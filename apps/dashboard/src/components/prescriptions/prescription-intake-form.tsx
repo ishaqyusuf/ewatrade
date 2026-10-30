@@ -54,7 +54,7 @@ export function PrescriptionIntakeForm({ storeId }: { storeId: string }) {
     trpc.prescriptions.staffIntake.mutationOptions({
       onSuccess: async (result) => {
         await queryClient.invalidateQueries({
-          queryKey: trpc.prescriptions.queue.queryKey(),
+          queryKey: trpc.prescriptions.queue.pathKey(),
         })
         setParams({
           prescriptionId: result.requestId,
@@ -161,9 +161,11 @@ export function PrescriptionIntakeForm({ storeId }: { storeId: string }) {
         </div>
         <ControlField
           label={<>Private prescription pages</>}
-          afterControl=<span className="text-xs text-muted-foreground">
-            Up to 12 pages, 10 MB each. Files remain private.
-          </span>
+          afterControl={
+            <span className="text-xs text-muted-foreground">
+              Up to 12 pages, 10 MB each. Files remain private.
+            </span>
+          }
         >
           <Input
             type="file"
@@ -190,10 +192,12 @@ export function PrescriptionIntakeForm({ storeId }: { storeId: string }) {
           />
         </ControlField>
         <CheckboxField
-          label=<span>
-            I confirmed the customer's consent to process this request under the
-            store policy.
-          </span>
+          label={
+            <span>
+              I confirmed the customer's consent to process this request under
+              the store policy.
+            </span>
+          }
         >
           <FormCheckboxControl
             control={form.control}

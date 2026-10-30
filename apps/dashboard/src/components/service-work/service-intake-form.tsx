@@ -246,7 +246,7 @@ export function ServiceIntakeForm({
             queryKey: trpc.orders.list.queryKey(),
           }),
           queryClient.invalidateQueries({
-            queryKey: trpc.orders.listPage.queryKey(),
+            queryKey: trpc.orders.listPage.pathKey(),
           }),
           queryClient.invalidateQueries({
             queryKey: trpc.orders.reportSummary.queryKey(),

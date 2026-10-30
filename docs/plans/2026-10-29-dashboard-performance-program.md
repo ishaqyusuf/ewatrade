@@ -123,6 +123,18 @@ pass. Dashboard development restored to listener49718; other services unchanged.
 No ticket newly accepted; full nine-family table above remains the latest complete
 representative pass. [Focused evidence and limits](../verification/2026-10-30-dashboard-received-bytes.md).
 
+Current development additionally corrects three command-success invalidations that
+could not match their infinite consumers: Service intake→Orders and Prescription
+intake/workspace→queue. Actual callbacks reproduce zero active list refreshes on
+old keys; corrected path keys refresh two active variants once and mark inactive
+variants stale, preserving unrelated data.14 focused cases/115 assertions, full
+Dashboard/fixture types, scoped237/1533+QA/Biome,H02 and frozen canonical development
+retry pass. First smoke's missing QA entry remains excluded/preserved; no business
+command, upload, service restart or deployment. This advances DP-203/406/501 without
+accepting another whole ticket or claiming latency gains. The optimized timing
+candidate above predates these three client changes.
+[Evidence](../verification/2026-10-30-dashboard-infinite-list-refresh.md).
+
 | Phase | Tickets | Accepted | Remaining outcome |
 | --- | --- | --- | --- |
 |0 Evidence |001–003 |2/3 |Comparable costs, variable-wait attribution and calibrated budgets |
@@ -150,6 +162,12 @@ The prior source/artifact were restored before this retained change. Code warmin
 [Rejected experiments and restoration](../verification/2026-10-30-dashboard-startup-experiments.md).
 
 Next execution order, within the same27 tickets:
+
+The next concrete DP-203 dependency review is Service intake→Finance/Customer/
+ledger/search facts. Its three typed-matcher defects above are fixed; its current
+callback still needs a command-to-read audit for created Customer, Order debt and
+initial-payment effects. Preserve existing job/order/usage refresh and fresh command
+authority. This is independent of the remaining Activity/Finance timing work below.
 
 1. **DP-405/407:** shared critical-path scheduling DP-103 is accepted from its
    criterion audit; the shared shell projection and cold Stock fix are verified.

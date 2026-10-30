@@ -76,7 +76,7 @@ export function PrescriptionRequestWorkspace({
         queryKey: trpc.prescriptions.detail.queryKey({ requestId, storeId }),
       }),
       queryClient.invalidateQueries({
-        queryKey: trpc.prescriptions.queue.queryKey(),
+        queryKey: trpc.prescriptions.queue.pathKey(),
       }),
     ])
   }

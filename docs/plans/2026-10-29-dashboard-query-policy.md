@@ -123,6 +123,22 @@ not refresh stock. Broader infinite-owner/mutation audits remain DP-203 work; no
 global TTL or all-dashboard invalidation policy is introduced.
 [Evidence](../verification/2026-10-30-dashboard-catalog-directory.md).
 
+## Orders and Prescription infinite invalidation —30October2026
+
+The same typed-key mismatch is now reproduced and corrected at three additional
+callback sites: Service intake's Orders list and Prescription intake/workspace's
+queue. Existing procedure path keys match ordinary and infinite variants without
+changing their inputs, activation, retention or server authority. Actual callbacks
+refresh both active filter variants once and mark inactive variants stale; unrelated
+data remains. No global cache clear, new TTL, command submission or clinical launch.
+
+Direct AST audit of1108 production files finds26 infinite option sites/17 procedures;
+all three ordinary-key overlaps are these invalidation sites, now zero. This excludes
+aliases, manual keys and imported helpers, and does not prove all command-to-read
+dependencies. Service intake's Finance/Customer/ledger/search dependencies still
+need explicit review; typed matching alone does not complete DP-203/406/501.
+[Actual-callback proof and limits](../verification/2026-10-30-dashboard-infinite-list-refresh.md).
+
 
 ## Closed bell counts —30October2026
 

@@ -50,9 +50,12 @@ Object.assign(globalThis, {
   location: win.location,
   IS_REACT_ACT_ENVIRONMENT: true,
 })
-const { QueryClientProvider, notifyManager, focusManager } = await import(
-  "@tanstack/react-query"
-)
+const {
+  QueryClientProvider,
+  InfiniteQueryObserver,
+  notifyManager,
+  focusManager,
+} = await import("@tanstack/react-query")
 const { createRoot } = await import("react-dom/client")
 const { NuqsTestingAdapter } = await import("nuqs/adapters/testing")
 const { createTRPCClient, TRPCClientError } = await import("@trpc/client")
@@ -108,10 +111,11 @@ mock.module(app("components/forms/form-feedback"), () => ({
   FormFeedback: leaf,
 }))
 mock.module("@hugeicons/react", () => ({ HugeiconsIcon: () => null }))
+let routeRefreshes = 0
 mock.module("next/navigation", () => ({
   useRouter: () => ({
     refresh() {
-      throw Error("No command expected")
+      routeRefreshes++
     },
   }),
 }))
@@ -195,6 +199,7 @@ const data: Record<string, unknown> = {
     expressSurchargeType: "fixed",
     expressSurchargeValue: 250,
   },
+  "orders.listPage": { items: [], nextCursor: undefined, totalCount: 2 },
 }
 const calls: Array<{ path: string; input: unknown; type: string }> = []
 let release = () => {}
@@ -225,8 +230,35 @@ let options = createTRPCOptionsProxy<AppRouter>({
   client: rpc,
   queryClient: client,
 })
+let intakeSuccess: (() => unknown) | undefined
 mock.module(app("trpc/client"), () => ({
-  useTRPC: () => options,
+  useTRPC: () =>
+    new Proxy(options, {
+      get(target, key) {
+        if (key !== "services") return Reflect.get(target, key)
+        return new Proxy(target.services, {
+          get(services, name) {
+            if (name !== "createAndConfirmIntake")
+              return Reflect.get(services, name)
+            return new Proxy(services.createAndConfirmIntake, {
+              get(intake, method) {
+                if (method !== "mutationOptions")
+                  return Reflect.get(intake, method)
+                return (
+                  configuration: Parameters<typeof intake.mutationOptions>[0],
+                ) => {
+                  const handler = configuration?.onSuccess
+                  intakeSuccess = handler
+                    ? () => Reflect.apply(handler, undefined, [])
+                    : undefined
+                  return intake.mutationOptions(configuration)
+                }
+              },
+            })
+          },
+        })
+      },
+    }),
   getDataCacheGeneration: () => 0,
 }))
 const { ServiceRequestForm } = await import(
@@ -258,6 +290,8 @@ async function mount(form: ReactNode) {
 }
 
 beforeEach(() => {
+  routeRefreshes = 0
+  intakeSuccess = undefined
   calls.length = 0
   held = undefined
   heldPath = "catalog.listItems"
@@ -321,3 +355,68 @@ for (const kind of ["request", "intake"] as const) {
       expect(calls).toHaveLength(2)
     })
 }
+
+test("actual intake success refreshes active infinite Orders variants and marks retained variants stale", async () => {
+  await mount(<ServiceIntakeForm store={store} canManage={false} />)
+  const inputs = [
+    { storeId: store.id, limit: 25 },
+    { storeId: store.id, limit: 25, statuses: ["CONFIRMED" as const] },
+  ]
+  const keys = inputs.map((input) =>
+    options.orders.listPage.infiniteQueryKey(input),
+  )
+  const previousOrders = {
+    pages: [{ items: [], nextCursor: undefined, totalCount: 1 }],
+    pageParams: [null],
+  }
+  for (const key of keys) client.setQueryData(key, previousOrders)
+  const unrelated = options.catalog.listDirectoryPage.infiniteQueryKey({
+    limit: 25,
+  })
+  const previousCatalog = {
+    pages: [{ items: [], nextCursor: undefined }],
+    pageParams: [null],
+  }
+  client.setQueryData(unrelated, previousCatalog)
+  const observers = inputs.map(
+    (input) =>
+      new InfiniteQueryObserver(
+        client,
+        options.orders.listPage.infiniteQueryOptions(input, {
+          getNextPageParam: (page) => page.nextCursor ?? undefined,
+          staleTime: Number.POSITIVE_INFINITY,
+          retry: false,
+        }),
+      ),
+  )
+  const unsubscribes = observers.map((observer) => observer.subscribe(() => {}))
+  const inactive = options.orders.listPage.infiniteQueryKey({
+    storeId: "other-store",
+    limit: 25,
+  })
+  client.setQueryData(inactive, previousOrders)
+  try {
+    if (!intakeSuccess) throw Error("Missing mounted intake success callback")
+    await act(async () => {
+      // Execute the production success callback without submitting a command.
+      await intakeSuccess?.()
+    })
+    expect(calls.filter((call) => call.path === "orders.listPage")).toEqual(
+      inputs.map((input) => ({
+        path: "orders.listPage",
+        input: { ...input, direction: "forward" },
+        type: "query",
+      })),
+    )
+    for (const observer of observers)
+      expect(observer.getCurrentResult().data?.pages[0]?.totalCount).toBe(2)
+    expect(client.getQueryState(inactive)?.isInvalidated).toBe(true)
+    expect(client.getQueryData(inactive)).toEqual(previousOrders)
+    expect(client.getQueryState(unrelated)?.isInvalidated).toBe(false)
+    expect(client.getQueryData(unrelated)).toEqual(previousCatalog)
+    expect(routeRefreshes).toBe(1)
+    expect(calls.every((call) => call.type === "query")).toBe(true)
+  } finally {
+    for (const unsubscribe of unsubscribes) unsubscribe()
+  }
+})

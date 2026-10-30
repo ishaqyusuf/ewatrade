@@ -1,0 +1,50 @@
+{
+  "version": 1,
+  "id": "2026-10-30-dashboard-infinite-list-refresh",
+  "tickets": ["H02"],
+  "summary": "Match existing infinite Orders and Prescription queue readers when their Dashboard success callbacks invalidate lists. Local only.",
+  "noAssistantImpact": "Three client invalidation prefixes change from ordinary query keys to procedure path keys. Service intake, Prescription intake and existing Prescription review callbacks keep the same command, detail refresh, drafts, navigation, inputs, output handling, money, clinical checks and server authority. Two existing JSX attributes are equivalently braced for the test runtime. No API, capability, assistant registration, schema, provider, upload, deployment or live command changes. Prescription operations remain form-only and launch-gated.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/web-navigation-performance.md"
+    },
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/service-commerce.md"
+    },
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/prescription-commerce.md"
+    },
+    {
+      "topic": "api",
+      "status": "not_applicable",
+      "note": "No API, clinical authority, permission or command contract changes."
+    },
+    {
+      "topic": "schema",
+      "status": "not_applicable",
+      "note": "No persistence, schema, index or migration changes."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "apps/dashboard/src/components/service-work/service-form-reads.integration.test.ts",
+      "executed": true,
+      "result": "Actual mounted Service intake success callback with real tRPC keys and infinite observers: old matcher refreshes zero variants; corrected prefix refreshes both active variants once, marks inactive variants stale and preserves unrelated Catalog data. No command submitted."
+    },
+    {
+      "kind": "test",
+      "path": "apps/dashboard/src/components/prescriptions/prescription-refresh.integration.test.ts",
+      "executed": true,
+      "result": "Eight actual form/workspace success callbacks: all eight fail on the old ordinary-query matcher and pass with the queue path key, refreshing two active infinite variants once and retaining inactive/unrelated data. SSR mounts actual hooks and captures callbacks; only inert query transport is permitted, no uploads or clinical mutations."
+    }
+  ]
+}
