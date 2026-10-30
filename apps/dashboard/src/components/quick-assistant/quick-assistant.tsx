@@ -4,19 +4,46 @@ import {
   usePageFabSlotMode,
   useQuickAssistantRequests,
 } from "@/components/page-fab/fab-slot"
+import { loadSheetCode } from "@/components/sheets/load-sheet-code"
 import { useQuickChatParam } from "@/hooks/use-quick-chat-param"
 import { Button, cn } from "@ewatrade/ui"
 import { BubbleChatIcon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import dynamic from "next/dynamic"
 import { usePathname } from "next/navigation"
-import { useCallback, useEffect, useRef, useState } from "react"
+import { type ReactNode, useCallback, useEffect, useRef, useState } from "react"
+import {
+  QuickAssistantFrame,
+  QuickAssistantMinimize,
+} from "./quick-assistant-frame"
 
 const QuickAssistantPanel = dynamic(
   () =>
-    import("./quick-assistant-panel").then((mod) => mod.QuickAssistantPanel),
+    loadSheetCode(
+      () =>
+        import("./quick-assistant-panel").then(
+          (mod) => mod.QuickAssistantPanel,
+        ),
+      QuickAssistantCodeFrame,
+    ),
   { ssr: false },
 )
+
+/** Lost panel code recovers in the same dialog with its existing Minimize. */
+function QuickAssistantCodeFrame({
+  children,
+  opened,
+  onMinimize,
+}: { children: ReactNode; opened: boolean; onMinimize: () => void }) {
+  return (
+    <QuickAssistantFrame opened={opened} onMinimize={onMinimize}>
+      <div className="flex justify-end px-2 pt-2">
+        <QuickAssistantMinimize onMinimize={onMinimize} />
+      </div>
+      <div className="px-4">{children}</div>
+    </QuickAssistantFrame>
+  )
+}
 
 /** The shell keys this owner by actor/business/Store, clearing transient chats on scope changes. */
 export function QuickAssistant() {

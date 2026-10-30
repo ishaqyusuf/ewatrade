@@ -1,0 +1,52 @@
+{
+  "version": 1,
+  "id": "2026-10-30-dashboard-optional-owner-boundaries",
+  "tickets": ["H02"],
+  "summary": "Recover Overview/Quick Assistant code failures in their existing owners, remove settings-hook code leakage, and defer Catalog product chat outside manual forms. Opus-authored, Codex-verified; local only.",
+  "noAssistantImpact": "Reloads code definitions only; Quick Assistant retains the same dialog/Escape/minimize and content/command owner. Notification URL parsing/history, private current reads, mutations, scopes and authority stay unchanged. No capability, procedure, provider or persistence change.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/web-navigation-performance.md"
+    },
+    {
+      "topic": "api",
+      "status": "not_applicable",
+      "note": "Read and command contracts unchanged."
+    },
+    {
+      "topic": "schema",
+      "status": "not_applicable",
+      "note": "No schema or persistence change."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "apps/dashboard/src/components/sheets/optional-code-recovery.test.tsx",
+      "executed": true,
+      "result": "Old source4pass/2fail; actual installed-loader final6/96 pass, including access/URL lifetime, current props and real shared dialog focus/Escape/minimize recovery with inert content."
+    },
+    {
+      "kind": "test",
+      "path": "apps/dashboard/src/hooks/use-business-notification-reads.test.tsx",
+      "executed": true,
+      "result": "Actual bell counts/preview activation and private cancellation/freshness37/142 pass after moving only its URL-hook import."
+    },
+    {
+      "kind": "test",
+      "path": "packages/assistant/evaluations/fixtures/dashboard-product-form-resume.fixture.tsx",
+      "executed": true,
+      "result": "Actual form/provider/QueryClient resume and same-chat commands1/49 pass; import count proves assistant body absent until chat render. Old delivery fails that exact assertion. Two stale inert photo/directory RPC definitions repaired without assertion weakening; unexercised photo command refuses."
+    },
+    {
+      "kind": "run",
+      "path": "docs/verification/2026-10-30-dashboard-optional-owner-boundaries.md",
+      "executed": true,
+      "result": "Next16.4.3 build8Xfym4plmfCqEXoMURwrG and frozen-source canonical local web smoke pass. Composite focused browser proof confirms41/41 feature definitions absent closed, manual Catalog chat graph absent, actual Catalog/Overview/Quick code retry, existing conversation expand/minimize/focus and Catalog history. Zero business writes; private driver corrections retained; no full ticket or release acceptance."
+    }
+  ]
+}

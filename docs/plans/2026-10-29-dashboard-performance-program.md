@@ -72,7 +72,26 @@ unchanged. `runtimeVerified:false`; no release qualification or deployment.
 [Browser streaming](../verification/2026-10-30-dashboard-browser-read-streaming.md) ·
 [Activity enrichment](../verification/2026-10-30-dashboard-activity-bounded-enrichment.md).
 
-The latest focused artifact is Next16.4.3 **`tBSrVXiC7Tcp2XZnqwaC5`**, parent
+The latest focused optimized candidate is **8Xfym4plmfCqEXoMURwrG**, parent15006abf
+plus frozen Opus-authored optional-owner boundaries. Preferences' Boolean URL hook
+now has a lightweight owner; all41 global family definitions are absent on closed
+Overview. Manual Catalog defers Product Chat; completed encoded script bodies through
+opening fall1006851→786348 bytes (21.9%) in one matched pair. Overview Order and
+Quick Assistant actual chunk rejection/retry stay local; Quick uses its existing
+exact dialog/Escape/focus/Minimize and existing conversation, with no new thread or
+message. Catalog fault/retry and Back/Forward/focus also pass. Types, source237/1533,
+H02, optimized build and canonical18:32:33Z–18:33:03Z pass; failed private drivers and
+corrected assumptions remain visible in the receipt. Staff's eight relevant pinned
+inputs match, current optimized trace still274 (prior1715). Development restored3798;
+other services unchanged. Source/body-byte proof is not a latency percentile or full
+family acceptance; program4/27 remains. Provider-entry recovery belongs to DP-104/501.
+Next close the measured remaining gaps: closed route-owned delivery on Catalog,
+Inventory, Sales, Services/Requests, Customers and Finance; rank current family
+client/server graphs. Do not redo unchanged command/native proof or invent further
+criteria after these bounded checks.
+[Optional owners, source inventory and optimized proof](../verification/2026-10-30-dashboard-optional-owner-boundaries.md).
+
+The preceding focused artifact is Next16.4.3 **`tBSrVXiC7Tcp2XZnqwaC5`**, parent
 959d75210 plus frozen Opus follow-ups. Owner-authorized Opus5.5/high workers authored
 patches; Codex reviewed/applied and ran acceptance. Actual framework attribution
 found middleware's adapter already strips Flight headers: positive browser Fetch

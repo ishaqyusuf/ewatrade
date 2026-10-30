@@ -393,10 +393,9 @@ test("actual closed bell fetches compact counts; previews start only on open and
   mock.module("@/hooks/use-activity-params", () => ({
     useActivityParams: () => ({ open() {} }),
   }))
-  mock.module(
-    "../components/notification-center/business-notification-settings",
-    () => ({ useAlertPreferencesParams: () => ({ open() {} }) }),
-  )
+  mock.module("@/hooks/use-alert-preferences-params", () => ({
+    useAlertPreferencesParams: () => ({ open() {} }),
+  }))
   mock.module(
     "../components/notification-center/business-notification-inbox",
     () => ({ BusinessNotificationInbox: empty }),

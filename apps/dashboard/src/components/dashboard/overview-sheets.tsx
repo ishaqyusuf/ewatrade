@@ -1,21 +1,30 @@
 "use client"
 
+import { ActivatedSheet } from "@/components/sheets/activated-sheet"
+import { loadSheetCode } from "@/components/sheets/load-sheet-code"
 import { useInventoryParams } from "@/hooks/use-inventory-params"
 import { useOrderParams } from "@/hooks/use-order-params"
 import dynamic from "next/dynamic"
 
 const OrderCreateSheet = dynamic(() =>
-  import("@/components/sheets/order-create-sheet").then(
-    (module) => module.OrderCreateSheet,
+  loadSheetCode(() =>
+    import("@/components/sheets/order-create-sheet").then(
+      (module) => module.OrderCreateSheet,
+    ),
   ),
 )
 const InventoryOperationSheet = dynamic(() =>
-  import("@/components/sheets/inventory-operation-sheet").then(
-    (module) => module.InventoryOperationSheet,
+  loadSheetCode(() =>
+    import("@/components/sheets/inventory-operation-sheet").then(
+      (module) => module.InventoryOperationSheet,
+    ),
   ),
 )
 
-/** URL owns activation; closed forms neither mount nor pull their dependency graph. */
+/**
+ * URL owns activation; closed forms neither mount nor pull their dependency graph.
+ * An open form's lost code offers Retry; closing its URL still unmounts it.
+ */
 export function OverviewSheets({
   store,
   orders,
@@ -32,14 +41,18 @@ export function OverviewSheets({
   return (
     <>
       {orders && sheet === "create" ? (
-        <OrderCreateSheet
-          key={`order:${store.id}`}
-          store={store}
-          customerDirectory={customerDirectory}
-        />
+        <ActivatedSheet active>
+          <OrderCreateSheet
+            key={`order:${store.id}`}
+            store={store}
+            customerDirectory={customerDirectory}
+          />
+        </ActivatedSheet>
       ) : null}
       {inventory && operation ? (
-        <InventoryOperationSheet key={`stock:${store.id}`} store={store} />
+        <ActivatedSheet active>
+          <InventoryOperationSheet key={`stock:${store.id}`} store={store} />
+        </ActivatedSheet>
       ) : null}
     </>
   )

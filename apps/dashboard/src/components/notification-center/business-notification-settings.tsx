@@ -2,6 +2,7 @@
 
 import { NotificationPreferencesContent } from "@/components/notifications/notification-preferences-content"
 import { SheetFrame } from "@/components/sheets/sheet-frame"
+import { useAlertPreferencesParams } from "@/hooks/use-alert-preferences-params"
 import { useTRPC } from "@/trpc/client"
 import {
   freshShownRead,
@@ -11,21 +12,9 @@ import {
 import type { BusinessEventType } from "@ewatrade/notifications/business-events"
 import { Button, Sheet } from "@ewatrade/ui"
 import { useMutation, useQuery } from "@tanstack/react-query"
-import { parseAsBoolean, useQueryStates } from "nuqs"
 import { useState } from "react"
 
-const params = { alertPreferences: parseAsBoolean }
-
-export function useAlertPreferencesParams() {
-  const [{ alertPreferences }, setParams] = useQueryStates(params, {
-    history: "push",
-  })
-  return {
-    isOpen: alertPreferences === true,
-    open: () => setParams({ alertPreferences: true }),
-    close: () => setParams({ alertPreferences: null }),
-  }
-}
+export { useAlertPreferencesParams }
 
 /** The signed-in member's own alert preferences, from the inbox. */
 export function BusinessNotificationPreferencesSheet({

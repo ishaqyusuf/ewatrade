@@ -1,6 +1,7 @@
 import { expect, mock, test } from "bun:test"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { DOMImplementation } from "@xmldom/xmldom"
+import dynamic from "next/dist/shared/lib/app-dynamic"
 import { type ComponentProps, type ReactNode, act, createElement } from "react"
 import type { ProductFormResumeState } from "../../../../apps/dashboard/src/components/product-assistant/product-form-resume"
 import { catalogChoiceDraftIdentity } from "../../../../apps/dashboard/src/lib/catalog-choice-drafts"
@@ -136,13 +137,23 @@ mock.module(at("components/catalog-item/catalog-saved-photos.tsx"), () => ({
 mock.module("next/navigation", () => ({
   useRouter: () => ({ refresh() {}, push() {} }),
 }))
-let backToForm: (() => unknown) | undefined
-mock.module(at("components/product-assistant/product-chat.tsx"), () => ({
-  ProductChat: ({ onBack }: { onBack: () => unknown }) => {
-    backToForm = onBack
-    return <p>Saved Product chat</p>
-  },
+// The installed App Router loader that next/dynamic resolves to in the app.
+mock.module("next/dynamic", () => ({ default: dynamic }))
+mock.module(at("observability/sentry.ts"), () => ({
+  initDashboardObservability() {},
+  captureDashboardError() {},
 }))
+let backToForm: (() => unknown) | undefined
+let productChatLoads = 0
+mock.module(at("components/product-assistant/product-chat.tsx"), () => {
+  productChatLoads++
+  return {
+    ProductChat: ({ onBack }: { onBack: () => unknown }) => {
+      backToForm = onBack
+      return <p>Saved Product chat</p>
+    },
+  }
+})
 const storeId = "original-store"
 const conversationId = "saved-rich-product"
 const groups = [{ id: "quality", name: "Quality", values: "Premium, Standard" }]
@@ -316,6 +327,7 @@ const trpc = {
     pathKey: () => ["catalog"],
     listItems: key(["catalog", "items"]),
     listItemsPage: key(["catalog", "page"]),
+    listDirectoryPage: key(["catalog", "directory"]),
     createItem: mutation(async () => {
       ordinaryCreates++
       throw Error("Ordinary create forbidden for saved chat")
@@ -331,6 +343,9 @@ const trpc = {
     photos: {
       createIntent: mutation(async () => {
         throw Error("Original photo reuse must not upload")
+      }),
+      reuse: mutation(async () => {
+        throw Error("Saved draft photo must not copy a My images photo")
       }),
     },
   },
@@ -360,6 +375,8 @@ mock.module(at("hooks/use-catalog-item-params.ts"), () => ({
 const { CatalogItemForm } = await import(
   "../../../../apps/dashboard/src/components/catalog-item/form"
 )
+// Importing the form must not load the assistant chat body and its SDK.
+const productChatLoadsWithForm = productChatLoads
 const { CatalogItemFormProvider } = await import(
   "../../../../apps/dashboard/src/components/catalog-item/form-context"
 )
@@ -500,6 +517,8 @@ test("mounted rich Product resume restores owner facts, submits only same-chat c
       await fixture.settle()
       await fixture.settle()
       expect(fixture.host.toString()).toContain("Saved Product chat")
+      expect(productChatLoadsWithForm).toBe(0)
+      expect(productChatLoads).toBe(1)
       expect(backToForm).toBeFunction()
       await act(async () => {
         await backToForm?.()

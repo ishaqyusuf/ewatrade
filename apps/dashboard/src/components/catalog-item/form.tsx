@@ -48,6 +48,7 @@ import { StoreSelector } from "@/components/stores/store-selector"
 import { ConfirmDraftModal } from "@/components/modals/confirm-draft-modal"
 import { createCatalogFixture } from "@/components/qa/fixture-recipes"
 import { QaDashboardQuickFill } from "@/components/qa/qa-quick-fill"
+import { loadSheetCode } from "@/components/sheets/load-sheet-code"
 import { useCatalogItemParams } from "@/hooks/use-catalog-item-params"
 import { useCatalogPhoto } from "@/hooks/use-catalog-photo"
 import {
@@ -85,15 +86,13 @@ import {
   WarehouseIcon,
 } from "@hugeicons/core-free-icons"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import dynamic from "next/dynamic"
 import { useRouter } from "next/navigation"
 import type { FormEvent, InputHTMLAttributes, ReactNode } from "react"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { createPortal } from "react-dom"
 
-import {
-  ProductChat,
-  type ProductChatState,
-} from "@/components/product-assistant/product-chat"
+import type { ProductChatState } from "@/components/product-assistant/product-chat"
 import {
   type ProductFormVersion,
   productFormExpectedRevision,
@@ -105,6 +104,19 @@ import { resolveCatalogFormGuidance } from "@ewatrade/utils/business-catalog-gui
 import { CatalogGuidanceSuggestions } from "./catalog-guidance-suggestions"
 import { CatalogSetupHelperPicker } from "./catalog-setup-helper-picker"
 import { useCatalogItemForm } from "./form-context"
+
+// Only chat mode needs the assistant SDK/markdown graph; the form stays light.
+const ProductChat = dynamic(
+  () =>
+    loadSheetCode(
+      () =>
+        import("@/components/product-assistant/product-chat").then(
+          (mod) => mod.ProductChat,
+        ),
+      "body",
+    ),
+  { loading: () => <CatalogItemSkeleton chat /> },
+)
 
 type CatalogItemFormProps = {
   businessProfileKey?: string | null

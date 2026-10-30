@@ -43,11 +43,24 @@ try {
     value: { onLine: true },
   })
 }
+if (typeof globalThis.requestAnimationFrame !== "function")
+  Object.assign(globalThis, {
+    requestAnimationFrame: (callback: (time: number) => void) =>
+      setTimeout(() => callback(Date.now()), 0),
+  })
+// The Quick Assistant frame owns a document Escape listener while open.
+const keyListeners = new Set<(event: KeyboardEvent) => void>()
 Object.assign(document, {
   defaultView: window,
   activeElement: null,
-  addEventListener() {},
-  removeEventListener() {},
+  addEventListener(type: string, listener: (event: KeyboardEvent) => void) {
+    if (type === "keydown") keyListeners.add(listener)
+  },
+  removeEventListener(type: string, listener: (event: KeyboardEvent) => void) {
+    if (type === "keydown") keyListeners.delete(listener)
+  },
+  // No nested overlay is open in these inert fixtures.
+  querySelector: () => null,
 })
 const createElement = document.createElement.bind(document)
 document.createElement = (name: string) => {
@@ -128,6 +141,7 @@ function Pass({ children }: { children?: ReactNode }) {
 }
 mock.module("@ewatrade/ui", () => ({
   Button: (props: ComponentProps<"button">) => <button {...props} />,
+  cn: (...values: unknown[]) => values.filter(Boolean).join(" "),
   Dialog,
   DialogContent: Slot,
   DialogDescription: Slot,
@@ -136,8 +150,24 @@ mock.module("@ewatrade/ui", () => ({
 }))
 mock.module("@hugeicons/react", () => ({ HugeiconsIcon: () => null }))
 mock.module("@hugeicons/core-free-icons", () => ({
+  BubbleChatIcon: {},
+  MinusSignIcon: {},
   SparklesIcon: {},
   TaskDone01Icon: {},
+}))
+mock.module("next/navigation", () => ({ usePathname: () => "/" }))
+mock.module("@/components/page-fab/fab-slot", () => ({
+  usePageFabSlotMode: () => null,
+  useQuickAssistantRequests: () => undefined,
+}))
+const chatChanges: (string | null)[] = []
+mock.module("@/hooks/use-quick-chat-param", () => ({
+  useQuickChatParam: () => [
+    null,
+    async (value: string | null) => {
+      chatChanges.push(value)
+    },
+  ],
 }))
 function Frame({
   kind,
@@ -303,6 +333,15 @@ mock.module("@/components/setup-assistant/setup-draft-panel", () => ({
 mock.module("@/components/receipts/pdf-preview", () => ({
   default: lostChunk("preview"),
 }))
+mock.module("@/components/sheets/order-create-sheet", () => ({
+  OrderCreateSheet: lostChunk("order"),
+}))
+mock.module("@/components/sheets/inventory-operation-sheet", () => ({
+  InventoryOperationSheet: lostChunk("stock"),
+}))
+mock.module("@/components/quick-assistant/quick-assistant-panel", () => ({
+  QuickAssistantPanel: lostChunk("quick"),
+}))
 
 const { createRoot } = await import("react-dom/client")
 const { FinanceSheet } = await import("./finance-sheet")
@@ -313,10 +352,20 @@ const { SetupAssistant } = await import(
   "@/components/setup-assistant/setup-assistant"
 )
 const { ReceiptContent } = await import("@/components/receipts/receipt-content")
+const { OverviewSheets } = await import(
+  "@/components/dashboard/overview-sheets"
+)
+const { QuickAssistant } = await import(
+  "@/components/quick-assistant/quick-assistant"
+)
 const container = document.createElement("div")
 document.documentElement.appendChild(container)
 const opener = document.createElement("button")
 document.documentElement.appendChild(opener)
+// Portal target for the actual Quick Assistant frame.
+const body = document.createElement("body")
+document.documentElement.appendChild(body)
+Object.defineProperty(document, "body", { configurable: true, value: body })
 let root = createRoot(container as unknown as HTMLElement)
 class Boundary extends Component<{ children: ReactNode }, { failed: boolean }> {
   state = { failed: false }
@@ -353,22 +402,50 @@ function frame() {
 function retryCount() {
   return text().split("Try again").length - 1
 }
-function retry() {
-  const buttons = container.getElementsByTagName("button")
-  let button: (typeof buttons)[number] | undefined
-  for (let index = 0; index < buttons.length && !button; index++)
-    if (buttons[index]?.textContent === "Try again") button = buttons[index]
-  if (!button) throw new Error("Missing retry button")
-  const key = Object.keys(button).find((name) =>
+function button(label: string) {
+  const buttons = document.documentElement.getElementsByTagName("button")
+  for (let index = 0; index < buttons.length; index++) {
+    const candidate = buttons[index]
+    if (
+      candidate?.textContent === label ||
+      candidate?.getAttribute("aria-label") === label
+    )
+      return candidate
+  }
+  throw new Error(`Missing ${label} button`)
+}
+function press(label: string) {
+  const target = button(label)
+  const key = Object.keys(target).find((name) =>
     name.startsWith("__reactProps$"),
   )
   if (!key) throw new Error("Missing React button event owner")
-  const props = (button as unknown as Record<string, { onClick: () => void }>)[
+  const props = (target as unknown as Record<string, { onClick: () => void }>)[
     key
   ]
-  if (!props) throw new Error("Missing retry button props")
-  Object.assign(document, { activeElement: button })
+  if (!props) throw new Error(`Missing ${label} button props`)
+  Object.assign(document, { activeElement: target })
   props.onClick()
+}
+function retry() {
+  press("Try again")
+}
+function dialog() {
+  return body.getElementsByTagName("dialog")[0]
+}
+function focused() {
+  return (document as unknown as { activeElement: unknown }).activeElement
+}
+async function pressEscape() {
+  await act(async () => {
+    for (const listener of [...keyListeners])
+      listener({
+        key: "Escape",
+        defaultPrevented: false,
+        preventDefault() {},
+      } as unknown as KeyboardEvent)
+    await new Promise((resolve) => setTimeout(resolve, 8))
+  })
 }
 async function requestClose() {
   await act(async () => {
@@ -383,6 +460,7 @@ beforeEach(() => {
   mounted.clear()
   operations.length = 0
   commands.length = 0
+  chatChanges.length = 0
   changeOpen = undefined
   Object.assign(document, { activeElement: opener })
 })
@@ -522,5 +600,115 @@ test("receipt PDF preview code failure keeps downloads and retries only the prev
   expect(text()).toContain("Download PDF")
   expect(retryCount()).toBe(0)
   expect(imports).toEqual(["preview", "preview"])
+  expect(operations).toEqual(["sheet.code.load"])
+})
+
+test("Overview order and stock controller code failures stay local, keep URL/access lifetime and retry with current props", async () => {
+  const store = { id: "store", name: "Inert Store", currencyCode: "NGN" }
+  // A fresh element per render: mocked URL state has no React subscription.
+  const overview = (access = true) => (
+    <OverviewSheets
+      store={store}
+      orders={access}
+      inventory={access}
+      customerDirectory={false}
+    />
+  )
+  failures.set("order", 1)
+  failures.set("stock", 1)
+  params = new URLSearchParams({ orderSheet: "create" })
+  await render(overview())
+  expect(text()).toContain("Couldn’t open this panel.")
+  expect(text()).not.toContain("page-error")
+  expect(imports).toEqual(["order"])
+
+  params = new URLSearchParams()
+  await render(overview())
+  expect(text()).toBe("")
+
+  params = new URLSearchParams({ orderSheet: "create" })
+  await render(overview(false))
+  expect(text()).toBe("")
+
+  await render(overview())
+  expect(retryCount()).toBe(1)
+  await act(async () => retry())
+  await settle()
+  expect(text()).toBe("order")
+  expect(mounted.get("order")).toEqual({ store, customerDirectory: false })
+
+  // Revoked access removes even recovered code; restored access reuses code only.
+  mounted.clear()
+  await render(overview(false))
+  expect(text()).toBe("")
+  expect(mounted.size).toBe(0)
+  await render(overview())
+  expect(text()).toBe("order")
+  expect(mounted.get("order")).toEqual({ store, customerDirectory: false })
+
+  params = new URLSearchParams({ inventoryOperation: "receipt" })
+  await render(overview())
+  expect(retryCount()).toBe(1)
+  expect(text()).not.toContain("page-error")
+  await act(async () => retry())
+  await settle()
+  expect(text()).toBe("stock")
+  expect(mounted.get("stock")).toEqual({ store })
+  expect(imports).toEqual(["order", "order", "stock", "stock"])
+  expect(operations).toEqual(["sheet.code.load", "sheet.code.load"])
+})
+
+test("Quick Assistant panel code failure recovers in its own dialog, minimizes by Escape and control, and retries with current props", async () => {
+  failures.set("quick", 1)
+  await render(<QuickAssistant />)
+  expect(imports).toEqual([])
+  expect(dialog()).toBeUndefined()
+  const trigger = button("Open quick assistant")
+
+  await act(async () => press("Open quick assistant"))
+  await settle()
+  const frame = dialog()
+  expect(frame?.getAttribute("id")).toBe("quick-assistant-panel")
+  expect(frame?.getAttribute("aria-label")).toBe("Quick assistant")
+  expect(frame?.hasAttribute("hidden")).toBe(false)
+  expect(trigger.getAttribute("aria-controls")).toBe("quick-assistant-panel")
+  expect(focused()).toBe(frame)
+  expect(body.textContent).toContain("Couldn’t open this panel.")
+  expect(text()).not.toContain("page-error")
+  expect(keyListeners.size).toBe(1)
+  expect(imports).toEqual(["quick"])
+
+  await pressEscape()
+  expect(dialog()).toBe(frame)
+  expect(frame?.hasAttribute("hidden")).toBe(true)
+  expect(keyListeners.size).toBe(0)
+  expect(chatChanges).toEqual([null])
+  expect(focused()).toBe(trigger)
+
+  await act(async () => press("Open quick assistant"))
+  await settle()
+  expect(dialog()).toBe(frame)
+  expect(frame?.hasAttribute("hidden")).toBe(false)
+  expect(focused()).toBe(frame)
+  await act(async () => press("Minimize quick assistant"))
+  await settle()
+  expect(frame?.hasAttribute("hidden")).toBe(true)
+  expect(keyListeners.size).toBe(0)
+  expect(chatChanges).toEqual([null, null])
+  expect(focused()).toBe(trigger)
+
+  await act(async () => press("Open quick assistant"))
+  await settle()
+  await act(async () => retry())
+  await settle()
+  expect(dialog()).toBeUndefined()
+  expect(keyListeners.size).toBe(0)
+  expect(mounted.get("quick")).toMatchObject({ opened: true })
+
+  await act(async () => press("Open quick assistant"))
+  await settle()
+  expect(mounted.get("quick")).toMatchObject({ opened: false })
+  expect(chatChanges).toEqual([null, null, null])
+  expect(imports).toEqual(["quick", "quick"])
   expect(operations).toEqual(["sheet.code.load"])
 })

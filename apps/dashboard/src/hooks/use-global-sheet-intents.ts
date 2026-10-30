@@ -1,14 +1,10 @@
 "use client"
 
-import {
-  parseAsBoolean,
-  parseAsString,
-  parseAsStringLiteral,
-  useQueryStates,
-} from "nuqs"
+import { parseAsString, parseAsStringLiteral, useQueryStates } from "nuqs"
 import { assistantObjectParams } from "./assistant-object-params"
 import { serviceWorkParams } from "./service-work-params"
 import { activitySheetParams } from "./use-activity-params"
+import { alertPreferencesParams } from "./use-alert-preferences-params"
 import { catalogItemParamParsers } from "./use-catalog-item-params"
 import { customerLedgerModes } from "./use-customer-ledger-params"
 import { customerMessageParams } from "./use-customer-message-params"
@@ -43,7 +39,7 @@ const params = {
   conversationSheet: storeConversationParams.conversationSheet,
   ledgerAccount: parseAsString,
   ledgerAction: parseAsStringLiteral(customerLedgerModes),
-  alertPreferences: parseAsBoolean,
+  ...alertPreferencesParams,
 }
 
 export function useGlobalSheetIntents() {

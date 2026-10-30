@@ -3,6 +3,7 @@
 import { isAccessDrift } from "@/components/activity/activity-read-errors"
 import { ActivityViewerProvider } from "@/components/activity/activity-viewer"
 import { useActivityParams } from "@/hooks/use-activity-params"
+import { useAlertPreferencesParams } from "@/hooks/use-alert-preferences-params"
 import {
   notificationReadOptions,
   usePaymentPlanNoticeCount,
@@ -25,7 +26,6 @@ import {
   BusinessNotificationInbox,
   type InboxTab,
 } from "./business-notification-inbox"
-import { useAlertPreferencesParams } from "./business-notification-settings"
 import { PaymentPlanNotices } from "./payment-plan-notices"
 import { PaymentReportNotifications } from "./payment-report-notifications"
 import { StorefrontRequestNotifications } from "./storefront-request-notifications"

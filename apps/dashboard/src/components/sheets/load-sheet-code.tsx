@@ -11,12 +11,14 @@ import {
 } from "react"
 import { useActiveSheet } from "./activated-sheet"
 
-/** Content that owns its whole sheet recovers inside its own loading frame. */
-type SheetCodeFrame = ComponentType<{ children: ReactNode }>
+/** Content that owns its whole frame recovers inside it, with current props. */
+type SheetCodeFrame<Props> = ComponentType<
+  NoInfer<Props> & { children: ReactNode }
+>
 
 export async function loadSheetCode<Props extends object>(
   loader: () => Promise<ComponentType<Props>>,
-  placement: "overlay" | "body" | SheetCodeFrame = "overlay",
+  placement: "overlay" | "body" | SheetCodeFrame<Props> = "overlay",
 ): Promise<ComponentType<Props>> {
   try {
     return await loader()
@@ -42,7 +44,7 @@ export async function loadSheetCode<Props extends object>(
     return inFlight
   }
 
-  // Keep feedback inside the frame, with Close, that its loading state opened.
+  // Keep feedback inside the owner's frame and its existing dismissal control.
   const Frame = typeof placement === "function" ? placement : null
 
   return function SheetCodeRecovery(props: Props) {
@@ -116,6 +118,6 @@ export async function loadSheetCode<Props extends object>(
         </Button>
       </div>
     )
-    return Frame ? <Frame>{feedback}</Frame> : feedback
+    return Frame ? <Frame {...props}>{feedback}</Frame> : feedback
   }
 }
