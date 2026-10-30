@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "id": "2026-10-30-dashboard-root-qa-policy",
+  "tickets": ["H02"],
+  "summary": "Remove the optional QA policy wait from the Dashboard root composition; activate only authenticated QA controls after the current policy resolves. Local only.",
+  "noAssistantImpact": "Dashboard-only scheduling and stable provider ownership. Managed policy reader/cache/expiry, session and grant validation, API fixture admission, product permissions, assistant capabilities, commands and provider behavior are unchanged. Production keeps its disabled replacement. No deployment or business submission.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/web-navigation-performance.md"
+    },
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/mobile-dev-preview-qa-accelerator.md"
+    },
+    {
+      "topic": "api",
+      "status": "not_applicable",
+      "note": "No API, permission, fixture, session or grant contract change."
+    },
+    {
+      "topic": "schema",
+      "status": "not_applicable",
+      "note": "No persistence/schema change."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "apps/dashboard/src/app/root-qa-policy-loading.test.tsx",
+      "executed": true,
+      "result": "Actual root red on unresolved optional policy, now 3/10 pass; immediate composition, failure isolation and no Production/unknown-mode policy read. No database."
+    },
+    {
+      "kind": "test",
+      "path": "apps/dashboard/src/components/qa/qa-policy-provider.test.tsx",
+      "executed": true,
+      "result": "Actual mounted provider and query 6/27 pass: editable children/draft retained, activation once, denial/failure/obsolete delivery/unmount, independent authenticated fixture refusal and disabled Production replacement. Inert transport only."
+    },
+    {
+      "kind": "run",
+      "path": "docs/verification/2026-10-30-dashboard-root-qa-policy.md",
+      "executed": true,
+      "result": "Exact root helper fresh module probe observes policy 2649ms, cached 0ms. Existing managed-policy contracts 3/9 pass unchanged. Current runtime/build evidence and limits recorded separately in the receipt."
+    }
+  ]
+}

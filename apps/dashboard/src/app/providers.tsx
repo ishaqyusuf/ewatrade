@@ -11,7 +11,7 @@ export function Providers({
   qaAcceleratorEnabled,
 }: {
   children: React.ReactNode
-  qaAcceleratorEnabled: boolean
+  qaAcceleratorEnabled: boolean | Promise<boolean>
 }) {
   return (
     <NuqsAdapter>
@@ -22,11 +22,9 @@ export function Providers({
           enableSystem
           disableTransitionOnChange
         >
-          {qaAcceleratorEnabled ? (
-            <QaDashboardProvider>{children}</QaDashboardProvider>
-          ) : (
-            children
-          )}
+          <QaDashboardProvider enabled={qaAcceleratorEnabled}>
+            {children}
+          </QaDashboardProvider>
           <Toaster position="bottom-right" />
         </ThemeProvider>
       </TRPCReactProvider>

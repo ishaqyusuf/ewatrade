@@ -38,12 +38,16 @@ export const metadata: Metadata = {
   },
 }
 
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  const qaAcceleratorEnabled =
-    (await getQaPolicyEnvironment()).QA_ACCELERATOR_ENABLED === "true" &&
-    isQaAcceleratorClientMode(process.env.APP_ENV ?? process.env.NODE_ENV)
+  const qaAcceleratorEnabled = isQaAcceleratorClientMode(
+    process.env.APP_ENV ?? process.env.NODE_ENV,
+  )
+    ? getQaPolicyEnvironment()
+        .then((env) => env.QA_ACCELERATOR_ENABLED === "true")
+        .catch(() => false)
+    : false
 
   return (
     <html

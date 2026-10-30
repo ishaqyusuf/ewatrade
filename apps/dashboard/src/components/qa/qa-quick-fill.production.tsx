@@ -1,6 +1,11 @@
 import type { ReactNode } from "react"
 
-export function QaDashboardProvider({ children }: { children: ReactNode }) {
+export function QaDashboardProvider({
+  children,
+}: {
+  children: ReactNode
+  enabled: boolean | Promise<boolean>
+}) {
   return children
 }
 

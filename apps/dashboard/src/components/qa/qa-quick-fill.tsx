@@ -12,6 +12,7 @@ import {
   type ReactNode,
   createContext,
   useContext,
+  useEffect,
   useMemo,
   useRef,
   useState,
@@ -24,16 +25,47 @@ type QaDashboardContextValue = {
 
 const QaDashboardContext = createContext<QaDashboardContextValue | null>(null)
 
-export function QaDashboardProvider({ children }: { children: ReactNode }) {
+export function QaDashboardProvider({
+  children,
+  enabled,
+}: {
+  children: ReactNode
+  enabled: boolean | Promise<boolean>
+}) {
+  const [policy, setPolicy] = useState<{
+    source: Promise<boolean>
+    enabled: boolean
+  } | null>(null)
+  // Policy resolution must neither suspend ordinary children nor enable an older policy.
+  const policyEnabled =
+    typeof enabled === "boolean"
+      ? enabled
+      : policy?.source === enabled && policy.enabled
+  useEffect(() => {
+    if (typeof enabled === "boolean") return
+    let current = true
+    void enabled.then(
+      (value) => {
+        if (current) setPolicy({ source: enabled, enabled: value })
+      },
+      () => {
+        if (current) setPolicy({ source: enabled, enabled: false })
+      },
+    )
+    return () => {
+      current = false
+    }
+  }, [enabled])
   const trpc = useTRPC()
   const fixture = useQuery(
     trpc.qaAccess.fixtureContext.queryOptions(undefined, {
+      enabled: policyEnabled,
       retry: false,
       staleTime: 5 * 60_000,
     }),
   )
   const value = useMemo<QaDashboardContextValue | null>(() => {
-    if (!fixture.data?.storeId) return null
+    if (!policyEnabled || !fixture.data?.storeId) return null
     return {
       createContext(formId, sequence) {
         return createQaFixtureContext({
@@ -48,7 +80,7 @@ export function QaDashboardProvider({ children }: { children: ReactNode }) {
       },
       qaDomain: fixture.data.qaDomain,
     }
-  }, [fixture.data])
+  }, [fixture.data, policyEnabled])
 
   return (
     <QaDashboardContext.Provider value={value}>

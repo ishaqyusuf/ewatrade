@@ -73,44 +73,55 @@ unchanged. `runtimeVerified:false`; no release qualification or deployment.
 [Activity enrichment](../verification/2026-10-30-dashboard-activity-bounded-enrichment.md).
 
 The latest optimized Dashboard artifact is Next16.4.3 BUILD_ID
-`3igQPtYkK9g1-qAFS_m5o`, built from parent4e6d9ce40 plus the frozen Book read slice.
-Full build/types, actual API14/64, native Book7/141 and reused snapshot controls,
-owned237/1533+QA/Biome,H01/H02 pass. Current source includes creation/Finance/Ledger/
-Order refresh effects. Canonical18 readiness actions across nine families and two isolated
-Finance GETs pass15:09:50.832Z–15:11:05.951Z; Book SQL8→7 agrees with the proven
-post-lock3→2 body reads. Development restored to71421, other services unchanged.
-Runtime API revision remains uncertified; no deployment or accepted budget.
-[Current candidate and evidence](../verification/2026-10-30-dashboard-finance-book-post-lock-read.md).
+`aXGxHvKxspRkA-sdcsSRx`, parent839dfad2 plus frozen optional root QA policy isolation.
+The root no longer awaits optional policy before returning document/provider/page
+composition. Its stable client QA provider remains disabled until current policy
+resolves true; the existing authenticated fixture query/Production replacement,
+server authority and managed30s/60s policy cache are unchanged. Actual root3/10,
+mounted provider6/27, existing policy3/9, complete Dashboard types/build,
+owned237/1533+QA/Biome and H02 pass; unchanged API/H01/native Finance proof reused.
+
+Canonical18 readiness actions across nine families and two isolated Finance GETs
+pass15:49:17.265Z–15:50:36.129Z. Actual server Catalog headers8ms overlap the717ms
+policy fetch; Chromium sees headers16.7ms/useful1353ms. This proves root isolation
+in that sample, not the cause of the previous header outlier or a p95 speedup.
+Development restored to77855, other services unchanged. Complete API revision
+remains uncertified; no deployment or accepted budget. Login retains its separate
+policy-dependent selection owner; its cold2722ms policy/2799ms headers remain.
+[Current root and family evidence](../verification/2026-10-30-dashboard-root-qa-policy.md).
+[Parent Finance Book/native proof](../verification/2026-10-30-dashboard-finance-book-post-lock-read.md).
 
 The earlier abf8aae83/KRKy artifact has a separate63-checkpoint lifecycle run:
 all18 controlled hidden/offline windows start zero API requests. Counts distinguish
 RPC operations from batches; visible queues/focus/reconnect continue. Recursive
 receipt/Setup/socket contracts remain separately reviewed. That run is historical
-lifecycle evidence, not a new full lifecycle run on3ig. Its old18 timing rows were
+lifecycle evidence, not a new full lifecycle run on aXG. Its old18 timing rows were
 excluded after cleanup emitted an extra visibility event; the preceding normal
 baseline remains in its receipt. The table below is the new normal journey.
 [Lifecycle evidence and measurement limits](../verification/2026-10-30-dashboard-read-activity.md).
 
 | Family | Full-family refresh sample | Full-family warm-return sample |
 | --- | ---: | ---: |
-| Overview |964ms |1059ms |
-| Catalog |2799ms |821ms |
-| Orders |1975ms |823ms |
-| Customers |1184ms |1332ms |
-| Finance |3271ms |2343ms |
-| Website requests |2341ms |827ms |
-| Activity |2299ms |2629ms |
-| General |1198ms |1332ms |
-| Reports |2288ms |819ms |
+| Overview |947ms |1073ms |
+| Catalog |1353ms |821ms |
+| Orders |2048ms |819ms |
+| Customers |990ms |1323ms |
+| Finance |3326ms |2339ms |
+| Website requests |2795ms |819ms |
+| Activity |2306ms |2633ms |
+| General |2433ms |1320ms |
+| Reports |1948ms |813ms |
 
 Single representative samples, not p95, accepted budgets or whole-family acceptance.
-Finance/Activity warm2343/2629ms remain near prior2345/2623ms. Catalog refresh2799ms
-versus1412ms is an unresolved slower observation: first document headers19.3→
-1948.8ms, while request/script/RPC counts and script bytes are essentially unchanged.
-Attribute actual pre-header/server work before another import/cache change. No
-causal dashboard speedup or regression is established. Missing completed stream
-measurements are not zero SQL/bytes/work; server-to-server/pre-window work remains
-partly unseen. Phases overlap. Fresh authority and database topology are unchanged.
+Catalog1353ms versus preceding2799ms retains79 starts/44 scripts/five browser RPC
+operations; document headers1948.8→16.7ms. General/Website refresh2433/2795ms are
+slower observations than1198/2341ms previously; do not hide them or claim causation.
+Finance/Activity warm2339/2633ms remain near2343/2629ms, still missing targets.
+Book1490ms/7SQL and owed1905ms/9SQL retain preceding counts/DTO sizes. Context
+627.1/650.7ms and transaction control420.9ms/2,616.5ms/3 overlap. Pool0.1ms each,
+legal/domain0–0.1ms. Missing completed stream measurements are not zero work;
+server-to-server/pre-window work remains partly unseen. Fresh authority and
+DB topology are unchanged. No causal aggregate speedup or regression is established.
 
 A subsequent focused Activity observation improves DP-003 attribution without an
 application change. Numeric Chromium counters capture partial cancelled streams;
@@ -209,8 +220,8 @@ DP-203 creation, Finance/Customer Ledger completion and Order-change refresh now
 have actual callback/owner proof. Mutable Finance/Ledger prefixes, other command
 and report dependencies still need review; no full invalidation acceptance.
 Book's post-lock permission/metadata join now removes one measured statement,
-with current-currency fallback and native lock/refusal proof. Next attribute the
-slower Catalog document headers in the current sample, then remaining Finance/
+with current-currency fallback and native lock/refusal proof. Root optional QA policy
+is now isolated with actual post-header overlap proof. Next inspect remaining Finance/
 Activity context/control/projection round trips using actual caller evidence.
 QA-proof/legal overlap remains rejected for local latency (legal0ms). Activity's
 fresh per-mount identity still prevents naive route/intent prefetch substitution.
