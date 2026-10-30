@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "id": "2026-10-30-dashboard-assistant-read-lifetime",
+  "tickets": ["H02"],
+  "summary": "Local retained Assistant subtree stops optional record context reads when minimized; fresh reopen and existing refusal interval guard retain access recovery. No deployment.",
+  "noAssistantImpact": "Client read lifecycle only. Canonical Assistant tools, commands, confirmations, capabilities, procedures, source provenance, current Tenant/Store authorization, no-store/private payload erasure and safe original-record links remain. Hidden chat/history/drafts and in-flight command/recovery owners remain mounted. No new TTL, grant, data/provider action or deployment.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/web-navigation-performance.md"
+    },
+    {
+      "topic": "api",
+      "status": "not_applicable",
+      "note": "Existing Tenant read transport/input/output unchanged."
+    },
+    {
+      "topic": "permissions",
+      "status": "not_applicable",
+      "note": "Fresh authorized read and original Tenant/Store matching remain; no new grant."
+    },
+    {
+      "topic": "schema",
+      "status": "not_applicable",
+      "note": "No schema or migration."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/assistant/evaluations/fixtures/dashboard-assistant-visibility.fixture.tsx",
+      "executed": true,
+      "result": "Actual panel/content/chat/thread/answer-card/record-reader plus real app QueryClient/observers: eight tests/64 assertions pass after hidden/refused/no-abort red reproduction. Fresh delayed reopen, new generation/Store refusal, all three refusal classes/focus resumption, transient errors/cancellation and existing draft/command/run recovery use inert ports."
+    },
+    {
+      "kind": "run",
+      "path": "docs/verification/2026-10-30-dashboard-assistant-read-lifetime.md",
+      "executed": true,
+      "result": "Full Dashboard and explicit owned fixture types pass; owned fast237 tests/1533 assertions plus QA tooling types/Biome, H01 current/H02 client zero contract changes. Inert browser driver3/3 and frozen canonical existing-data local web smoke pass after sandbox Mach-port launch failure; failed/passed receipts retained, runtimeVerified:false. No business/AI submission, shared restart, deployment or page-speed claim. Prepared9eb8 optimized build remains unchanged and does not include this source."
+    }
+  ]
+}

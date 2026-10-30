@@ -1,17 +1,25 @@
 "use client"
 
 import { getDataCacheGeneration, useTRPCClient } from "@/trpc/client"
+import { readPollInterval } from "@/trpc/query-read-errors"
 import { readRecordAppLink } from "@ewatrade/assistant/channels/read-record-links"
 import type { ReadRecordTarget } from "@ewatrade/assistant/general/read-record-target"
 import { Button, buttonVariants } from "@ewatrade/ui"
 import { useQuery } from "@tanstack/react-query"
 import Link from "next/link"
 import { useEffect, useRef, useState } from "react"
+import { useAssistantReadActivity } from "./general-assistant/assistant-read-activity"
 
 /** Navigation rechecks the real browser scope; it never changes business or Store. */
 export function OpenAssistantReadRecord({
   target,
 }: { target: ReadRecordTarget }) {
+  return useAssistantReadActivity() ? (
+    <ActiveAssistantReadRecord target={target} />
+  ) : null
+}
+
+function ActiveAssistantReadRecord({ target }: { target: ReadRecordTarget }) {
   const client = useTRPCClient()
   const generation = useRef(getDataCacheGeneration())
   const [appOrigin, setAppOrigin] = useState("")
@@ -23,7 +31,7 @@ export function OpenAssistantReadRecord({
     gcTime: 0,
     retry: false,
     refetchOnMount: "always",
-    refetchInterval: 15_000,
+    refetchInterval: (query) => readPollInterval(query.state.error, 15_000),
   })
   const fresh =
     context.isSuccess &&

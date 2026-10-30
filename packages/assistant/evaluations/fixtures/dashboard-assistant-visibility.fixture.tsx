@@ -1,4 +1,5 @@
 import { afterEach, expect, mock, test } from "bun:test"
+import type { GeneralAnswer } from "@ewatrade/assistant/general/contracts"
 import { DOMImplementation } from "@xmldom/xmldom"
 import {
   type ComponentProps,
@@ -9,7 +10,8 @@ import {
   useState,
 } from "react"
 
-// Real GeneralChat, its hook, composer and QueryClient/observers. Only RPC, SDK
+// Real panel, GeneralChat, answer card, record reader, composer and query observers.
+// Only RPC, SDK
 // streaming, recorder and heavy presentation boundaries are inert. No network,
 // provider, database, storage, business command or authenticated browser runs.
 const document = new DOMImplementation().createDocument(
@@ -24,6 +26,7 @@ const window = {
   addEventListener() {},
   removeEventListener() {},
   matchMedia: () => ({ matches: true }),
+  location: { origin: "https://example.invalid" },
 }
 Object.assign(globalThis, {
   window,
@@ -48,6 +51,9 @@ document.createElement = (name: string) =>
     addEventListener() {},
     removeEventListener() {},
   })
+const body = document.createElement("body")
+document.documentElement?.appendChild(body)
+Object.assign(document, { body })
 const text = document.createTextNode.bind(document)
 document.createTextNode = (value: string) => {
   const node = text(value)
@@ -60,13 +66,13 @@ document.createTextNode = (value: string) => {
   return node
 }
 // Import after window: actual QueryObserver must use browser polling semantics.
-const { QueryClient, QueryClientProvider, focusManager } = await import(
+const { QueryClientProvider, focusManager } = await import(
   "@tanstack/react-query"
 )
 const { createRoot } = await import("react-dom/client")
 focusManager.setFocused(true)
 const realInterval = globalThis.setInterval
-// Accelerate only the production 60s optional polls, preserving real observer work.
+// Accelerate only the production 60s/15s optional polls, preserving observers.
 globalThis.setInterval = ((
   callback: TimerHandler,
   delay?: number,
@@ -74,7 +80,7 @@ globalThis.setInterval = ((
 ) =>
   realInterval(
     callback,
-    delay === 60_000 ? 15 : delay,
+    delay === 60_000 || delay === 15_000 ? 15 : delay,
     ...args,
   )) as typeof setInterval
 
@@ -98,6 +104,7 @@ const Button = ({
 )
 mock.module("@ewatrade/ui", () => ({
   Button,
+  buttonVariants: () => "",
   cn: (...values: unknown[]) => values.filter(Boolean).join(" "),
   ...Object.fromEntries(
     [
@@ -117,7 +124,18 @@ mock.module("@ewatrade/ui", () => ({
   ),
 }))
 mock.module("@hugeicons/react", () => ({ HugeiconsIcon: () => null }))
-mock.module("next/link", () => ({ default: leaf }))
+mock.module("next/link", () => ({
+  default: ({ children, href }: { children: ReactNode; href: string }) => (
+    <a href={href}>{children}</a>
+  ),
+}))
+mock.module("next/dist/client/components/error-boundary", () => ({
+  ErrorBoundary: leaf,
+}))
+mock.module(app("components/dashboard/workspace-error"), () => ({
+  WorkspaceError: () => null,
+}))
+mock.module(app("observability/sentry"), () => ({ captureDashboardError() {} }))
 mock.module("streamdown", () => ({ Streamdown: leaf }))
 mock.module("use-stick-to-bottom", () => ({
   StickToBottom: Object.assign(leaf, { Content: leaf }),
@@ -136,7 +154,6 @@ mock.module(app("hooks/use-assistant-draft-job-handoff"), () => ({
   useAssistantDraftJobHandoff: () => ({}),
 }))
 for (const [name, exports] of [
-  ["general-answer-card", { GeneralAnswerCard: () => null }],
   ["general-chat-photo", { GeneralSentFile: () => null }],
   [
     "general-proposal-card",
@@ -153,6 +170,32 @@ for (const [name, exports] of [
   ],
 ] as const)
   mock.module(app(`components/general-assistant/${name}`), () => exports)
+
+for (const [path, name] of [
+  ["open-assistant-booking-sheet", "OpenAssistantBookingSheet"],
+  ["open-assistant-finance-review", "OpenAssistantFinanceReview"],
+  ["open-assistant-manual-message-sheet", "OpenAssistantManualMessageSheet"],
+  ["open-assistant-quote-approval-sheet", "OpenAssistantQuoteApprovalSheet"],
+  ["open-assistant-service-request-sheet", "OpenAssistantServiceRequestSheet"],
+  ["open-business-report-sheet", "OpenBusinessReportSheet"],
+  ["open-service-work-original-sheet", "OpenServiceWorkOriginalSheet"],
+  ["open-staff-access-sheet", "OpenStaffAccessSheet"],
+  ["open-staff-activity-sheet", "OpenStaffActivitySheet"],
+  ["open-staff-directory-sheet", "OpenStaffDirectorySheet"],
+  ["open-staff-history-sheet", "OpenStaffHistorySheet"],
+  ["open-staff-invitation-sheet", "OpenStaffInvitationSheet"],
+  ["open-staff-member-sheet", "OpenStaffMemberSheet"],
+  ["open-staff-status-sheet", "OpenStaffStatusSheet"],
+  [
+    "general-assistant/general-money-accounts-answer",
+    "GeneralMoneyAccountsAnswer",
+  ],
+  ["general-assistant/general-service-job-card", "GeneralServiceJobCard"],
+  ["general-assistant/open-missing-catalog-item", "OpenMissingCatalogItem"],
+] as const) {
+  mock.module(app(`components/${path}`), () => ({ [name]: () => null }))
+}
+
 const noItems: never[] = []
 mock.module(app("components/setup-assistant/use-setup-attachments"), () => ({
   useSetupAttachments: () => ({
@@ -226,13 +269,20 @@ let command: ReturnType<typeof Promise.withResolvers<object>> | undefined
 let runStatus = "RUNNING"
 const runReads: string[] = []
 const originalFetch = globalThis.fetch
-globalThis.fetch = async (input) => {
-  const path = String(input)
-  if (!path.startsWith("/api/assistant/general/runs/"))
-    throw Error("Unexpected network boundary")
-  runReads.push(path)
-  return Response.json({ conversationId: "chat-a", status: runStatus })
-}
+globalThis.fetch = Object.assign(
+  async (input: Parameters<typeof fetch>[0]) => {
+    const path = String(input)
+    if (!path.startsWith("/api/assistant/general/runs/"))
+      throw Error("Unexpected network boundary")
+    runReads.push(path)
+    return Response.json({ conversationId: "chat-a", status: runStatus })
+  },
+  {
+    preconnect() {
+      throw Error("Unexpected network boundary")
+    },
+  },
+)
 const reads: string[] = []
 function endpoint(path: string, get: () => unknown) {
   return {
@@ -278,7 +328,41 @@ const trpc = {
     },
   },
 }
-mock.module(app("trpc/client"), () => ({ useTRPC: () => trpc }))
+let recordReads = 0
+let recordGeneration = 0
+let recordError: string | null = null
+let recordStore = "store-a"
+type RecordContext = { tenant: { id: string }; activeStore: { id: string } }
+let recordGate:
+  | ReturnType<typeof Promise.withResolvers<RecordContext>>
+  | undefined
+let recordAborts = 0
+mock.module(app("trpc/client"), () => ({
+  useTRPC: () => trpc,
+  getDataCacheGeneration: () => recordGeneration,
+  useTRPCClient: () => ({
+    tenant: {
+      current: {
+        query: async (_: unknown, options: { signal: AbortSignal }) => {
+          recordReads++
+          options.signal.addEventListener("abort", () => recordAborts++, {
+            once: true,
+          })
+          if (recordError) throw { data: { code: recordError } }
+          return (
+            recordGate?.promise ?? {
+              tenant: { id: "tenant-a" },
+              activeStore: { id: recordStore },
+            }
+          )
+        },
+      },
+    },
+  }),
+}))
+const { makeQueryClient } = await import(
+  "../../../../apps/dashboard/src/trpc/query-client"
+)
 const { useGeneralAssistant: realHook } = await import(
   "../../../../apps/dashboard/src/components/general-assistant/use-general-assistant"
 )
@@ -292,8 +376,17 @@ mock.module(app("components/general-assistant/use-general-assistant"), () => ({
 const { GeneralChat } = await import(
   "../../../../apps/dashboard/src/components/general-assistant/general-chat"
 )
+const { QuickAssistantPanel } = await import(
+  "../../../../apps/dashboard/src/components/quick-assistant/quick-assistant-panel"
+)
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
-async function mounted() {
+async function mounted(panel = false) {
+  recordReads = 0
+  recordGeneration = 0
+  recordError = null
+  recordStore = "store-a"
+  recordGate = undefined
+  recordAborts = 0
   reads.length = 0
   runReads.length = 0
   stops = 0
@@ -311,14 +404,19 @@ async function mounted() {
   const host = document.createElement("div")
   document.documentElement?.appendChild(host)
   const root = createRoot(host as unknown as HTMLElement)
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false, staleTime: 0, gcTime: 0 } },
+  const client = makeQueryClient()
+  client.setDefaultOptions({
+    queries: { retry: false, staleTime: 0, gcTime: 0 },
   })
   const render = async (active: boolean) => {
     await act(async () => {
       root.render(
         <QueryClientProvider client={client}>
-          <GeneralChat active={active} />
+          {panel ? (
+            <QuickAssistantPanel opened={active} onMinimize={() => {}} />
+          ) : (
+            <GeneralChat active={active} />
+          )}
         </QueryClientProvider>,
       )
       await delay(20)
@@ -330,6 +428,7 @@ async function mounted() {
   return {
     client,
     render,
+    html: () => document.documentElement?.toString() ?? "",
     close: async () => {
       await act(async () => root.unmount())
       client.clear()
@@ -464,6 +563,169 @@ test("a streamed run remains recoverable after minimizing", async () => {
     await delay(45)
   })
   expect(reads).toEqual(afterRecovery)
+})
+
+const recordAnswer = {
+  id: "answer-record",
+  title: "Inert catalog result",
+  value: "A product",
+  detail: "Existing recorded item",
+  scope: "Original Store",
+  asOf: "2026-10-29T00:00:00.000Z",
+  target: {
+    kind: "catalog_item",
+    catalogItemId: "item-a",
+    origin: { tenantId: "tenant-a", storeId: "store-a" },
+  },
+} satisfies GeneralAnswer
+async function showRecord() {
+  await act(async () => {
+    vm.chat.setMessages([
+      {
+        id: "message-record",
+        role: "assistant",
+        parts: [{ type: "data-general-answer", data: recordAnswer }],
+      },
+    ])
+    await delay(20)
+  })
+  await act(async () => {
+    await delay(20)
+  })
+}
+
+test("actual retained panel and answer-card record stop hidden reads and require fresh scope on reopen", async () => {
+  const ui = await mounted(true)
+  cleanups.push(ui.close)
+  await ui.render(true)
+  await showRecord()
+  expect(ui.html()).toContain(
+    'href="https://example.invalid/sales?catalogDetail=item-a"',
+  )
+  expect(recordReads).toBeGreaterThan(0)
+  await act(async () => vm.setDraft("Retained record draft"))
+  await ui.render(false)
+  const hiddenReads = recordReads
+  await act(async () => {
+    await ui.client.invalidateQueries()
+    await delay(50)
+  })
+  expect(recordReads).toBe(hiddenReads)
+  expect(ui.html()).toContain("quick-assistant-panel")
+  expect(ui.html()).not.toContain(
+    'href="https://example.invalid/sales?catalogDetail=item-a"',
+  )
+  const gate = Promise.withResolvers<RecordContext>()
+  recordGate = gate
+  recordGeneration++
+  await ui.render(true)
+  expect(recordReads).toBeGreaterThan(hiddenReads)
+  expect(ui.html()).toContain("Checking record access")
+  expect(ui.html()).not.toContain(
+    'href="https://example.invalid/sales?catalogDetail=item-a"',
+  )
+  expect(vm.draft).toBe("Retained record draft")
+  await act(async () => {
+    gate.resolve({ tenant: { id: "tenant-a" }, activeStore: { id: "store-b" } })
+    await delay(20)
+  })
+  expect(ui.html()).not.toContain(
+    'href="https://example.invalid/sales?catalogDetail=item-a"',
+  )
+  expect(ui.html()).toContain("Select the original business")
+})
+
+test("record refusals stop intervals, erase payload and recover on focus", async () => {
+  for (const code of ["FORBIDDEN", "UNAUTHORIZED", "NOT_FOUND"]) {
+    const ui = await mounted(true)
+    try {
+      await ui.render(true)
+      await showRecord()
+      expect(ui.html()).toContain(
+        'href="https://example.invalid/sales?catalogDetail=item-a"',
+      )
+      recordError = code
+      await act(async () => {
+        await ui.client.invalidateQueries({
+          queryKey: ["assistant-read-record-context"],
+        })
+        await delay(10)
+      })
+      const refusedReads = recordReads
+      expect(
+        ui.client.getQueryData([
+          "assistant-read-record-context",
+          recordGeneration,
+        ]),
+      ).toBeUndefined()
+      expect(ui.html()).not.toContain(
+        'href="https://example.invalid/sales?catalogDetail=item-a"',
+      )
+      await act(async () => {
+        await delay(50)
+      })
+      expect(recordReads).toBe(refusedReads)
+      recordError = null
+      await act(async () => {
+        focusManager.setFocused(false)
+        focusManager.setFocused(true)
+        await delay(20)
+      })
+      await act(async () => {
+        await delay(20)
+      })
+      expect(recordReads).toBeGreaterThan(refusedReads)
+      const recoveredReads = recordReads
+      await act(async () => {
+        await delay(40)
+      })
+      expect(recordReads).toBeGreaterThan(recoveredReads)
+      expect(ui.html()).toContain(
+        'href="https://example.invalid/sales?catalogDetail=item-a"',
+      )
+    } finally {
+      await ui.close()
+    }
+  }
+})
+
+test("transient record errors retain interval recovery and minimizing aborts an in-flight private read", async () => {
+  const ui = await mounted(true)
+  cleanups.push(ui.close)
+  await ui.render(true)
+  await showRecord()
+  recordError = "INTERNAL_SERVER_ERROR"
+  await act(async () => {
+    await ui.client.invalidateQueries({
+      queryKey: ["assistant-read-record-context"],
+    })
+    await delay(1)
+  })
+  const failedReads = recordReads
+  await act(async () => {
+    await delay(45)
+  })
+  expect(recordReads).toBeGreaterThan(failedReads)
+  recordError = null
+  const gate = Promise.withResolvers<RecordContext>()
+  recordGate = gate
+  await act(async () => {
+    void ui.client.invalidateQueries({
+      queryKey: ["assistant-read-record-context"],
+    })
+    await delay(1)
+  })
+  await ui.render(false)
+  expect(recordAborts).toBeGreaterThan(0)
+  const hiddenReads = recordReads
+  await act(async () => {
+    gate.resolve({ tenant: { id: "tenant-a" }, activeStore: { id: "store-a" } })
+    await delay(30)
+  })
+  expect(recordReads).toBe(hiddenReads)
+  expect(ui.html()).not.toContain(
+    'href="https://example.invalid/sales?catalogDetail=item-a"',
+  )
 })
 
 process.on("exit", () => {

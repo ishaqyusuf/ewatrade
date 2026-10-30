@@ -181,3 +181,14 @@ sentinel. An initial ambient-environment invocation selected the smaller non-QA
 router and reported stale coverage; comparison showed only that environment's QA
 registration difference. No snapshot was rewritten to hide it. H02 passes with
 no gated change for this documentation-only slice.
+
+## Implementation follow-up: P14 / A1 — 30 October 2026
+
+[Assistant record lifetime slice](../verification/2026-10-30-dashboard-assistant-read-lifetime.md)
+carries activity through the actual retained chat subtree and unmounts only the
+optional private reader when hidden. Reopen requires fresh authorized context;
+known refusals stop intervals with recovery preserved. The strengthened fixture
+now includes actual answer cards and the complete panel/content/chat chain. It
+passes eight tests / 64 assertions after reproducing the hidden/refused/cancellation
+gaps. P14's A2 guard is included; other A2 owners and A3–A6 remain outstanding.
+This follow-up does not change the historical snapshot or accept DP-204/407.

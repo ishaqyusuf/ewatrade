@@ -717,3 +717,24 @@ erasure succeeds. These are red diagnostic results, not passing acceptance or
 evidence of a data leak. Conversation late-response and raw QA background refresh
 remain source hypotheses requiring inert proof. Product source/prepared optimized
 build unchanged; no runtime restart/deployment. Full program remains3/27 accepted.
+
+## Assistant record descendant activity — DP-204/407
+
+- [x] Reproduce the omitted actual answer-card descendant in the existing retained
+  panel fixture, including hidden invalidation and refused interval work.
+- [x] Carry optional read activity through the chat subtree. Unmount only the
+  private record reader on minimize; remount/fresh-check on reopen. Reuse refusal
+  interval guard while preserving focus recovery, scope and command lifetime.
+- [x] Complete focused types/source/gates and canonical local smoke, commit and
+  record evidence. A1 and P14's A2 behavior are implemented; other audited owners
+  and per-family optimized acceptance remain. Full program stays3/27.
+
+[Receipt](../verification/2026-10-30-dashboard-assistant-read-lifetime.md).
+
+Executed: strengthened actual-path fixture8/64 plus isolated entry pass; full
+Dashboard and explicit fixture types pass. Owned fast237/1533+QA types/Biome,
+H01 current/H02 client with zero contract rows, inert browser driver3/3 and frozen
+canonical local smoke pass. Sandbox Chromium registration failure is preserved;
+retry outside that sandbox passes. Runtime remains unverified; no Assistant AI
+submission/business write or page-speed claim. Prepared9eb8 optimized files remain
+unchanged and do not include this new source. Overall3/27 accepted remains.

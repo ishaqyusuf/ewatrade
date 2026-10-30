@@ -51,6 +51,7 @@ import { Fragment, type ReactNode, useEffect, useState } from "react"
 import { Streamdown } from "streamdown"
 import { StickToBottom } from "use-stick-to-bottom"
 import { AssistantComposer } from "./assistant-composer"
+import { AssistantReadActivityProvider } from "./assistant-read-activity"
 import { GeneralAnswerCard } from "./general-answer-card"
 import { GeneralAttachComposer } from "./general-attachment-tray"
 import { GeneralSentFile } from "./general-chat-photo"
@@ -887,59 +888,61 @@ export function GeneralChat({
   const pendingChats = new Set(pending.map((row) => row.conversationId))
   const focus = useReviewFocus(vm)
   return (
-    <section
-      aria-label="Assistant"
-      className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
-    >
-      <header className="flex shrink-0 items-center gap-1 border-b py-1.5 pr-2 pl-3">
-        <HugeiconsIcon
-          icon={SparklesIcon}
-          className="size-4 shrink-0 text-primary"
+    <AssistantReadActivityProvider active={active}>
+      <section
+        aria-label="Assistant"
+        className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
+      >
+        <header className="flex shrink-0 items-center gap-1 border-b py-1.5 pr-2 pl-3">
+          <HugeiconsIcon
+            icon={SparklesIcon}
+            className="size-4 shrink-0 text-primary"
+          />
+          <div className="min-w-0 flex-1">
+            <GeneralChatSwitcher vm={vm} pendingChats={pendingChats} pageLink />
+          </div>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            aria-label="New chat"
+            title="New chat"
+            disabled={navigationDisabled}
+            onClick={() => void vm.newThread()}
+          >
+            <HugeiconsIcon icon={PlusSignIcon} className="size-4" />
+          </Button>
+          {actions}
+        </header>
+        <GeneralReviewStrip
+          pending={pending}
+          onReview={() => pending[0] && focus.review(pending[0])}
         />
-        <div className="min-w-0 flex-1">
-          <GeneralChatSwitcher vm={vm} pendingChats={pendingChats} pageLink />
-        </div>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          aria-label="New chat"
-          title="New chat"
-          disabled={navigationDisabled}
-          onClick={() => void vm.newThread()}
-        >
-          <HugeiconsIcon icon={PlusSignIcon} className="size-4" />
-        </Button>
-        {actions}
-      </header>
-      <GeneralReviewStrip
-        pending={pending}
-        onReview={() => pending[0] && focus.review(pending[0])}
-      />
-      <GeneralThread
-        vm={vm}
-        compact
-        focusId={focus.focusId}
-        onFocused={focus.clear}
-      />
-      <div className="shrink-0 px-3 pt-2 pb-3">
-        <GeneralComposer
+        <GeneralThread
           vm={vm}
-          active={active}
-          footer={
-            <p
-              className={cn(
-                "text-center",
-                vm.data &&
-                  generalBudgetUsed(vm.data.allowance) &&
-                  "text-amber-700 dark:text-amber-400",
-              )}
-            >
-              {allowanceLine(vm)}
-            </p>
-          }
+          compact
+          focusId={focus.focusId}
+          onFocused={focus.clear}
         />
-      </div>
-    </section>
+        <div className="shrink-0 px-3 pt-2 pb-3">
+          <GeneralComposer
+            vm={vm}
+            active={active}
+            footer={
+              <p
+                className={cn(
+                  "text-center",
+                  vm.data &&
+                    generalBudgetUsed(vm.data.allowance) &&
+                    "text-amber-700 dark:text-amber-400",
+                )}
+              >
+                {allowanceLine(vm)}
+              </p>
+            }
+          />
+        </div>
+      </section>
+    </AssistantReadActivityProvider>
   )
 }
