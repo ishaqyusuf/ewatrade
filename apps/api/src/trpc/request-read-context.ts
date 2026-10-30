@@ -15,6 +15,11 @@ export function createRequestReadContext(
     userId: string
     read: () => Promise<void>
   },
+  initialTenant?: {
+    db: object
+    input: TenantInput
+    read: () => Promise<TenantContext | null>
+  },
 ) {
   if (method !== "GET") return undefined
   const eligibility = new WeakMap<object, Map<string, Promise<void>>>()
@@ -62,8 +67,19 @@ export function createRequestReadContext(
       ])
       let value = values.get(key)
       if (!value) {
-        value = Promise.resolve().then(read)
+        const initial =
+          initialTenant?.db === db &&
+          key ===
+            JSON.stringify([
+              initialTenant.input.userId,
+              initialTenant.input.tenantSlug ?? null,
+              initialTenant.input.storeId ?? null,
+            ])
+            ? initialTenant.read
+            : undefined
+        value = Promise.resolve().then(initial ?? read)
         values.set(key, value)
+        if (initial) traceSynchronousPhase("scopeReuse", () => undefined)
       } else {
         traceSynchronousPhase("scopeReuse", () => undefined)
       }

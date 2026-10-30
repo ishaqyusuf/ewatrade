@@ -1,5 +1,22 @@
 # Dashboard performance program
 
+## Shared request workspace projection — DP-102/103,30October2026
+
+- [x] Reproduce duplicate preference/protected scope reads in an actual GET.
+- [x] DB-owned joined current preference/profile; exact request identity reuse.
+- [x] Canonical selector/mapper parity; declared-age and QA SQL profile fences.
+- [x] Generated Prisma/PGlite6/98 and request/Hono16/97; types, scoped237/1533,
+  QA tooling/Biome, H01/H02 pass. POST/mutation/recovery/foreign scope stay fresh.
+- [x]18 local route readiness actions pass; Dashboard development restored,
+  API/Storefront/Marketing unchanged. Book SQL9→8, owed10→9, scope2→1.
+
+[Receipt](../verification/2026-10-30-dashboard-workspace-scope-projection.md).
+Finance3510/2327ms and Activity4205/3103ms(refresh/warm); single samples using
+unchanged b636 Dashboard artifact and updated hot API, runtimeVerified false.
+Context still~640ms; no p95/whole-ticket acceptance. Full program3/27 (11.1%).
+Warm metadata, fresh auth/QA cost, Finance spending and Activity attribution remain.
+Local only, no deployment or permission TTL.
+
 ## Independent Finance document reads — DP-102/103/405,30October2026
 
 - [x] Red held-Book test reproduces the serial panel startup.

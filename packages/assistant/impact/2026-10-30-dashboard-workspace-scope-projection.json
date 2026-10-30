@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "id": "2026-10-30-dashboard-workspace-scope-projection",
+  "tickets": ["H02"],
+  "summary": "Join remembered-business preference and conditional workspace profile once in a current HTTP GET. Local only.",
+  "noAssistantImpact": "Existing request-local read admission only. Canonical workspace selector/mapper, declared-age policy, session/legal/QA admission, role/Store/plan predicates, commands and DTOs unchanged. Seed is exact database/actor/business/Store and GET query only; POST, mutation, linked/default-byte and recovery mismatches retain fresh canonical authority. Undeclared age or foreign QA scope returns no protected profile from SQL. No new tool/procedure/capability, grant, schema or rollout.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/web-navigation-performance.md"
+    },
+    {
+      "topic": "permissions",
+      "status": "local_only",
+      "path": ".brain/api/permissions.md"
+    },
+    {
+      "topic": "api",
+      "status": "local_only",
+      "path": ".brain/api/contracts.md"
+    },
+    {
+      "topic": "schema",
+      "status": "not_applicable",
+      "note": "No schema, index or migration change."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/workspace-read-preference.test.ts",
+      "executed": true,
+      "result": "Six actual generated-Prisma/PGlite cases,98 assertions including56 role/access-mode/Store combinations, declared-age SQL privacy, fresh status, QA fences and date/plan parity."
+    },
+    {
+      "kind": "test",
+      "path": "apps/api/src/trpc/request-read-context.test.ts",
+      "executed": true,
+      "result": "Together with actual Hono preference tests:16 cases/97 assertions; exact identity, clones, no cross-request reuse, mutation/recovery/QA refusal and canonical fallback."
+    },
+    {
+      "kind": "run",
+      "path": "docs/verification/2026-10-30-dashboard-workspace-scope-projection.md",
+      "executed": true,
+      "result": "DB/API/Dashboard types, scoped237/1533+QA types/Biome,H01 and18 local route actions pass. Dashboard development restored; other listeners unchanged. Book SQL9->8, owed10->9; scope2->1. Single samples, runtimeVerified false, no broad performance acceptance or deployment."
+    }
+  ]
+}

@@ -12,6 +12,7 @@ import {
   RetailOpsSubscriptionError,
   getActiveTenantForUser,
   getCustomerAccountAgeStatus,
+  getWorkspaceReadPreference,
   isEligibleAccountAgeBand,
   validateQaDerivedSession,
 } from "@ewatrade/db/queries"
@@ -184,25 +185,40 @@ export const createTRPCContext = async (
     const requestCookies = parseCookieHeader(c.req.header("cookie"))
     const explicitTenantSlug = c.req.header("x-tenant-slug")
     const cookieTenantSlug = requestCookies.get("ewatrade.active_tenant_slug")
+    const activeStoreId =
+      c.req.header("x-store-id") ??
+      requestCookies.get("ewatrade.active_store_id") ??
+      null
     // A remembered business is only a suggestion. Explicit tenant headers stay strict.
-    const cookieMembership =
+    const rememberedBusiness =
       explicitTenantSlug === undefined && cookieTenantSlug && session
+        ? { userId: session.user.id, tenantSlug: cookieTenantSlug }
+        : null
+    const cookiePreference =
+      rememberedBusiness && c.req.method === "GET"
         ? await tracePhase("scope", () =>
-            prisma.membership.findFirst({
-              where: {
-                userId: session.user.id,
-                status: "ACTIVE",
-                tenant: { slug: cookieTenantSlug, isActive: true },
-              },
-              select: {
-                id: true,
-                ...(c.req.method === "GET"
-                  ? { user: { select: { ageBand: true } } }
-                  : {}),
-              },
+            getWorkspaceReadPreference(prisma, {
+              ...rememberedBusiness,
+              storeId: qaSessionValidation.scope?.storeId ?? activeStoreId,
+              qaScope: qaSessionValidation.scope,
             }),
           )
         : null
+    const cookieMembership =
+      cookiePreference ??
+      (rememberedBusiness && c.req.method !== "GET"
+        ? await tracePhase("scope", () =>
+            prisma.membership.findFirst({
+              where: {
+                userId: rememberedBusiness.userId,
+                status: "ACTIVE",
+                tenant: { slug: rememberedBusiness.tenantSlug, isActive: true },
+              },
+              select: { id: true },
+            }),
+          )
+        : null)
+    const preferenceScope = cookiePreference?.scope
     const tenantSlug =
       explicitTenantSlug ?? (cookieMembership ? cookieTenantSlug : null) ?? null
 
@@ -210,14 +226,21 @@ export const createTRPCContext = async (
       readContext: session
         ? createRequestReadContext(
             c.req.method,
-            cookieMembership && "user" in cookieMembership
+            cookiePreference
               ? {
                   db: prisma,
                   userId: session.user.id,
                   read: async () =>
                     assertEligibleAccountAge(
-                      isEligibleAccountAgeBand(cookieMembership.user.ageBand),
+                      isEligibleAccountAgeBand(cookiePreference.user.ageBand),
                     ),
+                }
+              : undefined,
+            preferenceScope
+              ? {
+                  db: prisma,
+                  input: preferenceScope.input,
+                  read: async () => preferenceScope.tenantContext,
                 }
               : undefined,
           )
@@ -251,10 +274,7 @@ export const createTRPCContext = async (
           getHeader: (name) => c.req.header(name),
         }),
       userAgent: c.req.header("user-agent") ?? null,
-      activeStoreId:
-        c.req.header("x-store-id") ??
-        requestCookies.get("ewatrade.active_store_id") ??
-        null,
+      activeStoreId,
       qaSessionScope: qaSessionValidation.scope,
     }
   })

@@ -3,6 +3,7 @@ import {
   type PerformanceTrace,
   withPerformanceTrace,
 } from "@ewatrade/db/performance-tracing"
+import { getActiveTenantForUser } from "@ewatrade/db/queries"
 import {
   type TRPCContext,
   createCallerFactory,
@@ -226,4 +227,77 @@ test("initial current eligibility is lazy and can only satisfy its exact databas
   const fresh = createRequestReadContext("GET")
   await fresh?.eligibility(db, "actor", fallback)
   expect(fallbackReads).toBe(3)
+})
+
+test("initial workspace projection is lazy, cloned and limited to the exact database/actor/business/Store GET", async () => {
+  const state = request()
+  const tenant = await getActiveTenantForUser(state.ctx.db, {
+    userId: "actor",
+    tenantSlug: "business",
+    storeId: "store",
+  })
+  const input = { userId: "actor", tenantSlug: "business", storeId: "store" }
+  let initialReads = 0
+  let fallbackReads = 0
+  const initial = {
+    db: state.ctx.db,
+    input,
+    read: async () => {
+      initialReads++
+      return tenant
+    },
+  }
+  const memo = createRequestReadContext("GET", undefined, initial)
+  if (!memo) throw Error("GET owner missing")
+  const fallback = async () => {
+    fallbackReads++
+    return null
+  }
+  expect(initialReads).toBe(0)
+  const [first, second] = await Promise.all([
+    memo.tenant(state.ctx.db, input, fallback),
+    memo.tenant(state.ctx.db, input, fallback),
+  ])
+  if (!first || !second) throw Error("Fixture context missing")
+  first.tenant.name = "reader change"
+  expect(second.tenant.name).toBe("Business")
+  expect(tenant?.tenant.name).toBe("Business")
+  expect(initialReads).toBe(1)
+  await memo.tenant({}, input, fallback)
+  for (const other of [
+    { ...input, userId: "foreign" },
+    { ...input, tenantSlug: "foreign" },
+    { ...input, storeId: null },
+    { ...input, storeId: "foreign" },
+  ])
+    await memo.tenant(state.ctx.db, other, fallback)
+  expect(fallbackReads).toBe(5)
+  expect(createRequestReadContext("POST", undefined, initial)).toBeUndefined()
+  await createRequestReadContext("GET")?.tenant(state.ctx.db, input, fallback)
+  expect(fallbackReads).toBe(6)
+})
+
+test("seeded workspace GETs cannot satisfy mutation, recovery or changed QA scope authority", async () => {
+  const state = request()
+  const input = { userId: "actor", tenantSlug: "business", storeId: "store" }
+  const tenant = await getActiveTenantForUser(state.ctx.db, input)
+  state.ctx.readContext = createRequestReadContext("GET", undefined, {
+    db: state.ctx.db,
+    input,
+    read: async () => tenant,
+  })
+  const caller = createCallerFactory(router)(state.ctx)
+  expect(await caller.first()).toBe("tenant")
+  state.revoke()
+  await expect(caller.write()).rejects.toMatchObject({ code: "NOT_FOUND" })
+  await expect(
+    resolveProtectedTenantContext(state.ctx, true, true),
+  ).rejects.toMatchObject({ code: "NOT_FOUND" })
+  state.ctx.qaSessionScope = {
+    tenantId: "foreign",
+    storeId: "store",
+    membershipId: "membership",
+  }
+  await expect(caller.first()).rejects.toMatchObject({ code: "FORBIDDEN" })
+  expect(state.counts()).toEqual({ ageReads: 2, membershipReads: 3 })
 })

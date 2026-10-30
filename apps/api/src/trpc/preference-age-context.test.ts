@@ -1,8 +1,7 @@
 import { expect, spyOn, test } from "bun:test"
-import { PGlite } from "@electric-sql/pglite"
 import { auth } from "@ewatrade/auth"
 import { PrismaClient, prisma } from "@ewatrade/db"
-import { AccountAgeBand, MembershipStatus } from "@ewatrade/db/enums"
+import type { AccountAgeBand } from "@ewatrade/db/enums"
 import { Hono } from "hono"
 import {
   type TRPCContext,
@@ -84,44 +83,45 @@ async function fixture(
   const sessionSpy = spyOn(auth.api, "getSession").mockImplementation(
     getSession as never,
   )
+  const fullMembership = () => ({
+    id: "membership",
+    role: "OWNER",
+    tenantId: "tenant",
+    staffAccessMode: "LEGACY",
+    catalogEditor: false,
+    staffStoreAssignments: [],
+    retailOpsStaffProfile: null,
+    tenant: {
+      id: "tenant",
+      slug: "business",
+      name: "Business",
+      type: "MERCHANT",
+      enabledModes: ["MERCHANT"],
+      currencyCode: "NGN",
+      dataClassification: "LIVE",
+      timezone: "Africa/Lagos",
+      qaPurgeStartedAt: null,
+      metadata: {},
+      subscription: null,
+      stores: [
+        {
+          id: "store",
+          slug: "store",
+          name: "Store",
+          status: "ACTIVE",
+          currencyCode: "NGN",
+          metadata: {},
+        },
+      ],
+    },
+  })
   const membershipRead = async (
     input: Parameters<typeof prisma.membership.findFirst>[0],
   ) => {
     if (state.failure) throw state.failure
     if (input?.select?.tenant) {
       counts.tenant++
-      return {
-        id: "membership",
-        role: "OWNER",
-        tenantId: "tenant",
-        staffAccessMode: "LEGACY",
-        catalogEditor: false,
-        staffStoreAssignments: [],
-        retailOpsStaffProfile: null,
-        tenant: {
-          id: "tenant",
-          slug: "business",
-          name: "Business",
-          type: "MERCHANT",
-          enabledModes: ["MERCHANT"],
-          currencyCode: "NGN",
-          dataClassification: "LIVE",
-          timezone: "Africa/Lagos",
-          qaPurgeStartedAt: null,
-          metadata: {},
-          subscription: null,
-          stores: [
-            {
-              id: "store",
-              slug: "store",
-              name: "Store",
-              status: "ACTIVE",
-              currencyCode: "NGN",
-              metadata: {},
-            },
-          ],
-        },
-      } as never
+      return fullMembership() as never
     }
     counts.preference++
     preferences.push(structuredClone(input))
@@ -133,7 +133,15 @@ async function fixture(
     return state.preferenceActive
       ? ({
           id: "membership",
-          ...(input?.select?.user ? { user: { ageBand: state.ageBand } } : {}),
+          ...(input?.select?.user
+            ? {
+                user: {
+                  ageBand: state.ageBand,
+                  memberships:
+                    state.ageBand === "UNDECLARED" ? [] : [fullMembership()],
+                },
+              }
+            : {}),
         } as never)
       : null
   }
@@ -191,6 +199,16 @@ async function fixture(
   }
 }
 
+test("a remembered-business GET does not repeat its admitted workspace scope lookup", async () => {
+  await fixture(async ({ request, counts }) => {
+    const caller = createCallerFactory(router)(await request())
+    expect(
+      await Promise.all([caller.first(), caller.second(), caller.first()]),
+    ).toEqual(["tenant", "store", "tenant"])
+    expect(counts.preference + counts.tenant).toBe(1)
+  })
+})
+
 test("remembered-business GET projects age once and parallel protected queries use it without another User read", async () => {
   await fixture(async ({ request, counts, preferences }) => {
     const ctx = await request()
@@ -199,10 +217,18 @@ test("remembered-business GET projects age once and parallel protected queries u
     expect(
       await Promise.all([caller.first(), caller.second(), caller.first()]),
     ).toEqual(["tenant", "store", "tenant"])
-    expect(counts).toEqual({ preference: 1, age: 0, tenant: 1, proof: 0 })
+    expect(counts).toEqual({ preference: 1, age: 0, tenant: 0, proof: 0 })
     expect(preferences).toEqual([
       expect.objectContaining({
-        select: { id: true, user: { select: { ageBand: true } } },
+        select: {
+          id: true,
+          user: {
+            select: {
+              ageBand: true,
+              memberships: expect.objectContaining({ take: 1 }),
+            },
+          },
+        },
       }),
     ])
   })
@@ -332,55 +358,9 @@ test("the actual GET preference projection compiles to one joined PostgreSQL sta
       expect(queries[0]?.args).toContain("business")
       const query = queries[0]
       if (!query) throw Error("Compiled preference SQL absent")
-      const memory = await PGlite.create()
-      try {
-        for (const [name, values] of Object.entries({
-          AccountAgeBand,
-          MembershipStatus,
-        }))
-          await memory.exec(
-            `CREATE TYPE "${name}" AS ENUM (${Object.values(values)
-              .map((value) => `'${value}'`)
-              .join(",")})`,
-          )
-        await memory.exec(`
-          CREATE TABLE "User" (id text PRIMARY KEY, "ageBand" "AccountAgeBand");
-          CREATE TABLE "Tenant" (id text PRIMARY KEY, slug text UNIQUE, "isActive" boolean);
-          CREATE TABLE "Membership" (id text PRIMARY KEY, "tenantId" text REFERENCES "Tenant", "userId" text REFERENCES "User", status "MembershipStatus");
-          INSERT INTO "User" VALUES ('actor','ADULT'),('foreign','UNDECLARED');
-          INSERT INTO "Tenant" VALUES ('tenant','business',true),('foreign','foreign',true);
-          INSERT INTO "Membership" VALUES ('membership','tenant','actor','ACTIVE'),('foreign','foreign','foreign','ACTIVE');
-        `)
-        const read = async () =>
-          (await memory.query(query.sql, query.args)).rows
-        expect(await read()).toEqual([
-          { id: "membership", userId: "actor", user: { ageBand: "ADULT" } },
-        ])
-        await memory.exec(
-          `UPDATE "User" SET "ageBand"='UNDECLARED' WHERE id='actor'`,
-        )
-        expect(await read()).toEqual([
-          {
-            id: "membership",
-            userId: "actor",
-            user: { ageBand: "UNDECLARED" },
-          },
-        ])
-        await memory.exec(
-          `UPDATE "Membership" SET status='INVITED' WHERE id='membership'`,
-        )
-        expect(await read()).toEqual([])
-        await memory.exec(
-          `UPDATE "Membership" SET status='ACTIVE' WHERE id='membership'; UPDATE "Tenant" SET "isActive"=false WHERE id='tenant'`,
-        )
-        expect(await read()).toEqual([])
-        await memory.exec(
-          `UPDATE "Tenant" SET "isActive"=true WHERE id='tenant'; UPDATE "Membership" SET "userId"='foreign' WHERE id='membership'`,
-        )
-        expect(await read()).toEqual([])
-      } finally {
-        await memory.close()
-      }
+      for (const band of ["AGE_13_TO_15", "AGE_16_TO_17", "ADULT"])
+        expect(query.args).toContain(band)
+      expect(query.args).not.toContain("UNDECLARED")
     } finally {
       await client.$disconnect()
     }
