@@ -72,6 +72,20 @@ unchanged. `runtimeVerified:false`; no release qualification or deployment.
 [Browser streaming](../verification/2026-10-30-dashboard-browser-read-streaming.md) ·
 [Activity enrichment](../verification/2026-10-30-dashboard-activity-bounded-enrichment.md).
 
+The unchanged8Xfym candidate now has an offline census of all59 app pages (plus2
+Next error entries/31 server entries) and actual9family refresh/return plus13clean closed
+code-delivery snapshots and one partial legacy-redirect capture. All12 calibrated
+heavy body/tool definitions are absent in the clean states;
+only expected tiny Catalog/Service controller self-imports remain. One35.5KB shared
+form-library chunk is unnecessarily present on closed Catalog and existing-book
+Finance, now assigned to Opus at the exact provider/setup edges. The server barrel
+source-map count is being calibrated before any import change.18readiness samples
+are observational (extra code-settle windows/shared machine), not new p95/budget or
+causal latency acceptance. Legacy streamed redirect waits corrected in the private
+driver; completed states reused, zero business writes. Development restored, other
+services unchanged. Program4/27 and all original criteria retained.
+[Family census, current byte/cost table and scope limits](../verification/2026-10-30-dashboard-family-import-census.md).
+
 The latest focused optimized candidate is **8Xfym4plmfCqEXoMURwrG**, parent15006abf
 plus frozen Opus-authored optional-owner boundaries. Preferences' Boolean URL hook
 now has a lightweight owner; all41 global family definitions are absent on closed
