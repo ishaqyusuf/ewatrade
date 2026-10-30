@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "id": "2026-10-30-dashboard-activity-filter-projection",
+  "tickets": ["H02"],
+  "summary": "Combine current Activity filter actors and bounded type availability into one SQL projection. Local only.",
+  "noAssistantImpact": "Existing protected Activity filter implementation only. Same request/domain authority, Member lock, RepeatableRead, Store/Finance rules, actor search/order/cursor, availability classification and DTO. Unknown handlers were already ignored, nonlegacy origins already recorded. No command, tool, procedure, capability, schema, dependency, permission or rollout change.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/business-activity-notifications.md"
+    },
+    {
+      "topic": "permissions",
+      "status": "not_applicable",
+      "note": "Existing authority and domain predicates unchanged; source parity and current refusal tests pass."
+    },
+    {
+      "topic": "api",
+      "status": "not_applicable",
+      "note": "Existing filters input/output/cursor and procedure policy unchanged."
+    },
+    {
+      "topic": "schema",
+      "status": "not_applicable",
+      "note": "No schema/index/migration; test indexes mirror existing schema only."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/business-activity/page-projection.test.ts",
+      "executed": true,
+      "result": "Red four reader operations -> three. Together with existing scope/legacy tests:22 cases416 assertions cover paging/search/former names, availability/unknown origins, empty scope, fresh refusals and bounded projection."
+    },
+    {
+      "kind": "run",
+      "path": "docs/verification/2026-10-30-dashboard-activity-filter-projection.md",
+      "executed": true,
+      "result": "Native PostgreSQL9 exact old/new comparisons up to10k events; projection2->1 and bounded database-to-API decoding with equal buffer work. Types, scoped237/1533+QA/Biome pass.18 local readiness samples pass; warm Activity SQL17->15, variable timings remain. Dev restored/other services unchanged, fixture removed; no broad budget or deployment claim."
+    }
+  ]
+}

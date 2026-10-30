@@ -5,6 +5,7 @@ import {
   businessActivityFiltersInput,
   businessEventCatalog,
   hasBusinessEventHandler,
+  implementedBusinessEventHandlers,
 } from "@ewatrade/notifications/business-events"
 import { z } from "zod"
 import { Prisma, type PrismaClient } from "../../../generated/prisma/client"
@@ -59,25 +60,31 @@ export async function getBusinessActivityFiltersInTransaction(
   const pattern = input.actorQuery
     ? `%${input.actorQuery.replace(/[\\%_]/g, (char) => `\\${char}`)}%`
     : null
-  const rows = await tx.$queryRaw<
+  const knownTypes = Object.keys(implementedBusinessEventHandlers)
+  // Keep both outputs bounded, and retain each branch's scope pushdown instead
+  // of materializing every payload in the Business's history.
+  const projection = await tx.$queryRaw<
     Array<{
-      membershipId: string
-      name: string
-      role: string
-      isFormer: boolean
+      actors: BusinessActivityFilterOptions["actors"]
+      types: Array<{ type: string; recordingOrigin: string }>
     }>
-  >`
-    ${businessActivitySources(scope)} SELECT DISTINCT m.id AS "membershipId", LEFT(COALESCE(NULLIF(u."displayName",''),u.name),240) AS name,
+  >`${businessActivitySources(scope, undefined, true)} SELECT
+    COALESCE((SELECT jsonb_agg(actor ORDER BY actor."membershipId") FROM (
+      SELECT DISTINCT m.id AS "membershipId", LEFT(COALESCE(NULLIF(u."displayName",''),u.name),240) AS name,
       m.role::text AS role, (m.status <> 'ACTIVE') AS "isFormer"
     FROM "activitySources" e JOIN "Membership" m ON m.id=e."actorMembershipId" AND m."tenantId"=e."tenantId"
     JOIN "User" u ON u.id=m."userId"
     WHERE ${businessActivityScopeSql(scope)} AND COALESCE(NULLIF(u."displayName",''),u.name) IS NOT NULL
       ${after ? Prisma.sql`AND m.id > ${after}` : Prisma.empty}
       ${pattern ? Prisma.sql`AND (u.name ILIKE ${pattern} OR u."displayName" ILIKE ${pattern})` : Prisma.empty}
-    ORDER BY m.id ASC LIMIT 26`
-  const typeRows = await tx.$queryRaw<
-    Array<{ type: string; recordingOrigin: string }>
-  >`${businessActivitySources(scope)} SELECT DISTINCT e.type,e."recordingOrigin" FROM "activitySources" e WHERE ${businessActivityScopeSql(scope)}`
+      ORDER BY m.id ASC LIMIT 26
+    ) actor),'[]'::jsonb) AS actors,
+    COALESCE((SELECT jsonb_agg(choice ORDER BY choice.type,choice."recordingOrigin") FROM (
+      SELECT DISTINCT e.type, CASE WHEN e."recordingOrigin"='legacy_fact' THEN 'legacy_fact' ELSE 'snapshot' END AS "recordingOrigin"
+      FROM "activitySources" e WHERE ${businessActivityScopeSql(scope)} AND e.type IN (${Prisma.join(knownTypes)})
+    ) choice),'[]'::jsonb) AS types`
+  const rows = projection[0]?.actors ?? []
+  const typeRows = projection[0]?.types ?? []
   const availability: Partial<
     Record<BusinessEventType, "recorded" | "legacy">
   > = {}

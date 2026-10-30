@@ -1,8 +1,12 @@
 import { afterAll, beforeEach, expect, test } from "bun:test"
 import { PGlite } from "@electric-sql/pglite"
-import type { BusinessActivityListInput } from "@ewatrade/notifications/business-events"
+import {
+  type BusinessActivityListInput,
+  implementedBusinessEventHandlers,
+} from "@ewatrade/notifications/business-events"
 import { z } from "zod"
 import { Prisma } from "../../../generated/prisma/client"
+import { getBusinessActivityFiltersInTransaction } from "./filters"
 import { listBusinessActivityInTransaction } from "./read"
 
 // Synthetic PostgreSQL only. Execute the production predicates, legacy union,
@@ -110,9 +114,10 @@ async function record(
     [extra.tenant ?? "tenant-a", id],
   )
 }
-async function read(raw: BusinessActivityListInput = input, who = viewer) {
+async function invoke<T>(work: (tx: Prisma.TransactionClient) => Promise<T>) {
   const statements: Prisma.Sql[] = []
   const rowCounts: number[] = []
+  const results: unknown[][] = []
   const value = await memory.transaction(async (pg) => {
     await pg.exec("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ")
     const tx = {
@@ -124,6 +129,7 @@ async function read(raw: BusinessActivityListInput = input, who = viewer) {
         statements.push(sql)
         const rows = (await pg.query(sql.text, sql.values)).rows
         rowCounts.push(rows.length)
+        results.push(rows)
         return rows
       },
       store: {
@@ -137,13 +143,32 @@ async function read(raw: BusinessActivityListInput = input, who = viewer) {
           statements.push(sql)
           const rows = (await pg.query(sql.text, sql.values)).rows
           rowCounts.push(rows.length)
+          results.push(rows)
           return rows
         },
       },
     } as unknown as Prisma.TransactionClient
-    return listBusinessActivityInTransaction(tx, who, raw)
+    return work(tx)
   })
-  return { value, statements, rowCounts }
+  return { value, statements, rowCounts, results }
+}
+
+function read(raw: BusinessActivityListInput = input, who = viewer) {
+  return invoke((tx) => listBusinessActivityInTransaction(tx, who, raw))
+}
+function filters(
+  raw: Parameters<typeof getBusinessActivityFiltersInTransaction>[2] = {},
+  who = viewer,
+) {
+  return invoke((tx) => getBusinessActivityFiltersInTransaction(tx, who, raw))
+}
+async function people() {
+  await memory.exec(`INSERT INTO "User" SELECT 'person-'||lpad(n::text,2,'0'), CASE WHEN n=0 THEN 'Literal%_\\ Person' ELSE repeat('Name ',60) END, CASE WHEN n=1 THEN 'Chosen display' ELSE NULL END FROM generate_series(0,29) n;
+  INSERT INTO "Membership" SELECT 'person-'||lpad(n::text,2,'0'),'tenant-a','person-'||lpad(n::text,2,'0'),'MANAGER',CASE WHEN n=28 THEN 'REVOKED' ELSE 'ACTIVE' END,'LEGACY',1 FROM generate_series(0,29) n;`)
+  for (let n = 0; n < 30; n++)
+    await record(`person-event-${n}`, {
+      actor: `person-${String(n).padStart(2, "0")}`,
+    })
 }
 
 test("list plus exact count uses one projection statement after the unchanged scope reads", async () => {
@@ -293,6 +318,202 @@ test("large recorded history retains bounded decoding and source predicate pushd
   const plan = await memory.query(
     `EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) ${projection.text}`,
     projection.values,
+  )
+  expect(JSON.stringify(plan.rows)).not.toContain(
+    '"CTE Name":"activitySources"',
+  )
+})
+
+test("filter actors and availability share one bounded projection after current scope", async () => {
+  const result = await filters()
+  expect(result.value.actors.map((actor) => actor.membershipId)).toEqual([
+    "member-cashier",
+    "member-owner",
+  ])
+  expect(
+    result.value.types.find((type) => type.type === "order.recorded")
+      ?.availability,
+  ).toBe("legacy")
+  expect(
+    result.value.types.find((type) => type.type === "payment.refund_recorded")
+      ?.availability,
+  ).toBe("legacy")
+  expect(result.statements).toHaveLength(3)
+  expect(result.rowCounts.at(-1)).toBe(1)
+})
+
+test("person choices retain ordered paging, former people, display names and clipped names", async () => {
+  await people()
+  const first = await filters()
+  expect(first.value.actors).toHaveLength(25)
+  if (!first.value.actorNextCursor) throw Error("Missing actor cursor")
+  const second = await filters({ actorCursor: first.value.actorNextCursor })
+  expect(second.value.actors).toHaveLength(7)
+  expect(second.value.actorNextCursor).toBeNull()
+  const actors = [...first.value.actors, ...second.value.actors]
+  const ids = actors.map((actor) => actor.membershipId)
+  expect(new Set(ids).size).toBe(32)
+  expect(ids).toEqual([...ids].sort())
+  expect(
+    actors.find((actor) => actor.membershipId === "person-28")?.isFormer,
+  ).toBe(true)
+  expect(actors.find((actor) => actor.membershipId === "person-01")?.name).toBe(
+    "Chosen display",
+  )
+  expect(
+    actors.find((actor) => actor.membershipId === "person-02")?.name,
+  ).toHaveLength(240)
+  expect(
+    (await filters({ actorQuery: "Chosen" })).value.actors.map(
+      (actor) => actor.membershipId,
+    ),
+  ).toEqual(["person-01"])
+  expect(
+    (await filters({ actorQuery: "%_" })).value.actors.map(
+      (actor) => actor.membershipId,
+    ),
+  ).toEqual(["person-00"])
+  expect((await filters({ actorQuery: "%' OR true --" })).value.actors).toEqual(
+    [],
+  )
+})
+
+test("filter availability preserves recorded precedence and ignores unavailable handlers and origin variants", async () => {
+  await record("snapshot")
+  await record("variant")
+  await memory.exec(
+    `UPDATE "BusinessActivityEvent" SET "recordingOrigin"='imported-fact' WHERE id='variant'`,
+  )
+  await record("future", { type: "future.unknown", category: "orders" })
+  const options = (await filters()).value
+  expect(
+    options.types.find((type) => type.type === "order.recorded")?.availability,
+  ).toBe("recorded")
+  expect(
+    options.types.find((type) => type.type === "payment.recorded")
+      ?.availability,
+  ).toBe("legacy")
+  expect(
+    options.types.some((type) => String(type.type) === "future.unknown"),
+  ).toBe(false)
+  await record("finance", {
+    type: "finance.movement_recorded",
+    category: "finance",
+  })
+  expect(
+    (await filters()).value.types.find(
+      (type) => type.type === "finance.movement_recorded",
+    )?.availability,
+  ).toBe("recorded")
+  await memory.exec(`UPDATE "SubscriptionPlan" SET key='free'`)
+  expect(
+    (await filters()).value.types.some((type) => type.category === "finance"),
+  ).toBe(false)
+})
+
+test("filter choices are derived only from currently visible events and fresh role/grants", async () => {
+  const cashier = { tenantId: "tenant-a", viewerUserId: "cashier" }
+  expect(
+    (await filters({}, cashier)).value.actors.map(
+      (actor) => actor.membershipId,
+    ),
+  ).toEqual(["member-cashier", "member-owner"])
+  await memory.exec(
+    `UPDATE "StaffStoreAssignment" SET status='REVOKED' WHERE id='grant-all'`,
+  )
+  const own = (await filters({}, cashier)).value
+  expect(own.actors.map((actor) => actor.membershipId)).toEqual([
+    "member-cashier",
+  ])
+  expect(own.scope).toBe("own")
+  expect(own.canManageNotifications).toBe(false)
+  expect(own.stores.map((store) => store.id)).toEqual(["store-a"])
+  expect(
+    own.types.every((type) => ["orders", "payments"].includes(type.category)),
+  ).toBe(true)
+  const foreign = (
+    await filters({}, { tenantId: "tenant-b", viewerUserId: "owner" })
+  ).value
+  expect(foreign.stores.map((store) => store.id)).toEqual(["foreign-store"])
+  expect(foreign.actors.map((actor) => actor.membershipId)).toEqual([
+    "foreign-member",
+  ])
+  await memory.exec(
+    `UPDATE "Membership" SET status='REVOKED' WHERE id='member-cashier'`,
+  )
+  await expect(filters({}, cashier)).rejects.toMatchObject({
+    code: "FORBIDDEN",
+  })
+})
+
+test("actor cursors reject changed search/access and malformed positions", async () => {
+  await people()
+  const first = (await filters()).value
+  if (!first.actorNextCursor) throw Error("Missing actor cursor")
+  await expect(
+    filters({ actorCursor: first.actorNextCursor, actorQuery: "Name" }),
+  ).rejects.toMatchObject({ code: "BAD_REQUEST" })
+  await memory.exec(
+    `UPDATE "Membership" SET "staffAccessRevision"=2 WHERE id='member-owner'`,
+  )
+  await expect(
+    filters({ actorCursor: first.actorNextCursor }),
+  ).rejects.toMatchObject({ code: "BAD_REQUEST" })
+  await expect(
+    filters({ actorCursor: "not-a-position" }),
+  ).rejects.toMatchObject({ code: "BAD_REQUEST" })
+})
+
+test("empty actor or history results preserve scope and planned types without placeholder people", async () => {
+  await memory.exec(`UPDATE "User" SET name=NULL,"displayName"=NULL`)
+  const nameless = (await filters()).value
+  expect(nameless.actors).toEqual([])
+  expect(
+    nameless.types.find((type) => type.type === "order.recorded")?.availability,
+  ).toBe("legacy")
+  await memory.exec(
+    `DELETE FROM "CommercialOrderPayment"; DELETE FROM "CommercialOrder";`,
+  )
+  const empty = (await filters()).value
+  expect(empty.actors).toEqual([])
+  expect(empty.actorNextCursor).toBeNull()
+  expect(empty.types.every((type) => type.availability === "planned")).toBe(
+    true,
+  )
+  expect(empty.scope).toBe("business")
+  expect(empty.canManageNotifications).toBe(true)
+  expect(empty.timeZone).toBe("UTC")
+})
+
+test("filter projection bounds people and availability despite unknown types and arbitrary origins", async () => {
+  await people()
+  await memory.exec(`INSERT INTO "BusinessActivityEvent" (id,"tenantId","storeId",type,category,"schemaVersion","businessEventKey","payloadHash","sourceKind","sourceId","sourceAction","actorKind","originChannel","actorMembershipId","occurredAt","recordedAt","recordingOrigin",payload)
+    SELECT 'origin-'||n,'tenant-a','store-a',CASE WHEN n<=500 THEN 'order.recorded' ELSE 'future.'||n END,'orders',1,'origin-'||n,'hash','commercial_order','own','created','staff','dashboard','member-owner','2026-01-20','2026-01-20','origin-'||n,'{}'::jsonb FROM generate_series(1,1000) n`)
+  const result = await filters()
+  const projected = z
+    .object({
+      actors: z.array(z.unknown()).max(26),
+      types: z
+        .array(z.object({ type: z.string(), recordingOrigin: z.string() }))
+        .max(Object.keys(implementedBusinessEventHandlers).length * 2),
+    })
+    .parse(result.results.at(-1)?.[0])
+  expect(projected.actors).toHaveLength(26)
+  expect(
+    projected.types.filter((type) => type.type === "order.recorded"),
+  ).toHaveLength(2)
+  expect(projected.types.some((type) => type.type.startsWith("future."))).toBe(
+    false,
+  )
+  expect(
+    result.value.types.find((type) => type.type === "order.recorded")
+      ?.availability,
+  ).toBe("recorded")
+  const query = result.statements.at(-1)
+  if (!query) throw Error("Missing filter projection")
+  const plan = await memory.query(
+    `EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) ${query.text}`,
+    query.values,
   )
   expect(JSON.stringify(plan.rows)).not.toContain(
     '"CTE Name":"activitySources"',
