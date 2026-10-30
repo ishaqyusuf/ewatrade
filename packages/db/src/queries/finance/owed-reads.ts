@@ -1,10 +1,8 @@
 import type { PrismaClient } from "../../../generated/prisma/client"
 import { listCustomerLedgerBalances } from "../customer-ledger/totals-projection"
 import { type FinanceActor, assertFinanceManager } from "./access"
+import { getFinanceOwedSummaryProjection } from "./owed-summary-projection"
 import { FinanceError } from "./rules"
-import { listFinanceSupplierBalances } from "./supplier-reads"
-
-const TOP = 3
 
 /**
  * Who owes what, for the Finance overview: what saved customers owe in the
@@ -23,64 +21,13 @@ export async function getFinanceOwedSummary(
       })
       if (!book)
         throw new FinanceError("NOT_FOUND", "Financial book not found.")
-      const [suppliers, accounts] = await Promise.all([
-        tx.financeSupplierAccount.findMany({
-          where: { bookId: book.id },
-          select: { id: true, name: true },
-        }),
-        tx.customerLedgerAccount.findMany({
-          where: { tenantId: input.tenantId, currencyCode: book.currencyCode },
-          select: { customerId: true, customer: { select: { name: true } } },
-        }),
-      ])
-      const [supplierBalances, customerBalances] = await Promise.all([
-        listFinanceSupplierBalances(tx, {
-          bookId: book.id,
-          snapshot: book.lastSequence,
-          supplierIds: suppliers.map((supplier) => supplier.id),
-        }),
-        listCustomerLedgerBalances(tx, {
-          tenantId: input.tenantId,
-          currencyCode: book.currencyCode,
-          customerIds: accounts.map((account) => account.customerId),
-        }),
-      ])
-      const owingSuppliers = suppliers
-        .map((supplier) => ({
-          id: supplier.id,
-          name: supplier.name,
-          owed: BigInt(supplierBalances.get(supplier.id)?.payableMinor ?? "0"),
-        }))
-        .filter((supplier) => supplier.owed > 0n)
-      const owingCustomers = accounts
-        .map((account) => ({
-          id: account.customerId,
-          name: account.customer.name,
-          owed: BigInt(
-            customerBalances.get(account.customerId)?.outstandingDebtMinor ??
-              "0",
-          ),
-        }))
-        .filter((customer) => customer.owed > 0n)
-      const summarise = (
-        rows: { id: string; name: string; owed: bigint }[],
-      ) => ({
-        count: rows.length,
-        owedMinor: rows.reduce((total, row) => total + row.owed, 0n).toString(),
-        top: [...rows]
-          .sort((a, b) => (b.owed > a.owed ? 1 : b.owed < a.owed ? -1 : 0))
-          .slice(0, TOP)
-          .map((row) => ({
-            id: row.id,
-            name: row.name,
-            owedMinor: row.owed.toString(),
-          })),
-      })
-      return {
+      const projection = await getFinanceOwedSummaryProjection(tx, {
+        tenantId: input.tenantId,
         currencyCode: book.currencyCode,
-        customers: summarise(owingCustomers),
-        suppliers: summarise(owingSuppliers),
-      }
+        bookId: book.id,
+        snapshot: book.lastSequence,
+      })
+      return { currencyCode: book.currencyCode, ...projection }
     },
     { maxWait: 10_000, timeout: 30_000, isolationLevel: "RepeatableRead" },
   )

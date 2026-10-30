@@ -1,5 +1,22 @@
 # Dashboard performance program
 
+## Bounded Finance owed summary — DP-103/405, 30 October 2026
+
+- [x] Reproduce four projection operations and complete directory/balance decoding
+  for a panel that displays totals and three names.
+- [x] Replace with one grouped projection, retaining current role/Book/lock/snapshot
+  controls and exact independent customer/supplier sequence arithmetic.
+- [x]12 cases/133 assertions,27 scope/sequence combinations and full currency,
+  error/refusal/binding/fresh/tie checks pass. DB/API/Dashboard types and parity pass.
+- [x] Generated-Prisma/canonical-helper synthetic comparison at10k/5k target scope:
+  equal summaries, decoded rows30,000→2, warm buffer hits190,976→1,635. Small-scope
+  check also stays indexed and equivalent. No new index/schema or provider change.
+
+Scoped fast237/1533+QA types/Biome, H01/H02 and source/control parity pass.
+[Receipt](../verification/2026-10-30-dashboard-finance-owed-summary.md). Counts/sums cover the whole scope; ties
+now use stable IDs. Unchanged e053 UI evidence reused; browser/optimized speedup
+and full DP-405 remain open. Full program3/27; prepared f027 excludes this source.
+
 ## Finance Overview document scheduling — DP-102/103/405, 30 October 2026
 
 - [x] Reproduce browser-only panel startup after Book hydration.
