@@ -18,6 +18,7 @@ export async function webJourney(page, config) {
   const performanceArtifacts = process.env.QA_WEB_NAVIGATION_ARTIFACTS
   const verifyBell = process.env.QA_WEB_NOTIFICATION_COUNTS === "true"
   const verifyFamilies = process.env.QA_WEB_ROUTE_FAMILIES === "true"
+  const verifyActivityStartup = process.env.QA_WEB_ACTIVITY_STARTUP === "true"
   const verifyActivityReads = process.env.QA_WEB_ACTIVITY_READS === "true"
   if (
     verifyActivityReads &&
@@ -27,7 +28,7 @@ export async function webJourney(page, config) {
       "Activity read verification requires local navigation artifacts.",
     )
   if (
-    verifyFamilies &&
+    (verifyFamilies || verifyActivityStartup) &&
     (!performanceArtifacts || origin !== "https://ewatrade-dashboard.localhost")
   )
     throw new Error(
@@ -308,7 +309,7 @@ export async function webJourney(page, config) {
         ),
       )
     }
-    if (verifyFamilies && observation) {
+    if ((verifyFamilies || verifyActivityStartup) && observation) {
       mkdirSync(performanceArtifacts, { recursive: true })
       const familySamples = await measureDashboardRouteFamilies(
         page,
@@ -329,6 +330,7 @@ export async function webJourney(page, config) {
             ),
           )
         },
+        verifyFamilies ? "all" : "activity",
       )
       samples.push(...familySamples)
       await sidebar

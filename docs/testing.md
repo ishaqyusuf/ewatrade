@@ -270,8 +270,27 @@ existing eligible Owner profile, including a Finance book and the configured
 Catalog row. Missing access/data or a visible content error fails, never skips a
 family or creates records to pass.
 
-The pass records one full refresh and one warm return after navigation away for
-each DP-401–409 representative: Overview, Catalog, Orders, Customers, Finance,
+For only Activity startup attribution, use `QA_WEB_ACTIVITY_STARTUP=true` with
+the same local command and navigation artifact directory. It reuses the ordinary
+QA journey, then measures Activity refresh and return after Overview, with the
+same content/error/shell checks. It does not run the other family samples or
+Finance diagnostic GETs. If both flags are true, the full nine-family pass wins.
+This focused run does not replace whole-dashboard acceptance.
+
+Navigation request summaries include `observationMilliseconds` and a numeric
+`timeline`: first/last request start, first response headers, last finish and
+start/header/finish counts relative to that observation window. Fixed labels
+cover document/script/stylesheet/API/Flight route work, streaming API negotiation,
+and exact same-origin Activity list/filter batches. A batch can have both Activity
+labels; their counts describe HTTP requests, not procedure/SQL counts. No URLs,
+inputs, header values, bodies or identifiers are retained. Foreign/lookalike paths
+cannot become Activity labels. Missing header/finish observations are null; late
+events cannot change the returned snapshot. Completion includes failed/canceled
+requests; response headers do not mean query data is ready. Readiness timings
+still include driver overhead; a finish-to-readiness gap is not a render profile.
+
+The full-family pass records one full refresh and one warm return after navigation
+away for each DP-401–409 representative: Overview, Catalog, Orders, Customers, Finance,
 Website requests, Activity, General settings and Reports. Readiness uses the
 configured Catalog row, loaded customer summary, three Finance panels, selected
 request list, recorded Activity region, server settings and sales headlines;

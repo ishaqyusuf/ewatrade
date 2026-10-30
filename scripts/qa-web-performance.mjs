@@ -1,7 +1,8 @@
 // Local QA diagnostics only. Never retain URLs, headers, bodies or identifiers.
 /** @typedef {{milliseconds: number, count: number}} Phase */
-/** @typedef {{kind: string, started: number, phases: Record<string, Phase>, status?: number, finished?: number, failed?: boolean, cancelled?: boolean, responseBodyBytes?: number}} Entry */
+/** @typedef {{kind: string, labels: string[], started: number, phases: Record<string, Phase>, responseHeadersAt?: number, status?: number, finished?: number, failed?: boolean, cancelled?: boolean, responseBodyBytes?: number}} Entry */
 /** @typedef {{completed: number, failed: number, cancelled: number, httpErrors: number, responseBodyBytes: number, byteMeasurements: number, requestWorkMilliseconds: number, serverPhases: Record<string, Phase>}} Group */
+/** @typedef {{started: number, responseHeaders: number, finished: number, firstStartMs: number, lastStartMs: number, firstResponseHeadersMs: number | null, lastFinishMs: number | null}} Timeline */
 const phases = new Set([
   "request",
   "responseSetup",
@@ -62,7 +63,7 @@ export function readPerformancePhases(header = "") {
 export function observeWebPerformance(page, origin) {
   if (origin !== "https://ewatrade-dashboard.localhost")
     throw new Error("Request performance measurement is local-only.")
-  /** @type {{entries: Entry[]} | undefined} */
+  /** @type {{started: number, entries: Entry[]} | undefined} */
   let window
   /** @type {WeakMap<import("playwright").Request, Entry>} */
   const requests = new WeakMap()
@@ -73,14 +74,33 @@ export function observeWebPerformance(page, origin) {
     if (!window) return
     const url = new URL(request.url())
     const type = request.resourceType()
+    const headers = request.headers()
     const kind =
       url.origin === origin && url.pathname.startsWith("/api/")
         ? "api"
-        : ["document", "script", "stylesheet"].includes(type)
-          ? type
-          : "other"
+        : url.origin === origin && headers.rsc === "1"
+          ? "route"
+          : ["document", "script", "stylesheet"].includes(type)
+            ? type
+            : "other"
+    // Classification is fixed; URLs, query input and headers are never retained.
+    const labels = [kind]
+    if (kind === "api") {
+      if (
+        request.method() === "GET" &&
+        headers["trpc-accept"] === "application/jsonl"
+      )
+        labels.push("streamingApi")
+      if (url.pathname.startsWith("/api/trpc/")) {
+        const procedures = url.pathname.slice("/api/trpc/".length).split(",")
+        if (procedures.includes("activity.listPage"))
+          labels.push("activityList")
+        if (procedures.includes("activity.filters"))
+          labels.push("activityFilters")
+      }
+    }
     /** @type {Entry} */
-    const entry = { kind, started: performance.now(), phases: {} }
+    const entry = { kind, labels, started: performance.now(), phases: {} }
     requests.set(request, entry)
     window.entries.push(entry)
   }
@@ -88,6 +108,7 @@ export function observeWebPerformance(page, origin) {
   const onResponse = (response) => {
     const entry = requests.get(response.request())
     if (!entry) return
+    entry.responseHeadersAt = performance.now()
     entry.status = response.status()
     if (entry.kind === "api")
       entry.phases = readPerformancePhases(response.headers()["server-timing"])
@@ -130,7 +151,7 @@ export function observeWebPerformance(page, origin) {
   return {
     begin() {
       if (window) throw new Error("Performance observation is already active.")
-      window = { entries: [] }
+      window = { started: performance.now(), entries: [] }
     },
     async end() {
       if (!window) throw new Error("Performance observation is not active.")
@@ -141,6 +162,52 @@ export function observeWebPerformance(page, origin) {
       const completed = current.entries.filter(
         (entry) => entry.finished !== undefined && entry.finished <= ended,
       )
+      /** @type {Record<string, Timeline>} */
+      const timeline = {}
+      /** @param {number} instant */
+      const relative = (instant) =>
+        Math.max(0, Math.round((instant - current.started) * 10) / 10)
+      for (const entry of current.entries) {
+        const start = relative(entry.started)
+        const responded =
+          entry.responseHeadersAt !== undefined &&
+          entry.responseHeadersAt <= ended
+            ? relative(entry.responseHeadersAt)
+            : null
+        const finished =
+          entry.finished !== undefined && entry.finished <= ended
+            ? relative(entry.finished)
+            : null
+        for (const label of entry.labels) {
+          timeline[label] ??= {
+            started: 0,
+            responseHeaders: 0,
+            finished: 0,
+            firstStartMs: start,
+            lastStartMs: start,
+            firstResponseHeadersMs: null,
+            lastFinishMs: null,
+          }
+          const value = timeline[label]
+          value.started++
+          value.firstStartMs = Math.min(value.firstStartMs, start)
+          value.lastStartMs = Math.max(value.lastStartMs, start)
+          if (responded !== null) {
+            value.responseHeaders++
+            value.firstResponseHeadersMs = Math.min(
+              value.firstResponseHeadersMs ?? responded,
+              responded,
+            )
+          }
+          if (finished !== null) {
+            value.finished++
+            value.lastFinishMs = Math.max(
+              value.lastFinishMs ?? finished,
+              finished,
+            )
+          }
+        }
+      }
       /** @type {Record<string, Group>} */
       const byKind = {}
       for (const entry of completed) {
@@ -180,6 +247,8 @@ export function observeWebPerformance(page, origin) {
       return {
         started: current.entries.length,
         inFlightAtReadiness: current.entries.length - completed.length,
+        observationMilliseconds: relative(ended),
+        timeline,
         byKind,
         scope:
           "Requests started during the action; completed bytes/phases stop at readiness. Includes background work. Server-to-server reads are not visible. Work durations overlap and are not additive wall time.",

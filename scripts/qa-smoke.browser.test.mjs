@@ -44,6 +44,20 @@ test(
         count: 2,
       })
       assert.ok(!JSON.stringify(result).includes("sentinel"))
+      assert.equal(result.timeline.api.started, 1)
+      assert.equal(result.timeline.api.responseHeaders, 1)
+      assert.equal(result.timeline.api.finished, 1)
+      assert.ok(result.timeline.api.firstStartMs >= 0)
+      assert.ok(result.timeline.api.firstResponseHeadersMs !== null)
+      assert.ok(result.timeline.api.lastFinishMs !== null)
+      assert.ok(
+        result.timeline.api.firstResponseHeadersMs >=
+          result.timeline.api.firstStartMs,
+      )
+      assert.ok(
+        result.timeline.api.lastFinishMs >=
+          result.timeline.api.firstResponseHeadersMs,
+      )
       /** @type {() => void} */
       let release = () => {
         throw new Error("Held request is not initialized.")
@@ -64,9 +78,15 @@ test(
       const beforeCompletion = await observer.end()
       assert.equal(beforeCompletion.started, 1)
       assert.equal(beforeCompletion.inFlightAtReadiness, 1)
+      assert.equal(beforeCompletion.timeline.api.started, 1)
+      assert.equal(beforeCompletion.timeline.api.responseHeaders, 0)
+      assert.equal(beforeCompletion.timeline.api.finished, 0)
+      assert.equal(beforeCompletion.timeline.api.firstResponseHeadersMs, null)
+      assert.equal(beforeCompletion.timeline.api.lastFinishMs, null)
       release()
       await navigation
       assert.equal(beforeCompletion.inFlightAtReadiness, 1)
+      assert.equal(beforeCompletion.timeline.api.finished, 0)
       observer.begin()
       assert.equal((await observer.end()).started, 0)
       await page.route("**/api/cancelled", (route) => route.abort("aborted"))
@@ -78,6 +98,62 @@ test(
       assert.equal(cancelled.byKind.api.failed, 1)
       assert.equal(cancelled.byKind.api.cancelled, 1)
       assert.equal(cancelled.byKind.api.byteMeasurements, 0)
+      observer.dispose()
+    } finally {
+      await browser.close()
+    }
+  },
+)
+
+test(
+  "startup timeline recognizes only fixed same-origin Activity reads and stream negotiation",
+  { timeout: 30000 },
+  async () => {
+    const browser = await launchSmokeBrowser()
+    try {
+      const page = await browser.newPage({ serviceWorkers: "block" })
+      await page.setExtraHTTPHeaders({
+        "trpc-accept": "application/jsonl",
+        "private-header": "header-sentinel",
+      })
+      await page.route("**/*", (route) =>
+        route.fulfill({ contentType: "application/json", body: "{}" }),
+      )
+      const observer = observeWebPerformance(
+        page,
+        "https://ewatrade-dashboard.localhost",
+      )
+      observer.begin()
+      await page.goto(
+        "https://ewatrade-dashboard.localhost/api/trpc/activity.filters,activity.listPage?input=private-query-sentinel",
+        { waitUntil: "load" },
+      )
+      const result = await observer.end()
+      for (const label of [
+        "api",
+        "streamingApi",
+        "activityList",
+        "activityFilters",
+      ])
+        assert.equal(result.timeline[label].started, 1)
+      assert.deepEqual(
+        result.timeline.activityList,
+        result.timeline.activityFilters,
+      )
+      assert.ok(!JSON.stringify(result).includes("sentinel"))
+
+      for (const url of [
+        "https://foreign.invalid/api/trpc/activity.listPage?secret=foreign-sentinel",
+        "https://ewatrade-dashboard.localhost/api/trpc/activity.listPageExtra?secret=lookalike-sentinel",
+        "https://ewatrade-dashboard.localhost/api/trpc/private-procedure-sentinel?procedure=activity.listPage",
+      ]) {
+        observer.begin()
+        await page.goto(url, { waitUntil: "load" })
+        const unrelated = await observer.end()
+        assert.equal(unrelated.timeline.activityList, undefined)
+        assert.equal(unrelated.timeline.activityFilters, undefined)
+        assert.ok(!JSON.stringify(unrelated).includes("sentinel"))
+      }
       observer.dispose()
     } finally {
       await browser.close()
@@ -157,6 +233,12 @@ test(
 // The runner's readiness/checkpoint contract, not product rendering or latency.
 for (const scenario of [
   { name: "all nine representatives", options: {}, expected: "passed" },
+  { name: "focused Activity startup", options: {}, expected: "passed" },
+  {
+    name: "focused Activity missing content",
+    options: { omitReady: "/activity" },
+    expected: "DP-407",
+  },
   {
     name: "isolated Finance refusal",
     options: { diagnosticRefusal: true },
@@ -313,19 +395,27 @@ for (const scenario of [
             { origin, catalogItem: "Fixture item" },
             observation,
             (update) => checkpoints.push(update),
+            scenario.name.startsWith("focused Activity") ? "activity" : "all",
           )
         if (scenario.expected === "passed") {
           const samples = await run()
-          assert.equal(samples.length, 18)
+          const activityOnly = scenario.name.startsWith("focused Activity")
+          const selectedFamilies = activityOnly
+            ? dashboardRouteFamilies.filter(
+                (target) => target.family === "DP-407",
+              )
+            : dashboardRouteFamilies
+          assert.equal(samples.length, selectedFamilies.length * 2)
           assert.equal(dashboardRouteFamilies.length, 9)
           assert.deepEqual(
             checkpoints.at(-1)?.diagnosticReads.map((read) => read.procedure),
-            ["finance.book", "finance.owedSummary"],
+            activityOnly ? [] : ["finance.book", "finance.owedSummary"],
           )
-          assert.equal(
-            checkpoints.at(-1)?.diagnosticReads[1]?.serverPhases.sql.count,
-            11,
-          )
+          if (!activityOnly)
+            assert.equal(
+              checkpoints.at(-1)?.diagnosticReads[1]?.serverPhases.sql.count,
+              11,
+            )
           assert.ok(
             checkpoints
               .at(-1)
@@ -334,7 +424,7 @@ for (const scenario of [
               ),
           )
 
-          for (const { family } of dashboardRouteFamilies) {
+          for (const { family } of selectedFamilies) {
             const pair = samples.filter((sample) => sample.family === family)
             assert.deepEqual(
               pair.map((sample) => sample.phase),
@@ -364,64 +454,67 @@ for (const scenario of [
   )
 }
 
-test(
-  "route-family opt-in requires canonical local artifacts before page activity",
-  { timeout: 30000 },
-  async () => {
-    const browser = await launchSmokeBrowser()
-    const oldFamilies = process.env.QA_WEB_ROUTE_FAMILIES
-    const oldArtifacts = process.env.QA_WEB_NAVIGATION_ARTIFACTS
-    try {
-      const page = await browser.newPage()
-      let requests = 0
-      page.on("request", () => requests++)
-      process.env.QA_WEB_ROUTE_FAMILIES = "true"
-      const config = {
-        qaDomain: "fixture.qa.test",
-        web: {
-          origin: "https://ewatrade-dashboard.localhost",
-          profileLabel: "Inert",
-          catalogItem: "Inert",
-          expectedTotal: "Inert",
-        },
-      }
-      Reflect.deleteProperty(process.env, "QA_WEB_NAVIGATION_ARTIFACTS")
-      await assert.rejects(
-        () => webJourney(page, config),
-        /requires local navigation artifacts/,
-      )
-      process.env.QA_WEB_NAVIGATION_ARTIFACTS = "/tmp/inert-not-written"
-      await assert.rejects(
-        () =>
-          webJourney(page, {
-            ...config,
-            web: {
-              ...config.web,
-              origin: "https://preview-dashboard.ewatrade.com",
-            },
-          }),
-        /requires local navigation artifacts/,
-      )
-      const { diagnoseFinanceReads } = await import(
-        "./qa-finance-read-diagnostics.mjs"
-      )
-      await assert.rejects(
-        () =>
-          diagnoseFinanceReads(page, "https://preview-dashboard.ewatrade.com"),
-        /local-only/,
-      )
-      assert.equal(requests, 0)
-    } finally {
-      if (oldFamilies === undefined)
-        Reflect.deleteProperty(process.env, "QA_WEB_ROUTE_FAMILIES")
-      else process.env.QA_WEB_ROUTE_FAMILIES = oldFamilies
-      if (oldArtifacts === undefined)
+for (const flag of ["QA_WEB_ROUTE_FAMILIES", "QA_WEB_ACTIVITY_STARTUP"])
+  test(
+    `route-family opt-in requires canonical local artifacts before page activity: ${flag}`,
+    { timeout: 30000 },
+    async () => {
+      const browser = await launchSmokeBrowser()
+      const oldFamilies = process.env[flag]
+      const oldArtifacts = process.env.QA_WEB_NAVIGATION_ARTIFACTS
+      try {
+        const page = await browser.newPage()
+        let requests = 0
+        page.on("request", () => requests++)
+        process.env[flag] = "true"
+        const config = {
+          qaDomain: "fixture.qa.test",
+          web: {
+            origin: "https://ewatrade-dashboard.localhost",
+            profileLabel: "Inert",
+            catalogItem: "Inert",
+            expectedTotal: "Inert",
+          },
+        }
         Reflect.deleteProperty(process.env, "QA_WEB_NAVIGATION_ARTIFACTS")
-      else process.env.QA_WEB_NAVIGATION_ARTIFACTS = oldArtifacts
-      await browser.close()
-    }
-  },
-)
+        await assert.rejects(
+          () => webJourney(page, config),
+          /requires local navigation artifacts/,
+        )
+        process.env.QA_WEB_NAVIGATION_ARTIFACTS = "/tmp/inert-not-written"
+        await assert.rejects(
+          () =>
+            webJourney(page, {
+              ...config,
+              web: {
+                ...config.web,
+                origin: "https://preview-dashboard.ewatrade.com",
+              },
+            }),
+          /requires local navigation artifacts/,
+        )
+        const { diagnoseFinanceReads } = await import(
+          "./qa-finance-read-diagnostics.mjs"
+        )
+        await assert.rejects(
+          () =>
+            diagnoseFinanceReads(
+              page,
+              "https://preview-dashboard.ewatrade.com",
+            ),
+          /local-only/,
+        )
+        assert.equal(requests, 0)
+      } finally {
+        if (oldFamilies === undefined) Reflect.deleteProperty(process.env, flag)
+        else process.env[flag] = oldFamilies
+        if (oldArtifacts === undefined)
+          Reflect.deleteProperty(process.env, "QA_WEB_NAVIGATION_ARTIFACTS")
+        else process.env.QA_WEB_NAVIGATION_ARTIFACTS = oldArtifacts
+        await browser.close()
+      }
+    },
+  )
 
 for (const scenario of ["valid", "refused", "malformed", "missing-trace"]) {
   test(

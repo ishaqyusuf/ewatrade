@@ -68,20 +68,26 @@ export const dashboardRouteFamilies = [
  * @param {{origin: string, catalogItem: string}} config
  * @param {ReturnType<import("./qa-web-performance.mjs").observeWebPerformance>} observation
  * @param {(update: {status: string, family: string | null, phase: string | null, samples: FamilySample[], diagnosticReads: Awaited<ReturnType<typeof diagnoseFinanceReads>>}) => void} checkpoint
+ * @param {"all" | "activity"} [selection]
  */
 export async function measureDashboardRouteFamilies(
   page,
   config,
   observation,
   checkpoint,
+  selection = "all",
 ) {
   if (config.origin !== "https://ewatrade-dashboard.localhost")
     throw Error("Route-family measurement is local-only.")
+  const targets =
+    selection === "activity"
+      ? dashboardRouteFamilies.filter((target) => target.family === "DP-407")
+      : dashboardRouteFamilies
   /** @type {FamilySample[]} */
   const samples = []
   /** @type {Awaited<ReturnType<typeof diagnoseFinanceReads>>} */
   const diagnosticReads = []
-  let family = dashboardRouteFamilies[0]
+  let family = targets[0]
   let phase = "full-refresh"
   let observing = false
   /** @param {string} status */
@@ -188,7 +194,7 @@ export async function measureDashboardRouteFamilies(
     publish("running")
   }
   try {
-    for (const target of dashboardRouteFamilies) {
+    for (const target of targets) {
       family = target
       await measure(target, "full-refresh", async () => {
         await page.goto(`${config.origin}${target.path}`, {

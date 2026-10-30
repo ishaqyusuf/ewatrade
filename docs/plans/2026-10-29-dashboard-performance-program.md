@@ -37,7 +37,7 @@ Dashboard development mode was restored; API/Storefront/Marketing stayed running
 [Latest evidence](../verification/2026-10-30-dashboard-browser-read-streaming.md).
 [Activity enrichment evidence](../verification/2026-10-30-dashboard-activity-bounded-enrichment.md).
 
-| Family | Latest refresh observation | Latest warm-return observation |
+| Family | Full-family refresh sample | Full-family warm-return sample |
 | --- | ---: | ---: |
 | Overview |986ms |1077ms |
 | Catalog |1892ms |817ms |
@@ -66,24 +66,35 @@ execution~2ms. Phases overlap; no blanket freshness-window or index change.
 |4 Domain rollout |401–409 |0/9 |Each family's read/state/access/freshness budgets |
 |5 Acceptance |501–503 |0/3 |Behavior, regression budgets and requirement-by-requirement audit |
 
+Latest focused attribution on the same artifact records Activity3007/2619ms.
+Its own batch starts945.4/456.1ms into refresh/return, receives headers at1628.6/
+1101.4ms and finishes2773.4/2233.9ms. It shares list/filter requests, while other
+API work starts earlier. Finish-to-readiness includes driver overhead, not a React
+profile. A separate3-literal-plan probe on the verified selected non-loopback DB
+endpoint measures244.8–303.1ms driver-inclusive versus<0.04ms server planning/work.
+This establishes material overhead outside the plan, not pure network RTT.
+[Focused timeline and probe](../verification/2026-10-30-dashboard-startup-timeline.md).
+
 Next execution order, within the same27 tickets:
 
-1. **DP-003/103/104:** browser batch-wide completion barrier is corrected. Capture
-   the actual Activity query-start/ready timeline, then attribute remaining context/
-   transaction round trips. Isolated list1813ms/SQL8 versus warmed server~2ms;
-   aggregate document duration alone does not prove exact client-start ordering.
-2. **DP-102/104/407:** preserve fresh mount-owned reads while evaluating the initial
-   loading edge and explicit all-panel gates. Useful document prefetch requires
-   current mount admission, exact key/scope consumption, one-use ownership, refusal
-   erasure and fresh returns; no speculative cross-mount hydration shortcut.
-3. **DP-405/407, then409/403:** remaining Finance metadata/spending and Activity
-   costs, followed by the observed Reports/Orders refresh outliers. Inspect real
-   query plans and caller work before indexes, read models or infrastructure.
+1. **DP-003/103/204:** distinguish the observed26 canceled refresh Flight requests
+   from navigation/useful prefetch before changing scheduling. Cancellation alone
+   is not wasted-work proof; existing submenu intent/automatic-parent evidence
+   remains. Keep DB topology unchanged while calibrating local round-trip cost.
+2. **DP-102/104/407:** use the measured945/456ms Activity start edge to test earlier
+   code/context delivery while preserving current mount admission and fresh reads.
+   Any data prefetch still requires exact key/scope consumption, one-use ownership,
+   refusal erasure and fresh returns. Do not mislabel driver polling as render cost.
+3. **DP-103/405/407:** inspect remaining fresh context/control round trips. Literal
+   plan cost is tiny; prefer bounded projection/independent-work evidence before
+   indexes, TTLs or infrastructure. No weaker proof, role or transaction admission.
+   Finance and other family outliers retain their existing work.
 4. **DP-201–204 and301–304:** finish lifecycle/invalidation/polling and code/interaction
-   contracts for all owners. Source slices already implemented need scoped behavior
-   and performance acceptance, not repeated speculative rewrites.
-5. **DP-501–503:** repeated comparable optimized samples, Back/tab/draft/error/scope/
-   revocation journeys, per-family regression budgets and all27-ticket audit.
+   contracts for all owners. Reuse completed source proofs. Current Channels and
+   Compliance reads already stream independently; the prescription access dependency
+   is deliberately ordered. Do not repeat those implementations.
+5. **DP-501–503:** comparable optimized samples, Back/tab/draft/error/scope/revocation
+   journeys, per-family regression budgets and the complete27-ticket audit.
 
 ## Activity attribution follow-up — DP-003/103/407
 
@@ -147,6 +158,22 @@ SQL speedup, whole-page or additional ticket acceptance claim.3/27 unchanged.
 [Evidence](../verification/2026-10-30-dashboard-browser-read-streaming.md).
 This removes a demonstrated browser adoption gap; no stale cache, authority or
 whole-dashboard speedup claim. All original27 criteria below remain;3/27 accepted.
+
+## Exact startup attribution — DP-003/103/204
+
+- [x] Existing optional observer exports fixed start/header/finish timelines and
+  streaming/Activity labels with no URL/input/header/body/identity retention.
+- [x] Focused Activity mode reuses the canonical runner's two readiness/shell actions;
+  full nine-family mode remains.22 intercepted cases plus final2 diagnostic cases,
+  QA types/Biome, four-script fast47/195 and no-gated-change H02 pass. H01 reused.
+- [x] Frozen focused optimized smoke passes; same b589 application/lock/manifests,
+  development restored, other services unchanged. No new app build or deployment.
+- [x]3 guarded read-only literal plans establish material overhead outside SQL;
+  no application table/profile/provider changes or pure network-RTT claim.
+- [ ] Classify Flight work and test startup/round-trip improvements; budget and
+  whole-family acceptance remain open. Program3/27 unchanged.
+
+[Evidence and limitations](../verification/2026-10-30-dashboard-startup-timeline.md).
 
 ## Current implementation evidence
 
