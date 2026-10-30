@@ -15,6 +15,19 @@ That file records earlier runtime/build states; its “current” labels are his
 
 ## Current assessment and phase order
 
+The next optimized local candidate **w1xT4Ud0Z2akx4EKAX34N** isolates the bell's
+unchanged time formatter from banking/phone helpers. Actual closed Overview,
+Catalog and Services no longer deliver calibrated phone metadata; matched Catalog
+encoded JS740390→686357 and Services731793→677822. Finance retains that graph through
+other banking-helper imports, with no meaningful byte reduction. Closed existing-
+draft Studio still delivers RHF/resolver, now concretely measured before a fix.
+Types, unchanged banking/payment inbox16/57, notification37/142, scoped237/1533,
+H02, full build, canonical smoke and five-page capture pass; zero business writes.
+Dashboard dev18082 restored with other services and local mappings intact. Opus
+owns the Studio first-activation proposal and seven-ticket evidence audit; program
+remains5/27, no new ticket or latency/p95 claim.
+[Notification import proof and Studio counterexample](../verification/2026-10-30-dashboard-notification-time-import.md).
+
 The latest local candidate **pb3F9q4CBf7nbQaETmiFm** defers Catalog form state with
 its existing content and Finance setup until the no-Book intro needs it. Closed
 Catalog/Finance no longer deliver the calibrated form-library chunk; encoded JS

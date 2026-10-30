@@ -1,6 +1,6 @@
 "use client"
 
-import { formatReportTime } from "@/components/business-banking/business-banking-model"
+import { formatReportTime } from "@/components/business-banking/report-time"
 import { orderMoney } from "@/components/orders/order-draft"
 import { useStorefrontRequestNotifications } from "@/hooks/use-business-notification-reads"
 import { useTRPC } from "@/trpc/client"

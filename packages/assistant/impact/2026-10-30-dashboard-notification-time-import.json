@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "id": "2026-10-30-dashboard-notification-time-import",
+  "tickets": ["H02"],
+  "summary": "Keep the existing bell time formatter in a pure module so closed Dashboard pages avoid its unrelated phone graph. Opus authored; local only.",
+  "noAssistantImpact": "The existing export and exact formatter body remain. Only three notification imports change. Existing phone normalization, messaging drafts, read/mutation/permission/cache and command owners are unchanged. No new capability, procedure, provider or persistence behavior.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/web-navigation-performance.md"
+    },
+    {
+      "topic": "api",
+      "status": "not_applicable",
+      "note": "No contract, read or command change."
+    },
+    {
+      "topic": "schema",
+      "status": "not_applicable",
+      "note": "No schema, SQL or persistence change."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "apps/dashboard/src/components/business-banking/report-time.test.ts",
+      "executed": true,
+      "result": "Formatter compatibility identity, dates/time zones/null/invalid behavior and positive-control compiler boundary pass. Existing banking/payment inbox combined16/57 pass."
+    },
+    {
+      "kind": "test",
+      "path": "apps/dashboard/src/hooks/use-business-notification-reads.test.tsx",
+      "executed": true,
+      "result": "Actual notification count/activation/privacy lifetime37/142 pass."
+    }
+  ]
+}

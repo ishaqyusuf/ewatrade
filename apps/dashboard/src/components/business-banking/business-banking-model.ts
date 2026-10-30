@@ -251,17 +251,4 @@ export function errorCode(error: unknown) {
   return null
 }
 
-export function formatReportTime(
-  value: Date | string | null,
-  timeZone: string,
-) {
-  if (!value) return "—"
-  return new Intl.DateTimeFormat("en-NG", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-    timeZone,
-  }).format(new Date(value))
-}
+export { formatReportTime } from "./report-time"
