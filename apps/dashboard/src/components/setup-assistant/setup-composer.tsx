@@ -78,9 +78,7 @@ export function SetupComposer({
   )
   const voiceEnabled = capabilities.data?.enabled === true
   // Photos are offered only when they can be read (vision model set up).
-  const availability = useQuery(
-    trpc.assistant.availability.queryOptions(),
-  ).data
+  const availability = useQuery(trpc.assistant.availability.queryOptions()).data
   // An older API has no media field; it gated photos itself.
   const photos = availability?.media?.photos ?? true
   const [sending, setSending] = useState(false)
@@ -175,6 +173,21 @@ export function SetupComposer({
             />
           ))}
         </ul>
+      ) : null}
+
+      {attachments.statusReadMessage ? (
+        <div className="mb-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+          <output>{attachments.statusReadMessage}</output>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => void attachments.checkStatus()}
+            disabled={busy || sending || attachments.checkingStatus}
+          >
+            Check again
+          </Button>
+        </div>
       ) : null}
 
       {recorder.state.kind === "recording" ? (

@@ -265,3 +265,18 @@ frozen canonical existing-data QA login/UI smoke pass. Historical39-site invento
 unchanged. T03/A3 implemented; P28 attachment recovery/budget and aggregate/focus/
 reconnect cost budgets remain open. Full program4/27; no DP-204/408 acceptance,
 optimized latency claim, service restart or deployment.
+
+## Implementation follow-up: P28 / A2 —30October2026
+
+[Attachment status budget/recovery](../verification/2026-10-30-dashboard-attachment-status.md)
+reproduces known-refusal/unbounded interval work and applies the existing helper
+plus a120s browser read window. Partial completion does not reset it. The query
+remains enabled for fresh focus/reconnect/late READY; explicit Check again refetches
+only and rearms one bounded window. Timeout/refusal never fails/removes files or
+reprocesses a recording. Current Send/original/command guards remain. Unmount opts
+into the SDK abort signal while admitted work may finish. Actual13/117 includes
+the composer action, cancellation, transient and transcript/FAILED/empty states;
+types, owned237/1533+QA/Biome,H02 and frozen canonical retry pass. Initial QA login
+availability failure retained separately; no restart/provider/deployment.
+P28/A2 implemented. Historical39-site snapshot unchanged; aggregate/focus/reconnect
+costs and full DP-204/407 remain open. Current program4/27 (14.8%).

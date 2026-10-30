@@ -1,0 +1,50 @@
+{
+  "version": 1,
+  "id": "2026-10-30-dashboard-attachment-status",
+  "tickets": ["H02"],
+  "summary": "Bound Setup attachment status polling and add explicit read-only recovery while preserving uploaded originals and processing commands. Local only.",
+  "noAssistantImpact": "Existing Dashboard status read lifecycle/UI only. No capability/procedure, API, scope/proof/permission, command, server processing, voice/transcription/provider, storage/schema or WhatsApp conversation change. Known refusals stop intervals; a two-minute browser window pauses reads without failing/removing files. Check again only refetches and rearms the read budget. Existing upload/retry/remove/transcript/Send bodies are byte-identical. No deployment, real bytes, business fixture or submission.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/web-navigation-performance.md"
+    },
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/ai-setup-assistant.md"
+    },
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/assistant-voice.md"
+    },
+    {
+      "topic": "api",
+      "status": "not_applicable",
+      "note": "Current scoped status API and upload/processing/retry/remove commands remain unchanged."
+    },
+    {
+      "topic": "schema",
+      "status": "not_applicable",
+      "note": "No persistence or schema change."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "apps/dashboard/src/components/setup-assistant/attachment-status.mounted.test.ts",
+      "executed": true,
+      "result": "Actual hook/SDK/QueryClient and composer fixture13/117 plus isolated wrapper pass after six read-budget/refusal/recovery failures and one missing abort opt-in. Query-only inert transport; no bytes/provider/command. Partial completion, late READY, focus, transients, one editable transcript, FAILED and empty owner covered."
+    },
+    {
+      "kind": "run",
+      "path": "docs/verification/2026-10-30-dashboard-attachment-status.md",
+      "executed": true,
+      "result": "Dashboard/fixture types, owned237/1533 plus QA types/Biome and source parity pass. Initial QA availability/login failure retained; fixed-field availability probe then unchanged frozen-source canonical existing-data retry passes. Runtime unverified; no service restart, deployment or optimized timing claim."
+    }
+  ]
+}

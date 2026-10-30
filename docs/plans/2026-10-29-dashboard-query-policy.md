@@ -163,3 +163,20 @@ Freshness/GC/key/scope and mutation authority are unchanged. Staff non-review
 keeps no interval and always-fresh focus; voice gateway/empty queues retain healthy
 cadence.37 actual mounted cases plus classifier checks pass; broader owner and
 optimized acceptance remain. [Receipt](../verification/2026-10-30-dashboard-assistant-staff-refusal-polls.md).
+
+## Attachment status owner —30October2026
+
+`setupAssistant.attachments.list` retains its reading-ID key and scoped read API.
+It now uses0 freshness for current focus/reconnect recovery and SDK abort-on-unmount;
+inactive cache retention and global retry policy are unchanged. Automatic1.5s
+intervals stop on known refusal or a120s browser read window. Partial completion
+keeps the same deadline; all-terminal/empty state removes its interval/deadline.
+An already admitted read may finish READY after the window, and a fresh focus read
+can recover without restarting expired intervals. Explicit Check again shares any
+pending GET and rearms one bounded window. Timeout is not server FAILED: originals,
+processing, editable transcripts, existing retry/remove commands and pending Send
+guards remain. This is required durable-status recovery with a bounded automatic
+read cost, not an optional hidden preview or a processing cancellation policy.
+Actual13/117 and composer action, types, scoped checks and canonical development
+retry pass; no live upload/provider, p95 or whole-DP-201/204 acceptance.
+[Receipt](../verification/2026-10-30-dashboard-attachment-status.md).

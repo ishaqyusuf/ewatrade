@@ -1,6 +1,7 @@
 "use client"
 
 import { useTRPC } from "@/trpc/client"
+import { isRejectedRead, readPollInterval } from "@/trpc/query-read-errors"
 import {
   SETUP_ATTACHMENTS_PER_MESSAGE,
   SETUP_ATTACHMENT_LIMITS,
@@ -55,6 +56,8 @@ function refusalCopy(reason: string, kind: SetupAttachmentKind | null) {
 const SHRINK_ABOVE_BYTES = 3 * 1024 * 1024
 /** Longest edge sent; the photo reader downsizes past this anyway. */
 const PHOTO_EDGE = 2048
+/** A browser read budget; processing and uploaded originals remain server-owned. */
+const STATUS_POLL_WINDOW_MS = 120_000
 
 /**
  * Shrinks a large photo before upload: the API takes at most about 4.5 MB a
@@ -120,6 +123,8 @@ export function useSetupAttachments(input: {
   const workflow = useDashboardWorkflow()
   const events = useEvents()
   const [items, setItemsState] = useState<SetupLocalAttachment[]>([])
+  const [pollUntil, setPollUntil] = useState<number | null>(null)
+  const [pollTimedOut, setPollTimedOut] = useState(false)
   const itemsRef = useRef(items)
   const setItems = useCallback(
     (updater: (current: SetupLocalAttachment[]) => SetupLocalAttachment[]) => {
@@ -204,10 +209,32 @@ export function useSetupAttachments(input: {
   const reading = items
     .filter((item) => item.phase === "reading" && item.attachmentId)
     .map((item) => item.attachmentId as string)
+  useEffect(() => {
+    if (reading.length === 0) {
+      setPollUntil(null)
+      setPollTimedOut(false)
+      return
+    }
+    const until = pollUntil ?? Date.now() + STATUS_POLL_WINDOW_MS
+    if (pollUntil === null) setPollUntil(until)
+    const timer = window.setTimeout(
+      () => setPollTimedOut(true),
+      Math.max(0, until - Date.now()),
+    )
+    return () => window.clearTimeout(timer)
+  }, [reading.length, pollUntil])
   const status = useQuery(
     trpc.setupAssistant.attachments.list.queryOptions(
       { attachmentIds: reading },
-      { enabled: reading.length > 0, refetchInterval: 1_500 },
+      {
+        enabled: reading.length > 0,
+        staleTime: 0,
+        trpc: { abortOnUnmount: true },
+        refetchInterval: (query) =>
+          !pollTimedOut && pollUntil !== null && Date.now() < pollUntil
+            ? readPollInterval(query.state.error, 1_500)
+            : false,
+      },
     ),
   )
 
@@ -409,6 +436,21 @@ export function useSetupAttachments(input: {
 
   return {
     items,
+    statusReadMessage:
+      reading.length === 0
+        ? null
+        : isRejectedRead(status.error)
+          ? "File status is unavailable. Check again or remove the file to continue."
+          : pollTimedOut
+            ? "Reading is taking longer than expected. Check again or remove the file to continue."
+            : null,
+    checkingStatus: reading.length > 0 && status.isFetching,
+    checkStatus: () => {
+      if (reading.length === 0) return
+      setPollUntil(Date.now() + STATUS_POLL_WINDOW_MS)
+      setPollTimedOut(false)
+      return status.refetch({ cancelRefetch: false })
+    },
     add,
     remove,
     retry: async (localId: string) => {
