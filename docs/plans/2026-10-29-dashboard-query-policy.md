@@ -277,3 +277,21 @@ hook/runner/lock success/recovery/refusal tests, types, scoped checks and canoni
 local retry pass; inert markers prove cache behavior, not live financial commands.
 DP-203 and family/optimized acceptance remain open, overall4/27.
 [Evidence](../verification/2026-10-30-dashboard-customer-ledger-read-effects.md).
+
+## Existing Order-change effects —30October2026
+
+Current Order detail/timeline/change-controls/Activity and its own message previews
+remain awaited completion reads. A different Order preview does not belong to that
+barrier. Deferred Orders stale marking excludes only successful just-refreshed
+current keys; failed/pending/current-other keys retain recovery. No key or TTL change.
+
+Behind completion, cached mutable Finance/Ledger, Customer history, scoped Catalog
+detail and Service job/queue/count readers refresh explicitly. Known loaded fixed
+statements stay pinned, latest/error/unknown readers still refresh, pure contacts
+retain a stale marker without eager load. Existing stock/directory/search stale
+markers and later route refresh remain; soft route refresh alone cannot prove
+mounted client projections update. Current mutable prefixes are still broad.
+Actual hook5/52, regressions9/74, types, scoped237/1533,H02 and local canonical smoke
+pass. Inert markers establish read wiring, not live financial-command or optimized
+budget acceptance. Overall4/27; DP-203 and broader family requirements remain open.
+[Evidence](../verification/2026-10-30-dashboard-order-change-read-effects.md).

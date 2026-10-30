@@ -1,5 +1,6 @@
 "use client"
 
+import { invalidateChangedOrderEffects } from "@/components/orders/invalidate-changed-order-effects"
 import { useTRPC } from "@/trpc/client"
 import { useQueryClient } from "@tanstack/react-query"
 import { useRouter } from "next/navigation"
@@ -16,31 +17,22 @@ export function useOrderRefresh(orderId: string) {
   const router = useRouter()
   return useCallback(async () => {
     const order = { orderId }
+    const refreshedOrderKeys = [
+      trpc.orders.get.queryKey(order),
+      trpc.orders.timeline.queryKey(order),
+      trpc.orders.changeOptions.queryKey(order),
+      trpc.orders.activity.list.queryKey(order),
+      // These previews quote this Order's balances and statuses.
+      trpc.customerMessages.preview.queryKey(order),
+    ]
     await Promise.allSettled(
-      [
-        trpc.orders.get.queryKey(order),
-        trpc.orders.timeline.queryKey(order),
-        trpc.orders.changeOptions.queryKey(order),
-        trpc.orders.activity.list.queryKey(order),
-        // WhatsApp previews quote balances and statuses: never reuse one
-        // read before this change.
-        trpc.customerMessages.preview.queryKey(),
-      ].map((queryKey) => client.invalidateQueries({ queryKey })),
+      refreshedOrderKeys.map((queryKey) =>
+        client.invalidateQueries({ queryKey }),
+      ),
     )
     // After, so the list does not ride in the same request batch.
-    void Promise.allSettled([
-      client.invalidateQueries({ queryKey: trpc.orders.listPage.pathKey() }),
-      ...[
-        trpc.orders.pathKey(),
-        trpc.catalog.pathKey(),
-        trpc.inventory.pathKey(),
-        trpc.customers.pathKey(),
-        trpc.customerLedger.pathKey(),
-        trpc.finance.pathKey(),
-        trpc.search.pathKey(),
-      ].map((queryKey) =>
-        client.invalidateQueries({ queryKey, refetchType: "none" }),
-      ),
-    ]).then(() => router.refresh())
+    void invalidateChangedOrderEffects(client, trpc, refreshedOrderKeys).then(
+      () => router.refresh(),
+    )
   }, [client, orderId, router, trpc])
 }

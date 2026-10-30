@@ -165,6 +165,16 @@ pass. Statement currentRevision remains informational; live accountDetail owns
 command authority. No financial command, service restart, optimized latency or new
 ticket acceptance. [Evidence](../verification/2026-10-30-dashboard-customer-ledger-read-effects.md).
 
+Order-change completion now scopes awaited message previews to the changed Order,
+keeps successful freshly read current keys fresh and updates related mounted
+Finance/Customer/Service/scoped-Catalog readers behind completion. Three actual
+hook defects reproduce before correction;5/52, final wrappers/classifier9/74,
+Dashboard/fixture types, owned237/1533+QA/Biome,H02 and frozen canonical local smoke
+pass. Required current read barrier, error recovery, later route refresh and
+native command bodies remain. Mutable prefixes and broader dependencies still
+need review; no new optimized-latency or ticket acceptance.
+[Evidence](../verification/2026-10-30-dashboard-order-change-read-effects.md).
+
 | Phase | Tickets | Accepted | Remaining outcome |
 | --- | --- | --- | --- |
 |0 Evidence |001–003 |2/3 |Comparable costs, variable-wait attribution and calibrated budgets |
@@ -193,12 +203,14 @@ The prior source/artifact were restored before this retained change. Code warmin
 
 Next execution order, within the same27 tickets:
 
-DP-203 creation effects, shared Finance completion and Customer Ledger command/
-recovery now have actual callback proof. Next inspect Order-change completion in
-`components/orders/overview/use-order-refresh.ts`: prove awaited/deferred owners
-and snapshot/live effects before changing ordering or broad stale markers. Mutable
-Finance and Orders refresh remain broad. Preserve current money/command authority
-and required fresh reads. This is independent of the timing work below.
+DP-203 creation, Finance/Customer Ledger completion and Order-change refresh now
+have actual callback/owner proof. Mutable Finance/Ledger prefixes, other command
+and report dependencies still need review; no full invalidation acceptance.
+Return to measured context/control latency: createTRPCContext sequentially reads
+QA-session proof and legal status after the same candidate session is known.
+First prove scheduling and fresh refusal/error behavior in the actual Hono caller;
+only then consider parallel reads, preserving native-write/admission authority.
+This is a source candidate, not an established latency gain or weaker guard policy.
 
 1. **DP-405/407:** shared critical-path scheduling DP-103 is accepted from its
    criterion audit; the shared shell projection and cold Stock fix are verified.

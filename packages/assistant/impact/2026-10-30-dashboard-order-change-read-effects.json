@@ -1,0 +1,44 @@
+{
+  "version": 1,
+  "id": "2026-10-30-dashboard-order-change-read-effects",
+  "tickets": ["H02"],
+  "summary": "Keep Order completion scoped and freshly read while refreshing affected mounted projections behind it. Local only.",
+  "noAssistantImpact": "Dashboard read invalidation only. Current Order get/timeline/change controls/Activity and only that Order message previews remain required completion reads. Successful refreshed current keys avoid subsequent broad stale marking; failed/pending and other Order keys keep stale recovery. Mutable Finance/Customer Ledger, Customer history, scoped Catalog detail and Service job/queues refresh in the background, with loaded known pinned statements retained. Directory/stock/search stale markers and later route refresh remain. Native write callbacks, payloads, server checks, money/stock transactions, command/recovery, scope/cache identities and assistant capabilities are unchanged. No provider, business command, schema or deployment.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/web-navigation-performance.md"
+    },
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/dashboard-quick-orders.md"
+    },
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/service-commerce.md"
+    },
+    {
+      "topic": "api",
+      "status": "not_applicable",
+      "note": "No endpoint, command, permission, payload or transaction change."
+    },
+    {
+      "topic": "schema",
+      "status": "not_applicable",
+      "note": "No persistence, migration, index or schema change."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "apps/dashboard/src/components/orders/overview/order-refresh.integration.test.ts",
+      "executed": true,
+      "result": "Actual hook with real QueryClient/observers and typed SDK keys. Before correction, held unrelated message preview blocks completion, deferred invalidation restales fresh current Order reads and active financial/Service markers remain unchanged. Corrected cases preserve current read barrier, independent background refresh, current refusal and later router refresh; loaded fixed snapshots and contacts avoid refetch, scoped Catalog and infinite queue keys refresh. Controlled focus causes no additional fresh current reads. Inert cache markers only; no API operation or financial write."
+    }
+  ]
+}
