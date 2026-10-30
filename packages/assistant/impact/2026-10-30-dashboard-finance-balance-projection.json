@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "id": "2026-10-30-dashboard-finance-balance-projection",
+  "tickets": ["H02"],
+  "summary": "Finance account balances use one conditional aggregate projection inside their unchanged transaction. Local only.",
+  "noAssistantImpact": "Only the implementation of the existing getFinanceAccountBalances read changes. Same protected Finance procedure, active role/Tenant/Book authority and Membership lock, RepeatableRead/cutoff, scalar account fields, exact balances/month values and DTO. No capability/tool/procedure contract, command, confirmation, money calculation, scope, cache/TTL, schema/index or provider behavior changes. Existing Assistant/API callers keep their current read contract.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/merchant-finance.md"
+    },
+    {
+      "topic": "api",
+      "status": "not_applicable",
+      "note": "Existing finance.balances contract and commands unchanged."
+    },
+    {
+      "topic": "permissions",
+      "status": "not_applicable",
+      "note": "Fresh lock/Owner/Admin/Tenant/Book admission and transaction retained."
+    },
+    {
+      "topic": "schema",
+      "status": "not_applicable",
+      "note": "No schema/index/migration; current same-Book journal relations remain."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/finance/account-balance-projection.test.ts",
+      "executed": true,
+      "result": "Six inert actual-reader/PostgreSQL cases plus five retained journal-rule cases pass,150 assertions total.36 Book/snapshot/month combinations; DTO/full scalar metadata, exact money/date/cutoff/Book/array/refusal/fresh/error/binding checks. No real lock race or live posting."
+    },
+    {
+      "kind": "run",
+      "path": "docs/verification/2026-10-30-dashboard-finance-balance-projection.md",
+      "executed": true,
+      "result": "One actual balance projection instead of3 statements on its unchanged transaction connection. Owned DB/API/Dashboard types, scoped fast237/1533+QA types/Biome, H01/H02 and authority/root options/Book DTO/other-reader parity pass. Synthetic150k-entry/300k-line plans return40 identical rows; shared buffer hits7505 to4006. No new UI run, browser/optimized speedup claim, restart, deployment or live financial/provider action. Preparedf027 manifests unchanged and exclude this source; full program3/27."
+    }
+  ]
+}

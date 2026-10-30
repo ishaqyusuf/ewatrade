@@ -1,5 +1,6 @@
 import type { PrismaClient } from "../../../generated/prisma/client"
 import { type FinanceActor, assertFinanceManager } from "./access"
+import { getFinanceAccountBalanceProjection } from "./account-balance-projection"
 import { FinanceError } from "./rules"
 
 export async function getFinanceAccountBalances(
@@ -19,60 +20,17 @@ export async function getFinanceAccountBalances(
       const monthStart = new Date(
         Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1),
       )
-      const [accounts, totals, monthTotals] = await Promise.all([
-        tx.financeAccount.findMany({
-          where: { bookId: book.id },
-          orderBy: { code: "asc" },
-        }),
-        tx.financeJournalLine.groupBy({
-          by: ["accountId"],
-          where: {
-            bookId: book.id,
-            entry: { sequence: { lte: book.lastSequence } },
-          },
-          _sum: { debitMinor: true, creditMinor: true },
-        }),
-        tx.financeJournalLine.groupBy({
-          by: ["accountId"],
-          where: {
-            bookId: book.id,
-            entry: {
-              sequence: { lte: book.lastSequence },
-              effectiveAt: { gte: monthStart },
-            },
-          },
-          _sum: { debitMinor: true, creditMinor: true },
-        }),
-      ])
-      const byAccount = new Map(totals.map((row) => [row.accountId, row._sum]))
-      const monthByAccount = new Map(
-        monthTotals.map((row) => [row.accountId, row._sum]),
-      )
+      const accounts = await getFinanceAccountBalanceProjection(tx, {
+        bookId: book.id,
+        snapshot: book.lastSequence,
+        monthStart,
+      })
       return {
         snapshotSequence: book.lastSequence.toString(),
         currencyCode: book.currencyCode,
         startsAt: book.startsAt,
         monthStart,
-        accounts: accounts.map((account) => {
-          const totals = byAccount.get(account.id)
-          const month = monthByAccount.get(account.id)
-          const debitMinor = totals?.debitMinor ?? BigInt(0)
-          const creditMinor = totals?.creditMinor ?? BigInt(0)
-          const debitNormal =
-            account.kind === "ASSET" || account.kind === "EXPENSE"
-          return {
-            ...account,
-            debitMinor: debitMinor.toString(),
-            creditMinor: creditMinor.toString(),
-            // For money (asset) accounts: debits are money in, credits money out.
-            monthDebitMinor: (month?.debitMinor ?? BigInt(0)).toString(),
-            monthCreditMinor: (month?.creditMinor ?? BigInt(0)).toString(),
-            balanceMinor: (debitNormal
-              ? debitMinor - creditMinor
-              : creditMinor - debitMinor
-            ).toString(),
-          }
-        }),
+        accounts,
       }
     },
     { maxWait: 10_000, timeout: 30_000, isolationLevel: "RepeatableRead" },

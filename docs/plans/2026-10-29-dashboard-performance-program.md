@@ -1,5 +1,21 @@
 # Dashboard performance program
 
+## Finance account projection — DP-103/405,30October2026
+
+- [x] Actual reader reproduces three projection statements on one transaction
+  connection; replace with one current conditional aggregate SELECT.
+- [x] Preserve fresh authority/Book/lock/snapshot, all scalar metadata and exact
+  account/month amounts. Six projection cases plus five journal-rule cases pass.
+- [x]36 Book/snapshot/month combinations match the three-read reference; synthetic
+  150k-entry/300k-line plans return identical rows with7505→4006 buffer hits.
+
+[Receipt](../verification/2026-10-30-dashboard-finance-balance-projection.md).
+This removes two statements, not a connection checkout or financial freshness.
+Browser/optimized timing remains open; preparedf027 excludes this new source.
+Owned DB/API/Dashboard types, scoped fast237/1533+QA types/Biome, H01/H02 and
+control/DTO/other-reader parity pass. Full program remains3/27; no schema/index,
+service restart or deployment.
+
 ## Nine-family measurement coverage — DP-003/502,30October2026
 
 - [x] Extend the existing optional local QA performance pass to fixed DP-401–409
