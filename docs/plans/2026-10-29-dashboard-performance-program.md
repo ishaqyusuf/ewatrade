@@ -7,13 +7,23 @@ Current primary checkout; local implementation, tests and commits only. No push,
 deployment, provider changes, paid resources or business submissions.
 
 This remains the durable scope across goal continuations. Individual source slices
-and passing smoke runs do not replace full ticket acceptance. **5/27 tickets are
-accepted (18.5%)**: DP-001, DP-002, DP-101, DP-103 and DP-302. All27 acceptance criteria below are
+and passing smoke runs do not replace full ticket acceptance. **6/27 tickets are
+accepted (22.2%)**: DP-001, DP-002, DP-003, DP-101, DP-103 and DP-302. All27 acceptance criteria below are
 preserved verbatim. Historical contracts and evidence remain authoritative in the
 [complete pre-consolidation history](2026-10-30-dashboard-performance-program-history-c119f31b.md).
 That file records earlier runtime/build states; its “current” labels are historical.
 
 ## Current assessment and phase order
+
+DP-003 is now accepted from the retained pinned aXG/fea718366 normal18-sample
+nine-family baseline and two actual SQL/pool/serialization diagnostics. Its missing
+per-family budget table now explicitly assigns the unchanged100ms feedback/200ms
+loaded revisit/1s warm/2s refresh targets, current baseline values, misses and sample/
+visibility/data-size limits. Five refresh and five warm targets are missed; no
+budget was relaxed and no new runtime sweep was needed. This closes baseline and
+calibration, not DP-502 performance/regression acceptance. Program **6/27**, all59
+routes/nine families and21 remaining criteria retained.
+[Baseline costs, per-family budgets and limits](../verification/2026-10-30-dashboard-baseline-budgets.md).
 
 The next optimized local candidate **w1xT4Ud0Z2akx4EKAX34N** isolates the bell's
 unchanged time formatter from banking/phone helpers. Actual closed Overview,
@@ -507,7 +517,7 @@ authorization and locked commands retain their ordering and transaction boundari
   Cover refresh, soft navigation, Back/filter restoration, tab revisits, close/
   reopen, scope changes and critical error paths. Acceptance: route inventory,
   owning layer and representative bounded journey for every route family.
-- [ ] **DP-003 Baseline and budgets.** Extend existing privacy-safe tracing to
+- [x] **DP-003 Baseline and budgets.** Extend existing privacy-safe tracing to
   distinguish auth/legal/scope, API, SQL/pool, serialization and browser work.
   Separate development compilation from an optimized local runtime. Acceptance:
   representative pinned baseline with request/query/payload and latency costs;
