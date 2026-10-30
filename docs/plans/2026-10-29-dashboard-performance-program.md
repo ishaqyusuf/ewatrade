@@ -75,25 +75,37 @@ endpoint measures244.8–303.1ms driver-inclusive versus<0.04ms server planning/
 This establishes material overhead outside the plan, not pure network RTT.
 [Focused timeline and probe](../verification/2026-10-30-dashboard-startup-timeline.md).
 
+Two measured code/context loading candidates did not advance Activity's actual
+request start and were removed. Both passed correctness checks; an isolated Flight
+module test missed the enclosing shell dependency. Product source and the accepted
+artifact were restored, and development mode is running. The code-warming sample's
+3017ms total is not a new performance win.
+[Rejected experiments and restoration](../verification/2026-10-30-dashboard-startup-experiments.md).
+
 Next execution order, within the same27 tickets:
 
-1. **DP-003/103/204:** distinguish the observed26 canceled refresh Flight requests
+1. **DP-103/401–409:** combine current plan-feature facts with the existing Dashboard
+   workspace projection. The shell presently awaits these in two serial reads.
+   Preserve mandatory workspace admission when optional billing tables are absent,
+   canonical plan/time policy, workspace/Store selection and fresh API authority.
+   Prove healthy-path query reduction and policy/error parity before timing claims.
+2. **DP-003/103/204:** distinguish the observed26 canceled refresh Flight requests
    from navigation/useful prefetch before changing scheduling. Cancellation alone
    is not wasted-work proof; existing submenu intent/automatic-parent evidence
    remains. Keep DB topology unchanged while calibrating local round-trip cost.
-2. **DP-102/104/407:** use the measured945/456ms Activity start edge to test earlier
-   code/context delivery while preserving current mount admission and fresh reads.
+3. **DP-102/104/407:** resolve the remaining measured945/456ms Activity start edge
+   using actual enclosing-caller evidence. Promise/code warming has now been tested
+   without advancing it; do not repeat those candidates without a new premise.
    Any data prefetch still requires exact key/scope consumption, one-use ownership,
-   refusal erasure and fresh returns. Do not mislabel driver polling as render cost.
-3. **DP-103/405/407:** inspect remaining fresh context/control round trips. Literal
+   refusal erasure and fresh returns. Driver polling is not a React profile.
+4. **DP-103/405/407:** inspect remaining fresh context/control round trips. Literal
    plan cost is tiny; prefer bounded projection/independent-work evidence before
    indexes, TTLs or infrastructure. No weaker proof, role or transaction admission.
-   Finance and other family outliers retain their existing work.
-4. **DP-201–204 and301–304:** finish lifecycle/invalidation/polling and code/interaction
+5. **DP-201–204 and301–304:** finish lifecycle/invalidation/polling and code/interaction
    contracts for all owners. Reuse completed source proofs. Current Channels and
    Compliance reads already stream independently; the prescription access dependency
    is deliberately ordered. Do not repeat those implementations.
-5. **DP-501–503:** comparable optimized samples, Back/tab/draft/error/scope/revocation
+6. **DP-501–503:** comparable optimized samples, Back/tab/draft/error/scope/revocation
    journeys, per-family regression budgets and the complete27-ticket audit.
 
 ## Activity attribution follow-up — DP-003/103/407
