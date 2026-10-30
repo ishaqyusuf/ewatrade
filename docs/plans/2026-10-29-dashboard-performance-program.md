@@ -1,5 +1,30 @@
 # Dashboard performance program
 
+## Optimized runtime measured and restored — DP-003/103/502,30October2026
+
+- [x] Serve the pinnedf027 optimized Dashboard, run canonical existing-data smoke,
+  measure18 fixed-family refresh/warm-return actions, restore development mode.
+- [x] Four manifest hashes match; API/Storefront/Marketing listeners unchanged.
+- [x] Retained shell, zero business writes and ordinary draft cancellation pass.
+
+| Representative | Refresh | Warm return |
+| --- | ---: | ---: |
+| Overview | 946ms | 1044ms |
+| Catalog | 1762ms | 819ms |
+| Orders | 2377ms | 817ms |
+| Customers | 2185ms | 1318ms |
+| Finance | 5916ms | 2830ms |
+| Website requests | 2459ms | 832ms |
+| Activity | 3480ms | 3114ms |
+| General | 1231ms | 1317ms |
+| Reports | 3565ms | 818ms |
+
+Initial post-login shell5692ms; first separate Catalog refresh3252ms. One sample
+per action, no causal/p95/Production claim. Checkout91c6c812; compiled Dashboard
+f027 excludes later Finance/Activity source; separate hot API revision unverified.
+[Receipt](../verification/2026-10-30-dashboard-optimized-route-family-timings.md). Full program3/27 unchanged.
+
+
 ## Activity scope projection — DP-103/407,30October2026
 
 - [x] Combine the existing fresh Membership lock and scope facts into one query;
@@ -44,7 +69,7 @@ business writes; source/lock hashes and preparedf027 manifests match. Finance/
 Activity refresh6422/5513ms and warm2982/3693ms lead the next attribution work.
 Owned fast47/195+QA types/Biome and H02 pass; unchanged H01 evidence reused.
 This adds measurement coverage, not numeric budgets or domain acceptance. Full
-program remains3/27 (11.1%); optimized timing coordination remains pending.
+program remains3/27 (11.1%); subsequent f027 optimized timings are linked above.
 
 ## Current optimized candidate — DP-003/502,30October2026
 
@@ -52,13 +77,14 @@ program remains3/27 (11.1%); optimized timing coordination remains pending.
   page entries/final optimization; four manifests and source/lock identity pinned.
 - [x] Prior9eb8 runtime archived with matching manifests; dev references and
   both dev type hashes restored/matching. Current relevant source remains clean.
-- [ ] Serve/timing/restore coordination for this candidate: new request replaces
-  pending9eb8. No Dashboard/API/other service has been switched or restarted.
+- [x] Dashboard-only serve/timing/restore completed in the later linked runtime
+  receipt. API/other services retained their listeners; development mode restored.
 
 [Build receipt](../verification/2026-10-30-dashboard-optimized-candidate-f027.md).
 Current root optimized output is f027263c; earlier “prepared9eb8” entries are
 historical milestone evidence. This build includes the accumulated source but
-has not been served/timed. Full program remains3/27 (11.1%); no deployment.
+was subsequently served/timed and development restored. Full program remains3/27
+(11.1%); no deployment.
 
 ## Customer-book independent reads — DP-103/404,30October2026
 
@@ -169,13 +195,11 @@ separate. Start:0/27. Evidence belongs in the execution log below and linked rec
 
 ## Current assessment and phase order
 
-Midday adoption is incomplete across owners, rather than absent. Request-local
-reuse, streaming/scheduling, retained tabs, hidden-reader controls and optional
-delivery have implemented slices. Those are not blanket acceptance of every
-route or proof that refresh latency is solved. Latest development smoke still
-measures Catalog refresh2731ms and warm Catalog831ms; Overview transitions are
-1045ms/warm1016ms in that run. Initial post-login shell5518ms remains slow. Sparse, uncontrolled
-observations cannot establish production performance, a causal speedup or p95.
+Midday adoption is partial across owners. Request-local reuse, streaming,
+retained tabs, hidden-reader controls and optional delivery have implemented
+slices. The optimized local run above still shows initial shell5692ms, Finance
+refresh5916ms/warm2830ms and Activity3480ms/3114ms. Development compilation cannot
+explain all remaining waits. One sample is insufficient for stable budgets.
 
 | Phase | Tickets | Accepted | Remaining outcome |
 | --- | --- | --- | --- |
@@ -186,13 +210,32 @@ observations cannot establish production performance, a causal speedup or p95.
 |4 Domain rollout |401–409 |0/9 |All nine families satisfy read/state/access/freshness budgets |
 |5 Acceptance |501–503 |0/3 |Behavior, regression budgets and full27-ticket audit |
 
-Next priority: correlate remaining document/render/API/pool/SQL cost in DP-003/103,
-finish actual prefetch consumption and query lifetime in DP-102/201–204, then use
-the measured slowest owners to order DP-401–409. Continue small delivery/recovery
-fixes only where an actual defect or costly graph is demonstrated. Keep the full
-ticket acceptance below; build success and a faster isolated tab do not close a
-domain ticket. Optimized runtime changes retain their explicit shared-service
-coordination requirement. Overall3/27 (11.1%); no deployment.
+Execution order within the existing tickets:
+
+1. **DP-003 → DP-103:** attribute document/SSR and individual API procedures;
+   distinguish fresh auth/legal/scope round trips from domain SQL and serialization.
+   Shared API context is roughly630ms in several observed requests. Remove proven
+   redundant work and independent serial edges, preserving fresh authority.
+2. **DP-102/104 + DP-201–204:** prove matching hydration keys, independent loading,
+   retained tabs and exact invalidation. Each read owner records scope, freshness,
+   retention, activation, cancellation and post-command dependencies. No blanket
+   stale-time increase for permission, money, proof or access reads.
+3. **DP-405/407 first:** Finance and Activity remain slow on optimized runtime.
+   Attribute their root/list/filter/summary scopes and inspect actual SQL plans.
+   Verify the committed Finance/Activity reductions in a subsequent matching build;
+   the current f027 artifact does not contain them. Then prioritize Reports/Orders,
+   Website Requests/Customers and the remaining family acceptance journeys.
+4. **DP-301–304:** measure unopened sheets/tools/import graphs and main-thread
+   interactions; split or stabilize demonstrated costs. Record transferred bytes,
+   loading/recovery and realistic table interaction evidence.
+5. **DP-501–503:** run repeated comparable optimized samples and critical
+   Back/tab/draft/error/scope/revocation journeys; enforce per-family budgets in
+   existing QA tooling. Proposed100ms feedback/200ms retained tabs/1s warm navigation/
+   2s optimized refresh remain targets, not achieved or statistical guarantees.
+
+Every ticket retains the acceptance criteria below. Build/source milestones and
+one faster tab do not close a domain ticket. Current optimized window is closed,
+development restored, no deployment. Overall3/27 (11.1%).
 
 ## References and migration contract
 

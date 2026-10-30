@@ -46,3 +46,9 @@ left running. It supersedes the unexecuted9eb8 request. The completed965 window
 and its approval remain historical. docs/testing.md15–17 requires coordination
 before shared-stack restarts. Nine-family optimized timings and comparative
 per-family budgets remain open; do not accept a domain based on this build alone.
+
+## Subsequent local timing window
+
+The Dashboard-only window completed; development mode restored and API/other
+service listener identities retained. Eighteen family samples pass, with explicit
+checkout/artifact/API identity limitations. See [runtime receipt](2026-10-30-dashboard-optimized-route-family-timings.md).
