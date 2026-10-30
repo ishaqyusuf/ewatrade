@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "id": "2026-10-30-dashboard-inbox-polls",
+  "tickets": ["H02"],
+  "summary": "Local Website inbox and conversation queue stop repeated known-refused intervals using the current helper. No deployment.",
+  "noAssistantImpact": "Only four client read intervals change. Same query activation/keys/inputs, required freshness, Store/filter/pagination scope, retry/background policy, selected details, commands and API permissions. Existing known-refusal erasure remains; focus/invalidation/reopen recover and transients/empty queues retain cadence. No Assistant capability/tool, confirmation, money/message/quote/provider action, schema or contract change.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/web-navigation-performance.md"
+    },
+    {
+      "topic": "api",
+      "status": "not_applicable",
+      "note": "Existing queries and commands have unchanged inputs/outputs and readers."
+    },
+    {
+      "topic": "permissions",
+      "status": "not_applicable",
+      "note": "No authority/grant/scope change; current server admission and fresh recovery remain."
+    },
+    {
+      "topic": "schema",
+      "status": "not_applicable",
+      "note": "No schema/index/migration."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "run",
+      "path": "docs/verification/2026-10-30-dashboard-inbox-polls.md",
+      "executed": true,
+      "result": "31 mounted cases/175 assertions, isolated entry, Dashboard/owned types, scoped fast237/1533+QA types/Biome and H01/H02 pass. Frozen canonical local smoke passes login/Catalog/draft-cancel, runtimeVerified:false; exact inbox/queue/error/tab proof remains inert. No live grant change, business/provider action, application restart or deployment. Prepared9eb8 separate/unchanged; full program3/27 remains."
+    },
+    {
+      "kind": "test",
+      "path": "packages/assistant/evaluations/fixtures/dashboard-inbox-polls.fixture.tsx",
+      "executed": true,
+      "result": "31 actual mounted component/nuqs/tRPC/query cases pass with175 assertions after12 refusal red cases. Four readers stop known refusals and clear payloads; focus/invalidation/reopen recover; transients/empty queues keep5s/30s; background/offline and selected-only list ownership retain behavior. Ports inert; mutations/unknown operations refused. No real business action or browser-latency claim."
+    }
+  ]
+}

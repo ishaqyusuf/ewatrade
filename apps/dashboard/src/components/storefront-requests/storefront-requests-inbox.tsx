@@ -5,6 +5,7 @@ import { FormFeedback } from "@/components/forms/form-feedback"
 import { PageHeader } from "@/components/page-header"
 import { ScrollableContent } from "@/components/scrollable-content"
 import { useTRPC } from "@/trpc/client"
+import { readPollInterval } from "@/trpc/query-read-errors"
 import type { AppRouter } from "@ewatrade/api/trpc/routers/_app"
 import {
   Alert,
@@ -147,7 +148,7 @@ export function StorefrontRequestsInbox({ timeZone }: { timeZone: string }) {
   const counts = useQuery({
     ...trpc.storefrontRequests.counts.queryOptions(),
     ...FRESH,
-    refetchInterval: 30_000,
+    refetchInterval: (query) => readPollInterval(query.state.error, 30_000),
   })
   return (
     <ScrollableContent>
@@ -285,7 +286,7 @@ function OrderRequests({
   const list = useQuery({
     ...trpc.storefrontRequests.orders.queryOptions({ filter }),
     ...FRESH,
-    refetchInterval: 30_000,
+    refetchInterval: (query) => readPollInterval(query.state.error, 30_000),
   })
   const items = list.data?.items ?? []
   return (
@@ -1093,7 +1094,7 @@ function ServiceRequests({
       filter: filter === "confirmed" ? "quoted" : filter,
     }),
     ...FRESH,
-    refetchInterval: 30_000,
+    refetchInterval: (query) => readPollInterval(query.state.error, 30_000),
   })
   const items = list.data?.items ?? []
   const current = items.find((item) => item.id === selected)

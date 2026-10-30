@@ -1,5 +1,20 @@
 # Dashboard performance program
 
+## Inbox/queue refused-read intervals — DP-201/204/406,30October2026
+
+- [x] Actual mounted owners reproduce12 refused-interval failures at P17/P25–27.
+  Healthy tab proof confirms one selected list and required fresh return.
+- [x] Reuse the shared guard at all four sites, preserving cadence, activation,
+  scopes, freshness, background pause and current focus/invalidation/reopen reads.
+- [x]31 mounted cases/175 assertions pass, including private erasure, transients,
+  empty queues/badges and refused tab visits. No business/provider commands.
+
+[Receipt](../verification/2026-10-30-dashboard-inbox-polls.md). Final source/platform
+checks pass: Dashboard/owned types, isolated entry, owned fast237/1533+QA types/
+Biome, H01/H02 and frozen local smoke (runtime unverified). Exact owner proof is
+inert; no browser-speed claim. This is A2 for these readers; WhatsApp/attachment/domain/job
+owners and aggregate/optimized acceptance remain. Full program stays3/27.
+
 ## Overview content loading owner — DP-104/401,30October2026
 
 - [x] Actual Flight reproduces whole-page header/actions waiting on presence and

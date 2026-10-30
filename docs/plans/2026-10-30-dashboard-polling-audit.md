@@ -223,3 +223,16 @@ component/hooks with query/tRPC observers cover denied payload clearing, interva
 stop, focus recovery/resumption, transients and staff non-review mode. Existing
 activation/cadence, command and required live-read rules remain. This is a subset
 of A2; remaining queue/WhatsApp/attachment/domain owners and full tickets stay open.
+
+## Implementation follow-up: P17/P25–27 / A2 —30October2026
+
+[Inbox/queue refused intervals](../verification/2026-10-30-dashboard-inbox-polls.md)
+reproduce12 known-refusal failures with actual mounted owners and apply the shared
+interval helper to all four sites.31 actual component/nuqs/tRPC/query cases/175
+assertions pass, including erasure, focus/invalidation/reopen, transients, empty
+queues and background/offline recovery. Healthy tab proof confirms only the
+selected Website list mounts; fresh return is retained, with no cache/activation
+change. No business/provider command. Other A2 owners and aggregate/optimized
+budgets remain; full program3/27. Dashboard/owned types, isolated entry, owned
+fast237/1533+QA types/Biome, H01/H02 and frozen local smoke pass (runtime
+unverified). Exact owner proof is inert; no application restart or deployment.

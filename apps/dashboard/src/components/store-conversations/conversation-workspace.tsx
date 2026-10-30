@@ -18,6 +18,7 @@ import {
   useStoreConversationParams,
 } from "@/hooks/use-store-conversation-params"
 import { useTRPC } from "@/trpc/client"
+import { readPollInterval } from "@/trpc/query-read-errors"
 import type { DirectoryViewSettings } from "@/utils/directory-view-settings"
 import type { TableSettings } from "@/utils/table-settings"
 import { Alert, AlertDescription, Button } from "@ewatrade/ui"
@@ -59,7 +60,7 @@ export function ConversationWorkspace({
   const queue = useQuery(
     trpc.serviceCommerce.storeConversationQueue.queryOptions(input, {
       retry: false,
-      refetchInterval: 5_000,
+      refetchInterval: (query) => readPollInterval(query.state.error, 5_000),
       refetchIntervalInBackground: false,
     }),
   )
