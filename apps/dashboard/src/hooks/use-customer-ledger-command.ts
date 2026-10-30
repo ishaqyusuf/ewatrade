@@ -1,4 +1,5 @@
 "use client"
+import { invalidateCustomerLedgerEffects } from "@/components/customer-ledger/invalidate-customer-ledger-effects"
 import { createCustomerLedgerCommandRunner } from "@/lib/customer-ledger/command-runner"
 import { withFinanceCommandLock } from "@/lib/finance-command-recovery"
 import { useTRPC } from "@/trpc/client"
@@ -93,13 +94,7 @@ export function useCustomerLedgerCommand(
     }
   }, [inspect])
   async function invalidate() {
-    await Promise.all([
-      client.invalidateQueries({ queryKey: trpc.customerLedger.pathKey() }),
-      client.invalidateQueries({ queryKey: trpc.finance.pathKey() }),
-      client.invalidateQueries({ queryKey: trpc.orders.pathKey() }),
-      client.invalidateQueries({ queryKey: trpc.customers.pathKey() }),
-      client.invalidateQueries({ queryKey: trpc.services.pathKey() }),
-    ])
+    await invalidateCustomerLedgerEffects(client, trpc)
   }
   async function run(
     operation: string,

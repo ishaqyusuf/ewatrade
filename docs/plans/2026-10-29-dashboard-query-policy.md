@@ -259,3 +259,21 @@ rule or apply the guard to active proof/job flows. Recursive receipt/socket/Setu
 recovery exceptions are recorded in the extended polling audit. Missing stream
 byte/phase measurements remain missing. Full DP-201/204 and per-family acceptance
 stay open. [Evidence](../verification/2026-10-30-dashboard-read-activity.md).
+
+## Customer Ledger completion effects —30October2026
+
+Success and committed/rejected acknowledgement share an explicit application owner.
+Loaded successful fixed Customer statement/continuation entries and totals avoid
+routine refetch; currentRevision inside that DTO is informational, not pinned
+command authority. Live accountDetail, account admission, funds/refunds/sources and
+mutable Ledger reads still refresh. Fresh workspace refusal hides retained rows.
+Known fixed Finance statements reuse their existing rule; latest/error/pending/
+missing/unknown keys and mutable reports continue refreshing. No TTL/key or API change.
+
+Mutable Finance/Orders keep current broad refresh. Customer Order-history detail
+and Service job/ordinary+infinite queues/stage totals refresh explicitly. Pure
+contact directories/count and Service settings/assignees remain unchanged. Actual
+hook/runner/lock success/recovery/refusal tests, types, scoped checks and canonical
+local retry pass; inert markers prove cache behavior, not live financial commands.
+DP-203 and family/optimized acceptance remain open, overall4/27.
+[Evidence](../verification/2026-10-30-dashboard-customer-ledger-read-effects.md).

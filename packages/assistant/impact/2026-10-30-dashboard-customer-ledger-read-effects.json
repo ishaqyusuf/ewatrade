@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "id": "2026-10-30-dashboard-customer-ledger-read-effects",
+  "tickets": ["H02"],
+  "summary": "Preserve loaded pinned statements during Customer Ledger completion/recovery and refresh only affected current readers. Local only.",
+  "noAssistantImpact": "Dashboard cache wiring only. Actual Customer Ledger command success and committed/rejected acknowledgement retain their write, lock, salted metadata, identity, scope and uncertainty semantics. Loaded successful fixed customerLedger.statement entries/totals and known Finance account statements avoid routine invalidation; informational statement currentRevision is not command authority. Live accountDetail, accounts, refunds, sources, mutable Finance and Orders remain refreshable. Customer history and Service job/queue projections refresh, while pure contact directories/count and Service configuration remain unchanged. Failed/latest/pending/unknown reads still refresh. No TTL/key, API, schema, server permission, native financial payload, command implementation, provider or deployment change.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/web-navigation-performance.md"
+    },
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/customer-ledger.md"
+    },
+    {
+      "topic": "api",
+      "status": "not_applicable",
+      "note": "No server contract, command, fresh permission, transaction or API change."
+    },
+    {
+      "topic": "schema",
+      "status": "not_applicable",
+      "note": "No persistence, schema, migration or index change."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "apps/dashboard/src/hooks/customer-ledger-refresh.integration.test.ts",
+      "executed": true,
+      "result": "Actual command hook, command runner and lock owner exercise inert success, committed/rejected acknowledgement, offline/lock refusal and actual workspace fresh-refusal gate. Held loaded snapshots previously blocked completion/recovery; intended live markers refresh after correction without duplicate writes. Isolated storage contains salted recovery metadata, never payload references. No API command or business write."
+    },
+    {
+      "kind": "test",
+      "path": "apps/dashboard/src/utils/finance-snapshot-query.test.ts",
+      "executed": true,
+      "result": "Actual SDK keys cover fixed zero/max/paged snapshots, error/pending/absent/latest/malformed states and unknown/private-live/other-domain key conservatism. Existing Finance classifier and actual Finance completion wrapper regressions remain covered."
+    }
+  ]
+}

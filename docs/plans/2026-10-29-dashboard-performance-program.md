@@ -155,6 +155,16 @@ one existing Add account open/Cancel pass.21 completion calls/20 form files shar
 the hook; no native financial command, restart, optimized latency or new ticket
 acceptance. [Evidence](../verification/2026-10-30-dashboard-finance-read-effects.md).
 
+Customer Ledger completion/recovery now avoids a reproduced wait on loaded fixed
+Customer/Finance statement reloads. Live accounts/detail/refunds/sources, mutable
+Finance/Orders, Customer Order history and Service job/queue reads still refresh;
+pure contacts and Service configuration do not. Actual hook/runner/lock and current
+workspace-refusal proof passes6/82; focused wrappers/classifier/runner15/105,
+Dashboard/fixture types, owned237/1533+QA/Biome,H02 and frozen canonical local retry
+pass. Statement currentRevision remains informational; live accountDetail owns
+command authority. No financial command, service restart, optimized latency or new
+ticket acceptance. [Evidence](../verification/2026-10-30-dashboard-customer-ledger-read-effects.md).
+
 | Phase | Tickets | Accepted | Remaining outcome |
 | --- | --- | --- | --- |
 |0 Evidence |001–003 |2/3 |Comparable costs, variable-wait attribution and calibrated budgets |
@@ -183,12 +193,12 @@ The prior source/artifact were restored before this retained change. Code warmin
 
 Next execution order, within the same27 tickets:
 
-DP-203 creation effects and shared Finance completion now have actual callback
-proof. The next concrete source candidate is `hooks/use-customer-ledger-command.ts`:
-its five blanket namespace invalidations need actual success, live/pinned and
-affected-read evidence before narrowing. Shared mutable Finance refresh is still
-broad. Preserve current money/command authority and required fresh reads. This is
-independent of remaining Activity/Finance timing work below.
+DP-203 creation effects, shared Finance completion and Customer Ledger command/
+recovery now have actual callback proof. Next inspect Order-change completion in
+`components/orders/overview/use-order-refresh.ts`: prove awaited/deferred owners
+and snapshot/live effects before changing ordering or broad stale markers. Mutable
+Finance and Orders refresh remain broad. Preserve current money/command authority
+and required fresh reads. This is independent of the timing work below.
 
 1. **DP-405/407:** shared critical-path scheduling DP-103 is accepted from its
    criterion audit; the shared shell projection and cold Stock fix are verified.

@@ -1,10 +1,16 @@
 import type { QueryKey } from "@tanstack/react-query"
 
-/** Public tRPC key shape for this app's unprefixed options proxy. */
-export function isLoadedFinanceStatement(query: {
+type CachedQuery = {
   queryKey: QueryKey
   state: { status: string; data: unknown }
-}) {
+}
+
+/** Public tRPC key shape for this app's unprefixed options proxy. */
+function hasLoadedSnapshot(
+  query: CachedQuery,
+  namespace: string,
+  procedures: readonly string[],
+) {
   if (
     query.state.status !== "success" ||
     query.state.data === undefined ||
@@ -15,8 +21,8 @@ export function isLoadedFinanceStatement(query: {
   if (
     !Array.isArray(path) ||
     path.length !== 2 ||
-    path[0] !== "finance" ||
-    !["accountActivity", "accountLedger"].includes(path[1]) ||
+    path[0] !== namespace ||
+    !procedures.includes(path[1]) ||
     !options ||
     typeof options !== "object" ||
     !("input" in options)
@@ -31,4 +37,16 @@ export function isLoadedFinanceStatement(query: {
     /^(0|[1-9]\d{0,18})$/.test(sequence) &&
     BigInt(sequence) <= BigInt("9223372036854775807")
   )
+}
+
+export function isLoadedFinanceStatement(query: CachedQuery) {
+  return hasLoadedSnapshot(query, "finance", [
+    "accountActivity",
+    "accountLedger",
+  ])
+}
+
+/** Entries/totals are pinned; command revisions come from live accountDetail. */
+export function isLoadedCustomerLedgerStatement(query: CachedQuery) {
+  return hasLoadedSnapshot(query, "customerLedger", ["statement"])
 }

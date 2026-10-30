@@ -3,7 +3,10 @@ import type { AppRouter } from "@ewatrade/api/trpc/routers/_app"
 import { QueryClient, type QueryKey } from "@tanstack/react-query"
 import { createTRPCClient } from "@trpc/client"
 import { createTRPCOptionsProxy } from "@trpc/tanstack-react-query"
-import { isLoadedFinanceStatement } from "./finance-snapshot-query"
+import {
+  isLoadedCustomerLedgerStatement,
+  isLoadedFinanceStatement,
+} from "./finance-snapshot-query"
 
 const trpc = createTRPCOptionsProxy<AppRouter>({
   client: createTRPCClient<AppRouter>({ links: [] }),
@@ -115,4 +118,73 @@ test("unknown/manual/prefixed key layouts conservatively keep refreshing", () =>
     ],
   ])
     expect(isLoadedFinanceStatement(loaded(queryKey))).toBe(false)
+})
+
+test("Customer entries/totals retain only loaded canonical fixed snapshot keys", () => {
+  for (const snapshotSequence of ["0", "7", "9223372036854775807"]) {
+    for (const afterSequence of [undefined, "2"]) {
+      const key = trpc.customerLedger.statement.queryKey({
+        accountId: "ledger",
+        snapshotSequence,
+        afterSequence,
+        limit: 30,
+      })
+      expect(isLoadedCustomerLedgerStatement(loaded(key))).toBe(true)
+      for (const status of ["error", "pending"])
+        expect(
+          isLoadedCustomerLedgerStatement({
+            queryKey: key,
+            state: { status, data: { retained: true } },
+          }),
+        ).toBe(false)
+      for (const data of [undefined, null])
+        expect(
+          isLoadedCustomerLedgerStatement({
+            queryKey: key,
+            state: { status: "success", data },
+          }),
+        ).toBe(false)
+    }
+  }
+  for (const snapshotSequence of [
+    undefined,
+    "",
+    "-1",
+    "01",
+    "1.5",
+    "9223372036854775808",
+    "1".repeat(20),
+  ]) {
+    expect(
+      isLoadedCustomerLedgerStatement(
+        loaded(
+          trpc.customerLedger.statement.queryKey({
+            accountId: "ledger",
+            snapshotSequence,
+            limit: 30,
+          }),
+        ),
+      ),
+    ).toBe(false)
+  }
+})
+test("Customer live controls and unknown key shapes stay refreshable", () => {
+  for (const key of [
+    trpc.customerLedger.accountDetail.queryKey({ accountId: "ledger" }),
+    trpc.customerLedger.accounts.queryKey({
+      customerId: "customer",
+      limit: 50,
+    }),
+    trpc.finance.accountActivity.queryKey({ ...input, snapshotSequence: "7" }),
+    [["customerLedger", "futureRead"], { input: { snapshotSequence: "7" } }],
+    [
+      ["scope"],
+      ["customerLedger", "statement"],
+      { input: { snapshotSequence: "7" } },
+    ],
+    [["customerLedger", "statement"], { input: null }],
+    [["customerLedger", "statement"]],
+    [],
+  ])
+    expect(isLoadedCustomerLedgerStatement(loaded(key))).toBe(false)
 })
