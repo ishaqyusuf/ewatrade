@@ -1,5 +1,20 @@
 # Dashboard performance program
 
+## Overview content loading owner — DP-104/401,30October2026
+
+- [x] Actual Flight reproduces whole-page header/actions waiting on presence and
+  current visibility. Keep auth/membership admission ahead of the header.
+- [x] Thin route returns existing controls with a content Suspense boundary;
+  projected server props retain current scope, with private reads after both gates.
+- [x] Nine Flight cases/57 assertions pass: arrival order, refusal/failure,
+  own/all visibility, overlapping scopes and existing section/stream ownership.
+- [x]19 AST move/role/control parity checks pass; no design or command change.
+
+[Receipt](../verification/2026-10-30-dashboard-overview-streaming.md). Source/platform
+checks pass: Dashboard/owned types, owned fast237/1533+QA types/Biome, H01/H02 and
+frozen local smoke (runtime unverified). This is earlier server output, not browser latency, Back or
+full DP-104/401 acceptance. Prepared9eb8 stays separate; full program3/27.
+
 ## Overview numbers projection — DP-103/401,30October2026
 
 - [x] Actual metrics reader reproduces4 acquisitions for a populated Overview.

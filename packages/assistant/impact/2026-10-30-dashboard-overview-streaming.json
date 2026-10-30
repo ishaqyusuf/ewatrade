@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "id": "2026-10-30-dashboard-overview-streaming",
+  "tickets": ["H02"],
+  "summary": "Local Overview returns its admitted header/controllers before presence/visibility content waits; private read ordering remains current. No deployment.",
+  "noAssistantImpact": "Page/server-component loading ownership only. The same current membership, allowed Store IDs, presence and Order visibility govern private metrics/recent reads. Existing section composition, role gates, sheet/FAB controllers, URLs/drafts, commands, database readers, query lifetime and API contracts remain. No Assistant tool/capability, confirmation, permission, model/provider or schema change.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/web-navigation-performance.md"
+    },
+    {
+      "topic": "api",
+      "status": "not_applicable",
+      "note": "No API/DTO or database reader change; existing server query functions remain."
+    },
+    {
+      "topic": "permissions",
+      "status": "not_applicable",
+      "note": "Current membership admission, permitted Store projection and fresh creator visibility remain ahead of private data."
+    },
+    {
+      "topic": "schema",
+      "status": "not_applicable",
+      "note": "No schema/index/migration."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "run",
+      "path": "docs/verification/2026-10-30-dashboard-overview-streaming.md",
+      "executed": true,
+      "result": "Nine actual Flight cases/57 assertions,19 AST move/control comparisons, isolated entry, Dashboard/owned types, scoped fast237/1533+QA types/Biome and H01/H02 pass. Frozen canonical local smoke passes login/Catalog/draft-cancel, runtimeVerified:false. No browser header timing/Back or optimized parity claim; outer shell/transport work remains. Prepared9eb8 separate/unchanged. No real command/provider action, application restart or deployment."
+    },
+    {
+      "kind": "test",
+      "path": "packages/assistant/evaluations/fixtures/dashboard-overview-streaming.fixture.tsx",
+      "executed": true,
+      "result": "Nine actual route/content/server-reader/Flight cases pass with57 assertions after two red early-header cases. Current scope/presence still gate private reads; own/all visibility, overlapping Tenant/Store requests, existing section order and independent recent stream retain behavior. Client refs/auth/read results are inert; no real database/provider/command. No browser click/hydration/latency claim."
+    }
+  ]
+}

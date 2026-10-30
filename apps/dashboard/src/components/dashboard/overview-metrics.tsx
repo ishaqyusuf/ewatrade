@@ -123,11 +123,12 @@ export async function OverviewMetrics({
 
 export function OverviewMetricsSkeleton({
   availability,
-}: Pick<Props, "availability">) {
-  const count =
-    (availability.hasOrders ? 2 : 0) +
-    (availability.hasCatalogItems ? 1 : 0) +
-    (availability.hasProductItems ? 1 : 0)
+}: { availability?: Props["availability"] }) {
+  const count = availability
+    ? (availability.hasOrders ? 2 : 0) +
+      (availability.hasCatalogItems ? 1 : 0) +
+      (availability.hasProductItems ? 1 : 0)
+    : 4
   if (!count) return null
   return (
     <output
