@@ -12,14 +12,20 @@ import { cn } from "@/lib/utils"
 import { useOperationalModeStore } from "@/store/operationalModeStore"
 import { useTRPC } from "@/trpc/client"
 import { formatMinorMoney } from "@ewatrade/utils"
-import { useInfiniteQuery } from "@tanstack/react-query"
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query"
 import { useRouter } from "expo-router"
 import { useDeferredValue, useMemo, useState } from "react"
 import { FlatList } from "react-native"
 import { BottomSearchFooter } from "./bottom-search-footer"
 import { HeroCard } from "./green-till/hero-card"
 import { RecordRow, RowDivider } from "./green-till/kit"
-import { loadedPaymentTotals, paymentDay, paymentTint } from "./payment-display"
+import {
+  exactPaymentTotals,
+  loadedPaymentTotals,
+  paymentDay,
+  paymentDayWindow,
+  paymentTint,
+} from "./payment-display"
 import {
   PAYMENTS_RECEIVED_COPY,
   buildPaymentsReceivedPresentation,
@@ -88,6 +94,32 @@ export function PaymentsReceivedScreen() {
   const currencyTotals = payments.data?.pages[0]?.currencyTotals ?? []
   const today = paymentDay(new Date())
   const todayRows = rows.filter((row) => paymentDay(row.recordedAt) === today)
+  // Today's line and a day that runs onto the next page come from the server,
+  // so they never stop at the payments loaded so far.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: The window moves when the day changes.
+  const todayWindow = useMemo(() => paymentDayWindow(new Date()), [today])
+  const todayTotals = useQuery(
+    trpc.orders.paymentTotals.queryOptions(todayWindow, {
+      enabled: !offline && !deferredQuery,
+      retry: false,
+    }),
+  )
+  const lastRecordedAt = rows.at(-1)?.recordedAt
+  const lastDay = lastRecordedAt ? paymentDay(lastRecordedAt) : null
+  // biome-ignore lint/correctness/useExhaustiveDependencies: One window per loaded last day.
+  const lastDayWindow = useMemo(
+    () => (lastRecordedAt ? paymentDayWindow(lastRecordedAt) : null),
+    [lastDay],
+  )
+  const lastDayTotals = useQuery(
+    trpc.orders.paymentTotals.queryOptions(
+      { ...lastDayWindow, query: deferredQuery || undefined },
+      {
+        enabled: Boolean(!offline && lastDayWindow && payments.hasNextPage),
+        retry: false,
+      },
+    ),
+  )
   const dayTotals = useMemo(() => {
     const byDay = new Map<string, typeof rows>()
     for (const row of rows) {
@@ -97,10 +129,14 @@ export function PaymentsReceivedScreen() {
     return new Map(
       [...byDay].map(([day, list]) => [
         day,
-        loadedPaymentTotals(list).join(" · "),
+        day === lastDay && payments.hasNextPage
+          ? lastDayTotals.data
+            ? exactPaymentTotals(lastDayTotals.data.currencyTotals).join(" · ")
+            : `Loaded · ${loadedPaymentTotals(list).join(" · ")}`
+          : loadedPaymentTotals(list).join(" · "),
       ]),
     )
-  }, [rows])
+  }, [rows, lastDay, lastDayTotals.data, payments.hasNextPage])
   const presentation = buildPaymentsReceivedPresentation({
     currencyTotals,
     defaultCurrencyCode: payments.data?.pages[0]?.defaultCurrencyCode ?? "NGN",
@@ -201,9 +237,13 @@ export function PaymentsReceivedScreen() {
                         ? presentation.currencyAmountRows.join(" · ")
                         : deferredQuery
                           ? `${totalCount} matching payment${totalCount === 1 ? "" : "s"}`
-                          : todayRows.length
-                            ? `${loadedPaymentTotals(todayRows).join(" · ")} received today · ${todayRows.length} payment${todayRows.length === 1 ? "" : "s"}`
-                            : "Nothing received today yet"
+                          : todayTotals.data
+                            ? todayTotals.data.totalCount
+                              ? `${exactPaymentTotals(todayTotals.data.currencyTotals).join(" · ")} received today · ${todayTotals.data.totalCount} payment${todayTotals.data.totalCount === 1 ? "" : "s"}`
+                              : "Nothing received today yet"
+                            : todayRows.length
+                              ? `Loaded · ${loadedPaymentTotals(todayRows).join(" · ")} received today`
+                              : "Nothing received today yet"
                   }
                 />
               )}
