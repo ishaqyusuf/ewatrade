@@ -13,9 +13,10 @@ import { useOperationalModeStore } from "@/store/operationalModeStore"
 import { useTRPC } from "@/trpc/client"
 import { formatMinorMoney } from "@ewatrade/utils"
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query"
-import { useRouter } from "expo-router"
+import { useLocalSearchParams, useRouter } from "expo-router"
 import { useDeferredValue, useMemo, useState } from "react"
 import { FlatList } from "react-native"
+import { ClassicOrdersFilterRow } from "./appearances/classic/orders-screen"
 import { BottomSearchFooter } from "./bottom-search-footer"
 import { HeroCard } from "./green-till/hero-card"
 import { RecordRow, RowDivider } from "./green-till/kit"
@@ -26,6 +27,13 @@ import {
   paymentDayWindow,
   paymentTint,
 } from "./payment-display"
+import {
+  type PaymentMethodFilter,
+  paymentMethodChips,
+  paymentMethodFilter,
+  paymentMethodLabel,
+  paymentMethodStats,
+} from "./payment-methods"
 import {
   PAYMENTS_RECEIVED_COPY,
   buildPaymentsReceivedPresentation,
@@ -68,6 +76,14 @@ export function PaymentsReceivedScreen() {
   const router = useRouter()
   const colors = useColors()
   const trpc = useTRPC()
+  // Reports' "Received" rows open this list on their method.
+  const params = useLocalSearchParams<{ method?: string }>()
+  const [method, setMethod] = useState<PaymentMethodFilter | "all">(
+    () => (params.method && paymentMethodFilter(params.method)) || "all",
+  )
+  // Saved pages only cover the last method loaded online, so offline shows all.
+  const activeMethod = offline ? "all" : method
+  const methods = activeMethod === "all" ? undefined : [activeMethod]
   const [query, setQuery] = useState("")
   const [footerHeight, setFooterHeight] = useState(88)
   const scrollHide = useBottomSearchScroll()
@@ -77,6 +93,7 @@ export function PaymentsReceivedScreen() {
     trpc.orders.payments.infiniteQueryOptions(
       {
         limit: LIST_PAGE_SIZE,
+        methods,
         query: deferredQuery || undefined,
       },
       {
@@ -92,6 +109,22 @@ export function PaymentsReceivedScreen() {
   )
   const totalCount = payments.data?.pages[0]?.totalCount ?? 0
   const currencyTotals = payments.data?.pages[0]?.currencyTotals ?? []
+  // Chip counts cover every method for the search, whichever chip is picked.
+  const methodTotals = useQuery(
+    trpc.orders.paymentTotals.queryOptions(
+      { query: deferredQuery || undefined },
+      { enabled: !offline, retry: false },
+    ),
+  )
+  const methodChips = paymentMethodChips(
+    methodTotals.data?.currencyTotals ?? [],
+    activeMethod,
+  )
+  const methodName =
+    activeMethod === "all" ? null : paymentMethodLabel(activeMethod)
+  // "cash payments", but "POS payments".
+  const methodWord =
+    methodName && methodName !== "POS" ? methodName.toLowerCase() : methodName
   const today = paymentDay(new Date())
   const todayRows = rows.filter((row) => paymentDay(row.recordedAt) === today)
   // Today's line and a day that runs onto the next page come from the server,
@@ -99,10 +132,13 @@ export function PaymentsReceivedScreen() {
   // biome-ignore lint/correctness/useExhaustiveDependencies: The window moves when the day changes.
   const todayWindow = useMemo(() => paymentDayWindow(new Date()), [today])
   const todayTotals = useQuery(
-    trpc.orders.paymentTotals.queryOptions(todayWindow, {
-      enabled: !offline && !deferredQuery,
-      retry: false,
-    }),
+    trpc.orders.paymentTotals.queryOptions(
+      { ...todayWindow, methods },
+      {
+        enabled: !offline && !deferredQuery,
+        retry: false,
+      },
+    ),
   )
   const lastRecordedAt = rows.at(-1)?.recordedAt
   const lastDay = lastRecordedAt ? paymentDay(lastRecordedAt) : null
@@ -113,7 +149,7 @@ export function PaymentsReceivedScreen() {
   )
   const lastDayTotals = useQuery(
     trpc.orders.paymentTotals.queryOptions(
-      { ...lastDayWindow, query: deferredQuery || undefined },
+      { ...lastDayWindow, methods, query: deferredQuery || undefined },
       {
         enabled: Boolean(!offline && lastDayWindow && payments.hasNextPage),
         retry: false,
@@ -216,8 +252,8 @@ export function PaymentsReceivedScreen() {
                 <HeroCard
                   label={
                     deferredQuery
-                      ? "Matching payments · all time"
-                      : "Received · all time"
+                      ? `Matching ${methodWord ? `${methodWord} ` : ""}payments · all time`
+                      : `${methodName ?? "Received"} · all time`
                   }
                   amount={payments.data ? presentation.amountLabel : "—"}
                   pill={
@@ -229,6 +265,11 @@ export function PaymentsReceivedScreen() {
                             tone: "synced",
                           }
                         : undefined
+                  }
+                  stats={
+                    payments.data && activeMethod === "all"
+                      ? paymentMethodStats(currencyTotals)
+                      : undefined
                   }
                   sub={
                     !payments.data
@@ -248,6 +289,15 @@ export function PaymentsReceivedScreen() {
                 />
               )}
             </SearchFold>
+            {!offline &&
+            (methodChips.values.length > 2 || activeMethod !== "all") ? (
+              <ClassicOrdersFilterRow
+                active={activeMethod}
+                labels={methodChips.labels}
+                onChange={setMethod}
+                values={methodChips.values}
+              />
+            ) : null}
           </View>
         }
         onEndReached={() => {
@@ -339,7 +389,9 @@ export function PaymentsReceivedScreen() {
           placeholder={
             offline
               ? "Search needs a connection"
-              : "Search order, customer, method"
+              : methodWord
+                ? `Search ${methodWord} payments`
+                : "Search order, customer, method"
           }
           showDisabledOfflineSearch
           totalCount={totalCount}
