@@ -56,7 +56,7 @@ function harness(ambiguous = false) {
         where,
         data,
       }: { where: { token: string }; data: Partial<Row> }) => {
-        const prior = rows.get(where.token)!
+        const prior = rows.get(where.token) as Row
         const next = { ...prior, ...data }
         rows.set(where.token, next)
         return next

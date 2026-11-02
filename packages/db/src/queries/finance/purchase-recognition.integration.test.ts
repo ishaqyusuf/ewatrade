@@ -222,21 +222,20 @@ describeWithServiceCommerceDatabase(
           return
         }
         if (process.env.RUN_PURCHASE_REGISTRATION_ONLY === "1") {
+          const agreedLine = {
+            ...goods,
+            enteredQuantity: "2",
+            amountMinor: "1000",
+            description: "Agreed goods",
+            categories: [{ name: "Purchase" }],
+          }
           const input = {
             ...context,
             supplierId: supplier.id,
             storeId: store.id,
             description: "QA exact agreement",
             agreedAt: date(1),
-            lines: [
-              {
-                ...goods,
-                enteredQuantity: "2",
-                amountMinor: "1000",
-                description: "Agreed goods",
-                categories: [{ name: "Purchase" }],
-              },
-            ],
+            lines: [agreedLine],
           }
           const journalsBefore = await db.financeJournalEntry.count({
             where: { bookId: book.id },
@@ -309,7 +308,7 @@ describeWithServiceCommerceDatabase(
                   ...input,
                   lines: [
                     {
-                      ...input.lines[0]!,
+                      ...agreedLine,
                       expectedConfigurationVersionId: randomUUID(),
                     },
                   ],

@@ -54,7 +54,8 @@ if (command === "inventory") {
       sections: page.sections.map((section) => {
         const definition = entry.manifest.sections.find(
           (d) => d.key === section.type,
-        )!
+        )
+        if (!definition) throw new Error(`Unknown section: ${section.type}.`)
         const resource = definition.resources[0]
         const loaded = resource
           ? sectionResources(data.resources, resource)

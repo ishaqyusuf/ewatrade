@@ -182,15 +182,17 @@ function readOnboardingButton(
   env: Record<string, string | undefined>,
   now: number,
 ): string | null {
-  const parts = /^waonb:([A-Za-z0-9_-]{1,64}):([a-f0-9]{64})$/.exec(id)
+  const encodedCommand = /^waonb:([A-Za-z0-9_-]{1,64}):([a-f0-9]{64})$/.exec(
+    id,
+  )?.[1]
   if (
-    !parts ||
+    !encodedCommand ||
     !flow.promptId ||
     !flow.promptExpiresAt ||
     flow.promptExpiresAt <= now
   )
     return null
-  const command = Buffer.from(parts[1]!, "base64url").toString()
+  const command = Buffer.from(encodedCommand, "base64url").toString()
   const expected = onboardingButtonId(token, flow.promptId, command, env)
   if (
     id.length !== expected.length ||

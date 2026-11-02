@@ -23,6 +23,10 @@ type Row = {
   userId?: string | null
   completed?: boolean
 }
+function required<T>(value: T | undefined): T {
+  if (value === undefined) throw new Error("Missing expected test value")
+  return value
+}
 function harness(unknownSend = false, linked = false) {
   const rows = new Map<string, Row>()
   let inTransaction = false
@@ -299,9 +303,9 @@ test("linked ordinary six-digit amount bypasses onboarding without persistence o
 test("native onboarding actions bind sender and the current prompt; stale REGISTER cannot change email proof", async () => {
   const h = harness()
   await h.send("Hi")
-  const oldRegister = h.lastButtons.find(
-    (button) => button.title === "Create account",
-  )!.id
+  const oldRegister = required(
+    h.lastButtons.find((button) => button.title === "Create account"),
+  ).id
   await h.send("owner@example.com")
   const stale = {
     ...h.message("Create account"),
@@ -309,13 +313,15 @@ test("native onboarding actions bind sender and the current prompt; stale REGIST
     quickActionId: oldRegister,
   }
   await processWhatsAppOnboardingMessage(stale, config, h.dependencies)
-  const flow = [...h.rows.values()].find((row) =>
-    row.token.startsWith("wa-flow_"),
-  )!
+  const flow = required(
+    [...h.rows.values()].find((row) => row.token.startsWith("wa-flow_")),
+  )
   expect(flow.formData).toMatchObject({
     state: { stage: "code", mode: "login" },
   })
-  const cancel = h.lastButtons.find((button) => button.title === "Cancel")!.id
+  const cancel = required(
+    h.lastButtons.find((button) => button.title === "Cancel"),
+  ).id
   const otherSender = {
     ...h.message("Cancel"),
     externalCustomerId: "2348000000002",
@@ -340,9 +346,9 @@ test("connected REGISTER never opens signup even while re-verifying another busi
   await h.send("CONNECT")
   await h.send("owner@example.com")
   await h.send("REGISTER")
-  const flow = [...h.rows.values()].find((row) =>
-    row.token.startsWith("wa-flow_"),
-  )!
+  const flow = required(
+    [...h.rows.values()].find((row) => row.token.startsWith("wa-flow_")),
+  )
   expect(flow.formData).toMatchObject({ state: null })
   expect(h.lastButtons.map((button) => button.title)).toContain(
     "Add a business",
