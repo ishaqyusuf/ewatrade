@@ -9,6 +9,7 @@ import {
 import {
   type OwnerBillingEnvironment,
   OwnerBillingPolicyError,
+  type OwnerBillingSubscription,
   type OwnerPurchaseBinding,
   assertBillingOwner,
   assertOwnerPurchaseBinding,
@@ -193,7 +194,9 @@ export async function applyVerifiedOwnerSubscription(
         verifiedAt: input.observedAt,
       },
     })
-    const status = voided || input.status !== "active" ? "CANCELLED" : "ACTIVE"
+    // Annotated so `facts` keeps the enum union instead of a widened string.
+    const status: OwnerBillingSubscription["status"] =
+      voided || input.status !== "active" ? "CANCELLED" : "ACTIVE"
     const cancelAtPeriodEnd = status === "ACTIVE" && input.cancelAtPeriodEnd
     // Observed-time ordering: an older read never overwrites a newer one.
     const stale = Boolean(

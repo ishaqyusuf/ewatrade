@@ -1,4 +1,7 @@
-import type { RetailOpsPaidPlanId } from "../retail-ops-subscription-plans"
+import type {
+  RetailOpsPaidPlanId,
+  RetailOpsPlanId,
+} from "../retail-ops-subscription-plans"
 import { OWNER_BILLING_OFFERS, OWNER_BILLING_QUOTA_SCOPE } from "./offers"
 
 export type OwnerBillingEnvironment = "production" | "sandbox"
@@ -142,7 +145,8 @@ export function projectOwnerBusinessAccess(
         : !coveredTenantIds.includes(tenantId)
           ? ("over_business_limit" as const)
           : ("covered" as const)
-  const planId =
+  // Annotated so the returned object keeps the plan union, not a widened string.
+  const planId: RetailOpsPlanId =
     reason === "covered" && subscription ? subscription.planId : "free"
   return {
     planId,
