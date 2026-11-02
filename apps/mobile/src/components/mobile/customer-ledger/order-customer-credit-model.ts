@@ -38,15 +38,17 @@ export function orderCustomerCreditView(input: {
     return { kind: "loading" as const }
   const funds = input.data
   if (!funds)
-    return { kind: input.fetching ? ("loading" as const) : ("hidden" as const) }
+    return input.fetching
+      ? { kind: "loading" as const }
+      : { kind: "hidden" as const }
   if (
     funds.orderId !== input.order.id ||
     funds.customerId !== input.order.customerId ||
     funds.currencyCode !== input.order.currencyCode
   )
-    return {
-      kind: input.fetching ? ("loading" as const) : ("unavailable" as const),
-    }
+    return input.fetching
+      ? { kind: "loading" as const }
+      : { kind: "unavailable" as const }
   if (!funds.showCredit) return { kind: "hidden" as const }
   if (!MINOR.test(funds.availableMinor) || !MINOR.test(funds.reservedMinor))
     return { kind: "unavailable" as const }
