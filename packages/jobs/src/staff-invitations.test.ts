@@ -120,6 +120,10 @@ test("public producer build graph excludes the worker registry and unrelated med
       "pdfjs-dist/*",
       "@trigger.dev/*",
       "@sentry/*",
+      // Bun 1.3.9's bundler cannot resolve email's `../defaults` under
+      // `bun test` in this repo (it can from a script). Email templates never
+      // import jobs, so leaving them out does not hide a registry import.
+      "@ewatrade/email",
     ],
   })
   expect(result.success).toBe(true)
