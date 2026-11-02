@@ -12,7 +12,10 @@ import { getCatalogIllustrations } from "@ewatrade/utils/catalog-illustrations"
 import { Image } from "expo-image"
 import { useState } from "react"
 import { Text as NativeText, View } from "react-native"
-import { CatalogPhotoGalleryPicker } from "../catalog-item/catalog-photo-gallery-picker"
+import {
+  CatalogPhotoGalleryPicker,
+  catalogGalleryLabel,
+} from "../catalog-item/catalog-photo-gallery-picker"
 import { SavedPhotoPreview } from "../catalog-item/saved-photo-preview"
 import { CatalogIllustrationPreview } from "./catalog-illustration-library"
 import { catalogIllustrationCategoryKey } from "./catalog-illustration-library"
@@ -589,7 +592,7 @@ function ClassicPhotosEditor({
             model.imageDraft.chooseReused({
               assetId: entry.assetId,
               storeId: entry.storeId,
-              name: entry.items[0]?.name ?? "",
+              name: catalogGalleryLabel(entry, ""),
             })
             model.setImageUrl("")
           }}

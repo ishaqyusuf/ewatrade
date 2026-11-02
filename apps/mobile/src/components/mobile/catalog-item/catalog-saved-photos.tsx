@@ -32,6 +32,7 @@ import type { CatalogItem } from "./catalog-item-presentation"
 import {
   type CatalogGalleryEntry,
   CatalogPhotoGalleryPicker,
+  catalogGalleryLabel,
 } from "./catalog-photo-gallery-picker"
 import { SavedPhotoPreview } from "./saved-photo-preview"
 
@@ -530,7 +531,7 @@ function SavedPhotoEditor({
         <SavedPhotoPreview
           assetId={entry.assetId}
           storeId={entry.storeId}
-          name={entry.items[0]?.name ?? item.name}
+          name={catalogGalleryLabel(entry, item.name)}
           variant="thumbnail"
         />
       ),

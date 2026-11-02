@@ -50,6 +50,7 @@ import {
 } from "react-native"
 import { FlatList } from "react-native-css/components/FlatList"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
+import { CatalogPhotoGalleryPicker } from "../catalog-item/catalog-photo-gallery-picker"
 import { shouldShowCatalogFirstItemGate } from "../catalog-items-model"
 import type {
   CatalogItemsContentProps,
@@ -96,7 +97,12 @@ export function CatalogItemsContent({
   const scrollToTop = useScrollToTop()
   const deferredQuery = useDeferredValue(query)
   const addSheet = useModal()
-  const pendingAdd = useRef<"product" | "service" | null>(null)
+  const pendingAdd = useRef<"product" | "service" | "images" | null>(null)
+  const [imagesOpen, setImagesOpen] = useState(false)
+  const storesQuery = useQuery({
+    ...trpc.tenant.stores.queryOptions(),
+    enabled: imagesOpen,
+  })
   const availabilityQuery = useQuery(
     trpc.tenant.featureAvailability.queryOptions(undefined, { retry: false }),
   )
@@ -215,7 +221,7 @@ export function CatalogItemsContent({
     Keyboard.dismiss()
     addSheet.present()
   }
-  const chooseAdd = (kind: "product" | "service") => {
+  const chooseAdd = (kind: "product" | "service" | "images") => {
     if (!canEdit || isOffline || pendingAdd.current) return
     pendingAdd.current = kind
     addSheet.dismiss()
@@ -224,7 +230,8 @@ export function CatalogItemsContent({
     const kind = pendingAdd.current
     pendingAdd.current = null
     if (isOffline || !canEdit || !kind) return
-    if (kind === "product") onAddProduct()
+    if (kind === "images") setImagesOpen(true)
+    else if (kind === "product") onAddProduct()
     else onAddService()
   }
   const edgeFeedback = useScrollEdgeFeedback()
@@ -593,6 +600,23 @@ export function CatalogItemsContent({
               onAddProduct={() => chooseAdd("product")}
               onAddService={() => chooseAdd("service")}
             />
+            <Pressable
+              accessibilityRole="button"
+              accessibilityState={{ disabled: isOffline || !canEdit }}
+              disabled={isOffline || !canEdit}
+              onPress={() => chooseAdd("images")}
+              className="min-h-14 flex-row items-center gap-3 rounded-2xl border border-border bg-card px-4 py-3"
+            >
+              <Icon className="size-[20px] text-foreground" name="Image" />
+              <View className="flex-1">
+                <Text className="text-base font-semibold text-foreground">
+                  My images
+                </Text>
+                <Text className="text-xs text-muted-foreground">
+                  Upload and organise photos for any item
+                </Text>
+              </View>
+            </Pressable>
             {isOffline ? (
               <Text className="text-xs text-muted-foreground">
                 Reconnect to add an item.
@@ -601,6 +625,14 @@ export function CatalogItemsContent({
           </View>
         </BottomSheetScrollView>
       </Modal>
+      {availabilityQuery.data?.storeId ? (
+        <CatalogPhotoGalleryPicker
+          open={imagesOpen}
+          storeId={availabilityQuery.data.storeId}
+          stores={storesQuery.data ?? []}
+          onClose={() => setImagesOpen(false)}
+        />
+      ) : null}
     </ClassicCatalogFrame>
   )
 }
