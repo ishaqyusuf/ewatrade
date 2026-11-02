@@ -5,6 +5,8 @@ export const REPORTS_COPY = {
   emptyMessage:
     "Reports will fill in as you take orders and track stock or service work.",
   emptyTitle: "No activity yet",
+  periodMessage:
+    "Sales count open and completed orders made in these days. Received counts payments recorded in them, including for older orders.",
   purpose: "A current snapshot of orders, stock records, and service work.",
 } as const
 

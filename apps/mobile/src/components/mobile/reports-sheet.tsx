@@ -9,10 +9,11 @@ import { useAuthContext } from "@/hooks/use-auth"
 import { useColors } from "@/hooks/use-color"
 import { useOperationalModeStore } from "@/store/operationalModeStore"
 import { useTRPC } from "@/trpc/client"
-import { formatMinorMoney } from "@ewatrade/utils"
 import { useQuery } from "@tanstack/react-query"
 import { type Href, useRouter } from "expo-router"
+import { useMemo, useState } from "react"
 import { RefreshControl, ScrollView } from "react-native"
+import { ClassicOrdersFilterRow } from "./appearances/classic/orders-screen"
 import { HeroCard } from "./green-till/hero-card"
 import {
   type AttentionItem,
@@ -21,7 +22,25 @@ import {
   RecordRow,
   SectionHeader,
 } from "./green-till/kit"
+import { paymentTint } from "./payment-display"
+import type { PaymentMethodFilter } from "./payment-methods"
+import {
+  REPORT_PERIODS,
+  REPORT_PERIOD_LABELS,
+  type ReportPeriod,
+  buildReportPeriodFigures,
+  reportPeriodRange,
+  reportPeriodWindow,
+} from "./report-periods"
 import { REPORTS_COPY, buildReportsPresentation } from "./reports-presentation"
+
+const METHOD_ICONS = {
+  bank_transfer: "ArrowLeftRight",
+  card: "CreditCard",
+  cash: "Wallet",
+  other: "CreditCard",
+  pos: "CreditCard",
+} as const satisfies Record<PaymentMethodFilter, IconKeys>
 
 const OPERATION_ICONS = {
   inventory: "Warehouse",
@@ -87,7 +106,40 @@ function OperationalReportsContent({
       enabled: !offline,
     }),
   )
-  const reportQueries = [balances, reconciliation, services, orders] as const
+  // Period figures are exact server totals: Orders made in the period and
+  // payments recorded in it.
+  const [period, setPeriod] = useState<ReportPeriod>("week")
+  const periodWindow = useMemo(() => reportPeriodWindow(period), [period])
+  const periodOrders = useQuery(
+    trpc.orders.listTotals.queryOptions(
+      periodWindow
+        ? {
+            createdAfter: periodWindow.after,
+            createdBefore: periodWindow.before,
+          }
+        : {},
+      { retry: false, enabled: !offline },
+    ),
+  )
+  const periodPayments = useQuery(
+    trpc.orders.paymentTotals.queryOptions(
+      periodWindow
+        ? {
+            recordedAfter: periodWindow.after,
+            recordedBefore: periodWindow.before,
+          }
+        : {},
+      { retry: false, enabled: !offline },
+    ),
+  )
+  const reportQueries = [
+    balances,
+    reconciliation,
+    services,
+    orders,
+    periodOrders,
+    periodPayments,
+  ] as const
   const failedQueries = reportQueries.filter((query) => query.isError)
   const isInitialLoading = reportQueries.some(
     (query) => query.isPending && query.data === undefined,
@@ -96,6 +148,13 @@ function OperationalReportsContent({
   const orderCount = orders.data?.orderCount ?? 0
   const orderValueMinor = orders.data?.orderValueMinor ?? 0
   const currency = orders.data?.currencyCode ?? "NGN"
+  const figures = buildReportPeriodFigures({
+    defaultCurrencyCode: currency,
+    orderGroups: periodOrders.data?.groups ?? [],
+    payments: periodPayments.data?.currencyTotals ?? [],
+  })
+  const periodWords =
+    period === "all" ? "all time" : REPORT_PERIOD_LABELS[period].toLowerCase()
   const report = buildReportsPresentation({
     balanceSources: balances.data?.rows.length ?? 0,
     orderCount,
@@ -190,25 +249,94 @@ function OperationalReportsContent({
           onActionPress={() => void retryFailedReports()}
         />
       ) : null}
-      {orders.isPending && !offline ? (
+      <ClassicOrdersFilterRow
+        active={period}
+        labels={REPORT_PERIOD_LABELS}
+        onChange={setPeriod}
+        values={REPORT_PERIODS}
+      />
+      {periodOrders.isPending && !offline ? (
         <Skeleton className="h-48 rounded-[22px]" />
       ) : (
         <HeroCard
-          label="Order value · all time"
-          amount={
-            orders.data ? formatMinorMoney(orderValueMinor, currency) : "—"
-          }
-          pill={{ label: "Store snapshot", tone: "synced" }}
+          label={`Sales · ${periodWords}`}
+          amount={periodOrders.data ? figures.sales : "—"}
+          pill={{
+            label: reportPeriodRange(period) ?? "Store snapshot",
+            tone: "synced",
+          }}
           sub={
-            orders.data
-              ? `${orderCount} order${orderCount === 1 ? "" : "s"} · average ${formatMinorMoney(
-                  orderCount ? Math.round(orderValueMinor / orderCount) : 0,
-                  currency,
-                )}`
-              : "Order summary unavailable"
+            periodOrders.data
+              ? `${figures.orderCount} order${figures.orderCount === 1 ? "" : "s"}${figures.average ? ` · average ${figures.average}` : ""}`
+              : "Sales unavailable"
           }
+          stats={[
+            {
+              label: "Received",
+              value: periodPayments.data ? figures.received : "—",
+            },
+            {
+              accent: true,
+              label: "Still owed",
+              value: periodOrders.data ? figures.owed : "—",
+            },
+          ]}
         />
       )}
+      <View>
+        <SectionHeader
+          title={`Received ${periodWords}`}
+          trailing={
+            periodPayments.data ? (
+              <Text className="text-xs font-bold text-muted-foreground">
+                {figures.receivedCount}
+              </Text>
+            ) : undefined
+          }
+        />
+        {periodPayments.data ? (
+          figures.receivedRows.length ? (
+            <ListCard>
+              {figures.receivedRows.map((row) => (
+                <RecordRow
+                  stackDetails
+                  key={row.key}
+                  title={row.title}
+                  meta={row.meta}
+                  amount={row.amount}
+                  avatar={{
+                    icon: METHOD_ICONS[row.method],
+                    tint: paymentTint(row.method.toUpperCase()),
+                  }}
+                  status={
+                    <Icon
+                      className="size-[16px]"
+                      color={colors.mutedForeground}
+                      name="ChevronRight"
+                    />
+                  }
+                  onPress={() =>
+                    router.push(
+                      `/payments-received-modal?method=${row.method}` as Href,
+                    )
+                  }
+                />
+              ))}
+            </ListCard>
+          ) : (
+            <Text className="px-0.5 text-sm text-muted-foreground">
+              No payments recorded{" "}
+              {periodWords === "all time" ? "yet" : periodWords}.
+            </Text>
+          )
+        ) : periodPayments.isPending && !offline ? (
+          <Skeleton className="h-24 rounded-[20px]" />
+        ) : (
+          <Text className="px-0.5 text-sm text-muted-foreground">
+            Received totals unavailable.
+          </Text>
+        )}
+      </View>
       {attention.length ? (
         <View>
           <SectionHeader
@@ -276,16 +404,20 @@ function OperationalReportsContent({
           message={REPORTS_COPY.emptyMessage}
         />
       ) : null}
-      <View className="flex-row gap-2 px-0.5">
-        <Icon
-          className="mt-0.5 size-[14px]"
-          color={colors.mutedForeground}
-          name="Info"
-        />
-        <Text className="min-w-0 flex-1 text-xs text-muted-foreground">
-          {REPORTS_COPY.boundaryMessage}
-        </Text>
-      </View>
+      {[REPORTS_COPY.periodMessage, REPORTS_COPY.boundaryMessage].map(
+        (message) => (
+          <View className="flex-row gap-2 px-0.5" key={message}>
+            <Icon
+              className="mt-0.5 size-[14px]"
+              color={colors.mutedForeground}
+              name="Info"
+            />
+            <Text className="min-w-0 flex-1 text-xs text-muted-foreground">
+              {message}
+            </Text>
+          </View>
+        ),
+      )}
       {presentation === "sheet" && onComplete ? (
         <ActionButton variant="outline" onPress={onComplete}>
           Done
