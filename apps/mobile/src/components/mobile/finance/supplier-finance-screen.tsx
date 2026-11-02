@@ -820,6 +820,8 @@ function SupplierStatement({
         const rows = query.data?.data ?? []
         const last = index === rows.length - 1
         const style = supplierEntryStyle(item.kind)
+        // Reversed originals and the reversals themselves are kept, but muted.
+        const struck = Boolean(item.reversal || item.reversalOfId)
         const canCorrect =
           !item.reversal &&
           ["OPENING_PAYABLE", "OPENING_ADVANCE", "ADVANCE"].includes(item.kind)
@@ -836,9 +838,21 @@ function SupplierStatement({
             <RecordRow
               stackDetails
               title={item.description}
-              meta={`${financeDisplayDate(item.effectiveAt)} · ${supplierKindLabel(item.kind)}${item.reversal ? " · Reversed" : ""}`}
-              amount={formatFinanceMoney(item.amountMinor, currencyCode)}
-              avatar={{ icon: style.icon, tint: style.tint }}
+              meta={`${financeDisplayDate(item.effectiveAt)} · ${supplierKindLabel(item.kind)}`}
+              // Credit raises what is owed to the supplier; debit lowers it.
+              amount={`${item.side === "CREDIT" ? "+" : "−"}${formatFinanceMoney(item.amountMinor, currencyCode)}`}
+              avatar={{
+                icon: style.icon,
+                tint: struck ? "muted" : style.tint,
+              }}
+              status={
+                struck ? (
+                  <StatusPill
+                    label={item.reversal ? "Reversed" : "Reversal"}
+                    tone="muted"
+                  />
+                ) : undefined
+              }
             />
             {canCorrect || canApply ? (
               <View className="-mt-1 flex-row flex-wrap gap-x-5 pb-3 pl-[50px]">
@@ -1181,8 +1195,8 @@ function SupplierAging({
               <SectionHeader
                 title={`Payable aging · as of ${financeDisplayDate(`${asOfDate}T00:00:00.000Z`)}`}
               />
-              <View className="gap-3.5 rounded-[20px] bg-card p-4 shadow-sm">
-                {query.data.buckets.map((bucket) => {
+              <View className="rounded-[20px] bg-card px-3.5 py-1.5 shadow-sm">
+                {query.data.buckets.map((bucket, index) => {
                   const amount = BigInt(bucket.amountMinor)
                   const pct = total > 0n ? Number((amount * 100n) / total) : 0
                   const tone =
@@ -1194,16 +1208,22 @@ function SupplierAging({
                         ? "bg-gold"
                         : "bg-destructive"
                   return (
-                    <View key={bucket.bucket} className="gap-1.5">
+                    <View
+                      key={bucket.bucket}
+                      className={cn(
+                        "gap-1.5 py-2.5",
+                        index > 0 && "border-t border-border",
+                      )}
+                    >
                       <View className="flex-row justify-between gap-3">
-                        <Text className="min-w-0 flex-1 text-xs font-semibold text-foreground">
+                        <Text className="min-w-0 flex-1 text-[13px] font-bold text-foreground">
                           {supplierAgingBucketLabels[bucket.bucket]}
                         </Text>
-                        <Text className="text-xs font-bold tabular-nums text-foreground">
+                        <Text className="text-[13px] font-semibold tabular-nums text-muted-foreground">
                           {formatFinanceMoney(bucket.amountMinor, currencyCode)}
                         </Text>
                       </View>
-                      <View className="h-1.5 overflow-hidden rounded-full bg-muted">
+                      <View className="h-2 overflow-hidden rounded-full bg-muted">
                         <VariableContextProvider
                           value={{ "--aging-width": `${pct}%` }}
                         >
