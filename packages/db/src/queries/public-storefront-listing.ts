@@ -171,19 +171,16 @@ export function decodePublicListingCursor(
  * makes the item incomparable, sorted last in both directions; ties by id.
  * Callers must re-read the ids through the exact Prisma predicate.
  */
-export function publicPriceSortedIdsSql(input: {
+type PublicListingSqlScope = {
   tenantId: string
   storeId: string
-  currencyCode: string
   category: string | null
   subcategory?: string | null
   terms: string[]
-  availability: PublicListingAvailability | undefined
-  outVariantIds: string[]
-  direction: "asc" | "desc"
-  after: { p: number | null; id: string } | null
-  take: number
-}) {
+}
+
+/** Public items joined to their public offerings; mirrors `publicCatalogItemWhere`. */
+function publicEligibleItemsFromSql(input: PublicListingSqlScope) {
   const filters: Prisma.Sql[] = []
   if (input.category)
     filters.push(Prisma.sql`AND i."categoryId" = ${input.category}`)
@@ -193,10 +190,49 @@ export function publicPriceSortedIdsSql(input: {
     filters.push(
       Prisma.sql`AND (i.name ILIKE ${`%${escapePublicListingTerm(term)}%`} OR i.description ILIKE ${`%${escapePublicListingTerm(term)}%`} OR i.category ILIKE ${`%${escapePublicListingTerm(term)}%`})`,
     )
-  const out = Prisma.sql`(EXISTS (SELECT 1 FROM "CatalogStorefrontPolicy" policy
+  return Prisma.sql`FROM "CatalogItem" i
+      JOIN "SellableOffering" o ON o."catalogItemId" = i.id
+        AND o."tenantId" = ${input.tenantId}
+        AND o.status = 'ACTIVE' AND o."archivedAt" IS NULL
+      JOIN "SellableVariant" v ON v.id = o."variantId"
+        AND v.status = 'ACTIVE' AND v."archivedAt" IS NULL
+      WHERE i."tenantId" = ${input.tenantId}
+        AND i.status = 'ACTIVE' AND i."archivedAt" IS NULL
+        AND i."systemRole" IS NULL
+        AND (i.kind = 'SERVICE' OR (i.kind = 'PRODUCT' AND EXISTS (
+          SELECT 1 FROM "CatalogProduct" p
+          WHERE p."catalogItemId" = i.id AND p.usage IN ('FOR_SALE', 'BOTH'))))
+        AND EXISTS (SELECT 1 FROM "StoreOfferingAvailability" a
+          WHERE a."offeringId" = o.id AND a."storeId" = ${input.storeId}
+            AND a."isAvailable" = true)
+        ${filters.length ? Prisma.join(filters, " ") : Prisma.empty}`
+}
+
+/** Sold out: manually unavailable, or a product whose every public option is sold out. */
+function publicSoldOutSql(
+  input: Pick<PublicListingSqlScope, "tenantId" | "storeId">,
+  soldOutVariant: Prisma.Sql,
+) {
+  return Prisma.sql`(EXISTS (SELECT 1 FROM "CatalogStorefrontPolicy" policy
     WHERE policy."tenantId"=${input.tenantId} AND policy."storeId"=${input.storeId}
       AND policy."catalogItemId"=i.id AND policy.unavailable=true)
-    OR (i.kind = 'PRODUCT' AND bool_and(o."variantId" = ANY(${input.outVariantIds}::text[]))))`
+    OR (i.kind = 'PRODUCT' AND bool_and(${soldOutVariant})))`
+}
+
+export function publicPriceSortedIdsSql(
+  input: PublicListingSqlScope & {
+    currencyCode: string
+    availability: PublicListingAvailability | undefined
+    outVariantIds: string[]
+    direction: "asc" | "desc"
+    after: { p: number | null; id: string } | null
+    take: number
+  },
+) {
+  const out = publicSoldOutSql(
+    input,
+    Prisma.sql`o."variantId" = ANY(${input.outVariantIds}::text[])`,
+  )
   const having =
     input.availability === "out_of_stock"
       ? Prisma.sql`HAVING ${out}`
@@ -217,28 +253,60 @@ export function publicPriceSortedIdsSql(input: {
             AND o."fixedPriceMinor" IS NOT NULL
             AND o."currencyCode" = ${input.currencyCode})
           THEN min(o."fixedPriceMinor") END AS price
-      FROM "CatalogItem" i
-      JOIN "SellableOffering" o ON o."catalogItemId" = i.id
-        AND o."tenantId" = ${input.tenantId}
-        AND o.status = 'ACTIVE' AND o."archivedAt" IS NULL
-      JOIN "SellableVariant" v ON v.id = o."variantId"
-        AND v.status = 'ACTIVE' AND v."archivedAt" IS NULL
-      WHERE i."tenantId" = ${input.tenantId}
-        AND i.status = 'ACTIVE' AND i."archivedAt" IS NULL
-        AND i."systemRole" IS NULL
-        AND (i.kind = 'SERVICE' OR (i.kind = 'PRODUCT' AND EXISTS (
-          SELECT 1 FROM "CatalogProduct" p
-          WHERE p."catalogItemId" = i.id AND p.usage IN ('FOR_SALE', 'BOTH'))))
-        AND EXISTS (SELECT 1 FROM "StoreOfferingAvailability" a
-          WHERE a."offeringId" = o.id AND a."storeId" = ${input.storeId}
-            AND a."isAvailable" = true)
-        ${filters.length ? Prisma.join(filters, " ") : Prisma.empty}
+      ${publicEligibleItemsFromSql(input)}
       GROUP BY i.id
       ${having}
     )
     SELECT id, price FROM eligible
     ${keyset}
     ORDER BY price IS NULL, price ${Prisma.raw(input.direction === "asc" ? "ASC" : "DESC")}, id COLLATE "C"
+    LIMIT ${input.take}
+  `
+}
+
+/**
+ * Default bucket order in one round trip: in-stock entries, then sold-out, each by
+ * creation then ID. Store stock is aggregated here as `publicStockAvailability`
+ * does (per selling unit, exact numerics; no balance rows is not sold out), so no
+ * separate stock read gates the page. A cursor continues after its own current
+ * position; one outside this listing yields no rows. The caller re-reads the IDs
+ * through the exact Prisma predicate.
+ */
+export function publicBucketOrderedIdsSql(
+  input: PublicListingSqlScope & {
+    only?: "a" | "o"
+    after: string | null
+    take: number
+  },
+) {
+  const soldOut = publicSoldOutSql(
+    input,
+    Prisma.sql`o."variantId" IN (SELECT "variantId" FROM sold_out_variant)`,
+  )
+  const conditions: Prisma.Sql[] = []
+  if (input.only) conditions.push(Prisma.sql`e.out = ${input.only === "o"}`)
+  if (input.after)
+    conditions.push(Prisma.sql`EXISTS (SELECT 1 FROM eligible c
+      WHERE c.id = ${input.after} AND (e.out > c.out OR (e.out = c.out
+        AND (e."createdAt", e.id) > (c."createdAt", c.id))))`)
+  return Prisma.sql`
+    WITH unit_free AS (
+      SELECT b."variantId",
+        COALESCE(sum(b."onHandQuantity"), 0) - COALESCE(sum(b."reservedQuantity"), 0) AS free
+      FROM "StockBalanceSource" b
+      WHERE b."tenantId" = ${input.tenantId} AND b."storeId" = ${input.storeId}
+        AND b."custodyType" = 'STORE'
+      GROUP BY b."variantId", b."inventoryUnitId"
+    ), sold_out_variant AS (
+      SELECT "variantId" FROM unit_free GROUP BY "variantId" HAVING bool_and(free <= 0)
+    ), eligible AS (
+      SELECT i.id, i."createdAt", ${soldOut} AS out
+      ${publicEligibleItemsFromSql(input)}
+      GROUP BY i.id
+    )
+    SELECT e.id, e.out FROM eligible e
+    ${conditions.length ? Prisma.sql`WHERE ${Prisma.join(conditions, " AND ")}` : Prisma.empty}
+    ORDER BY e.out, e."createdAt", e.id
     LIMIT ${input.take}
   `
 }

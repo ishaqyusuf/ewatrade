@@ -24,6 +24,7 @@ import {
   decodePublicListingCursor,
   encodePublicListingCursor,
   normalizePublicListing,
+  publicBucketOrderedIdsSql,
   publicListingBinding,
   publicListingSearchWhere,
   publicPriceSortedIdsSql,
@@ -729,14 +730,16 @@ export async function readPublicStorefrontFromContext(
         )
       : null
   // Paid pagination has two stable buckets, so sold-out items remain last across pages.
-  // Aggregate only eligible Store stock, keeping quantities in the repository.
+  // The bucket order aggregates Store stock in its own query; only sorted listings
+  // filtered by availability aggregate it here, keeping quantities in the repository.
   let outVariantIds: string[] = []
   const priceSort = listing.sort?.startsWith("price") ?? false
   const nameSort = listing.sort?.startsWith("name") ?? false
   if (
     projection.catalog === undefined &&
     paidListing &&
-    (!(nameSort || priceSort) || listing.availability)
+    (nameSort || priceSort) &&
+    listing.availability
   ) {
     const balances = await db.stockBalanceSource.groupBy({
       by: ["variantId", "inventoryUnitId"],
@@ -788,36 +791,39 @@ export async function readPublicStorefrontFromContext(
   } satisfies Prisma.CatalogItemWhereInput
   const orderBy = [{ createdAt: "asc" as const }, { id: "asc" as const }]
   const take = limit + 1
+  // One ordered ID read, then the exact Prisma predicate re-reads that page.
   const readBuckets = async (
     where: Prisma.CatalogItemWhereInput,
+    terms: string[],
     cursorId: string | null,
-    outPage: boolean,
     only?: "a" | "o",
   ) => {
-    const rows: Row[] =
-      outPage || only === "o"
-        ? []
-        : await db.catalogItem.findMany({
-            where: {
-              AND: [where, { NOT: outWhere }],
-            },
-            orderBy,
-            take,
-            ...(cursorId ? { cursor: { id: cursorId }, skip: 1 } : {}),
-            select,
-          })
-    if (only !== "a" && rows.length <= limit) {
-      rows.push(
-        ...(await db.catalogItem.findMany({
-          where: { AND: [where, outWhere] },
-          orderBy,
-          take: take - rows.length,
-          ...(outPage && cursorId ? { cursor: { id: cursorId }, skip: 1 } : {}),
+    const page = await db.$queryRaw<{ id: string; out: boolean }[]>(
+      publicBucketOrderedIdsSql({
+        tenantId: tenant.id,
+        storeId: store.id,
+        category,
+        subcategory,
+        terms,
+        only,
+        after: cursorId,
+        take,
+      }),
+    )
+    const ids = page.slice(0, limit).map((row) => row.id)
+    const found = ids.length
+      ? await db.catalogItem.findMany({
+          where: { AND: [where, { id: { in: ids } }] },
           select,
-        })),
-      )
-    }
-    return rows
+        })
+      : []
+    const rowsById = new Map(found.map((row) => [row.id, row]))
+    const pageItems = ids.flatMap((id) => {
+      const row = rowsById.get(id)
+      const item = row ? projectItem(row) : null
+      return item && (!only || bucketOf(item) === only) ? [item] : []
+    })
+    return { pageItems, more: page.length > limit }
   }
   const cursorRow = (where: Prisma.CatalogItemWhereInput, id: string) =>
     db.catalogItem.findFirst({ where: { AND: [where, { id }] }, select })
@@ -874,26 +880,25 @@ export async function readPublicStorefrontFromContext(
     )
   } else if (!listing.advanced) {
     // Unchanged default listing with legacy `(a:|o:)?ID` bucket cursors.
-    let cursorId: string | null = null
-    let outPage = false
+    const cursorId = after ? after.replace(/^[ao]:/, "") : null
+    if (cursorId !== null && !validId(cursorId)) return null
+    // The cursor row is validated alongside the page it continues.
+    const [cursorItem, page] = await Promise.all([
+      cursorId ? cursorRow(baseWhere, cursorId) : null,
+      readBuckets(baseWhere, [], cursorId),
+    ])
     if (after) {
-      const raw = after.replace(/^[ao]:/, "")
-      if (!validId(raw)) return null
-      const cursorItem = await cursorRow(baseWhere, raw)
       if (!cursorItem) return null
-      cursorId = cursorItem.id
-      outPage = projectItem(cursorItem).availability === "OUT_OF_STOCK"
+      const outPage = projectItem(cursorItem).availability === "OUT_OF_STOCK"
       if (
         (after.startsWith("o:") && !outPage) ||
         (after.startsWith("a:") && outPage)
       )
         return null
     }
-    const rows = await readBuckets(baseWhere, cursorId, outPage)
-    items = rows.slice(0, limit).map(projectItem)
+    items = page.pageItems
     const last = items.at(-1)
-    nextCursor =
-      rows.length > limit && last ? `${bucketOf(last)}:${last.id}` : null
+    nextCursor = page.more && last ? `${bucketOf(last)}:${last.id}` : null
   } else {
     // Advanced listing accepts only `s:` cursors bound to this exact query state.
     const cursor = after
@@ -907,24 +912,21 @@ export async function readPublicStorefrontFromContext(
           ? ("a" as const)
           : undefined
     if (!listing.sort) {
-      let outPage = false
-      if (cursor?.m === "d") {
-        const row = await cursorRow(listWhere, cursor.id)
-        if (!row) return null
-        outPage = bucketOf(projectItem(row)) === "o"
-        if ((outPage ? "o" : "a") !== cursor.b || (only && only !== cursor.b))
-          return null
-      }
-      const rows = await readBuckets(
-        listWhere,
-        cursor?.id ?? null,
-        outPage,
-        only,
+      const cursorId = cursor?.m === "d" ? cursor.id : null
+      if (cursor?.m === "d" && only && only !== cursor.b) return null
+      const [row, page] = await Promise.all([
+        cursorId ? cursorRow(listWhere, cursorId) : null,
+        readBuckets(listWhere, listing.terms, cursorId, only),
+      ])
+      if (
+        cursor?.m === "d" &&
+        (!row || bucketOf(projectItem(row)) !== cursor.b)
       )
-      items = rows.slice(0, limit).map(projectItem)
+        return null
+      items = page.pageItems
       const last = items.at(-1)
       nextCursor =
-        rows.length > limit && last
+        page.more && last
           ? encodePublicListingCursor(binding, {
               m: "d",
               b: bucketOf(last),

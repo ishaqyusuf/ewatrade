@@ -46,6 +46,7 @@ function repository(
   const reads: Record<string, unknown>[] = []
   const firsts: Record<string, unknown>[] = []
   const categoryReads: Record<string, unknown>[] = []
+  const raws: { sql: string; values: unknown[] }[] = []
   const db = {
     tenant: {
       findFirst: async () => ({
@@ -76,7 +77,10 @@ function repository(
       },
     },
     stockBalanceSource: { groupBy: async () => [] },
-    $queryRaw: async () => [],
+    $queryRaw: async (sql: { sql: string; values: unknown[] }) => {
+      raws.push(sql)
+      return (input.rows ?? []).map((entry) => ({ id: entry.id, out: false }))
+    },
     catalogCategory: {
       findMany: async (query: Record<string, unknown>) => {
         categoryReads.push(query)
@@ -85,7 +89,7 @@ function repository(
     },
     customerEntryPoint: { findFirst: async () => null },
   } as unknown as DbClient
-  return { db, reads, firsts, categoryReads }
+  return { db, reads, firsts, categoryReads, raws }
 }
 
 /** The exact public item predicate every navigation group must hold. */
@@ -172,6 +176,10 @@ test("subcategory filters narrow the paid listing only inside their root categor
     expect(JSON.stringify(read.where)).toContain(
       '"categoryId":"root-1","subcategoryId":"sub-1"',
     )
+  expect(scoped.raws[0]?.sql.replace(/\s+/g, " ")).toContain(
+    `AND i."categoryId" = ? AND i."subcategoryId" = ?`,
+  )
+  expect(scoped.raws[0]?.values).toContain("sub-1")
 
   // Without its root, or with an invalid id, a subcategory is ignored entirely.
   for (const options of [
@@ -188,11 +196,12 @@ test("subcategory filters narrow the paid listing only inside their root categor
     expect(result?.subcategory).toBeNull()
     for (const read of loose.reads)
       expect(JSON.stringify(read.where)).not.toContain("subcategoryId")
+    for (const raw of loose.raws) expect(raw.sql).not.toContain("subcategoryId")
   }
 })
 
 test("default bucket cursors resolve and continue inside the same subcategory", async () => {
-  const { db, reads, firsts } = repository("growth", {
+  const { db, reads, firsts, raws } = repository("growth", {
     rows: [row("shirt-2")],
     findFirst: () => row("shirt-1"),
   })
@@ -203,7 +212,8 @@ test("default bucket cursors resolve and continue inside the same subcategory", 
   expect(store?.items.map((item) => item.id)).toEqual(["shirt-2"])
   // The cursor item must itself belong to the subcategory listing.
   expect(JSON.stringify(firsts[0]?.where)).toContain('"subcategoryId":"sub-1"')
-  expect(reads[0]).toMatchObject({ cursor: { id: "shirt-1" }, skip: 1 })
+  expect(raws[0]?.values).toContain("shirt-1")
+  expect(raws[0]?.values).toContain("sub-1")
   expect(JSON.stringify(reads[0]?.where)).toContain('"subcategoryId":"sub-1"')
 
   // A cursor whose item is outside the subcategory is refused, not widened.

@@ -44,6 +44,8 @@ function repository(
   cursor: ReturnType<typeof row> | null = null,
 ) {
   const reads: unknown[] = []
+  const raws: { sql: string; values: unknown[] }[] = []
+  const ordered = pages.flat()
   let categoryReads = 0
   let stockReads = 0
   const db = {
@@ -65,11 +67,25 @@ function repository(
       }),
     },
     catalogItem: {
-      findMany: async (query: unknown) => {
+      findMany: async (query: {
+        where?: { AND?: { id?: { in?: string[] } }[] }
+      }) => {
         reads.push(query)
-        return pages.shift() ?? []
+        // A paid page re-read by ID; included plans read their capped page.
+        const ids = query.where?.AND?.[1]?.id?.in
+        return ids
+          ? ordered.filter((entry) => ids.includes(entry.id))
+          : (pages.shift() ?? [])
       },
       findFirst: async () => cursor,
+    },
+    // Paid bucket order: the queued pages are the database order of IDs.
+    $queryRaw: async (sql: { sql: string; values: unknown[] }) => {
+      raws.push(sql)
+      return ordered.map((entry) => ({
+        id: entry.id,
+        out: (entry.offerings[0]?.variant.stockBalanceSources.length ?? 0) > 0,
+      }))
     },
     stockBalanceSource: {
       groupBy: async () => {
@@ -96,7 +112,7 @@ function repository(
     },
     customerEntryPoint: { findFirst: async () => null },
   } as unknown as DbClient
-  return { db, reads, counters: () => ({ categoryReads, stockReads }) }
+  return { db, reads, raws, counters: () => ({ categoryReads, stockReads }) }
 }
 
 test("Starter detail links cannot expose a fourth item or enable paid filtering", async () => {
@@ -158,14 +174,26 @@ test("Starter detail links cannot expose a fourth item or enable paid filtering"
 })
 
 test("paid categories constrain the server query before its bounded page", async () => {
-  const { db, reads } = repository("growth", [[row("one")], []])
+  const { db, reads, raws, counters } = repository("growth", [[row("one")]])
   const store = await getPublicStorefront(db, "merchant", undefined, {
     category: "category-1",
   })
   expect(store?.category).toBe("category-1")
+  expect(store?.items.map((item) => item.id)).toEqual(["one"])
+  // The bucket order filters and bounds in SQL, aggregating stock in the same read.
+  expect(counters().stockReads).toBe(0)
+  expect(raws).toHaveLength(1)
+  expect(raws[0]?.sql.replace(/\s+/g, " ")).toContain(`i."categoryId" = ?`)
+  expect(raws[0]?.values).toContain("category-1")
+  expect(raws[0]?.values.at(-1)).toBe(51)
+  // The page re-reads through the exact predicate, by ID only.
   expect(reads[0]).toMatchObject({
-    take: 51,
-    where: { AND: [{ tenantId: "tenant", categoryId: "category-1" }, {}] },
+    where: {
+      AND: [
+        { tenantId: "tenant", categoryId: "category-1" },
+        { id: { in: ["one"] } },
+      ],
+    },
   })
 })
 
@@ -187,6 +215,13 @@ test("paid pagination crosses into sold-out entries without losing the bucket cu
   )
   expect(secondPage?.items.map((item) => item.id)).toEqual(["out-2"])
   expect(secondPage?.nextCursor).toBeNull()
+  // The SQL keyset continues after the cursor's own bucket position.
+  expect(next.raws[0]?.sql.replace(/\s+/g, " ")).toContain(
+    `WHERE c.id = ? AND (e.out > c.out OR (e.out = c.out AND (e."createdAt", e.id) > (c."createdAt", c.id)))`,
+  )
+  expect(next.raws[0]?.values).toContain("out-1")
   expect(next.reads).toHaveLength(1)
-  expect(next.reads[0]).toMatchObject({ cursor: { id: "out-1" }, skip: 1 })
+  // A cursor in the other bucket is refused.
+  const wrong = repository("growth", [[row("out-2", true)]], row("out-1", true))
+  expect(await getPublicStorefront(wrong.db, "merchant", "a:out-1")).toBeNull()
 })

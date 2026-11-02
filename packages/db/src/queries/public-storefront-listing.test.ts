@@ -193,8 +193,9 @@ test("included plans cap the first N entries before search, filter and sort", as
 })
 
 test("paid search and availability constrain the server query before its bounded page", async () => {
-  const { db, reads, groupBys } = repository("growth", {
+  const { db, reads, raws, groupBys } = repository("growth", {
     findMany: () => [row("bag-1")],
+    queryRaw: () => [{ id: "bag-1", out: false }],
     outVariants: ["variant-out-x"],
   })
   const store = await getPublicStorefront(db, "merchant", undefined, {
@@ -211,34 +212,30 @@ test("paid search and availability constrain the server query before its bounded
       searchTerm("50\\%\\_bag"),
     ],
   }
-  expect(groupBys[0]).toMatchObject({
-    where: { variant: { catalogItem: where } },
-  })
-  // Available-only reads just the in-stock bucket, filtered, then takes limit + 1.
+  // Unsorted listings aggregate stock inside the ordered ID query, not separately.
+  expect(groupBys).toHaveLength(0)
+  expect(raws).toHaveLength(1)
+  const text = raws[0]?.sql.replace(/\s+/g, " ") ?? ""
+  for (const predicate of [
+    `b."tenantId" = ? AND b."storeId" = ? AND b."custodyType" = 'STORE'`,
+    `GROUP BY b."variantId", b."inventoryUnitId"`,
+    "HAVING bool_and(free <= 0)",
+    `o."variantId" IN (SELECT "variantId" FROM sold_out_variant)`,
+    `i."categoryId" = ?`,
+    "(i.name ILIKE ? OR i.description ILIKE ? OR i.category ILIKE ?)",
+    "WHERE e.out = ?",
+    `ORDER BY e.out, e."createdAt", e.id LIMIT ?`,
+  ])
+    expect(text).toContain(predicate)
+  // Available-only: in-stock IDs only, then limit + 1.
+  expect(raws[0]?.values).toEqual(
+    expect.arrayContaining(["category-1", "%red%", "%50\\%\\_bag%", false]),
+  )
+  expect(raws[0]?.values.at(-1)).toBe(51)
+  // The page re-reads through the exact filtered predicate, by ID only.
   expect(reads).toHaveLength(1)
   expect(reads[0]).toMatchObject({
-    take: 51,
-    where: {
-      AND: [
-        where,
-        {
-          NOT: {
-            OR: [
-              {
-                storefrontPolicies: {
-                  some: {
-                    tenantId: "tenant",
-                    storeId: "store",
-                    unavailable: true,
-                  },
-                },
-              },
-              { kind: "PRODUCT" },
-            ],
-          },
-        },
-      ],
-    },
+    where: { AND: [where, { id: { in: ["bag-1"] } }] },
   })
 })
 
@@ -487,8 +484,8 @@ test("capped sort: ranges use the minimum, unknown or mixed currency last both w
     (
       await getPublicStorefront(
         repository("growth", {
-          findMany: (query) =>
-            JSON.stringify(query.where).includes('"NOT"') ? rows : [],
+          queryRaw: () => rows.map((entry) => ({ id: entry.id, out: false })),
+          findMany: () => rows,
         }).db,
         "merchant",
       )
