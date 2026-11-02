@@ -50,3 +50,23 @@ export function isLoadedFinanceStatement(query: CachedQuery) {
 export function isLoadedCustomerLedgerStatement(query: CachedQuery) {
   return hasLoadedSnapshot(query, "customerLedger", ["statement"])
 }
+
+/**
+ * Loaded Finance records an account or category creation cannot change: they
+ * list existing bills/cash counts only. Failed, pending and unfamiliar keys refresh.
+ */
+export function isLoadedFinanceRecord(query: CachedQuery) {
+  if (
+    query.state.status !== "success" ||
+    query.state.data === undefined ||
+    query.state.data === null
+  )
+    return false
+  const [path] = query.queryKey
+  return (
+    Array.isArray(path) &&
+    path.length === 2 &&
+    path[0] === "finance" &&
+    ["bills", "cashCounts", "cashCount"].includes(path[1])
+  )
+}

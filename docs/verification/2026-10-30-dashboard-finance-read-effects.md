@@ -110,3 +110,29 @@ All23 open program tickets, including DP-203, remain open. Next inspect Customer
 command-runner invalidation at actual success boundaries, including its five broad
 namespaces and snapshot/live dependencies. Scope/freshness, remaining family and
 interaction acceptance and optimized navigation budgets retain their original criteria.
+
+## Addendum — record-list and bank-detail effects (2 November 2026)
+
+The lost product patch for the applied regression fixture was rewritten. Completion
+effects are now:
+
+| Completion | Mutable Finance reads | Loaded bills/cash counts | Order payment choices | Bank-detail cards | Customer-account detail |
+| --- | --- | --- | --- | --- | --- |
+| Ordinary Finance | Refresh | Refresh | Unchanged | Unchanged | Unchanged |
+| Spending category | Refresh | Kept | Unchanged | Unchanged | Unchanged |
+| Money-account creation | Refresh | Kept | Refresh | Refresh | Unchanged |
+| Payment settings | Refresh | Refresh | Refresh (once) | Refresh | Unchanged |
+| Finance Book setup | Refresh | Refresh | Refresh | Unchanged | Refresh |
+
+"Kept" applies only to successful, defined `finance.bills`, `finance.cashCounts` and
+`finance.cashCount` reads with the public two-part key: they list existing records,
+which creating an account or category cannot change. Failed, refused, pending and
+unfamiliar/nested keys still refresh. Payment settings now refresh order choices
+through the shared effect instead of a separate earlier call. Loaded fixed statements
+keep the original exclusion. No key, input, staleTime, gcTime, permission or server
+change.
+
+Evidence: fixture old source 5 pass/3 fail; after fix **8/8, 76 assertions**; wrapper
+and existing classifier tests 7/72 pass; Biome on changed files; H02 gate passes.
+No typecheck, browser, device or live submission. UI acceptance deferred by owner;
+DP-203 remains open and program progress is unchanged.

@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "id": "2026-11-02-dashboard-finance-record-invalidation",
+  "tickets": ["H02"],
+  "summary": "Dashboard Finance completion effects (DP-203 slice): money-account and spending-category creation keep loaded bill and cash-count records, which they cannot change, while failed, pending and unfamiliar Finance reads still refresh; money-account creation and payment settings also refresh bank-detail cards, and payment settings refresh order choices once through the shared effect. Local only; no deployment; UI acceptance deferred by owner.",
+  "noAssistantImpact": "Client cache invalidation only. No capability, procedure, permission, role, rollout, TTL, query key/input or server command change; assistant reads are fetched fresh per request.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/web-navigation-performance.md"
+    },
+    {
+      "topic": "api",
+      "status": "not_applicable",
+      "note": "Existing reads and commands unchanged."
+    },
+    {
+      "topic": "schema",
+      "status": "not_applicable",
+      "note": "No SQL/schema/persistence change."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/assistant/evaluations/fixtures/dashboard-finance-invalidation.fixture.tsx",
+      "executed": true,
+      "result": "Old source 5 pass 3 fail (account/category refetched loaded bills and cash counts; account and payment settings missed bank details); after fix 8/8 pass, 76 expects."
+    },
+    {
+      "kind": "test",
+      "path": "apps/dashboard/src/hooks/finance-invalidation.integration.test.ts",
+      "executed": true,
+      "result": "Isolated wrapper passes; existing finance-snapshot-query classifier tests pass alongside (7 tests, 72 expects)."
+    }
+  ]
+}

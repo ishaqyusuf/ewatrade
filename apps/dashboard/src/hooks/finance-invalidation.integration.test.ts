@@ -11,9 +11,9 @@ test("actual Finance completion preserves snapshots and refreshes affected choic
     {
       cwd: new URL("../../../../", import.meta.url).pathname,
       env: {
-        ...process.env,
+        PATH: process.env.PATH ?? "",
+        NODE_ENV: "test",
         EWATRADE_DATABASE_URL: "postgresql://inert@127.0.0.1:1/inert",
-        DATABASE_URL: undefined,
       },
       timeout: 15000,
     },

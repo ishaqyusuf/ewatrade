@@ -9,7 +9,7 @@ import {
   moneyAccountPaymentMethods,
   moneyAccountPaymentMethodsProblem,
 } from "@ewatrade/utils/finance-payment-methods"
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useMutation, useQuery } from "@tanstack/react-query"
 import { useState } from "react"
 import { PaymentMethodGaps } from "./finance-accounts"
 import { FinanceFormFooter } from "./form-fields"
@@ -91,24 +91,19 @@ function SettingsFields({
   initialMobileMoney: boolean
 }) {
   const trpc = useTRPC()
-  const queryClient = useQueryClient()
   const [methods, setMethods] = useState(initialMethods)
   const [available, setAvailable] = useState(initialAvailable)
   const [mobileMoney, setMobileMoney] = useState(initialMobileMoney)
+  // Also refreshes open order choices and bank-detail cards.
   const complete = useCompleteFinanceForm(
     `Payment settings saved for ${name}.${available ? "" : " It's paused for new payments."}`,
+    "payment-settings",
   )
   const { close } = useFinanceParams()
   const [tried, setTried] = useState(false)
   const save = useMutation(
     trpc.finance.updateMoneyAccountPayments.mutationOptions({
-      onSuccess: async () => {
-        // Open order screens pick up the new choices too.
-        await queryClient.invalidateQueries({
-          queryKey: trpc.orders.paymentAccounts.queryKey(),
-        })
-        await complete()
-      },
+      onSuccess: complete,
     }),
   )
   const problem = moneyAccountPaymentMethodsProblem(purpose, methods)
