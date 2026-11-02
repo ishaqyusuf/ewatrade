@@ -42,6 +42,13 @@ import {
 } from "./retail-ops-subscriptions"
 import type { DbClient } from "./types"
 
+/** Starts an independent read now; awaiting it rethrows, an unused failure is ignored. */
+function eagerRead<T>(read: () => Promise<T>) {
+  const promise = (async () => read())()
+  promise.catch(() => {})
+  return promise
+}
+
 /** Resolve the actual request authority; never consume client x-tenant-slug headers. */
 export async function getPublicStorefrontForHost(
   db: DbClient,
@@ -684,6 +691,43 @@ export async function readPublicStorefrontFromContext(
     projection,
   )
   type Row = PublicItemRow<typeof select>
+  // Independent of the listing, so these share its first round trip.
+  const categoriesRead =
+    paidListing && projection.catalog === undefined
+      ? eagerRead(() =>
+          db.catalogCategory.findMany({
+            where: {
+              tenantId: tenant.id,
+              parentId: null,
+              items: { some: eligibleWhere },
+            },
+            select: {
+              id: true,
+              label: true,
+              children: {
+                where: { subcategoryItems: { some: eligibleWhere } },
+                select: { id: true, label: true },
+                orderBy: [{ normalizedLabel: "asc" }, { id: "asc" }],
+                take: STOREFRONT_RESOURCE_LIMITS.subcategoriesPerCategory,
+              },
+            },
+            orderBy: [{ normalizedLabel: "asc" }, { id: "asc" }],
+          }),
+        )
+      : null
+  const isQaPreview = tenant.dataClassification === "QA"
+  // Read alongside the listing; used only when the page shows a service item.
+  const serviceRequestEntryRead =
+    projection.catalog !== "none" &&
+    planHasFeature(plan, "customerMessages") &&
+    (!isQaPreview || localQaPreview)
+      ? eagerRead(() =>
+          getStorefrontServiceRequestEntry(db, {
+            tenantId: tenant.id,
+            storeId: store.id,
+          }),
+        )
+      : null
   // Paid pagination has two stable buckets, so sold-out items remain last across pages.
   // Aggregate only eligible Store stock, keeping quantities in the repository.
   let outVariantIds: string[] = []
@@ -969,28 +1013,7 @@ export async function readPublicStorefrontFromContext(
     highlightedItem = row ? projectItem(row) : null
   }
   // Root → subcategory navigation lists only groups holding a currently public item.
-  const categories =
-    paidListing && projection.catalog === undefined
-      ? await db.catalogCategory.findMany({
-          where: {
-            tenantId: tenant.id,
-            parentId: null,
-            items: { some: eligibleWhere },
-          },
-          select: {
-            id: true,
-            label: true,
-            children: {
-              where: { subcategoryItems: { some: eligibleWhere } },
-              select: { id: true, label: true },
-              orderBy: [{ normalizedLabel: "asc" }, { id: "asc" }],
-              take: STOREFRONT_RESOURCE_LIMITS.subcategoriesPerCategory,
-            },
-          },
-          orderBy: [{ normalizedLabel: "asc" }, { id: "asc" }],
-        })
-      : []
-  const isQaPreview = tenant.dataClassification === "QA"
+  const categories = (await categoriesRead) ?? []
   const messagesEnabled =
     !isQaPreview && planHasFeature(plan, "customerMessages")
   const serviceItems = [
@@ -998,13 +1021,8 @@ export async function readPublicStorefrontFromContext(
     ...(highlightedItem ? [highlightedItem] : []),
   ].some((item) => item.kind === "SERVICE")
   const serviceRequestEntry =
-    serviceItems &&
-    planHasFeature(plan, "customerMessages") &&
-    (!isQaPreview || localQaPreview)
-      ? await getStorefrontServiceRequestEntry(db, {
-          tenantId: tenant.id,
-          storeId: store.id,
-        })
+    serviceItems && serviceRequestEntryRead
+      ? await serviceRequestEntryRead
       : null
   return {
     ...(serviceRequestEntry ? { serviceRequestEntry } : {}),
