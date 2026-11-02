@@ -427,6 +427,11 @@ function Statement({
               ]}
             />
           ) : null}
+          <Text className="text-sm [-rn-line-height:22] text-muted-foreground">
+            Shows only what’s been added to this statement: Orders, payments and
+            any starting balance. Orders not added here aren’t counted. A
+            payment stays as credit until it’s applied to what they owe.
+          </Text>
           {credit > 0n && debt > 0n && detail.data?.book ? (
             <UnappliedStrip
               amount={whole(s.totals.availableCreditMinor)}
