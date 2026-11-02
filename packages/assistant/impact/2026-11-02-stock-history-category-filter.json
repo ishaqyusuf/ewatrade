@@ -1,0 +1,48 @@
+{
+  "version": 1,
+  "id": "2026-11-02-stock-history-category-filter",
+  "tickets": ["H02"],
+  "summary": "Dashboard Stock history category filter and Net change totals (queue Q18, Workshop dashboard/web-app/inventory/inventory-pages revision 70884559, option 04). inventory.categorySuggestions gains an optional ids input (1-10 positive integers) that returns the business's saved names for chosen filter IDs, so Stock history chips can name categories kept in the URL; unknown or foreign IDs are left out, and existing query/limit calls are unchanged. The dashboard keeps categories and uncategorized in the URL, passes them to inventory.operationHistoryPage and inventory.operationTotals, adds the Categories filter group and the Net change strip, and stock forms, the count form and the transfer sheet also invalidate operationTotals. Local only; no deployment; UI acceptance deferred.",
+  "capabilities": [
+    {
+      "id": "inventory.stock.receive",
+      "change": "unchanged",
+      "rollout": "source",
+      "note": "Lists inventory.categorySuggestions for its category suggestions. The new ids input is optional and additive; suggestion calls by query and limit return the same rows, and the capability declaration, roles, clients and rollout are unchanged."
+    }
+  ],
+  "procedures": [
+    {
+      "path": "inventory.categorySuggestions",
+      "status": "supported",
+      "reason": "Still the suggestion read behind Receive and Adjust categories. The optional ids lookup is used only by the dashboard Stock history filter chips; it is tenant-scoped and inventory-manager gated like before."
+    }
+  ],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/inventory-operation-categories.md"
+    },
+    {
+      "topic": "api",
+      "status": "local_only",
+      "path": ".brain/plans/2026-10-01-minimum-inventory-categories.md",
+      "note": "Q18 section records the optional categorySuggestions ids input; operationHistoryPage and operationTotals inputs are unchanged."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "apps/api/src/schemas/inventory-categories.test.ts",
+      "executed": true,
+      "result": "4 pass, 27 expects: ids accepts positive integers, rejects text, zero and more than ten."
+    },
+    {
+      "kind": "test",
+      "path": "apps/dashboard/src/hooks/use-stock-history-filter-params.test.ts",
+      "executed": true,
+      "result": "URL state 3 pass; with inventory-labels (7), stock-history-totals render (4) and inventory-hydration (10): 24 pass, 103 expects."
+    }
+  ]
+}
