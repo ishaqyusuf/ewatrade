@@ -247,6 +247,11 @@ formOnly(
   "Display setting for Running low on the Inventory page; it never changes stock or blocks a sale. The assistant reads low stock with lowStockPage and its own threshold.",
   ["inventory.setLowStockLevel"],
 )
+formOnly(
+  "inventory",
+  "Stock history pages and category totals behind the Stock history page filters; the assistant reads recent operations with readStockOperations and one original with readStockOperation.",
+  ["inventory.operationHistoryPage", "inventory.operationTotals"],
+)
 planned("inventory", "C05", ["inventory.reconciliationReport"])
 planned("inventory", "G04", [
   "inventory.*Reservation",

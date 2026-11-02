@@ -10,6 +10,10 @@ import {
 import { describeWithServiceCommerceDatabase } from "./acceptance/service-commerce/database"
 import { listStockOperationCategoryNames } from "./inventory-categories"
 import {
+  getInventoryOperationTotals,
+  listInventoryOperationHistoryPage,
+} from "./inventory-operation-history"
+import {
   correctStockOperation,
   postSingleBalanceStockOperation,
 } from "./inventory-operations"
@@ -381,6 +385,116 @@ describeWithServiceCommerceDatabase(
           categories: [{ name: "Changed" }],
         }),
       ).rejects.toThrow("different input")
+    })
+    test("match-all and Uncategorized filters page on the server; totals fold corrections once", async () => {
+      const both = await postSingleBalanceStockOperation(
+        db,
+        await input([{ name: "Filter house A" }, { name: "Filter row B" }]),
+      )
+      const [houseA, rowB] = both.categories.map((row) => row.categoryNameId)
+      if (!houseA || !rowB) throw new Error("Missing filter categories")
+      const onlyA = await postSingleBalanceStockOperation(db, {
+        ...(await input([{ categoryNameId: houseA }])),
+        enteredQuantity: "5",
+      })
+      const legacy = await postSingleBalanceStockOperation(
+        db,
+        await input(undefined, balances[0], "Filter legacy"),
+      )
+      const movement = both.movements[0]
+      if (!movement) throw new Error("Missing receipt movement")
+      const current = await db.stockBalanceSource.findUniqueOrThrow({
+        where: { id: movement.balanceSourceId },
+      })
+      const correction = await correctStockOperation(db, {
+        actorUserId,
+        clientOperationId: randomUUID(),
+        corrections: [
+          {
+            movementId: movement.id,
+            correctedEnteredQuantity: "18",
+            expectedBalanceRevision: current.revision,
+          },
+        ],
+        reason: "Counted 18",
+        schemaVersion: 1,
+        source: "category_acceptance",
+        targetOperationId: both.id,
+        tenantId,
+      })
+
+      const first = await listInventoryOperationHistoryPage(db, {
+        tenantId,
+        categoryNameIds: [rowB, houseA],
+        limit: 1,
+      })
+      expect(first.rows.map((row) => row.id)).toEqual([correction.id])
+      expect(first.nextCursor).toBe(correction.id)
+      const second = await listInventoryOperationHistoryPage(db, {
+        tenantId,
+        categoryNameIds: [rowB, houseA],
+        cursor: first.nextCursor ?? undefined,
+        limit: 1,
+      })
+      expect(second.rows.map((row) => row.id)).toEqual([both.id])
+      expect(second.nextCursor).toBeNull()
+      expect(
+        (
+          await listInventoryOperationHistory(db, {
+            tenantId,
+            categoryNameIds: [houseA],
+          })
+        ).map((row) => row.id),
+      ).toEqual([correction.id, onlyA.id, both.id])
+      const uncategorized = await listInventoryOperationHistoryPage(db, {
+        tenantId,
+        uncategorized: true,
+        limit: 100,
+      })
+      expect(uncategorized.rows.map((row) => row.id)).toContain(legacy.id)
+      expect(uncategorized.rows.every((row) => !row.categories.length)).toBe(
+        true,
+      )
+
+      const pair = await getInventoryOperationTotals(db, {
+        tenantId,
+        categoryNameIds: [houseA, rowB],
+      })
+      expect(pair).toMatchObject({ operationCount: 1, correctionCount: 1 })
+      expect(pair.rows).toEqual([
+        expect.objectContaining({
+          productId: current.productId,
+          canonicalUnitName: expect.any(String),
+          netCanonicalQuantity: "18",
+          operationCount: 1,
+        }),
+      ])
+      const receipts = await getInventoryOperationTotals(db, {
+        tenantId,
+        categoryNameIds: [houseA],
+        type: "RECEIPT",
+      })
+      expect(receipts.operationCount).toBe(2)
+      expect(receipts.rows.map((row) => row.netCanonicalQuantity)).toEqual([
+        "23",
+      ])
+
+      const foreign = await db.stockOperationCategoryName.findFirstOrThrow({
+        where: { tenantId: otherTenantId },
+      })
+      await expect(
+        getInventoryOperationTotals(db, {
+          tenantId,
+          categoryNameIds: [foreign.id],
+        }),
+      ).rejects.toThrow("not available")
+      await expect(
+        listInventoryOperationHistoryPage(db, {
+          tenantId,
+          categoryNameIds: [houseA],
+          uncategorized: true,
+        }),
+      ).rejects.toThrow("not both")
     })
   },
 )

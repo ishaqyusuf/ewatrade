@@ -1,5 +1,10 @@
 import { expect, test } from "bun:test"
-import { inventorySingleBalanceOperationSchema } from "./inventory"
+import {
+  inventoryOperationHistoryPageSchema,
+  inventoryOperationHistorySchema,
+  inventoryOperationTotalsSchema,
+  inventorySingleBalanceOperationSchema,
+} from "./inventory"
 
 const command = {
   balanceSourceId: "balance",
@@ -69,4 +74,37 @@ test("legacy commands keep categories absent and returns keep their reason contr
       reason: "Returned item",
     }).success,
   ).toBe(true)
+})
+
+test("history and totals filters take match-all name IDs or Uncategorized, never both", () => {
+  expect(
+    inventoryOperationHistoryPageSchema.parse({
+      categoryNameIds: [7, 8],
+      cursor: "op_1",
+      limit: 25,
+    }),
+  ).toEqual({ categoryNameIds: [7, 8], cursor: "op_1", limit: 25 })
+  expect(
+    inventoryOperationHistorySchema.parse({ uncategorized: true }),
+  ).toEqual({ uncategorized: true })
+  for (const input of [
+    { categoryNameIds: [7], uncategorized: true },
+    { categoryNameIds: ["7"] },
+    { categoryNameIds: [0] },
+    { categoryNameIds: Array.from({ length: 11 }, (_, i) => i + 1) },
+    { limit: 101 },
+  ])
+    expect(inventoryOperationHistoryPageSchema.safeParse(input).success).toBe(
+      false,
+    )
+  // Corrections are folded into the original they correct.
+  expect(
+    inventoryOperationTotalsSchema.safeParse({ type: "correction" }).success,
+  ).toBe(false)
+  expect(
+    inventoryOperationTotalsSchema.parse({
+      type: "receipt",
+      categoryNameIds: [7],
+    }),
+  ).toEqual({ type: "receipt", categoryNameIds: [7] })
 })

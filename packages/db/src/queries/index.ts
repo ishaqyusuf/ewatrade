@@ -43,6 +43,10 @@ export * from "./offline-settings"
 export * from "./owner-businesses"
 export * from "./business-country"
 export * from "./inventory-reporting"
+export {
+  getInventoryOperationTotals,
+  listInventoryOperationHistoryPage,
+} from "./inventory-operation-history"
 export * from "./service-work"
 export * from "./service-manual-message"
 export * from "./service-settings"

@@ -19,6 +19,13 @@ import {
 } from "./inventory-categories"
 
 import { CatalogError } from "./catalog-errors"
+import {
+  type InventoryOperationFilters,
+  operationHistoryInclude,
+  operationHistoryWhere,
+  resolveOperationCategoryFilter,
+  serializeOperationHistoryRow,
+} from "./inventory-operation-history"
 
 const balanceReportGraph = {
   inventoryUnit: { include: { configurationVersion: true } },
@@ -321,45 +328,19 @@ export async function getStockOperationAudit(
 
 export async function listInventoryOperationHistory(
   db: PrismaClient,
-  input: {
-    limit?: number
-    storeId?: string
-    tenantId: string
-    type?: StockOperationType
-  },
+  input: InventoryOperationFilters & { limit?: number },
 ) {
+  const where = operationHistoryWhere(
+    input,
+    await resolveOperationCategoryFilter(db, input),
+  )
   const operations = await db.stockOperation.findMany({
-    include: {
-      store: { select: { name: true } },
-      movements: true,
-      categories: stockOperationCategoryGraph,
-    },
-    orderBy: [{ effectiveAt: "desc" }, { createdAt: "desc" }],
+    include: operationHistoryInclude,
+    orderBy: [{ effectiveAt: "desc" }, { createdAt: "desc" }, { id: "desc" }],
     take: Math.min(Math.max(input.limit ?? 50, 1), 200),
-    where: {
-      storeId: input.storeId,
-      tenantId: input.tenantId,
-      type: input.type,
-    },
+    where,
   })
-  return operations.map((operation) => ({
-    categories: serializeStockCategories(operation.categories),
-    actorUserId: operation.actorUserId,
-    canonicalNetEffect: operation.movements.reduce(
-      (total, movement) =>
-        addExactDecimals(total, movement.signedCanonicalEffect.toFixed()),
-      "0",
-    ),
-    createdAt: operation.createdAt,
-    effectiveAt: operation.effectiveAt,
-    id: operation.id,
-    storeId: operation.storeId,
-    storeName: operation.store.name,
-    movementCount: operation.movements.length,
-    reason: operation.reason,
-    source: operation.source,
-    type: operation.type,
-  }))
+  return operations.map(serializeOperationHistoryRow)
 }
 
 export async function getInventoryReconciliationSummary(

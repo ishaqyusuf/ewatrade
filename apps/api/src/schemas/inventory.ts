@@ -400,28 +400,66 @@ export const inventoryOperationAuditSchema = z
   })
   .strict()
 
+const inventoryOperationTypeSchema = z.enum([
+  "adjustment",
+  "correction",
+  "custody_assignment",
+  "custody_return",
+  "opening_stock",
+  "receipt",
+  "return",
+  "sale_fulfillment",
+  "stock_count",
+  "stock_transition",
+  "transfer",
+  "transformation",
+])
+
+/** Match-all category-name IDs, or Uncategorized; never both. */
+const inventoryOperationFilterFields = {
+  storeId: z.string().trim().min(1).optional(),
+  type: inventoryOperationTypeSchema.optional(),
+  categoryNameIds: z.array(z.number().int().positive()).max(10).optional(),
+  uncategorized: z.boolean().optional(),
+}
+
+function oneCategoryFilter(
+  input: { categoryNameIds?: number[]; uncategorized?: boolean },
+  context: z.RefinementCtx,
+) {
+  if (input.uncategorized && input.categoryNameIds?.length)
+    context.addIssue({
+      code: "custom",
+      message: "Choose categories or Uncategorized, not both.",
+      path: ["uncategorized"],
+    })
+}
+
 export const inventoryOperationHistorySchema = z
   .object({
+    ...inventoryOperationFilterFields,
     limit: z.number().int().min(1).max(200).optional(),
-    storeId: z.string().trim().min(1).optional(),
-    type: z
-      .enum([
-        "adjustment",
-        "correction",
-        "custody_assignment",
-        "custody_return",
-        "opening_stock",
-        "receipt",
-        "return",
-        "sale_fulfillment",
-        "stock_count",
-        "stock_transition",
-        "transfer",
-        "transformation",
-      ])
-      .optional(),
   })
   .strict()
+  .superRefine(oneCategoryFilter)
+
+export const inventoryOperationHistoryPageSchema = z
+  .object({
+    ...inventoryOperationFilterFields,
+    cursor: z.string().trim().min(1).max(128).optional(),
+    limit: z.number().int().min(1).max(100).optional(),
+  })
+  .strict()
+  .superRefine(oneCategoryFilter)
+
+/** Totals start from original operations; their corrections are folded in. */
+export const inventoryOperationTotalsSchema = z
+  .object({
+    ...inventoryOperationFilterFields,
+    type: inventoryOperationTypeSchema.exclude(["correction"]).optional(),
+  })
+  .strict()
+  .superRefine(oneCategoryFilter)
 
 export const inventoryReconciliationReportSchema = z
   .object({ storeId: z.string().trim().min(1).optional() })

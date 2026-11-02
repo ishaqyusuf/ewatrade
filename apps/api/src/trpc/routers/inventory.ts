@@ -23,6 +23,7 @@ import {
   getConfiguredCatalogOfferingAvailability,
   getInventoryBalanceSource,
   getInventoryCloseoutReview,
+  getInventoryOperationTotals,
   getInventoryReconciliationSummary,
   getStockCountReview,
   getStockOperationAudit,
@@ -34,6 +35,7 @@ import {
   listInventoryCloseouts,
   listInventoryCompatibleTotalsPage,
   listInventoryOperationHistory,
+  listInventoryOperationHistoryPage,
   listServiceAssignees,
   listStockOperationCategoryNames,
   listStockTransfers,
@@ -72,7 +74,9 @@ import {
   inventoryMoveCustodySchema,
   inventoryOfferingAvailabilitySchema,
   inventoryOperationAuditSchema,
+  inventoryOperationHistoryPageSchema,
   inventoryOperationHistorySchema,
+  inventoryOperationTotalsSchema,
   inventoryReconciliationReportSchema,
   inventoryRecordInternalUseSchema,
   inventoryReleaseReservationSchema,
@@ -133,6 +137,15 @@ function resolveStoreId(
     })
   }
   return storeId
+}
+
+function stockOperationType(type?: string) {
+  if (!type) return undefined
+  // The "stock_count" history filter is the ledger's count reconciliation.
+  if (type === "stock_count") return StockOperationType.COUNT_RECONCILIATION
+  return StockOperationType[
+    type.toUpperCase() as keyof typeof StockOperationType
+  ]
 }
 
 function inventoryError(error: CatalogError | FinanceError) {
@@ -394,15 +407,50 @@ export const inventoryRouter = createTRPCRouter({
     .input(inventoryOperationHistorySchema)
     .query(async ({ ctx, input }) => {
       assertCanManageInventory(ctx.tenantContext)
-      return listInventoryOperationHistory(ctx.db, {
-        ...input,
-        tenantId: ctx.tenantContext.tenant.id,
-        type: input.type
-          ? StockOperationType[
-              input.type.toUpperCase() as keyof typeof StockOperationType
-            ]
-          : undefined,
-      })
+      try {
+        return await listInventoryOperationHistory(ctx.db, {
+          ...input,
+          tenantId: ctx.tenantContext.tenant.id,
+          type: stockOperationType(input.type),
+        })
+      } catch (error) {
+        if (error instanceof CatalogError) throw inventoryError(error)
+        throw error
+      }
+    }),
+
+  /** Complete history, filtered on the server before each page is cut. */
+  operationHistoryPage: protectedProcedure
+    .input(inventoryOperationHistoryPageSchema)
+    .query(async ({ ctx, input }) => {
+      assertCanManageInventory(ctx.tenantContext)
+      try {
+        return await listInventoryOperationHistoryPage(ctx.db, {
+          ...input,
+          tenantId: ctx.tenantContext.tenant.id,
+          type: stockOperationType(input.type),
+        })
+      } catch (error) {
+        if (error instanceof CatalogError) throw inventoryError(error)
+        throw error
+      }
+    }),
+
+  /** Exact net effect of the matching operations, corrections included. */
+  operationTotals: protectedProcedure
+    .input(inventoryOperationTotalsSchema)
+    .query(async ({ ctx, input }) => {
+      assertCanManageInventory(ctx.tenantContext)
+      try {
+        return await getInventoryOperationTotals(ctx.db, {
+          ...input,
+          tenantId: ctx.tenantContext.tenant.id,
+          type: stockOperationType(input.type),
+        })
+      } catch (error) {
+        if (error instanceof CatalogError) throw inventoryError(error)
+        throw error
+      }
     }),
 
   reconciliationReport: protectedProcedure
