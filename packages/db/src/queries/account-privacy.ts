@@ -18,6 +18,7 @@ import {
 } from "./account-privacy-profile-policy"
 import { assessAccountPrivacyProfilePrerequisites } from "./account-privacy-profile-prerequisites"
 import { getAccountPrivacyStaffInvitationInventory } from "./account-privacy-staff-invitation-inventory"
+import { ownerCoveragePrivacyWhere } from "./account-privacy-subscription"
 import { isLocalPhoneAuth } from "./phone-auth-profile"
 import type { DbClient } from "./types"
 
@@ -716,17 +717,45 @@ export async function getAccountPrivacyReview(
         db.playRefundReviewResponse.count({
           where: { actorUserId: request.userId },
         }),
+        // The person's own owner-wide account: receipts, the canonical
+        // subscription and coverage history (released rows included).
+        db.ownerBillingAccount.findUnique({
+          where: { ownerUserId: request.userId },
+          select: {
+            subscription: {
+              select: {
+                provider: true,
+                status: true,
+                currentPeriodEndsAt: true,
+              },
+            },
+            _count: { select: { purchases: true, coverage: true } },
+          },
+        }),
+        db.ownerBusinessCoverage.count({
+          where: ownerCoveragePrivacyWhere(request.userId, membershipTenantIds),
+        }),
       ]).then(
         ([
           initiatedCheckoutSessions,
           tenantSubscriptions,
           storePurchases,
           refundReviewActions,
+          ownerAccount,
+          ownerCoverageRecords,
         ]) => ({
           initiatedCheckoutSessions,
           storePurchases,
           tenantSubscriptions,
           refundReviewActions,
+          ownerBilling: ownerAccount
+            ? {
+                subscription: ownerAccount.subscription,
+                purchases: ownerAccount._count.purchases,
+                coverageRecords: ownerAccount._count.coverage,
+              }
+            : null,
+          ownerCoverageRecords,
         }),
       )
     : null

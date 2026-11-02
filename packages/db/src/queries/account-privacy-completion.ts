@@ -20,6 +20,7 @@ import {
   accountPrivacyRetentionDeadlines,
   getApprovedAccountPrivacyRetentionPolicy,
 } from "./account-privacy-retention-policy"
+import { ownerCoveragePrivacyWhere } from "./account-privacy-subscription"
 import { mobileOtpIdentifiersForEmail } from "./mobile-otp-identifier"
 import { runInOwnSerializableTransaction } from "./own-transaction"
 
@@ -157,6 +158,8 @@ export async function assessAccountPrivacyCompletion(
     | "storeConversationChannelConfigurationAuditEvent"
     | "billingCheckoutSession"
     | "playRefundReviewResponse"
+    | "ownerBillingAccount"
+    | "ownerBusinessCoverage"
     | "commercialOrder"
     | "commercialServiceFulfillment"
     | "commercialServiceAuthorization"
@@ -602,7 +605,19 @@ export async function assessAccountPrivacyCompletion(
       const refundReviewActions = await db.playRefundReviewResponse.count({
         where: { actorUserId: subjectId },
       })
-      if (initiatedCheckouts > 0 || refundReviewActions > 0)
+      // Owner-wide receipts and coverage history also outlive the claim.
+      const ownerBillingAccounts = await db.ownerBillingAccount.count({
+        where: { ownerUserId: subjectId },
+      })
+      const ownerCoverageActions = await db.ownerBusinessCoverage.count({
+        where: ownerCoveragePrivacyWhere(subjectId),
+      })
+      if (
+        initiatedCheckouts > 0 ||
+        refundReviewActions > 0 ||
+        ownerBillingAccounts > 0 ||
+        ownerCoverageActions > 0
+      )
         blockers.push("SOFTWARE_SUBSCRIPTION_REVIEW_REQUIRED")
     }
     if (conversationOutcome?.disposition === "NOT_APPLICABLE") {

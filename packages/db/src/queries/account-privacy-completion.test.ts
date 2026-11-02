@@ -111,6 +111,8 @@ function fixture(
     unresolvedOutboundSends?: number
     initiatedCheckouts?: number
     refundReviewActions?: number
+    ownerBillingAccounts?: number
+    ownerCoverageActions?: number
     commercialOrders?: number
     commercialPayments?: number
     commercialFulfillments?: number
@@ -150,6 +152,7 @@ function fixture(
   const invitationQueries: unknown[] = []
   const checkoutQueries: unknown[] = []
   const refundReviewQueries: unknown[] = []
+  const ownerBillingQueries: unknown[] = []
   const commercialQueries: Record<string, unknown[]> = {
     orders: [],
     payments: [],
@@ -372,6 +375,18 @@ function fixture(
         return live.refundReviewActions ?? 0
       },
     },
+    ownerBillingAccount: {
+      count: async (query: unknown) => {
+        ownerBillingQueries.push(query)
+        return live.ownerBillingAccounts ?? 0
+      },
+    },
+    ownerBusinessCoverage: {
+      count: async (query: unknown) => {
+        ownerBillingQueries.push(query)
+        return live.ownerCoverageActions ?? 0
+      },
+    },
     commercialServiceFulfillment: { count: async () => 0 },
     commercialServiceAuthorization: { count: async () => 0 },
     commercialOrderAmendment: { count: async () => 0 },
@@ -539,6 +554,7 @@ function fixture(
     invitationQueries,
     checkoutQueries,
     refundReviewQueries,
+    ownerBillingQueries,
     commercialQueries,
     expandedCommercialQueries,
     userQueries,
@@ -1229,6 +1245,37 @@ describe("account privacy completion assessment", () => {
       "SOFTWARE_SUBSCRIPTION_REVIEW_REQUIRED",
     )
   })
+
+  test.each([
+    ["owner billing account", { ownerBillingAccounts: 1 }],
+    ["owner coverage action", { ownerCoverageActions: 1 }],
+  ])(
+    "requires subscription review for a retained %s after User removal",
+    async (_name, live) => {
+      const { db, ownerBillingQueries } = fixture(
+        { userId: null, user: null },
+        live,
+      )
+      const assessment = await assessAccountPrivacyCompletion(db, "request-1", {
+        approvedPolicyVersion: policyVersion,
+        now,
+      })
+      expect(assessment.blockers).toContain(
+        "SOFTWARE_SUBSCRIPTION_REVIEW_REQUIRED",
+      )
+      expect(ownerBillingQueries).toEqual([
+        { where: { ownerUserId: "user-1" } },
+        {
+          where: {
+            OR: [
+              { enrolledByUserId: "user-1" },
+              { releasedByUserId: "user-1" },
+            ],
+          },
+        },
+      ])
+    },
+  )
 
   test.each([
     ["order", { commercialOrders: 1 }],

@@ -19,6 +19,23 @@ export class AccountPrivacySubscriptionError extends Error {
   }
 }
 
+/**
+ * Owner-wide coverage the subject enrolled or released (attribution is kept by
+ * user ID, like checkout attribution) or that covers one of their Tenants.
+ */
+export function ownerCoveragePrivacyWhere(
+  subjectId: string,
+  tenantIds: readonly string[] = [],
+) {
+  return {
+    OR: [
+      { enrolledByUserId: subjectId },
+      { releasedByUserId: subjectId },
+      ...(tenantIds.length ? [{ tenantId: { in: [...tenantIds] } }] : []),
+    ],
+  }
+}
+
 /** Certifies only the narrow no-data case; never cancels a Tenant's plan. */
 export async function confirmNoAccountPrivacySubscriptions(
   db: PrismaClient,
@@ -130,8 +147,12 @@ export async function confirmNoAccountPrivacySubscriptions(
       const ownerBillingAccounts = await tx.ownerBillingAccount.count({
         where: { ownerUserId: subjectId },
       })
+      const ownerCoverage = await tx.ownerBusinessCoverage.count({
+        where: ownerCoveragePrivacyWhere(subjectId, tenantIds),
+      })
       if (
         ownerBillingAccounts ||
+        ownerCoverage ||
         initiatedCheckouts ||
         refundReviewActions ||
         storePurchases ||
@@ -180,6 +201,8 @@ export async function confirmNoAccountPrivacySubscriptions(
             storePurchases,
             providerSubscriptions,
             billingInvoices,
+            ownerBillingAccounts,
+            ownerCoverage,
           }),
         )
         .digest("hex")

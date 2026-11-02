@@ -712,6 +712,25 @@ test("operator review identifies an unmatched email and a sole owner without exp
         return 3
       },
     },
+    ownerBillingAccount: {
+      findUnique: async (query: unknown) => {
+        billingQueries.push(query)
+        return {
+          subscription: {
+            provider: "PLAY_STORE",
+            status: "ACTIVE",
+            currentPeriodEndsAt: new Date("2026-12-01T00:00:00.000Z"),
+          },
+          _count: { purchases: 2, coverage: 3 },
+        }
+      },
+    },
+    ownerBusinessCoverage: {
+      count: async (query: unknown) => {
+        billingQueries.push(query)
+        return 4
+      },
+    },
     commercialServiceFulfillment: { count: async () => 0 },
     commercialServiceAuthorization: { count: async () => 0 },
     commercialOrderAmendment: { count: async () => 0 },
@@ -823,6 +842,12 @@ test("operator review identifies an unmatched email and a sole owner without exp
           status: "ACTIVE",
         },
       ],
+      ownerBilling: {
+        subscription: { provider: "PLAY_STORE", status: "ACTIVE" },
+        purchases: 2,
+        coverageRecords: 3,
+      },
+      ownerCoverageRecords: 4,
     },
     commercialReviewInventory: {
       createdOrders: 2,
@@ -1002,6 +1027,24 @@ test("operator review identifies an unmatched email and a sole owner without exp
     },
     { where: { tenantId: { in: ["tenant-1", "tenant-2"] } } },
     { where: { actorUserId: "user-1" } },
+    {
+      where: { ownerUserId: "user-1" },
+      select: {
+        subscription: {
+          select: { provider: true, status: true, currentPeriodEndsAt: true },
+        },
+        _count: { select: { purchases: true, coverage: true } },
+      },
+    },
+    {
+      where: {
+        OR: [
+          { enrolledByUserId: "user-1" },
+          { releasedByUserId: "user-1" },
+          { tenantId: { in: ["tenant-1", "tenant-2"] } },
+        ],
+      },
+    },
   ])
   expect(commercialQueries.slice(0, 5)).toEqual([
     { where: { createdByUserId: "user-1" } },
