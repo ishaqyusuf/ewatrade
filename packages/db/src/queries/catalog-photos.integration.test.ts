@@ -262,7 +262,8 @@ describeWithServiceCommerceDatabase("Catalog private photo records", () => {
           contentDigest: intent.contentDigest,
           contentType: intent.contentType,
           sizeBytes: intent.sizeBytes,
-          storageProvider: "vercel_blob_private" as const,
+          // QA fixture tenants store through the guarded local QA adapter.
+          storageProvider: "local_test" as const,
         }
         return { ...photo, storagePath: catalogPhotoStoragePath(photo) }
       }
