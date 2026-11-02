@@ -83,6 +83,7 @@ function source(): Source {
       hasHiddenItems: false,
       nextCursor: null,
       category: null,
+      subcategory: null,
       categories: [],
       highlightedItem: item,
       items: [item],
