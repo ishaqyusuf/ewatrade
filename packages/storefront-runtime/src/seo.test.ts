@@ -91,7 +91,7 @@ test("structured data uses public facts, exact prices, stock and safely serializ
   const unpriced = {
     ...item,
     kind: "SERVICE" as const,
-    options: [{ ...item.options[0], priceMinor: null }],
+    options: item.options.map((option) => ({ ...option, priceMinor: null })),
   }
   expect(
     serializeStorefrontStructuredData(

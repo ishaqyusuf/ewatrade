@@ -75,7 +75,7 @@ test("WhatsApp enquiries preserve exact selected public variant and selling-unit
 })
 
 test("enquiry actions accept IDs only, reject duplicate or unbounded selection and authored labels", () => {
-  const action = { type: "whatsappEnquiry", itemId: "sandals" }
+  const action = { type: "whatsappEnquiry" as const, itemId: "sandals" }
   expect(
     storefrontActionSchema.parse({ ...action, optionIds: ["pair"] }),
   ).toEqual({

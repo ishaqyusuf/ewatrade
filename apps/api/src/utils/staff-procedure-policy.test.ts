@@ -168,7 +168,7 @@ test("list and payment totals follow their list reads, pinned to the active Stor
     ["orders.listTotals", "orders.listPage"],
     ["orders.paymentTotals", "orders.payments"],
     ["catalog.attentionSummary", "catalog.count"],
-  ]) {
+  ] as const) {
     expect(staffProcedureAction(path, "query")).toBe("read")
     expect(staffProcedureAction(path, "mutation")).toBeNull()
     expect(staffProcedureStoreInput.has(path)).toBe(

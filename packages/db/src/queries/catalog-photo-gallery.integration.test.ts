@@ -335,7 +335,7 @@ describeWithServiceCommerceDatabase("Catalog My images gallery", () => {
           storeIds: [store.id],
           ...extra,
         })
-      async function upload(key: string, digest: string) {
+      const upload = async (key: string, digest: string) => {
         const intent = await createCatalogPhotoIntent(db, {
           ...as(owner.id),
           clientOperationId: `gallery-only-${key}`,
