@@ -46,6 +46,10 @@ export type CustomerLedgerMode =
   | "refund"
   | "reverse"
   | RefundRequestMode
+  | AccountActionMode
+
+/** Account-wide actions that record nothing on the statement. */
+export type AccountActionMode = "remind" | "summary" | "link"
 
 /**
  * Refund-request lifecycle on the shared action route. For `refund-request`
@@ -58,5 +62,5 @@ export type RefundRequestMode =
   | "request-refund"
 export type CustomerLedgerCommandMode = Exclude<
   CustomerLedgerMode,
-  "entry" | RefundRequestMode
+  "entry" | RefundRequestMode | AccountActionMode
 >

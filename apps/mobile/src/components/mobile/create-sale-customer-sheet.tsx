@@ -27,7 +27,14 @@ import type {
 } from "@gorhom/bottom-sheet"
 import { BottomSheetFooter, useBottomSheetModal } from "@gorhom/bottom-sheet"
 import { VariableContextProvider } from "nativewind"
-import { forwardRef, useCallback, useEffect, useRef, useState } from "react"
+import {
+  type ReactNode,
+  forwardRef,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react"
 import { View, useWindowDimensions } from "react-native"
 import { KeyboardStickyView } from "react-native-keyboard-controller"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
@@ -46,6 +53,8 @@ type CreateSaleCustomerSheetProps = {
   onDismiss?: () => void
   recoveryAction?: { label: string; onPress: () => void; disabled?: boolean }
   saveLabel?: string
+  /** Extra fields under the contact fields, such as a starting balance. */
+  children?: ReactNode
 }
 
 export const CreateSaleCustomerSheet = forwardRef<
@@ -65,6 +74,7 @@ export const CreateSaleCustomerSheet = forwardRef<
       onDismiss,
       recoveryAction,
       saveLabel = "Save customer",
+      children,
     },
     ref,
   ) => {
@@ -282,6 +292,7 @@ export const CreateSaleCustomerSheet = forwardRef<
                   value={draft.email}
                 />
               ) : null}
+              {children}
               <ShowMoreToggle
                 hint={useCountryPhone ? "Email" : "Country, email"}
                 open={showMore}

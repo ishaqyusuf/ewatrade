@@ -27,6 +27,8 @@ import {
   StatusPill,
 } from "../green-till/kit"
 import { CustomerLedgerGate } from "./customer-ledger-gate"
+import { EarlierOrdersBanner } from "./earlier-orders"
+import { OwedForCard } from "./owed-for-card"
 import { ledgerLabels } from "./types"
 export function CustomerLedgerScreen({ customerId }: { customerId: string }) {
   return (
@@ -140,6 +142,7 @@ function Accounts({ customerId }: { customerId: string }) {
         <Statement
           key={selected.id}
           accountId={selected.id}
+          customerId={customerId}
           customerName={query.data.customer.name}
         />
       ) : (
@@ -176,9 +179,11 @@ function statementFilename(customerName: string, snapshot: string) {
 
 function Statement({
   accountId,
+  customerId,
   customerName,
 }: {
   accountId: string
+  customerId: string
   customerName: string
 }) {
   const trpc = useTRPC()
@@ -358,6 +363,12 @@ function Statement({
               tone="warning"
             />
           ) : null}
+          <EarlierOrdersBanner
+            customerId={customerId}
+            customerName={customerName}
+            offline={offline}
+            onReview={() => open("link")}
+          />
           <HeroCard
             label={
               debt > 0n
@@ -394,6 +405,7 @@ function Statement({
               </View>
             ) : null}
           </HeroCard>
+          <OwedForCard accountId={accountId} offline={offline} />
           {detail.data?.book ? (
             <QuickActionRow
               actions={[
@@ -424,7 +436,14 @@ function Statement({
                   disabled: offline,
                   onPress: () => open("refund-requests"),
                 },
+                {
+                  label: "Remind",
+                  icon: "WhatsApp",
+                  disabled: offline,
+                  onPress: () => open("remind"),
+                },
               ]}
+              columns={4}
             />
           ) : null}
           <Text className="text-sm [-rn-line-height:22] text-muted-foreground">

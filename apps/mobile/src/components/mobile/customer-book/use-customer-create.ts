@@ -1,13 +1,21 @@
 import { useModal } from "@/components/ui/modal"
-import type { SaleCustomerDraft } from "../create-sale-customer-sheet-model"
 import { useTRPC } from "@/trpc/client"
+import type { RouterInputs } from "@ewatrade/api/trpc/routers/_app"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { TRPCClientError } from "@trpc/client"
-import type { RouterInputs } from "@ewatrade/api/trpc/routers/_app"
+import * as Crypto from "expo-crypto"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { Keyboard } from "react-native"
+import type { SaleCustomerDraft } from "../create-sale-customer-sheet-model"
+import {
+  type StartingBalanceChoice,
+  startingBalanceMinor,
+} from "./starting-balance-model"
 
 type CreateInput = RouterInputs["customers"]["create"]
+type OpeningInput = RouterInputs["customerLedger"]["createCustomerWithOpening"]
+/** The canonical opening needs a reason; the form doesn't ask for one. */
+const STARTING_BALANCE_REASON = "Starting balance added with the customer"
 type Phase = "editing" | "posting" | "uncertain" | "accepted"
 const emptyDraft = (): SaleCustomerDraft => ({ name: "", phone: "", email: "" })
 
@@ -32,16 +40,21 @@ function prepareCustomer(
 }
 
 // No automatic retry: customers.create has no server idempotency contract.
+// A starting balance goes through createCustomerWithOpening, which replays a
+// repeated command identity instead of adding the customer twice.
 export function useCustomerCreate({
   scope,
   canOperate,
   isOffline,
   onCheckDirectory,
+  startingBalanceBook,
 }: {
   scope: string | null
   canOperate: boolean
   isOffline: boolean
   onCheckDirectory: (name: string) => void
+  /** Owners and Admins with Finance set up; null hides the starting balance. */
+  startingBalanceBook?: { id: string; currencyCode: string } | null
 }) {
   const trpc = useTRPC()
   const queryClient = useQueryClient()
@@ -56,8 +69,11 @@ export function useCustomerCreate({
   const attempt = useRef<{
     scope: string
     input: CreateInput
+    opening: OpeningInput | null
     accepted: boolean
   } | null>(null)
+  const [startChoice, setStartChoice] = useState<StartingBalanceChoice>("none")
+  const [startAmount, setStartAmount] = useState("")
   const [draft, updateDraft] = useState<SaleCustomerDraft>(emptyDraft)
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
@@ -65,6 +81,11 @@ export function useCustomerCreate({
   const [open, setOpen] = useState(false)
   const mutation = useMutation(
     trpc.customers.create.mutationOptions({ retry: false }),
+  )
+  const openingMutation = useMutation(
+    trpc.customerLedger.createCustomerWithOpening.mutationOptions({
+      retry: false,
+    }),
   )
   useEffect(() => {
     mounted.current = true
@@ -98,6 +119,8 @@ export function useCustomerCreate({
     modal.dismiss()
     setOpen(false)
     updateDraft(emptyDraft())
+    setStartChoice("none")
+    setStartAmount("")
     setError(null)
     setNotice("Customer saved.")
     let refreshed = false
@@ -113,6 +136,9 @@ export function useCustomerCreate({
           queryClient.invalidateQueries(
             trpc.tenant.featureAvailability.queryFilter(),
             { throwOnError: true },
+          ),
+          queryClient.invalidateQueries(
+            trpc.customerLedger.accounts.pathFilter(),
           ),
         ])
         refreshed = true
@@ -164,9 +190,30 @@ export function useCustomerCreate({
       setError(prepared.error)
       return
     }
+    const book = startingBalanceBook ?? null
+    const start = book
+      ? startingBalanceMinor(startChoice, startAmount)
+      : { minor: null }
+    if (start.error) {
+      setError(start.error)
+      return
+    }
     attempt.current = {
       scope: current.current.scope,
       input: prepared.input,
+      opening:
+        book && start.minor
+          ? {
+              bookId: book.id,
+              clientCommandId: Crypto.randomUUID(),
+              customer: prepared.input,
+              opening: {
+                direction: startChoice === "owes" ? "DEBT" : "CREDIT",
+                amountMinor: start.minor,
+                reason: STARTING_BALANCE_REASON,
+              },
+            }
+          : null,
       accepted: false,
     }
     busy.current = true
@@ -175,7 +222,9 @@ export function useCustomerCreate({
     setNotice(null)
     Keyboard.dismiss()
     try {
-      await mutation.mutateAsync(prepared.input)
+      const opening = attempt.current.opening
+      if (opening) await openingMutation.mutateAsync(opening)
+      else await mutation.mutateAsync(prepared.input)
     } catch (failure) {
       busy.current = false
       if (!mounted.current) return
@@ -244,6 +293,25 @@ export function useCustomerCreate({
     isPending: phase === "posting" || phase === "accepted",
     locked: blocked || phase !== "editing",
     uncertain: phase === "uncertain",
+    startingBalance: startingBalanceBook
+      ? {
+          currencyCode: startingBalanceBook.currencyCode,
+          choice: startChoice,
+          amount: startAmount,
+          setChoice: (choice: StartingBalanceChoice) => {
+            if (current.current.blocked || busy.current || attempt.current)
+              return
+            setStartChoice(choice)
+            setError(null)
+          },
+          setAmount: (amount: string) => {
+            if (current.current.blocked || busy.current || attempt.current)
+              return
+            setStartAmount(amount)
+            setError(null)
+          },
+        }
+      : null,
     present,
     save,
     checkDirectory,

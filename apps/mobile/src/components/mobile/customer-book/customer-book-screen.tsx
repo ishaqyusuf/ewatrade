@@ -34,6 +34,7 @@ import { getListCreateFabFooterOffset } from "../list-create-fab-model"
 import { SearchFold, useSearchFold } from "../search-fold"
 import type { WorkflowModalChromeProps } from "../workflow-modal-screen"
 import { CustomerOpenOrders } from "./customer-open-orders"
+import { StartingBalanceField } from "./starting-balance-field"
 import { type CustomerBookProps, useCustomerBook } from "./use-customer-book"
 export function CustomerBookChrome(props: WorkflowModalChromeProps) {
   return <MobileWorkflowChrome {...props} />
@@ -460,7 +461,18 @@ export function CustomerBookContent(
             : undefined
         }
         ref={creation.modal.ref}
-      />
+      >
+        {creation.startingBalance ? (
+          <StartingBalanceField
+            amount={creation.startingBalance.amount}
+            choice={creation.startingBalance.choice}
+            currencyCode={creation.startingBalance.currencyCode}
+            disabled={isOffline || creation.locked}
+            onAmountChange={creation.startingBalance.setAmount}
+            onChoiceChange={creation.startingBalance.setChoice}
+          />
+        ) : null}
+      </CreateSaleCustomerSheet>
     </View>
   )
 }

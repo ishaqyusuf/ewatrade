@@ -19,6 +19,9 @@ export default function CustomerLedgerActionRoute() {
     "refund-request": "Refund request",
     "request-refund": "Request refund",
     release: "Release allocation",
+    remind: "Balance reminder",
+    summary: "Account summary",
+    link: "Earlier Orders",
     reverse: "Correct entry",
   }
   const title = titles[params.mode] ?? "Customer record"

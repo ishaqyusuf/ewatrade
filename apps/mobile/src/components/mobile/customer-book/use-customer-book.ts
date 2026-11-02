@@ -62,7 +62,24 @@ export function useCustomerBook({
     profile?.id && profile.businessId
       ? JSON.stringify([profile.id, profile.businessId])
       : null
+  // Owners and Admins can add a starting balance once Finance is set up.
+  const canAddStartingBalance = ["OWNER", "ADMIN"].includes(
+    profile?.role?.trim().toUpperCase() ?? "",
+  )
+  const financeBook = useQuery(
+    trpc.finance.book.queryOptions(undefined, {
+      enabled: canAddStartingBalance && !isOffline,
+      retry: false,
+    }),
+  )
   const creation = useCustomerCreate({
+    startingBalanceBook:
+      canAddStartingBalance && financeBook.data
+        ? {
+            id: financeBook.data.id,
+            currencyCode: financeBook.data.currencyCode,
+          }
+        : null,
     scope,
     canOperate:
       canManageMobileOperations(profile?.role) || isSalesRepRole(profile?.role),

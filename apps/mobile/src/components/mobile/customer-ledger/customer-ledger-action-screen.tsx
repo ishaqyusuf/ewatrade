@@ -2,12 +2,14 @@ import { StatusBanner } from "@/components/mobile/status-banner"
 import { Text } from "@/components/ui/text"
 import { useTRPC } from "@/trpc/client"
 import { useQuery } from "@tanstack/react-query"
+import { AccountMessageScreen } from "./account-message"
 import { CustomerLedgerCommandForm } from "./customer-ledger-command-form"
 import { CustomerLedgerEntryDetail } from "./customer-ledger-entry-detail"
 import { CustomerLedgerGate } from "./customer-ledger-gate"
 import { CustomerRefundDetail } from "./customer-refund-detail"
 import { CustomerRefundRequestForm } from "./customer-refund-request-form"
 import { CustomerRefundRequests } from "./customer-refund-requests"
+import { EarlierOrdersScreen } from "./earlier-orders"
 import type { CustomerLedgerCommandMode, CustomerLedgerMode } from "./types"
 const modes: CustomerLedgerMode[] = [
   "opening",
@@ -20,6 +22,9 @@ const modes: CustomerLedgerMode[] = [
   "refund-requests",
   "refund-request",
   "request-refund",
+  "remind",
+  "summary",
+  "link",
 ]
 export function CustomerLedgerActionScreen(props: {
   accountId: string
@@ -88,6 +93,10 @@ function Action({
     ) : (
       <StatusBanner message="Choose an entry from the statement." />
     )
+  if (mode === "remind" || mode === "summary")
+    return <AccountMessageScreen accountId={accountId} initialKind={mode} />
+  if (mode === "link")
+    return <EarlierOrdersScreen customerId={query.data.customer.id} />
   if (!query.data.book)
     return (
       <StatusBanner message="Start a matching currency book on the dashboard before recording customer activity." />
