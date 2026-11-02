@@ -456,6 +456,28 @@ describeWithServiceCommerceDatabase(
         true,
       )
 
+      const ids = async (
+        filters: Partial<
+          Parameters<typeof listInventoryOperationHistoryPage>[1]
+        >,
+      ) =>
+        (
+          await listInventoryOperationHistoryPage(db, {
+            tenantId,
+            limit: 100,
+            ...filters,
+          })
+        ).rows.map((row) => row.id)
+      // The 20 → 18 correction nets −2: a stock-out found by its category name.
+      expect(await ids({ group: "out", search: "filter ROW" })).toEqual([
+        correction.id,
+      ])
+      expect(await ids({ group: "in", search: "Filter legacy" })).toEqual([
+        legacy.id,
+      ])
+      expect(await ids({ search: "Filter%legacy" })).toEqual([])
+      expect(await ids({ group: "count", search: "Filter" })).toEqual([])
+
       const pair = await getInventoryOperationTotals(db, {
         tenantId,
         categoryNameIds: [houseA, rowB],
@@ -475,9 +497,9 @@ describeWithServiceCommerceDatabase(
         type: "RECEIPT",
       })
       expect(receipts.operationCount).toBe(2)
-      expect(receipts.rows.map((row) => row.netCanonicalQuantity)).toEqual([
-        "23",
-      ])
+      expect(
+        receipts.rows.map((row) => String(row.netCanonicalQuantity)),
+      ).toEqual(["23"])
 
       const foreign = await db.stockOperationCategoryName.findFirstOrThrow({
         where: { tenantId: otherTenantId },

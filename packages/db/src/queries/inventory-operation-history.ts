@@ -94,6 +94,7 @@ export async function resolveOperationCategoryFilter(
   return ids
 }
 
+/** Prisma form of the category filters, for the bounded recent list. */
 export function operationHistoryWhere(
   input: InventoryOperationFilters,
   categoryNameIds: number[],
@@ -113,16 +114,98 @@ export function operationHistoryWhere(
   }
 }
 
-const historyOrder = [
-  { effectiveAt: "desc" },
-  { createdAt: "desc" },
-  { id: "desc" },
-] satisfies Prisma.StockOperationOrderByWithRelationInput[]
+/** The Stock history change groups; mirrors the dashboard's stockChangeGroup. */
+export type StockChangeGroup = "in" | "out" | "count" | "move"
+const COUNT_TYPES = ["COUNT_RECONCILIATION"]
+const MOVE_TYPES = [
+  "TRANSFER",
+  "TRANSFORMATION",
+  "CUSTODY_ASSIGNMENT",
+  "CUSTODY_RETURN",
+]
+
+/** SQL predicates on `o` (StockOperation); every filter is applied here. */
+function operationConditions(
+  input: InventoryOperationFilters & {
+    group?: StockChangeGroup
+    search?: string
+  },
+  categoryNameIds: number[],
+) {
+  const conditions = [Prisma.sql`o."tenantId" = ${input.tenantId}`]
+  if (input.storeId) conditions.push(Prisma.sql`o."storeId" = ${input.storeId}`)
+  if (input.type) conditions.push(Prisma.sql`o."type"::text = ${input.type}`)
+  if (input.uncategorized)
+    conditions.push(Prisma.sql`NOT EXISTS (
+      SELECT 1 FROM "StockOperationCategory" c
+      WHERE c."tenantId" = o."tenantId" AND c."stockOperationId" = o."id")`)
+  if (categoryNameIds.length)
+    conditions.push(Prisma.sql`(
+      SELECT count(*) FROM "StockOperationCategory" c
+      WHERE c."tenantId" = o."tenantId" AND c."stockOperationId" = o."id"
+        AND c."categoryNameId" IN (${Prisma.join(categoryNameIds)})
+    ) = ${categoryNameIds.length}`)
+  if (input.group === "count" || input.group === "move")
+    conditions.push(
+      Prisma.sql`o."type"::text IN (${Prisma.join(
+        input.group === "count" ? COUNT_TYPES : MOVE_TYPES,
+      )})`,
+    )
+  if (input.group === "in" || input.group === "out") {
+    const net = Prisma.sql`(SELECT coalesce(sum(m."signedCanonicalEffect"), 0)
+      FROM "StockMovement" m WHERE m."operationId" = o."id")`
+    conditions.push(
+      Prisma.sql`o."type"::text NOT IN (${Prisma.join([...COUNT_TYPES, ...MOVE_TYPES])})`,
+      input.group === "out" ? Prisma.sql`${net} < 0` : Prisma.sql`${net} >= 0`,
+    )
+  }
+  const search = input.search?.trim()
+  if (search) {
+    const pattern = `%${search.replace(/[\\%_]/g, "\\$&")}%`
+    conditions.push(Prisma.sql`(
+      o."reason" ILIKE ${pattern}
+      OR EXISTS (SELECT 1 FROM "Store" s
+        WHERE s."id" = o."storeId" AND s."name" ILIKE ${pattern})
+      OR EXISTS (SELECT 1 FROM "StockOperationCategory" c
+        JOIN "StockOperationCategoryName" n
+          ON n."tenantId" = c."tenantId" AND n."id" = c."categoryNameId"
+        WHERE c."tenantId" = o."tenantId" AND c."stockOperationId" = o."id"
+          AND n."name" ILIKE ${pattern}))`)
+  }
+  return conditions
+}
+
+/** Newest-first IDs, then one bounded relation read in the same order. */
+async function readOperationHistory(
+  db: PrismaClient,
+  conditions: Prisma.Sql[],
+  take: number,
+) {
+  const ids = await db.$queryRaw<Array<{ id: string }>>`
+    SELECT o."id" FROM "StockOperation" o
+    WHERE ${Prisma.join(conditions, " AND ")}
+    ORDER BY o."effectiveAt" DESC, o."createdAt" DESC, o."id" DESC
+    LIMIT ${take}`
+  const rows = await db.stockOperation.findMany({
+    include: operationHistoryInclude,
+    where: { id: { in: ids.map((row) => row.id) } },
+  })
+  const byId = new Map(rows.map((row) => [row.id, row]))
+  return ids.flatMap((row) => {
+    const operation = byId.get(row.id)
+    return operation ? [serializeOperationHistoryRow(operation)] : []
+  })
+}
 
 /** Complete newest-first history, filtered on the server before each page is cut. */
 export async function listInventoryOperationHistoryPage(
   db: PrismaClient,
-  input: InventoryOperationFilters & { cursor?: string; limit?: number },
+  input: InventoryOperationFilters & {
+    group?: StockChangeGroup
+    search?: string
+    cursor?: string
+    limit?: number
+  },
 ) {
   const limit = input.limit ?? 50
   if (!Number.isInteger(limit) || limit < 1 || limit > 100)
@@ -130,45 +213,28 @@ export async function listInventoryOperationHistoryPage(
       "INVALID_STOCK_OPERATION",
       "Invalid stock history page size.",
     )
-  const where = operationHistoryWhere(
+  const conditions = operationConditions(
     input,
     await resolveOperationCategoryFilter(db, input),
   )
-  let after: Prisma.StockOperationWhereInput = {}
   if (input.cursor) {
-    const cursor = await db.stockOperation.findFirst({
-      where: { AND: [where, { id: input.cursor }] },
-      select: { id: true, effectiveAt: true, createdAt: true },
-    })
+    const [cursor] = await db.$queryRaw<Array<{ id: string }>>`
+      SELECT o."id" FROM "StockOperation" o
+      WHERE ${Prisma.join(conditions, " AND ")} AND o."id" = ${input.cursor}`
     if (!cursor)
       throw new CatalogError(
         "REVISION_CONFLICT",
         "The stock history changed. Refresh to continue.",
       )
-    after = {
-      OR: [
-        { effectiveAt: { lt: cursor.effectiveAt } },
-        {
-          effectiveAt: cursor.effectiveAt,
-          createdAt: { lt: cursor.createdAt },
-        },
-        {
-          effectiveAt: cursor.effectiveAt,
-          createdAt: cursor.createdAt,
-          id: { lt: cursor.id },
-        },
-      ],
-    }
+    // Row comparison matches the all-descending order; no timestamp parameters.
+    conditions.push(Prisma.sql`(o."effectiveAt", o."createdAt", o."id") < (
+      SELECT k."effectiveAt", k."createdAt", k."id" FROM "StockOperation" k
+      WHERE k."id" = ${cursor.id} AND k."tenantId" = ${input.tenantId})`)
   }
-  const rows = await db.stockOperation.findMany({
-    include: operationHistoryInclude,
-    orderBy: historyOrder,
-    take: limit + 1,
-    where: { AND: [where, after] },
-  })
+  const rows = await readOperationHistory(db, conditions, limit + 1)
   const items = rows.slice(0, limit)
   return {
-    rows: items.map(serializeOperationHistoryRow),
+    rows: items,
     nextCursor: rows.length > limit ? (items.at(-1)?.id ?? null) : null,
   }
 }
@@ -195,23 +261,13 @@ export async function getInventoryOperationTotals(
   db: PrismaClient,
   input: InventoryOperationFilters,
 ) {
-  const categoryNameIds = await resolveOperationCategoryFilter(db, input)
   const conditions = [
-    Prisma.sql`o."tenantId" = ${input.tenantId}`,
+    ...operationConditions(
+      input,
+      await resolveOperationCategoryFilter(db, input),
+    ),
     Prisma.sql`o."correctionOfOperationId" IS NULL`,
   ]
-  if (input.storeId) conditions.push(Prisma.sql`o."storeId" = ${input.storeId}`)
-  if (input.type) conditions.push(Prisma.sql`o."type"::text = ${input.type}`)
-  if (input.uncategorized)
-    conditions.push(Prisma.sql`NOT EXISTS (
-      SELECT 1 FROM "StockOperationCategory" c
-      WHERE c."tenantId" = o."tenantId" AND c."stockOperationId" = o."id")`)
-  if (categoryNameIds.length)
-    conditions.push(Prisma.sql`(
-      SELECT count(*) FROM "StockOperationCategory" c
-      WHERE c."tenantId" = o."tenantId" AND c."stockOperationId" = o."id"
-        AND c."categoryNameId" IN (${Prisma.join(categoryNameIds)})
-    ) = ${categoryNameIds.length}`)
   const tree = Prisma.sql`
     WITH RECURSIVE roots AS (
       SELECT o."id" FROM "StockOperation" o

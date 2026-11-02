@@ -85,6 +85,12 @@ test("history and totals filters take match-all name IDs or Uncategorized, never
     }),
   ).toEqual({ categoryNameIds: [7, 8], cursor: "op_1", limit: 25 })
   expect(
+    inventoryOperationHistoryPageSchema.parse({
+      group: "out",
+      search: " Row ",
+    }),
+  ).toEqual({ group: "out", search: "Row" })
+  expect(
     inventoryOperationHistorySchema.parse({ uncategorized: true }),
   ).toEqual({ uncategorized: true })
   for (const input of [
@@ -93,6 +99,7 @@ test("history and totals filters take match-all name IDs or Uncategorized, never
     { categoryNameIds: [0] },
     { categoryNameIds: Array.from({ length: 11 }, (_, i) => i + 1) },
     { limit: 101 },
+    { group: "sales" },
   ])
     expect(inventoryOperationHistoryPageSchema.safeParse(input).success).toBe(
       false,

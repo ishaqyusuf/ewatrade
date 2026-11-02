@@ -10,6 +10,7 @@ import {
   selectColumn,
   useLoadedRowSelection,
 } from "@/components/tables/core"
+import { useInfiniteScroll } from "@/hooks/use-infinite-scroll"
 import { useSortParams } from "@/hooks/use-sort-params"
 import { useStickyColumns } from "@/hooks/use-sticky-columns"
 import { useTableDnd } from "@/hooks/use-table-dnd"
@@ -43,6 +44,17 @@ const stickyColumns = [
 const fixedColumnIds = ["select", "identity", "actions"]
 const getLedgerId = (row: { id: string }) => row.id
 
+/** Server cursor pages, loaded on scroll or with the Load more button. */
+export type LedgerPagination = {
+  hasNextPage: boolean
+  isFetchingNextPage: boolean
+  isFetchNextPageError: boolean
+  errorMessage?: string
+  fetchNextPage: () => Promise<unknown>
+  /** Plural noun for the buttons, e.g. "stock changes". */
+  noun: string
+}
+
 export type LedgerRecordDescription = {
   title: ReactNode
   description?: ReactNode
@@ -65,6 +77,7 @@ export function InventoryLedgerTable<T extends { id: string }>({
   empty,
   summary,
   viewLabel,
+  pagination,
 }: {
   rows: T[]
   columns: ColumnDef<T>[]
@@ -82,6 +95,7 @@ export function InventoryLedgerTable<T extends { id: string }>({
   summary: string
   /** Row menu item that opens the record, e.g. "View transfer". */
   viewLabel?: string
+  pagination?: LedgerPagination
 }) {
   const columns = useMemo(
     () => [selectColumn(getRecordLabel), ...domainColumns],
@@ -129,6 +143,15 @@ export function InventoryLedgerTable<T extends { id: string }>({
     getScrollElement: () => scroll.containerRef.current,
     estimateSize: () => 57,
     overscan: 8,
+  })
+  const { retry: retryNextPage } = useInfiniteScroll({
+    scrollRef: scroll.containerRef,
+    rowVirtualizer: virtualizer,
+    rowCount: visible.length,
+    hasNextPage: pagination?.hasNextPage ?? false,
+    isFetchingNextPage: pagination?.isFetchingNextPage ?? false,
+    isError: pagination?.isFetchNextPageError,
+    fetchNextPage: pagination?.fetchNextPage ?? noNextPage,
   })
   const openRow = useCallback((row: Row<T>) => onOpen(row.original), [onOpen])
   return (
@@ -227,7 +250,31 @@ export function InventoryLedgerTable<T extends { id: string }>({
           </DndContext>
         </section>
       )}
+      {pagination?.isFetchNextPageError ? (
+        <div className="flex items-center justify-between gap-3" role="alert">
+          <p className="text-sm text-destructive">
+            {pagination.errorMessage ||
+              `More ${pagination.noun} could not be loaded.`}
+          </p>
+          <Button variant="outline" onClick={retryNextPage}>
+            Retry loading {pagination.noun}
+          </Button>
+        </div>
+      ) : pagination?.hasNextPage ? (
+        <Button
+          className="w-fit"
+          variant="outline"
+          disabled={pagination.isFetchingNextPage}
+          onClick={() => void pagination.fetchNextPage()}
+        >
+          {pagination.isFetchingNextPage
+            ? "Loading…"
+            : `Load more ${pagination.noun}`}
+        </Button>
+      ) : null}
       <SelectionBar table={table} />
     </div>
   )
 }
+
+const noNextPage = () => Promise.resolve()

@@ -283,6 +283,9 @@ export function InventoryOperationForm({
         queryKey: trpc.inventory.operationHistory.queryKey(),
       }),
       queryClient.invalidateQueries({
+        queryKey: trpc.inventory.operationHistoryPage.pathKey(),
+      }),
+      queryClient.invalidateQueries({
         queryKey: trpc.inventory.categorySuggestions.queryKey(),
       }),
       queryClient.invalidateQueries({

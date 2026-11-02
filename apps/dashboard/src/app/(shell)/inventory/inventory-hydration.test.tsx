@@ -38,16 +38,19 @@ const rpc = createTRPCClient<AppRouter>({
           const data =
             op.path === "inventory.balanceReport"
               ? { rows: [{ balanceSourceId: `${scope}:balance` }] }
-              : op.path === "inventory.operationHistory"
-                ? [
-                    {
-                      id: `${scope}:operation`,
-                      type: "RECEIPT",
-                      reason: "",
-                      storeName: "",
-                      categories: [],
-                    },
-                  ]
+              : op.path === "inventory.operationHistoryPage"
+                ? {
+                    rows: [
+                      {
+                        id: `${scope}:operation`,
+                        type: "RECEIPT",
+                        reason: "",
+                        storeName: "",
+                        categories: [],
+                      },
+                    ],
+                    nextCursor: null,
+                  }
                 : [
                     {
                       id: `${scope}:transfer`,
@@ -140,8 +143,11 @@ mock.module("@/lib/inventory-view", () => ({
 mock.module("@/lib/inventory-store-totals", () => ({
   groupInventoryStores: <T,>(rows: T[]) => rows,
 }))
+// The real page-input builder keeps the route prefetch and table on one key.
+const { stockHistoryPageInput } = await import("@/lib/inventory-labels")
 mock.module("@/lib/inventory-labels", () => ({
   stockChangeGroup: () => "other",
+  stockHistoryPageInput,
   stockChangeLabel: (type: string) => type,
   stockDate: () => "",
   transferStatusLabel: (status: string) => status,
@@ -299,9 +305,9 @@ const owners = [
   },
   {
     name: "stock history",
-    path: "inventory.operationHistory",
-    route: OperationsRoutePage,
-    input: { limit: 200 },
+    path: "inventory.operationHistoryPage",
+    route: () => OperationsRoutePage({ searchParams: Promise.resolve({}) }),
+    input: { limit: 50, direction: "forward" },
     marker: "operation",
     table: (storeId?: string) => (
       <OperationsDataTable

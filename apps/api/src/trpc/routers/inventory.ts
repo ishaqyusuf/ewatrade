@@ -425,8 +425,9 @@ export const inventoryRouter = createTRPCRouter({
     .query(async ({ ctx, input }) => {
       assertCanManageInventory(ctx.tenantContext)
       try {
+        const { direction: _direction, ...filters } = input
         return await listInventoryOperationHistoryPage(ctx.db, {
-          ...input,
+          ...filters,
           tenantId: ctx.tenantContext.tenant.id,
           type: stockOperationType(input.type),
         })

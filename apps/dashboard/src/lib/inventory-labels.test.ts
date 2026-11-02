@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test"
 import {
   stockChangeGroup,
   stockChangeLabel,
+  stockHistoryPageInput,
   stockSourceLabel,
   transferStatusLabel,
 } from "./inventory-labels"
@@ -35,5 +36,19 @@ describe("inventory labels", () => {
   test("shows transfer statuses the way the Transfers page names them", () => {
     expect(transferStatusLabel("IN_TRANSIT")).toBe("On the way")
     expect(transferStatusLabel("RECEIVED")).toBe("Received")
+  })
+
+  test("Stock history URL filters become one server page input", () => {
+    expect(
+      stockHistoryPageInput({ storeId: "s", q: "  Row 1 ", filter: "out" }),
+    ).toEqual({ storeId: "s", limit: 50, group: "out", search: "Row 1" })
+    expect(stockHistoryPageInput({ q: " ", filter: "all" })).toEqual({
+      storeId: undefined,
+      limit: 50,
+    })
+    expect(stockHistoryPageInput({ filter: "sales" })).toEqual({
+      storeId: undefined,
+      limit: 50,
+    })
   })
 })

@@ -446,7 +446,13 @@ export const inventoryOperationHistorySchema = z
 export const inventoryOperationHistoryPageSchema = z
   .object({
     ...inventoryOperationFilterFields,
+    /** Stock history groups: net in or out, counts, or moves. */
+    group: z.enum(["in", "out", "count", "move"]).optional(),
+    /** Reason, note, Store or category name. */
+    search: z.string().trim().max(120).optional(),
     cursor: z.string().trim().min(1).max(128).optional(),
+    // Sent by tRPC infinite queries; history only pages forward.
+    direction: z.enum(["forward", "backward"]).optional(),
     limit: z.number().int().min(1).max(100).optional(),
   })
   .strict()

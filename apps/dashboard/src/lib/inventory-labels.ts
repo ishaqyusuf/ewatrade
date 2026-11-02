@@ -73,6 +73,27 @@ export function stockChangeGroup(row: {
   return compareExactDecimals(row.canonicalNetEffect, "0") < 0 ? "out" : "in"
 }
 
+/**
+ * Stock history page input from the URL filters; the server applies the group
+ * and search before each page, so the page and its prefetch share one key.
+ */
+export function stockHistoryPageInput(input: {
+  storeId?: string
+  q?: string | null
+  filter?: string | null
+}) {
+  const group = stockChangeGroups.find(
+    (row) => row.id !== "all" && row.id === input.filter,
+  )?.id as StockChangeGroup | undefined
+  const search = input.q?.trim().slice(0, 120)
+  return {
+    storeId: input.storeId,
+    limit: 50,
+    ...(group ? { group } : {}),
+    ...(search ? { search } : {}),
+  }
+}
+
 /** Dates in the viewer's own time, e.g. "19 Oct 2026, 10:15". */
 export function stockDate(value: Date | string) {
   return new Intl.DateTimeFormat("en-GB", {
