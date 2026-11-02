@@ -110,6 +110,34 @@ test paths to Bun; use that form for focused commands too, so Bun does not treat
 them as recursive filters and accidentally discover archived copies. Unknown
 packages still fail visibly. Tests are never removed or skipped to hide a failure.
 
+### Scoped check environment
+
+- Type checks: `packages/db` needs `NODE_OPTIONS=--max-old-space-size=8192`
+  (the default heap can report a false pass); mobile may need 16000.
+- `bun --cwd apps/api assistant:coverage` and `capability-coverage.test.ts` need
+  `APP_ENV=local`, or the QA router (`qaAccess`) drops out of the snapshot.
+- `bun test` does not load `.env.local`, so `BLOB_STORE_ID` and the dev database are
+  missing; plain `.env` points at an older database without the photo tables. For a
+  guarded DB integration file use
+  `APP_ENV=local RUN_DATABASE_INTEGRATION_TESTS=1 DATABASE_PROFILE_VERIFIED=1 DEV_PROFILE=local bun --env-file=.env.local test ./<file>`.
+  QA photo fixtures also need `APP_ENV=local` for the local QA photo adapter.
+- Under `bun test`, Bun 1.3.9's bundler cannot resolve a relative `../defaults`
+  import in this repo (scripts can). The jobs producer build-graph test therefore
+  keeps `@ewatrade/email` external.
+
+Mobile marker guards read where each behaviour lives since the 19 October split:
+`qa:service-jobs-flow` reads the `service-jobs/` and `catalog-setup/` folders, and
+its offline Service contract now checks that intake refuses offline (Service
+commands stopped queueing offline in July). `qa:offline-visuals`,
+`qa:keyboard-coverage`, `qa:operation-success` and `qa:large-text-layout` point at
+the Home surface, replay hook, store, search footer and split Catalog setup files.
+`qa:theme-colors` skips `*.fixture.tsx` render fixtures; fixed brand art (WhatsApp
+green, owner-signup glow) lives in `src/lib`. `qa:large-text-layout` still fails on
+45 markers in 12 redesigned screens (auth, OTP, More, Catalog items, customer
+conversations, QA sheet, Catalog setup sheets) whose large-text branches no longer
+exist. Review them at 200% text before restoring the branches or retiring those
+markers.
+
 ## UI and evidence
 
 The optional repository recipe `docs/verification/verify-ewatrade/SKILL.md` applies
