@@ -68,6 +68,7 @@ function source(): Source {
     },
     storefront: {
       name: "Shop",
+      timezone: "Africa/Lagos",
       slug: "shop",
       description: null,
       currencyCode: "NGN",
