@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test"
+import { LEGAL_DOCUMENT_VERSION } from "@ewatrade/utils/legal-documents"
 import { verifyMobileAppleIdentity } from "./mobile-apple-auth"
 import {
   MobileAccountNotFoundError,
@@ -13,16 +14,79 @@ import {
 import { createOwnerBusiness } from "./owner-businesses"
 import type { DbClient } from "./types"
 
-let previousAuthSecret: string | undefined
+/** Runtime profile keys are pinned so the file behaves the same under any APP_ENV. */
+const PINNED_ENV_KEYS = [
+  "APP_ENV",
+  "BETTER_AUTH_SECRET",
+  "DEV_PROFILE",
+  "EMAIL_QA_DOMAIN_ROUTES",
+  "QA_POLICY_READ_KEY",
+  "QA_POLICY_URL",
+] as const
+let previousEnv: Array<string | undefined> = []
 beforeEach(() => {
-  previousAuthSecret = process.env.BETTER_AUTH_SECRET
+  previousEnv = PINNED_ENV_KEYS.map((key) => process.env[key])
+  for (const key of PINNED_ENV_KEYS) Reflect.deleteProperty(process.env, key)
   process.env.BETTER_AUTH_SECRET = "mobile-auth-fixture-secret-only"
 })
 afterEach(() => {
-  if (previousAuthSecret === undefined)
-    Reflect.deleteProperty(process.env, "BETTER_AUTH_SECRET")
-  else process.env.BETTER_AUTH_SECRET = previousAuthSecret
+  PINNED_ENV_KEYS.forEach((key, index) => {
+    const value = previousEnv[index]
+    if (value === undefined) Reflect.deleteProperty(process.env, key)
+    else process.env[key] = value
+  })
 })
+
+/** Signup now requires the owner to accept the current effective legal publication. */
+const CURRENT_LEGAL_CHOICE = {
+  acceptedTerms: true,
+  acknowledgedPrivacyNotice: true,
+  legalVersion: LEGAL_DOCUMENT_VERSION,
+} as const
+
+const ISHAQ_QA_ENTRY = {
+  accountId: null,
+  active: true,
+  email: "tester@example.com",
+  id: "57da5d46-6b28-44ef-8be7-d29eb6171f3f",
+  phone: null,
+  qa: "ishaq.qa.test",
+}
+
+/** Serves a hermetic central QA policy (no network) for the duration of `action`. */
+async function withQaPolicy<T>(
+  entries: Array<{
+    accountId: string | null
+    active: boolean
+    email: string
+    id: string
+    phone: string | null
+    qa: string
+  }>,
+  action: () => Promise<T>,
+) {
+  const originalFetch = globalThis.fetch
+  globalThis.fetch = Object.assign(
+    async () =>
+      Response.json({
+        projectId: "ewatrade",
+        revision: 1,
+        environments: { development: true, preview: true, production: false },
+        entries,
+      }),
+    { preconnect: originalFetch.preconnect },
+  ) as typeof fetch
+  // "dev" selects the development QA target while keeping signup legal gates on.
+  process.env.APP_ENV = "dev"
+  process.env.QA_POLICY_URL =
+    "https://oversight.example.test/api/qa-policy/v1/ewatrade"
+  process.env.QA_POLICY_READ_KEY = crypto.randomUUID()
+  try {
+    return await action()
+  } finally {
+    globalThis.fetch = originalFetch
+  }
+}
 
 type VerificationRow = {
   id: string
@@ -35,6 +99,7 @@ type VerificationRow = {
 type UserRow = {
   ageBand?: string
   ageDeclaredAt?: Date | null
+  createdAt?: Date
   avatarUrl?: string | null
   displayName?: string | null
   email: string
@@ -71,6 +136,7 @@ type StoreRow = {
 type TenantRow = {
   currencyCode?: string
   createdAt: Date
+  dataClassification?: string
   id: string
   isActive: boolean
   metadata?: unknown
@@ -85,12 +151,21 @@ type MembershipRow = {
   status: string
   tenant: {
     currencyCode?: string
+    dataClassification?: string
     id: string
     name: string
     slug: string
     stores: StoreRow[]
   }
   userId: string
+}
+
+type LegalAcceptanceRow = {
+  acceptedAt: Date
+  documentHash: string
+  surface: string
+  userId: string
+  version: string
 }
 
 type StoreConversationAccountAccessRow = {
@@ -115,6 +190,11 @@ function createMockMobileAuthDb(input?: {
   const users = [...(input?.users ?? [])]
   const memberships = [...(input?.memberships ?? [])]
   const sessions: Array<{ expiresAt: Date; token: string; userId: string }> = []
+  const legalAcceptances: LegalAcceptanceRow[] = []
+  const findLegalAcceptance = (key: { userId: string; version: string }) =>
+    legalAcceptances.find(
+      (row) => row.userId === key.userId && row.version === key.version,
+    ) ?? null
 
   const rateBuckets = new Map<string, number>()
   const db = {
@@ -208,6 +288,28 @@ function createMockMobileAuthDb(input?: {
         return account
       },
     },
+    legalAcceptance: {
+      findFirst: async ({ where }: { where: { version: string } }) =>
+        legalAcceptances.find((row) => row.version === where.version) ?? null,
+      findUnique: async ({
+        where,
+      }: {
+        where: { userId_version: { userId: string; version: string } }
+      }) => findLegalAcceptance(where.userId_version),
+      upsert: async ({
+        create,
+        where,
+      }: {
+        create: Omit<LegalAcceptanceRow, "acceptedAt">
+        where: { userId_version: { userId: string; version: string } }
+      }) => {
+        const existing = findLegalAcceptance(where.userId_version)
+        if (existing) return existing
+        const row = { ...create, acceptedAt: new Date() }
+        legalAcceptances.push(row)
+        return row
+      },
+    },
     membership: {
       count: async () => 0,
       create: async ({
@@ -233,13 +335,18 @@ function createMockMobileAuthDb(input?: {
         where: {
           OR?: Array<{ status: string }>
           status?: string
+          tenant?: { dataClassification?: string }
           userId: string
         }
       }) =>
         memberships.find(
           (membership) =>
             membership.userId === where.userId &&
-            (where.status === undefined || membership.status === where.status),
+            (where.status === undefined ||
+              membership.status === where.status) &&
+            (where.tenant?.dataClassification === undefined ||
+              (membership.tenant.dataClassification ?? "LIVE") ===
+                where.tenant.dataClassification),
         ) ?? null,
     },
     offlineDevice: {
@@ -337,12 +444,18 @@ function createMockMobileAuthDb(input?: {
       create: async ({
         data,
       }: {
-        data: { currencyCode?: string; name: string; slug: string }
+        data: {
+          currencyCode?: string
+          dataClassification?: string
+          name: string
+          slug: string
+        }
       }) => {
         const now = new Date()
         const tenant = {
           currencyCode: data.currencyCode,
           createdAt: now,
+          dataClassification: data.dataClassification ?? "LIVE",
           id: `tenant_${tenants.length + 1}`,
           isActive: true,
           metadata: null,
@@ -524,6 +637,7 @@ function createMockMobileAuthDb(input?: {
     accounts,
     accountAccesses,
     client: db as unknown as DbClient,
+    legalAcceptances,
     memberships,
     sessions,
     stores,
@@ -721,10 +835,7 @@ describe("mobile auth queries", () => {
   )
 
   test("QA owners create suffixed business names without claiming ordinary slugs", async () => {
-    const previousRoutes = process.env.EMAIL_QA_DOMAIN_ROUTES
-    process.env.EMAIL_QA_DOMAIN_ROUTES =
-      '{"ishaq.qa.test":"tester@example.com"}'
-    try {
+    await withQaPolicy([ISHAQ_QA_ENTRY], async () => {
       const db = createMockMobileAuthDb({
         users: [
           {
@@ -742,11 +853,8 @@ describe("mobile auth queries", () => {
       })
       expect(business.slug).toBe("hello-qa")
       expect(db.tenants.map((tenant) => tenant.slug)).not.toContain("hello")
-    } finally {
-      if (previousRoutes === undefined)
-        Reflect.deleteProperty(process.env, "EMAIL_QA_DOMAIN_ROUTES")
-      else process.env.EMAIL_QA_DOMAIN_ROUTES = previousRoutes
-    }
+      expect(db.tenants[0]?.dataClassification).toBe("QA")
+    })
   })
 
   test("does not create a business for an undeclared account", async () => {
@@ -777,6 +885,7 @@ describe("mobile auth queries", () => {
     const db = createMockMobileAuthDb()
 
     const otp = await createMobileOwnerOtp(db.client, {
+      ...CURRENT_LEGAL_CHOICE,
       businessName: "  Main Market Store  ",
       email: " OWNER@Example.COM ",
       ageBand: "AGE_13_TO_15",
@@ -785,7 +894,8 @@ describe("mobile auth queries", () => {
     })
 
     expect(otp.email).toBe("owner@example.com")
-    expect(otp.code).toBe("123456")
+    // Outside explicit local runtimes the code is random, never the fixed one.
+    expect(otp.code).toMatch(/^\d{6}$/)
     expect(db.verifications).toHaveLength(1)
     expect(db.verifications[0]?.identifier).toBe(
       "mobile-auth:sign_up:owner@example.com",
@@ -796,6 +906,8 @@ describe("mobile auth queries", () => {
     expect(payload).toMatchObject({
       businessName: "Main Market Store",
       ageBand: "AGE_13_TO_15",
+      legalVersion: LEGAL_DOCUMENT_VERSION,
+      legalDocumentHash: expect.any(String),
       mode: "sign_up",
       name: "Store Owner",
     })
@@ -814,7 +926,7 @@ describe("mobile auth queries", () => {
     expect(db.verifications).toHaveLength(0)
   })
 
-  test("draft signup cannot persist a claimed legal acceptance", async () => {
+  test("signup cannot persist a claimed acceptance of a stale legal version", async () => {
     const db = createMockMobileAuthDb()
     await expect(
       createMobileOwnerOtp(db.client, {
@@ -825,8 +937,9 @@ describe("mobile auth queries", () => {
         acceptedTerms: true,
         acknowledgedPrivacyNotice: true,
       }),
-    ).rejects.toThrow("Draft legal documents")
+    ).rejects.toThrow("Review the current Terms and Privacy Notice.")
     expect(db.verifications).toHaveLength(0)
+    expect(db.legalAcceptances).toHaveLength(0)
   })
 
   test("creates a common login OTP before account access is known", async () => {
@@ -857,6 +970,8 @@ describe("mobile auth queries", () => {
       const db = createMockMobileAuthDb({
         users: [
           {
+            // Accounts created before the legal publication took effect stay usable.
+            createdAt: new Date("2026-09-01T00:00:00.000Z"),
             email: "reviewer@example.test",
             id: "user_reviewer",
             name: "Review Owner",
@@ -1316,6 +1431,7 @@ describe("mobile auth queries", () => {
   test("verifies new owner OTP signup by creating the first business and store", async () => {
     const db = createMockMobileAuthDb()
     const otp = await createMobileOwnerOtp(db.client, {
+      ...CURRENT_LEGAL_CHOICE,
       businessProfileKey: "animal-feed-agricultural-supplies",
       businessProfileVersion: 1,
       businessName: " Main Market Store ",
@@ -1340,6 +1456,13 @@ describe("mobile auth queries", () => {
       ageBand: "AGE_13_TO_15",
       ageDeclaredAt: expect.any(Date),
     })
+    expect(db.legalAcceptances).toEqual([
+      expect.objectContaining({
+        surface: "mobile",
+        userId: "user_1",
+        version: LEGAL_DOCUMENT_VERSION,
+      }),
+    ])
 
     expect(db.tenants).toEqual([
       expect.objectContaining({
@@ -1372,8 +1495,8 @@ describe("mobile auth queries", () => {
             }),
           },
         },
-        name: "Main Market Store",
-        slug: "main-market-store",
+        name: "Main store",
+        slug: "main-store",
         status: "ACTIVE",
         tenantId: "tenant_1",
       }),
@@ -1393,57 +1516,59 @@ describe("mobile auth queries", () => {
       currencyCode: "GHS",
       name: "Main Market Store",
       storeId: "store_1",
-      storeName: "Main Market Store",
+      storeName: "Main store",
     })
   })
 
-  test("keeps the signup business phone on the store instead of the user identity", async () => {
-    const businessPhone = "08186877306"
-    const db = createMockMobileAuthDb({
-      users: [
-        {
-          email: "existing-owner@example.com",
+  test("keeps the signup business phone on the store instead of the user identity", () =>
+    withQaPolicy([ISHAQ_QA_ENTRY], async () => {
+      const businessPhone = "08186877306"
+      const db = createMockMobileAuthDb({
+        users: [
+          {
+            email: "existing-owner@example.com",
+            id: "user_existing",
+            name: "Existing Owner",
+            phone: businessPhone,
+          },
+        ],
+      })
+      const otp = await createMobileOwnerOtp(db.client, {
+        ...CURRENT_LEGAL_CHOICE,
+        businessName: "Jawdah",
+        email: "jawdah@ishaq.qa.test",
+        ageBand: "AGE_13_TO_15",
+        mode: "sign_up",
+        name: "Ishaq Yusuf",
+        phone: businessPhone,
+      })
+
+      const session = await verifyMobileOwnerOtp(db.client, {
+        businessName: "Jawdah",
+        code: otp.code,
+        email: "jawdah@ishaq.qa.test",
+        ageBand: "AGE_13_TO_15",
+        mode: "sign_up",
+        name: "Ishaq Yusuf",
+        phone: businessPhone,
+      })
+
+      expect(db.users).toEqual([
+        expect.objectContaining({
           id: "user_existing",
-          name: "Existing Owner",
           phone: businessPhone,
-        },
-      ],
-    })
-    const otp = await createMobileOwnerOtp(db.client, {
-      businessName: "Jawdah",
-      email: "jawdah@ishaq.qa.test",
-      ageBand: "AGE_13_TO_15",
-      mode: "sign_up",
-      name: "Ishaq Yusuf",
-      phone: businessPhone,
-    })
-
-    const session = await verifyMobileOwnerOtp(db.client, {
-      businessName: "Jawdah",
-      code: otp.code,
-      email: "jawdah@ishaq.qa.test",
-      ageBand: "AGE_13_TO_15",
-      mode: "sign_up",
-      name: "Ishaq Yusuf",
-      phone: businessPhone,
-    })
-
-    expect(db.users).toEqual([
-      expect.objectContaining({
-        id: "user_existing",
-        phone: businessPhone,
-      }),
-      expect.not.objectContaining({
-        phone: businessPhone,
-      }),
-    ])
-    expect(db.stores).toEqual([
-      expect.objectContaining({
-        supportPhone: businessPhone,
-        tenantId: session.tenant?.id,
-      }),
-    ])
-  })
+        }),
+        expect.not.objectContaining({
+          phone: businessPhone,
+        }),
+      ])
+      expect(db.stores).toEqual([
+        expect.objectContaining({
+          supportPhone: businessPhone,
+          tenantId: session.tenant?.id,
+        }),
+      ])
+    }))
 
   test("first-time Google and Apple login cannot create an account without signup choices", async () => {
     for (const provider of ["google", "apple"] as const) {
@@ -1541,6 +1666,7 @@ describe("mobile auth queries", () => {
     const db = createMockMobileAuthDb()
 
     const session = await verifyMobileGoogleIdentity(db.client, {
+      ...CURRENT_LEGAL_CHOICE,
       businessProfileKey: "laundry-dry-cleaning",
       businessProfileVersion: 1,
       businessName: " Main Market Store ",
@@ -1560,6 +1686,13 @@ describe("mobile auth queries", () => {
       ageBand: "AGE_13_TO_15",
       ageDeclaredAt: expect.any(Date),
     })
+    expect(db.legalAcceptances).toEqual([
+      expect.objectContaining({
+        surface: "mobile",
+        userId: "user_1",
+        version: LEGAL_DOCUMENT_VERSION,
+      }),
+    ])
 
     expect(db.accounts).toEqual([
       expect.objectContaining({
@@ -1595,8 +1728,8 @@ describe("mobile auth queries", () => {
             }),
           },
         },
-        name: "Main Market Store",
-        slug: "main-market-store",
+        name: "Main store",
+        slug: "main-store",
         status: "ACTIVE",
         tenantId: "tenant_1",
       }),
@@ -1614,7 +1747,7 @@ describe("mobile auth queries", () => {
       id: "tenant_1",
       name: "Main Market Store",
       storeId: "store_1",
-      storeName: "Main Market Store",
+      storeName: "Main store",
     })
   })
 
@@ -1633,6 +1766,7 @@ describe("mobile auth queries", () => {
 
     await expect(
       verifyMobileGoogleIdentity(db.client, {
+        ...CURRENT_LEGAL_CHOICE,
         ageBand: "AGE_13_TO_15",
         email: "owner@example.com",
         mode: "sign_up",
