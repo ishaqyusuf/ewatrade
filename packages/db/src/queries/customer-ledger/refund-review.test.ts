@@ -10,20 +10,29 @@ const input = {
 function fixture(options: {
   denied?: boolean; closed?: boolean; currency?: string; allocated?: bigint; released?: bigint;
   reversed?: boolean; held?: bigint; receipt?: boolean; missingReceipt?: boolean; moneyPurpose?: string;
+  execution?: boolean;
 } = {}) {
   let reads = 0
+  const execution = options.execution
+    ? {
+        financeBook: { findUniqueOrThrow: async () => ({ id: "book", currencyCode: "NGN" }) },
+        customerLedgerAccount: { findUniqueOrThrow: async () => ({ id: "account", currencyCode: "NGN", revision: 9n }) },
+        customerLedgerCommand: { findUnique: async () => null },
+      }
+    : undefined
   const db = {
-    $queryRaw: async () => [],
+    $queryRaw: async () => (execution ? [{ id: "book" }] : []),
+    customerLedgerCommand: execution?.customerLedgerCommand,
     membership: { findFirst: async () => options.denied ? null : { tenant: { isActive: true } } },
     financeBook: { findFirst: async (args: unknown) => {
       reads++
       expect(args).toEqual({ where: { id: "book", tenantId: "tenant" } })
       return { id: "book", currencyCode: "NGN", startsAt: new Date("2026-09-01"), closedThrough: options.closed ? input.effectiveAt : null }
-    } },
+    }, ...execution?.financeBook },
     customerLedgerAccount: { findFirst: async (args: unknown) => {
       expect(args).toEqual({ where: { id: "account", tenantId: "tenant" }, include: { customer: { select: { name: true } } } })
       return { id: "account", customerId: "customer", customer: { name: "QA customer" }, currencyCode: options.currency ?? "NGN", revision: 9n }
-    } },
+    }, ...execution?.customerLedgerAccount },
     customerLedgerEntry: { findFirst: async (args: unknown) => {
       expect(args).toEqual({ where: { id: "credit", accountId: "account", side: "CREDIT", kind: { in: ["OPENING_CREDIT", "RECEIPT"] }, reversals: { none: {} } } })
       return { id: "credit", kind: options.receipt ? "RECEIPT" : "OPENING_CREDIT", sourceKind: options.receipt ? "CUSTOMER_RECEIPT" : "CUSTOMER_OPENING", sourceId: options.receipt ? "receipt" : "account:CREDIT", amountMinor: 1000n, effectiveAt: new Date("2026-09-01") }
@@ -65,11 +74,7 @@ test("refund review retains provenance, available-credit and payment-method chec
 
 test("canonical refund execution still rejects unreconciled source before writing", async () => {
   const { refundCustomerLedgerCreditInTransaction } = await import("./refunds")
-  const { db } = fixture({ held: 999n })
-  db.$queryRaw = (async () => [{ id: "book" }]) as typeof db.$queryRaw
-  db.financeBook.findUniqueOrThrow = (async () => ({ id: "book", currencyCode: "NGN" })) as typeof db.financeBook.findUniqueOrThrow
-  db.customerLedgerAccount.findUniqueOrThrow = (async () => ({ id: "account", currencyCode: "NGN", revision: 9n })) as typeof db.customerLedgerAccount.findUniqueOrThrow
-  db.customerLedgerCommand = { findUnique: async () => null } as typeof db.customerLedgerCommand
+  const { db } = fixture({ held: 999n, execution: true })
   await expect(refundCustomerLedgerCreditInTransaction(db, {
     ...input, expectedRevision: "9", clientCommandId: "command", reason: "Customer collected unused funds",
   })).rejects.toMatchObject({ code: "CONFLICT" })

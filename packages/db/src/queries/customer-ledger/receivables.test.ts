@@ -50,7 +50,7 @@ function fixture(authorized = true, validCursor = true) {
     },
   }
   const db = {
-    $transaction: async (run: (tx: typeof tx) => unknown) => run(tx),
+    $transaction: async (run: (client: typeof tx) => unknown) => run(tx),
   } as unknown as PrismaClient
   return { db, reads, scopes, cursorReads }
 }

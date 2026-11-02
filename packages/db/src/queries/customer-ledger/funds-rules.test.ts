@@ -39,7 +39,7 @@ test("receipt allocation conserves received funds exactly and rejects malformed/
     ["100", "01"],
     ["100", "-1"],
     ["100000000000001", "0"],
-  ])
+  ] as const)
     expect(() => customerReceiptConservation(received, applied)).toThrow()
 })
 
