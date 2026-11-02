@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test"
+import type { WhatsAppWorkflowActionResult } from "@ewatrade/assistant/channels/workflow-action-result"
 import type { WhatsAppWorkflowActionSource } from "@ewatrade/assistant/channels/workflow-action-review"
 import { assistantWhatsAppActionDecisionDigest } from "./action-reviews"
 import {
@@ -307,7 +308,7 @@ test("queued workflow action and safe receipt schemas never persist caller actor
       "SETUP",
     ),
     replyToMessageId: "accepted-review-provider-message",
-  }
+  } as const
   expect(whatsAppWorkflowActionIngressContentSchema.parse(content)).toEqual(
     content,
   )
@@ -327,7 +328,7 @@ test("queued workflow action and safe receipt schemas never persist caller actor
         ...patch,
       }).success,
     ).toBe(false)
-  const result = {
+  const result: WhatsAppWorkflowActionResult = {
     version: "workflow-result-v1",
     purpose: "SETUP",
     conversationId: "conversation",

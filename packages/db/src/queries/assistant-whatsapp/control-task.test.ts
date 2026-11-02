@@ -59,10 +59,10 @@ test("five empty form starters are exact and do not autoplay arbitrary model exa
     ["catalog.product.create", "Add product"],
     ["finance.expense.record_simple", "Record expense"],
     ["inventory.stock.receive", "Receive stock"],
-  ]) {
+  ] as const) {
     expect(
       whatsAppControlTaskStarter({
-        id: id ?? "",
+        id,
         title: "Task",
         domain: "sales",
         example: "Sold 9 invented bags for 5000",

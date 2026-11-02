@@ -225,7 +225,7 @@ test("verified queued action retains digest and quoted review only, never raw co
     decision: "confirm",
     decisionDigest: assistantWhatsAppActionDecisionDigest(code, "confirm"),
     replyToMessageId: "accepted-provider-review",
-  }
+  } as const
   expect(whatsAppActionReviewIngressContentSchema.parse(content)).toEqual(
     content,
   )

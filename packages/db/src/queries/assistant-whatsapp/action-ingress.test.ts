@@ -149,7 +149,7 @@ test("ACTION owns a binding-fenced lease and cannot recover a model run", async 
     owner: "lease-owner",
     generation: 1,
   }
-  expect(await assertAssistantWhatsAppInboxLease(db, lease)).toBe(row)
+  expect<unknown>(await assertAssistantWhatsAppInboxLease(db, lease)).toBe(row)
   expect(await recoverAssistantWhatsAppInboxRun(db, lease)).toBeNull()
   expect(modelReads).toBe(0)
   row.identityId = "mixed-owner"
