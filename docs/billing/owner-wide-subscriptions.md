@@ -1,11 +1,13 @@
-# Owner-wide subscriptions: offline preparation
+# Owner-wide subscriptions: durable adapter, cutover pending
 
-The Android paid-launch branch prepares `@ewatrade/db/owner-billing`. The module
-has pure policy functions and commands taking a transactional repository port.
-It has **no live Prisma adapter, router, signup hook or notification wiring**.
-The existing Tenant-bound billing implementation and launch grants remain active
-source authority until the reviewed cutover. Do not enable checkout on the basis
-of these offline checks.
+`@ewatrade/db/owner-billing` has pure policy functions, transactional commands and,
+since 2 November 2026, a durable Prisma adapter wired to the catalog, purchase,
+restore, notification, signup and canonical entitlement readers. All of that
+wiring is **off** unless `OWNER_BILLING_ENABLED=true` and
+`STORE_BILLING_ENVIRONMENT` is `sandbox` or `production`. The existing
+Tenant-bound billing implementation and launch grants remain the active source
+authority until the reviewed cutover. Do not enable checkout or the switch on the
+basis of local checks.
 
 ## Commercial contract
 
@@ -61,51 +63,80 @@ These policies project a tier, not business data access. Session, membership,
 roles, Store scope and all existing domain checks remain independently required.
 No assistant tool, prompt, client plan ID or client coverage list may grant access.
 
-## Durable adapter and cutover still required
+## Durable adapter (local development only, 2 November 2026)
 
-1. After service restoration, inspect existing accounts, receipts, grants and
-   migration state once on the selected authorized target. Do not assume empty
-   purchases, rewrite existing tokens or copy plans into Tenant metadata.
-2. Add reviewed durable owner account/subscription/coverage persistence through
-   normal Prisma generation and migrate/push commands. No Prisma schema or
-   migration is changed by this offline preparation. Require one immutable billing
-   owner per account, one account per owner, unique provider purchase identity,
-   one canonical subscription per account and unique active Tenant coverage.
-   Retain release/enrollment history. Ownership transfer requires a separate
-   explicit reconciliation path; never infer transfer from a membership change.
-3. Implement `OwnerBillingRepository.transaction`: lock account and Tenant in a
-   deterministic order; serialize with ownership/membership changes; re-read all
-   authority and subscription facts; enforce the unique constraints; roll back
-   completely on failure. Enrollment and release must use that same lock protocol.
-4. Use existing provider verification, event/order/void ledger, observed-time
-   ordering and refund authority when persisting the canonical subscription.
-   An old refund must not cancel a newer paid renewal. Binding assertions alone
-   do not establish notification/replay correctness. Notifications are not actor
-   purchases; purchase initiation still requires the authenticated paying owner.
-5. Wire catalog/purchase/restore, notification/refund processing, signup and each
-   domain entitlement/allowance reader to the same account and current coverage.
-   Pin purchase recovery to its original actor/account; business switching cannot
-   reinterpret an in-flight receipt. Preserve legacy/manual/launch grants through
-   an explicit versioned cutover and preserve business records above a new limit.
-   The staged offer intentionally omits unapproved feature/Store/AI policy changes.
-   Reconcile durable plan rows/limitsSnapshot and mobile mirrors with the staged
-   offer; changing a static label alone cannot override saved authority. Add new
-   billing records to the canonical account privacy inventory/export/retention
-   workflow before activation, preserving its existing financial-record policy.
-6. Verify actual database uniqueness/locks, account changes, existing-receipt
-   compatibility, notification ordering and cutover on a non-production target.
-   Then build and test the exact signed Android billing candidate and complete
-   merchant, legal/refund, Data safety and review gates. Android35 lacks native
-   IAP and cannot prove this candidate. No push, deployment or provider activation
-   follows from source verification.
+Schema `packages/db/prisma/models/owner-billing.prisma`, migration
+`20261102192301_owner_billing_persistence`, applied only to the local
+`ewatrade_qa_v1` development database:
 
-## Offline verification
+- `OwnerBillingAccount`: UUID id is the opaque store account token; unique,
+  immutable `ownerUserId` (one account per owner, one owner per account).
+- `OwnerBillingPurchase`: every verified owner receipt; unique
+  `(provider, purchaseDigest)` binds a purchase to one account.
+- `OwnerBillingSubscription`: unique `accountId`, the one canonical
+  subscription, with `verifiedAt` for observed-time ordering.
+- `OwnerBusinessCoverage`: enrollment history. `activeTenantId` is unique and set
+  only while current, so one active coverage per Tenant and released rows remain.
 
-The focused test file is
-`packages/db/src/queries/owner-billing/owner-billing.test.ts`. It imports no Prisma
-client or provider module. Its serialized in-memory port exercises command
-ordering, conflicting admissions, retry and rollback behavior. That is a test of
-the port model, **not evidence of PostgreSQL constraints or isolation**.
+`createPrismaOwnerBillingRepository(db).transaction` takes advisory locks on the
+account and then the Tenant (always that order), share-locks the owner `User` and
+the owner's `Membership`/`Tenant` rows (`FOR SHARE`) so ownership changes wait,
+re-reads every fact after the locks under ReadCommitted, relies on the database
+unique indexes and rolls back completely on any failure. Enrollment and release
+use it. `applyVerifiedOwnerSubscription` and `recordOwnerPlayVoidedOrder` take the
+same account lock, refuse legacy Tenant receipts and foreign or second
+subscriptions, keep an older notification for a replaced receipt from displacing
+the current one, and let only the current paid order's void cancel access. Owner
+ledger rows in `BillingProviderEvent` have no Tenant and carry `accountId`.
+
+Wiring behind the switch:
+
+- `reconcileStoreSubscription` routes a receipt whose token names an owner
+  account to the owner adapter (purchase, restore, Apple/Play notifications and
+  Play voids). Purchase/restore pass the actor, which must be the account owner.
+- `storeSubscriptions.catalog` gives an account token only to an `OWNER`
+  membership, bound to that user's own account, and reports `ownerCoverage`;
+  `enrollBusiness` and `releaseBusiness` run the commands.
+- `completeOwnerSignup` enrolls the businesses it just created after commit
+  while slots remain; failures are logged and never fail the signup.
+- The canonical entitlement reader (snapshot, tenant plan, order/product/report
+  allowance and dashboard navigation features) raises a covered business to the
+  owner plan with that offer's per-business products/orders/staff. It never
+  lowers a higher legacy, manual or launch grant.
+- An owner billing account now requires software-subscription privacy review.
+
+## Cutover still required (owner-gated)
+
+1. Inspect existing accounts, receipts, grants and migration state once on the
+   selected authorized target after service restoration. Apply the migration there
+   only through the normal guarded commands. No target was touched.
+2. Decide the versioned cutover: what happens to launch grants, existing
+   Tenant-bound receipts and `limitsSnapshot` rows; whether signup still writes a
+   launch grant; and whether paid product caps (currently not enforced for paid
+   plans) are enforced. Reconcile durable plan rows and mobile mirrors with the
+   offer; Pro's unlimited products currently keeps the legacy numeric cap.
+3. Synchronous plan readers that project from preloaded tenant data
+   (`resolveRetailOpsPlanId` in tenant context, storefront, notifications, jobs,
+   attachments; `projectRetailOpsPlanFeatures` in tenant lists) still read only
+   Tenant-bound authority. Wire them before enabling the switch.
+4. Add the owner billing tables to the account privacy export/retention workflow
+   (only the review gate exists). Ownership transfer still needs its explicit
+   reconciliation path; the account owner is never inferred from membership.
+5. The mobile client must use the owner token, `ownerCoverage`, enroll and
+   release. Then verify on a non-production target, build and test the exact
+   signed Android candidate and complete merchant, legal/refund, Data safety and
+   review gates. No push, deployment or provider activation follows.
+
+## Verification
+
+`packages/db/src/queries/owner-billing/owner-billing.test.ts` keeps the in-memory
+port model (no Prisma client). It is not evidence of PostgreSQL behavior.
+`owner-billing.integration.test.ts` runs only with the verified local profile
+(`RUN_DATABASE_INTEGRATION_TESTS=1`) against `ewatrade_qa_v1`: it proves the
+database refuses a second active coverage row, concurrent enrollments on a
+one-business plan grant exactly one slot, release keeps history, legacy and
+foreign receipts are refused, older reads never overwrite newer ones, an old
+void does not cancel a newer renewal, and the entitlement reader overlay.
 
 Run the existing `qa:doctor --offline`, planned/scoped `test:quick`, strict module
 types and H01/H02 gates. Use a minimal environment with an unusable DB sentinel;
