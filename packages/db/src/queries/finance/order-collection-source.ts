@@ -6,6 +6,7 @@ import {
 } from "../customer-ledger/commerce-locks"
 import { financePostingCommandId } from "./commands"
 import type { FinancePostingInput } from "./posting"
+import { ORDER_COLLECTIONS_ACCOUNT } from "./report-order-collections"
 import { FinanceError } from "./rules"
 
 /**
@@ -63,22 +64,18 @@ export async function resolveOrderCollectionPosting(
   // in one round trip instead of three.
   const control =
     (await tx.financeAccount.findUnique({
-      where: { bookId_code: { bookId: book.id, code: "2200" } },
+      where: {
+        bookId_code: { bookId: book.id, code: ORDER_COLLECTIONS_ACCOUNT.code },
+      },
     })) ??
     (await tx.financeAccount.create({
-      data: {
-        bookId: book.id,
-        code: "2200",
-        name: "Order collections awaiting reconciliation",
-        kind: "LIABILITY",
-        purpose: "OTHER",
-      },
+      data: { bookId: book.id, ...ORDER_COLLECTIONS_ACCOUNT },
     }))
   if (
     control.archivedAt ||
-    control.kind !== "LIABILITY" ||
-    control.purpose !== "OTHER" ||
-    control.name !== "Order collections awaiting reconciliation"
+    control.kind !== ORDER_COLLECTIONS_ACCOUNT.kind ||
+    control.purpose !== ORDER_COLLECTIONS_ACCOUNT.purpose ||
+    control.name !== ORDER_COLLECTIONS_ACCOUNT.name
   )
     throw new FinanceError(
       "CONFLICT",

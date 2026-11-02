@@ -4,6 +4,7 @@ import { useTRPC } from "@/trpc/client"
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
 import { Alert, AlertDescription, AlertTitle, Badge } from "@ewatrade/ui"
 import { formatFinanceMoney } from "@ewatrade/utils/finance-money"
+import { financeCoverageGapLabel } from "@ewatrade/utils/finance-report-output"
 import { useQuery } from "@tanstack/react-query"
 import { plainDay } from "./review-changes"
 
@@ -54,14 +55,6 @@ const PLAIN_CHECKS: Record<string, [string, string]> = {
     "Profit for the year",
     "Closing a month doesn't move profit into owner's money. That happens at year end.",
   ],
-}
-
-function sourceGapLabel(value: string) {
-  return value
-    .toLowerCase()
-    .split("_")
-    .map((word) => word[0]?.toUpperCase() + word.slice(1))
-    .join(" ")
 }
 
 export function FinancePeriodCloseChecklistView({
@@ -178,7 +171,7 @@ export function FinancePeriodCloseChecklistView({
             What your reports don't cover yet
           </h5>
           <p className="text-sm text-muted-foreground">
-            {checklist.coverageGaps.map(sourceGapLabel).join(" · ")}
+            {checklist.coverageGaps.map(financeCoverageGapLabel).join(" · ")}
           </p>
         </div>
       ) : null}

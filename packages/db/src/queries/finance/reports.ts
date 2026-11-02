@@ -8,6 +8,7 @@ import {
   FINANCE_FISCAL_MAX_YEARS,
 } from "./fiscal-limits"
 import { getFinanceFiscalPnlExclusions } from "./fiscal-report-integrity"
+import { reportOrderCollections } from "./report-order-collections"
 import { FinanceError } from "./rules"
 
 export type FinanceReportInput = FinanceActor & {
@@ -423,6 +424,7 @@ export async function getFinanceReportsInTransaction(
       "INVENTORY_COSTS",
       "OPENING_BALANCE_RECONCILIATION",
     ] as const,
+    orderCollections: reportOrderCollections(rows),
     balanceSheet: calculateFinancialPosition(rows),
     trialBalance: {
       accounts: rows,

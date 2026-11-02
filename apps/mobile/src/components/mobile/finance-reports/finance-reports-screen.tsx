@@ -8,6 +8,7 @@ import { Text } from "@/components/ui/text"
 import { prepareFinanceStatementRange } from "@/lib/finance-money-input"
 import { useTRPC } from "@/trpc/client"
 import { formatFinanceMoney } from "@ewatrade/utils/finance-money"
+import { financeCoverageGapLabel } from "@ewatrade/utils/finance-report-output"
 import { useQuery } from "@tanstack/react-query"
 import { type Href, useRouter } from "expo-router"
 import { useEffect, useState } from "react"
@@ -250,8 +251,10 @@ function ReportWindowView({
       {showCoverage ? (
         <View className="gap-2 rounded-2xl bg-card p-4">
           <Text className="text-sm [-rn-line-height:22] text-foreground">
-            Sales, payments, stock costs and opening balances are incomplete, so
-            these totals aren’t your full profit or financial position.
+            Order sales, stock costs and starting balances aren’t fully counted,
+            so these totals aren’t your full profit or financial position. Money
+            received from Orders is held as Order collections, not counted as
+            sales.
           </Text>
           <Text className="text-sm [-rn-line-height:22] text-muted-foreground">
             Posted Finance entries only. Sales, Customer, stock and opening
@@ -264,9 +267,7 @@ function ReportWindowView({
               {"\n"}Coverage:{" "}
               {report.coverage.replaceAll("_", " ").toLowerCase()}
               {"\n"}Missing coverage:{" "}
-              {report.coverageGaps
-                .map((gap) => gap.replaceAll("_", " ").toLowerCase())
-                .join(", ")}
+              {report.coverageGaps.map(financeCoverageGapLabel).join(", ")}
             </Text>
           ) : null}
         </View>
@@ -328,6 +329,7 @@ function ReportContents({ report }: { report: FinanceReport }) {
     />
   )
   const p = report.profitAndLoss
+  const orders = report.orderCollections
   const c = report.cashFlow
   const b = report.balanceSheet
   const t = report.trialBalance
@@ -344,6 +346,13 @@ function ReportContents({ report }: { report: FinanceReport }) {
         {p.accounts.map((a) =>
           account(a.accountId, `${a.code} · ${a.name}`, a.periodBalanceMinor),
         )}
+        {orders && orders.receivedMinor !== "0"
+          ? account(
+              orders.accountId,
+              "Order money not counted as sales",
+              orders.receivedMinor,
+            )
+          : null}
       </ReportSection>
       <ReportSection title="Cash flow — cash and bank">
         <Text className="text-sm text-muted-foreground">

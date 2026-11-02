@@ -37,6 +37,11 @@ const report: FinanceReport = {
     "INVENTORY_COSTS",
     "OPENING_BALANCE_RECONCILIATION",
   ],
+  orderCollections: {
+    accountId: "collections",
+    receivedMinor: "250000",
+    heldMinor: huge,
+  },
   profitAndLoss: {
     accounts: [account],
     revenueMinor: "0",
@@ -130,6 +135,15 @@ describe("report output", () => {
     expect(csv).toContain("POSTED_FINANCE_ENTRIES")
     expect(csv).toContain("OPENING_BALANCE_RECONCILIATION")
     expect(csv).toContain('"\'=unsafe"')
+    expect(csv).toContain(
+      '"Order money not counted as sales, period (minor units)","250000"',
+    )
+    expect(csv).toContain(
+      `"Order money held through end date (minor units)","${huge}"`,
+    )
+    expect(
+      buildFinanceReportCsv({ ...report, orderCollections: null }),
+    ).not.toContain("Order money")
   })
   test("print document includes expanded accounts, exact formatted digits and failed checks without executable source text", () => {
     const html = buildFinanceReportPrintDocument(report)
@@ -152,6 +166,11 @@ describe("report output", () => {
       if (text !== "Snapshot") expect(html).toContain(text)
     }
     expect(html).toContain("@page{size:A4;margin:18mm}")
+    expect(html).toContain("Missing coverage: Order sales; Stock costs")
+    expect(html).toContain("isn't counted as sales yet: ₦2,500.00 in these")
+    expect(
+      buildFinanceReportPrintDocument({ ...report, orderCollections: null }),
+    ).not.toContain("counted as sales")
   })
   test("collects all pinned pages and normal-side CSV metadata", async () => {
     const calls: (string | undefined)[] = []

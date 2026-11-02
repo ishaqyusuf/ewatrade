@@ -18,6 +18,12 @@ export type FinanceReportOutput = {
   coverage: string
   completeness: string
   coverageGaps: readonly string[]
+  /** Order money received without a posted sale; absent on older reports. */
+  orderCollections?: {
+    accountId: string
+    receivedMinor: string
+    heldMinor: string
+  } | null
   profitAndLoss: {
     revenueMinor: string
     costOfSalesMinor: string
@@ -91,6 +97,23 @@ export type FinanceLedgerOutput = {
   }[]
 }
 
+// Plain words for report coverage gaps; unknown ids keep a readable form.
+const COVERAGE_GAP_LABELS: Record<string, string> = {
+  COMMERCIAL_SALES_AND_CUSTOMER_PAYMENTS: "Order sales",
+  INVENTORY_COSTS: "Stock costs",
+  OPENING_BALANCE_RECONCILIATION: "Starting balances",
+  CASH_AND_BANK_RECONCILIATION: "Cash and bank checks",
+  SUPPLIER_DOCUMENTS_AND_SETTLEMENTS: "Supplier bills and payments",
+  ASSETS_LOANS_ACCRUALS_AND_TAX: "Equipment, loans, unpaid bills and tax",
+}
+
+export function financeCoverageGapLabel(gap: string) {
+  const known = COVERAGE_GAP_LABELS[gap]
+  if (known) return known
+  const words = gap.toLowerCase().split("_").join(" ")
+  return words.charAt(0).toUpperCase() + words.slice(1)
+}
+
 function financeCsvCell(value: string) {
   // Signed integer amounts are safe literals; preserve every digit for import.
   const safe =
@@ -116,6 +139,18 @@ export function buildFinanceReportCsv(report: FinanceReportOutput) {
     ["Coverage", report.coverage],
     ["Completeness", report.completeness],
     ["Missing coverage", report.coverageGaps.join("; ")],
+    ...(report.orderCollections
+      ? [
+          [
+            "Order money not counted as sales, period (minor units)",
+            report.orderCollections.receivedMinor,
+          ],
+          [
+            "Order money held through end date (minor units)",
+            report.orderCollections.heldMinor,
+          ],
+        ]
+      : []),
     [
       "Amount convention",
       "Exact integer minor units. Import amount columns as text to preserve large values.",

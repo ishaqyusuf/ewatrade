@@ -2,18 +2,11 @@ import { StatusBanner } from "@/components/mobile/status-banner"
 import { Text } from "@/components/ui/text"
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
 import { formatFinanceMoney } from "@ewatrade/utils/finance-money"
+import { financeCoverageGapLabel } from "@ewatrade/utils/finance-report-output"
 import { View } from "react-native"
 import { SetupSteps } from "../green-till/kit"
 
 type Checklist = RouterOutputs["finance"]["periodCloseChecklist"]
-
-function gapLabel(value: string) {
-  return value
-    .toLowerCase()
-    .split("_")
-    .map((word) => word[0]?.toUpperCase() + word.slice(1))
-    .join(" ")
-}
 
 export function FinancePeriodChecklist({
   checklist,
@@ -106,7 +99,7 @@ export function FinancePeriodChecklist({
         <View className="gap-1">
           <Text className="font-semibold">Known report coverage gaps</Text>
           <Text className="text-sm text-muted-foreground">
-            {checklist.coverageGaps.map(gapLabel).join(" · ")}
+            {checklist.coverageGaps.map(financeCoverageGapLabel).join(" · ")}
           </Text>
         </View>
       ) : null}

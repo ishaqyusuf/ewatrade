@@ -103,6 +103,7 @@ function ReportResults({
   const report = query.data
   const money = (value: string) => formatFinanceMoney(value, book.currencyCode)
   const profit = report.profitAndLoss
+  const orders = report.orderCollections
   return (
     <div className="grid gap-8">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-4">
@@ -133,6 +134,20 @@ function ReportResults({
             </div>
           ))}
         </dl>
+        {orders && orders.receivedMinor !== "0" ? (
+          <p className="text-sm text-muted-foreground">
+            {money(orders.receivedMinor)} received from Orders in these dates
+            isn't counted as Sales yet. It's held under{" "}
+            <ReportAccountLink
+              accountId={orders.accountId}
+              label="Order collections awaiting reconciliation"
+              from={report.from}
+              through={report.through}
+              snapshot={report.snapshotSequence}
+            />
+            .
+          </p>
+        ) : null}
         <Disclosure title={<>Show the accounts behind this</>}>
           <dl className="mt-3 grid gap-3">
             {profit.accounts.map((account) => (

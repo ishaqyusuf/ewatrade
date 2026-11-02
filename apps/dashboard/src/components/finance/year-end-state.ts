@@ -102,8 +102,8 @@ const GAP_LABELS: Record<string, [string, string]> = {
     "Cash counts and bank statement matches aren't checked for the last day of the year.",
   ],
   COMMERCIAL_SALES_AND_CUSTOMER_PAYMENTS: [
-    "Sales and Customer payments",
-    "Some sales and payments are recorded outside Finance.",
+    "Order sales",
+    "Order sales aren't counted as sales yet. Money received for them is held as Order collections awaiting reconciliation.",
   ],
   SUPPLIER_DOCUMENTS_AND_SETTLEMENTS: [
     "Supplier bills and payments",
