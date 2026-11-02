@@ -6,17 +6,22 @@ import {
   startStaffInvitationNotification,
 } from "@ewatrade/db/queries"
 import { resendEmailTransport } from "@ewatrade/email"
-import { task } from "@trigger.dev/sdk/v3"
+import { task, tasks } from "@trigger.dev/sdk/v3"
 import {
   createStaffInvitationEmailAdapter,
   staffInvitationDeliveryConfigured,
 } from "../handlers/staff-invitation-email"
 import { runStaffInvitationNotificationDispatch } from "../handlers/staff-invitation-notification-dispatch"
 import { assertQaJobProviderAllowed } from "../qa-provider-guard"
+import {
+  STAFF_INVITATION_DISPATCH_TASK_ID,
+  staffInvitationDispatchOptions,
+} from "../staff-invitation-dispatch"
 
 export const staffInvitationNotificationDispatch = task({
-  id: "staff.invitation.notification-dispatch",
+  id: STAFF_INVITATION_DISPATCH_TASK_ID,
   maxDuration: 120,
+  // Trigger retries would bypass the outbox backoff; failures reschedule themselves.
   retry: { maxAttempts: 1 },
   queue: { concurrencyLimit: 5 },
   run: async (payload: StaffInvitationNotificationIdentifier) => {
@@ -38,6 +43,12 @@ export const staffInvitationNotificationDispatch = task({
       claim: (input) => claimStaffInvitationNotification(prisma, input),
       start: (input) => startStaffInvitationNotification(prisma, input),
       finish: (input) => finishStaffInvitationNotification(prisma, input),
+      scheduleRetry: async ({ attempt, runAt, ...identity }) =>
+        tasks.trigger(
+          STAFF_INVITATION_DISPATCH_TASK_ID,
+          identity,
+          await staffInvitationDispatchOptions({ ...identity, attempt, runAt }),
+        ),
       ...createStaffInvitationEmailAdapter(
         process.env,
         resendEmailTransport,

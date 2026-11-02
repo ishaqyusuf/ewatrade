@@ -15,6 +15,7 @@ import {
 import type { Prisma } from "@ewatrade/db/types"
 import { enqueueAssistantWhatsAppDelivery } from "@ewatrade/jobs/assistant-whatsapp"
 import { TRPCError } from "@trpc/server"
+import { dispatchStaffInvitationProposalEmail } from "../staff/invitation-dispatch"
 import {
   requireBrowserIdentity,
   resolveLinkedAssistantIdentity,
@@ -191,6 +192,10 @@ export async function decideAssistantReviewLink(
     // Committed intent is recovered by the existing outbox cadence; never repeat the business command.
     console.error("[assistant] review result dispatch deferred to recovery")
   }
+  await dispatchStaffInvitationProposalEmail(ctx.db, {
+    tenantId: ctx.tenantContext.tenant.id,
+    proposal: result.proposal,
+  })
   return result.proposal
 }
 

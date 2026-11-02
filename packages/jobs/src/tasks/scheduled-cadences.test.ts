@@ -107,7 +107,7 @@ describe("scheduled cadences", () => {
       "service-commerce.booking-reminder-schedule": "*/5 * * * * sweep",
       "service-commerce.customer-notification-schedule": "*/5 * * * * sweep",
       "services.notification.schedule": "*/5 * * * * sweep",
-      "staff.invitation.notification-schedule": "*/5 * * * * sweep",
+      "staff.invitation.notification-schedule": "*/15 * * * * sweep",
       "store-billing.play-refund-review-alert": "0 * * * * task",
       "store-conversation.credential-expiry": "0 * * * * sweep",
       "store-conversation.notification-schedule": "*/5 * * * * sweep",

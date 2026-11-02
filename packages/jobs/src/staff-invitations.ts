@@ -6,6 +6,8 @@ import {
 import { jobIds } from "./job-ids"
 import { triggerJob } from "./trigger"
 
+export * from "./staff-invitation-dispatch"
+
 export async function enqueueRetailOpsStaffInviteNotification(
   input: RetailOpsStaffInvitedPayload,
 ) {

@@ -14,15 +14,15 @@ const config = {
 }
 
 describe("staff invitation outbox discovery", () => {
-  test("bounded discovery projects only identities and awaits every enqueue", async () => {
+  test("bounded overdue-only discovery projects identities with their next attempt and awaits every enqueue", async () => {
     const now = new Date("2026-10-12T12:00:00Z")
     const calls: unknown[] = []
     const deps: StaffInvitationScheduleDependencies = {
       listDue: async (input) => {
         calls.push(input)
         return [
-          { tenantId: "tenant-a", id: "one" },
-          { tenantId: "tenant-b", id: "two" },
+          { tenantId: "tenant-a", id: "one", attemptCount: 0 },
+          { tenantId: "tenant-b", id: "two", attemptCount: 2 },
         ]
       },
       enqueue: async (input) => {
@@ -33,9 +33,9 @@ describe("staff invitation outbox discovery", () => {
       await runStaffInvitationNotificationSchedule(config, deps, now),
     ).toEqual({ notificationsQueued: 2 })
     expect(calls).toEqual([
-      { limit: 100, now },
-      { tenantId: "tenant-a", notificationId: "one" },
-      { tenantId: "tenant-b", notificationId: "two" },
+      { limit: 100, now, overdueMs: 15 * 60_000 },
+      { tenantId: "tenant-a", notificationId: "one", attempt: 1 },
+      { tenantId: "tenant-b", notificationId: "two", attempt: 3 },
     ])
   })
   test("partial enqueue failure is reported without private errors and remaining submissions finish", async () => {
@@ -43,8 +43,8 @@ describe("staff invitation outbox discovery", () => {
     await expect(
       runStaffInvitationNotificationSchedule(config, {
         listDue: async () => [
-          { tenantId: "tenant", id: "one" },
-          { tenantId: "tenant", id: "two" },
+          { tenantId: "tenant", id: "one", attemptCount: 0 },
+          { tenantId: "tenant", id: "two", attemptCount: 0 },
         ],
         enqueue: async ({ notificationId }) => {
           queued.push(notificationId)

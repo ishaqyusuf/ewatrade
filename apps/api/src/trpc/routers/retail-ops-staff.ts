@@ -73,6 +73,7 @@ import {
   staffStatusReadInput,
   staffStatusReviewInput,
 } from "../../schemas/staff-status"
+import { dispatchStaffInvitationNotification } from "../../staff/invitation-dispatch"
 import { assertFinanceAccess } from "../finance-procedure"
 import {
   type TRPCContext,
@@ -377,15 +378,23 @@ export const retailOpsStaffRouter = createTRPCRouter({
     ),
   staffInvitationCommandSave: protectedProcedure
     .input(staffInvitationCommandInput)
-    .mutation(({ ctx, input }) =>
-      staffInvitationCommand(() =>
+    .mutation(async ({ ctx, input }) => {
+      const tenantId = ctx.tenantContext.tenant.id
+      const receipt = await staffInvitationCommand(() =>
         executeStaffInvitationCommand(ctx.db, {
           ...input,
-          tenantId: ctx.tenantContext.tenant.id,
+          tenantId,
           actorUserId: ctx.session.user.id,
         }),
-      ),
-    ),
+      )
+      // Committed: send now instead of waiting for the safety-net sweep.
+      if (receipt.notificationId)
+        await dispatchStaffInvitationNotification({
+          tenantId,
+          notificationId: receipt.notificationId,
+        })
+      return receipt
+    }),
   staffInvitationCommand: protectedProcedure
     .input(staffInvitationCommandReadSchema)
     .query(({ ctx, input }) =>

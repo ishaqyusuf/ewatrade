@@ -131,10 +131,6 @@ export const SCHEDULED_CADENCES = {
         runServiceCommerceCustomerNotificationSchedule(),
       ),
       sweep("services.notification.schedule", runServiceNotificationSchedule),
-      sweep(
-        "staff.invitation.notification-schedule",
-        runStaffInvitationNotificationSweep,
-      ),
       sweep("manual-payment.notification-sweep", runManualPaymentAlertSweep),
       sweep("store-conversation.notification-schedule", () =>
         runStoreConversationNotificationSchedule(),
@@ -168,6 +164,12 @@ export const SCHEDULED_CADENCES = {
       ),
       sweep("store-conversations.escalations", () =>
         runStoreConversationEscalations(),
+      ),
+      // Invitations dispatch on save and retries reschedule themselves; this
+      // only recovers lost dispatches (prelaunch folds it into the 30-min tick).
+      sweep(
+        "staff.invitation.notification-schedule",
+        runStaffInvitationNotificationSweep,
       ),
     ],
   },

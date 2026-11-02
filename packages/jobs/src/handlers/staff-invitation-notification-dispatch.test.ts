@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test"
+import { describe, expect, setSystemTime, test } from "bun:test"
 import { createHash, randomBytes, randomUUID } from "node:crypto"
 import {
   sealStaffInvitationPayload,
@@ -44,6 +44,7 @@ const claim = {
   currentEmail: payload.inviteeEmail,
   tokenHash: createHash("sha256").update(token).digest("hex"),
   providerIdempotencyKey: "staff-invitation:notification",
+  attemptNumber: 1,
 }
 function fixture(overrides: Partial<StaffInvitationDispatchDependencies> = {}) {
   const calls: Array<[string, unknown]> = []
@@ -67,6 +68,9 @@ function fixture(overrides: Partial<StaffInvitationDispatchDependencies> = {}) {
     send: async (value) => {
       calls.push(["send", value])
       return { providerKey: "test-provider", providerMessageId: "test-receipt" }
+    },
+    scheduleRetry: async (value) => {
+      calls.push(["schedule", value])
     },
     ...overrides,
   }
@@ -119,7 +123,11 @@ describe("staff invitation ID-only notification dispatch", () => {
   test("unavailable custody is a pre-send failure with no provider work", async () => {
     const f = fixture({ config: {} })
     await runStaffInvitationNotificationDispatch(input, f.deps)
-    expect(f.calls.map(([name]) => name)).toEqual(["claim", "finish"])
+    expect(f.calls.map(([name]) => name)).toEqual([
+      "claim",
+      "finish",
+      "schedule",
+    ])
     expect(f.calls[1]?.[1]).toMatchObject({
       outcome: "FAILED",
       failureCode: "CUSTODY_UNAVAILABLE",
@@ -147,7 +155,11 @@ describe("staff invitation ID-only notification dispatch", () => {
       },
     })
     await runStaffInvitationNotificationDispatch(input, blocked.deps)
-    expect(blocked.calls.map(([name]) => name)).toEqual(["claim", "finish"])
+    expect(blocked.calls.map(([name]) => name)).toEqual([
+      "claim",
+      "finish",
+      "schedule",
+    ])
     expect(blocked.calls[1]?.[1]).toMatchObject({
       outcome: "FAILED",
       failureCode: "PROVIDER_UNAVAILABLE",
@@ -164,7 +176,10 @@ describe("staff invitation ID-only notification dispatch", () => {
       async () => ({ providerKey: "test-provider", providerMessageId: "" }),
     ]) {
       const f = fixture({ send })
-      await runStaffInvitationNotificationDispatch(input, f.deps)
+      expect(
+        await runStaffInvitationNotificationDispatch(input, f.deps),
+      ).toBeNull()
+      expect(f.calls.some(([name]) => name === "schedule")).toBe(false)
       expect(f.calls.at(-1)?.[1]).toMatchObject({
         outcome: "OUTCOME_UNKNOWN",
         failureCode: "PROVIDER_OUTCOME_UNKNOWN",
@@ -181,10 +196,87 @@ describe("staff invitation ID-only notification dispatch", () => {
       },
     })
     await runStaffInvitationNotificationDispatch(input, f.deps)
-    expect(f.calls.at(-1)?.[1]).toMatchObject({
+    expect(f.calls.at(-2)?.[1]).toMatchObject({
       outcome: "FAILED",
       failureCode: "PROVIDER_REJECTED",
     })
+    expect(f.calls.at(-1)?.[0]).toBe("schedule")
+  })
+  test("a retryable failure schedules exactly its next attempt after the stored backoff", async () => {
+    const now = new Date("2026-11-02T10:00:00Z")
+    setSystemTime(now)
+    try {
+      for (const [attemptNumber, delayMs] of [
+        [1, 65_000],
+        [2, 125_000],
+      ] as const) {
+        const f = fixture({
+          claim: async () => ({ ...claim, attemptNumber }),
+          assertProviderAllowed: async () => {
+            throw Error("blocked")
+          },
+        })
+        expect(
+          await runStaffInvitationNotificationDispatch(input, f.deps),
+        ).toEqual({
+          status: "retry_scheduled",
+          attempt: attemptNumber + 1,
+          runAt: new Date(now.getTime() + delayMs).toISOString(),
+        })
+        expect(f.calls.filter(([name]) => name === "schedule")).toEqual([
+          [
+            "schedule",
+            {
+              ...input,
+              attempt: attemptNumber + 1,
+              runAt: new Date(now.getTime() + delayMs),
+            },
+          ],
+        ])
+      }
+    } finally {
+      setSystemTime()
+    }
+  })
+  test("the last attempt ends failed without scheduling another run", async () => {
+    const f = fixture({
+      claim: async () => ({ ...claim, attemptNumber: 3 }),
+      send: async () => {
+        throw new StaffInvitationProviderRejected()
+      },
+    })
+    expect(await runStaffInvitationNotificationDispatch(input, f.deps)).toEqual(
+      {
+        status: "failed",
+        attempt: 3,
+      },
+    )
+    expect(f.calls.some(([name]) => name === "schedule")).toBe(false)
+  })
+  test("a lost retry schedule leaves the outbox for the sweeper; unrecorded failure schedules nothing", async () => {
+    const lost = fixture({
+      config: {},
+      scheduleRetry: async () => {
+        throw Error("queue unavailable")
+      },
+    })
+    expect(
+      await runStaffInvitationNotificationDispatch(input, lost.deps),
+    ).toEqual({ status: "retry_deferred", attempt: 2 })
+    const fenced = fixture({ config: {}, finish: async () => false })
+    expect(
+      await runStaffInvitationNotificationDispatch(input, fenced.deps),
+    ).toBeNull()
+    expect(fenced.calls.some(([name]) => name === "schedule")).toBe(false)
+  })
+  test("changed payload is cancelled, never retried", async () => {
+    const f = fixture({
+      claim: async () => ({ ...claim, currentAccessRevision: 4 }),
+    })
+    expect(
+      await runStaffInvitationNotificationDispatch(input, f.deps),
+    ).toBeNull()
+    expect(f.calls.some(([name]) => name === "schedule")).toBe(false)
   })
   test("accepted provider result with persistence failure propagates without a second send or failure relabel", async () => {
     let finishes = 0

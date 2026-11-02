@@ -5,9 +5,12 @@ import type {
 } from "../../generated/prisma/client"
 import {
   claimStaffInvitationNotificationInTransaction,
-  startStaffInvitationNotificationInTransaction,
+  findUnattemptedStaffInvitationNotification,
   finishStaffInvitationNotificationInTransaction,
+  listDueStaffInvitationNotifications,
   recordStaffInvitationDeliveredInTransaction,
+  staffInvitationNotificationRetryAt,
+  startStaffInvitationNotificationInTransaction,
 } from "./staff-invitation-notifications"
 
 const now = new Date("2026-10-12T12:00:00Z")
@@ -33,6 +36,7 @@ function fixture(
     deliveredAt: null as Date | null,
     providerKey: null as string | null,
     providerMessageId: null as string | null,
+    failureCode: null as string | null,
     command: { actorUserId: "owner" },
     invitation: {
       status: "ACTIVE",
@@ -131,6 +135,7 @@ describe("durable staff notification transitions", () => {
       membershipId: "member",
       currentAccessRevision: 3,
       providerIdempotencyKey: "staff-invitation:notification",
+      attemptNumber: 1,
     })
     expect(f.row.status).toBe("CLAIMED")
     expect(f.row.attemptCount).toBe(1)
@@ -193,18 +198,126 @@ describe("durable staff notification transitions", () => {
     expect(f.row.payloadCiphertext).toBeNull()
     expect(f.row.deliveredAt).toBeNull()
   })
-  test("claimed crash is safely reclaimable before send, but exhausted claims terminate", async () => {
+  test("claimed crash is safely reclaimable before send, but exhausted claims end visibly failed", async () => {
     const safe = fixture("CLAIMED", 1)
     expect(
       await claimStaffInvitationNotificationInTransaction(safe.tx, input),
-    ).not.toBeNull()
+    ).toMatchObject({ attemptNumber: 2 })
     expect(safe.row.attemptCount).toBe(2)
     const exhausted = fixture("CLAIMED", 3)
     expect(
       await claimStaffInvitationNotificationInTransaction(exhausted.tx, input),
     ).toBeNull()
-    expect(exhausted.row.status).toBe("CANCELLED")
+    expect(exhausted.row.status).toBe("FAILED")
+    expect(exhausted.row.failureCode).toBe("CLAIM_ATTEMPTS_EXHAUSTED")
     expect(exhausted.row.payloadCiphertext).toBeNull()
+  })
+  test("a retryable failure waits as PENDING for its backoff, then the last attempt is terminal FAILED", async () => {
+    for (const [attempt, delayMs] of [
+      [1, 60_000],
+      [2, 120_000],
+    ] as const) {
+      const f = fixture("CLAIMED", attempt)
+      f.row.claimExpiresAt = new Date(now.getTime() + 60_000)
+      expect(
+        await finishStaffInvitationNotificationInTransaction(f.tx, {
+          ...input,
+          claimId: "previous-claim",
+          payloadHash: f.row.payloadHash,
+          outcome: "FAILED",
+          failureCode: "PROVIDER_UNAVAILABLE",
+        }),
+      ).toBe(true)
+      expect(f.row.status).toBe("PENDING")
+      expect(f.row.failureCode).toBe("PROVIDER_UNAVAILABLE")
+      expect(f.row.payloadCiphertext).toBe("encrypted")
+      expect(f.row.nextAttemptAt).toEqual(new Date(now.getTime() + delayMs))
+      expect(f.attempts.at(-1)).toMatchObject({
+        data: { status: "FAILED", failureCode: "PROVIDER_UNAVAILABLE" },
+      })
+      // Not claimable before its backoff; claimable once due.
+      expect(
+        await claimStaffInvitationNotificationInTransaction(f.tx, input),
+      ).toBeNull()
+      expect(
+        await claimStaffInvitationNotificationInTransaction(f.tx, {
+          ...input,
+          now: f.row.nextAttemptAt,
+        }),
+      ).toMatchObject({ attemptNumber: attempt + 1 })
+    }
+    const last = fixture("CLAIMED", 3)
+    last.row.claimExpiresAt = new Date(now.getTime() + 60_000)
+    expect(
+      await finishStaffInvitationNotificationInTransaction(last.tx, {
+        ...input,
+        claimId: "previous-claim",
+        payloadHash: last.row.payloadHash,
+        outcome: "FAILED",
+        failureCode: "CUSTODY_UNAVAILABLE",
+      }),
+    ).toBe(true)
+    expect(last.row.status).toBe("FAILED")
+    expect(last.row.payloadCiphertext).toBeNull()
+    expect(
+      await claimStaffInvitationNotificationInTransaction(last.tx, {
+        ...input,
+        now: new Date(now.getTime() + 3600_000),
+      }),
+    ).toBeNull()
+  })
+  test("retry backoff is bounded and grows per failed attempt", () => {
+    expect(staffInvitationNotificationRetryAt(1, now)).toEqual(
+      new Date(now.getTime() + 60_000),
+    )
+    expect(staffInvitationNotificationRetryAt(2, now)).toEqual(
+      new Date(now.getTime() + 120_000),
+    )
+  })
+  test("safety-net discovery skips work an event or retry run should still own", async () => {
+    const calls: Array<{ where: unknown; select: unknown }> = []
+    const db = {
+      staffInvitationNotification: {
+        findMany: async (args: { where: unknown; select: unknown }) => {
+          calls.push(args)
+          return []
+        },
+        findFirst: async (args: { where: unknown }) => {
+          calls.push({ where: args.where, select: null })
+          return null
+        },
+      },
+    } as never
+    await listDueStaffInvitationNotifications(db, {
+      now,
+      overdueMs: 15 * 60_000,
+    })
+    expect(calls[0]).toMatchObject({
+      where: {
+        OR: [
+          {
+            status: { in: ["PENDING", "FAILED"] },
+            nextAttemptAt: { lte: new Date(now.getTime() - 15 * 60_000) },
+            attemptCount: { lt: 3 },
+          },
+          {
+            status: { in: ["CLAIMED", "SENDING"] },
+            claimExpiresAt: { lte: now },
+          },
+        ],
+      },
+      select: { tenantId: true, id: true, attemptCount: true },
+    })
+    await findUnattemptedStaffInvitationNotification(db, {
+      tenantId: "tenant",
+      commandId: "command",
+    })
+    expect(calls[1]?.where).toEqual({
+      tenantId: "tenant",
+      commandId: "command",
+      status: "PENDING",
+      attemptCount: 0,
+    })
   })
   test("revoked creator, accepted/expired invitation and changed membership/default Store cancel before send", async () => {
     for (const change of [

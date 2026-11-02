@@ -29,6 +29,7 @@ import {
 } from "@ewatrade/db/queries"
 import type { Prisma } from "@ewatrade/db/types"
 import { TRPCError } from "@trpc/server"
+import { dispatchStaffInvitationProposalEmail } from "../staff/invitation-dispatch"
 import {
   isLinkedAssistantIdentity,
   lockLinkedAssistantIdentity,
@@ -274,9 +275,14 @@ export async function decideGeneralProposal(
     approvalToken?: string
   },
 ) {
-  return inFreshGeneralTransaction(ctx, (fresh) =>
+  const proposal = await inFreshGeneralTransaction(ctx, (fresh) =>
     decideGeneralProposalInTransaction(fresh, input),
   )
+  await dispatchStaffInvitationProposalEmail(ctx.db, {
+    tenantId: ctx.tenantContext.tenant.id,
+    proposal,
+  })
+  return proposal
 }
 
 /** Internal composition seam: the caller owns the fresh-authorized transaction. */

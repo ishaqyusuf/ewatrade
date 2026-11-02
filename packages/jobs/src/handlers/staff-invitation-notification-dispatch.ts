@@ -1,9 +1,11 @@
 import { createHash } from "node:crypto"
-import type {
-  StaffInvitationNotificationIdentifier,
-  claimStaffInvitationNotification,
-  finishStaffInvitationNotification,
-  startStaffInvitationNotification,
+import {
+  STAFF_INVITATION_NOTIFICATION_MAX_ATTEMPTS,
+  type StaffInvitationNotificationIdentifier,
+  type claimStaffInvitationNotification,
+  type finishStaffInvitationNotification,
+  staffInvitationNotificationRetryAt,
+  type startStaffInvitationNotification,
 } from "@ewatrade/db/queries"
 import { openStaffInvitationPayload } from "@ewatrade/db/staff-invitation-custody"
 import {
@@ -30,8 +32,18 @@ export type StaffInvitationDispatchDependencies = {
   send(
     message: EmailMessage,
   ): Promise<{ providerKey: string; providerMessageId: string }>
+  /** One delayed, idempotent dispatch run for the next attempt. */
+  scheduleRetry(
+    input: StaffInvitationNotificationIdentifier & {
+      attempt: number
+      runAt: Date
+    },
+  ): Promise<unknown>
   config: NodeJS.ProcessEnv
 }
+
+// Keeps the delayed run after the stored nextAttemptAt despite worker clock skew.
+const RETRY_CLOCK_MARGIN_MS = 5_000
 
 /** Only an adapter with a definitive non-acceptance receipt may throw this. */
 export class StaffInvitationProviderRejected extends Error {
@@ -40,7 +52,12 @@ export class StaffInvitationProviderRejected extends Error {
   }
 }
 
-/** ID-only dispatch seam. No scheduler or live provider is registered by this source. */
+type RetryableFailure =
+  | "PROVIDER_REJECTED"
+  | "PROVIDER_UNAVAILABLE"
+  | "CUSTODY_UNAVAILABLE"
+
+/** ID-only dispatch seam. A retryable failure schedules its own next attempt. */
 export async function runStaffInvitationNotificationDispatch(
   input: StaffInvitationNotificationIdentifier,
   dependencies: StaffInvitationDispatchDependencies,
@@ -51,6 +68,34 @@ export async function runStaffInvitationNotificationDispatch(
     ...input,
     claimId: claim.claimId,
     payloadHash: claim.payloadHash,
+  }
+  const failed = async (failureCode: RetryableFailure) => {
+    if (
+      !(await dependencies.finish({
+        ...completion,
+        outcome: "FAILED",
+        failureCode,
+      }))
+    )
+      return null
+    if (claim.attemptNumber >= STAFF_INVITATION_NOTIFICATION_MAX_ATTEMPTS)
+      return { status: "failed" as const, attempt: claim.attemptNumber }
+    const attempt = claim.attemptNumber + 1
+    const runAt = new Date(
+      staffInvitationNotificationRetryAt(claim.attemptNumber).getTime() +
+        RETRY_CLOCK_MARGIN_MS,
+    )
+    try {
+      await dependencies.scheduleRetry({ ...input, attempt, runAt })
+      return {
+        status: "retry_scheduled" as const,
+        attempt,
+        runAt: runAt.toISOString(),
+      }
+    } catch {
+      // The outbox row stays PENDING; the safety-net sweeper recovers it.
+      return { status: "retry_deferred" as const, attempt }
+    }
   }
   let payload: ReturnType<typeof openStaffInvitationPayload>
   try {
@@ -72,12 +117,7 @@ export async function runStaffInvitationNotificationDispatch(
       dependencies.config,
     )
   } catch {
-    await dependencies.finish({
-      ...completion,
-      outcome: "FAILED",
-      failureCode: "CUSTODY_UNAVAILABLE",
-    })
-    return null
+    return failed("CUSTODY_UNAVAILABLE")
   }
   const token = new URL(payload.inviteUrl).searchParams.get("inviteToken")
   if (
@@ -114,12 +154,7 @@ export async function runStaffInvitationNotificationDispatch(
       recipient: payload.inviteeEmail,
     })
   } catch {
-    await dependencies.finish({
-      ...completion,
-      outcome: "FAILED",
-      failureCode: "PROVIDER_UNAVAILABLE",
-    })
-    return null
+    return failed("PROVIDER_UNAVAILABLE")
   }
   if (
     !(await dependencies.start({
@@ -140,15 +175,14 @@ export async function runStaffInvitationNotificationDispatch(
     )
       throw Error("Provider acceptance receipt is unavailable.")
   } catch (error) {
-    await dependencies.finish(
-      error instanceof StaffInvitationProviderRejected
-        ? { ...completion, outcome: "FAILED", failureCode: "PROVIDER_REJECTED" }
-        : {
-            ...completion,
-            outcome: "OUTCOME_UNKNOWN",
-            failureCode: "PROVIDER_OUTCOME_UNKNOWN",
-          },
-    )
+    if (error instanceof StaffInvitationProviderRejected)
+      return failed("PROVIDER_REJECTED")
+    // Unknown provider outcome is never retried: a retry could send twice.
+    await dependencies.finish({
+      ...completion,
+      outcome: "OUTCOME_UNKNOWN",
+      failureCode: "PROVIDER_OUTCOME_UNKNOWN",
+    })
     return null
   }
   // A persistence error here must propagate; never relabel known acceptance as rejection.

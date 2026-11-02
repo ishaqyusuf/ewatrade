@@ -9,10 +9,18 @@ const trigger = mock(
 mock.module("./handlers/notification-dispatch", () => ({
   notificationDispatchHandler: handler,
 }))
-mock.module("./trigger", () => ({ triggerJob: trigger }))
-const { enqueueRetailOpsStaffInviteNotification } = await import(
-  "@ewatrade/jobs/staff-invitations"
+const triggerOnce = mock(
+  async (_id: string, _payload: unknown, _options: unknown) => true,
 )
+mock.module("./trigger", () => ({
+  triggerJob: trigger,
+  triggerTaskOnce: triggerOnce,
+}))
+const {
+  enqueueRetailOpsStaffInviteNotification,
+  enqueueStaffInvitationNotificationDispatch,
+  staffInvitationDispatchKey,
+} = await import("@ewatrade/jobs/staff-invitations")
 const input: RetailOpsStaffInvitedPayload = {
   appUrl: "https://example.invalid",
   businessName: "Inert business",
@@ -23,7 +31,55 @@ const input: RetailOpsStaffInvitedPayload = {
   membershipId: "membership",
   role: "CASHIER",
 }
-beforeEach(() => trigger.mockClear())
+beforeEach(() => {
+  trigger.mockClear()
+  triggerOnce.mockClear()
+})
+
+test("a saved invitation starts one ID-only dispatch run keyed per notification attempt", async () => {
+  expect(
+    await enqueueStaffInvitationNotificationDispatch({
+      tenantId: "tenant",
+      notificationId: "notification",
+    }),
+  ).toBe(true)
+  expect(triggerOnce.mock.calls).toEqual([
+    [
+      "staff.invitation.notification-dispatch",
+      { tenantId: "tenant", notificationId: "notification" },
+      {
+        delay: undefined,
+        idempotencyKey: "staff-invitation:notification:attempt:1",
+        idempotencyKeyTTL: "10m",
+      },
+    ],
+  ])
+  const runAt = new Date("2026-11-02T10:01:05Z")
+  await enqueueStaffInvitationNotificationDispatch({
+    tenantId: "tenant",
+    notificationId: "notification",
+    attempt: 2,
+    runAt,
+  })
+  expect(triggerOnce.mock.calls[1]?.[2]).toEqual({
+    delay: runAt,
+    idempotencyKey: "staff-invitation:notification:attempt:2",
+    idempotencyKeyTTL: "10m",
+  })
+  expect(
+    staffInvitationDispatchKey({ notificationId: "n", attempt: 3 }),
+  ).not.toBe(staffInvitationDispatchKey({ notificationId: "n", attempt: 2 }))
+})
+
+test("without Trigger the dispatch reports not queued and the outbox stays pending", async () => {
+  triggerOnce.mockImplementationOnce(async () => false)
+  expect(
+    await enqueueStaffInvitationNotificationDispatch({
+      tenantId: "tenant",
+      notificationId: "notification",
+    }),
+  ).toBe(false)
+})
 
 test("public invitation producer preserves the canonical job, handler and unchanged payload", async () => {
   await enqueueRetailOpsStaffInviteNotification(input)

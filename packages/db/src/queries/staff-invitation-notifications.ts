@@ -11,8 +11,17 @@ export type StaffInvitationNotificationIdentifier = {
   tenantId: string
   notificationId: string
 }
-const MAX_ATTEMPTS = 3
+export const STAFF_INVITATION_NOTIFICATION_MAX_ATTEMPTS = 3
+const MAX_ATTEMPTS = STAFF_INVITATION_NOTIFICATION_MAX_ATTEMPTS
 const LEASE_MS = 5 * 60_000
+
+/** Retry backoff after a failed attempt: 1 min, then 2 min. Bounded by MAX_ATTEMPTS. */
+export function staffInvitationNotificationRetryAt(
+  failedAttempt: number,
+  now = new Date(),
+) {
+  return new Date(now.getTime() + 60_000 * 2 ** Math.max(failedAttempt - 1, 0))
+}
 
 async function authorized(tx: Tx, row: Row, now: Date) {
   const [actor] = await tx.$queryRaw<
@@ -35,6 +44,27 @@ async function authorized(tx: Tx, row: Row, now: Date) {
           a.storeId === row.membership.retailOpsStaffProfile?.defaultStoreId,
       ),
   )
+}
+/** Terminal visible failure: no further attempt and custody erased. */
+async function exhaust(tx: Tx, row: Row, now: Date, failureCode: string) {
+  await tx.staffInvitationNotification.update({
+    where: { id: row.id },
+    data: {
+      status: "FAILED",
+      failureCode,
+      payloadCiphertext: null,
+      claimId: null,
+      claimExpiresAt: null,
+    },
+  })
+  await tx.staffInvitationNotificationAttempt.updateMany({
+    where: {
+      notificationId: row.id,
+      tenantId: row.tenantId,
+      status: "CLAIMED",
+    },
+    data: { status: "FAILED", failureCode, completedAt: now },
+  })
 }
 async function cancel(tx: Tx, row: Row, now: Date, failureCode: string) {
   await tx.staffInvitationNotification.update({
@@ -92,19 +122,25 @@ export async function cancelStaffInvitationNotificationsInTransaction(
   })
 }
 
-/** Internal worker discovery only. SENDING/unknown delivery is never requeued. */
+/**
+ * Internal safety-net discovery only. SENDING/unknown delivery is never
+ * requeued. `overdueMs` skips work an event dispatch or self-scheduled retry
+ * should already be running, so the sweeper only finds lost dispatches.
+ */
 export async function listDueStaffInvitationNotifications(
   db: PrismaClient,
-  input: { limit?: number; now?: Date } = {},
+  input: { limit?: number; now?: Date; overdueMs?: number } = {},
 ) {
   const now = input.now ?? new Date()
+  const due = new Date(now.getTime() - Math.max(input.overdueMs ?? 0, 0))
   const limit = Math.min(Math.max(input.limit ?? 50, 1), 100)
   return db.staffInvitationNotification.findMany({
     where: {
       OR: [
         {
+          // FAILED with attempts left is only a legacy (pre-retry) state.
           status: { in: ["PENDING", "FAILED"] },
-          nextAttemptAt: { lte: now },
+          nextAttemptAt: { lte: due },
           attemptCount: { lt: MAX_ATTEMPTS },
         },
         {
@@ -113,7 +149,7 @@ export async function listDueStaffInvitationNotifications(
         },
       ],
     },
-    select: { tenantId: true, id: true },
+    select: { tenantId: true, id: true, attemptCount: true },
     orderBy: [{ nextAttemptAt: "asc" }, { id: "asc" }],
     take: limit,
   })
@@ -153,7 +189,7 @@ export async function claimStaffInvitationNotificationInTransaction(
   const reclaim =
     row.status === "CLAIMED" && row.claimExpiresAt && row.claimExpiresAt <= now
   if (reclaim && row.attemptCount >= MAX_ATTEMPTS) {
-    await cancel(tx, row, now, "CLAIM_ATTEMPTS_EXHAUSTED")
+    await exhaust(tx, row, now, "CLAIM_ATTEMPTS_EXHAUSTED")
     return null
   }
   if (
@@ -214,7 +250,23 @@ export async function claimStaffInvitationNotificationInTransaction(
     currentEmail: row.invitation.email,
     tokenHash: row.invitation.tokenHash,
     providerIdempotencyKey: `staff-invitation:${row.id}`,
+    attemptNumber: number,
   }
+}
+/** Post-commit event dispatch lookup: only a never-attempted command email is dispatched. */
+export async function findUnattemptedStaffInvitationNotification(
+  db: Pick<PrismaClient, "staffInvitationNotification">,
+  input: { tenantId: string; commandId: string },
+) {
+  return db.staffInvitationNotification.findFirst({
+    where: {
+      tenantId: input.tenantId,
+      commandId: input.commandId,
+      status: "PENDING",
+      attemptCount: 0,
+    },
+    select: { tenantId: true, id: true },
+  })
 }
 export async function claimStaffInvitationNotification(
   db: PrismaClient,
@@ -354,8 +406,14 @@ export async function finishStaffInvitationNotificationInTransaction(
     input.outcome === "FAILED" &&
     input.failureCode === "PAYLOAD_CHANGED"
   const state = terminalPreSendFailure ? ("CANCELLED" as const) : input.outcome
+  // A retryable failure waits as PENDING for the self-scheduled next attempt;
+  // only the last attempt leaves the visible terminal FAILED state.
+  const retry =
+    input.outcome === "FAILED" &&
+    !terminalPreSendFailure &&
+    row.attemptCount < MAX_ATTEMPTS
   const data = {
-    status: state,
+    status: retry ? ("PENDING" as const) : state,
     failureCode,
     ...(input.outcome === "SENT"
       ? {
@@ -373,8 +431,9 @@ export async function finishStaffInvitationNotificationInTransaction(
           ...(row.attemptCount >= MAX_ATTEMPTS
             ? { payloadCiphertext: null }
             : {}),
-          nextAttemptAt: new Date(
-            now.getTime() + 60_000 * 2 ** Math.max(row.attemptCount - 1, 0),
+          nextAttemptAt: staffInvitationNotificationRetryAt(
+            row.attemptCount,
+            now,
           ),
         }
       : {}),
