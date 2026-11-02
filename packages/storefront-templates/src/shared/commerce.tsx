@@ -44,10 +44,14 @@ import {
 import type { PublicCatalogItem } from "../../../storefront-contracts/src/resources"
 import { CatalogListingControls } from "./catalog-controls"
 import {
+  type CatalogListingScope,
   LISTING_NO_RESULTS,
+  catalogCategoryNavVisible,
   catalogListingFiltered,
   catalogListingHref,
   catalogListingQuery,
+  catalogRootCurrent,
+  catalogSubcategoryLinks,
 } from "./catalog-listing"
 import { type DetailHistory, useDetailHistory } from "./detail-history"
 
@@ -385,8 +389,9 @@ export function CommerceCollection({
   })
   const query = catalogListingQuery(catalog.query)
   const filtered = catalogListingFiltered(query)
-  const listing = (category?: string | null, cursor?: string | null) =>
-    catalogListingHref(category, cursor, query)
+  const listing = (scope?: CatalogListingScope, cursor?: string | null) =>
+    catalogListingHref(scope, cursor, query)
+  const subcategories = showCategories ? catalogSubcategoryLinks(catalog) : []
   return (
     <section
       className={`tf-collection tf-${kind}`}
@@ -395,7 +400,7 @@ export function CommerceCollection({
     >
       <div className="tf-section-head">
         <h2>{headingContent ?? heading}</h2>
-        {showCategories && catalog.categories.length > 1 ? (
+        {showCategories && catalogCategoryNavVisible(catalog.categories) ? (
           <nav aria-label="Categories">
             <Link
               prefetch={false}
@@ -409,9 +414,7 @@ export function CommerceCollection({
                 prefetch={false}
                 key={category.id}
                 href={listing(category.id)}
-                aria-current={
-                  catalog.category === category.id ? "page" : undefined
-                }
+                aria-current={catalogRootCurrent(catalog, category.id)}
               >
                 {category.name}
               </Link>
@@ -419,9 +422,24 @@ export function CommerceCollection({
           </nav>
         ) : null}
       </div>
+      {subcategories.length ? (
+        <nav className="tf-subnav" aria-label="Subcategories">
+          {subcategories.map((link) => (
+            <Link
+              prefetch={false}
+              key={link.id}
+              href={listing(link.scope)}
+              aria-current={link.current ? "page" : undefined}
+            >
+              {link.label}
+            </Link>
+          ))}
+        </nav>
+      ) : null}
       {items.length || filtered || query.sort || after ? (
         <CatalogListingControls
           category={catalog.category}
+          subcategory={catalog.subcategory}
           query={query}
           label={kind === "services" ? "Search services" : "Search items"}
         />
@@ -500,7 +518,7 @@ export function CommerceCollection({
             <Link
               prefetch={false}
               scroll={false}
-              href={catalogListingHref(catalog.category)}
+              href={catalogListingHref(catalog)}
             >
               {LISTING_NO_RESULTS.reset}
             </Link>
@@ -569,15 +587,12 @@ export function CommerceCollection({
       {catalog.nextCursor || after ? (
         <nav className="tf-pagination" aria-label="More items">
           {catalog.nextCursor ? (
-            <Link
-              prefetch={false}
-              href={listing(catalog.category, catalog.nextCursor)}
-            >
+            <Link prefetch={false} href={listing(catalog, catalog.nextCursor)}>
               Show more
             </Link>
           ) : null}
           {after ? (
-            <Link prefetch={false} href={listing(catalog.category)}>
+            <Link prefetch={false} href={listing(catalog)}>
               Back to start
             </Link>
           ) : null}

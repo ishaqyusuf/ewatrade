@@ -1,5 +1,8 @@
 import { storefrontListingHref } from "@ewatrade/storefront-runtime/links"
-import type { CatalogQuery } from "../../../storefront-contracts/src/resources"
+import type {
+  CatalogQuery,
+  StorefrontCategory,
+} from "../../../storefront-contracts/src/resources"
 
 /** Customer listing state the server applies to the whole catalog; templates never sort a loaded page. */
 export type CatalogListingQuery = Pick<
@@ -32,7 +35,7 @@ export function catalogListingPriceSorted(query?: CatalogListingQuery | null) {
   return sort === "price_asc" || sort === "price_desc"
 }
 
-/** Shared no-results copy; its reset is catalogListingHref(category): same category, no search, filter, sort, cursor or item. */
+/** Shared no-results copy; its reset is catalogListingHref(scope): same category scope, no search, filter, sort, cursor or item. */
 export const LISTING_NO_RESULTS = {
   title: "No matching items",
   description: "Try a different search or availability, or clear them.",
@@ -67,19 +70,85 @@ export function catalogListingCustomized(query?: CatalogListingQuery | null) {
 }
 
 /**
+ * A root category id, or the loaded catalog's `{ category, subcategory }` pair.
+ * A subcategory never survives without its root category.
+ */
+export type CatalogListingScope =
+  | string
+  | { category?: string | null; subcategory?: string | null }
+  | null
+  | undefined
+
+export function catalogListingScope(scope: CatalogListingScope) {
+  const category = typeof scope === "string" ? scope : scope?.category
+  const subcategory = typeof scope === "string" ? null : scope?.subcategory
+  return {
+    ...(category ? { category } : {}),
+    ...(category && subcategory ? { subcategory } : {}),
+  }
+}
+
+/**
  * Same-page listing link. Category and cursor stay server-loaded so no item is dropped;
  * callers pass `after` only for pagination, so a category or control change starts at page one.
  */
 export function catalogListingHref(
-  category?: string | null,
+  scope?: CatalogListingScope,
   after?: string | null,
   query?: CatalogListingQuery | null,
 ) {
   return storefrontListingHref({
-    ...(category ? { category } : {}),
+    ...catalogListingScope(scope),
     ...catalogListingQuery(query),
     ...(after ? { after } : {}),
   })
+}
+
+type CatalogCategoryState = {
+  categories: readonly StorefrontCategory[]
+  category: string | null
+  subcategory?: string | null
+}
+
+/** Root navigation is useful with several roots, or one root that has subcategories. */
+export function catalogCategoryNavVisible(
+  categories: readonly StorefrontCategory[],
+) {
+  return (
+    categories.length > 1 ||
+    categories.some((category) => category.subcategories?.length)
+  )
+}
+
+/** A root link is the page itself, or the parent of the current subcategory page. */
+export function catalogRootCurrent(catalog: CatalogCategoryState, id: string) {
+  if (catalog.category !== id) return undefined
+  return catalog.subcategory ? ("true" as const) : ("page" as const)
+}
+
+/**
+ * Workshop category-navigation 01: under an active root with subcategories, a
+ * subordinate row of "All <root>" plus each subcategory. Empty for any other state.
+ */
+export function catalogSubcategoryLinks(catalog: CatalogCategoryState) {
+  const root = catalog.categories.find(
+    (category) => category.id === catalog.category,
+  )
+  if (!root?.subcategories?.length) return []
+  return [
+    {
+      id: root.id,
+      label: `All ${root.name}`,
+      scope: { category: root.id },
+      current: !catalog.subcategory,
+    },
+    ...root.subcategories.map((subcategory) => ({
+      id: subcategory.id,
+      label: subcategory.name,
+      scope: { category: root.id, subcategory: subcategory.id },
+      current: catalog.subcategory === subcategory.id,
+    })),
+  ]
 }
 
 /**
@@ -88,11 +157,11 @@ export function catalogListingHref(
  */
 export function catalogListingPathHref(
   path: string,
-  category?: string | null,
+  scope?: CatalogListingScope,
   after?: string | null,
   query?: CatalogListingQuery | null,
 ) {
-  const href = catalogListingHref(category, after, query)
+  const href = catalogListingHref(scope, after, query)
   if (path === "/") return href
   return href === "/" ? path : `${path}${href.slice(1)}`
 }
@@ -110,9 +179,19 @@ export function pruneListingFormData(formData: FormData) {
     sort: String(formData.get("sort") ?? "") as CatalogListingQuery["sort"],
   })
   const category = String(formData.get("category") ?? "")
-  for (const key of ["category", "q", "availability", "sort", "after", "item"])
+  const subcategory = String(formData.get("subcategory") ?? "")
+  for (const key of [
+    "category",
+    "subcategory",
+    "q",
+    "availability",
+    "sort",
+    "after",
+    "item",
+  ])
     formData.delete(key)
   if (category) formData.set("category", category)
+  if (category && subcategory) formData.set("subcategory", subcategory)
   if (query.q) formData.set("q", query.q)
   if (query.availability) formData.set("availability", query.availability)
   if (query.sort) formData.set("sort", query.sort)

@@ -290,6 +290,46 @@ test("mixed catalog renders the floor, every board item, the services counter an
   expect(embedded).not.toContain('href="?item=')
 })
 
+test("an active root with subcategories adds a subordinate deep-linked Subcategories row", () => {
+  const categories = [
+    {
+      id: "cat-a",
+      name: "Clothing",
+      subcategories: [
+        { id: "sub-1", name: "Shirts" },
+        { id: "sub-2", name: "Trousers" },
+      ],
+    },
+    { id: "cat-b", name: "Shoes", subcategories: [] },
+  ]
+  const html = render(
+    snapshot({
+      items: [item("p1", "PRODUCT", { name: "Linen shirt" })],
+      categories,
+      category: "cat-a",
+      subcategory: "sub-1",
+      query: { sort: "name_asc" },
+    }),
+  )
+  // Roots stay one tablist; subcategories are plain links keeping listing state.
+  expect(html).toContain('role="tablist"')
+  expect(html).toContain('aria-label="Subcategories"')
+  expect(html).toContain(
+    'href="/?category=cat-a&amp;sort=name_asc">All Clothing',
+  )
+  expect(html).toContain(
+    'aria-current="page" href="/?category=cat-a&amp;subcategory=sub-1&amp;sort=name_asc">Shirts',
+  )
+  expect(html).not.toMatch(/aria-current="page">All Clothing/)
+  // Searching keeps the chosen subcategory.
+  expect(html).toContain('name="subcategory" value="sub-1"')
+  // A root without subcategories, or no active root, shows no second row.
+  for (const category of ["cat-b", null])
+    expect(
+      render(snapshot({ categories, category, subcategory: null })),
+    ).not.toContain('aria-label="Subcategories"')
+})
+
 test("service-only catalog features services on the floor and omits the empty live counter", () => {
   const html = render(
     snapshot({ items: [item("s1", "SERVICE", { name: "Bespoke kaftan" })] }),

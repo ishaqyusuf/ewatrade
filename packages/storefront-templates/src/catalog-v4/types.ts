@@ -1,6 +1,7 @@
 import type {
   CatalogQuery,
   PublicCatalogItem,
+  StorefrontCategory,
 } from "../../../storefront-contracts/src/resources"
 
 /** Public snapshot the Catalog v4 renderer reads. Host projections satisfy it structurally; no DB types here. */
@@ -9,8 +10,9 @@ export type CatalogV4Store = {
   name: string
   slug: string
   description: string | null
-  categories: readonly { id: string; name: string }[]
+  categories: readonly StorefrontCategory[]
   category: string | null
+  subcategory?: string | null
   items: CatalogV4Item[]
   highlightedItem: CatalogV4Item | null
   nextCursor: string | null

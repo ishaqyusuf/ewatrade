@@ -457,3 +457,81 @@ button.mh-detail-link {
 .mh-detail-cue:hover {
   text-decoration-color: currentColor;
 }
+
+/* Category navigation 01: the active root's subcategories after the root tabs. */
+.cv-site .mh-subtabs {
+  display: flex;
+  gap: 2px;
+  margin-top: -6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.cv-site .mh-subtabs::-webkit-scrollbar {
+  display: none;
+}
+.cv-site .mh-subtabs a {
+  position: relative;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 12px;
+  white-space: nowrap;
+  font-size: 14px;
+  font-weight: 500;
+  color: color-mix(in oklab, var(--foreground) 60%, transparent);
+  text-decoration: none;
+}
+.cv-site .mh-subtabs a:focus-visible {
+  outline-offset: -2px;
+}
+.cv-site .mh-subtabs a:hover,
+.cv-site .mh-subtabs a[aria-current="page"] {
+  color: var(--foreground);
+}
+.cv-site .mh-subtabs a[aria-current="page"]::after {
+  content: "";
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 6px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--foreground);
+}
+.cv-site .mh-subtree {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin: 2px 0 6px 20px;
+  padding-left: 2px;
+  border-left: 1px solid color-mix(in oklab, var(--foreground) 14%, transparent);
+}
+.cv-site .mh-subtree a {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-height: 32px;
+  padding: 4px 12px;
+  border-radius: 10px;
+  font-size: 13.5px;
+  color: color-mix(in oklab, var(--foreground) 60%, transparent);
+  text-decoration: none;
+}
+.cv-site .mh-subtree a:hover {
+  color: var(--foreground);
+}
+.cv-site .mh-subtree a[aria-current="page"] {
+  color: var(--foreground);
+  font-weight: 500;
+}
+.cv-site .mh-subtree a[aria-current="page"]::before {
+  content: "";
+  position: absolute;
+  left: -3px;
+  top: 6px;
+  bottom: 6px;
+  width: 2px;
+  border-radius: 2px;
+  background: var(--foreground);
+}

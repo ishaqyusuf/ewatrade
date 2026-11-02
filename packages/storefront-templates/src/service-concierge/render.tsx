@@ -243,7 +243,7 @@ export function ServiceConciergeCollection({
   const query = catalogListingQuery(catalog.query)
   const filtered = catalogListingFiltered(query)
   const listing = (cursor?: string | null) =>
-    catalogListingHref(catalog.category, cursor, query)
+    catalogListingHref(catalog, cursor, query)
   const detailIds = detail?.kind === "SERVICE" ? selectedFor(detail) : []
   const detailRequest =
     detail?.kind === "SERVICE" && requestable(detail)
@@ -258,6 +258,7 @@ export function ServiceConciergeCollection({
           {catalog.items.length || filtered || query.sort || after ? (
             <CatalogListingControls
               category={catalog.category}
+              subcategory={catalog.subcategory}
               query={query}
               label="Search services"
             />
@@ -301,7 +302,7 @@ export function ServiceConciergeCollection({
               <Link
                 prefetch={false}
                 scroll={false}
-                href={catalogListingHref(catalog.category)}
+                href={catalogListingHref(catalog)}
               >
                 {LISTING_NO_RESULTS.reset}
               </Link>

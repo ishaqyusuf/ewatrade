@@ -227,6 +227,31 @@ test("one category hides category controls; several show them; history never dec
   expect(many).toContain("Linen")
 })
 
+test("Shop shows the active root's subcategories as a subordinate row on /shop", () => {
+  const html = render(
+    snapshot({
+      items: [item("a", "PRODUCT")],
+      categories: [
+        {
+          id: "cat-a",
+          name: "Clothing",
+          subcategories: [{ id: "sub-1", name: "Shirts" }],
+        },
+      ],
+      category: "cat-a",
+      subcategory: null,
+      offeringCounts: { products: 1, services: 0 },
+    }),
+    "shop",
+  )
+  // One root with subcategories still earns category navigation.
+  expect(html).toContain('aria-label="Categories"')
+  expect(html).toMatch(/class="cs-chip"[^>]*aria-current="page"[^>]*>Clothing/)
+  expect(html).toContain('class="cs-subnav"')
+  expect(html).toMatch(/aria-current="page"[^>]*>All Clothing/)
+  expect(html).toContain('href="/shop?category=cat-a&amp;subcategory=sub-1"')
+})
+
 test("stock wording never presents unknown stock as available", () => {
   expect(stockWording("unknown").label).toBe("Shop confirms stock")
   expect(stockWording(undefined).tone).toBe("unknown")

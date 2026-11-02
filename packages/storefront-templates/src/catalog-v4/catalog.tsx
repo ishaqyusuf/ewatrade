@@ -36,10 +36,14 @@ import Link from "next/link"
 import { Fragment, type ReactNode, useEffect, useState } from "react"
 import { CatalogListingControls } from "../shared/catalog-controls"
 import {
+  type CatalogListingScope,
   LISTING_NO_RESULTS,
+  catalogCategoryNavVisible,
   catalogListingFiltered,
   catalogListingHref,
   catalogListingQuery,
+  catalogRootCurrent,
+  catalogSubcategoryLinks,
 } from "../shared/catalog-listing"
 import { useDetailHistory } from "../shared/detail-history"
 import type { CatalogV4Layout } from "./layout"
@@ -85,8 +89,9 @@ export function StorefrontCatalog({
   )
   const query = catalogListingQuery(store.query)
   const filtered = catalogListingFiltered(query)
-  const listingUrl = (category?: string | null, cursor?: string | null) =>
-    catalogListingHref(category, cursor, query)
+  const listingUrl = (scope?: CatalogListingScope, cursor?: string | null) =>
+    catalogListingHref(scope, cursor, query)
+  const subcategories = catalogSubcategoryLinks(store)
   const itemUrl = (item: CatalogV4Item) =>
     `${shopUrl}?item=${encodeURIComponent(item.id)}`
   function openItem(item: CatalogV4Item, trigger: HTMLElement) {
@@ -227,7 +232,7 @@ export function StorefrontCatalog({
       <h2 id="storefront-catalog-heading" className="sf-section-heading">
         Products &amp; services
       </h2>
-      {layout.showCategories && store.categories.length > 1 ? (
+      {layout.showCategories && catalogCategoryNavVisible(store.categories) ? (
         <nav aria-label="Categories" className="sf-chips">
           <Link
             prefetch={false}
@@ -241,15 +246,33 @@ export function StorefrontCatalog({
               prefetch={false}
               key={category.id}
               href={listingUrl(category.id)}
-              aria-current={store.category === category.id ? "page" : undefined}
+              aria-current={catalogRootCurrent(store, category.id)}
             >
               {category.name}
             </Link>
           ))}
         </nav>
       ) : null}
+      {layout.showCategories && subcategories.length ? (
+        <nav aria-label="Subcategories" className="sf-subnav">
+          {subcategories.map((link) => (
+            <Link
+              prefetch={false}
+              key={link.id}
+              href={listingUrl(link.scope)}
+              aria-current={link.current ? "page" : undefined}
+            >
+              {link.label}
+            </Link>
+          ))}
+        </nav>
+      ) : null}
       {store.items.length || filtered || query.sort || after ? (
-        <CatalogListingControls category={store.category} query={query} />
+        <CatalogListingControls
+          category={store.category}
+          subcategory={store.subcategory}
+          query={query}
+        />
       ) : null}
       {store.items.length ? (
         <div
@@ -303,7 +326,7 @@ export function StorefrontCatalog({
                   <Link
                     prefetch={false}
                     scroll={false}
-                    href={catalogListingHref(store.category)}
+                    href={catalogListingHref(store)}
                   />
                 }
               >
@@ -382,7 +405,7 @@ export function StorefrontCatalog({
               render={
                 <Link
                   prefetch={false}
-                  href={listingUrl(store.category, store.nextCursor)}
+                  href={listingUrl(store, store.nextCursor)}
                 />
               }
             >
@@ -390,7 +413,7 @@ export function StorefrontCatalog({
             </Button>
           ) : null}
           {after ? (
-            <Link prefetch={false} href={listingUrl(store.category)}>
+            <Link prefetch={false} href={listingUrl(store)}>
               Back to start
             </Link>
           ) : null}

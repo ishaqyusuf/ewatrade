@@ -29,6 +29,7 @@ import {
  */
 export function CatalogListingControls({
   category,
+  subcategory,
   query,
   label = "Search items",
   stacked = false,
@@ -36,6 +37,8 @@ export function CatalogListingControls({
   action = "/",
 }: {
   category?: string | null
+  /** Kept with its root category, so a search stays inside the chosen subcategory. */
+  subcategory?: string | null
   query?: CatalogListingQuery | null
   label?: string
   stacked?: boolean
@@ -46,8 +49,9 @@ export function CatalogListingControls({
   // Remount on every server state so uncontrolled fields show the loaded query after Back or Clear.
   return (
     <ListingForm
-      key={`${category ?? ""}|${current.q ?? ""}|${current.availability ?? ""}|${current.sort ?? ""}`}
+      key={`${category ?? ""}|${subcategory ?? ""}|${current.q ?? ""}|${current.availability ?? ""}|${current.sort ?? ""}`}
       category={category ?? null}
+      subcategory={category ? (subcategory ?? null) : null}
       query={current}
       label={label}
       stacked={stacked}
@@ -59,6 +63,7 @@ export function CatalogListingControls({
 
 function ListingForm({
   category,
+  subcategory,
   query,
   label,
   stacked,
@@ -66,6 +71,7 @@ function ListingForm({
   action,
 }: {
   category: string | null
+  subcategory: string | null
   query: CatalogListingQuery
   label: string
   stacked: boolean
@@ -99,6 +105,9 @@ function ListingForm({
     >
       {category ? (
         <input type="hidden" name="category" value={category} />
+      ) : null}
+      {subcategory ? (
+        <input type="hidden" name="subcategory" value={subcategory} />
       ) : null}
       <Field className={cn("gap-1.5", stacked ? undefined : "min-w-48 flex-1")}>
         <FieldLabel htmlFor={`${id}-q`}>Search</FieldLabel>
@@ -158,7 +167,7 @@ function ListingForm({
             variant="ghost"
             nativeButton={false}
             render={
-              // Resets every listing control: category, search, availability, sort, cursor and item.
+              // Resets every listing control: category, subcategory, search, availability, sort, cursor and item.
               <Link
                 prefetch={false}
                 scroll={false}

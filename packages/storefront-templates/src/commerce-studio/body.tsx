@@ -36,8 +36,11 @@ import type { SectionInstance } from "../../../storefront-contracts/src/manifest
 import type { PublicCatalogItem } from "../../../storefront-contracts/src/resources"
 import { CatalogListingControls } from "../shared/catalog-controls"
 import {
+  catalogCategoryNavVisible,
   catalogListingFiltered,
   catalogListingPathHref,
+  catalogRootCurrent,
+  catalogSubcategoryLinks,
 } from "../shared/catalog-listing"
 import { formatMoney, itemSoldOut, stockWording } from "./commerce"
 import {
@@ -504,6 +507,7 @@ function Catalog({ section }: { section: SectionInstance }) {
     )
   const products = catalog.items.filter((item) => item.kind === "PRODUCT")
   const filtered = catalogListingFiltered(catalog.query)
+  const subcategories = catalogSubcategoryLinks(catalog)
   const showSearch =
     section.settings["show-search"] !== false && facts.products > 6
   return (
@@ -517,7 +521,7 @@ function Catalog({ section }: { section: SectionInstance }) {
             {facts.products} {facts.products === 1 ? "item" : "items"}
           </p>
         </div>
-        {catalog.categories.length > 1 ? (
+        {catalogCategoryNavVisible(catalog.categories) ? (
           <nav className="cs-chips" aria-label="Categories">
             <CommerceLink
               className="cs-chip"
@@ -538,11 +542,30 @@ function Catalog({ section }: { section: SectionInstance }) {
                     catalog.query,
                   ),
                 )}
-                aria-current={
-                  catalog.category === category.id ? "page" : undefined
-                }
+                aria-current={catalogRootCurrent(catalog, category.id)}
               >
                 {category.name}
+              </CommerceLink>
+            ))}
+          </nav>
+        ) : null}
+        {subcategories.length ? (
+          <nav className="cs-subnav" aria-label="Subcategories">
+            {subcategories.map((link) => (
+              <CommerceLink
+                key={link.id}
+                className="cs-subnav__link"
+                href={href(
+                  catalogListingPathHref(
+                    "/shop",
+                    link.scope,
+                    null,
+                    catalog.query,
+                  ),
+                )}
+                aria-current={link.current ? "page" : undefined}
+              >
+                {link.label}
               </CommerceLink>
             ))}
           </nav>
@@ -551,6 +574,7 @@ function Catalog({ section }: { section: SectionInstance }) {
           <CatalogListingControls
             className="cs-listing-controls"
             category={catalog.category}
+            subcategory={catalog.subcategory}
             query={catalog.query}
             label="Search the shop"
             action="/shop"
@@ -593,7 +617,7 @@ function Catalog({ section }: { section: SectionInstance }) {
               href={href(
                 catalogListingPathHref(
                   "/shop",
-                  catalog.category,
+                  catalog,
                   catalog.nextCursor,
                   catalog.query,
                 ),

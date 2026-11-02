@@ -5,6 +5,7 @@ import {
   catalogListingCustomized,
   catalogListingFiltered,
   catalogListingHref,
+  catalogListingPathHref,
   catalogListingQuery,
   pruneListingFormData,
 } from "./catalog-listing"
@@ -25,6 +26,32 @@ test("listing hrefs keep category and controls, add the cursor last and drop emp
     "/?category=cat-a&q=ankara+tote&availability=available&sort=price_asc&after=s%3Aabc_-1",
   )
   expect(catalogListingHref("cat-a", "", { q: "   " })).toBe("/?category=cat-a")
+})
+
+test("subcategory scope deep-links inside its root and survives paging and search", () => {
+  const catalog = { category: "clothing", subcategory: "shirts" }
+  expect(catalogListingHref(catalog, "a:item-9", { sort: "name_asc" })).toBe(
+    "/?category=clothing&subcategory=shirts&sort=name_asc&after=a%3Aitem-9",
+  )
+  expect(catalogListingPathHref("/shop", catalog)).toBe(
+    "/shop?category=clothing&subcategory=shirts",
+  )
+  // Without its root category a subcategory is dropped, never sent alone.
+  expect(catalogListingHref({ category: null, subcategory: "shirts" })).toBe(
+    "/",
+  )
+  const data = new FormData()
+  data.set("category", "clothing")
+  data.set("subcategory", "shirts")
+  data.set("q", "linen")
+  data.set("after", "a:item-9")
+  const pruned = new URLSearchParams()
+  for (const [key, value] of pruneListingFormData(data))
+    pruned.append(key, String(value))
+  expect(`/?${pruned}`).toBe(catalogListingHref(catalog, null, { q: "linen" }))
+  const orphan = new FormData()
+  orphan.set("subcategory", "shirts")
+  expect([...pruneListingFormData(orphan).keys()]).toEqual([])
 })
 
 test("listing query keeps only known values and caps search like the server", () => {

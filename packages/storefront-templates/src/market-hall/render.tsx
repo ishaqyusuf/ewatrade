@@ -61,9 +61,11 @@ import type { PublicCatalogItem } from "../../../storefront-contracts/src/resour
 import { CatalogListingControls } from "../shared/catalog-controls"
 import {
   LISTING_NO_RESULTS,
+  catalogCategoryNavVisible,
   catalogListingFiltered,
   catalogListingHref,
   catalogListingQuery,
+  catalogSubcategoryLinks,
 } from "../shared/catalog-listing"
 import { TemplateActions, useCommerceDetail } from "../shared/commerce"
 
@@ -249,7 +251,8 @@ export function MarketHallFloor({
   const active = catalog.category ?? "all"
   const showCategories =
     section.settings["show-categories"] === true &&
-    catalog.categories.length > 1
+    catalogCategoryNavVisible(catalog.categories)
+  const subcategories = showCategories ? catalogSubcategoryLinks(catalog) : []
   const tab = (value: string, label: ReactNode, href: string) => (
     <TabsTrigger
       key={value}
@@ -290,9 +293,29 @@ export function MarketHallFloor({
               )}
             </TabsList>
           ) : null}
+          {subcategories.length ? (
+            // Roots stay one tablist; the active root's subcategories follow it as links.
+            <nav
+              aria-label="Subcategories"
+              className={wide ? "mh-subtree" : "mh-subtabs"}
+            >
+              {subcategories.map((link) => (
+                <Link
+                  prefetch={false}
+                  scroll={false}
+                  key={link.id}
+                  href={catalogListingHref(link.scope, null, query)}
+                  aria-current={link.current ? "page" : undefined}
+                >
+                  {link.label}
+                </Link>
+              ))}
+            </nav>
+          ) : null}
           {catalog.items.length || filtered || query.sort || after ? (
             <CatalogListingControls
               category={catalog.category}
+              subcategory={catalog.subcategory}
               query={query}
               stacked={wide}
             />
@@ -376,7 +399,7 @@ export function MarketHallFloor({
                     <Link
                       prefetch={false}
                       scroll={false}
-                      href={catalogListingHref(catalog.category)}
+                      href={catalogListingHref(catalog)}
                     />
                   }
                 >
@@ -425,11 +448,7 @@ export function MarketHallFloor({
               render={
                 <Link
                   prefetch={false}
-                  href={catalogListingHref(
-                    catalog.category,
-                    catalog.nextCursor,
-                    query,
-                  )}
+                  href={catalogListingHref(catalog, catalog.nextCursor, query)}
                 />
               }
             >
@@ -443,7 +462,7 @@ export function MarketHallFloor({
               render={
                 <Link
                   prefetch={false}
-                  href={catalogListingHref(catalog.category, null, query)}
+                  href={catalogListingHref(catalog, null, query)}
                 />
               }
             >

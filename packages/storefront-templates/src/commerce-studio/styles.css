@@ -591,7 +591,7 @@ figure.cs-hero__media,
   display: inline-flex;
   align-items: center;
 }
-.cs-chip[aria-current="page"] {
+.cs-chip[aria-current] {
   background: var(--cs-ink);
   color: var(--cs-paper);
   border-color: var(--cs-ink);
@@ -976,3 +976,49 @@ html:has(.cs-store:not([data-preview])) {
 /* ---------- photo gallery (Product and Service detail) ---------- */
 
 /* ---------- request ahead, quick login, location ---------- */
+
+/* Category navigation 01: subordinate subcategory row, mirroring .cs-nav__link. */
+.cs-chips:has(+ .cs-subnav) {
+  margin-bottom: 2px;
+}
+.cs-subnav {
+  display: flex;
+  gap: 4px;
+  margin: 0 calc(-1 * var(--cs-pad)) 16px;
+  padding-inline: calc(var(--cs-pad) - 8px);
+  overflow-x: auto;
+  scrollbar-width: none;
+  box-shadow: inset 0 -1px 0 var(--cs-line);
+}
+.cs-subnav::-webkit-scrollbar {
+  display: none;
+}
+.cs-subnav__link {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 8px;
+  white-space: nowrap;
+  font-size: 0.9375rem;
+  color: var(--cs-ink-2);
+  text-decoration: none;
+  border-bottom: 2px solid transparent;
+}
+.cs-subnav__link:hover {
+  color: var(--cs-ink);
+}
+.cs-subnav__link:focus-visible {
+  outline-offset: -2px;
+}
+.cs-subnav__link[aria-current="page"] {
+  color: var(--cs-ink);
+  font-weight: 600;
+  border-bottom-color: var(--cs-accent-ink, var(--cs-accent));
+}
+@container storefront (min-width: 900px) {
+  .cs-subnav {
+    margin-inline: 0;
+    padding-inline: 0;
+  }
+}
