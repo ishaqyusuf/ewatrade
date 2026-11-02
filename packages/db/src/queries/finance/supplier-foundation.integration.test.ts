@@ -350,6 +350,28 @@ describeWithServiceCommerceDatabase("supplier financial foundation", () => {
       })
       expect(current.advanceMinor).toBe("2345")
       expect(current.payableMinor).toBe("10001")
+      // The newest line's running balance is the statement total, and paging
+      // one line at a time (reversal included) gives the same balances.
+      expect(current.data[0]?.payableBalanceMinor).toBe(current.payableMinor)
+      expect(current.data[0]?.advanceBalanceMinor).toBe(current.advanceMinor)
+      let pageCursor: string | undefined
+      for (const row of current.data) {
+        const single = await getFinanceSupplierStatement(db, {
+          ...base,
+          supplierId: supplier.id,
+          snapshotSequence: current.snapshotSequence,
+          cursor: pageCursor,
+          limit: 1,
+        })
+        expect(single.data[0]?.id).toBe(row.id)
+        expect(single.data[0]?.payableBalanceMinor).toBe(
+          row.payableBalanceMinor,
+        )
+        expect(single.data[0]?.advanceBalanceMinor).toBe(
+          row.advanceBalanceMinor,
+        )
+        pageCursor = single.nextCursor ?? undefined
+      }
       expect(
         current.data.find((row) => row.id === advance.id)?.reversal?.id,
       ).toBe(reversed.id)

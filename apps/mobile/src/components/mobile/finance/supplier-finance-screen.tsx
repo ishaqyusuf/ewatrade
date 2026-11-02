@@ -846,12 +846,19 @@ function SupplierStatement({
                 tint: struck ? "muted" : style.tint,
               }}
               status={
-                struck ? (
-                  <StatusPill
-                    label={item.reversal ? "Reversed" : "Reversal"}
-                    tone="muted"
-                  />
-                ) : undefined
+                <>
+                  {/* Payable after this line, from the server (advance is kept separate). */}
+                  <Text className="text-xs tabular-nums text-muted-foreground">
+                    Bal{" "}
+                    {formatFinanceMoney(item.payableBalanceMinor, currencyCode)}
+                  </Text>
+                  {struck ? (
+                    <StatusPill
+                      label={item.reversal ? "Reversed" : "Reversal"}
+                      tone="muted"
+                    />
+                  ) : null}
+                </>
               }
             />
             {canCorrect || canApply ? (

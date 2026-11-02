@@ -138,6 +138,8 @@ test("supplier statement preserves exact snapshot controls, original entry side 
     actorUserId: "actor",
     journalEntryId: "journal",
     sequence: "7",
+    payableBalanceMinor: "0",
+    advanceBalanceMinor: "0",
     moneyAccountId: "bank",
     reversalOfId: null,
     reversal: {

@@ -174,6 +174,49 @@ export async function listFinanceSupplierBalances(
   return balances
 }
 
+type SupplierBalanceMovement = {
+  /** Null for everything dated before the page's oldest line. */
+  sequence: string | null
+  payable: string
+  advance: string
+}
+
+/**
+ * Balances after each statement line, newest first. `movements` holds each
+ * line's own change to PAYABLE (credit minus debit) and SUPPLIER_ADVANCE
+ * (debit minus credit), plus one null-sequence row summing every earlier
+ * line, so a page's balances stay exact without reading earlier pages.
+ * Reversals are ordinary lines here: the reversed original and its reversal
+ * both move the balance, as they do in the journal.
+ */
+export function supplierStatementRunningBalances(
+  sequencesNewestFirst: string[],
+  movements: SupplierBalanceMovement[],
+) {
+  const bySequence = new Map(
+    movements.flatMap((row) =>
+      row.sequence === null ? [] : [[row.sequence, row]],
+    ),
+  )
+  const opening = movements.find((row) => row.sequence === null)
+  let payable = BigInt(opening?.payable ?? 0)
+  let advance = BigInt(opening?.advance ?? 0)
+  const balances = new Map<
+    string,
+    { payableBalanceMinor: string; advanceBalanceMinor: string }
+  >()
+  for (const sequence of [...sequencesNewestFirst].reverse()) {
+    const row = bySequence.get(sequence)
+    payable += BigInt(row?.payable ?? 0)
+    advance += BigInt(row?.advance ?? 0)
+    balances.set(sequence, {
+      payableBalanceMinor: payable.toString(),
+      advanceBalanceMinor: advance.toString(),
+    })
+  }
+  return balances
+}
+
 export type FinanceSupplierStatementInput = FinanceActor & {
   bookId: string
   supplierId: string
@@ -315,6 +358,30 @@ export async function getFinanceSupplierStatement(
         }),
       ])
       const page = rows.slice(0, limit)
+      const newest = page[0]?.journalEntry.sequence
+      const oldest = page.at(-1)?.journalEntry.sequence
+      const movements =
+        newest === undefined || oldest === undefined
+          ? []
+          : await tx.$queryRaw<SupplierBalanceMovement[]>(Prisma.sql`
+              SELECT
+                CASE WHEN e.sequence < ${oldest} THEN NULL ELSE e.sequence::text END AS sequence,
+                COALESCE(SUM(l."creditMinor" - l."debitMinor") FILTER (WHERE a.purpose = 'PAYABLE'), 0)::text AS payable,
+                COALESCE(SUM(l."debitMinor" - l."creditMinor") FILTER (WHERE a.purpose = 'SUPPLIER_ADVANCE'), 0)::text AS advance
+              FROM "FinanceSupplierEntry" se
+              JOIN "FinanceJournalEntry" e ON e."bookId" = se."bookId" AND e.id = se."journalEntryId"
+              JOIN "FinanceJournalLine" l ON l."bookId" = e."bookId" AND l."entryId" = e.id
+              JOIN "FinanceAccount" a ON a."bookId" = l."bookId" AND a.id = l."accountId"
+              WHERE se."bookId" = ${book.id}
+                AND se."supplierId" = ${supplier.id}
+                AND e.sequence <= ${newest}
+                AND a.purpose IN ('PAYABLE', 'SUPPLIER_ADVANCE')
+              GROUP BY 1
+            `)
+      const balances = supplierStatementRunningBalances(
+        page.map((entry) => entry.journalEntry.sequence.toString()),
+        movements,
+      )
       const payableMinor =
         (payable._sum.creditMinor ?? BigInt(0)) -
         (payable._sum.debitMinor ?? BigInt(0))
@@ -329,6 +396,7 @@ export async function getFinanceSupplierStatement(
         advanceMinor: advanceMinor.toString(),
         data: page.map((entry) => {
           const reversal = entry.reversals[0]
+          const sequence = entry.journalEntry.sequence.toString()
           return {
             id: entry.id,
             kind: entry.kind,
@@ -339,7 +407,12 @@ export async function getFinanceSupplierStatement(
             recordedAt: entry.recordedAt,
             actorUserId: entry.actorUserId,
             journalEntryId: entry.journalEntryId,
-            sequence: entry.journalEntry.sequence.toString(),
+            sequence,
+            // Payable and advance owed after this line, exact at the snapshot.
+            ...(balances.get(sequence) ?? {
+              payableBalanceMinor: "0",
+              advanceBalanceMinor: "0",
+            }),
             moneyAccountId: entry.moneyAccountId,
             reversalOfId: entry.reversalOfId,
             reversal: reversal
