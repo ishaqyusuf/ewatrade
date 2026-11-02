@@ -4,7 +4,8 @@ import { join, relative, resolve } from "node:path"
 const REPO_ROOT = resolve(new URL("../../..", import.meta.url).pathname)
 const contracts = [
   {
-    file: "apps/mobile/src/app/dashboard.tsx",
+    // Admin and sales rep Home both render this surface; dashboard.tsx only redirects.
+    file: "apps/mobile/src/components/mobile/dashboard/operations-dashboard-screen.tsx",
     markers: [
       "useOperationalModeStore",
       "useOfflineCommandStore",
@@ -22,21 +23,29 @@ const contracts = [
   {
     file: "apps/mobile/src/components/mobile/sync-status-sheet.tsx",
     markers: [
-      "pendingOfflineCommands",
       "trpc.offline.conflicts",
-      "trpc.offline.replay",
-      "trpc.offline.registerDevice",
-      "trpc.offline.review",
-      "applyReplayResults",
+      "useOfflineReplay",
+      "sync.reviewCommand",
       "Retry",
       "Discard",
       "dependentCommands",
-      "Activity",
-      "Conflict review",
+      'title="On this phone"',
+      'title="Needs review"',
       "Server data is authoritative.",
     ],
     reason:
       "sync UI must expose queue, replay, idempotent device registration, conflict dependencies, and explicit review decisions",
+  },
+  {
+    // Shared by the root reconciler and the Sync status sheet.
+    file: "apps/mobile/src/hooks/use-offline-replay.ts",
+    markers: [
+      "trpc.offline.replay",
+      "trpc.offline.registerDevice",
+      "trpc.offline.review",
+    ],
+    reason:
+      "replay, idempotent device registration and review decisions must stay on the shared replay path",
   },
   {
     file: "apps/mobile/src/store/offlineCommandStore.ts",
@@ -50,6 +59,8 @@ const contracts = [
       "persist",
       "merge",
       "incompatible schema are never read",
+      "pendingOfflineCommands",
+      "applyReplayResults",
     ],
     reason:
       "the persisted command boundary must retain dependencies, local states, and clean incompatible-state discard",

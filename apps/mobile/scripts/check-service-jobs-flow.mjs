@@ -1,8 +1,9 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
 
 const REPO_ROOT = resolve(new URL("../../..", import.meta.url).pathname);
 const MOBILE_DIR = join(REPO_ROOT, "apps/mobile");
+// A contract names one file or a feature folder (every non-test source in it).
 const contracts = [
   {
     file: "src/app/_layout.tsx",
@@ -15,18 +16,18 @@ const contracts = [
     reason: "Service Work must use the shared full-screen workflow shell",
   },
   {
-    file: "src/app/dashboard.tsx",
+    // Admin and sales rep Home both render this surface; dashboard.tsx only redirects.
+    file: "src/components/mobile/dashboard/operations-dashboard-screen.tsx",
     markers: ['router.push("/service-jobs-modal" as never)'],
-    reason: "Service Work must remain reachable from the generic dashboard",
+    reason: "Service Work must remain reachable from Home",
   },
   {
-    file: "src/components/mobile/simple-catalog-item-screen.tsx",
+    folder: "src/components/mobile/catalog-setup",
     markers: [
       'setKind("product")',
       'setKind("service")',
       "trpc.catalog.createSimpleItem",
       "trpc.catalog.createItem",
-      "Products can track stock. Services do not affect inventory.",
       "Track work after order",
       "authorizationPolicy",
       "workPolicy",
@@ -36,11 +37,11 @@ const contracts = [
       "Catalog setup must classify each item and configure charge-only/tracked Service policies without inventory coupling",
   },
   {
-    file: "src/components/mobile/service-jobs-sheet.tsx",
+    folder: "src/components/mobile/service-jobs",
     markers: [
-      'trpc.catalog.listItems.queryOptions({ kind: "service" }',
+      "trpc.catalog.listItems.queryOptions(\n      { kind: \"service\" }",
       "trpc.services.createAndConfirmIntake",
-      "trpc.services.queue",
+      "trpc.services.queuePage",
       "trpc.services.transitionLine",
       "trpc.services.getSettings",
       "trpc.services.handoff",
@@ -51,8 +52,8 @@ const contracts = [
       "trpc.services.captureEvidence",
       "Customer and delivery details are optional.",
       "Add date, instructions, photo or video",
-      "Private evidence requires at least one tracked Service item.",
-      "Service order created.",
+      "Private evidence requires tracked Service work.",
+      "Create service order",
       "offeringDisplayName",
       "normalizedVariantName.startsWith(`${normalizedItemName} ·`)",
       "Start work",
@@ -62,34 +63,38 @@ const contracts = [
       "Record payment",
       "Collect balance and hand over",
       "Mark collected",
-      "Send customer update",
+      "Review customer update",
       "Update status",
-      "bottomOffset={120}",
     ],
     reason:
       "the simple Service flow must support optional details/evidence and tracked or charge-only outcomes",
   },
   {
-    file: "src/components/mobile/service-jobs-sheet.tsx",
+    // Service commands no longer queue offline (removed July 2026); intake waits for a connection.
+    folder: "src/components/mobile/service-jobs",
     markers: [
-      'kind: "service_intake"',
-      'kind: "service_evidence_capture"',
-      'kind: "service_transition"',
-      'kind: "service_note"',
-      'kind: "service_self_assignment"',
-      "dependencyClientIds: [clientIntakeId]",
-      "provisional until replay",
+      "disabled={isOfflineMode || !model.intakeProjection.value}",
+      "Reconnect to create Service work",
       "expectedRevision",
     ],
     reason:
-      "offline Service commands must preserve dependency order, revisions, and provisional messaging",
+      "Service work is online-only: intake must refuse offline instead of queueing unreplayable commands, and changes keep revisions",
   },
 ];
 
+function readContractSource(contract) {
+  if (contract.file) return readFileSync(join(MOBILE_DIR, contract.file), "utf8");
+  const dir = join(MOBILE_DIR, contract.folder);
+  return readdirSync(dir)
+    .filter((name) => /\.tsx?$/.test(name) && !/\.test\.tsx?$/.test(name))
+    .map((name) => readFileSync(join(dir, name), "utf8"))
+    .join("\n");
+}
+
 const failures = [];
 for (const contract of contracts) {
-  const filePath = join(MOBILE_DIR, contract.file);
-  const source = readFileSync(filePath, "utf8");
+  const filePath = join(MOBILE_DIR, contract.file ?? contract.folder);
+  const source = readContractSource(contract);
   const missing = contract.markers.filter((marker) => !source.includes(marker));
   if (missing.length > 0) {
     failures.push({

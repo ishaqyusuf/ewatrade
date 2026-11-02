@@ -11,7 +11,7 @@ const checks = [
       "CommonActions.reset",
       'name: "dashboard"',
       'name: "operation-success"',
-      "index: 1",
+      "index: routes.length - 1",
     ],
   },
   {

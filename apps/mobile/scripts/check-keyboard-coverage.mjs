@@ -477,7 +477,7 @@ const contracts = [
     markers: [
       'keyboardDismissMode="interactive"',
       'keyboardShouldPersistTaps="handled"',
-      'label="Search all customers"',
+      'accessibilityLabel="Search all customers"',
       "BottomSearchFooter",
     ],
     reason:
@@ -506,14 +506,13 @@ const contracts = [
       'contentContainerClassName="pb-[var(--helper-bottom)]"',
       'keyboardDismissMode="interactive"',
       'keyboardShouldPersistTaps="handled"',
-      '<View className="border-b border-border px-4 py-3">',
-      'variant="search"',
-      'accessibilityLabel={"Search " + kindLabel + " setups"}',
-      'label="Search setups"',
-      'placeholder={"Search " + kindLabel.toLowerCase() + " setups"}',
+      "<SearchFooterField",
+      "localSearch",
+      "accessibilityLabel={`Search ${kindLabel} setups`}",
+      "placeholder={`Search ${kindLabel.toLowerCase()} setups`}",
     ],
     reason:
-      "the quick-setup header search must remain visible with result rows above the keyboard",
+      "the quick-setup search footer must remain visible with result rows above the keyboard",
   },
   {
     file: "components/mobile/bottom-search-footer.tsx",
