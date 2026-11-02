@@ -15,7 +15,10 @@ test("undeclared legacy Account cannot list Business memberships", async () => {
       },
     },
     requestHeaders: new Headers(),
-    session: { user: { id: "legacy-account" } },
+    session: {
+      session: { id: "legacy-account-session" },
+      user: { id: "legacy-account" },
+    },
   } as never)
 
   await expect(caller.businesses()).rejects.toMatchObject({
@@ -45,7 +48,10 @@ test("declared teen Account can list its Business memberships", async () => {
       },
     },
     requestHeaders: new Headers(),
-    session: { user: { id: "teen-account" } },
+    session: {
+      session: { id: "teen-account-session" },
+      user: { id: "teen-account" },
+    },
   } as never)
 
   expect(await caller.businesses()).toEqual([
@@ -91,7 +97,7 @@ test("QA-derived session lists only its selected business", async () => {
       tenantId: "qa-business",
     },
     requestHeaders: new Headers(),
-    session: { user: { id: "qa-owner" } },
+    session: { session: { id: "qa-owner-session" }, user: { id: "qa-owner" } },
   } as never)
 
   expect(await caller.businesses()).toEqual([
@@ -132,7 +138,7 @@ test("QA-derived session whose selected business is gone cannot list businesses"
       tenantId: "qa-business",
     },
     requestHeaders: new Headers(),
-    session: { user: { id: "qa-owner" } },
+    session: { session: { id: "qa-owner-session" }, user: { id: "qa-owner" } },
   } as never)
 
   await expect(caller.businesses()).rejects.toMatchObject({
@@ -153,7 +159,10 @@ test("undeclared Account cannot resolve Tenant or Store context through a protec
       },
     },
     requestHeaders: new Headers(),
-    session: { user: { id: "legacy-account" } },
+    session: {
+      session: { id: "legacy-account-session" },
+      user: { id: "legacy-account" },
+    },
     tenantContext: null,
   } as never)
 
@@ -201,7 +210,10 @@ test("declared teen Account can resolve its Store context", async () => {
       },
     },
     requestHeaders: new Headers(),
-    session: { user: { id: "teen-account" } },
+    session: {
+      session: { id: "teen-account-session" },
+      user: { id: "teen-account" },
+    },
     tenantContext: null,
   } as never)
 
