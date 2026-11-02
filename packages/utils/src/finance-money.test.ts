@@ -45,8 +45,9 @@ describe("finance money", () => {
       ["900719925474099301", "NGN"],
       ["-9223372036854775807", "GBP"],
     ] as const
-    const expected = cases.map(([value, currency]) =>
-      formatFinanceMoney(value, currency),
+    const expected = cases.map(
+      ([value, currency]) =>
+        [value, currency, formatFinanceMoney(value, currency)] as const,
     )
     const original = Object.getOwnPropertyDescriptor(
       Intl.NumberFormat.prototype,
@@ -57,8 +58,8 @@ describe("finance money", () => {
       value: undefined,
     })
     try {
-      for (const [index, [value, currency]] of cases.entries())
-        expect(formatFinanceMoney(value, currency)).toBe(expected[index])
+      for (const [value, currency, formatted] of expected)
+        expect(formatFinanceMoney(value, currency)).toBe(formatted)
     } finally {
       if (original)
         Object.defineProperty(
