@@ -279,13 +279,17 @@ function MovementWorkspace({
                       id: "reversal",
                       title: "Reversed · original kept",
                       detail: `${financeDisplayDate(original.reversal.effectiveAt)} · ${original.reversal.description}`,
+                      amount: `−${money(total)}`,
+                      dot: "warn" as const,
                     },
                   ]
                 : []),
               {
                 id: "original",
                 title: "Movement recorded",
-                detail: `Effective ${financeDisplayDate(original.effectiveAt)} · ${money(total)}`,
+                detail: `Effective ${financeDisplayDate(original.effectiveAt)} · recorded ${financeDisplayDate(original.recordedAt, true)}`,
+                amount: money(total),
+                dot: original.reversal ? ("muted" as const) : ("ok" as const),
               },
             ]}
           />

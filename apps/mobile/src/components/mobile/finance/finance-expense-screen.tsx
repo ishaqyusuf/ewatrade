@@ -25,7 +25,7 @@ import {
   FinanceExpensePaymentForm,
 } from "./finance-expense-forms"
 import { FinanceExpenseReceipts } from "./finance-expense-receipts"
-import { FinanceDetailScaffold } from "./finance-ledger-layout"
+import { FinanceDetailScaffold, HistoryTimeline } from "./finance-ledger-layout"
 import {
   type FinanceWorkspace,
   FinanceWorkspaceGate,
@@ -343,46 +343,18 @@ function ExpenseWorkspace({
           ))}
         </ListCard>
       </View>
-      <View>
-        <SectionHeader title="Payment history" />
-        <ListCard>
-          {history.map((entry, index) => (
-            <View key={entry.id} className="flex-row gap-3 py-3">
-              <View className="items-center pt-1.5">
-                <View
-                  className={
-                    entry.id === bill.id
-                      ? "size-2.5 rounded-full border-2 border-gold"
-                      : entry.reversed
-                        ? "size-2.5 rounded-full border-2 border-muted-foreground"
-                        : "size-2.5 rounded-full border-2 border-primary"
-                  }
-                />
-                {index < history.length - 1 ? (
-                  <View className="mt-1 w-px flex-1 bg-border" />
-                ) : null}
-              </View>
-              <View className="min-w-0 flex-1">
-                <Text
-                  className={
-                    entry.reversed
-                      ? "text-sm font-bold text-muted-foreground line-through"
-                      : "text-sm font-bold text-foreground"
-                  }
-                >
-                  {entry.title}
-                </Text>
-                <Text className="text-xs text-muted-foreground">
-                  {entry.detail}
-                </Text>
-              </View>
-              <Text className="text-sm font-bold tabular-nums text-foreground">
-                {entry.amount}
-              </Text>
-            </View>
-          ))}
-        </ListCard>
-      </View>
+      <HistoryTimeline
+        heading="Payment history"
+        items={history.map((entry) => ({
+          ...entry,
+          dot:
+            entry.id === bill.id
+              ? ("warn" as const)
+              : entry.reversed
+                ? ("muted" as const)
+                : ("ok" as const),
+        }))}
+      />
       <View className="flex-row gap-2 px-0.5">
         <Icon
           className="mt-0.5 size-[14px]"

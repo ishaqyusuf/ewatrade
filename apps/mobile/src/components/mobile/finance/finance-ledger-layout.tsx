@@ -51,43 +51,85 @@ export function FinanceDetailScaffold({
     </View>
   )
 }
+export type HistoryDot = "ok" | "warn" | "danger" | "muted"
+
+const HISTORY_DOT: Record<HistoryDot, string> = {
+  ok: "border-primary",
+  warn: "border-gold",
+  danger: "border-destructive",
+  muted: "border-muted-foreground",
+}
+
+/**
+ * Deep finance history card (Workshop 22, 01 Green Till Ledger): a rail of
+ * toned rings, newest first, with each entry's amount on the right. A muted
+ * entry (reversed or superseded) keeps its text but strikes the amount.
+ */
 export function HistoryTimeline({
+  heading = "History",
   items,
 }: {
+  heading?: string
   items: Array<{
     id: string
     title: string
     detail: string
+    amount?: string
+    dot?: HistoryDot
     status?: string
     tone?: StatusPillTone
   }>
 }) {
   return (
     <View>
-      <SectionHeader title="History" />
-      <View className="rounded-[20px] bg-card px-4">
-        {items.map((item, index) => (
-          <View
-            key={item.id}
-            className={cn(
-              "flex-row gap-3 py-4",
-              index < items.length - 1 && "border-b border-border",
-            )}
-          >
-            <View className="mt-1 size-2.5 rounded-full bg-primary" />
-            <View className="min-w-0 flex-1 gap-1">
-              <Text className="text-sm font-bold text-foreground">
-                {item.title}
-              </Text>
-              <Text className="text-xs text-muted-foreground">
-                {item.detail}
-              </Text>
-              {item.status ? (
-                <StatusPill label={item.status} tone={item.tone ?? "muted"} />
+      <SectionHeader title={heading} />
+      <View className="rounded-[20px] bg-card px-3.5 pt-3.5 shadow-sm">
+        {items.map((item, index) => {
+          const muted = item.dot === "muted"
+          return (
+            <View key={item.id} className="flex-row gap-2.5">
+              <View className="w-4 items-center">
+                <View
+                  className={cn(
+                    "mt-1 size-2.5 rounded-full border-[2.5px] bg-card",
+                    HISTORY_DOT[item.dot ?? "ok"],
+                  )}
+                />
+                {index < items.length - 1 ? (
+                  <View className="mt-1 w-[1.5px] flex-1 bg-border" />
+                ) : null}
+              </View>
+              <View className="min-w-0 flex-1 gap-0.5 pb-3.5">
+                <Text className="text-sm font-bold text-foreground">
+                  {item.title}
+                </Text>
+                <Text className="text-xs text-muted-foreground">
+                  {item.detail}
+                </Text>
+                {item.status ? (
+                  <View className="mt-1 flex-row">
+                    <StatusPill
+                      label={item.status}
+                      tone={item.tone ?? "muted"}
+                    />
+                  </View>
+                ) : null}
+              </View>
+              {item.amount ? (
+                <Text
+                  className={cn(
+                    "max-w-[45%] text-right text-[13.5px] font-extrabold tabular-nums",
+                    muted
+                      ? "text-muted-foreground line-through"
+                      : "text-foreground",
+                  )}
+                >
+                  {item.amount}
+                </Text>
               ) : null}
             </View>
-          </View>
-        ))}
+          )
+        })}
       </View>
     </View>
   )

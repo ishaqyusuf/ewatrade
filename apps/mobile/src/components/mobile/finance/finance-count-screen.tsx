@@ -4,7 +4,6 @@ import { Icon } from "@/components/ui/icon"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Text } from "@/components/ui/text"
 import { useColors } from "@/hooks/use-color"
-import { cn } from "@/lib/utils"
 import { useOperationalModeStore } from "@/store/operationalModeStore"
 import { useTRPC } from "@/trpc/client"
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
@@ -14,11 +13,10 @@ import { useQuery } from "@tanstack/react-query"
 import { useState } from "react"
 import { ScrollView, View } from "react-native"
 import { HeroCard } from "../green-till/hero-card"
-import { ListCard, SectionHeader } from "../green-till/kit"
 import { FinanceCashActionForm } from "./finance-cash-action-form"
 import { FinanceCommandFeedback } from "./finance-command-feedback"
 import { financeDisplayDate } from "./finance-display"
-import { FinanceDetailScaffold } from "./finance-ledger-layout"
+import { FinanceDetailScaffold, HistoryTimeline } from "./finance-ledger-layout"
 import {
   type FinanceWorkspace,
   FinanceWorkspaceGate,
@@ -238,87 +236,55 @@ function CountWorkspace({
           ) : null}
         </View>
       ) : null}
-      <View>
-        <SectionHeader title="History" />
-        <ListCard>
-          {[
-            ...(count.adjustment?.reversal
-              ? [
-                  {
-                    id: "reversal",
-                    title: "Adjustment reversed · original kept",
-                    detail: financeDisplayDate(
-                      count.adjustment.reversal.recordedAt,
-                      true,
-                    ),
-                    amount: undefined,
-                    tone: "muted" as const,
-                  },
-                ]
-              : []),
-            ...(count.adjustment
-              ? [
-                  {
-                    id: "adjustment",
-                    title: "Adjustment recorded",
-                    detail: `${financeDisplayDate(count.adjustment.recordedAt, true)} · ${count.adjustment.description}`,
-                    amount: signedDiff,
-                    tone: "ok" as const,
-                  },
-                ]
-              : []),
-            ...(diff !== 0n
-              ? [
-                  {
-                    id: "difference",
-                    title: "Difference found",
-                    detail: `Expected ${money(count.expectedBalanceMinor)} from posted entries`,
-                    amount: signedDiff,
-                    tone: "warn" as const,
-                  },
-                ]
-              : []),
-            {
-              id: "count",
-              title: "Cash counted",
-              detail: `${financeDisplayDate(count.recordedAt, true)} UTC`,
-              amount: money(count.observedBalanceMinor),
-              tone: "ok" as const,
-            },
-          ].map((entry, index, list) => (
-            <View key={entry.id} className="flex-row gap-3 py-3">
-              <View className="items-center pt-1.5">
-                <View
-                  className={cn(
-                    "size-2.5 rounded-full border-2",
-                    entry.tone === "warn"
-                      ? "border-gold"
-                      : entry.tone === "muted"
-                        ? "border-muted-foreground"
-                        : "border-primary",
-                  )}
-                />
-                {index < list.length - 1 ? (
-                  <View className="mt-1 w-px flex-1 bg-border" />
-                ) : null}
-              </View>
-              <View className="min-w-0 flex-1">
-                <Text className="text-sm font-bold text-foreground">
-                  {entry.title}
-                </Text>
-                <Text className="text-xs text-muted-foreground">
-                  {entry.detail}
-                </Text>
-              </View>
-              {entry.amount ? (
-                <Text className="text-sm font-bold tabular-nums text-foreground">
-                  {entry.amount}
-                </Text>
-              ) : null}
-            </View>
-          ))}
-        </ListCard>
-      </View>
+      <HistoryTimeline
+        items={[
+          ...(count.adjustment?.reversal
+            ? [
+                {
+                  id: "reversal",
+                  title: "Adjustment reversed · original kept",
+                  detail: financeDisplayDate(
+                    count.adjustment.reversal.recordedAt,
+                    true,
+                  ),
+                  amount: undefined,
+                  dot: "muted" as const,
+                },
+              ]
+            : []),
+          ...(count.adjustment
+            ? [
+                {
+                  id: "adjustment",
+                  title: "Adjustment recorded",
+                  detail: `${financeDisplayDate(count.adjustment.recordedAt, true)} · ${count.adjustment.description}`,
+                  amount: signedDiff,
+                  dot: count.adjustment.reversal
+                    ? ("muted" as const)
+                    : ("ok" as const),
+                },
+              ]
+            : []),
+          ...(diff !== 0n
+            ? [
+                {
+                  id: "difference",
+                  title: "Difference found",
+                  detail: `Expected ${money(count.expectedBalanceMinor)} from posted entries`,
+                  amount: signedDiff,
+                  dot: "warn" as const,
+                },
+              ]
+            : []),
+          {
+            id: "count",
+            title: "Cash counted",
+            detail: `${financeDisplayDate(count.recordedAt, true)} UTC`,
+            amount: money(count.observedBalanceMinor),
+            dot: "ok" as const,
+          },
+        ]}
+      />
       <View className="flex-row gap-2 px-0.5">
         <Icon
           className="mt-0.5 size-[14px]"
