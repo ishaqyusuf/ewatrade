@@ -1,6 +1,7 @@
 import { describe, expect, setDefaultTimeout, test } from "bun:test"
 import { randomUUID } from "node:crypto"
 import { assertQaAccessAcceptanceDatabase } from "../acceptance/qa-access/database"
+import { getRetailOpsTenantPlan } from "../retail-ops-subscriptions"
 import { storePurchaseDigest } from "../store-subscriptions"
 import { enrollOwnerBusiness, removeOwnerBusiness } from "./commands"
 import { OwnerBillingPolicyError } from "./policy"
@@ -50,6 +51,12 @@ const policyCode = (error: unknown) =>
               dataClassification: "QA",
               qaSourceDomain: "owner-billing.test",
               qaMarkedAt: now,
+              // An explicit Free grant: owner coverage may raise, never lower.
+              metadata: {
+                retailOps: {
+                  subscription: { planId: "free", status: "active" },
+                },
+              },
               users: { create: { userId: ownerId, role: "OWNER" } },
             },
           })
@@ -149,6 +156,35 @@ const policyCode = (error: unknown) =>
             })
           )?.reason,
         ).toBe("covered")
+        const previousRuntime = {
+          enabled: process.env.OWNER_BILLING_ENABLED,
+          environment: process.env.STORE_BILLING_ENVIRONMENT,
+        }
+        const tenantPlan = async (tenantId: string) => {
+          process.env.OWNER_BILLING_ENABLED = "true"
+          process.env.STORE_BILLING_ENVIRONMENT = "sandbox"
+          try {
+            return await getRetailOpsTenantPlan(prisma, { tenantId })
+          } finally {
+            for (const [key, value] of [
+              ["OWNER_BILLING_ENABLED", previousRuntime.enabled],
+              ["STORE_BILLING_ENVIRONMENT", previousRuntime.environment],
+            ] as const) {
+              if (value === undefined) Reflect.deleteProperty(process.env, key)
+              else process.env[key] = value
+            }
+          }
+        }
+        const covered = await tenantPlan(winner)
+        expect(covered.plan.id).toBe("starter")
+        expect(covered.subscription.source).toBe("owner_subscription")
+        expect(covered.plan.limits.staff).toBe(2)
+        expect(covered.plan.limits.ordersPerMonth).toBeNull()
+        expect((await tenantPlan(tenantA)).plan.id).toBe("free")
+        // Without the switch the Tenant-bound authority is unchanged.
+        expect(
+          (await getRetailOpsTenantPlan(prisma, { tenantId: winner })).plan.id,
+        ).toBe("free")
 
         // Release keeps history; the database refuses a second active row.
         expect(
@@ -199,6 +235,7 @@ const policyCode = (error: unknown) =>
             })
           )?.reason,
         ).toBe("inactive_subscription")
+        expect((await tenantPlan(winner)).plan.id).toBe("free")
         // Replaying the voided order keeps it cancelled.
         await verify({ latestOrderId: nextOrder, observedAt: at(4_000) })
         expect(

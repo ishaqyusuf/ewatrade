@@ -9,6 +9,10 @@ import {
   OfflineDeviceStatus as DurableOfflineDeviceStatus,
 } from "../../generated/prisma/enums"
 import {
+  getOwnerBusinessAccess,
+  ownerBillingRuntime,
+} from "./owner-billing/prisma-repository"
+import {
   RETAIL_OPS_LAUNCH_DEFAULT_PLAN_ID,
   RETAIL_OPS_SUBSCRIPTION_PLANS,
   type RetailOpsPaidPlanId,
@@ -72,6 +76,8 @@ export type RetailOpsTenantSubscription = {
     | "tenant_metadata"
     | "tenant_subscription"
     | "owner_signup_launch"
+    /** Owner-wide store subscription covering this business. */
+    | "owner_subscription"
   grantedAt?: string
   revokedAt?: string | null
   status: RetailOpsSubscriptionStatus
@@ -1085,7 +1091,77 @@ function getTenantSubscription(input: {
   }
 }
 
+type RetailOpsSubscriptionState = {
+  plan: RetailOpsSubscriptionPlan
+  plans: RetailOpsSubscriptionPlan[]
+  subscription: RetailOpsTenantSubscription
+}
+
+const RETAIL_OPS_PLAN_RANK: Record<RetailOpsPlanId, number> = {
+  free: 0,
+  starter: 1,
+  growth: 2,
+  pro: 3,
+}
+
+/**
+ * Owner-wide coverage (behind OWNER_BILLING_ENABLED) can raise a business to
+ * the owner's paid plan with that offer's per-business allowances. It never
+ * lowers a legacy, manual or launch grant; that needs the versioned cutover.
+ */
+async function withOwnerBusinessCoverage(
+  db: DbClient,
+  tenantId: string,
+  state: RetailOpsSubscriptionState,
+): Promise<RetailOpsSubscriptionState> {
+  const runtime = ownerBillingRuntime()
+  if (!runtime) return state
+  const access = await getOwnerBusinessAccess(db, {
+    tenantId,
+    environment: runtime.environment,
+  })
+  if (
+    !access ||
+    access.reason !== "covered" ||
+    RETAIL_OPS_PLAN_RANK[access.planId] <= RETAIL_OPS_PLAN_RANK[state.plan.id]
+  )
+    return state
+  const plan = getPlanFromList(state.plans, access.planId)
+  return {
+    plans: state.plans,
+    plan: {
+      ...plan,
+      limits: {
+        ...plan.limits,
+        // The plan type has no unlimited products; keep the plan's own cap.
+        products: access.limits.products ?? plan.limits.products,
+        ordersPerMonth: access.limits.ordersPerMonth,
+        staff: access.limits.staff,
+      },
+    },
+    subscription: {
+      currentPeriodEndsAt: access.currentPeriodEndsAt?.toISOString() ?? null,
+      planId: access.planId,
+      source: "owner_subscription",
+      status: "active",
+      trialEndsAt: null,
+      updatedAt: (access.currentPeriodEndsAt ?? new Date()).toISOString(),
+    },
+  }
+}
+
 async function getDurableRetailOpsSubscriptionState(
+  db: DbClient,
+  input: Parameters<typeof getTenantBoundRetailOpsSubscriptionState>[1],
+): Promise<RetailOpsSubscriptionState> {
+  return withOwnerBusinessCoverage(
+    db,
+    input.tenant.id,
+    await getTenantBoundRetailOpsSubscriptionState(db, input),
+  )
+}
+
+async function getTenantBoundRetailOpsSubscriptionState(
   db: DbClient,
   input: {
     tenant: {
@@ -1095,11 +1171,7 @@ async function getDurableRetailOpsSubscriptionState(
       updatedAt: Date
     }
   },
-): Promise<{
-  plan: RetailOpsSubscriptionPlan
-  plans: RetailOpsSubscriptionPlan[]
-  subscription: RetailOpsTenantSubscription
-}> {
+): Promise<RetailOpsSubscriptionState> {
   try {
     const [durablePlans, durableSubscription] = await Promise.all([
       db.subscriptionPlan.findMany({
@@ -2272,6 +2344,9 @@ export async function getRetailOpsTenantPlanFeatures(
   input: { tenantId: string },
 ): Promise<RetailOpsPlanFeature[]> {
   try {
+    // Owner-wide coverage needs the full reader; it is off until cutover.
+    if (ownerBillingRuntime())
+      return [...(await getRetailOpsTenantPlan(db, input)).plan.features]
     const tenant = await db.tenant.findUniqueOrThrow({
       where: { id: input.tenantId },
       select: retailOpsPlanFeaturesSelect,

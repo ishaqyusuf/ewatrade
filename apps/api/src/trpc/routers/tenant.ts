@@ -1,5 +1,9 @@
 import { canManageTenant, normalizeRole } from "@ewatrade/auth/roles"
 import {
+  enrollOwnerSignupBusinesses,
+  ownerBillingRuntime,
+} from "@ewatrade/db/owner-billing"
+import {
   OwnerSignupSetupError,
   StoreLinkConflictError,
   completeOwnerSignupSetup,
@@ -96,10 +100,23 @@ export const tenantRouter = createTRPCRouter({
     .input(ownerSignupCompletionSchema)
     .mutation(async ({ ctx, input }) => {
       try {
-        return await ctx.db.$transaction(
+        const result = await ctx.db.$transaction(
           (tx) => completeOwnerSignupSetup(tx, ctx.session.user.id, input),
           { isolationLevel: "Serializable", maxWait: 10_000, timeout: 30_000 },
         )
+        const ownerBilling = ownerBillingRuntime()
+        if (ownerBilling && result.readyTenantIds?.length) {
+          // Signup has committed; coverage is best-effort and retryable from
+          // billing, so a coverage failure never fails the completed signup.
+          await enrollOwnerSignupBusinesses(ctx.db, {
+            ownerUserId: ctx.session.user.id,
+            tenantIds: result.readyTenantIds,
+            environment: ownerBilling.environment,
+          }).catch(() =>
+            console.error("[owner-billing] Signup coverage was not enrolled."),
+          )
+        }
+        return { completed: result.completed }
       } catch (error) {
         if (error instanceof OwnerSignupSetupError)
           throw new TRPCError({

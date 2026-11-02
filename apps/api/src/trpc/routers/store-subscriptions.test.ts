@@ -299,3 +299,103 @@ test("Play response submission denies non-admins and production before claiming"
     }
   }
 })
+
+test("owner-wide catalog binds only the paying owner and stays off by default", async () => {
+  const keys = [
+    "STORE_BILLING_ENABLED",
+    "STORE_SUBSCRIPTION_PRODUCTS",
+    "OWNER_BILLING_ENABLED",
+    "STORE_BILLING_ENVIRONMENT",
+  ] as const
+  const previous = Object.fromEntries(
+    keys.map((key) => [key, process.env[key]]),
+  )
+  const upserts: unknown[] = []
+  let ownerAccount: { id: string; ownerUserId: string } | null = null
+  const db = {
+    storeBillingAccount: {
+      upsert: async () => ({ id: "legacy-business-binding" }),
+    },
+    tenantSubscription: { findUnique: async () => null },
+    ownerBillingAccount: {
+      upsert: async (query: { where: { ownerUserId: string } }) => {
+        upserts.push(query)
+        ownerAccount = {
+          id: "owner-account",
+          ownerUserId: query.where.ownerUserId,
+        }
+        return { id: ownerAccount.id }
+      },
+      findUnique: async () => ownerAccount,
+    },
+    user: { findMany: async () => [{ id: "owner-1" }] },
+    ownerBusinessCoverage: { findMany: async () => [] },
+    ownerBillingSubscription: { findUnique: async () => null },
+    membership: { findMany: async () => [{ tenantId: "tenant-1" }] },
+  }
+  const caller = (userId: string, role: string) =>
+    createCallerFactory(storeSubscriptionsRouter)({
+      db,
+      requestId: "request-test",
+      session: {
+        session: { id: "session-1", token: "ordinary-session" },
+        user: { id: userId },
+      },
+      tenantContext: {
+        tenant: { id: "tenant-1", qaPurgeStartedAt: null },
+        membership: { id: "membership-1", role },
+      },
+    } as never)
+  try {
+    process.env.STORE_BILLING_ENABLED = "true"
+    process.env.STORE_SUBSCRIPTION_PRODUCTS = JSON.stringify([
+      { store: "play_store", productId: "growth.play", planId: "growth" },
+    ])
+    process.env.STORE_BILLING_ENVIRONMENT = "sandbox"
+    Reflect.deleteProperty(process.env, "OWNER_BILLING_ENABLED")
+    expect(await caller("owner-1", "OWNER").catalog()).toMatchObject({
+      accountToken: "legacy-business-binding",
+      ownerCoverage: null,
+    })
+    await expect(
+      caller("owner-1", "OWNER").enrollBusiness(),
+    ).rejects.toMatchObject({ code: "PRECONDITION_FAILED" })
+    expect(upserts).toHaveLength(0)
+
+    process.env.OWNER_BILLING_ENABLED = "true"
+    expect(await caller("admin-1", "ADMIN").catalog()).toMatchObject({
+      accountToken: null,
+      purchaseAvailable: false,
+      ownerCoverage: null,
+    })
+    expect(upserts).toHaveLength(0)
+    await expect(
+      caller("admin-1", "ADMIN").enrollBusiness(),
+    ).rejects.toMatchObject({ code: "PRECONDITION_FAILED" })
+
+    expect(await caller("owner-1", "OWNER").catalog()).toMatchObject({
+      accountToken: "owner-account",
+      activeProvider: null,
+      ownerCoverage: {
+        planId: "free",
+        reason: "inactive_subscription",
+        businessLimit: 0,
+        coveredBusinessCount: 0,
+      },
+    })
+    expect(upserts).toEqual([
+      {
+        where: { ownerUserId: "owner-1" },
+        create: { ownerUserId: "owner-1" },
+        update: {},
+        select: { id: true },
+      },
+    ])
+  } finally {
+    for (const key of keys) {
+      const value = previous[key]
+      if (value === undefined) Reflect.deleteProperty(process.env, key)
+      else process.env[key] = value
+    }
+  }
+})

@@ -1,8 +1,9 @@
 import { Prisma, type PrismaClient } from "../../../generated/prisma/client"
 import type { DbClient } from "../types"
-import type {
-  OwnerBillingRepository,
-  OwnerBillingTransaction,
+import {
+  type OwnerBillingRepository,
+  type OwnerBillingTransaction,
+  enrollOwnerBusiness,
 } from "./commands"
 import {
   type OwnerBillingAccount,
@@ -11,6 +12,7 @@ import {
   type OwnerBillingProvider,
   type OwnerBillingSubscription,
   type OwnerBusinessCoverage,
+  currentOwnerSubscription,
   projectOwnerBusinessAccess,
 } from "./policy"
 
@@ -342,5 +344,84 @@ export async function getOwnerBusinessAccess(
     environment: input.environment,
     now: input.now,
   })
-  return snapshot ? projectOwnerBusinessAccess(snapshot, input.tenantId) : null
+  if (!snapshot) return null
+  return {
+    ...projectOwnerBusinessAccess(snapshot, input.tenantId),
+    currentPeriodEndsAt: snapshot.subscription?.currentPeriodEndsAt ?? null,
+  }
+}
+
+/** What the purchase screen needs: the owner's current receipt and this business. */
+export async function getOwnerBillingCatalogState(
+  db: DbClient,
+  input: {
+    accountId: string
+    tenantId: string
+    environment: OwnerBillingEnvironment
+    now?: Date
+  },
+) {
+  const snapshot = await readOwnerCoverageSnapshot(db, {
+    accountId: input.accountId,
+    tenantIds: [input.tenantId],
+    environment: input.environment,
+    now: input.now,
+  })
+  if (!snapshot) return null
+  const current = currentOwnerSubscription(snapshot)
+  const purchase =
+    current?.provider === "play_store"
+      ? await db.ownerBillingPurchase.findUnique({
+          where: {
+            provider_purchaseDigest: {
+              provider: "PLAY_STORE",
+              purchaseDigest: current.purchaseDigest,
+            },
+          },
+          select: { accountId: true, productId: true },
+        })
+      : null
+  return {
+    activeProvider: current ? toDurableBillingProvider(current.provider) : null,
+    activePlayProductId:
+      purchase?.accountId === snapshot.account.id ? purchase.productId : null,
+    access: projectOwnerBusinessAccess(snapshot, input.tenantId),
+  }
+}
+
+/**
+ * After signup commits, cover the businesses it created while the owner's
+ * subscription has free slots. Businesses the owner released earlier are not
+ * re-enrolled; a full plan or no subscription simply leaves them uncovered.
+ */
+export async function enrollOwnerSignupBusinesses(
+  db: PrismaClient,
+  input: {
+    ownerUserId: string
+    tenantIds: string[]
+    environment: OwnerBillingEnvironment
+  },
+) {
+  const account = await findOwnerBillingAccount(db, input.ownerUserId)
+  if (!account) return []
+  const repository = createPrismaOwnerBillingRepository(db)
+  const enrolled: string[] = []
+  for (const tenantId of input.tenantIds) {
+    try {
+      const result = await enrollOwnerBusiness(
+        repository,
+        { accountId: account.id, actorUserId: input.ownerUserId, tenantId },
+        { environment: input.environment, now: () => new Date() },
+      )
+      if (result.action === "enroll") enrolled.push(tenantId)
+    } catch (error) {
+      if (!(error instanceof OwnerBillingPolicyError)) throw error
+      if (
+        error.code === "BUSINESS_LIMIT_REACHED" ||
+        error.code === "SUBSCRIPTION_REQUIRED"
+      )
+        break
+    }
+  }
+  return enrolled
 }

@@ -1,11 +1,19 @@
 import type { PrismaClient } from "@ewatrade/db"
 import {
+  applyVerifiedOwnerSubscription,
+  ownerBillingRuntime,
+  recordOwnerPlayVoidedOrder,
+} from "@ewatrade/db/owner-billing"
+import {
   applyVerifiedStoreSubscription,
   recordPlayVoidedOrder,
 } from "@ewatrade/db/queries"
 import { verifyAppleSubscription } from "./apple-subscriptions"
 import { verifyGoogleSubscription } from "./google-subscriptions"
-import { projectStoreEntitlement } from "./store-entitlement"
+import {
+  type VerifiedStoreEntitlement,
+  projectStoreEntitlement,
+} from "./store-entitlement"
 import { resolveStorePlan } from "./store-products"
 
 export async function reconcileStoreSubscription(
@@ -14,6 +22,8 @@ export async function reconcileStoreSubscription(
     store: "app_store" | "play_store"
     purchaseId: string
     tenantId?: string
+    /** The authenticated purchaser; notifications have none. */
+    actorUserId?: string
     voidedOrderId?: string
   },
 ) {
@@ -26,7 +36,9 @@ export async function reconcileStoreSubscription(
     where: { id: purchase.accountToken },
     select: { tenantId: true },
   })
-  if (!binding || (input.tenantId && binding.tenantId !== input.tenantId))
+  if (!binding)
+    return reconcileOwnerStoreSubscription(db, input, purchase, observedAt)
+  if (input.tenantId && binding.tenantId !== input.tenantId)
     throw new Error("Purchase workspace binding does not match.")
   const planId = resolveStorePlan(purchase.provider, purchase.productId)
   if (input.voidedOrderId) {
@@ -49,4 +61,56 @@ export async function reconcileStoreSubscription(
     tenantId: binding.tenantId,
   })
   return { ...result, expiresAt: purchase.expiresAt }
+}
+
+/**
+ * The receipt's opaque account token names an owner-wide account, never a
+ * Tenant, so switching business cannot reinterpret an in-flight receipt.
+ * A purchase or restore must come from that account's own owner.
+ */
+async function reconcileOwnerStoreSubscription(
+  db: PrismaClient,
+  input: Parameters<typeof reconcileStoreSubscription>[1],
+  purchase: VerifiedStoreEntitlement,
+  observedAt: Date,
+) {
+  const runtime = ownerBillingRuntime()
+  const account = runtime
+    ? await db.ownerBillingAccount.findUnique({
+        where: { id: purchase.accountToken },
+        select: { id: true },
+      })
+    : null
+  if (!runtime || !account || (input.tenantId && !input.actorUserId))
+    throw new Error("Purchase workspace binding does not match.")
+  const planId = resolveStorePlan(purchase.provider, purchase.productId)
+  if (input.voidedOrderId) {
+    if (input.store !== "play_store" || !purchase.latestOrderId)
+      throw new Error("Voided Play order cannot be matched to a paid order.")
+    await recordOwnerPlayVoidedOrder(db, {
+      accountToken: account.id,
+      purchaseId: input.purchaseId,
+      orderId: input.voidedOrderId,
+      latestOrderId: purchase.latestOrderId,
+      observedAt,
+    })
+  }
+  const entitlement = projectStoreEntitlement(purchase)
+  const result = await applyVerifiedOwnerSubscription(db, {
+    accountToken: account.id,
+    actorUserId: input.actorUserId,
+    expectedEnvironment: runtime.environment,
+    provider: purchase.provider,
+    purchaseId: purchase.purchaseId,
+    linkedPurchaseId: purchase.linkedPurchaseId,
+    latestOrderId: purchase.latestOrderId,
+    productId: purchase.productId,
+    planId,
+    environment: purchase.environment,
+    expiresAt: purchase.expiresAt,
+    observedAt,
+    status: entitlement.status,
+    cancelAtPeriodEnd: entitlement.cancelAtPeriodEnd,
+  })
+  return { applied: result.applied, expiresAt: purchase.expiresAt }
 }

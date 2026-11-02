@@ -375,5 +375,5 @@ export async function completeOwnerSignupSetup(
         expiresAt: new Date(Date.now() + 365 * 86400_000),
       },
     })
-  return { completed: true }
+  return { completed: true, readyTenantIds: ready.map((tenant) => tenant.id) }
 }
