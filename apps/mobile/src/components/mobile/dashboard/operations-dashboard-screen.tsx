@@ -52,6 +52,7 @@ import { useQuery } from "@tanstack/react-query"
 import { useFocusEffect, useRouter } from "expo-router"
 import { useCallback, useMemo, useRef, useState } from "react"
 import { View } from "react-native"
+import { mapCatalogItem } from "../catalog/catalog-row-model"
 import {
   SALE_STATUSES,
   greenTillHomeStage,
@@ -312,6 +313,21 @@ export function OperationsDashboardSurface({
     isOffline,
     loadedOrderCount: orderRows.length,
   })
+  const homeStage = greenTillHomeStage(ownerHome.journey)
+  // The first-order Home shows a few sellable items (Workshop 01, first order).
+  const firstOrderCatalog = useQuery(
+    trpc.catalog.listItemsPage.queryOptions(
+      { limit: 6, sort: { field: "name", direction: "asc" }, status: "active" },
+      {
+        enabled: isClassicOwner && homeStage === "first-order" && !isOffline,
+        retry: false,
+      },
+    ),
+  )
+  const firstOrderCatalogRows =
+    firstOrderCatalog.data?.items.map((item) =>
+      mapCatalogItem(item, featureAvailabilityQuery.data?.storeId),
+    ) ?? []
   const allNavItems = [
     {
       icon: "home" as const,
@@ -599,6 +615,19 @@ export function OperationsDashboardSurface({
                 }
           }
           businessName={profile?.businessName ?? "your business"}
+          catalogPreview={
+            homeStage === "first-order" && firstOrderCatalogRows.length
+              ? {
+                  items: firstOrderCatalogRows,
+                  onOpen: (catalogItemId) =>
+                    router.push({
+                      params: { catalogItemId },
+                      pathname: "/catalog-item/[catalogItemId]",
+                    }),
+                  onSeeAll: () => router.push("/catalog-items-modal" as never),
+                }
+              : undefined
+          }
           isOffline={isOffline}
           onAddItem={openQuickCreate}
           onInviteTeam={
@@ -668,7 +697,7 @@ export function OperationsDashboardSurface({
                 ? { status: "unavailable" }
                 : { status: "loading" }
           }
-          stage={greenTillHomeStage(ownerHome.journey)}
+          stage={homeStage}
           team={
             ownerHome.journey.showTeamPrompt
               ? {

@@ -1,4 +1,11 @@
 import {
+  CATALOG_AVATAR_TINT,
+  CatalogAvatar,
+} from "@/components/mobile/catalog/catalog-avatar"
+import { selectCatalogAvatar } from "@/components/mobile/catalog/catalog-avatar-model"
+import type { CatalogRow } from "@/components/mobile/catalog/catalog-presentation"
+import { catalogAvatarTint } from "@/components/mobile/catalog/catalog-shelf-model"
+import {
   type GreenTillHomeStage,
   homeMoney,
 } from "@/components/mobile/dashboard/green-till-home-model"
@@ -30,8 +37,10 @@ import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
 import { useSalesValueMotion } from "@/hooks/use-sales-value-motion"
 import type { GreenTillTint } from "@/lib/green-till-theme"
+import { cn } from "@/lib/utils"
 import { useIsFocused } from "@react-navigation/native"
 import type { ReactNode } from "react"
+import { ScrollView } from "react-native"
 
 export type HomeRecentOrder = {
   amount: string
@@ -70,6 +79,12 @@ export type GreenTillOwnerHomeProps = {
     title: string
   }
   businessName: string
+  /** A few sellable items for the first-order Home (Workshop 01, first order). */
+  catalogPreview?: {
+    items: CatalogRow[]
+    onOpen: (id: string) => void
+    onSeeAll: () => void
+  }
   isOffline: boolean
   onAddItem: () => void
   onInviteTeam?: () => void
@@ -382,8 +397,79 @@ function SetupHome(props: GreenTillOwnerHomeProps) {
         </View>
       ) : null}
       <SetupSteps steps={steps} />
+      {first && props.catalogPreview?.items.length ? (
+        <CatalogCarousel {...props.catalogPreview} />
+      ) : null}
       {props.isOffline ? null : props.paymentNotifications}
       <GhostPreview message="Today’s sales will appear here after your first order." />
+    </View>
+  )
+}
+
+function CatalogCarousel({
+  items,
+  onOpen,
+  onSeeAll,
+}: NonNullable<GreenTillOwnerHomeProps["catalogPreview"]>) {
+  return (
+    <View>
+      <SectionHeader
+        actionLabel="See all"
+        onAction={onSeeAll}
+        title="Your catalog"
+      />
+      <ScrollView
+        contentContainerStyle={{
+          gap: 10,
+          paddingBottom: 6,
+          paddingHorizontal: 18,
+        }}
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={{ flexGrow: 0, marginHorizontal: -18 }}
+      >
+        {items.map((item) => {
+          const tint = catalogAvatarTint(item.name, item.kind)
+          return (
+            <View className="rounded-[18px] bg-card shadow-sm" key={item.id}>
+              <Pressable
+                accessibilityLabel={`Open ${item.name}, ${item.priceLabel}, ${item.availabilityLabel}`}
+                accessibilityRole="button"
+                className="w-[130px] rounded-[18px] p-2.5"
+                haptic
+                onPress={() => onOpen(item.id)}
+                transition
+              >
+                <View
+                  className={cn(
+                    "mb-2 h-[66px] items-center justify-center overflow-hidden rounded-xl",
+                    CATALOG_AVATAR_TINT[tint].bg,
+                  )}
+                >
+                  <CatalogAvatar
+                    media={item.avatar ?? selectCatalogAvatar(item)}
+                    name={item.name}
+                    service={item.kind === "service"}
+                    tint={tint}
+                  />
+                </View>
+                <Text
+                  className="text-[13px] font-bold text-foreground"
+                  numberOfLines={1}
+                >
+                  {item.name}
+                </Text>
+                <Text
+                  className="text-[11.5px] text-muted-foreground"
+                  numberOfLines={2}
+                >
+                  {item.priceLabel} · {item.availabilityLabel}
+                </Text>
+              </Pressable>
+            </View>
+          )
+        })}
+      </ScrollView>
     </View>
   )
 }
