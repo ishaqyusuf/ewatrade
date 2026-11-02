@@ -11,6 +11,7 @@ import {
 } from "@hugeicons/core-free-icons"
 import { CatalogSearchFilter } from "./catalog-search-filter"
 import { OpenCatalogItemSheet } from "./open-catalog-item-sheet"
+import { OpenMyImages } from "./open-my-images"
 
 // The saved value stays "cards" so existing view cookies keep working.
 const catalogViewOptions = [
@@ -20,10 +21,12 @@ const catalogViewOptions = [
 ] as const satisfies readonly ViewOption<DirectoryView>[]
 
 export function CatalogHeader({
+  storeId,
   storeName,
   view,
   onViewChange,
 }: {
+  storeId: string
   storeName: string
   view: DirectoryView
   onViewChange: (view: DirectoryView) => void
@@ -44,6 +47,7 @@ export function CatalogHeader({
               options={catalogViewOptions}
               onValueChange={onViewChange}
             />
+            <OpenMyImages storeId={storeId} />
             <OpenCatalogItemSheet />
           </>
         }

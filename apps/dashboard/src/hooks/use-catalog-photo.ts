@@ -9,11 +9,12 @@ import {
 import { useMutation } from "@tanstack/react-query"
 import { useEffect, useRef, useState } from "react"
 
-const INVALID_FILE = "Choose a JPG, PNG, WebP or HEIC photo smaller than 10 MB."
+export const INVALID_FILE =
+  "Choose a JPG, PNG, WebP or HEIC photo smaller than 10 MB."
 const STORE_CHANGED =
   "The active Store changed. Reopen this item before saving."
 
-function isCatalogPhotoFile(file: File) {
+export function isCatalogPhotoFile(file: File) {
   return (
     CATALOG_PHOTO_CONTENT_TYPES.some((type) => type === file.type) &&
     file.size >= 1 &&
@@ -24,7 +25,7 @@ function isCatalogPhotoFile(file: File) {
 type UploadDraftInput = Parameters<typeof uploadCatalogPhotoDraft>[0]
 
 /** Uploads one file as a private draft photo of the Store; returns its asset. */
-function uploadCatalogFile(input: {
+export function uploadCatalogFile(input: {
   file: File
   storeId: string
   clientOperationId: string

@@ -39,6 +39,7 @@ import { CatalogIllustrationPreview } from "./catalog-illustration-preview"
 import {
   type CatalogGalleryEntry,
   CatalogPhotoGalleryDialog,
+  catalogGalleryLabel,
 } from "./catalog-photo-gallery-dialog"
 import { CatalogPhotoPreview } from "./catalog-photo-preview"
 
@@ -323,7 +324,7 @@ function SavedPhotoEditor({
           compact
           assetId={entry.assetId}
           storeId={entry.storeId}
-          label={entry.items[0]?.name ?? item.name}
+          label={catalogGalleryLabel(entry, item.name)}
           className="size-full object-cover"
         />
       ),

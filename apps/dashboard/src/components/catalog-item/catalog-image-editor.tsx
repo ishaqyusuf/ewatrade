@@ -6,7 +6,10 @@ import { findCatalogIllustration } from "@ewatrade/utils/catalog-illustrations"
 import { useId, useState } from "react"
 import { CatalogIllustrationPicker } from "./catalog-illustration-picker"
 import { CatalogIllustrationPreview } from "./catalog-illustration-preview"
-import { CatalogPhotoGalleryDialog } from "./catalog-photo-gallery-dialog"
+import {
+  CatalogPhotoGalleryDialog,
+  catalogGalleryLabel,
+} from "./catalog-photo-gallery-dialog"
 
 export function CatalogImageEditor({
   photo,
@@ -120,7 +123,7 @@ export function CatalogImageEditor({
                 photo.reuse({
                   assetId: entry.assetId,
                   storeId: entry.storeId,
-                  name: entry.items[0]?.name ?? "",
+                  name: catalogGalleryLabel(entry, ""),
                 })
               )
                 onIllustrationChange(null)
