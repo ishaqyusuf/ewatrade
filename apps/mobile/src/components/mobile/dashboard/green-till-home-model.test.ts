@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import {
   countLabel,
+  firstOrderCatalogStepSub,
   greenTillHomeStage,
   homeMoney,
   orderPaymentPill,
@@ -109,5 +110,14 @@ describe("Green Till Home model", () => {
     expect(homeMoney(18_450_000, "NGN")).toBe("₦184,500")
     expect(homeMoney(150, "NGN")).toBe("₦1.50")
     expect(homeMoney(0, "NGN")).toBe("₦0")
+  })
+})
+
+describe("first-order catalog step", () => {
+  test("names the server's active item count, else the plain label", () => {
+    expect(firstOrderCatalogStepSub(3)).toBe("3 items ready to sell")
+    expect(firstOrderCatalogStepSub(1)).toBe("1 item ready to sell")
+    expect(firstOrderCatalogStepSub(0)).toBe("Ready to sell")
+    expect(firstOrderCatalogStepSub(undefined)).toBe("Ready to sell")
   })
 })

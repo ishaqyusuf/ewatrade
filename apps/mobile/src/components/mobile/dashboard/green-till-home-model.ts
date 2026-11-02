@@ -52,6 +52,17 @@ export function countLabel(count: number, singular: string, plural?: string) {
   return `${count} ${count === 1 ? singular : (plural ?? `${singular}s`)}`
 }
 
+/**
+ * The done "Add what you sell" step on the first-order Home (Workshop 01):
+ * "3 items ready to sell" from the server's count of active items, or the
+ * plain label while that count is loading, offline or unavailable.
+ */
+export function firstOrderCatalogStepSub(activeItemCount?: number) {
+  return activeItemCount && activeItemCount > 0
+    ? `${countLabel(activeItemCount, "item")} ready to sell`
+    : "Ready to sell"
+}
+
 /** The payment pill on a recent order row. */
 export function orderPaymentPill(order: {
   amountPaidMinor: number

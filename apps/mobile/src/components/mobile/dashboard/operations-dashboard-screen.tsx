@@ -324,6 +324,16 @@ export function OperationsDashboardSurface({
       },
     ),
   )
+  // Exact active-item count for "N items ready to sell" (a plain row count).
+  const firstOrderItemCount = useQuery(
+    trpc.catalog.count.queryOptions(
+      { status: "active" },
+      {
+        enabled: isClassicOwner && homeStage === "first-order" && !isOffline,
+        retry: false,
+      },
+    ),
+  )
   const firstOrderCatalogRows =
     firstOrderCatalog.data?.items.map((item) =>
       mapCatalogItem(item, featureAvailabilityQuery.data?.storeId),
@@ -628,6 +638,7 @@ export function OperationsDashboardSurface({
                 }
               : undefined
           }
+          activeItemCount={isOffline ? undefined : firstOrderItemCount.data}
           isOffline={isOffline}
           onAddItem={openQuickCreate}
           onInviteTeam={

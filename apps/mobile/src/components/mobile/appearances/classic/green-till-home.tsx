@@ -7,6 +7,7 @@ import type { CatalogRow } from "@/components/mobile/catalog/catalog-presentatio
 import { catalogAvatarTint } from "@/components/mobile/catalog/catalog-shelf-model"
 import {
   type GreenTillHomeStage,
+  firstOrderCatalogStepSub,
   homeMoney,
 } from "@/components/mobile/dashboard/green-till-home-model"
 import {
@@ -85,6 +86,8 @@ export type GreenTillOwnerHomeProps = {
     onOpen: (id: string) => void
     onSeeAll: () => void
   }
+  /** Active items in the business, from `catalog.count` (first-order step). */
+  activeItemCount?: number
   isOffline: boolean
   onAddItem: () => void
   onInviteTeam?: () => void
@@ -341,7 +344,9 @@ function SetupHome(props: GreenTillOwnerHomeProps) {
       key: "catalog",
       onPress: first ? undefined : props.onAddItem,
       state: first ? "done" : "now",
-      sub: first ? "Ready to sell" : "An item or service with a price",
+      sub: first
+        ? firstOrderCatalogStepSub(props.activeItemCount)
+        : "An item or service with a price",
       title: "Add what you sell",
     },
     {
