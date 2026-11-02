@@ -138,7 +138,9 @@ test("unavailable choices and changed fixed prices refuse before source writes",
   ).rejects.toThrow("no longer available")
   expect(unavailable.writes).toHaveLength(0)
   const changed = fixture()
-  changed.choices[0].fixedPriceMinor = 30000
+  const changedChoice = changed.choices[0]
+  if (!changedChoice) throw Error("Missing fixture choice")
+  changedChoice.fixedPriceMinor = 30000
   await expect(
     createStaffServiceQuoteSourceInTransaction(changed.tx, input),
   ).rejects.toThrow("fixed service price changed")

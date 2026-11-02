@@ -578,8 +578,8 @@ test("a completed replay after access is revoked or narrowed is refused unchange
 })
 
 test("history keeps older delivered/sent truth independently of its latest three displayed attempts", async () => {
-  for (const terminal of ["DELIVERED", "SENT"])
-    for (const recent of ["FAILED", "PENDING"]) {
+  for (const terminal of ["DELIVERED", "SENT"] as const)
+    for (const recent of ["FAILED", "PENDING"] as const) {
       const w = world()
       await recordServiceManualMessageInTransaction(w.tx, {
         ...input,
@@ -746,6 +746,7 @@ test("exact original retains full saved content/contact and selected share while
   const original = w.intents[0]
   const share = original?.manualShares[0]
   if (!original || !share) throw Error("Missing exact record")
+  if (!original.completedAt) throw Error("Missing exact completion time")
   original.manualShares.unshift({
     ...share,
     id: "other-share",
@@ -771,7 +772,7 @@ test("exact original retains full saved content/contact and selected share while
       email: "amina@example.test",
     },
     createdAt: original.createdAt.toISOString(),
-    completedAt: original.completedAt?.toISOString(),
+    completedAt: original.completedAt.toISOString(),
   })
   expect(result.share).toEqual({
     id: share.id,
@@ -817,7 +818,7 @@ test("exact original supports all three manual-share channels for every permitte
         w.tx,
         { ...input, intentId: result.intent.id, shareId: result.share.id },
       )
-      expect(original.share.channel).toBe(channel.toUpperCase())
+      expect<string>(original.share.channel).toBe(channel.toUpperCase())
       expect(original.sending).toBe("none")
       expect(original.delivery).toBe("unverified")
     }

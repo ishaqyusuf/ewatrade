@@ -23,6 +23,14 @@ const base = {
   ],
   dueCommitmentAt: new Date("2026-10-15T10:00:00.123Z"),
 }
+type StoredIntake = {
+  id: string
+  payloadHash: string
+  tenantId?: string
+  status?: string
+  commercialOrderId?: string
+  lines?: unknown[]
+}
 function fixture() {
   const state = {
     role: "OWNER",
@@ -117,7 +125,7 @@ function fixture() {
     },
     financeAccount: { findMany: async () => [] },
     serviceIntake: {
-      findUnique: async () => ({
+      findUnique: async (): Promise<StoredIntake | null> => ({
         id: "original-intake",
         payloadHash: "unused",
       }),
@@ -126,7 +134,7 @@ function fixture() {
         status: "CONFIRMED",
         commercialOrderId: "original-order",
       }),
-      create: async () => {
+      create: async (): Promise<{ id: string }> => {
         state.createCount++
         throw Error("Unexpected write")
       },
@@ -134,7 +142,11 @@ function fixture() {
     serviceJob: { findMany: async () => [] },
     serviceNotificationIntent: { findMany: async () => [] },
   }
-  return { state, tx: tx as unknown as Prisma.TransactionClient }
+  return {
+    state,
+    delegates: tx,
+    tx: tx as unknown as Prisma.TransactionClient,
+  }
 }
 describe("canonical Service intake review", () => {
   test("uses canonical exact totals, express surcharge, work policies and saved customer", async () => {
@@ -293,7 +305,7 @@ describe("canonical Service intake review", () => {
     expect(state.nestedCount).toBe(0)
   })
   test("Intake command replay returns original records without nesting or writes", async () => {
-    const { tx, state } = fixture()
+    const { tx, delegates, state } = fixture()
     // The real command's persisted hash is computed from the exact native input.
     const { createHash } = await import("node:crypto")
     const stable = (value: unknown): string => {
@@ -309,14 +321,14 @@ describe("canonical Service intake review", () => {
         .join(",")}}`
     }
     const digest = createHash("sha256").update(stable(base)).digest("hex")
-    tx.serviceIntake.findUnique = (async () => ({
+    delegates.serviceIntake.findUnique = async () => ({
       id: "original-intake",
       tenantId: "tenant",
       status: "CONFIRMED",
       commercialOrderId: "original-order",
       lines: [],
       payloadHash: digest,
-    })) as typeof tx.serviceIntake.findUnique
+    })
     const result = await createAndConfirmServiceIntakeInTransaction(tx, base)
     expect(result.orderId).toBe("original-order")
     expect(result.intakeId).toBe("original-intake")
@@ -363,15 +375,14 @@ describe("canonical Service intake review", () => {
 })
 
 test("canonical create-and-confirm rolls back the draft when line persistence fails", async () => {
-  const { tx, state } = fixture()
+  const { tx, delegates, state } = fixture()
   let pending = false
   let saved = false
-  tx.serviceIntake.findUnique = (async () =>
-    null) as typeof tx.serviceIntake.findUnique
-  tx.serviceIntake.create = (async () => {
+  delegates.serviceIntake.findUnique = async () => null
+  delegates.serviceIntake.create = async () => {
     pending = true
     return { id: "pending-intake" }
-  }) as typeof tx.serviceIntake.create
+  }
   Object.assign(tx, {
     serviceIntakeLine: {
       createMany: async () => {

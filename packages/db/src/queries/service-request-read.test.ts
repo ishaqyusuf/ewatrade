@@ -543,6 +543,7 @@ test("original refuses source/form/line/Quote/version/Order mismatches and clini
       })
     ).currentQuote?.acceptedOrderId,
   ).toBe("order")
+  const saved = q.currentVersion.acceptedOrder
   for (const change of [
     { prescriptionPickupFulfillment: { id: "clinical" } },
     { prescriptionDeliveryAddress: { id: "clinical" } },
@@ -553,7 +554,6 @@ test("original refuses source/form/line/Quote/version/Order mismatches and clini
       },
     },
   ]) {
-    const saved = q.currentVersion.acceptedOrder
     q.currentVersion.acceptedOrder = { ...saved, ...change }
     await expect(
       readServiceRequestOriginalInTransaction(w.tx, {

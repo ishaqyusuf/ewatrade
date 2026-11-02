@@ -82,9 +82,11 @@ function deferred() {
  * concurrency/constraint acceptance claim, and no module/global mocks are used.
  */
 function fixture() {
-  const publication = currentEffectiveLegalPublication()
-  if (!publication)
+  const effectivePublication = currentEffectiveLegalPublication()
+  if (!effectivePublication)
     throw new Error("A current legal publication is required by this fixture")
+  // Hoisted helpers below do not see the narrowing, so keep a non-null binding.
+  const publication = effectivePublication
   const authority = {
     entryRevision: 1,
     paused: false,
