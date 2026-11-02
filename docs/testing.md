@@ -73,9 +73,12 @@ The explicit mapping in `scripts/test-quick.ts` selects a small reviewed set:
 | `experiments/petrol-station/` (standalone prototype, not a workspace) | Core + its own offline model test |
 | Unmapped source/config | Exit 2 with paths; review and extend the mapping |
 
-The release-wide comparison `708b9d874..7beecf387` (1,317 paths) and
-`708b9d874..HEAD` at 2 November 2026 (2,078 paths) both map with zero unknown
-paths. `packages/storefront-components/src/pipeline.test.ts` is intentionally
+The release-wide comparison `708b9d874..7beecf387` (1,317 paths, 65 then 59
+unmapped) and `708b9d874..HEAD` at 2 November 2026 (2,081 paths) both map with
+zero unknown paths. Biome on the same full-diff file set went from 78
+diagnostics to 2 left on purpose: the catalog helper picker effect dependency
+(adding the per-render callback would re-run the Android dismissal effect every
+render, so it needs a behaviour review) and the QA auth modal import order. `packages/storefront-components/src/pipeline.test.ts` is intentionally
 not in the smoke set: it writes fixtures under the macOS-only `/private/tmp`.
 Shared UI has no test of its own; its consumers' web smoke is the bounded check.
 Areas never touched by that release still exit 2 when changed (157 tracked paths
