@@ -5,12 +5,9 @@ import { Text } from "@/components/ui/text"
 import { Textarea } from "@/components/ui/textarea"
 import { View } from "@/components/ui/view"
 import { useAuthContext } from "@/hooks/use-auth"
+import { businessCountryCode } from "@/lib/business-country"
 import { useBusinessStore } from "@/store/businessStore"
-import {
-  COUNTRIES,
-  DEFAULT_COUNTRY_CODE,
-  getCountry,
-} from "@ewatrade/utils/countries"
+import { getCountry } from "@ewatrade/utils/countries"
 import * as Clipboard from "expo-clipboard"
 import { useState } from "react"
 import { Linking, Share } from "react-native"
@@ -157,10 +154,10 @@ function DraftRecipient({
   const businessCountry = useBusinessStore(
     (s) => s.businesses.find((b) => b.id === profile?.businessId)?.country,
   )
-  const defaultCountry =
-    COUNTRIES.find(
-      (c) => c.code === businessCountry || c.name === businessCountry,
-    )?.code ?? DEFAULT_COUNTRY_CODE
+  const defaultCountry = businessCountryCode(
+    profile?.countryCode,
+    businessCountry,
+  )
   const [open, setOpen] = useState(false)
   const [countryCode, setCountryCode] = useState<string | null>(null)
   const [digits, setDigits] = useState("")

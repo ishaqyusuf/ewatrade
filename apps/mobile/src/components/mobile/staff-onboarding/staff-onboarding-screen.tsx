@@ -126,6 +126,8 @@ export function StaffOnboardingScreen() {
             businessId: completed.tenant.id,
             businessName: business.name,
             businessSlug: completed.tenant.slug,
+            // The joined business's country arrives with the next sign-in.
+            countryCode: undefined,
             email: completed.user.email,
             id: completed.user.id,
             name:

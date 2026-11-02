@@ -129,6 +129,7 @@ export function LoginScreen() {
               businessSlug: session.tenant?.slug ?? undefined,
               storeId: session.tenant?.storeId ?? undefined,
               storeName: session.tenant?.storeName ?? undefined,
+              countryCode: session.profile.countryCode ?? undefined,
               currencyCode: session.profile.currencyCode,
               email: session.profile.email,
               id: session.profile.id,

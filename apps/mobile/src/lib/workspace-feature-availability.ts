@@ -1,6 +1,7 @@
 import type { MobileSession } from "@/lib/session-store"
 import type { RetailOpsBusiness } from "@/store/businessStore"
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
+import { businessCountryCode } from "./business-country"
 
 export type MobileWorkspaceFeatureAvailability =
   RouterOutputs["tenant"]["featureAvailability"]
@@ -106,6 +107,9 @@ export function switchMobileBusinessSession(
       businessId: business.id,
       businessName: business.name,
       businessSlug: business.slug,
+      countryCode: business.country
+        ? businessCountryCode(business.country)
+        : undefined,
       storeId: undefined,
       storeName: undefined,
       staffAccessMode: undefined,

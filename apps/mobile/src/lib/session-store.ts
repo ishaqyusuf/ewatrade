@@ -10,6 +10,8 @@ export type MobileProfile = {
   email: string
   businessName?: string
   businessSlug?: string
+  /** The business's country (ISO code) from the server, when recorded. */
+  countryCode?: string
   currencyCode?: string
   storeId?: string
   storeName?: string

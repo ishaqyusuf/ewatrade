@@ -15,6 +15,7 @@ import {
 import {
   OwnerBusinessAgeError,
   RetailOpsSubscriptionError,
+  canonicalBusinessCountryCode,
   createOwnerBusiness,
   createTenantStore,
   findOrCreateInventoryStore,
@@ -232,10 +233,16 @@ export const tenantRouter = createTRPCRouter({
         role: true,
         tenant: {
           select: {
+            countryCode: true,
             currencyCode: true,
             id: true,
             name: true,
             slug: true,
+            stores: {
+              orderBy: { createdAt: "asc" },
+              select: { countryCode: true },
+              where: { status: { not: "ARCHIVED" } },
+            },
           },
         },
       },
@@ -250,6 +257,10 @@ export const tenantRouter = createTRPCRouter({
       })
 
     return memberships.map((membership) => ({
+      countryCode: canonicalBusinessCountryCode(
+        membership.tenant.countryCode,
+        membership.tenant.stores,
+      ),
       currencyCode: membership.tenant.currencyCode,
       id: membership.tenant.id,
       name: membership.tenant.name,

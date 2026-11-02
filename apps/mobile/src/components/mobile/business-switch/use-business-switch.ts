@@ -94,6 +94,7 @@ export function useBusinessSwitch({
               id: business.id,
               name: business.name,
               role: business.role,
+              country: business.countryCode ?? undefined,
               currency: business.currencyCode,
               slug: business.slug,
               type: "Business",

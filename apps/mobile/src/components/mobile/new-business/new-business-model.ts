@@ -31,9 +31,9 @@ export type NewBusinessDraft = {
   otherBusinessDescription: string
   teamSize: BusinessTeamSize
 }
-export function newBusinessDraft(): NewBusinessDraft {
+export function newBusinessDraft(countryCode = "NG"): NewBusinessDraft {
   return {
-    countryCode: "NG",
+    countryCode,
     businessName: "",
     addressLine1: "",
     city: "",

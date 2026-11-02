@@ -33,10 +33,12 @@ test("declared teen Account can list its Business memberships", async () => {
           {
             role: "OWNER",
             tenant: {
+              countryCode: null,
               currencyCode: "NGN",
               id: "teen-business",
               name: "Teen Store",
               slug: "teen-store",
+              stores: [{ countryCode: null }, { countryCode: "ng" }],
             },
           },
         ],
@@ -48,6 +50,8 @@ test("declared teen Account can list its Business memberships", async () => {
 
   expect(await caller.businesses()).toEqual([
     {
+      // No business country: the oldest Store with one supplies it.
+      countryCode: "NG",
       currencyCode: "NGN",
       id: "teen-business",
       name: "Teen Store",
@@ -69,10 +73,12 @@ test("QA-derived session lists only its selected business", async () => {
             {
               role: "OWNER",
               tenant: {
+                countryCode: "GH",
                 currencyCode: "NGN",
                 id: "qa-business",
                 name: "Jawdah Poultry QA",
                 slug: "jawdah-poultry-qa",
+                stores: [{ countryCode: "NG" }],
               },
             },
           ]
@@ -90,6 +96,7 @@ test("QA-derived session lists only its selected business", async () => {
 
   expect(await caller.businesses()).toEqual([
     {
+      countryCode: "GH",
       currencyCode: "NGN",
       id: "qa-business",
       name: "Jawdah Poultry QA",

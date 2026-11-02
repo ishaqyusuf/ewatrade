@@ -1,5 +1,6 @@
 import { useAuthContext } from "@/hooks/use-auth"
 import { createBusinessFixture } from "@/internal-tooling/fixture-recipes"
+import { businessCountryCode } from "@/lib/business-country"
 import { isLocalSessionToken } from "@/lib/session-store"
 import { switchMobileBusinessSession } from "@/lib/workspace-feature-availability"
 import { type RetailOpsBusiness, useBusinessStore } from "@/store/businessStore"
@@ -50,7 +51,18 @@ export function useNewBusiness() {
   const latest = useRef({ auth, isOffline, local })
   latest.current = { auth, isOffline, local }
   const mounted = useRef(true)
-  const [draft, setDraft] = useState(newBusinessDraft)
+  const localCountry = useBusinessStore(
+    (state) =>
+      state.businesses.find(
+        (business) => business.id === auth.profile?.businessId,
+      )?.country,
+  )
+  // A new business starts in the current business's country.
+  const [draft, setDraft] = useState(() =>
+    newBusinessDraft(
+      businessCountryCode(auth.profile?.countryCode, localCountry),
+    ),
+  )
   const draftRef = useRef(draft)
   draftRef.current = draft
   const [step, setStep] = useState(1)
@@ -244,6 +256,7 @@ export function useNewBusiness() {
           businessCreateInput(inputDraft),
         )
         business = {
+          country: result.countryCode ?? undefined,
           createdAt: "",
           currency: result.currencyCode,
           id: result.id,

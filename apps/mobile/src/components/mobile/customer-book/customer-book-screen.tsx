@@ -15,9 +15,9 @@ import { Toast } from "@/components/ui/toast"
 import { View } from "@/components/ui/view"
 import { useAuthContext } from "@/hooks/use-auth"
 import { useBottomSearchScroll } from "@/hooks/use-bottom-search-scroll"
+import { businessCountryCode } from "@/lib/business-country"
 import { shouldFetchNextListPage } from "@/lib/list-pagination"
 import { useBusinessStore } from "@/store/businessStore"
-import { COUNTRIES, DEFAULT_COUNTRY_CODE } from "@ewatrade/utils/countries"
 import { VariableContextProvider } from "nativewind"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { FlatList } from "react-native-css/components/FlatList"
@@ -56,10 +56,7 @@ export function CustomerBookContent(
   const businessCountry = useBusinessStore(
     (s) => s.businesses.find((b) => b.id === profile?.businessId)?.country,
   )
-  const countryCode =
-    COUNTRIES.find(
-      (c) => c.code === businessCountry || c.name === businessCountry,
-    )?.code ?? DEFAULT_COUNTRY_CODE
+  const countryCode = businessCountryCode(profile?.countryCode, businessCountry)
   const canManageTenant = ["OWNER", "ADMIN"].includes(
     profile?.role?.trim().toUpperCase() ?? "",
   )

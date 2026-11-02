@@ -19,6 +19,7 @@ import type { Prisma } from "../../generated/prisma/client"
 import { AccountAgeBand, MembershipRole } from "../../generated/prisma/enums"
 import { recordLegalAcceptance } from "./account-privacy"
 import { isAccountPrivacyAccessBlocked } from "./account-privacy-access"
+import { canonicalBusinessCountryCode } from "./business-country"
 import { isLegalSignupSessionBlocked } from "./legal-session-access"
 import { shouldUseFixedMobileOwnerOtp } from "./mobile-otp-development-policy"
 import {
@@ -82,6 +83,8 @@ export type MobileAuthSessionResult = {
   profile: {
     businessId: string | null
     businessName: string | null
+    /** The business's country for pickers; null when none is recorded. */
+    countryCode: string | null
     currencyCode: string
     email: string
     id: string
@@ -345,6 +348,7 @@ async function getFirstActiveTenantForUser(
           id: true,
           name: true,
           slug: true,
+          countryCode: true,
           currencyCode: true,
           stores: {
             where: { status: { not: "ARCHIVED" } },
@@ -353,6 +357,7 @@ async function getFirstActiveTenantForUser(
               id: true,
               name: true,
               status: true,
+              countryCode: true,
               currencyCode: true,
               metadata: true,
             },
@@ -381,6 +386,10 @@ async function getFirstActiveTenantForUser(
     null
 
   return {
+    countryCode: canonicalBusinessCountryCode(
+      membership.tenant.countryCode,
+      membership.tenant.stores,
+    ),
     currencyCode:
       activeStore?.currencyCode ??
       normalizeOperatingCurrencyCode(membership.tenant.currencyCode),
@@ -527,6 +536,7 @@ export async function createMobileSessionForVerifiedUser(
     profile: {
       businessId: tenant?.id ?? null,
       businessName: tenant?.name ?? null,
+      countryCode: tenant?.countryCode ?? null,
       currencyCode: tenant?.currencyCode ?? "NGN",
       email: user.email.endsWith("@phone.ewatrade.invalid") ? "" : user.email,
       id: user.id,
@@ -1030,6 +1040,7 @@ export async function verifyMobileOwnerOtp(
     profile: {
       businessId: tenant?.id ?? null,
       businessName: tenant?.name ?? null,
+      countryCode: tenant?.countryCode ?? null,
       currencyCode: tenant?.currencyCode ?? "NGN",
       email: user.email,
       id: user.id,
@@ -1237,6 +1248,7 @@ export async function verifyMobileSocialIdentity(
     profile: {
       businessId: tenant?.id ?? null,
       businessName: tenant?.name ?? null,
+      countryCode: tenant?.countryCode ?? null,
       currencyCode: tenant?.currencyCode ?? "NGN",
       email: user.email,
       id: user.id,

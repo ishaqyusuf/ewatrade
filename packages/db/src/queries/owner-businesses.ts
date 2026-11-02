@@ -7,6 +7,7 @@ import { managedQaIdentity } from "@ewatrade/utils/qa-policy-server"
 import { isClaimableStoreLink } from "@ewatrade/utils/store-link"
 import { Prisma } from "../../generated/prisma/client"
 import { AccountAgeBand } from "../../generated/prisma/enums"
+import { canonicalBusinessCountryCode } from "./business-country"
 import {
   StoreLinkConflictError,
   storeLinkHostnames,
@@ -15,6 +16,7 @@ import { createTenantStore } from "./stores"
 import type { DbClient } from "./types"
 
 export type OwnerBusinessSummary = {
+  countryCode: string | null
   currencyCode: string
   id: string
   name: string
@@ -270,6 +272,9 @@ async function createOwnerBusinessWithSource(
   })
 
   return {
+    countryCode: canonicalBusinessCountryCode(null, [
+      { countryCode: input.countryCode ?? null },
+    ]),
     currencyCode: store.currencyCode,
     id: tenant.id,
     name: tenant.name,
