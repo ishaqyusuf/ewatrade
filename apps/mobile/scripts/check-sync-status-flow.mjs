@@ -16,7 +16,7 @@ const contracts = [
       "SYNC_STATUS_COPY.syncError",
       "SYNC_STATUS_COPY.policySaveError",
       "SYNC_STATUS_COPY.reviewError",
-      "review.isPending",
+      "sync.reviewPending",
       "updateSettings.isPending",
       "disabled={operationPending}",
       "SYNC_STATUS_COPY.localConflict",
@@ -43,8 +43,12 @@ const contracts = [
     reason: "the development QA control must not overlap live sync actions",
   },
   {
-    file: "apps/mobile/src/components/mobile/admin-tabs/admin-more-screen.tsx",
-    markers: ["staleTime: 30_000"],
+    file: "apps/mobile/src/components/mobile/more/more-screen.tsx",
+    markers: [
+      "trpc.offline.settings.queryOptions",
+      "trpc.offline.conflicts.queryOptions",
+      "staleTime: 30_000",
+    ],
     reason:
       "opening More and then Sync & offline must not immediately repeat identical reads",
   },
