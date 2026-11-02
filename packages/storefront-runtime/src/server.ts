@@ -128,6 +128,13 @@ export function checkResourceLimits(
   const { items, categories } = resources.catalog
   if (items.length > limits.catalogItems) return "catalogItems"
   if (categories.length > limits.categories) return "categories"
+  if (
+    categories.some(
+      (category) =>
+        (category.subcategories?.length ?? 0) > limits.subcategoriesPerCategory,
+    )
+  )
+    return "subcategories"
   const allItems = resources.catalog.highlightedItem
     ? [...items, resources.catalog.highlightedItem]
     : items

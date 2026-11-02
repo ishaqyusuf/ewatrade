@@ -1,4 +1,5 @@
 import { catalogPublicPhotoProviderFilter } from "@ewatrade/catalog/photo-qa-policy"
+import { STOREFRONT_RESOURCE_LIMITS } from "@ewatrade/storefront-contracts/resources"
 import {
   isLocalStorefrontPreviewHost,
   normalizeHostname,
@@ -662,11 +663,14 @@ export async function readPublicStorefrontFromContext(
     typeof value === "string" && /^[A-Za-z0-9_-]{1,128}$/.test(value)
   const category =
     paidListing && validId(options.category) ? options.category : null
+  const subcategory =
+    category && validId(options.subcategory) ? options.subcategory : null
   const listing = normalizePublicListing(options)
   const eligibleWhere = publicCatalogItemWhere(tenant.id, store.id)
   const baseWhere = {
     ...eligibleWhere,
     ...(category ? { categoryId: category } : {}),
+    ...(subcategory ? { subcategoryId: subcategory } : {}),
   } satisfies Prisma.CatalogItemWhereInput
   // Search narrows only paid listings here; included plans filter after their cap.
   const listWhere: Prisma.CatalogItemWhereInput =
@@ -775,7 +779,12 @@ export async function readPublicStorefrontFromContext(
     db.catalogItem.findFirst({ where: { AND: [where, { id }] }, select })
   const bucketOf = (item: { availability: string | null }) =>
     item.availability === "OUT_OF_STOCK" ? ("o" as const) : ("a" as const)
-  const binding = publicListingBinding({ storeId: store.id, category, listing })
+  const binding = publicListingBinding({
+    storeId: store.id,
+    category,
+    subcategory,
+    listing,
+  })
   let items: ReturnType<typeof projectItem>[]
   let cappedItems: ReturnType<typeof projectItem>[] = []
   let hasHiddenItems = false
@@ -915,6 +924,7 @@ export async function readPublicStorefrontFromContext(
                 storeId: store.id,
                 currencyCode: store.currencyCode,
                 category,
+                subcategory,
                 terms: listing.terms,
                 availability: listing.availability,
                 outVariantIds,
@@ -958,22 +968,25 @@ export async function readPublicStorefrontFromContext(
     const row = await cursorRow(eligibleWhere, requestedItem)
     highlightedItem = row ? projectItem(row) : null
   }
+  // Root → subcategory navigation lists only groups holding a currently public item.
   const categories =
     paidListing && projection.catalog === undefined
       ? await db.catalogCategory.findMany({
           where: {
             tenantId: tenant.id,
-            items: {
-              some: {
-                ...saleEligibleCatalogItem,
-                tenantId: tenant.id,
-                status: "ACTIVE",
-                archivedAt: null,
-                offerings: { some: offeringWhere },
-              },
+            parentId: null,
+            items: { some: eligibleWhere },
+          },
+          select: {
+            id: true,
+            label: true,
+            children: {
+              where: { subcategoryItems: { some: eligibleWhere } },
+              select: { id: true, label: true },
+              orderBy: [{ normalizedLabel: "asc" }, { id: "asc" }],
+              take: STOREFRONT_RESOURCE_LIMITS.subcategoriesPerCategory,
             },
           },
-          select: { id: true, label: true },
           orderBy: [{ normalizedLabel: "asc" }, { id: "asc" }],
         })
       : []
@@ -998,9 +1011,14 @@ export async function readPublicStorefrontFromContext(
     name: tenant.name,
     timezone: tenant.timezone,
     category,
+    subcategory,
     categories: categories.map((category) => ({
       id: category.id,
       name: category.label,
+      subcategories: category.children.map((child) => ({
+        id: child.id,
+        name: child.label,
+      })),
     })),
     highlightedItem,
     slug: tenant.slug,

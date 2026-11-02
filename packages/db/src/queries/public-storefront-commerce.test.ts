@@ -91,7 +91,7 @@ function repository(
     catalogCategory: {
       findMany: async () => {
         categoryReads++
-        return [{ id: "category-1", label: "Bags" }]
+        return [{ id: "category-1", label: "Bags", children: [] }]
       },
     },
     customerEntryPoint: { findFirst: async () => null },

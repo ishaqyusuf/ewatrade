@@ -18,13 +18,14 @@ test("public listing query is bounded and cannot select a Tenant or Store", () =
     { q: ["a", "b"] },
     { after: `s:${"x".repeat(1537)}` },
     { after: "s:bad/value" },
+    { subcategory: "bad/id" },
   ])
     expect(catalogQuerySchema.safeParse(query).success).toBe(false)
   for (const after of ["item", "a:item", "o:item", "s:eyJpZCI6Iml0ZW0ifQ"])
     expect(catalogQuerySchema.safeParse({ after }).success).toBe(true)
 })
 
-test("scope cache keys distinguish search, availability and sort", () => {
+test("scope cache keys distinguish category, subcategory, search, availability and sort", () => {
   const scope = {
     tenantId: "tenant",
     siteId: "site",
@@ -42,6 +43,9 @@ test("scope cache keys distinguish search, availability and sort", () => {
     { availability: "out_of_stock" as const },
     { sort: "price_asc" as const },
     { sort: "name_desc" as const },
+    { category: "clothing" },
+    { category: "clothing", subcategory: "shirts" },
+    { category: "clothing", subcategory: "trousers" },
   ].map((query) => JSON.stringify(storefrontQueryKey(scope, query)))
   expect(new Set(keys).size).toBe(keys.length)
 })

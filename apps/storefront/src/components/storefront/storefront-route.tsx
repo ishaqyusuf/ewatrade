@@ -19,7 +19,8 @@ export async function storefrontPageMetadata(
   pageKey: string,
   searchParams: StorefrontSearch,
 ): Promise<Metadata> {
-  const { after, category, item, q, availability, sort } = await searchParams
+  const { after, category, subcategory, item, q, availability, sort } =
+    await searchParams
   const { load, storefront } = await loadStorefrontPage(
     after,
     category,
@@ -28,6 +29,7 @@ export async function storefrontPageMetadata(
     availability,
     sort,
     pageKey,
+    subcategory,
   )
   if (load.status !== "ready" || !storefront)
     return {
@@ -40,6 +42,7 @@ export async function storefrontPageMetadata(
     {
       after,
       category,
+      subcategory,
       q,
       availability,
       sort,
@@ -80,7 +83,7 @@ async function ResolvedTemplatePage({
   pageKey,
   query,
 }: { pageKey: string; query: CatalogQuery }) {
-  const { after, category, item, q, availability, sort } = query
+  const { after, category, subcategory, item, q, availability, sort } = query
   const { load } = await loadStorefrontPage(
     after,
     category,
@@ -89,6 +92,7 @@ async function ResolvedTemplatePage({
     availability,
     sort,
     pageKey,
+    subcategory,
   )
   if (
     load.status !== "ready" ||

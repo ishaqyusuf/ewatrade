@@ -25,7 +25,12 @@ export const metadata: Metadata = {
 }
 
 type Props = {
-  searchParams: Promise<{ page?: string; item?: string; category?: string }>
+  searchParams: Promise<{
+    page?: string
+    item?: string
+    category?: string
+    subcategory?: string
+  }>
 }
 
 /**
@@ -56,6 +61,7 @@ export default async function QaTemplatePreview({ searchParams }: Props) {
   const query = catalogQuerySchema.safeParse({
     item: params.item,
     category: params.category,
+    subcategory: params.subcategory,
   })
   if (!query.success) notFound()
   const projection = await getScopedStorefrontDesignPreview(

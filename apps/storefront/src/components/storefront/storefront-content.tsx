@@ -59,6 +59,7 @@ export function StorefrontContent({
                   page: pageKey === "about" ? "about" : "home",
                   after,
                   category: store.category,
+                  subcategory: store.subcategory,
                   ...store.query,
                 },
               ),

@@ -94,6 +94,13 @@ export const publicCatalogItemSchema = z
   .strict()
 export type PublicCatalogItem = z.infer<typeof publicCatalogItemSchema>
 
+/** A root category and its subcategories holding public items; ids are listing filters only. */
+export type StorefrontCategory = {
+  id: string
+  name: string
+  subcategories?: { id: string; name: string }[]
+}
+
 export type StorefrontResources = {
   business: {
     name: string
@@ -104,8 +111,10 @@ export type StorefrontResources = {
   catalog: {
     items: PublicCatalogItem[]
     highlightedItem: PublicCatalogItem | null
-    categories: { id: string; name: string }[]
+    categories: StorefrontCategory[]
     category: string | null
+    /** Echoed subcategory filter; only applied together with its root `category`. */
+    subcategory?: string | null
     nextCursor: string | null
     hasHiddenItems: boolean
     /** Listing state only; item/after stay navigation hints, never resource authority. */
@@ -150,6 +159,10 @@ export type StorefrontCommerceResource = {
 export const catalogQuerySchema = z
   .object({
     category: z
+      .string()
+      .regex(/^[A-Za-z0-9_-]{1,128}$/)
+      .optional(),
+    subcategory: z
       .string()
       .regex(/^[A-Za-z0-9_-]{1,128}$/)
       .optional(),
@@ -198,6 +211,7 @@ export function storefrontQueryKey(
     query.q ?? "",
     query.availability ?? "",
     query.sort ?? "",
+    query.subcategory ?? "",
   ] as const
 }
 
@@ -216,6 +230,7 @@ export function sectionResources(
 export const STOREFRONT_RESOURCE_LIMITS = {
   catalogItems: 50,
   categories: 50,
+  subcategoriesPerCategory: 50,
   optionsPerItem: 20,
   assets: 64,
 } as const

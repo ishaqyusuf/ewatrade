@@ -31,6 +31,7 @@ export function storefrontMetadata(
     page?: "home" | "about"
     after?: string
     category?: string | null
+    subcategory?: string | null
     indexable?: boolean
     q?: string
     availability?: CatalogQuery["availability"]

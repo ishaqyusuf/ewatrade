@@ -27,6 +27,17 @@ test("listing links retain filters and cursor with literal search encoding", () 
   )
 })
 
+test("subcategory links deep-link only inside their root category", () => {
+  expect(
+    storefrontListingHref({
+      category: "clothing",
+      subcategory: "shirts",
+      sort: "name_asc",
+    }),
+  ).toBe("/?category=clothing&subcategory=shirts&sort=name_asc")
+  expect(storefrontListingHref({ subcategory: "shirts" })).toBe("/")
+})
+
 test("WhatsApp enquiries preserve exact selected public variant and selling-unit labels", () => {
   const item = {
     name: "Sandals & bags",

@@ -2,6 +2,7 @@ import type {
   CatalogQuery,
   PublicCatalogItem,
   StorefrontCapabilities,
+  StorefrontCategory,
   StorefrontCommerceResource,
   StorefrontResources,
 } from "../../storefront-contracts/src/resources"
@@ -16,8 +17,9 @@ export type PublicStorefrontProjection = {
   currencyCode: string
   items: PublicCatalogItem[]
   highlightedItem: PublicCatalogItem | null
-  categories: { id: string; name: string }[]
+  categories: StorefrontCategory[]
   category: string | null
+  subcategory?: string | null
   nextCursor: string | null
   hasHiddenItems: boolean
   query?: Pick<CatalogQuery, "q" | "availability" | "sort">
@@ -84,6 +86,7 @@ export function publicStorefrontResources(
         highlightedItem: store.highlightedItem,
         categories: store.categories,
         category: store.category,
+        ...(store.subcategory ? { subcategory: store.subcategory } : {}),
         nextCursor: store.nextCursor,
         hasHiddenItems: store.hasHiddenItems,
         ...(store.query ? { query: store.query } : {}),

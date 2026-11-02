@@ -33,6 +33,7 @@ export function storefrontPageUrl(
   query: {
     page?: "home" | "about"
     category?: string | null
+    subcategory?: string | null
     after?: string
     item?: string
     q?: string
@@ -46,6 +47,8 @@ export function storefrontPageUrl(
     url.search = ""
   } else if (!query.item) {
     if (query.category) url.searchParams.set("category", query.category)
+    if (query.category && query.subcategory)
+      url.searchParams.set("subcategory", query.subcategory)
     if (query.after) url.searchParams.set("after", query.after)
     if (query.q?.trim()) url.searchParams.set("q", query.q.trim())
     if (query.availability)
@@ -61,6 +64,7 @@ export function storefrontStructuredData(
   query: {
     page?: "home" | "about"
     category?: string | null
+    subcategory?: string | null
     after?: string
     q?: string
     availability?: CatalogQuery["availability"]

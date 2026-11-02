@@ -10,12 +10,15 @@ export function storefrontListingHref(input: Omit<CatalogQuery, "item"> = {}) {
   const params = new URLSearchParams()
   for (const key of [
     "category",
+    "subcategory",
     "q",
     "availability",
     "sort",
     "after",
   ] as const) {
     const value = query[key]
+    // A subcategory is meaningful only inside its root category.
+    if (key === "subcategory" && !query.category) continue
     if (value) params.set(key, value)
   }
   return params.size ? `/?${params}` : "/"

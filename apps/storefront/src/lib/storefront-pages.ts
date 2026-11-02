@@ -40,10 +40,12 @@ const loadCachedStorefrontPage = cache(
     availability?: CatalogQuery["availability"],
     sort?: CatalogQuery["sort"],
     pageKey = "home",
+    subcategory?: string,
   ) => {
     const query = catalogQuerySchema.safeParse({
       after,
       category,
+      subcategory,
       item,
       q,
       availability,
@@ -75,6 +77,7 @@ export function loadStorefrontPage(
   availability?: CatalogQuery["availability"],
   sort?: CatalogQuery["sort"],
   pageKey = "home",
+  subcategory?: string,
 ) {
   return loadCachedStorefrontPage(
     after,
@@ -84,6 +87,7 @@ export function loadStorefrontPage(
     availability,
     sort,
     pageKey,
+    subcategory,
   )
 }
 

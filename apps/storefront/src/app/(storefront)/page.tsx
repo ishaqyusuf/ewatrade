@@ -13,7 +13,8 @@ export const dynamic = "force-dynamic"
 export async function generateMetadata({
   searchParams,
 }: Props): Promise<Metadata> {
-  const { after, category, item, q, availability, sort } = await searchParams
+  const { after, category, subcategory, item, q, availability, sort } =
+    await searchParams
   const { load, storefront: store } = await loadStorefront(
     after,
     category,
@@ -21,6 +22,8 @@ export async function generateMetadata({
     q,
     availability,
     sort,
+    "home",
+    subcategory,
   )
   return load.status === "ready" && store
     ? storefrontMetadata(
@@ -29,6 +32,7 @@ export async function generateMetadata({
         {
           after,
           category,
+          subcategory,
           q,
           availability,
           sort,

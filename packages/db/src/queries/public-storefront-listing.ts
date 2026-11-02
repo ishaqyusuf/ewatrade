@@ -11,6 +11,8 @@ export type PublicListingAvailability = "available" | "out_of_stock"
 /** Structurally matches the shared CatalogQuery; every field is optional. */
 export type PublicStorefrontQuery = {
   category?: string
+  /** Applies only with its root `category`; a mismatched pair lists nothing. */
+  subcategory?: string
   item?: string
   q?: string
   availability?: PublicListingAvailability
@@ -99,6 +101,7 @@ export type PublicListingCursor =
 export function publicListingBinding(input: {
   storeId: string
   category: string | null
+  subcategory?: string | null
   listing: PublicListing
 }) {
   return createHash("sha256")
@@ -109,6 +112,8 @@ export function publicListingBinding(input: {
         input.listing.q ?? "",
         input.listing.availability ?? "",
         input.listing.sort ?? "",
+        // Appended only when set, so cursors issued before subcategories stay valid.
+        ...(input.subcategory ? [input.subcategory] : []),
       ]),
     )
     .digest("base64url")
@@ -171,6 +176,7 @@ export function publicPriceSortedIdsSql(input: {
   storeId: string
   currencyCode: string
   category: string | null
+  subcategory?: string | null
   terms: string[]
   availability: PublicListingAvailability | undefined
   outVariantIds: string[]
@@ -181,6 +187,8 @@ export function publicPriceSortedIdsSql(input: {
   const filters: Prisma.Sql[] = []
   if (input.category)
     filters.push(Prisma.sql`AND i."categoryId" = ${input.category}`)
+  if (input.subcategory)
+    filters.push(Prisma.sql`AND i."subcategoryId" = ${input.subcategory}`)
   for (const term of input.terms)
     filters.push(
       Prisma.sql`AND (i.name ILIKE ${`%${escapePublicListingTerm(term)}%`} OR i.description ILIKE ${`%${escapePublicListingTerm(term)}%`} OR i.category ILIKE ${`%${escapePublicListingTerm(term)}%`})`,
