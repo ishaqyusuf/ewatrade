@@ -78,6 +78,12 @@ export function HistoryTimeline({
     dot?: HistoryDot
     status?: string
     tone?: StatusPillTone
+    /** A correction that belongs to this entry, drawn as a text link. */
+    action?: {
+      label: string
+      accessibilityLabel?: string
+      onPress: () => void
+    }
   }>
 }) {
   return (
@@ -113,6 +119,19 @@ export function HistoryTimeline({
                       tone={item.tone ?? "muted"}
                     />
                   </View>
+                ) : null}
+                {item.action ? (
+                  <Pressable
+                    accessibilityLabel={item.action.accessibilityLabel}
+                    accessibilityRole="button"
+                    className="min-h-9 justify-center self-start"
+                    hitSlop={6}
+                    onPress={item.action.onPress}
+                  >
+                    <Text className="text-xs font-bold text-primary">
+                      {item.action.label}
+                    </Text>
+                  </Pressable>
                 ) : null}
               </View>
               {item.amount ? (

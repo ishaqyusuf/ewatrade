@@ -21,6 +21,7 @@ import {
 } from "../green-till/kit"
 import { FinanceCommandFeedback } from "./finance-command-feedback"
 import { financeDisplayDate } from "./finance-display"
+import { HistoryTimeline } from "./finance-ledger-layout"
 import type { FinanceWorkspace } from "./finance-workspace-gate"
 import { useSupplierReadAuthority } from "./supplier-finance-screen"
 import { SupplierPurchaseRecognitionPanel } from "./supplier-purchase-recognition"
@@ -31,6 +32,7 @@ import {
 import { SupplierPurchaseSettlementForm } from "./supplier-purchase-settlement-form"
 import type { PurchaseSettlementMode } from "./supplier-purchase-settlement-form"
 import { resolveSupplierPurchaseView } from "./supplier-purchase-settlement-state"
+import { purchasePaymentsTimeline } from "./supplier-purchase-timeline"
 
 type Supplier = { id: string; code: string; name: string }
 type PurchaseItem = RouterOutputs["finance"]["purchases"]["items"][number]
@@ -631,109 +633,60 @@ function SupplierPurchaseDetail({
               </View>
             ))}
           </ListCard>
-          <SectionHeader title="Cash payments" />
-          {data.payments.length === 0 ? (
-            <Text className="px-0.5 text-sm text-muted-foreground">
-              No payments recorded yet.
-            </Text>
-          ) : null}
-          {data.payments.map((item) => (
-            <View
-              key={item.id}
-              className="gap-2 rounded-[20px] bg-card p-4 shadow-sm"
-            >
-              <View className="flex-row justify-between gap-3">
-                <Text className="min-w-0 flex-1 font-semibold">
-                  {item.account.name}
-                </Text>
-                <Text className="font-bold tabular-nums">
-                  {money(item.amountMinor)}
-                </Text>
-              </View>
-              <Text className="text-xs text-muted-foreground">
-                {financeDisplayDate(item.effectiveAt)}
-                {item.reference ? ` · ${item.reference}` : ""}
-                {item.reversedAt
-                  ? ` · reversed ${financeDisplayDate(item.reversalEffectiveAt ?? item.reversedAt)}`
-                  : ""}
-              </Text>
-              {!item.reversedAt ? (
-                <ActionButton
-                  variant="outline"
-                  onPress={() => {
-                    setPayment(item)
-                    setMode("reverse-payment")
-                  }}
-                >
-                  Reverse this payment
-                </ActionButton>
-              ) : null}
-            </View>
-          ))}
+          <HistoryTimeline
+            heading="Payments and advances"
+            items={purchasePaymentsTimeline({
+              payments: data.payments,
+              allocations: data.allocations,
+              voided: Boolean(data.voidedAt),
+              purchase: {
+                id: data.id,
+                totalMinor: data.totalMinor,
+                incurredAt: data.incurredAt,
+                reference: data.reference,
+              },
+            }).map(({ action, ...entry }) => ({
+              id: entry.id,
+              title: entry.title,
+              detail: [financeDisplayDate(entry.at), entry.detail]
+                .filter(Boolean)
+                .join(" · "),
+              amount: `${entry.negative ? "−" : ""}${money(entry.amountMinor)}`,
+              dot: entry.dot,
+              status: entry.status,
+              action:
+                action?.kind === "reverse-payment"
+                  ? {
+                      label: "Reverse this payment",
+                      onPress: () => {
+                        setPayment(action.payment)
+                        setMode("reverse-payment")
+                      },
+                    }
+                  : action?.kind === "release"
+                    ? {
+                        label: "Release part",
+                        accessibilityLabel: "Release part of this allocation",
+                        onPress: () => {
+                          setAllocation(action.allocation)
+                          setMode("release")
+                        },
+                      }
+                    : undefined,
+            }))}
+          />
           {data.paymentsHasMore ? (
             <StatusBanner
               message="More than 50 payment records exist. The visible actual payments can be corrected individually; older payment pages are not currently exposed here."
               tone="warning"
             />
           ) : null}
-          <SectionHeader title="Advances applied" />
-          {data.allocations.length === 0 ? (
-            <Text className="px-0.5 text-sm text-muted-foreground">
-              No supplier advance applied.
-            </Text>
+          {data.allocations.some((item) => item.releasesHasMore) ? (
+            <StatusBanner
+              message="An allocation has more than 50 release events; it cannot be released until complete history is available."
+              tone="warning"
+            />
           ) : null}
-          {data.allocations.map((item) => {
-            const released = item.releases.reduce(
-              (sum, release) => sum + BigInt(release.amountMinor),
-              0n,
-            )
-            const unreleased = BigInt(item.amountMinor) - released
-            return (
-              <View
-                key={item.id}
-                className="gap-2 rounded-[20px] bg-card p-4 shadow-sm"
-              >
-                <View className="flex-row justify-between gap-3">
-                  <Text className="min-w-0 flex-1 font-semibold">
-                    Advance applied
-                  </Text>
-                  <Text className="font-bold tabular-nums">
-                    {money(item.amountMinor)}
-                  </Text>
-                </View>
-                <Text className="text-xs text-muted-foreground">
-                  {financeDisplayDate(item.effectiveAt)} ·{" "}
-                  {money(released.toString())} released
-                </Text>
-                {unreleased > 0n && !data.voidedAt ? (
-                  <ActionButton
-                    variant="outline"
-                    onPress={() => {
-                      setAllocation(item)
-                      setMode("release")
-                    }}
-                  >
-                    Release part of this allocation
-                  </ActionButton>
-                ) : null}
-                {item.releases.map((release) => (
-                  <Text
-                    key={release.id}
-                    className="text-xs text-muted-foreground"
-                  >
-                    Released {money(release.amountMinor)} ·{" "}
-                    {financeDisplayDate(release.effectiveAt)} · {release.reason}
-                  </Text>
-                ))}
-                {item.releasesHasMore ? (
-                  <StatusBanner
-                    message="This allocation has more than 50 release events; no release action is offered until complete history is available."
-                    tone="warning"
-                  />
-                ) : null}
-              </View>
-            )
-          })}
           {data.allocationsHasMore ? (
             <StatusBanner
               message="More than 50 allocations exist. Additional allocation pages are not currently exposed here."
