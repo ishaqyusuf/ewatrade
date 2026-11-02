@@ -91,8 +91,51 @@ describe("fast workflow scope", () => {
     expect(plan.groups).toEqual(["core", "web", "domain"])
     expect(plan.tests).toContain("apps/marketing/src/lib/signup-phone.test.ts")
     expect(
-      selectQuickPlan(["packages/onboarding/src/unknown-contract.ts"]).unknown,
-    ).toEqual(["packages/onboarding/src/unknown-contract.ts"])
+      selectQuickPlan(["packages/onboarding-other/src/contract.ts"]).unknown,
+    ).toEqual(["packages/onboarding-other/src/contract.ts"])
+  })
+  test("release-wide path classes map to their reviewed offline checks", () => {
+    const signup = selectQuickPlan([
+      "packages/onboarding/src/components/signup/signup-chat.tsx",
+      "packages/ui/src/components/popover.tsx",
+      "packages/storefront-components/src/pipeline.ts",
+    ])
+    expect(signup.unknown).toEqual([])
+    expect(signup.groups).toEqual(["core", "web", "domain"])
+    expect(signup.tests).toContain(
+      "packages/onboarding/src/lib/signup-chat.test.ts",
+    )
+    expect(signup.tests).toContain(
+      "packages/storefront-components/src/contracts.test.ts",
+    )
+    for (const path of [
+      "packages/ai/src/provider.ts",
+      "packages/events/src/storefront-server.ts",
+    ]) {
+      const plan = selectQuickPlan([path])
+      expect(plan.unknown).toEqual([])
+      expect(plan.groups).toEqual(["core", "domain", "web", "mobile"])
+    }
+    expect(selectQuickPlan(["packages/ai/src/provider.ts"]).tests).toContain(
+      "packages/ai/src/runtime-config.test.ts",
+    )
+    const experiment = selectQuickPlan([
+      "experiments/petrol-station/model.mjs",
+      "experiments/petrol-station/screenshots/preview-delivery.png",
+    ])
+    expect(experiment.unknown).toEqual([])
+    expect(experiment.groups).toEqual(["core", "experiments"])
+    expect(selectQuickPlan(["bun.lock"]).groups).not.toContain("experiments")
+    expect(selectQuickPlan([".vercelignore"]).groups).toHaveLength(4)
+    expect(selectQuickPlan([".gitignore"]).groups).toEqual(["core"])
+    expect(selectQuickPlan([".easignore"]).groups).toEqual([
+      "core",
+      "mobile",
+      "domain",
+    ])
+    expect(selectQuickPlan(["experiments/other/a.mjs"]).unknown).toEqual([
+      "experiments/other/a.mjs",
+    ])
   })
   test("storefront packages map to shared smoke and exercise their public contracts", () => {
     for (const path of [

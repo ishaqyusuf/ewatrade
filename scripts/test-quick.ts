@@ -31,6 +31,11 @@ export const suites = {
     "packages/storefront-runtime/src/share.test.ts",
     "packages/storefront-templates/src/shared/enquiry-selection.test.ts",
     "packages/storefront-templates/src/shared/detail-history.test.ts",
+    "packages/onboarding/src/lib/signup-chat.test.ts",
+    "packages/storefront-components/src/contracts.test.ts",
+    "packages/storefront-components/src/operations.test.ts",
+    "packages/storefront-components/src/sdk.test.tsx",
+    "packages/storefront-components/src/source-policy.test.ts",
   ],
   mobile: [
     "apps/mobile/src/lib/qa-runtime-identity.test.ts",
@@ -57,9 +62,16 @@ export const suites = {
     "apps/api/src/health-routes.test.ts",
     "packages/db/src/queries/public-storefront-listing.test.ts",
     "packages/db/src/queries/storefront-customer-scope.test.ts",
+    "packages/ai/src/runtime-config.test.ts",
+    "packages/events/src/policy.test.ts",
+    "packages/events/src/storefront.test.ts",
   ],
+  // Standalone prototype outside the workspaces; nothing imports or deploys it.
+  experiments: ["experiments/petrol-station/model.test.mjs"],
 }
 type Suite = keyof typeof suites
+// Root manifests/config reach every workspace, not the standalone experiments.
+const workspaceSuites: Suite[] = ["core", "web", "mobile", "domain"]
 export type QuickOptions = {
   base?: string
   files?: string[]
@@ -133,13 +145,16 @@ export function selectQuickPlan(files: string[]) {
         "biome.json",
         "qa.smoke.example.json",
         ".env.example",
+        // Deploy-input filter shared by every Vercel project.
+        ".vercelignore",
       ].includes(file) ||
       /^(release\.config\.|tooling\/)/.test(file) ||
       /^(apps|packages)\/[^/]+\/package\.json$/.test(file)
     ) {
-      for (const group of Object.keys(suites) as Suite[]) groups.add(group)
+      for (const group of workspaceSuites) groups.add(group)
     } else if (
       /^scripts\//.test(file) ||
+      file === ".gitignore" ||
       file === ".github/workflows/fast-checks.yml" ||
       /^\.maestro\/.+\.yaml$/.test(file)
     )
@@ -149,15 +164,15 @@ export function selectQuickPlan(files: string[]) {
         file,
       ) ||
       /^apps\/(dashboard|marketing|storefront)\//.test(file) ||
-      /^packages\/onboarding\/src\/components\/product-preview\//.test(file)
+      /^packages\/(onboarding|storefront-components|ui)\//.test(file)
     ) {
       groups.add("web")
       groups.add("domain")
-    } else if (/^apps\/mobile\//.test(file)) {
+    } else if (/^apps\/mobile\//.test(file) || file === ".easignore") {
       groups.add("mobile")
       groups.add("domain")
     } else if (
-      /^(apps\/api|packages\/(auth|db|assistant|communications|notifications|utils|payments|catalog|errors|email|jobs|oversight|service-commerce|storefront-runtime|storefront-contracts|storefront-templates))\//.test(
+      /^(apps\/api|packages\/(ai|auth|db|assistant|events|communications|notifications|utils|payments|catalog|errors|email|jobs|oversight|service-commerce|storefront-runtime|storefront-contracts|storefront-templates))\//.test(
         file,
       )
     ) {
@@ -165,7 +180,9 @@ export function selectQuickPlan(files: string[]) {
       // Shared contracts can affect every client; broaden the bounded smoke set.
       groups.add("web")
       groups.add("mobile")
-    } else unknown.push(file)
+    } else if (/^experiments\/petrol-station\//.test(file))
+      groups.add("experiments")
+    else unknown.push(file)
   }
   return {
     paths,

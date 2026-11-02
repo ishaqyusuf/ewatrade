@@ -65,11 +65,24 @@ The explicit mapping in `scripts/test-quick.ts` selects a small reviewed set:
 | Change | Fast smoke selection |
 | --- | --- |
 | Documentation / QA scripts | QA workflow and environment/isolation tests |
-| Dashboard, marketing, storefront | Core + web + domain smoke |
-| Mobile | Core + mobile + domain smoke |
-| API, auth, DB, jobs, assistant, communications and mapped shared contracts | All client/domain smoke groups |
-| Root package/lock/config or workspace manifests | All smoke groups |
+| Dashboard, marketing, storefront; onboarding, storefront-components and shared UI packages | Core + web + domain smoke (adds signup-chat and component contract/operations/SDK/source-policy tests) |
+| Mobile, `.easignore` | Core + mobile + domain smoke |
+| API, auth, DB, jobs, assistant, AI, events, communications and mapped shared contracts | All client/domain smoke groups (adds AI runtime-config and events policy/storefront tests) |
+| Root package/lock/config, `.vercelignore` or workspace manifests | All workspace smoke groups |
+| `.gitignore` | Core |
+| `experiments/petrol-station/` (standalone prototype, not a workspace) | Core + its own offline model test |
 | Unmapped source/config | Exit 2 with paths; review and extend the mapping |
+
+The release-wide comparison `708b9d874..7beecf387` (1,317 paths) and
+`708b9d874..HEAD` at 2 November 2026 (2,078 paths) both map with zero unknown
+paths. `packages/storefront-components/src/pipeline.test.ts` is intentionally
+not in the smoke set: it writes fixtures under the macOS-only `/private/tmp`.
+Shared UI has no test of its own; its consumers' web smoke is the bounded check.
+Areas never touched by that release still exit 2 when changed (157 tracked paths
+on 2 November 2026): POS, desktop, WAPI and oversight API apps; private-media,
+domains, order-receipts, prescriptions, customer-messages, tenant-url,
+notifications-react, observability and tsconfig packages; `tools/`, `tmp/`,
+`patches/` and a few root files. Map each after reviewing its offline tests.
 
 Every run also typechecks only the QA tooling and runs Biome on existing changed
 JS/TS/JSON files. It does **not** typecheck application graphs. A TypeScript feature
