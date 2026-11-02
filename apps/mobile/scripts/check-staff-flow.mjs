@@ -3,22 +3,43 @@ import { join, relative, resolve } from "node:path"
 
 const MOBILE_DIR = resolve(new URL("..", import.meta.url).pathname)
 const SOURCE_DIR = join(MOBILE_DIR, "src")
+// Staff now lives under components/mobile/staff; staff-invite-sheet.tsx is
+// the compatibility re-export. Markers follow the owning files.
 const contracts = [
   {
     file: "components/mobile/staff-invite-sheet.tsx",
+    markers: ["StaffInviteContent", "StaffInviteSheet", "./staff/staff-screen"],
+  },
+  {
+    file: "components/mobile/staff/staff-screen.tsx",
     markers: [
       "StaffInviteContent",
-      "getStaffDirectoryPresentation",
-      "trpc.retailOps.staff",
-      "trpc.retailOps.inviteStaff",
-      "staff-add-first-action",
+      "useStaffDirectory",
+      "StaffInvitationSheet",
       'variant="flat"',
-      "Invite first attendant",
-      "SecondaryOperationalRow",
-      "Send invite",
-      "STAFF_INVITE_SHEET_PRESENT_DELAY_MS",
+      "disabled={!vm.canOpenInvite}",
+      "rows.length === 0 &&",
+    ],
+  },
+  {
+    file: "components/mobile/staff/use-staff-directory.ts",
+    markers: ["trpc.retailOps.staff", "trpc.retailOps.subscription"],
+  },
+  {
+    file: "components/mobile/staff/use-staff-invitation.ts",
+    markers: [
+      "trpc.retailOps.inviteStaff",
+      "trpc.retailOps.staff.queryFilter()",
+    ],
+  },
+  {
+    file: "components/mobile/staff/staff-invitation-sheet.tsx",
+    markers: [
       "hasStaffInviteDraft",
-      "setTimeout(",
+      "getStaffInviteSheetMaxHeight",
+      "STAFF_INVITE_SHEET_SNAP_POINTS",
+      "dismissible={!hasDraft && !isPending}",
+      "Send invite",
     ],
     scopedContracts: [
       {
@@ -29,14 +50,13 @@ const contracts = [
           "paddingBottom: 220",
         ],
         markers: [
-          'keyboardBehavior="extend"',
-          "bottomOffset={120}",
-          "paddingBottom: 24",
-          "extraKeyboardSpace={140}",
-          "backdropComponent={renderInviteBackdrop}",
-          "enablePanDownToClose={!hasInviteDraft}",
-          "maxDynamicContentSize={maxInviteSheetHeight}",
-          "snapPoints={STAFF_INVITE_SHEET_SNAP_POINTS}",
+          'keyboardBehavior="fillParent"',
+          "bottomOffset={footerHeight + 12}",
+          "backdropComponent={renderBackdrop}",
+          "footerComponent={renderFooter}",
+          "enablePanDownToClose={!hasDraft && !isPending}",
+          "maxDynamicContentSize={getStaffInviteSheetMaxHeight(height)}",
+          "snapPoints={[...STAFF_INVITE_SHEET_SNAP_POINTS]}",
           'title="Invite attendant"',
           'label="Email address · Required"',
           'label="Attendant name · Optional"',
@@ -44,9 +64,8 @@ const contracts = [
         orderedMarkers: [
           'label="Email address · Required"',
           'label="Attendant name · Optional"',
-          "Send invite",
         ],
-        start: "      <Modal\n        backdropComponent={renderInviteBackdrop}",
+        start: "    <Modal\n      ref={ref}",
       },
     ],
   },
@@ -70,10 +89,14 @@ const contracts = [
   },
   {
     file: "app/staff-onboarding.tsx",
+    markers: ["StaffOnboardingScreen"],
+  },
+  {
+    file: "components/mobile/staff-onboarding/staff-onboarding-screen.tsx",
     markers: [
       "resolveStaffInviteToken",
       "completeStaffOnboarding",
-      "SecondarySheetHeader",
+      "AuthFlowScreen",
       "SecondaryOperationalRow",
       "StatusBadge",
       "StatusBanner",
