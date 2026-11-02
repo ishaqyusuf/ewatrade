@@ -1,10 +1,7 @@
 {
   "version": 1,
   "id": "2026-10-21-whatsapp-hybrid-local",
-  "tickets": [
-    "H01",
-    "H02"
-  ],
+  "tickets": ["H01", "H02"],
   "summary": "Implement local Hybrid WhatsApp channel adapters: scoped native menus, email-verified signup forms, five business-entry forms and deterministic saved Orders pagination. Existing merchant commands, roles, client release decisions and confirmation authorities remain canonical. No deployment, Meta publication, schema, OTP or phone change.",
   "capabilities": [
     {

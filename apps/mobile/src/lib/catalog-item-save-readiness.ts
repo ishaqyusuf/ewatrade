@@ -1,5 +1,5 @@
-import { catalogItemNoun } from "./catalog-wording"
 import { majorToMinor } from "@ewatrade/utils"
+import { catalogItemNoun } from "./catalog-wording"
 
 type CatalogItemSaveReadinessInput = {
   defaultQuoteRequired: boolean

@@ -1,10 +1,7 @@
 {
   "version": 1,
   "id": "2026-10-23-ewl05-candidate",
-  "tickets": [
-    "H01",
-    "H02"
-  ],
+  "tickets": ["H01", "H02"],
   "summary": "Local exact-candidate preparation: bound existing typed WhatsApp onboarding transport, correctly type existing provider options, and reconcile existing transitive procedure coverage without exposing new assistant actions.",
   "noAssistantImpact": "Existing typed CONNECT state/receipt/UNKNOWN semantics and OTP/proof/consent remain unchanged; only the existing outbound request gets the ordinary 20-second abort/redirect policy. Existing provider factory advertises the SDK JSON provider-options contract. Listed merchant procedures already exist; their present support classifications are retained, not newly enabled by this ticket.",
   "capabilities": [],

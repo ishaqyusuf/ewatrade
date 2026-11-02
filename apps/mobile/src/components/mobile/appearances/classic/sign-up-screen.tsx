@@ -1,4 +1,3 @@
-import { mobileCatalogSystemCopy } from "@/lib/catalog-wording"
 import {
   AuthListCard,
   AuthListRow,
@@ -10,6 +9,7 @@ import type {
   SignUpCategoriesProps,
   SignUpPresentationProps,
 } from "@/components/mobile/sign-up/sign-up-presentation"
+import { mobileCatalogSystemCopy } from "@/lib/catalog-wording"
 
 export function ClassicSignUpScreen({
   children,

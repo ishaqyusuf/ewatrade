@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test"
 import type { WhatsAppInboxLease } from "@ewatrade/db/assistant-whatsapp"
-import type { GeneralContext } from "./general-context"
 import { processAssistantWhatsAppReplyChoiceTurn } from "./channel-reply-choice-turn"
+import type { GeneralContext } from "./general-context"
 
 const lease = {} as WhatsAppInboxLease
 const inbox = {

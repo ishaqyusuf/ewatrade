@@ -49,7 +49,8 @@ const quantity = z
 const envelope = { form_version: z.literal("1") }
 
 /** Keep canonical validation/defaults without requiring a structurally identical pipe input. */
-const canonicalAction = <S extends z.ZodType>(schema: S) =>
+const canonicalAction =
+  <S extends z.ZodType>(schema: S) =>
   (value: unknown, context: z.RefinementCtx): z.output<S> => {
     const parsed = schema.safeParse(value)
     if (parsed.success) return parsed.data

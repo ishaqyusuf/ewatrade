@@ -1,5 +1,4 @@
 import { createHash, randomUUID } from "node:crypto"
-import { z } from "zod"
 import {
   parseWhatsAppActionButton,
   parseWhatsAppTypedAction,
@@ -21,6 +20,7 @@ import {
   parseWhatsAppTypedWorkflowAction,
   parseWhatsAppWorkflowActionButton,
 } from "@ewatrade/assistant/channels/workflow-action-review"
+import { z } from "zod"
 import type { PrismaClient } from "../../../generated/prisma/client"
 import { runInOwnSerializableTransaction } from "../own-transaction"
 import { assistantWhatsAppActionDecisionDigest } from "./action-reviews"
@@ -173,7 +173,9 @@ export async function acceptAssistantWhatsAppIngress(
   const inboxKind = action ? "ACTION" : "TURN"
   const flowData =
     event.flowResponse?.status === "valid"
-      ? z.record(z.string().max(128), z.json()).safeParse(event.flowResponse.data)
+      ? z
+          .record(z.string().max(128), z.json())
+          .safeParse(event.flowResponse.data)
       : null
   if (flowData && !flowData.success)
     return { kind: "ignored", reason: "invalid" }

@@ -1,10 +1,7 @@
 {
   "version": 1,
   "id": "2026-10-21-storefront-cleaning-request-cards",
-  "tickets": [
-    "S04",
-    "H02"
-  ],
+  "tickets": ["S04", "H02"],
   "summary": "Direct cleaning card actions select the canonical current service request form, with guest or server-derived account authority.",
   "noAssistantImpact": "Customer-only storefront navigation and structured form handoff. No assistant tool/capability/permission is added. A server-derived signed-in account may use the same canonical structured request command only with existing current Terms, eligible age and exact active conversation access, rechecked under lock. Offering query hints are never authority or consent; canonical policy, scope and idempotency remain. No provider or rollout change.",
   "capabilities": [],

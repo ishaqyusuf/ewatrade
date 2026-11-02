@@ -46,9 +46,7 @@
       "effort": "high",
       "launchEffortVerified": true,
       "result": "success",
-      "resultModelUsage": [
-        "claude-opus-5-5"
-      ],
+      "resultModelUsage": ["claude-opus-5-5"],
       "permissionDenials": [],
       "coordinatorReviewEdits": true
     },
@@ -59,9 +57,7 @@
       "effort": "high",
       "launchEffortVerified": true,
       "result": "success",
-      "resultModelUsage": [
-        "claude-opus-5-5"
-      ],
+      "resultModelUsage": ["claude-opus-5-5"],
       "permissionDenials": [],
       "coordinatorReviewEdits": true
     },
@@ -72,9 +68,7 @@
       "effort": "high",
       "launchEffortVerified": true,
       "result": "success",
-      "resultModelUsage": [
-        "claude-opus-5-5"
-      ],
+      "resultModelUsage": ["claude-opus-5-5"],
       "permissionDenials": [],
       "coordinatorReviewEdits": true
     },
@@ -85,9 +79,7 @@
       "effort": "high",
       "launchEffortVerified": true,
       "result": "success",
-      "resultModelUsage": [
-        "claude-opus-5-5"
-      ],
+      "resultModelUsage": ["claude-opus-5-5"],
       "permissionDenials": [],
       "coordinatorReviewEdits": true
     }
@@ -98,10 +90,7 @@
     "originalSession": "86bff231-446b-4a3e-af49-36e0aae46135",
     "reason": "No completed substantive action or artifact since 10:10:09 UTC, over five minutes; thinking-token telemetry only. Exact owned run stopped and process exit confirmed before takeover.",
     "author": "Codex coordinator",
-    "partialFilesPreserved": [
-      "ASSIGNMENT.md",
-      "assets/"
-    ]
+    "partialFilesPreserved": ["ASSIGNMENT.md", "assets/"]
   },
   "sourceChecks": [
     {

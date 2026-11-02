@@ -1,9 +1,9 @@
-import { mobileCatalogSystemCopy } from "@/lib/catalog-wording"
 import type { HelperRowProps } from "@/components/mobile/catalog-setup/catalog-helper-model"
 import { Icon } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
+import { mobileCatalogSystemCopy } from "@/lib/catalog-wording"
 import { View } from "react-native"
 
 export function ClassicHelperRow({

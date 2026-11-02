@@ -1,7 +1,9 @@
 import { redirect } from "next/navigation"
 
 /** Keep existing shared links while requests now live in the Services workspace. */
-export default async function ServiceRequestsRoutePage({ searchParams }: {
+export default async function ServiceRequestsRoutePage({
+  searchParams,
+}: {
   searchParams: Promise<Record<string, string | string[] | undefined>>
 }) {
   const params = new URLSearchParams()

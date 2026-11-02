@@ -1,9 +1,7 @@
 {
   "version": 1,
   "id": "2026-10-28-shared-storefront-features",
-  "tickets": [
-    "H02"
-  ],
+  "tickets": ["H02"],
   "summary": "Shared storefront customer and commerce features implemented across template families with explicit policy migration, current-scope login locking and local acceptance evidence.",
   "noAssistantImpact": "Customer identity, OTP, receipt capability proofs, request recovery and customer-initiated actions remain excluded from model tools and ordinary model input. Existing domain commands remain canonical. Shared UI and template configuration do not grant permission. Existing Host/published Site/active release/Store scope and current entitlement checks remain; new login effects recheck publication under a Site lock while valid session/history/receipt reads do not depend on the selected template or new-intake policy. No new protected merchant procedure, assistant capability, provider activation or deployment. Neutral feature settings retain existing Owner/Admin draft/save/publication authority and explicit consent; design generation cannot silently alter operational configuration.",
   "capabilities": [],

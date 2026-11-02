@@ -3,9 +3,9 @@ import type {
   RouterOutputs,
 } from "@ewatrade/api/trpc/routers/_app"
 import {
+  EXACT_QUANTITY_MAX_SCALE,
   addExactDecimals,
   compareExactDecimals,
-  EXACT_QUANTITY_MAX_SCALE,
   multiplyExactDecimals,
   parseExactDecimal,
   subtractExactDecimals,

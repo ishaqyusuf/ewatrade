@@ -3,8 +3,8 @@
 // lesson's camera rectangle, so it appears where the machine physically is.
 // Plates only draw model readings; they keep no fuel or money of their own.
 
-import { chargeFor as chargeOf, formatKobo, formatMl } from "../model.mjs";
-import { P, liquidHeight } from "./scene.mjs";
+import { chargeFor as chargeOf, formatKobo, formatMl } from "../model.mjs"
+import { P, liquidHeight } from "./scene.mjs"
 
 // Camera rectangles (all 4:3, like the full view, so the stage never resizes).
 export const CAMERA = Object.freeze({
@@ -12,29 +12,31 @@ export const CAMERA = Object.freeze({
   delivery: [20, 120, 640, 480],
   pricing: [420, 318, 320, 240],
   nozzle: [442, 437, 280, 210],
-});
+})
 
-const INSET = 0.03; // the zoomed station stays visible as a thin frame
+const INSET = 0.03 // the zoomed station stays visible as a thin frame
 
 function placement(rect) {
-  const [x, y, w] = rect;
-  const s = (w * (1 - 2 * INSET)) / 1000;
-  return `translate(${x + w * INSET} ${y + rect[3] * INSET}) scale(${s.toFixed(5)})`;
+  const [x, y, w] = rect
+  const s = (w * (1 - 2 * INSET)) / 1000
+  return `translate(${x + w * INSET} ${y + rect[3] * INSET}) scale(${s.toFixed(5)})`
 }
 
-const INK = "#1d2a44";
-const FUEL = "#f0ac2a";
-const FUEL_TOP = "#f8d26a";
+const INK = "#1d2a44"
+const FUEL = "#f0ac2a"
+const FUEL_TOP = "#f8d26a"
 
 function pill(text, x, y, { anchor = "start", to = null, cls = "" } = {}) {
-  const w = text.length * 16.5 + 30;
-  const x0 = anchor === "middle" ? x - w / 2 : anchor === "end" ? x - w : x;
-  const leader = to ? `<path class="pl-leader" d="M${to[0]},${to[1]} L${anchor === "end" ? x0 + w : anchor === "middle" ? x : x0},${y}"/><circle class="pl-dot" cx="${to[0]}" cy="${to[1]}" r="6"/>` : "";
-  return `<g class="pl-pill ${cls}">${leader}<rect x="${x0}" y="${y - 24}" width="${w}" height="48" rx="24"/><text x="${x0 + w / 2}" y="${y + 10}" text-anchor="middle">${text}</text></g>`;
+  const w = text.length * 16.5 + 30
+  const x0 = anchor === "middle" ? x - w / 2 : anchor === "end" ? x - w : x
+  const leader = to
+    ? `<path class="pl-leader" d="M${to[0]},${to[1]} L${anchor === "end" ? x0 + w : anchor === "middle" ? x : x0},${y}"/><circle class="pl-dot" cx="${to[0]}" cy="${to[1]}" r="6"/>`
+    : ""
+  return `<g class="pl-pill ${cls}">${leader}<rect x="${x0}" y="${y - 24}" width="${w}" height="48" rx="24"/><text x="${x0 + w / 2}" y="${y + 10}" text-anchor="middle">${text}</text></g>`
 }
 
 function frame() {
-  return `<rect class="pl-frame" x="0" y="0" width="1000" height="750" rx="28"/>`;
+  return `<rect class="pl-frame" x="0" y="0" width="1000" height="750" rx="28"/>`
 }
 
 // ---------------------------------------------------------------------------
@@ -46,11 +48,17 @@ const L1 = {
   tank: { x: 620, y: 540, w: 350, h: 180, rx: 80 },
   valve: [540, 392],
   headX: 880,
-};
-const DELIVERY_PATH = "M500,338 L500,392 L600,392 C650,394 662,434 702,434 L750,434 L750,700";
+}
+const DELIVERY_PATH =
+  "M500,338 L500,392 L600,392 C650,394 662,434 702,434 L750,434 L750,700"
 
 function deliveryPlate() {
-  const { ground, barrel: b, tank: t, valve: [vx, vy] } = L1;
+  const {
+    ground,
+    barrel: b,
+    tank: t,
+    valve: [vx, vy],
+  } = L1
   return `<g class="plate" id="plate-delivery" transform="${placement(CAMERA.delivery)}">
     <defs>
       <clipPath id="pl1-barrel"><rect x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}" rx="${b.rx}"/></clipPath>
@@ -121,48 +129,66 @@ function deliveryPlate() {
     ${pill("Fill pipe", 790, 498, { to: [752, 498] })}
     ${pill("Underground tank", 300, 640, { to: [t.x + 10, 640] })}
     ${pill("Vent: air out", 895, 40, { anchor: "end" })}
-  </g>`;
+  </g>`
 }
 
 function updateDelivery(root, s) {
-  const { barrel: b, tank: t, headX } = L1;
-  const del = s.delivery;
-  const tankerMl = del?.tankerMl ?? 0;
-  const tankerFrac = del ? tankerMl / del.tankerStartMl : 0;
-  const tankFrac = s.tank.stockMl / s.config.tankCapacityMl;
-  const fuelH = b.h * tankerFrac;
-  const tankerTop = b.y + b.h - fuelH;
-  const tankTop = t.y + t.h - (liquidHeight(tankFrac, t.h / 2) / (t.h / 2)) * (t.h / 2);
-  set(root, "pl1-tanker-fuel", { y: tankerTop, height: fuelH });
-  set(root, "pl1-tanker-surface", { y: tankerTop - 3, height: fuelH > 0 ? 6 : 0 });
-  set(root, "pl1-tank-fuel", { y: tankTop, height: t.y + t.h - tankTop });
-  set(root, "pl1-tank-surface", { y: tankTop - 3, height: s.tank.stockMl > 0 ? 6 : 0 });
+  const { barrel: b, tank: t, headX } = L1
+  const del = s.delivery
+  const tankerMl = del?.tankerMl ?? 0
+  const tankerFrac = del ? tankerMl / del.tankerStartMl : 0
+  const tankFrac = s.tank.stockMl / s.config.tankCapacityMl
+  const fuelH = b.h * tankerFrac
+  const tankerTop = b.y + b.h - fuelH
+  const tankTop =
+    t.y + t.h - (liquidHeight(tankFrac, t.h / 2) / (t.h / 2)) * (t.h / 2)
+  set(root, "pl1-tanker-fuel", { y: tankerTop, height: fuelH })
+  set(root, "pl1-tanker-surface", {
+    y: tankerTop - 3,
+    height: fuelH > 0 ? 6 : 0,
+  })
+  set(root, "pl1-tank-fuel", { y: tankTop, height: t.y + t.h - tankTop })
+  set(root, "pl1-tank-surface", {
+    y: tankTop - 3,
+    height: s.tank.stockMl > 0 ? 6 : 0,
+  })
   // Numeric only: the pills name the parts, and "30,000 L" fits inside either vessel.
-  text(root, "pl1-tanker-reading", del ? formatMl(tankerMl, 0) : "—");
-  text(root, "pl1-tank-reading", formatMl(s.tank.stockMl, 0));
-  text(root, "pl1-moved", `moved ${formatMl(del?.receivedMl ?? 0, 0)}`);
-  const open = del?.status === "discharging";
-  root.querySelector("#pl1-valve-ball").classList.toggle("open", open);
-  const showHead = Boolean(del) && tankerMl > 0;
-  root.querySelector("#pl1-head").classList.toggle("off", !showHead);
+  text(root, "pl1-tanker-reading", del ? formatMl(tankerMl, 0) : "—")
+  text(root, "pl1-tank-reading", formatMl(s.tank.stockMl, 0))
+  text(root, "pl1-moved", `moved ${formatMl(del?.receivedMl ?? 0, 0)}`)
+  const open = del?.status === "discharging"
+  root.querySelector("#pl1-valve-ball").classList.toggle("open", open)
+  const showHead = Boolean(del) && tankerMl > 0
+  root.querySelector("#pl1-head").classList.toggle("off", !showHead)
   if (showHead) {
-    set(root, "pl1-head-top", { d: `M590,${tankerTop} H${headX + 30}` });
-    set(root, "pl1-head-arrow", { d: `M${headX},${tankerTop + 8} V${tankTop - 8}` });
-    set(root, "pl1-head-text", { y: (tankerTop + tankTop) / 2 + 10 });
+    set(root, "pl1-head-top", { d: `M590,${tankerTop} H${headX + 30}` })
+    set(root, "pl1-head-arrow", {
+      d: `M${headX},${tankerTop + 8} V${tankTop - 8}`,
+    })
+    set(root, "pl1-head-text", { y: (tankerTop + tankTop) / 2 + 10 })
   }
 }
 
 // ---------------------------------------------------------------------------
 // Lesson 2 — how litres become a price (open dispenser)
 
-const METER = [230, 575];
-const ENCODER = [420, 575];
+const METER = [230, 575]
+const ENCODER = [420, 575]
 
 function pricingPlate() {
-  const [mx, my] = METER;
-  const [ex, ey] = ENCODER;
-  const vanes = [0, 45, 90, 135].map((a) => `<rect class="pl-vane" x="${mx - 66}" y="${my - 9}" width="132" height="18" rx="6" transform="rotate(${a} ${mx} ${my})"/>`).join("");
-  const slots = Array.from({ length: 12 }, (_, i) => `<rect class="pl-slot" x="${ex - 5}" y="${ey - 52}" width="10" height="16" rx="2" transform="rotate(${i * 30} ${ex} ${ey})"/>`).join("");
+  const [mx, my] = METER
+  const [ex, ey] = ENCODER
+  const vanes = [0, 45, 90, 135]
+    .map(
+      (a) =>
+        `<rect class="pl-vane" x="${mx - 66}" y="${my - 9}" width="132" height="18" rx="6" transform="rotate(${a} ${mx} ${my})"/>`,
+    )
+    .join("")
+  const slots = Array.from(
+    { length: 12 },
+    (_, i) =>
+      `<rect class="pl-slot" x="${ex - 5}" y="${ey - 52}" width="10" height="16" rx="2" transform="rotate(${i * 30} ${ex} ${ey})"/>`,
+  ).join("")
   return `<g class="plate" id="plate-pricing" transform="${placement(CAMERA.pricing)}">
     ${frame()}
     <!-- cabinet with its front panel removed -->
@@ -225,35 +251,49 @@ function pricingPlate() {
     </g>
     ${pill("Meter", 70, 690, { to: [mx - 56, my + 56] })}
     ${pill("Pulse encoder", 330, 690, { to: [ex, ey + 52] })}
-  </g>`;
+  </g>`
 }
 
 function updatePricing(root, s) {
-  const sale = s.sale;
-  const last = s.ledger.sales.at(-1);
-  const src = sale && sale.priceKobo != null ? sale : last;
-  const ml = src?.deliveredMl ?? 0;
-  const price = src?.priceKobo ?? s.station.priceKobo;
-  const amount = price == null ? 0 : chargeOf(ml, price);
+  const sale = s.sale
+  const last = s.ledger.sales.at(-1)
+  const src = sale && sale.priceKobo != null ? sale : last
+  const ml = src?.deliveredMl ?? 0
+  const price = src?.priceKobo ?? s.station.priceKobo
+  const amount = price == null ? 0 : chargeOf(ml, price)
   // Rotor turns with the dispenser totaliser: no flow, no movement (1 turn = 1 L, illustrative).
-  const angle = ((s.dispenser.totaliserMl % 1000) / 1000) * 360;
-  root.querySelector("#pl2-rotor").setAttribute("transform", `rotate(${angle.toFixed(2)} ${METER[0]} ${METER[1]})`);
-  root.querySelector("#pl2-encoder").setAttribute("transform", `rotate(${angle.toFixed(2)} ${ENCODER[0]} ${ENCODER[1]})`);
-  text(root, "pl2-amount", formatKobo(amount, { symbol: false }));
-  text(root, "pl2-litres", formatMl(ml, 3, { unit: false }));
-  text(root, "pl2-price", price == null ? "—" : formatKobo(price, { symbol: false }));
-  text(root, "pl2-eq-litres", formatMl(ml, 3));
-  text(root, "pl2-eq-price", price == null ? "—" : `${formatKobo(price)}/L`);
-  text(root, "pl2-eq-amount", formatKobo(amount));
-  text(root, "pl2-pulse-count", String(Math.floor(ml / 10)));
+  const angle = ((s.dispenser.totaliserMl % 1000) / 1000) * 360
+  root
+    .querySelector("#pl2-rotor")
+    .setAttribute(
+      "transform",
+      `rotate(${angle.toFixed(2)} ${METER[0]} ${METER[1]})`,
+    )
+  root
+    .querySelector("#pl2-encoder")
+    .setAttribute(
+      "transform",
+      `rotate(${angle.toFixed(2)} ${ENCODER[0]} ${ENCODER[1]})`,
+    )
+  text(root, "pl2-amount", formatKobo(amount, { symbol: false }))
+  text(root, "pl2-litres", formatMl(ml, 3, { unit: false }))
+  text(
+    root,
+    "pl2-price",
+    price == null ? "—" : formatKobo(price, { symbol: false }),
+  )
+  text(root, "pl2-eq-litres", formatMl(ml, 3))
+  text(root, "pl2-eq-price", price == null ? "—" : `${formatKobo(price)}/L`)
+  text(root, "pl2-eq-amount", formatKobo(amount))
+  text(root, "pl2-pulse-count", String(Math.floor(ml / 10)))
 }
 
 // ---------------------------------------------------------------------------
 // Lesson 3 — customer preset, trigger and automatic stopping (nozzle cutaway)
 
-const NECK = "M600,345 L880,474 L880,530";
-const NECK_LEN = Math.hypot(280, 129) + 56;
-const TRIGGER_PIVOT = [170, 392];
+const NECK = "M600,345 L880,474 L880,530"
+const NECK_LEN = Math.hypot(280, 129) + 56
+const TRIGGER_PIVOT = [170, 392]
 
 function nozzlePlate() {
   return `<g class="plate" id="plate-nozzle" transform="${placement(CAMERA.nozzle)}">
@@ -304,7 +344,17 @@ function nozzlePlate() {
 
     <!-- numbered trip sequence (vehicle-full stop only) -->
     <g id="pl3-trip" class="pl-trip">
-      ${[[752, 470, 1], [620, 340, 2], [470, 176, 3], [508, 400, 4]].map(([x, y, n]) => `<circle class="pl-badge" cx="${x}" cy="${y}" r="20"/><text class="pl-badge-text" x="${x}" y="${y + 8}" text-anchor="middle">${n}</text>`).join("")}
+      ${[
+        [752, 470, 1],
+        [620, 340, 2],
+        [470, 176, 3],
+        [508, 400, 4],
+      ]
+        .map(
+          ([x, y, n]) =>
+            `<circle class="pl-badge" cx="${x}" cy="${y}" r="20"/><text class="pl-badge-text" x="${x}" y="${y + 8}" text-anchor="middle">${n}</text>`,
+        )
+        .join("")}
     </g>
 
     <!-- dispenser readout -->
@@ -325,70 +375,172 @@ function nozzlePlate() {
     ${pill("Valve + spring", 450, 160, { to: [304, 262], anchor: "start", cls: "small" })}
     ${pill("Sensing port", 990, 462, { to: [760, 432], anchor: "end", cls: "small" })}
     ${pill("Diaphragm + latch", 990, 210, { to: [516, 236], anchor: "end", cls: "small" })}
-  </g>`;
+  </g>`
 }
 
 // Box text area is about 476 units wide: titles ≤ 25 characters at 34 units,
 // lines ≤ 30 characters at 26 units, at most four lines.
 const WHY = {
-  idle: ["Choose naira or litres", ["Your request becomes a", "preset: naira ÷ price per", "litre = target litres.", "The price locks for the sale."]],
-  ready: ["Ready to pump", ["Squeeze: the stem lifts the", "main valve off its seat,", "against the spring.", "Release any time to stop."]],
-  flowing: ["Fuel is flowing", ["The meter counts each mL.", "Air enters the sensing port", "while the tip is in open air."]],
-  target: ["Stopped: preset reached", ["The dispenser closed its", "own valve upstream at the", "target. The nozzle did not", "trip: release the trigger."]],
-  "vehicle-full": ["Stopped: car tank full", ["1 Fuel covers sensing port.", "2 Air stops: tube suction.", "3 The diaphragm lifts.", "4 Latch lets go: valve shuts."]],
-  released: ["Released after preset", ["Dispenser valve shut first;", "now the nozzle spring has", "closed its valve too.", "Next: hang up and pay."]],
-  manual: ["Trigger released", ["The spring closed the main", "valve. You pay only for the", "litres that flowed."]],
-  paid: ["Paid", ["You paid for exactly the", "litres the meter measured.", "Authorise a new preset for", "the next customer."]],
-  cancelled: ["Nothing dispensed", ["The nozzle was hung up", "before any fuel flowed,", "so nothing is due."]],
-  "tank-empty": ["Station tank empty", ["No fuel reaches the pump.", "The sale settles for what", "was delivered."]],
-  power: ["Stopped: no power", ["Pump and meter need power.", "The sale settles for what", "was delivered."]],
-  estop: ["Emergency stop", ["All flow stopped.", "The sale settles for what", "was delivered."]],
-};
+  idle: [
+    "Choose naira or litres",
+    [
+      "Your request becomes a",
+      "preset: naira ÷ price per",
+      "litre = target litres.",
+      "The price locks for the sale.",
+    ],
+  ],
+  ready: [
+    "Ready to pump",
+    [
+      "Squeeze: the stem lifts the",
+      "main valve off its seat,",
+      "against the spring.",
+      "Release any time to stop.",
+    ],
+  ],
+  flowing: [
+    "Fuel is flowing",
+    [
+      "The meter counts each mL.",
+      "Air enters the sensing port",
+      "while the tip is in open air.",
+    ],
+  ],
+  target: [
+    "Stopped: preset reached",
+    [
+      "The dispenser closed its",
+      "own valve upstream at the",
+      "target. The nozzle did not",
+      "trip: release the trigger.",
+    ],
+  ],
+  "vehicle-full": [
+    "Stopped: car tank full",
+    [
+      "1 Fuel covers sensing port.",
+      "2 Air stops: tube suction.",
+      "3 The diaphragm lifts.",
+      "4 Latch lets go: valve shuts.",
+    ],
+  ],
+  released: [
+    "Released after preset",
+    [
+      "Dispenser valve shut first;",
+      "now the nozzle spring has",
+      "closed its valve too.",
+      "Next: hang up and pay.",
+    ],
+  ],
+  manual: [
+    "Trigger released",
+    [
+      "The spring closed the main",
+      "valve. You pay only for the",
+      "litres that flowed.",
+    ],
+  ],
+  paid: [
+    "Paid",
+    [
+      "You paid for exactly the",
+      "litres the meter measured.",
+      "Authorise a new preset for",
+      "the next customer.",
+    ],
+  ],
+  cancelled: [
+    "Nothing dispensed",
+    ["The nozzle was hung up", "before any fuel flowed,", "so nothing is due."],
+  ],
+  "tank-empty": [
+    "Station tank empty",
+    [
+      "No fuel reaches the pump.",
+      "The sale settles for what",
+      "was delivered.",
+    ],
+  ],
+  power: [
+    "Stopped: no power",
+    [
+      "Pump and meter need power.",
+      "The sale settles for what",
+      "was delivered.",
+    ],
+  ],
+  estop: [
+    "Emergency stop",
+    ["All flow stopped.", "The sale settles for what", "was delivered."],
+  ],
+}
 
 /** `view.triggerHeld` is the learner's hand (UI-only); the model knows only flow. */
 function updateNozzle(root, s, view = {}) {
-  const sale = s.sale;
-  const fuel = sale?.vehicle.fuelMl ?? s.config.vehicleStartFuelMl;
-  const cap = sale?.vehicle.capacityMl ?? s.config.vehicleCapacityMl;
-  const frac = fuel / cap;
-  const h = 200 * frac;
-  set(root, "pl3-car-fuel", { y: 720 - h, height: h });
-  text(root, "pl3-car-reading", `Car ${formatMl(fuel, 1)} / ${formatMl(cap, 0)}`);
+  const sale = s.sale
+  const fuel = sale?.vehicle.fuelMl ?? s.config.vehicleStartFuelMl
+  const cap = sale?.vehicle.capacityMl ?? s.config.vehicleCapacityMl
+  const frac = fuel / cap
+  const h = 200 * frac
+  set(root, "pl3-car-fuel", { y: 720 - h, height: h })
+  text(
+    root,
+    "pl3-car-reading",
+    `Car ${formatMl(fuel, 1)} / ${formatMl(cap, 0)}`,
+  )
 
-  const stop = sale?.stopReason ?? null;
-  const tripped = stop === "vehicle-full";
-  const neck = tripped ? 1 : Math.max(0, Math.min(1, (frac - 0.96) / 0.04));
-  set(root, "pl3-neck-fuel", { "stroke-dasharray": `${(NECK_LEN * neck).toFixed(1)} 2000` });
+  const stop = sale?.stopReason ?? null
+  const tripped = stop === "vehicle-full"
+  const neck = tripped ? 1 : Math.max(0, Math.min(1, (frac - 0.96) / 0.04))
+  set(root, "pl3-neck-fuel", {
+    "stroke-dasharray": `${(NECK_LEN * neck).toFixed(1)} 2000`,
+  })
 
-  const flowing = sale?.status === "dispensing";
+  const flowing = sale?.status === "dispensing"
   // The nozzle valve follows the hand on the trigger; only a sensing trip closes it by itself.
-  const nozzleOpen = Boolean(view.triggerHeld) && !tripped;
-  root.querySelector("#pl3-trigger").classList.toggle("open", nozzleOpen);
-  root.querySelector("#pl3-poppet").classList.toggle("open", nozzleOpen);
-  root.querySelector("#pl3-latch").classList.toggle("tripped", tripped);
-  root.querySelector("#pl3-trip").classList.toggle("on", tripped);
-  root.querySelector("#pl3-port").classList.toggle("covered", tripped);
-  root.querySelector("#pl3-tube").classList.toggle("vacuum", tripped);
-  set(root, "pl3-diaphragm", { d: tripped ? "M424,236 Q470,206 516,236" : "M424,236 Q470,250 516,236" });
+  const nozzleOpen = Boolean(view.triggerHeld) && !tripped
+  root.querySelector("#pl3-trigger").classList.toggle("open", nozzleOpen)
+  root.querySelector("#pl3-poppet").classList.toggle("open", nozzleOpen)
+  root.querySelector("#pl3-latch").classList.toggle("tripped", tripped)
+  root.querySelector("#pl3-trip").classList.toggle("on", tripped)
+  root.querySelector("#pl3-port").classList.toggle("covered", tripped)
+  root.querySelector("#pl3-tube").classList.toggle("vacuum", tripped)
+  set(root, "pl3-diaphragm", {
+    d: tripped ? "M424,236 Q470,206 516,236" : "M424,236 Q470,250 516,236",
+  })
 
-  const price = sale?.priceKobo;
-  const ml = sale?.deliveredMl ?? 0;
+  const price = sale?.priceKobo
+  const ml = sale?.deliveredMl ?? 0
   // Concise LCD line; the full budget ÷ price equation lives in the HTML panel.
-  text(root, "pl3-target", sale?.mode ? `TARGET ${formatMl(sale.targetMl, 3)}` : "NO PRESET");
-  text(root, "pl3-amount", formatKobo(price == null ? 0 : chargeOf(ml, price), { symbol: false }));
-  text(root, "pl3-litres", formatMl(ml, 3, { unit: false }));
-  text(root, "pl3-valve", flowing ? "DISPENSER VALVE OPEN" : "DISPENSER VALVE CLOSED");
+  text(
+    root,
+    "pl3-target",
+    sale?.mode ? `TARGET ${formatMl(sale.targetMl, 3)}` : "NO PRESET",
+  )
+  text(
+    root,
+    "pl3-amount",
+    formatKobo(price == null ? 0 : chargeOf(ml, price), { symbol: false }),
+  )
+  text(root, "pl3-litres", formatMl(ml, 3, { unit: false }))
+  text(
+    root,
+    "pl3-valve",
+    flowing ? "DISPENSER VALVE OPEN" : "DISPENSER VALVE CLOSED",
+  )
 
-  let key = "idle";
+  let key = "idle"
   // Settled states first, so a paid sale never shows a stale "pay" instruction.
-  if (sale?.status === "paid" || sale?.status === "cancelled") key = sale.status;
-  else if (sale?.status === "dispensing") key = "flowing";
-  else if (stop === "target") key = view.triggerHeld ? "target" : "released";
-  else if (stop) key = stop;
-  else if (sale?.status === "nozzle" || sale?.status === "preset") key = "ready";
-  const [title, lines] = WHY[key] ?? WHY.idle;
-  text(root, "pl3-why-title", title);
-  for (let i = 0; i < 4; i++) text(root, `pl3-why-${i}`, lines[i] ?? "");
+  if (sale?.status === "paid" || sale?.status === "cancelled") key = sale.status
+  else if (sale?.status === "dispensing") key = "flowing"
+  else if (stop === "target") key = view.triggerHeld ? "target" : "released"
+  else if (stop) key = stop
+  else if (sale?.status === "nozzle" || sale?.status === "preset") key = "ready"
+  const [title, lines] = WHY[key] ?? WHY.idle
+  text(root, "pl3-why-title", title)
+  for (let i = 0; i < 4; i++) text(root, `pl3-why-${i}`, lines[i] ?? "")
 }
 
 // ---------------------------------------------------------------------------
@@ -399,31 +551,37 @@ export function pinsMarkup() {
     ["delivery", 1, P(6.4, 13.9, 5.6), "Tanker to storage", -1],
     ["pricing", 2, P(27, 20, 4.4), "Litres to price", -1],
     ["nozzle", 3, P(30.6, 22.4, 2.4), "Customer and nozzle", 1],
-  ];
-  return `<g id="lesson-pins" aria-hidden="true">${pins.map(([id, n, [x, y], name, side]) => {
-    const w = name.length * 10.5 + 24;
-    const lx = side > 0 ? 28 : -28 - w;
-    return `<g class="pin" data-pin="${id}" transform="translate(${x.toFixed(1)} ${y.toFixed(1)})">
+  ]
+  return `<g id="lesson-pins" aria-hidden="true">${pins
+    .map(([id, n, [x, y], name, side]) => {
+      const w = name.length * 10.5 + 24
+      const lx = side > 0 ? 28 : -28 - w
+      return `<g class="pin" data-pin="${id}" transform="translate(${x.toFixed(1)} ${y.toFixed(1)})">
       <path class="pin-tail" d="M0,0 L-9,-22 H9 Z"/><circle class="pin-head" cx="0" cy="-36" r="22"/><text class="pin-text" x="0" y="-28" text-anchor="middle">${n}</text>
-      <g class="pin-label"><rect x="${lx}" y="-52" width="${w}" height="32" rx="16"/><text x="${lx + w / 2}" y="-30" text-anchor="middle">${name}</text></g></g>`;
-  }).join("")}</g>`;
+      <g class="pin-label"><rect x="${lx}" y="-52" width="${w}" height="32" rx="16"/><text x="${lx + w / 2}" y="-30" text-anchor="middle">${name}</text></g></g>`
+    })
+    .join("")}</g>`
 }
 
 export function platesMarkup() {
-  return `${deliveryPlate()}${pricingPlate()}${nozzlePlate()}`;
+  return `${deliveryPlate()}${pricingPlate()}${nozzlePlate()}`
 }
 
-export const updatePlate = { delivery: updateDelivery, pricing: updatePricing, nozzle: updateNozzle };
+export const updatePlate = {
+  delivery: updateDelivery,
+  pricing: updatePricing,
+  nozzle: updateNozzle,
+}
 
 function set(root, id, attrs) {
-  const el = root.querySelector(`#${id}`);
+  const el = root.querySelector(`#${id}`)
   for (const [k, v] of Object.entries(attrs)) {
-    const value = typeof v === "number" ? v.toFixed(1) : v;
-    if (el.getAttribute(k) !== value) el.setAttribute(k, value);
+    const value = typeof v === "number" ? v.toFixed(1) : v
+    if (el.getAttribute(k) !== value) el.setAttribute(k, value)
   }
 }
 
 function text(root, id, value) {
-  const el = root.querySelector(`#${id}`);
-  if (el.textContent !== value) el.textContent = value;
+  const el = root.querySelector(`#${id}`)
+  if (el.textContent !== value) el.textContent = value
 }

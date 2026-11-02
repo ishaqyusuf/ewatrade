@@ -1,10 +1,7 @@
 {
   "version": 1,
   "id": "2026-10-26-storefront-local-product-sharing",
-  "tickets": [
-    "H01",
-    "H02"
-  ],
+  "tickets": ["H01", "H02"],
   "summary": "Local service-request coverage reconciliation, selected public option labels in WhatsApp enquiry drafts, and dashboard Catalog Product Share. No deployment/publication/provider effects.",
   "noAssistantImpact": "Product Share is an explicit browser share/copy action over a protected read of an already public product. It grants no publishing authority and is intentionally form-only. Public customer enquiry selection is not a model tool. Existing assistant capabilities and confirmation rules are unchanged.",
   "capabilities": [],

@@ -1,9 +1,7 @@
 {
   "version": 1,
   "id": "2026-10-27-inventory-reverse-transformation",
-  "tickets": [
-    "G04"
-  ],
+  "tickets": ["G04"],
   "summary": "Source-owned undo of a packaged-stock transformation (Finance roadmap F4.3.03). inventory.reverseTransformation writes one linked TRANSFORMATION correction with reversing movements at the exact original quantities and moves the exact original values back between the two stock pools (PACKAGED_TRANSFORMATION_RESTORATION). It refuses stale revisions or configuration, insufficient stock, pools whose value can no longer be restored exactly, closed periods and double reversal. No journal and no schema change. Roles are unchanged: the same inventory management guard as the forward transformation.",
   "noAssistantImpact": "No assistant tool, prompt authority, capability declaration or write is added. The new mutation is classified planned under G04 with no assistant draft yet; scoped staff cannot call it until the staff procedure policy lists it.",
   "capabilities": [],

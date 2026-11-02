@@ -1,4 +1,3 @@
-import { mobileCatalogSystemCopy } from "@/lib/catalog-wording"
 import {
   BUSINESS_SETUP_STEPS,
   BUSINESS_SETUP_TITLES,
@@ -11,6 +10,7 @@ import { SearchFold } from "@/components/mobile/search-fold"
 import { SetupSection } from "@/components/mobile/setup-flow"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
+import { mobileCatalogSystemCopy } from "@/lib/catalog-wording"
 import { cn } from "@/lib/utils"
 import { View } from "react-native"
 import { SettingsScreen } from "../../settings-screen"

@@ -1,10 +1,7 @@
 {
   "version": 1,
   "id": "2026-10-23-market-hall",
-  "tickets": [
-    "H01",
-    "H02"
-  ],
+  "tickets": ["H01", "H02"],
   "summary": "Implement user-selected Market hall as an additional exact template pin using the existing Factory catalog, editor and runtime. Configure existing Jawdah QA through normal local Owner controls. No new merchant procedure, provider authority or deployment.",
   "noAssistantImpact": "Market hall is another active registered composition available to existing dashboard Owner/Admin storefront.design.read/generate/accept commands and signed design review under unchanged Store/Site scope, CAS, permissions and entitlements. initialize/saveDraft/publish/rollback remain explicit form-only commands. WhatsApp/mobile design writes and provider configuration remain excluded. Catalog inspection and customer actions reuse current canonical resource/action contracts; no new model tool or expanded authority.",
   "capabilities": [],

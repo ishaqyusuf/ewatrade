@@ -7,12 +7,34 @@
   "capabilities": [],
   "procedures": [],
   "docs": [
-    { "topic": "feature", "status": "local_only", "path": ".brain/features/storefront-basic-customer-flow.md" },
-    { "topic": "api", "status": "local_only", "path": ".brain/api/contracts.md" },
-    { "topic": "schema", "status": "not_applicable", "note": "Existing ServiceRequest/Form/Line models; no schema or migration." }
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/storefront-basic-customer-flow.md"
+    },
+    {
+      "topic": "api",
+      "status": "local_only",
+      "path": ".brain/api/contracts.md"
+    },
+    {
+      "topic": "schema",
+      "status": "not_applicable",
+      "note": "Existing ServiceRequest/Form/Line models; no schema or migration."
+    }
   ],
   "evidence": [
-    { "kind": "test", "path": "packages/db/src/queries/storefront-service-intake.test.ts", "executed": true, "result": "Focused in-memory canonical create/replay, foreign scope and quantity refusal, publication withdrawal rollback and rejected text checks pass; no connected/provider effects." },
-    { "kind": "test", "path": "packages/storefront-runtime/src/links.test.ts", "executed": true, "result": "General service names/multiple options use the standalone storefront path; product and foreign option refuse." }
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/storefront-service-intake.test.ts",
+      "executed": true,
+      "result": "Focused in-memory canonical create/replay, foreign scope and quantity refusal, publication withdrawal rollback and rejected text checks pass; no connected/provider effects."
+    },
+    {
+      "kind": "test",
+      "path": "packages/storefront-runtime/src/links.test.ts",
+      "executed": true,
+      "result": "General service names/multiple options use the standalone storefront path; product and foreign option refuse."
+    }
   ]
 }

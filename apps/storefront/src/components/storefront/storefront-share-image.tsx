@@ -1,8 +1,8 @@
-import { getCatalogIllustrationSvg } from "@ewatrade/utils/catalog-illustration-artwork"
 import {
   formatStorefrontPrice,
   storefrontInitials,
 } from "@ewatrade/storefront-runtime/presentation"
+import { getCatalogIllustrationSvg } from "@ewatrade/utils/catalog-illustration-artwork"
 import type { PublicStorefront, PublicStorefrontItem } from "./storefront-types"
 
 function Artwork({

@@ -7,8 +7,8 @@ import { FormField } from "@/components/mobile/form-field"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { useCurrentAddress } from "@/hooks/use-current-address"
-import { mobileOperatingModelLabel } from "@/lib/catalog-wording"
 import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
+import { mobileOperatingModelLabel } from "@/lib/catalog-wording"
 import {
   BUSINESS_OPERATING_MODELS,
   BUSINESS_ORDER_CHANNELS,

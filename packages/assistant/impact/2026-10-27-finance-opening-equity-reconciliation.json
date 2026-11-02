@@ -1,9 +1,7 @@
 {
   "version": 1,
   "id": "2026-10-27-finance-opening-equity-reconciliation",
-  "tickets": [
-    "H02"
-  ],
+  "tickets": ["H02"],
   "summary": "Read-only Finance view of what makes up opening equity at one snapshot (Finance roadmap F6.5.04): each posted starting-balance source (money accounts, Customers, Suppliers and their reversals), anything else that touched opening equity, opening stock valued in pools but not posted, and unknown-cost opening stock counted rather than valued at zero. Assets, loans, tax, prepayments and accruals are listed as unsupported; the view never certifies a complete opening. The dashboard closing checklist shows it under Starting balances. Roles, permissions and assistant rollout are unchanged.",
   "noAssistantImpact": "No assistant tool, prompt authority, capability declaration or write is added. finance.openingEquityReconciliation is an Owner/Admin financeProcedure read classified form-only with the other period close reviews.",
   "capabilities": [],
