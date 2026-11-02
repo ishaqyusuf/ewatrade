@@ -54,6 +54,12 @@ import {
   submitExternalDeletionRequest,
 } from "@ewatrade/db/queries"
 import {
+  TenantPhotoErasureError,
+  getTenantPhotoErasureStatus,
+  resumeTenantPhotoErasure,
+  startTenantPhotoErasure,
+} from "@ewatrade/db/tenant-photo-erasure"
+import {
   createEmailMessage,
   dispatchEmailMessages,
   renderAccountDeletionVerificationTemplate,
@@ -115,6 +121,22 @@ function recordRetentionError(error: unknown): never {
   throw error
 }
 
+function tenantPhotoErasureError(error: unknown): never {
+  if (error instanceof TenantPhotoErasureError)
+    throw new TRPCError({
+      code:
+        error.code === "OPERATOR_REQUIRED" ||
+        error.code === "OPERATOR_IS_MEMBER"
+          ? "FORBIDDEN"
+          : error.code === "NOT_FOUND"
+            ? "NOT_FOUND"
+            : error.code === "AUTHORITY_CONFLICT"
+              ? "CONFLICT"
+              : "PRECONDITION_FAILED",
+      message: error.code,
+    })
+  throw error
+}
 export const accountPrivacyRouter = createTRPCRouter({
   inspectRetentionRecord: platformAdminProcedure
     .input(accountPrivacyRecordInspectionSchema)
@@ -206,6 +228,37 @@ export const accountPrivacyRouter = createTRPCRouter({
         throw error
       }
     }),
+  tenantPhotoErasure: platformAdminProcedure
+    .input(z.object({ tenantId: z.string().min(1).max(128) }).strict())
+    .query(({ ctx, input }) =>
+      getTenantPhotoErasureStatus(ctx.db, {
+        ...input,
+        operatorUserId: ctx.session.user.id,
+      }).catch(tenantPhotoErasureError),
+    ),
+  startTenantPhotoErasure: platformAdminProcedure
+    .input(
+      z
+        .object({
+          tenantId: z.string().min(1).max(128),
+          authorityReference: z.string().min(8).max(128),
+        })
+        .strict(),
+    )
+    .mutation(({ ctx, input }) =>
+      startTenantPhotoErasure(ctx.db, {
+        ...input,
+        operatorUserId: ctx.session.user.id,
+      }).catch(tenantPhotoErasureError),
+    ),
+  resumeTenantPhotoErasure: platformAdminProcedure
+    .input(z.object({ tenantId: z.string().min(1).max(128) }).strict())
+    .mutation(({ ctx, input }) =>
+      resumeTenantPhotoErasure(ctx.db, {
+        ...input,
+        operatorUserId: ctx.session.user.id,
+      }).catch(tenantPhotoErasureError),
+    ),
   workflow: platformAdminProcedure
     .input(z.object({ requestId: z.string().min(1) }).strict())
     .query(async ({ ctx, input }) => {

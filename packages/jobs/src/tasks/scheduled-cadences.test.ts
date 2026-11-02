@@ -118,6 +118,7 @@ describe("scheduled cadences", () => {
       "storefront.design.recovery": "*/5 * * * * sweep",
       "storefront.release-source-check": "*/5 * * * * sweep",
       "storefront.template-update-emails": "0 * * * * sweep",
+      "tenant.photo.erasure": "0 * * * * task",
     })
   })
 

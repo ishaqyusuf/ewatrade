@@ -1,0 +1,87 @@
+// Whole-Tenant private-object erasure. No Tenant/Store/User FK: the ledger and
+// each exact object identity must survive an approved Tenant hard deletion.
+model TenantPhotoErasureRun {
+  id                 String                       @id @default(cuid())
+  tenantId           String                       @unique
+  dataClassification String
+  authorityReference String
+  startedByUserId    String
+  status             TenantPhotoErasureRunStatus  @default(INVENTORYING)
+  // Per-kind source id cursor for the bounded inventory/verification pass.
+  inventoryCursor    Json                         @default("{}")
+  passAdded          Int                          @default(0)
+  passCount          Int                          @default(0)
+  inventoriedAt      DateTime?
+  verifiedAt         DateTime?
+  completedAt        DateTime?
+  createdAt          DateTime                     @default(now())
+  updatedAt          DateTime                     @updatedAt
+  objects            TenantPhotoErasureObject[]
+
+  @@index([status, updatedAt])
+}
+
+enum TenantPhotoErasureRunStatus {
+  INVENTORYING
+  DELETING
+  VERIFYING
+  NEEDS_REVIEW
+  COMPLETED
+}
+
+// Exact provider identity is copied at inventory; only state, retry and lease
+// fields change afterwards. Paths never leave server-side status projections.
+model TenantPhotoErasureObject {
+  id              String                         @id @default(cuid())
+  runId           String
+  tenantId        String
+  kind            TenantPhotoErasureObjectKind
+  sourceId        String
+  storageProvider String?
+  storageStoreId  String?
+  storagePath     String?
+  contentDigest   String?
+  sizeBytes       Int?
+  state           TenantPhotoErasureObjectState
+  holdReason      TenantPhotoErasureHoldReason?
+  attempts        Int                            @default(0)
+  nextAttemptAt   DateTime
+  leaseToken      String?
+  leaseUntil      DateTime?
+  lastErrorCode   String?
+  deletedAt       DateTime?
+  createdAt       DateTime                       @default(now())
+  updatedAt       DateTime                       @updatedAt
+  run             TenantPhotoErasureRun          @relation(fields: [runId], references: [id], onDelete: Restrict)
+
+  @@unique([runId, kind, sourceId])
+  @@index([state, nextAttemptAt, leaseUntil])
+  @@index([runId, state])
+}
+
+enum TenantPhotoErasureObjectKind {
+  CATALOG_ORIGINAL
+  CATALOG_DERIVATIVE
+  EXPENSE_RECEIPT
+  ORDER_ATTACHMENT
+  ASSISTANT_ATTACHMENT
+  SERVICE_MEDIA
+  PRESCRIPTION_MEDIA
+}
+
+enum TenantPhotoErasureObjectState {
+  PENDING
+  DELETED
+  FAILED
+  HELD
+}
+
+// HELD rows keep bytes and block completion until an owner-gated decision or
+// a source-side change lets the next verification pass reclassify them.
+enum TenantPhotoErasureHoldReason {
+  FINANCIAL_EVIDENCE_POLICY_PENDING
+  RETENTION_HOLD
+  CLINICAL_RETENTION
+  OWNERSHIP_UNKNOWN
+  PROVIDER_UNSUPPORTED
+}

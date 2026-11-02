@@ -9,6 +9,7 @@ import {
   purgeExpiredAccountPrivacyVerification,
   purgeExpiredPhoneOtpChallenges,
 } from "@ewatrade/db/queries"
+import { listActiveTenantPhotoErasureRuns } from "@ewatrade/db/tenant-photo-erasure"
 import { idempotencyKeys, logger, schedules } from "@trigger.dev/sdk/v3"
 import {
   recoverAssistantWhatsAppDeliveries,
@@ -41,6 +42,7 @@ import { runStoreConversationWhatsAppRecoverySchedule } from "./store-conversati
 import { recoverStorefrontDesignRuns } from "./storefront-design"
 import { runStorefrontReleaseChecks } from "./storefront-release-check"
 import { runStorefrontTemplateUpdateEmails } from "./storefront-template-update-email"
+import { tenantPhotoErasure } from "./tenant-photo-erasure"
 
 type CadenceTask = {
   id: string
@@ -181,6 +183,12 @@ export const SCHEDULED_CADENCES = {
       ),
       start(assistantMaintenance),
       start(catalogPhotoCleanup, () => env("CATALOG_PHOTO_CLEANUP_ENABLED")),
+      start(
+        tenantPhotoErasure,
+        async () =>
+          env("TENANT_PHOTO_ERASURE_ENABLED") &&
+          (await listActiveTenantPhotoErasureRuns(prisma)).length > 0,
+      ),
       start(commercialOrderReminders, anyTenantInOrderDigestWindow),
       start(domainReconciliation, isWebsiteDomainsLaunchApproved),
       start(playRefundReviewAlert, () =>

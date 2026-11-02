@@ -86,6 +86,8 @@ function fixture(
   overrides: Record<string, unknown> = {},
   live: {
     memberships?: number
+    ownedTenantIds?: string[]
+    unfinishedTenantPhotoErasures?: number
     sessions?: number
     activeMobileOtp?: number
     storedMobileOtp?: number
@@ -249,7 +251,14 @@ function fixture(
       },
     },
     legalAcceptance: { count: async () => live.legalAcceptances ?? 0 },
-    membership: { count: async () => live.memberships ?? 0 },
+    membership: {
+      count: async () => live.memberships ?? 0,
+      findMany: async () =>
+        (live.ownedTenantIds ?? []).map((tenantId) => ({ tenantId })),
+    },
+    tenantPhotoErasureRun: {
+      count: async () => live.unfinishedTenantPhotoErasures ?? 0,
+    },
     session: { count: async () => live.sessions ?? 0 },
     verification: {
       count: async (query: unknown) => {
@@ -854,6 +863,30 @@ describe("account privacy completion assessment", () => {
     expect(assessment.eligible).toBe(false)
     expect(assessment.blockers).toContain("MEMBERSHIP_ACCESS_REMAINS")
     expect(assessment.blockers).toContain("IDENTITY_ACCESS_REMAINS")
+  })
+
+  test("blocks while an owned business still has unfinished photo erasure", async () => {
+    const { db } = fixture(
+      {},
+      { ownedTenantIds: ["tenant-1"], unfinishedTenantPhotoErasures: 1 },
+    )
+    const assessment = await assessAccountPrivacyCompletion(db, "request-1", {
+      approvedPolicyVersion: policyVersion,
+      now,
+    })
+    expect(assessment.blockers).toContain("TENANT_PHOTO_ERASURE_INCOMPLETE")
+    const { db: finished } = fixture(
+      {},
+      { ownedTenantIds: ["tenant-1"], unfinishedTenantPhotoErasures: 0 },
+    )
+    expect(
+      (
+        await assessAccountPrivacyCompletion(finished, "request-1", {
+          approvedPolicyVersion: policyVersion,
+          now,
+        })
+      ).blockers,
+    ).not.toContain("TENANT_PHOTO_ERASURE_INCOMPLETE")
   })
 
   test("rejects stored identity and unhandled provider tokens despite outcomes", async () => {

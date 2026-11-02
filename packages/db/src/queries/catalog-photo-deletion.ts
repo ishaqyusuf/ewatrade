@@ -1,4 +1,3 @@
-import { inventoryCatalogDerivativesBeforeTenantDeletion } from "./catalog-photo-derivatives"
 import { randomUUID } from "node:crypto"
 import {
   CATALOG_PHOTO_CLEANUP_GRACE_MS,
@@ -8,13 +7,16 @@ import {
   catalogPhotoStoragePath,
 } from "@ewatrade/catalog/photo-contracts"
 import { Prisma, type PrismaClient } from "../../generated/prisma/client"
+import { inventoryCatalogDerivativesBeforeTenantDeletion } from "./catalog-photo-derivatives"
+import { assessTenantPhotoErasure } from "./tenant-photo-erasure"
 
 const options = { maxWait: 10_000, timeout: 30_000 } as const
 const provenance = "catalog-tenant-inventory-v1"
 
 /** Internal integration boundary, NOT deletion authority. The approved domain
  * processor must call this in its own transaction BEFORE deleting photo metadata
- * and Tenant, and must independently satisfy all retention/legal gates. No API
+ * and Tenant, and must independently satisfy all retention/legal gates. It
+ * refuses until the Tenant photo erasure run is certified complete. No API
  * exposes this function. Larger inventories block rather than silently truncate. */
 export async function inventoryCatalogPhotosBeforeTenantDeletion(
   tx: Prisma.TransactionClient,
@@ -27,6 +29,10 @@ export async function inventoryCatalogPhotosBeforeTenantDeletion(
   `)
   if (!tenant || tenant.dataClassification !== "LIVE")
     throw new Error("Live Catalog deletion inventory unavailable.")
+  // Hard deletion cannot precede whole-Tenant byte erasure; this outbox only
+  // backstops objects inventoried inside the deletion transaction.
+  if (!(await assessTenantPhotoErasure(tx, tenantId)).complete)
+    throw new Error("Tenant photo erasure is not complete.")
   const assets = await tx.catalogPhotoAsset.findMany({
     where: { tenantId, bytesDeletedAt: null },
     orderBy: { id: "asc" },

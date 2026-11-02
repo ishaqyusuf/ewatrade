@@ -13,7 +13,8 @@
     "./order-attachments": "./src/order-attachments.ts",
     "./order-videos": "./src/order-videos.ts",
     "./local-test-object-port": "./src/local-test-object-port.ts",
-    "./verified-upload": "./src/verified-upload.ts"
+    "./verified-upload": "./src/verified-upload.ts",
+    "./tenant-object-erasure": "./src/tenant-object-erasure.ts"
   },
   "scripts": {
     "lint": "biome check .",

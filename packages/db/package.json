@@ -29,6 +29,7 @@
     "./catalog-photo-derivatives": "./src/queries/catalog-photo-derivatives.ts",
     "./catalog-photo-gallery": "./src/queries/catalog-photo-gallery.ts",
     "./catalog-photo-deletion": "./src/queries/catalog-photo-deletion.ts",
+    "./tenant-photo-erasure": "./src/queries/tenant-photo-erasure.ts",
     "./catalog-photo-lifecycle": "./src/queries/catalog-photo-lifecycle.ts",
     "./catalog-photo-review": "./src/queries/catalog-photo-review.ts",
     "./catalog-photo-replacement": "./src/queries/catalog-photo-replacement.ts",

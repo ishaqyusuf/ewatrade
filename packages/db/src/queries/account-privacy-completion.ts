@@ -160,6 +160,7 @@ export async function assessAccountPrivacyCompletion(
     | "playRefundReviewResponse"
     | "ownerBillingAccount"
     | "ownerBusinessCoverage"
+    | "tenantPhotoErasureRun"
     | "commercialOrder"
     | "commercialServiceFulfillment"
     | "commercialServiceAuthorization"
@@ -688,6 +689,22 @@ export async function assessAccountPrivacyCompletion(
         blockers.push("PRESCRIPTION_RECORDS_REVIEW_REQUIRED")
     }
     if (memberships > 0) blockers.push("MEMBERSHIP_ACCESS_REMAINS")
+    // A business this subject owned cannot be certified while its whole-Tenant
+    // photo erasure still holds, retries or verifies stored bytes.
+    const ownedTenants = await db.membership.findMany({
+      where: { userId: subjectId, role: "OWNER" },
+      select: { tenantId: true },
+    })
+    if (
+      ownedTenants.length &&
+      (await db.tenantPhotoErasureRun.count({
+        where: {
+          tenantId: { in: ownedTenants.map((row) => row.tenantId) },
+          status: { not: "COMPLETED" },
+        },
+      }))
+    )
+      blockers.push("TENANT_PHOTO_ERASURE_INCOMPLETE")
     if (
       sessions > 0 ||
       identityTokens > 0 ||

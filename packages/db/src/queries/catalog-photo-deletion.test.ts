@@ -2,7 +2,14 @@ import { describe, expect, test } from "bun:test"
 import type { Prisma } from "../../generated/prisma/client"
 import { inventoryCatalogPhotosBeforeTenantDeletion } from "./catalog-photo-deletion"
 
-function fixture(classification = "LIVE", changes = {}) {
+function fixture(
+  classification = "LIVE",
+  changes = {},
+  erasure: { status: string; remaining: number } = {
+    status: "COMPLETED",
+    remaining: 0,
+  },
+) {
   const rows: unknown[] = []
   const asset = {
     id: "asset",
@@ -16,12 +23,28 @@ function fixture(classification = "LIVE", changes = {}) {
     storagePath: null,
     ...changes,
   }
+  const count = { count: async () => 0 }
   const tx = {
     $queryRaw: async () => [{ dataClassification: classification }],
-    catalogPhotoAsset: { findMany: async () => [asset] },
+    tenant: { findUnique: async () => ({ isActive: false }) },
+    tenantPhotoErasureRun: {
+      findUnique: async () => ({
+        id: "run",
+        status: erasure.status,
+        verifiedAt: new Date(),
+      }),
+    },
+    tenantPhotoErasureObject: { count: async () => erasure.remaining },
+    financeExpenseReceiptAsset: count,
+    commercialOrderAttachment: count,
+    assistantAttachment: count,
+    serviceCommerceMediaAsset: count,
+    prescriptionMedia: count,
+    catalogPhotoAsset: { findMany: async () => [asset], count: async () => 0 },
     catalogPhotoDerivative: {
       findMany: async () => [],
       updateMany: async () => ({ count: 0 }),
+      count: async () => 0,
     },
     catalogPhotoDeletionOutbox: {
       findUnique: async () => null,
@@ -45,11 +68,13 @@ describe("internal Catalog Tenant deletion inventory", () => {
     })
     expect(rows[0]).not.toHaveProperty("actorUserId")
   })
-  test("QA, unknown store and contradictory provider paths fail closed", async () => {
+  test("QA, unknown store, contradictory paths and unfinished erasure fail closed", async () => {
     for (const { tx, rows } of [
       fixture("QA"),
       fixture("LIVE", { storageStoreId: null }),
       fixture("LIVE", { storagePath: "arbitrary/key" }),
+      fixture("LIVE", {}, { status: "NEEDS_REVIEW", remaining: 1 }),
+      fixture("LIVE", {}, { status: "COMPLETED", remaining: 1 }),
     ]) {
       await expect(
         inventoryCatalogPhotosBeforeTenantDeletion(tx, "tenant"),
