@@ -20,7 +20,7 @@ import {
 } from "@ewatrade/utils/catalog-setup-helpers"
 import { StatusBar } from "expo-status-bar"
 import { VariableContextProvider } from "nativewind"
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Keyboard, Modal as NativeModal, Platform, View } from "react-native"
 import { FlatList } from "react-native-css/components/FlatList"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
@@ -110,7 +110,9 @@ export function CatalogSetupHelperPicker({
         ]
       : []
   }
-  function finishSelection() {
+  // Reads only refs, so its identity stays stable across renders and the
+  // dismissal effect below re-runs only when visibility changes.
+  const finishSelection = useCallback(() => {
     const selected = pending.current
     pending.current = null
     if (
@@ -121,7 +123,7 @@ export function CatalogSetupHelperPicker({
     )
       return
     current.current.onSelect(selected.helper)
-  }
+  }, [])
   function close() {
     pending.current = null
     Keyboard.dismiss()
@@ -142,7 +144,7 @@ export function CatalogSetupHelperPicker({
       const frame = requestAnimationFrame(finishSelection)
       return () => cancelAnimationFrame(frame)
     }
-  }, [visible])
+  }, [visible, finishSelection])
   useEffect(
     () => () => {
       pending.current = null

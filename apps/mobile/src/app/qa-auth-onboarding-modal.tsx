@@ -1,4 +1,3 @@
-import { mobileOperatingModelLabel } from "@/lib/catalog-wording"
 import { ActionButton } from "@/components/mobile/action-button"
 import { ClassicLoginScreen } from "@/components/mobile/appearances/classic/login-screen"
 import { ClassicOnboardingScreen } from "@/components/mobile/appearances/classic/onboarding-screen"
@@ -27,6 +26,7 @@ import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
 import { applyThemeOverride } from "@/hooks/use-color"
 import { isDevelopmentAppVariant } from "@/lib/app-variant"
+import { mobileOperatingModelLabel } from "@/lib/catalog-wording"
 import { appThemeRuntime } from "@/lib/theme-runtime"
 import {
   BUSINESS_OPERATING_MODELS,
