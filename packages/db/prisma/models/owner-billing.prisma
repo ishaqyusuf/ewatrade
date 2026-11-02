@@ -1,0 +1,76 @@
+// Owner-wide billing (docs/billing/owner-wide-subscriptions.md). One account per
+// billing owner; the account id is the opaque store-side account token and never
+// names a Tenant. The owner is immutable; transfer needs explicit reconciliation.
+model OwnerBillingAccount {
+  id           String                    @id @default(uuid())
+  ownerUserId  String                    @unique
+  createdAt    DateTime                  @default(now())
+  owner        User                      @relation(fields: [ownerUserId], references: [id], onDelete: Restrict)
+  subscription OwnerBillingSubscription?
+  purchases    OwnerBillingPurchase[]
+  coverage     OwnerBusinessCoverage[]
+}
+
+// Every verified owner receipt. A provider purchase binds to exactly one account.
+model OwnerBillingPurchase {
+  id                String              @id @default(cuid())
+  accountId         String
+  provider          BillingProvider
+  purchaseDigest    String
+  latestOrderDigest String?
+  productId         String
+  environment       String
+  expiresAt         DateTime
+  verifiedAt        DateTime
+  createdAt         DateTime            @default(now())
+  account           OwnerBillingAccount @relation(fields: [accountId], references: [id], onDelete: Restrict)
+
+  @@unique([provider, purchaseDigest])
+  @@index([accountId, expiresAt])
+}
+
+enum OwnerBillingSubscriptionStatus {
+  ACTIVE
+  SUSPENDED
+  CANCELLED
+}
+
+// The one canonical subscription of an account, projected from its current receipt.
+model OwnerBillingSubscription {
+  id                  String                         @id @default(cuid())
+  accountId           String                         @unique
+  provider            BillingProvider
+  environment         String
+  purchaseDigest      String
+  planId              String
+  status              OwnerBillingSubscriptionStatus
+  currentPeriodEndsAt DateTime
+  cancelAtPeriodEnd   Boolean                        @default(false)
+  cancelledAt         DateTime?
+  cancellationReason  String?
+  verifiedAt          DateTime
+  createdAt           DateTime                       @default(now())
+  updatedAt           DateTime                       @updatedAt
+  account             OwnerBillingAccount            @relation(fields: [accountId], references: [id], onDelete: Restrict)
+
+  @@index([provider, purchaseDigest])
+}
+
+// Enrollment history. activeTenantId equals tenantId only while the coverage is
+// current, so its unique index allows one active coverage per Tenant and keeps
+// every released row. Releasing never deletes business data or the purchase.
+model OwnerBusinessCoverage {
+  id               String              @id @default(cuid())
+  accountId        String
+  tenantId         String
+  activeTenantId   String?             @unique
+  enrolledAt       DateTime
+  enrolledByUserId String
+  releasedAt       DateTime?
+  releasedByUserId String?
+  account          OwnerBillingAccount @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  tenant           Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([accountId, releasedAt])
+  @@index([tenantId, enrolledAt])
+}

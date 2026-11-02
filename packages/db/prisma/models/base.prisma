@@ -32,6 +32,7 @@ model Tenant {
   storeBillingAccount                               StoreBillingAccount?
   playRefundReviewCases                             PlayRefundReviewCase[]
   storeSubscriptionPurchases                        StoreSubscriptionPurchase[]
+  ownerBusinessCoverage                             OwnerBusinessCoverage[]
   id                                                String                                               @id @default(cuid())
   slug                                              String                                               @unique
   name                                              String
@@ -386,6 +387,7 @@ model User {
   productAnalyticsEvents ProductAnalyticsEvent[]
   accountPrivacyRequests                         AccountPrivacyRequest[]
   legalAcceptances                               LegalAcceptance[]
+  ownerBillingAccount                            OwnerBillingAccount?
   id                                             String                                            @id @default(cuid())
   name                                           String                                            @default("")
   email                                          String                                            @unique

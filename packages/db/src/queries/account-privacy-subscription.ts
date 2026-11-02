@@ -126,7 +126,12 @@ export async function confirmNoAccountPrivacySubscriptions(
       const billingInvoices = await tx.billingInvoice.count({
         where: { tenantId: { in: tenantIds } },
       })
+      // An owner-wide account holds the person's own receipts and coverage history.
+      const ownerBillingAccounts = await tx.ownerBillingAccount.count({
+        where: { ownerUserId: subjectId },
+      })
       if (
+        ownerBillingAccounts ||
         initiatedCheckouts ||
         refundReviewActions ||
         storePurchases ||

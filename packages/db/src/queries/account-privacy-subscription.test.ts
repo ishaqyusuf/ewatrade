@@ -36,6 +36,7 @@ function fixture(
     purchases?: number
     providerSubscriptions?: number
     billingInvoices?: number
+    ownerBillingAccounts?: number
     emailVerified?: boolean
     contactEmail?: string
   } = {},
@@ -112,6 +113,12 @@ function fixture(
         return input.billingInvoices ?? 0
       },
     },
+    ownerBillingAccount: {
+      count: async (query: unknown) => {
+        queries.ownerBilling = query
+        return input.ownerBillingAccounts ?? 0
+      },
+    },
     accountPrivacyDomainOutcome: {
       findUnique: async ({
         where,
@@ -185,6 +192,7 @@ describe("account privacy no-subscription outcome", () => {
       invoice: {
         where: { tenantId: { in: ["tenant-1"] } },
       },
+      ownerBilling: { where: { ownerUserId: "user-1" } },
     })
     expect(getTransactionOptions()).toEqual({
       isolationLevel: "Serializable",
@@ -201,6 +209,7 @@ describe("account privacy no-subscription outcome", () => {
     ["store purchase", { purchases: 1 }],
     ["provider subscription", { providerSubscriptions: 1 }],
     ["billing invoice", { billingInvoices: 1 }],
+    ["owner billing account", { ownerBillingAccounts: 1 }],
   ])("requires review for %s", async (_name, live) => {
     enable()
     const { db, outcomes } = fixture(live)
