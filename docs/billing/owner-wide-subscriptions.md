@@ -104,6 +104,56 @@ Wiring behind the switch:
   owner plan with that offer's per-business products/orders/staff. It never
   lowers a higher legacy, manual or launch grant.
 - An owner billing account now requires software-subscription privacy review.
+- Synchronous plan readers (`resolveRetailOpsPlanId`,
+  `projectRetailOpsPlanFeatures`) take an optional `ownerPlanId` that raises the
+  Tenant-bound plan and never lowers it. Their async callers fetch it with
+  `getRetailOpsOwnerPlanId(s)` (batched `getOwnerCoveredPlanIds`), which
+  returns nothing without a query while the switch is off. Wired: tenant
+  context, workspace read preference, Dashboard workspace list, public
+  storefront projection, site factory and customer messages, storefront
+  orders, site authority, attachments, Activity finance scope, notification
+  fanout and order-reminder jobs. Current coverage also keeps a business whose
+  Tenant-bound store receipt lapsed from being taken offline by the store
+  access gate. The coverage read is unlocked: a projection only, like the async
+  reader, so a concurrent owner change can be one read behind.
+
+## Account privacy (2 November 2026)
+
+- The platform-admin `reviewDetail` `billingReviewInventory` adds
+  `ownerBilling` (canonical subscription provider/status/period end, receipt
+  and coverage counts; `null` without an account) and `ownerCoverageRecords`
+  (coverage rows the subject enrolled or released, or that cover a Tenant they
+  belonged to). No purchase digests, order IDs or prices are selected.
+- `confirmNoAccountPrivacySubscriptions` refuses `NOT_APPLICABLE` while the
+  subject has an owner account or any such coverage row, and adds both counts
+  to its evidence digest. The completion gate rechecks the account and
+  user-attributed coverage by verified subject ID after User removal.
+- Retention reuses the existing reviewed `SOFTWARE_SUBSCRIPTIONS` disposition
+  (`RETENTION_APPROVED`, erasure or anonymization); no billing retention
+  period exists or is introduced. Profile disposition anonymizes, not deletes,
+  the User, so the `Restrict` owner relation keeps the account and its
+  receipts until that review. A numeric retention period for owner receipts
+  and coverage history is an owner decision.
+
+## Ownership transfer (design, pending)
+
+There is no business ownership-transfer command in the product yet. When a
+Tenant's OWNER changes, the previous owner's coverage row goes stale: the
+projection already stops giving that Tenant a paid tier and frees the old
+owner's slot, but `activeTenantId` stays held, so the new owner's enrollment is
+refused with `COVERAGE_CONFLICT`. The path it needs:
+
+1. An explicit `releaseStaleOwnerCoverage(tenantId, actor)` command, called by
+   the future transfer command or by the new owner. It locks both accounts in
+   ascending id order and then the Tenant (extending the account-then-Tenant
+   order), share-locks memberships, and verifies the old account's owner has no
+   current OWNER membership in that Tenant.
+2. It sets `releasedAt`, `releasedByUserId` and clears `activeTenantId`,
+   never touching the old account's purchases or subscription. The new owner
+   then enrolls through the normal command.
+3. Owner decision: who may release another account's stale coverage (new
+   owner, platform admin only, or the transfer command alone) and whether a
+   transfer should enroll automatically.
 
 ## Cutover still required (owner-gated)
 
@@ -115,13 +165,12 @@ Wiring behind the switch:
    launch grant; and whether paid product caps (currently not enforced for paid
    plans) are enforced. Reconcile durable plan rows and mobile mirrors with the
    offer; Pro's unlimited products currently keeps the legacy numeric cap.
-3. Synchronous plan readers that project from preloaded tenant data
-   (`resolveRetailOpsPlanId` in tenant context, storefront, notifications, jobs,
-   attachments; `projectRetailOpsPlanFeatures` in tenant lists) still read only
-   Tenant-bound authority. Wire them before enabling the switch.
-4. Add the owner billing tables to the account privacy export/retention workflow
-   (only the review gate exists). Ownership transfer still needs its explicit
-   reconciliation path; the account owner is never inferred from membership.
+3. Synchronous plan readers are wired (above). Before enabling, review any new
+   `resolveRetailOpsPlanId` caller: one that passes no `ownerPlanId` silently
+   reads Tenant-bound authority only.
+4. Decide a retention period for owner receipts and coverage history, if one is
+   wanted beyond the reviewed disposition. Implement the ownership-transfer
+   release path above; the account owner is never inferred from membership.
 5. The mobile client must use the owner token, `ownerCoverage`, enroll and
    release. Then verify on a non-production target, build and test the exact
    signed Android candidate and complete merchant, legal/refund, Data safety and
@@ -136,7 +185,11 @@ port model (no Prisma client). It is not evidence of PostgreSQL behavior.
 database refuses a second active coverage row, concurrent enrollments on a
 one-business plan grant exactly one slot, release keeps history, legacy and
 foreign receipts are refused, older reads never overwrite newer ones, an old
-void does not cancel a newer renewal, and the entitlement reader overlay.
+void does not cancel a newer renewal, and the entitlement reader overlay. It
+also checks that the batched `getOwnerCoveredPlanIds` reader agrees with it.
+`retail-ops-subscriptions.test.ts` covers the synchronous overlay (raises,
+never lowers, outlives a lapsed receipt, no query while off) and the privacy
+tests cover the owner inventory, certification refusal and completion recheck.
 
 Run the existing `qa:doctor --offline`, planned/scoped `test:quick`, strict module
 types and H01/H02 gates. Use a minimal environment with an unusable DB sentinel;
