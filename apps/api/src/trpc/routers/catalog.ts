@@ -17,6 +17,7 @@ import {
   createCatalogUnitDefinition,
   createProductUnitConfigurationDraft,
   createSimpleCatalogItem,
+  getCatalogAttentionSummary,
   getCatalogItem,
   listCatalogDirectoryPage,
   listCatalogItems,
@@ -48,6 +49,7 @@ import {
   catalogAddServiceChoiceSchema,
   catalogArchiveOfferingSchema,
   catalogArchiveVariantSchema,
+  catalogAttentionSummarySchema,
   catalogCountSchema,
   catalogCreateItemSchema,
   catalogCreateSimpleItemSchema,
@@ -124,6 +126,14 @@ function resolveStoreId(
   }
 
   return storeId
+}
+
+/** Problems are judged on the active Store's stock, as the Catalog shows it. */
+function catalogAttentionStoreId(tenant: TenantContext) {
+  const store = tenant.activeStore ?? tenant.stores[0]
+  if (!store)
+    throw new TRPCError({ code: "NOT_FOUND", message: "Store not found" })
+  return store.id
 }
 
 function catalogTRPCError(error: CatalogError) {
@@ -505,6 +515,18 @@ export const catalogRouter = createTRPCRouter({
       })
     }),
 
+  /** Exact type and problem counts for the active Store's Catalog. */
+  attentionSummary: protectedProcedure
+    .input(catalogAttentionSummarySchema)
+    .query(({ ctx, input }) => {
+      assertCanReadCatalog(ctx.tenantContext.membership.role)
+      return getCatalogAttentionSummary(ctx.db, {
+        ...input,
+        storeId: catalogAttentionStoreId(ctx.tenantContext),
+        tenantId: ctx.tenantContext.tenant.id,
+      })
+    }),
+
   searchProductCategories: protectedProcedure
     .input(catalogProductCategorySearchSchema)
     .query(({ ctx, input }) => {
@@ -537,6 +559,9 @@ export const catalogRouter = createTRPCRouter({
 
       return listCatalogItemsPage(ctx.db, {
         ...input,
+        attentionStoreId: input.attention
+          ? catalogAttentionStoreId(ctx.tenantContext)
+          : undefined,
         tenantId: ctx.tenantContext.tenant.id,
         storeIds:
           ctx.tenantContext.staffAccess?.mode === "SCOPED"

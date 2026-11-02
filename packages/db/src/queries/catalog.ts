@@ -27,6 +27,7 @@ export type {
   InventoryUnitStockBehaviorValue,
 } from "./catalog-read"
 import { createHash } from "node:crypto"
+import type { CatalogAttention } from "@ewatrade/utils/catalog-attention"
 import { findCatalogIllustration } from "@ewatrade/utils/catalog-illustrations"
 import { type ProductUsage, productUsages } from "@ewatrade/utils/product-usage"
 import { rankBySearch } from "@ewatrade/utils/search-rank"
@@ -52,6 +53,7 @@ import {
   UnitConfigurationStatus,
   WorkAuthorizationPolicy,
 } from "../../generated/prisma/enums"
+import { listCatalogAttentionItemIds } from "./catalog-attention"
 import { resolveCatalogCategorySelection } from "./catalog-categories"
 import { lockCatalogCommandInTransaction } from "./catalog-command-locks"
 import {
@@ -224,6 +226,9 @@ export type ListCatalogItemsInput = {
 }
 
 export type ListCatalogItemsPageInput = ListCatalogItemsInput & {
+  /** Only items with this problem in `attentionStoreId`, across the business. */
+  attention?: CatalogAttention
+  attentionStoreId?: string
   cursor?: string
   limit?: number
   query?: string
@@ -1452,8 +1457,18 @@ export async function listCatalogItemsPage(
   db: Pick<PrismaClient, "catalogItem">,
   input: ListCatalogItemsPageInput,
 ) {
+  const itemIds =
+    input.attention && input.attentionStoreId
+      ? await listCatalogAttentionItemIds(db, {
+          attention: input.attention,
+          kind: input.kind,
+          status: input.status,
+          storeId: input.attentionStoreId,
+          tenantId: input.tenantId,
+        })
+      : undefined
   const { limit, where, baseWhere, orderBy, ranked } =
-    await catalogListPageQuery(db, input)
+    await catalogListPageQuery(db, input, { itemIds })
   if (ranked) return listRankedCatalogItemsPage(db, input, where)
   const [records, totalCount] = await Promise.all([
     db.catalogItem.findMany({
@@ -1496,6 +1511,7 @@ async function listRankedCatalogItemsPage(
     }),
     db.catalogItem.count({
       where: {
+        id: where.id,
         kind: where.kind,
         status: where.status,
         systemRole: null,

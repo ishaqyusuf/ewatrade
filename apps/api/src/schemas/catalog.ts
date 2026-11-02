@@ -437,7 +437,15 @@ export const catalogCountSchema = catalogListItemsSchema.extend({
   nameContains: z.string().trim().min(1).max(160).optional(),
 })
 
+export const catalogAttentionSchema = z.enum([
+  "out_of_stock",
+  "no_price",
+  "not_counted",
+])
+
 export const catalogListItemsPageSchema = catalogListItemsSchema.extend({
+  /** Only items with this problem in the active Store, across the business. */
+  attention: catalogAttentionSchema.optional(),
   searchOrder: z.enum(["relevance", "stable"]).optional(),
   cursor: z.string().trim().min(1).optional(),
   direction: z.enum(["forward", "backward"]).optional(),
@@ -451,6 +459,8 @@ export const catalogListItemsPageSchema = catalogListItemsSchema.extend({
     .strict()
     .optional(),
 })
+
+export const catalogAttentionSummarySchema = catalogListItemsSchema
 
 export const catalogArchiveOfferingSchema = z
   .object({ offeringId: z.string().trim().min(1) })

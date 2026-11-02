@@ -20,10 +20,12 @@ import {
 export async function catalogListPageQuery(
   db: Pick<PrismaClient, "catalogItem">,
   input: ListCatalogItemsPageInput,
+  options: { itemIds?: string[] } = {},
 ) {
   const limit = Math.min(Math.max(input.limit ?? 20, 1), 50)
   const normalizedQuery = input.query?.trim()
   const baseWhere: Prisma.CatalogItemWhereInput = {
+    ...(options.itemIds ? { id: { in: options.itemIds } } : {}),
     kind: input.kind ? catalogKind(input.kind) : undefined,
     status: input.status ? catalogStatus(input.status) : undefined,
     systemRole: null,

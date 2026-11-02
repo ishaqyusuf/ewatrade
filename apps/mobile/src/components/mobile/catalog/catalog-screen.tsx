@@ -66,6 +66,7 @@ import {
 } from "./catalog-shelf-model"
 
 /** The Catalog lists items A to Z; the server sorts so every page follows on. */
+const problemKinds = ["out_of_stock", "no_price", "not_counted"] as const
 const CATALOG_SORT = { field: "name", direction: "asc" } as const
 
 export function CatalogItemsContent({
@@ -110,9 +111,29 @@ export function CatalogItemsContent({
       },
     ),
   )
+  // Exact type and problem counts for the whole Catalog, not loaded pages.
+  const summaryQuery = useQuery(
+    trpc.catalog.attentionSummary.queryOptions(
+      {},
+      { enabled: !isOffline, retry: false },
+    ),
+  )
+  const summary = isOffline ? undefined : summaryQuery.data
+  // Writers refresh the item pages; follow each later refresh so counts never
+  // go stale. The first page load and the summary load together.
+  const pagesUpdatedAt = savedItemsQuery.dataUpdatedAt
+  const refetchSummary = summaryQuery.refetch
+  const seenPagesUpdatedAt = useRef(0)
+  useEffect(() => {
+    const previous = seenPagesUpdatedAt.current
+    seenPagesUpdatedAt.current = pagesUpdatedAt
+    if (!isOffline && previous && pagesUpdatedAt > previous)
+      void refetchSummary()
+  }, [isOffline, pagesUpdatedAt, refetchSummary])
   const itemsQuery = useInfiniteQuery(
     trpc.catalog.listItemsPage.infiniteQueryOptions(
       {
+        attention: isOffline ? undefined : (attention ?? undefined),
         kind: isOffline || kindFilter === "all" ? undefined : kindFilter,
         limit: LIST_PAGE_SIZE,
         query: isOffline ? undefined : deferredQuery || undefined,
@@ -137,7 +158,7 @@ export function CatalogItemsContent({
   const rows = filterCatalogShelf(loadedRows, {
     query: isOffline ? deferredQuery : "",
     kind: isOffline ? kindFilter : "all",
-    attention,
+    attention: isOffline ? attention : null,
   })
   const totalCount = visibleQuery.data?.pages[0]?.totalCount ?? 0
   // Online, the type switch and search filter on the server, so counts are kept
@@ -155,7 +176,7 @@ export function CatalogItemsContent({
   useEffect(() => {
     if (freshCounts) setKeptCounts(freshCounts)
   }, [freshCounts])
-  const counts = unfiltered ? freshCounts : keptCounts
+  const counts = summary ? summary : unfiltered ? freshCounts : keptCounts
   const mixedCatalog =
     availabilityQuery.data?.hasProductItems &&
     availabilityQuery.data?.hasServiceItems
@@ -303,7 +324,10 @@ export function CatalogItemsContent({
                   View only · Ask an owner to add or edit items.
                 </Text>
               ) : null}
-              {attention || loadedRows.some((row) => row.problem) ? (
+              {attention ||
+              (summary
+                ? problemKinds.some((key) => summary[key] > 0)
+                : loadedRows.some((row) => row.problem)) ? (
                 <View className="gap-2">
                   {counts ? null : (
                     <Text className="text-xs text-muted-foreground">
@@ -321,7 +345,9 @@ export function CatalogItemsContent({
                       .filter(
                         ([key]) =>
                           attention === key ||
-                          loadedRows.some((row) => row.problem === key),
+                          (summary
+                            ? summary[key] > 0
+                            : loadedRows.some((row) => row.problem === key)),
                       )
                       .map(([key, problem, icon]) => {
                         const count = counts?.[key]

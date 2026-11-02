@@ -1,5 +1,9 @@
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
-import { formatMinorMoney, subtractExactDecimals } from "@ewatrade/utils"
+import { formatMinorMoney } from "@ewatrade/utils"
+import {
+  catalogItemAttention,
+  catalogItemStockBalance,
+} from "@ewatrade/utils/catalog-attention"
 import { selectCatalogAvatar } from "./catalog-avatar-model"
 import type { CatalogRow } from "./catalog-presentation"
 type CatalogItem = RouterOutputs["catalog"]["listItems"][number]
@@ -30,7 +34,7 @@ export function mapCatalogItem(
   if (item.kind === "service") {
     return {
       avatar,
-      problem: priceLabel === "Price not set" ? "no_price" : undefined,
+      problem: catalogItemAttention(item, storeId),
       detail: `${priceLabel} · Service`,
       availabilityLabel: "Service",
       id: item.id,
@@ -45,22 +49,10 @@ export function mapCatalogItem(
     item.product?.currentUnitConfiguration?.units.find(
       (unit) => unit.stockBehavior === "canonical_shared",
     ) ?? item.product?.currentUnitConfiguration?.units[0]
-  const offeringUnit = item.product?.currentUnitConfiguration?.units.find(
-    (unit) => unit.id === offering?.productUnit?.inventoryUnitId,
-  )
-  const balance = item.product?.stockBalances.find(
-    (candidate) =>
-      candidate.storeId === storeId &&
-      candidate.variantId === defaultVariant?.id &&
-      (offeringUnit?.stockBehavior === "packaged_stock"
-        ? candidate.kind === "packaged_stock" &&
-          candidate.inventoryUnitId === offeringUnit.id
-        : candidate.kind === "shared_pool"),
-  )
-  const unitName = balance?.inventoryUnitName ?? canonicalUnit?.name ?? "unit"
-  const availableQuantity = balance
-    ? subtractExactDecimals(balance.onHandQuantity, balance.reservedQuantity)
-    : null
+  const stock = catalogItemStockBalance(item, storeId)
+  const unitName =
+    stock?.balance.inventoryUnitName ?? canonicalUnit?.name ?? "unit"
+  const availableQuantity = stock?.available ?? null
   const availabilityLabel =
     availableQuantity === null
       ? "Availability not recorded"
@@ -70,14 +62,7 @@ export function mapCatalogItem(
 
   return {
     avatar,
-    problem:
-      priceLabel === "Price not set"
-        ? "no_price"
-        : availableQuantity === null
-          ? "not_counted"
-          : Number(availableQuantity) <= 0
-            ? "out_of_stock"
-            : undefined,
+    problem: catalogItemAttention(item, storeId),
     detail: `${availabilityLabel} · ${priceLabel}`,
     availabilityLabel,
     id: item.id,
