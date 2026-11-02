@@ -2,6 +2,11 @@ import { describe, expect, setDefaultTimeout, test } from "bun:test"
 import { randomUUID } from "node:crypto"
 import { assertQaAccessAcceptanceDatabase } from "./acceptance/qa-access/database"
 import {
+  catalogFreeOfferingWhere,
+  ensureCatalogFreeOfferingInTransaction,
+  provisionCatalogFreeOfferingInTransaction,
+} from "./catalog-free-lines"
+import {
   createCommercialOrder,
   fulfillCommercialOrderProducts,
 } from "./commercial-orders"
@@ -111,6 +116,48 @@ if (enabled) setDefaultTimeout(120_000)
             where: { systemRole: { not: null }, tenantId },
           }),
         ).toBe(2)
+
+        // Concurrent first use in another Store reuses the item graph and
+        // only adds that Store's availability.
+        const branch = await prisma.store.create({
+          data: { name: "Branch", slug: `branch-${id}`, tenantId },
+        })
+        const scope = {
+          currencyCode: branch.currencyCode,
+          kind: "quick_sale" as const,
+          tenantId,
+        }
+        const original = await prisma.sellableOffering.findFirstOrThrow({
+          select: { id: true },
+          where: catalogFreeOfferingWhere({ ...scope, storeId: store.id }),
+        })
+        const provisioned = await Promise.all(
+          [0, 1].map(() =>
+            prisma.$transaction((tx) =>
+              ensureCatalogFreeOfferingInTransaction(tx, {
+                ...scope,
+                storeId: branch.id,
+              }),
+            ),
+          ),
+        )
+        expect(provisioned).toEqual([original.id, original.id])
+        expect(
+          await prisma.$transaction((tx) =>
+            provisionCatalogFreeOfferingInTransaction(tx, {
+              ...scope,
+              storeId: branch.id,
+            }),
+          ),
+        ).toBe(original.id)
+        expect(
+          await prisma.sellableOffering.count({ where: { tenantId } }),
+        ).toBe(2)
+        expect(
+          await prisma.storeOfferingAvailability.count({
+            where: { offering: { tenantId } },
+          }),
+        ).toBe(3)
 
         const fulfilled = await fulfillCommercialOrderProducts(prisma, {
           actorUserId: userId,

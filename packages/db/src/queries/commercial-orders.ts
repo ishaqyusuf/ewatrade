@@ -40,11 +40,12 @@ import { CatalogError } from "./catalog"
 import {
   type CommercialOrderCustomLineInput,
   catalogFreeLineKindForRole,
+  catalogFreeOfferingWhere,
   catalogFreeSnapshotNames,
   catalogFreeSystemRole,
-  ensureCatalogFreeOfferingInTransaction,
   isCustomOrderLineInput,
   normalizeCatalogFreeLine,
+  provisionCatalogFreeOfferingInTransaction,
 } from "./catalog-free-lines"
 import {
   commitCatalogStockReservationInTransaction,
@@ -797,22 +798,31 @@ export async function createCommercialOrderGraphInTransaction(
       // so skip those relation reads (each is a round trip).
       let offering = catalogFreeOfferings.get(custom.kind)
       if (!offering) {
-        const found = await tx.sellableOffering.findFirstOrThrow({
-          include: {
-            catalogItem: { select: { id: true, name: true } },
-            serviceOffering: true,
-            variant: true,
-          },
-          where: {
-            id: await ensureCatalogFreeOfferingInTransaction(tx, {
-              currencyCode: store.currencyCode,
-              kind: custom.kind,
-              storeId: store.id,
+        const scope = {
+          currencyCode: store.currencyCode,
+          kind: custom.kind,
+          storeId: store.id,
+          tenantId: input.tenantId,
+        }
+        const include = {
+          catalogItem: { select: { id: true, name: true } },
+          serviceOffering: true,
+          variant: true,
+        } as const
+        // Read the provisioned Offering directly; first use provisions it in
+        // one statement and reads it back (three round trips in all).
+        const found =
+          (await tx.sellableOffering.findFirst({
+            include,
+            where: catalogFreeOfferingWhere(scope),
+          })) ??
+          (await tx.sellableOffering.findFirstOrThrow({
+            include,
+            where: {
+              id: await provisionCatalogFreeOfferingInTransaction(tx, scope),
               tenantId: input.tenantId,
-            }),
-            tenantId: input.tenantId,
-          },
-        })
+            },
+          }))
         offering = {
           ...found,
           productUnitOffering: null,
