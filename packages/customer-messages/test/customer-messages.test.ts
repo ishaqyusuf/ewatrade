@@ -11,7 +11,7 @@ import {
 } from "../src"
 
 describe("customer message catalog and templates", () => {
-  test("exports the eight ordered customer-facing events", () => {
+  test("exports the ten ordered customer-facing events", () => {
     expect(customerMessageEvents.map(({ key }) => key)).toEqual([
       "order.recorded",
       "payment.recorded",
@@ -21,6 +21,8 @@ describe("customer message catalog and templates", () => {
       "order.completed",
       "order.cancelled",
       "payment.refund_recorded",
+      "customer.balance_reminder",
+      "customer.account_summary",
     ])
     for (const event of customerMessageEvents) {
       expect(() =>

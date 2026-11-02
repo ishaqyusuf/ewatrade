@@ -10,6 +10,8 @@ const customerMessageEventSchema = z.object({
     "order.completed",
     "order.cancelled",
     "payment.refund_recorded",
+    "customer.balance_reminder",
+    "customer.account_summary",
   ]),
   label: z.string().min(1),
   description: z.string().min(1),
@@ -153,6 +155,40 @@ const customerMessageEventDefinitions = [
     starterBody:
       "Hi {customer_first_name}, a refund of {refund_amount} for order {order_number} has been recorded by {business_name}. The method was {payment_method}.",
   },
+  {
+    key: "customer.balance_reminder",
+    label: "Balance reminder",
+    description:
+      "Remind a saved customer what they owe across their account, not one order.",
+    variables: [
+      "customer_name",
+      "customer_first_name",
+      "business_name",
+      "store_name",
+      "amount_owed",
+      "owed_since",
+      "statement_date",
+    ],
+    starterBody:
+      "Hi {customer_first_name}, this is a reminder from {business_name} that your balance is {amount_owed}, owed since {owed_since}. Please contact us if you have any questions. Thank you.",
+  },
+  {
+    key: "customer.account_summary",
+    label: "Account summary",
+    description:
+      "Share where a saved customer's account stands today: what they owe and what they paid ahead.",
+    variables: [
+      "customer_name",
+      "customer_first_name",
+      "business_name",
+      "store_name",
+      "amount_owed",
+      "paid_ahead",
+      "statement_date",
+    ],
+    starterBody:
+      "Hi {customer_first_name}, here is your account with {business_name} on {statement_date}: you owe {amount_owed} and have {paid_ahead} paid ahead. Thank you.",
+  },
 ] as const
 
 const parsedCustomerMessageEvents = z
@@ -184,6 +220,26 @@ export const customerMessageVariableLabels: Readonly<Record<string, string>> = {
   balance_due: "Balance due",
   payment_method: "Payment method",
   refund_amount: "Refund amount",
+  amount_owed: "Amount owed",
+  owed_since: "Owed since",
+  paid_ahead: "Paid ahead",
+  statement_date: "Statement date",
+}
+
+/** Account-level events use a saved customer's account, never one Order. */
+export const customerAccountMessageEventKeys = [
+  "customer.balance_reminder",
+  "customer.account_summary",
+] as const satisfies readonly CustomerMessageEventKey[]
+export type CustomerAccountMessageEventKey =
+  (typeof customerAccountMessageEventKeys)[number]
+
+export function isCustomerAccountMessageEvent(
+  eventKey: CustomerMessageEventKey,
+): eventKey is CustomerAccountMessageEventKey {
+  return (customerAccountMessageEventKeys as readonly string[]).includes(
+    eventKey,
+  )
 }
 
 export function getCustomerMessageEvent(
@@ -219,4 +275,6 @@ export const requiredVariablesByEvent: Readonly<
   "order.completed": ["order_number"],
   "order.cancelled": ["order_number"],
   "payment.refund_recorded": ["order_number", "refund_amount", "payment_date"],
+  "customer.balance_reminder": ["amount_owed"],
+  "customer.account_summary": ["amount_owed", "paid_ahead", "statement_date"],
 }

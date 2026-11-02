@@ -10,14 +10,20 @@ type Caller = ReturnType<typeof createCaller>
 test("ledger router loads implemented repository procedures", () => {
   expect(Object.keys(customerLedgerRouter._def.procedures).sort()).toEqual([
     "accountDetail",
+    "accountMessageOpen",
+    "accountMessagePreview",
     "accounts",
+    "aging",
     "allocationHistory",
     "applyCredit",
     "cancelRefund",
     "commandStatus",
     "completeRefund",
+    "createCustomerWithOpening",
     "ensureAccount",
     "entryDetail",
+    "linkOrders",
+    "orderLinkSuggestions",
     "orderReturnReview",
     "receivables",
     "recordOpening",
@@ -38,6 +44,26 @@ test("ledger router loads implemented repository procedures", () => {
 })
 
 const inputs = {
+  aging: { accountId: "account-1" },
+  createCustomerWithOpening: {
+    bookId: "book-1",
+    clientCommandId: "new-customer-1",
+    customer: { name: "Amina Bello", phone: "08030000001" },
+    opening: { direction: "DEBT", amountMinor: "5000", reason: "Old debt" },
+  },
+  orderLinkSuggestions: { customerId: "customer-1", limit: 50 },
+  linkOrders: {
+    customerId: "customer-1",
+    orderIds: ["order-1"],
+    clientCommandId: "link-1",
+  },
+  accountMessagePreview: { accountId: "account-1" },
+  accountMessageOpen: {
+    accountId: "account-1",
+    eventKey: "customer.balance_reminder",
+    previewVersion: "a".repeat(64),
+    body: "Hi Amina, your balance is ₦50.00.",
+  },
   receivables: { limit: 10 },
   allocationHistory: {
     accountId: "account-1",
@@ -185,6 +211,12 @@ const inputs = {
 
 function callEveryProcedure(caller: Caller) {
   return [
+    caller.aging(inputs.aging),
+    caller.createCustomerWithOpening(inputs.createCustomerWithOpening),
+    caller.orderLinkSuggestions(inputs.orderLinkSuggestions),
+    caller.linkOrders(inputs.linkOrders),
+    caller.accountMessagePreview(inputs.accountMessagePreview),
+    caller.accountMessageOpen(inputs.accountMessageOpen),
     caller.receivables(inputs.receivables),
     caller.ensureAccount(inputs.ensureAccount),
     caller.recordOpening(inputs.recordOpening),

@@ -335,3 +335,62 @@ export const customerOrderFundsReturnSchema = command
 export const customerOrderReturnReviewSchema = z
   .object({ orderId: id })
   .strict()
+
+export const customerLedgerAgingSchema = z.object({ accountId: id }).strict()
+
+/** Add customer with a starting balance; the opening is posted at the book start. */
+export const customerLedgerCreateCustomerWithOpeningSchema = command
+  .extend({
+    customer: z
+      .object({
+        name: z.string().trim().min(1).max(160),
+        email: z.string().trim().email().max(320).optional(),
+        phone: z.string().trim().min(3).max(40).optional(),
+      })
+      .strict(),
+    opening: z
+      .object({
+        direction: z.enum(["DEBT", "CREDIT"]),
+        amountMinor,
+        reason: z.string().trim().min(1).max(400),
+      })
+      .strict(),
+  })
+  .strict()
+
+export const customerLedgerOrderLinkSuggestionsSchema = z
+  .object({
+    customerId: id,
+    limit: z.number().int().min(1).max(50).default(50),
+  })
+  .strict()
+
+export const customerLedgerLinkOrdersSchema = z
+  .object({
+    customerId: id,
+    orderIds: z.array(id).min(1).max(50),
+    clientCommandId: id,
+  })
+  .strict()
+
+const accountMessageEventKey = z.enum([
+  "customer.balance_reminder",
+  "customer.account_summary",
+])
+export const customerAccountMessagePreviewSchema = z
+  .object({ accountId: id, eventKey: accountMessageEventKey.optional() })
+  .strict()
+export const customerAccountMessageOpenSchema =
+  customerAccountMessagePreviewSchema
+    .extend({
+      previewVersion: z.string().regex(/^[a-f0-9]{64}$/),
+      body: z
+        .string()
+        .min(1)
+        .max(3_000)
+        .refine(
+          (value) => Array.from(value).length <= 1_500,
+          "Keep the message within 1,500 characters.",
+        ),
+    })
+    .strict()

@@ -3,6 +3,7 @@ import {
   type CustomerMessageEventKey,
   buildWhatsAppMessageUrl,
   customerMessageEvents,
+  isCustomerAccountMessageEvent,
   normalizeWhatsAppPhone,
   renderCustomerMessageTemplate,
   resolveEffectiveMessageTemplate,
@@ -29,6 +30,11 @@ export async function previewCustomerMessageInTransaction(
   tx: Prisma.TransactionClient,
   input: MessagePreviewInput,
 ) {
+  if (input.eventKey && isCustomerAccountMessageEvent(input.eventKey))
+    throw new CustomerMessageError(
+      "BAD_REQUEST",
+      "Send account messages from the customer's statement.",
+    )
   const scope = await customerMessageScope(tx, input)
   const order = await tx.commercialOrder.findFirst({
     where: {
@@ -367,14 +373,16 @@ export async function previewCustomerMessageInTransaction(
     ),
     previewVersion,
     preparedAt: new Date().toISOString(),
-    events: customerMessageEvents.map((event) => {
-      const resolved = resolveEffectiveMessageTemplate(
-        templates,
-        input.storeId,
-        event.key,
-      )
-      return { ...event, state: resolved.state, scope: resolved.scope }
-    }),
+    events: customerMessageEvents
+      .filter((event) => !isCustomerAccountMessageEvent(event.key))
+      .map((event) => {
+        const resolved = resolveEffectiveMessageTemplate(
+          templates,
+          input.storeId,
+          event.key,
+        )
+        return { ...event, state: resolved.state, scope: resolved.scope }
+      }),
   }
 }
 

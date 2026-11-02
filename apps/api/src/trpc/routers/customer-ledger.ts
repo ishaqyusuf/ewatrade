@@ -1,20 +1,30 @@
 import {
+  CustomerMessageError,
+  prepareCustomerAccountMessageOpen,
+  previewCustomerAccountMessage,
+} from "@ewatrade/db/customer-messages"
+import {
+  CustomerDirectoryError,
   applyCustomerLedgerCredit,
   cancelCustomerFundsRefund,
   completeCustomerFundsRefund,
+  createCustomerWithOpening,
   encryptCustomerRefundDestination,
   ensureCustomerLedgerAccount,
   getCustomerFundsRefundDetail,
   getCustomerLedgerAccountDetail,
+  getCustomerLedgerAging,
   getCustomerLedgerAllocationHistory,
   getCustomerLedgerCommandStatus,
   getCustomerLedgerEntryDetail,
   getCustomerLedgerStatement,
   getCustomerOrderReturnReview,
+  linkCustomerHistoricalOrders,
   listCustomerFundsRefunds,
   listCustomerLedgerAccounts,
   listCustomerLedgerReceivables,
   listCustomerLedgerSources,
+  listCustomerOrderLinkSuggestions,
   recordCustomerLedgerOpening,
   recordCustomerLedgerReceipt,
   recordCustomerLedgerReceiptAndApply,
@@ -26,7 +36,10 @@ import {
   returnCustomerOrderFunds,
   reverseCustomerLedgerEntry,
 } from "@ewatrade/db/queries"
+import { TRPCError } from "@trpc/server"
 import {
+  customerAccountMessageOpenSchema,
+  customerAccountMessagePreviewSchema,
   customerFundsRefundChangeSchema,
   customerFundsRefundCompleteSchema,
   customerFundsRefundDetailSchema,
@@ -36,12 +49,16 @@ import {
   customerFundsRefundReserveSchema,
   customerLedgerAccountDetailSchema,
   customerLedgerAccountsSchema,
+  customerLedgerAgingSchema,
   customerLedgerAllocationHistorySchema,
   customerLedgerApplyCreditSchema,
   customerLedgerCommandStatusSchema,
+  customerLedgerCreateCustomerWithOpeningSchema,
   customerLedgerEnsureAccountSchema,
   customerLedgerEntryDetailSchema,
+  customerLedgerLinkOrdersSchema,
   customerLedgerOpeningSchema,
+  customerLedgerOrderLinkSuggestionsSchema,
   customerLedgerReceiptSchema,
   customerLedgerReceivablesSchema,
   customerLedgerRefundCreditSchema,
@@ -54,6 +71,30 @@ import {
 } from "../../schemas/customer-ledger"
 import { financeProcedure } from "../finance-procedure"
 import { createTRPCRouter } from "../init"
+
+/** Customer-account messages use the active Store's wording and name. */
+function activeStoreId(ctx: {
+  tenantContext: { activeStore?: { id: string } | null }
+}) {
+  const storeId = ctx.tenantContext.activeStore?.id
+  if (!storeId)
+    throw new TRPCError({ code: "NOT_FOUND", message: "Choose a Store first." })
+  return storeId
+}
+
+async function accountMessage<T>(run: () => Promise<T>): Promise<T> {
+  try {
+    return await run()
+  } catch (error) {
+    if (error instanceof CustomerMessageError)
+      throw new TRPCError({
+        code: error.code,
+        message: error.message,
+        cause: error,
+      })
+    throw error
+  }
+}
 
 // A missing destination key preserves safe request reads/cancellation.
 // Approvals require the exact available destination; new custody requires a dedicated key.
@@ -251,5 +292,59 @@ export const customerLedgerRouter = createTRPCRouter({
         ...input,
         ...ctx.financeActor,
       }),
+    ),
+  aging: financeProcedure
+    .input(customerLedgerAgingSchema)
+    .query(({ ctx, input }) =>
+      getCustomerLedgerAging(ctx.db, { ...input, ...ctx.financeActor }),
+    ),
+  createCustomerWithOpening: financeProcedure
+    .input(customerLedgerCreateCustomerWithOpeningSchema)
+    .mutation(async ({ ctx, input }) => {
+      try {
+        return await createCustomerWithOpening(ctx.db, {
+          ...input,
+          ...ctx.financeActor,
+        })
+      } catch (error) {
+        if (error instanceof CustomerDirectoryError)
+          throw new TRPCError({ code: "CONFLICT", message: error.message })
+        throw error
+      }
+    }),
+  orderLinkSuggestions: financeProcedure
+    .input(customerLedgerOrderLinkSuggestionsSchema)
+    .query(({ ctx, input }) =>
+      listCustomerOrderLinkSuggestions(ctx.db, {
+        ...input,
+        ...ctx.financeActor,
+      }),
+    ),
+  linkOrders: financeProcedure
+    .input(customerLedgerLinkOrdersSchema)
+    .mutation(({ ctx, input }) =>
+      linkCustomerHistoricalOrders(ctx.db, { ...input, ...ctx.financeActor }),
+    ),
+  accountMessagePreview: financeProcedure
+    .input(customerAccountMessagePreviewSchema)
+    .query(({ ctx, input }) =>
+      accountMessage(() =>
+        previewCustomerAccountMessage(ctx.db, {
+          ...input,
+          ...ctx.financeActor,
+          storeId: activeStoreId(ctx),
+        }),
+      ),
+    ),
+  accountMessageOpen: financeProcedure
+    .input(customerAccountMessageOpenSchema)
+    .mutation(({ ctx, input }) =>
+      accountMessage(() =>
+        prepareCustomerAccountMessageOpen(ctx.db, {
+          ...input,
+          ...ctx.financeActor,
+          storeId: activeStoreId(ctx),
+        }),
+      ),
     ),
 })
