@@ -11,10 +11,16 @@ const contracts = [
       "PAYMENTS_RECEIVED_COPY.error",
       "buildPaymentsReceivedPresentation",
       "HeroCard",
-      "editable={!offline}",
+      "showDisabledOfflineSearch",
     ],
     reason:
       "the mobile directory must keep bounded pagination, safe recovery, compact empty presentation, and conditional search",
+  },
+  {
+    file: "apps/mobile/src/components/mobile/bottom-search-footer.tsx",
+    markers: ["editable={editable && (!isOffline || localSearch)}"],
+    reason:
+      "the shared search footer keeps server-backed search read-only while offline",
   },
   {
     file: "apps/api/src/schemas/orders.ts",
