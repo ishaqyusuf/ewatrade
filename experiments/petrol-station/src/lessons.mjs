@@ -639,7 +639,7 @@ function backToStation() {
   renderPanel()
   update()
   svg.classList.remove("zoomed")
-  flyTo(CAMERA.station, () => $(`[data-lesson]`)?.focus())
+  flyTo(CAMERA.station, () => $("[data-lesson]")?.focus())
 }
 
 function replay() {
@@ -891,9 +891,12 @@ function renderPanel() {
     renderControls()
   })
   $("#replay-btn", panel).addEventListener("click", replay)
-  $("#demo-btn", panel).addEventListener("click", () =>
-    demo ? (stopDemo(), renderControls()) : startDemo(),
-  )
+  $("#demo-btn", panel).addEventListener("click", () => {
+    if (demo) {
+      stopDemo()
+      renderControls()
+    } else startDemo()
+  })
   $("#speed-select", panel).addEventListener("change", (e) => {
     ui.speed = Number(e.target.value)
   })

@@ -14,8 +14,7 @@ export function parseSvg(markup) {
   const stack = [root]
   const re =
     /<!--[\s\S]*?-->|<\/([\w:-]+)\s*>|<([\w:-]+)((?:\s+[\w:-]+\s*=\s*"[^"]*")*)\s*(\/?)>|([^<]+)/g
-  let m
-  while ((m = re.exec(markup))) {
+  for (let m = re.exec(markup); m; m = re.exec(markup)) {
     const top = stack.at(-1)
     if (m[1]) {
       stack.pop()
@@ -26,7 +25,7 @@ export function parseSvg(markup) {
       const node = { tag: m[2], attrs, children: [], parent: top }
       top.children.push(node)
       if (!m[4]) stack.push(node)
-    } else if (m[5] && m[5].trim()) {
+    } else if (m[5]?.trim()) {
       top.children.push({
         tag: "#text",
         text: m[5],
@@ -108,8 +107,8 @@ export function fakeDom(svgNode) {
 
 // ---------------------------------------------------------------- CSS subset
 
-function parseCss(css) {
-  css = css.replace(/\/\*[\s\S]*?\*\//g, "")
+function parseCss(source) {
+  const css = source.replace(/\/\*[\s\S]*?\*\//g, "")
   const vars = {}
   const rules = []
   let i = 0
@@ -201,9 +200,9 @@ function matches(node, parts) {
 
 // ---------------------------------------------------------------- paint
 
-function parseColor(v, ctx) {
-  if (!v || v === "none" || v === "transparent") return null
-  v = v.trim()
+function parseColor(value, ctx) {
+  if (!value || value === "none" || value === "transparent") return null
+  const v = value.trim()
   const varMatch = /^var\((--[\w-]+)\)$/.exec(v)
   if (varMatch) return parseColor(ctx.vars[varMatch[1]], ctx)
   const url = /^url\(#([\w-]+)\)$/.exec(v)
@@ -302,16 +301,16 @@ function ellipsePts(cx, cy, rx, ry, n = 40) {
   return out
 }
 
-function rectPts(x, y, w, h, rx, ry) {
-  if (!rx && !ry)
+function rectPts(x, y, w, h, radiusX, radiusY) {
+  if (!radiusX && !radiusY)
     return [
       [x, y],
       [x + w, y],
       [x + w, y + h],
       [x, y + h],
     ]
-  rx = Math.min(rx || ry, w / 2)
-  ry = Math.min(ry || rx, h / 2)
+  const rx = Math.min(radiusX || radiusY, w / 2)
+  const ry = Math.min(radiusY || rx, h / 2)
   const out = []
   const corner = (cx, cy, a0) => {
     for (let i = 0; i <= 8; i++) {
@@ -476,8 +475,8 @@ class Canvas {
   /** Coverage mask (0/1 per subsample) of polygons under nonzero winding. */
   mask(polys) {
     const { W, H } = this
-    let minY = Infinity
-    let maxY = -Infinity
+    let minY = Number.POSITIVE_INFINITY
+    let maxY = Number.NEGATIVE_INFINITY
     const edges = []
     for (const p of polys) {
       for (let i = 0; i < p.length; i++) {
@@ -530,7 +529,7 @@ class Canvas {
     for (const [y, spans] of rows) {
       const clipRow = clip?.get(y)
       if (clip && !clipRow) continue
-      for (let [xa, xb] of spans) {
+      for (const [xa, xb] of spans) {
         for (let x = xa; x <= xb; x++) {
           if (clipRow && !clipRow.some(([ca, cb]) => x >= ca && x <= cb))
             continue

@@ -12,7 +12,8 @@ const here = new URL(".", import.meta.url)
 const outDir = new URL("../screenshots/", here)
 const css = await readFile(new URL("../src/styles.css", here), "utf8")
 
-const run = (s, ...types) => {
+const run = (initial, ...types) => {
+  let s = initial
   for (const t of types) {
     const [type, payload] = Array.isArray(t) ? t : [t]
     const r = apply(s, payload ? { type, payload } : { type })
