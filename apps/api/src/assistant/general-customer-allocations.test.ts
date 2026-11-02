@@ -1,9 +1,9 @@
 import { expect, test } from "bun:test"
 import { z } from "zod"
 import {
-  generalCustomerEntryInput,
-  generalCustomerAllocationHistoryInput,
   generalCustomerAllocationHistoryAnswer,
+  generalCustomerAllocationHistoryInput,
+  generalCustomerEntryInput,
 } from "./general-customer-allocations"
 test("allocation lookups preserve strict bounded revision-pinned continuation", () => {
   expect(z.toJSONSchema(generalCustomerEntryInput).type).toBe("object")
@@ -55,6 +55,8 @@ test("allocation answer labels complete totals separately from the release page"
       actorUserId: "qa",
       createdAt: new Date(),
     },
+    currentAllocationId: "x",
+    currentRemainingAmountMinor: "200",
     releasedAmountMinor: "100",
     remainingAmountMinor: "200",
     reconciliationRequired: false,

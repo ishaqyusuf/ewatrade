@@ -35,6 +35,7 @@ function source(): Source {
     priceMinor: 1850000,
     isFromPrice: false,
     availability: null,
+    storefrontPolicy: { unavailable: false, allowBookAhead: false },
     options: [
       {
         id: "pair",
