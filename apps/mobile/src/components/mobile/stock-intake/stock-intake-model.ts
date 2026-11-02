@@ -1,4 +1,3 @@
-import type { ParsedStockIntakeTarget } from "@/lib/stock-intake-target"
 import type {
   RouterInputs,
   RouterOutputs,
@@ -13,6 +12,7 @@ import {
   collectStockCategoryDraft,
   stockCategorySelectors,
 } from "@ewatrade/utils/inventory-categories"
+import type { ParsedStockIntakeTarget } from "../../../lib/stock-intake-target"
 import { stockAfter } from "./stock-preview"
 
 export type StockBalance =
