@@ -1,7 +1,11 @@
 import { CatalogPhotoStorageError } from "@ewatrade/catalog/photo-contracts"
 import { CatalogPhotoProcessingError } from "@ewatrade/catalog/photo-processing"
 import { CatalogPhotoUploadError } from "@ewatrade/catalog/photo-upload"
-import { listCatalogPhotoGallery } from "@ewatrade/db/catalog-photo-gallery"
+import {
+  addCatalogPhotoToGallery,
+  listCatalogPhotoGallery,
+  updateCatalogGalleryDetails,
+} from "@ewatrade/db/catalog-photo-gallery"
 import { removeCatalogPhoto } from "@ewatrade/db/catalog-photo-lifecycle"
 import { replaceCatalogItemPhotos } from "@ewatrade/db/catalog-photo-replacement"
 import {
@@ -14,6 +18,8 @@ import { TRPCError } from "@trpc/server"
 import { catalogPhotoActorScope } from "../../catalog/photo-access"
 import { reuseCatalogPhoto } from "../../catalog/photo-reuse"
 import {
+  catalogGalleryDetailsSchema,
+  catalogPhotoAddToGallerySchema,
   catalogPhotoGallerySchema,
   catalogPhotoIntentSchema,
   catalogPhotoMetadataSchema,
@@ -97,7 +103,8 @@ export const catalogPhotosRouter = createTRPCRouter({
         throw error
       }
     }),
-  /** My images: approved photos already on Items in Stores the actor manages. */
+  /** My images: approved photos on Items and gallery-only uploads in Stores
+   * the actor manages, searchable by title, category and Item name. */
   gallery: protectedProcedure
     .input(catalogPhotoGallerySchema)
     .query(async ({ ctx, input }) => {
@@ -122,6 +129,46 @@ export const catalogPhotosRouter = createTRPCRouter({
             catalogItemId: input.catalogItemId,
           },
           query: input.query,
+          category: input.category,
+          cursor: input.cursor,
+          limit: input.limit,
+        })
+      } catch (error) {
+        if (error instanceof CatalogPhotoError)
+          throw catalogPhotoTRPCError(error)
+        throw error
+      }
+    }),
+  /** Keeps the actor's own finished upload in My images without an Item. */
+  addToGallery: protectedProcedure
+    .input(catalogPhotoAddToGallerySchema)
+    .mutation(async ({ ctx, input }) => {
+      const scope = catalogPhotoActorScope(ctx, input.storeId)
+      try {
+        // The upload route already queued the image check.
+        return await addCatalogPhotoToGallery(ctx.db, {
+          ...scope,
+          assetId: input.assetId,
+          title: input.title,
+          category: input.category,
+        })
+      } catch (error) {
+        if (error instanceof CatalogPhotoError)
+          throw catalogPhotoTRPCError(error)
+        throw error
+      }
+    }),
+  /** Title and category of an image in My images, shared by every copy. */
+  updateGalleryDetails: protectedProcedure
+    .input(catalogGalleryDetailsSchema)
+    .mutation(async ({ ctx, input }) => {
+      const scope = catalogPhotoActorScope(ctx, input.storeId)
+      try {
+        return await updateCatalogGalleryDetails(ctx.db, {
+          ...scope,
+          assetId: input.assetId,
+          title: input.title,
+          category: input.category,
         })
       } catch (error) {
         if (error instanceof CatalogPhotoError)

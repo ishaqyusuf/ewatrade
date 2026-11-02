@@ -63,6 +63,33 @@ export const catalogPhotoGallerySchema = z
     catalogItemId: identifier.optional(),
     scope: z.enum(["store", "all"]).default("store"),
     query: z.string().trim().max(80).optional(),
+    category: z.string().trim().max(40).optional(),
+    cursor: z.string().max(200).optional(),
+    limit: z.number().int().min(1).max(60).optional(),
+  })
+  .strict()
+
+const galleryTitle = z.string().max(160).nullable().optional()
+const galleryCategory = z.string().max(80).nullable().optional()
+
+/** Keeps the actor's finished upload in My images without an Item. */
+export const catalogPhotoAddToGallerySchema = z
+  .object({
+    storeId: identifier.optional(),
+    assetId: identifier,
+    title: galleryTitle,
+    category: galleryCategory,
+  })
+  .strict()
+
+/** Title and category of an image in My images; omitted fields stay. */
+export const catalogGalleryDetailsSchema = z
+  .object({
+    /** Store of the copy the actor sees (entry.storeId). */
+    storeId: identifier.optional(),
+    assetId: identifier,
+    title: galleryTitle,
+    category: galleryCategory,
   })
   .strict()
 

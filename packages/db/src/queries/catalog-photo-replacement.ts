@@ -147,6 +147,8 @@ export async function replaceCatalogItemPhotos(
             (asset.catalogItemId !== item.id &&
               (asset.actorUserId !== request.actorUserId ||
                 asset.catalogItemId ||
+                // My images uploads are copied onto Items, never moved.
+                asset.galleryAddedAt ||
                 asset.expiresAt <= new Date())) ||
             !asset.storagePath ||
             !asset.uploadedAt ||

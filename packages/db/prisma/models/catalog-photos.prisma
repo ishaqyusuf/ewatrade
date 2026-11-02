@@ -28,6 +28,8 @@ model CatalogPhotoAsset {
   catalogItemId       String?
   sortOrder           Int?
   attachedAt          DateTime?
+  /// Kept in My images without an Item (gallery-only upload); never attached.
+  galleryAddedAt      DateTime?
   createdAt           DateTime               @default(now())
   updatedAt           DateTime               @updatedAt
   tenant              Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Restrict)
@@ -40,6 +42,24 @@ model CatalogPhotoAsset {
   @@index([tenantId, storeId, actorUserId, expiresAt])
   @@index([tenantId, catalogItemId, state])
   @@index([state, reviewAvailableAt, reviewLeaseUntil])
+  @@index([tenantId, storeId, galleryAddedAt])
+}
+
+// My images details shared by every copy of the same bytes in one business.
+// Holds text only; the bytes stay on CatalogPhotoAsset rows.
+model CatalogGalleryImage {
+  id              String   @id @default(cuid())
+  tenantId        String
+  contentDigest   String
+  title           String?
+  category        String?
+  updatedByUserId String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, contentDigest])
+  @@index([tenantId, category])
 }
 
 // Approval is a server-only verdict bound to the immutable source/display bytes.

@@ -67,7 +67,8 @@ export async function removeCatalogPhoto(
       }>
     >(Prisma.sql`
       SELECT * FROM "CatalogPhotoAsset" WHERE "id"=${input.assetId} AND "tenantId"=${input.tenantId}
-      AND "storeId"=${input.storeId} AND ("actorUserId"=${input.actorUserId} OR "catalogItemId" IS NOT NULL) FOR UPDATE
+      AND "storeId"=${input.storeId} AND ("actorUserId"=${input.actorUserId} OR "catalogItemId" IS NOT NULL
+        OR ("galleryAddedAt" IS NOT NULL AND "state"='APPROVED')) FOR UPDATE
     `)
     if (!asset)
       throw new CatalogPhotoError("PHOTO_NOT_FOUND", "Photo not found.")
@@ -85,6 +86,7 @@ export async function removeCatalogPhoto(
         catalogItemId: null,
         sortOrder: null,
         approvedAt: null,
+        galleryAddedAt: null,
         expiresAt,
       },
     })
@@ -207,6 +209,7 @@ export async function recordCatalogPhotoVerdict(
         storageProvider: string
         reviewLeaseToken: string | null
         reviewLeaseUntil: Date | null
+        galleryAddedAt: Date | null
       }>
     >(Prisma.sql`
       SELECT * FROM "CatalogPhotoAsset" WHERE "id"=${snapshot.assetId} AND "tenantId"=${snapshot.tenantId}
@@ -261,6 +264,11 @@ export async function recordCatalogPhotoVerdict(
         approvedAt: snapshot.verdict === "APPROVED" ? now : null,
         reviewLeaseToken: null,
         reviewLeaseUntil: null,
+        // A rejected My images upload shows to its uploader for a day, then
+        // goes through the normal expired-draft cleanup.
+        ...(snapshot.verdict === "REJECTED" && asset.galleryAddedAt
+          ? { expiresAt: new Date(now.getTime() + 24 * 60 * 60 * 1000) }
+          : {}),
       },
     })
     return { assetId: asset.id, state: snapshot.verdict }

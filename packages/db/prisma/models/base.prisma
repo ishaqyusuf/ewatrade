@@ -55,6 +55,7 @@ model Tenant {
   stores                                            Store[]
   catalogItemIllustrations                          CatalogItemIllustration[]
   catalogPhotoAssets                                CatalogPhotoAsset[]
+  catalogGalleryImages                              CatalogGalleryImage[]
   catalogCategories                                 CatalogCategory[]
   sites                                             Site[]
   hostnames                                         TenantHostname[]

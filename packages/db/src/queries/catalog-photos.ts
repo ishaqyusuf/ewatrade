@@ -47,6 +47,8 @@ export type CreateCatalogPhotoIntentInput = CatalogPhotoActorScope & {
 }
 
 const transactionOptions = { maxWait: 10_000, timeout: 30_000 } as const
+/** Expiry of an upload kept in My images: it stays until someone removes it. */
+export const CATALOG_GALLERY_KEEP_UNTIL = new Date("9999-12-31T00:00:00.000Z")
 const intentLifetimeMs = 24 * 60 * 60 * 1000
 const maxOpenIntents = 32
 
@@ -310,6 +312,8 @@ export async function getCatalogPhotoReadTarget(
         OR: [
           { actorUserId: input.actorUserId },
           { catalogItemId: { not: null } },
+          // Approved My images uploads are shared like attached photos.
+          { galleryAddedAt: { not: null }, state: "APPROVED" },
         ],
       },
     })
@@ -561,7 +565,9 @@ export async function attachCatalogPhotoAssets(
         !asset.storagePath ||
         !asset.uploadedAt ||
         asset.expiresAt <= new Date() ||
-        asset.catalogItemId,
+        asset.catalogItemId ||
+        // My images uploads are copied onto Items, never moved.
+        asset.galleryAddedAt,
     )
   ) {
     throw new CatalogPhotoError(
