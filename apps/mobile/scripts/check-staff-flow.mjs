@@ -79,15 +79,6 @@ const contracts = [
     ],
   },
   {
-    file: "components/mobile/staff-directory-presentation-model.ts",
-    markers: [
-      "getStaffDirectoryPresentation",
-      "showInitialInviteAction",
-      "showStandardInviteFab",
-      "isAtStaffLimit",
-    ],
-  },
-  {
     file: "app/staff-onboarding.tsx",
     markers: ["StaffOnboardingScreen"],
   },
