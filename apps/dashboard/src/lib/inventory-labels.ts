@@ -1,3 +1,4 @@
+import type { StockHistoryCategoryFilter } from "@/hooks/use-stock-history-filter-params"
 import { compareExactDecimals } from "@ewatrade/utils/exact-decimal"
 
 /** Plain names for stock operation types, as a shop owner reads Stock history. */
@@ -81,6 +82,7 @@ export function stockHistoryPageInput(input: {
   storeId?: string
   q?: string | null
   filter?: string | null
+  categories?: StockHistoryCategoryFilter
 }) {
   const group = stockChangeGroups.find(
     (row) => row.id !== "all" && row.id === input.filter,
@@ -91,7 +93,26 @@ export function stockHistoryPageInput(input: {
     limit: 50,
     ...(group ? { group } : {}),
     ...(search ? { search } : {}),
+    ...stockCategoryInput(input.categories),
   }
+}
+
+/**
+ * Totals input: Store and categories only. The server totals take neither the
+ * search nor the Stock history group, so the totals view says what it covers.
+ */
+export function stockHistoryTotalsInput(input: {
+  storeId?: string
+  categories?: StockHistoryCategoryFilter
+}) {
+  return { storeId: input.storeId, ...stockCategoryInput(input.categories) }
+}
+
+function stockCategoryInput(filter?: StockHistoryCategoryFilter) {
+  if (filter?.uncategorized) return { uncategorized: true }
+  return filter?.categoryNameIds.length
+    ? { categoryNameIds: filter.categoryNameIds }
+    : {}
 }
 
 /** Dates in the viewer's own time, e.g. "19 Oct 2026, 10:15". */

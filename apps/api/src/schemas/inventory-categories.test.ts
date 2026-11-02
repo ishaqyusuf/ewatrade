@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test"
 import {
+  inventoryCategorySuggestionsSchema,
   inventoryOperationHistoryPageSchema,
   inventoryOperationHistorySchema,
   inventoryOperationTotalsSchema,
@@ -114,4 +115,14 @@ test("history and totals filters take match-all name IDs or Uncategorized, never
       categoryNameIds: [7],
     }),
   ).toEqual({ type: "receipt", categoryNameIds: [7] })
+})
+
+test("category suggestions look up chosen filter names by ID", () => {
+  expect(inventoryCategorySuggestionsSchema.parse({ ids: [3, 7] })).toEqual({
+    ids: [3, 7],
+  })
+  for (const ids of [["3"], [0], Array.from({ length: 11 }, (_, i) => i + 1)])
+    expect(inventoryCategorySuggestionsSchema.safeParse({ ids }).success).toBe(
+      false,
+    )
 })

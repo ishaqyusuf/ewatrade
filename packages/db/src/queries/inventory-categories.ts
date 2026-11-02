@@ -178,7 +178,7 @@ export async function resolvePurchaseStockCategoryGroups(
 
 export async function listStockOperationCategoryNames(
   db: PrismaClient,
-  input: { tenantId: string; query?: string; limit?: number },
+  input: { tenantId: string; query?: string; ids?: number[]; limit?: number },
 ) {
   const prefix = input.query
     ?.normalize("NFC")
@@ -189,6 +189,7 @@ export async function listStockOperationCategoryNames(
     where: {
       tenantId: input.tenantId,
       normalizedName: prefix ? { startsWith: prefix } : undefined,
+      id: input.ids ? { in: input.ids } : undefined,
     },
     orderBy: [{ normalizedName: "asc" }, { id: "asc" }],
     take: Math.min(Math.max(input.limit ?? 20, 1), 50),

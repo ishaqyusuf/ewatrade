@@ -130,6 +130,9 @@ export function StockCountForm({ store }: { store: StoreSummary }) {
         queryKey: trpc.inventory.operationHistoryPage.pathKey(),
       }),
       queryClient.invalidateQueries({
+        queryKey: trpc.inventory.operationTotals.pathKey(),
+      }),
+      queryClient.invalidateQueries({
         queryKey: trpc.inventory.stockCountReview.pathKey(),
       }),
     ])

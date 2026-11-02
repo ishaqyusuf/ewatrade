@@ -126,6 +126,11 @@ const categoryNameSchema = z
 export const inventoryCategorySuggestionsSchema = z
   .object({
     query: z.string().trim().max(80).optional(),
+    /** Names for chosen filter IDs; unknown IDs are simply left out. */
+    ids: z
+      .array(z.number().int().positive().max(2_147_483_647))
+      .max(10)
+      .optional(),
     limit: z.number().int().min(1).max(50).optional(),
   })
   .strict()

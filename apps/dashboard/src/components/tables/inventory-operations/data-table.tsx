@@ -1,6 +1,7 @@
 "use client"
 import { InventoryAuditSheet } from "@/components/sheets/inventory-audit-sheet"
 import { useInventoryLedgerParams } from "@/hooks/use-inventory-ledger-params"
+import { useStockHistoryCategoryParams } from "@/hooks/use-stock-history-filter-params"
 import {
   stockChangeLabel,
   stockDate,
@@ -48,10 +49,16 @@ export function OperationsDataTable({
 }) {
   const trpc = useTRPC()
   const { params, setParams } = useInventoryLedgerParams()
-  // Group and search run on the server, so every page is already filtered.
+  const categories = useStockHistoryCategoryParams()
+  // Group, search and categories run on the server, so every page is already filtered.
   const query = useSuspenseInfiniteQuery(
     trpc.inventory.operationHistoryPage.infiniteQueryOptions(
-      stockHistoryPageInput({ storeId, q: params.q, filter: params.filter }),
+      stockHistoryPageInput({
+        storeId,
+        q: params.q,
+        filter: params.filter,
+        categories: categories.filter,
+      }),
       {
         getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
         retry: false,
@@ -83,6 +90,7 @@ export function OperationsDataTable({
           storeId ?? "all",
           params.q,
           params.filter,
+          categories.filter,
         ])}
         getRecordLabel={getOperationLabel}
         describeRecord={describeOperation}
@@ -97,8 +105,16 @@ export function OperationsDataTable({
         }}
         empty={
           <OperationsEmpty
-            filtered={Boolean(params.q || params.filter)}
-            onClear={() => void setParams({ q: null, filter: null })}
+            filtered={Boolean(
+              params.q ||
+                params.filter ||
+                categories.filter.uncategorized ||
+                categories.filter.categoryNameIds.length,
+            )}
+            onClear={() => {
+              void setParams({ q: null, filter: null })
+              void categories.clear()
+            }}
           />
         }
       />

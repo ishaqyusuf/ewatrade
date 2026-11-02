@@ -59,6 +59,9 @@ export function StockTransferSheet({
           queryClient.invalidateQueries({
             queryKey: trpc.inventory.operationHistoryPage.pathKey(),
           }),
+          queryClient.invalidateQueries({
+            queryKey: trpc.inventory.operationTotals.pathKey(),
+          }),
         ])
       },
     }),

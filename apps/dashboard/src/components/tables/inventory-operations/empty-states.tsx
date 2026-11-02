@@ -13,7 +13,7 @@ export function OperationsEmpty({
       </h2>
       <p className="max-w-sm text-sm text-muted-foreground">
         {filtered
-          ? "Clear the search or pick All changes."
+          ? "Try fewer categories, clear the search or pick All changes."
           : "Changes appear here when you add, count, sell or move stock."}
       </p>
       {filtered ? (

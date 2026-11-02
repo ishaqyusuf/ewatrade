@@ -3,6 +3,7 @@ import {
   stockChangeGroup,
   stockChangeLabel,
   stockHistoryPageInput,
+  stockHistoryTotalsInput,
   stockSourceLabel,
   transferStatusLabel,
 } from "./inventory-labels"
@@ -50,5 +51,37 @@ describe("inventory labels", () => {
       storeId: undefined,
       limit: 50,
     })
+  })
+
+  test("category filters reach the page and the totals; search and group only the page", () => {
+    const categories = { categoryNameIds: [4, 9], uncategorized: false }
+    expect(
+      stockHistoryPageInput({
+        storeId: "s",
+        q: "eggs",
+        filter: "in",
+        categories,
+      }),
+    ).toEqual({
+      storeId: "s",
+      limit: 50,
+      group: "in",
+      search: "eggs",
+      categoryNameIds: [4, 9],
+    })
+    expect(stockHistoryTotalsInput({ storeId: "s", categories })).toEqual({
+      storeId: "s",
+      categoryNameIds: [4, 9],
+    })
+    const none = { categoryNameIds: [], uncategorized: true }
+    expect(stockHistoryTotalsInput({ categories: none })).toEqual({
+      storeId: undefined,
+      uncategorized: true,
+    })
+    expect(
+      stockHistoryTotalsInput({
+        categories: { categoryNameIds: [], uncategorized: false },
+      }),
+    ).toEqual({ storeId: undefined })
   })
 })

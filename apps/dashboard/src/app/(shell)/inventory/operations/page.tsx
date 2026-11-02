@@ -1,5 +1,6 @@
 import { InventoryOperationsPage } from "@/components/dashboard/inventory-operations-page"
 import { OperationsSkeleton } from "@/components/tables/inventory-operations/skeleton"
+import { loadStockHistoryCategoryFilter } from "@/hooks/use-stock-history-filter-params"
 import { stockHistoryPageInput } from "@/lib/inventory-labels"
 import { canOperateInventory } from "@/lib/inventory-operations"
 import { getServerSession } from "@/lib/session"
@@ -33,12 +34,14 @@ export default async function Page({
     getInitialDirectoryView("inventory-operations", identity),
   ])
   const params = await searchParams
+  const categories = await loadStockHistoryCategoryFilter(params)
   void getQueryClient().prefetchInfiniteQuery(
     trpc.inventory.operationHistoryPage.infiniteQueryOptions(
       stockHistoryPageInput({
         storeId: ctx.inventoryScope === "all" ? undefined : store.id,
         q: firstParam(params.q),
         filter: firstParam(params.filter),
+        categories,
       }),
       {
         getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
