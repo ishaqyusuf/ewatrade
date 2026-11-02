@@ -115,16 +115,16 @@ the server command still re-checks authority. Retained display never authorizes 
 
 ## Contact-target decision and explicit notes
 
-1. **`sheets/customer-details-sheet.tsx:17`, `customers.getById`, `staleTime: 0`: C3 private contact target.**
+1. **`sheets/customer-details-sheet.tsx:17`, `customers.contact` (formerly `customers.getById`), `staleTime: 0`: C3 private contact target.**
    Engineering classification preserves the existing behavior: a URL-owned
    contact record reads freshly on open; the protected procedure checks current
    `assertCanUseCustomers`/POS role, and `getCustomerById` bounds the ID by the
    admitted Tenant. Target changes alter the key; a refusal renders an error
    instead of contact values. Current inactive retention is unchanged, and no
    first-open or revisit speed claim is made. This records an explicit rationale,
-   not a new access rule or TTL decision. The current response also reads commercial
-   order history unused by this contact-only sheet; a lean projection is a DP-404
-   follow-up, not a reason to relax freshness.
+   not a new access rule or TTL decision. The sheet now reads the contact-only
+   projection with `getById`'s exact admission and no Order history (DP-404
+   slice); freshness, URL, retry and refusal erasure are unchanged.
 2. Three overrides explicitly equal the 60 s default (`order-overview.tsx:183`,
    `PREVIEW_STALE_MS`, `command-search.tsx:64`). They are harmless and documented;
    no change.

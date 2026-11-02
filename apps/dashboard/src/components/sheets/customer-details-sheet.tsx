@@ -12,7 +12,7 @@ export function CustomerDetailsSheet() {
   )
   const trpc = useTRPC()
   const query = useQuery(
-    trpc.customers.getById.queryOptions(
+    trpc.customers.contact.queryOptions(
       { customerId: customerDetail ?? "" },
       { enabled: Boolean(customerDetail), retry: false, staleTime: 0 },
     ),

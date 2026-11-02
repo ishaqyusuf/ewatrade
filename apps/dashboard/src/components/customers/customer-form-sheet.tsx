@@ -165,9 +165,14 @@ function CustomerFormFrame({
         ...(phone !== (loaded.phone ?? "") ? { phone: phone || null } : {}),
         ...(email !== (loaded.email ?? "") ? { email: email || null } : {}),
       })
-      await client.invalidateQueries({
-        queryKey: trpc.customers.getById.queryKey({ customerId }),
-      })
+      await Promise.all([
+        client.invalidateQueries({
+          queryKey: trpc.customers.getById.queryKey({ customerId }),
+        }),
+        client.invalidateQueries({
+          queryKey: trpc.customers.contact.queryKey({ customerId }),
+        }),
+      ])
       onSaved({ name, created: false })
     } catch (failure) {
       const code = errorCode(failure)

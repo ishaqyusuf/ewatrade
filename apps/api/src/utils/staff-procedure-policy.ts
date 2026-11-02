@@ -77,6 +77,8 @@ const reads = new Set([
   "stores.orderVisibility",
   "search.global",
   "customers.getById",
+  // Same admission as getById, contact fields only.
+  "customers.contact",
   "orders.list",
   "orders.listPage",
   "orders.payments",

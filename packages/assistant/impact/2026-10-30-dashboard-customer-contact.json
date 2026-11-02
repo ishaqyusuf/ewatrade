@@ -1,0 +1,66 @@
+{
+  "version": 1,
+  "id": "2026-10-30-dashboard-customer-contact",
+  "tickets": ["H01", "H02"],
+  "summary": "Dashboard Customer details sheet reads a contact-only projection instead of the full getById record with Order history. Shared admission keeps POS role, Tenant-bounded lookup, shared not-found and Order-scope Store refusal; getById is unchanged for its other consumers. Local only; no deployment; UI acceptance deferred by owner.",
+  "capabilities": [
+    {
+      "id": "customers.read",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Adds customers.contact as a narrower presentation procedure under the existing read capability. The readCustomer tool still uses customers.getById; no new tool, action, permission, role or rollout. Linked assistant reads remain limited to this capability's roles and return less data than getById."
+    }
+  ],
+  "procedures": [
+    {
+      "path": "customers.contact",
+      "status": "supported",
+      "reason": "Protected Tenant-scoped read with getById's exact admission helper and audited scoped-staff read grant. Returns only id, name, email and phone; never reads Order history; no write or authority input."
+    }
+  ],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/web-navigation-performance.md",
+      "note": "Customer contact projection (DP-404 slice, ledger C3) completion note."
+    },
+    {
+      "topic": "api",
+      "status": "local_only",
+      "path": ".brain/api/contracts.md",
+      "note": "customers.contact DTO and shared admission."
+    },
+    {
+      "topic": "api",
+      "status": "local_only",
+      "path": ".brain/api/endpoints.md"
+    },
+    {
+      "topic": "permissions",
+      "status": "local_only",
+      "path": ".brain/api/permissions.md",
+      "note": "Same POS permission, Tenant predicate, shared not-found and Order-scope Store refusal as getById."
+    },
+    {
+      "topic": "capability",
+      "status": "updated",
+      "path": "packages/assistant/src/capabilities/COVERAGE.md",
+      "note": "Regenerated coverage lists customers.contact as supported by customers.read."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "apps/api/src/trpc/routers/customers-contact.test.ts",
+      "executed": true,
+      "result": "6/6 pass, 37 expects (inert DB URL): real router admission parity per role, Tenant/missing not-found, sales-rep Store-scope refusal, held history, exact reads, scoped grant."
+    },
+    {
+      "kind": "test",
+      "path": "apps/dashboard/src/components/sheets/customer-details-sheet.test.tsx",
+      "executed": true,
+      "result": "3/3 pass, 15 expects: actual sheet reads only customers.contact, refusal erases contact after broad invalidation, Customer form save refreshes the open sheet."
+    }
+  ]
+}

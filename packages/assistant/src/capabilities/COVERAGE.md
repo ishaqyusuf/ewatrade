@@ -6,8 +6,8 @@ Tickets refer to the Brain plan `.brain/plans/2026-10-09-assistant-business-oper
 
 ## Summary
 
-- Router procedures: 771 (584 merchant, 187 public/account/internal)
-- Merchant supported by a capability: 177
+- Router procedures: 772 (585 merchant, 187 public/account/internal)
+- Merchant supported by a capability: 178
 - Merchant planned: 135
 - Merchant form-only: 210
 - Merchant excluded: 62
@@ -136,7 +136,7 @@ Tickets refer to the Brain plan `.brain/plans/2026-10-09-assistant-business-oper
 | `services.queue.read` | 1 | read | `readServices` | OWNER, ADMIN, MANAGER | Owner/Admin only | dashboard, mobile, whatsapp | source | `services.queuePage` |
 | `customers.receivables.read` | 1 | read | `readReceivables` | OWNER, ADMIN | Owner/Admin only | dashboard, mobile, whatsapp | source | `customerLedger.receivables` |
 | `customers.accounts.read` | 2 | read | `readCustomerAccounts` | OWNER, ADMIN | Owner/Admin only | dashboard, mobile, whatsapp | source | `customerLedger.accounts` |
-| `customers.read` | 1 | read | `readCustomer` | OWNER, ADMIN, MANAGER | read | dashboard, mobile, whatsapp | source | `customers.getById` |
+| `customers.read` | 1 | read | `readCustomer` | OWNER, ADMIN, MANAGER | read, read | dashboard, mobile, whatsapp | source | `customers.getById`, `customers.contact` |
 | `customers.create` | 1 | write (`customer_create`) | `draftAction` | OWNER, ADMIN, MANAGER | Owner/Admin only | dashboard, mobile, whatsapp | source | `customers.create` |
 | `catalog.product.create` | 1 | write (`product_create`) | `draftAction` | OWNER, ADMIN, MANAGER | catalog | dashboard, mobile, whatsapp | source | `catalog.createSimpleItem` |
 | `sales.order.record_simple` | 1 | write (`sale_record`) | `draftAction` | OWNER, ADMIN, MANAGER | orders, orders, orders, Owner/Admin only | dashboard, mobile, whatsapp | source | `orders.create`, `orders.recordPayment`, `orders.activity.add`, `assistant.saleOptions` |
@@ -525,6 +525,7 @@ track conversational evaluation separately from these source test links.
 | `customerMessages.templates.save` | mutation | Owner/Admin only | platform | form_only | Manual WhatsApp composition/settings and reviewed AI drafts; no assistant provider-send or template-write authority. |
 | `customerMessages.templates.setEnabled` | mutation | Owner/Admin only | platform | form_only | Manual WhatsApp composition/settings and reviewed AI drafts; no assistant provider-send or template-write authority. |
 | `customerMessages.templateStatus` | query | read | platform | planned | G05 |
+| `customers.contact` | query | read | customers | supported | customers.read |
 | `customers.count` | query | Owner/Admin only | customers | supported | customers.count |
 | `customers.create` | mutation | Owner/Admin only | customers | supported | customers.create |
 | `customers.getById` | query | read | customers | supported | customers.read |

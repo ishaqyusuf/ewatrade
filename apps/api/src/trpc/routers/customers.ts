@@ -31,30 +31,59 @@ export function assertCanUseCustomers(role: string) {
   }
 }
 
+/**
+ * Customer read admission shared by the full record and the contact sheet:
+ * POS role, Tenant-bounded lookup and the Order scope, which can refuse a
+ * sales rep without a permitted Store before any history is read.
+ */
+async function readAdmittedCustomer(
+  ctx: Parameters<typeof orderScope>[0],
+  customerId: string,
+) {
+  assertCanUseCustomers(ctx.tenantContext.membership.role)
+  const customer = await getCustomerById(ctx.db, {
+    customerId,
+    tenantId: ctx.tenantContext.tenant.id,
+  })
+  if (!customer)
+    throw new TRPCError({
+      code: "NOT_FOUND",
+      message: "Customer not found.",
+    })
+  const scope = await orderScope(ctx, {
+    storeId: ctx.tenantContext.activeStore?.id,
+  })
+  return { customer, scope }
+}
+
 export const customersRouter = createTRPCRouter({
   getById: protectedProcedure
     .input(customerGetByIdSchema)
     .query(async ({ ctx, input }) => {
-      assertCanUseCustomers(ctx.tenantContext.membership.role)
-      const customer = await getCustomerById(ctx.db, {
-        customerId: input.customerId,
-        tenantId: ctx.tenantContext.tenant.id,
-      })
-      if (!customer)
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Customer not found.",
-        })
+      const { customer, scope } = await readAdmittedCustomer(
+        ctx,
+        input.customerId,
+      )
       return {
         ...customer,
         revision: customerRevision(customer),
         orders: await lookupCommercialOrders(ctx.db, {
-          ...(await orderScope(ctx, {
-            storeId: ctx.tenantContext.activeStore?.id,
-          })),
+          ...scope,
           customerId: customer.id,
           history: true,
         }),
+      }
+    }),
+  /** Contact sheet: getById's admission and contact fields, without Order history. */
+  contact: protectedProcedure
+    .input(customerGetByIdSchema)
+    .query(async ({ ctx, input }) => {
+      const { customer } = await readAdmittedCustomer(ctx, input.customerId)
+      return {
+        id: customer.id,
+        name: customer.name,
+        email: customer.email,
+        phone: customer.phone,
       }
     }),
   count: protectedProcedure

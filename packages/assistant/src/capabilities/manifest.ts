@@ -2665,7 +2665,7 @@ export const capabilityManifest = [
     clients: ["dashboard", "mobile", "whatsapp"],
     rollout: "source",
     whatsapp: { mode: "native", rollout: "source" },
-    procedures: ["customers.getById"],
+    procedures: ["customers.getById", "customers.contact"],
     examples: ["What is Amina's phone number?"],
     tests: [
       "apps/api/src/assistant/channel-principal.integration.test.ts",
