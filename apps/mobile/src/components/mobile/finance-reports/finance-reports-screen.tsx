@@ -11,8 +11,9 @@ import { formatFinanceMoney } from "@ewatrade/utils/finance-money"
 import { financeCoverageGapLabel } from "@ewatrade/utils/finance-report-output"
 import { useQuery } from "@tanstack/react-query"
 import { type Href, useRouter } from "expo-router"
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { ScrollView, View } from "react-native"
+import { ClassicOrdersFilterRow } from "../appearances/classic/orders-screen"
 import { FinanceBankDateField } from "../finance/finance-bank-date-field"
 import { financeDisplayDate } from "../finance/finance-display"
 import { FinanceFormBody } from "../finance/finance-form-body"
@@ -22,6 +23,11 @@ import {
 } from "../finance/finance-workspace-gate"
 import { HeroCard } from "../green-till/hero-card"
 import { type FinanceReport, buildFinanceReportCsv } from "./report-csv"
+import {
+  financeReportPresets,
+  financeReportRangeLabel,
+  matchFinanceReportPreset,
+} from "./report-date-presets"
 import { ReportExportActions } from "./report-export-actions"
 import { ReportAmount, ReportSection } from "./report-section"
 
@@ -98,6 +104,16 @@ function ReportWindowView({
     window.through.toISOString().slice(0, 10),
   )
   const [error, setError] = useState<string>()
+  const presets = useMemo(
+    () => financeReportPresets(book.startsAt),
+    [book.startsAt],
+  )
+  const [pickedPreset, setPickedPreset] = useState<string | null>(null)
+  const preset = matchFinanceReportPreset(
+    presets,
+    { from, through },
+    pickedPreset,
+  )
   const [report, setReport] = useState<FinanceReport>()
   const query = useQuery(
     trpc.finance.reports.queryOptions(
@@ -124,6 +140,33 @@ function ReportWindowView({
           UTC dates on or after bookkeeping began. Applying dates starts a new
           snapshot.
         </Text>
+        <ClassicOrdersFilterRow
+          active={preset?.key ?? "custom"}
+          labels={Object.fromEntries(
+            presets.map((entry) => [entry.key, entry.label]),
+          )}
+          onChange={(key) => {
+            const next = presets.find((entry) => entry.key === key)
+            if (!next) return
+            setPickedPreset(key)
+            setFrom(next.from)
+            setThrough(next.through)
+            setError(undefined)
+          }}
+          values={presets.map((entry) => entry.key)}
+        />
+        <View className="flex-row items-center gap-2 px-0.5">
+          <Icon name="Calendar" className="size-[16px] text-muted-foreground" />
+          <Text className="min-w-0 flex-1 text-sm font-bold">
+            {preset ? financeReportRangeLabel(preset) : "Custom dates"}
+            {preset?.clamped ? (
+              <Text className="text-sm font-normal text-muted-foreground">
+                {" "}
+                · from when your books start
+              </Text>
+            ) : null}
+          </Text>
+        </View>
         <FinanceBankDateField
           label="From"
           value={from}
