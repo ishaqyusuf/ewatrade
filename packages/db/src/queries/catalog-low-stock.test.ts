@@ -30,6 +30,8 @@ function fixture(
         return {
           id: row.id,
           variantId: row.id,
+          // SellableOffering.variant is required; the availability read names it.
+          variant: { name: "Large" },
           storeAvailability: [{ isAvailable: true }],
           productUnitOffering: {
             inventoryUnit: {

@@ -19,8 +19,14 @@ export async function readInventoryRelocationGraph(
   })
   if (!identity)
     throw new FinanceError("NOT_FOUND", "Stock operation not found.")
-  if (identity.id !== input.stockOperationId || identity.tenantId !== input.tenantId)
-    throw new FinanceError("CONFLICT", "Inventory relocation owner scope changed.")
+  if (
+    identity.id !== input.stockOperationId ||
+    identity.tenantId !== input.tenantId
+  )
+    throw new FinanceError(
+      "CONFLICT",
+      "Inventory relocation owner scope changed.",
+    )
   const hasCompetingOwners =
     identity._count.purchaseReceipts > 0 ||
     identity._count.productFulfillments > 0 ||
@@ -127,5 +133,11 @@ export async function readInventoryRelocationGraph(
       "CONFLICT",
       "Inventory relocation graph is incomplete.",
     )
-  return graph
+  // The shared reader's type drops these owner rows; keep them typed for callers.
+  return {
+    ...graph,
+    purchaseReceipts: owner.purchaseReceipts,
+    productFulfillments: owner.productFulfillments,
+    productReturns: owner.productReturns,
+  }
 }
