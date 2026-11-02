@@ -26,6 +26,10 @@ export function makeQueryClient() {
     defaultOptions: {
       queries: {
         retry: shouldRetryQuery,
+        // A refused read (404/403/401) has its data cleared above, so every
+        // remount of its sheet would fetch it again; wait for an explicit
+        // retry, focus or invalidation instead. Transient errors still refetch.
+        retryOnMount: (query) => !isRejectedRead(query.state.error),
         staleTime: 60 * 1000,
       },
       dehydrate: {
