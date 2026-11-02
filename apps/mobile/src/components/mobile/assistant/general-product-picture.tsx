@@ -30,24 +30,23 @@ export function GeneralProductThumb({
   const storeId = session?.profile.storeId
   if (payload.photoAssetId && storeId && session?.token)
     return (
-      <View
-        className="overflow-hidden rounded-xl border border-border"
-        style={{ width: size, height: size }}
-      >
-        <Image
-          source={{
-            uri: `${getBaseUrl()}/api/catalog/photos/${encodeURIComponent(payload.photoAssetId)}/preview?storeId=${encodeURIComponent(storeId)}&variant=thumbnail`,
-            headers: {
-              "x-app-authorization": `Bearer ${session.token}`,
-              "x-tenant-slug": session.profile.businessSlug ?? "",
-              "x-store-id": storeId,
-            },
-          }}
-          style={{ width: "100%", height: "100%" }}
-          contentFit="cover"
-          cachePolicy="none"
-          accessibilityLabel={payload.name}
-        />
+      <View style={{ width: size, height: size }}>
+        <View className="flex-1 overflow-hidden rounded-xl border border-border">
+          <Image
+            source={{
+              uri: `${getBaseUrl()}/api/catalog/photos/${encodeURIComponent(payload.photoAssetId)}/preview?storeId=${encodeURIComponent(storeId)}&variant=thumbnail`,
+              headers: {
+                "x-app-authorization": `Bearer ${session.token}`,
+                "x-tenant-slug": session.profile.businessSlug ?? "",
+                "x-store-id": storeId,
+              },
+            }}
+            style={{ width: "100%", height: "100%" }}
+            contentFit="cover"
+            cachePolicy="none"
+            accessibilityLabel={payload.name}
+          />
+        </View>
       </View>
     )
   if (payload.illustrationId)
