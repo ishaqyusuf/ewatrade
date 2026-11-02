@@ -16,13 +16,22 @@ import {
   DropdownMenuTrigger,
 } from "@ewatrade/ui"
 import { formatFinanceMoney } from "@ewatrade/utils/finance-money"
-import { ArrowDown01Icon } from "@hugeicons/core-free-icons"
+import { ArrowDown01Icon, WhatsappIcon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { type ReactNode, useCallback, useEffect, useState } from "react"
+import { EarlierOrdersBanner } from "./earlier-orders"
+import { OwedByAge } from "./owed-by-age"
 import { useCustomerLedgerExport } from "./statement-export"
 
-type LedgerMode = "receipt" | "apply" | "opening" | "refund"
+type LedgerMode =
+  | "receipt"
+  | "apply"
+  | "opening"
+  | "refund"
+  | "remind"
+  | "summary"
+  | "link"
 
 /**
  * One customer's statement in one currency: actions, the three totals and
@@ -153,6 +162,14 @@ export function CustomerLedgerStatement({
       {book ? (
         <Button onClick={() => startAction("receipt")}>Record payment</Button>
       ) : null}
+      <Button variant="outline" onClick={() => startAction("remind")}>
+        <HugeiconsIcon
+          icon={WhatsappIcon}
+          data-icon="inline-start"
+          aria-hidden="true"
+        />
+        Send reminder
+      </Button>
       <DropdownMenu>
         <DropdownMenuTrigger
           render={
@@ -190,6 +207,13 @@ export function CustomerLedgerStatement({
               </DropdownMenuItem>
             </>
           ) : null}
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={() => startAction("summary")}>
+            Share account summary
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => startAction("link")}>
+            Link earlier Orders
+          </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem
             disabled={!query.data || exporter.busy}
@@ -243,6 +267,13 @@ export function CustomerLedgerStatement({
   return (
     <section className="flex min-w-0 flex-col gap-5">
       {renderHeader(actions)}
+      {current ? (
+        <EarlierOrdersBanner
+          customerId={current.customer.id}
+          customerName={customerName ?? current.customer.name}
+          onReview={() => startAction("link")}
+        />
+      ) : null}
       <dl
         data-summary-grid
         data-summary-money
@@ -320,6 +351,7 @@ export function CustomerLedgerStatement({
           </dd>
         </div>
       </dl>
+      <OwedByAge accountId={accountId} />
       <p className="text-sm text-muted-foreground">
         Shows only what’s been added to this statement: Orders, payments and any
         starting balance. Orders not added here aren’t counted. A payment stays

@@ -7,4 +7,7 @@ export const customerLedgerTitles: Record<CustomerLedgerMode, string> = {
   release: "Take off this Order",
   refund: "Return paid-ahead money",
   reverse: "Undo entry",
+  remind: "Send balance reminder",
+  summary: "Share account summary",
+  link: "Link earlier Orders",
 }

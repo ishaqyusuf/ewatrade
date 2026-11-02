@@ -8,6 +8,9 @@ export const customerLedgerModes = [
   "release",
   "refund",
   "reverse",
+  "remind",
+  "summary",
+  "link",
 ] as const
 export type CustomerLedgerMode = (typeof customerLedgerModes)[number]
 export function useCustomerLedgerParams() {

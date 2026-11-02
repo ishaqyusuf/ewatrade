@@ -1,9 +1,14 @@
 "use client"
-import type { CustomerLedgerMode } from "@/hooks/use-customer-ledger-params"
+import {
+  type CustomerLedgerMode,
+  useCustomerLedgerParams,
+} from "@/hooks/use-customer-ledger-params"
 import { useTRPC } from "@/trpc/client"
 import { Alert, AlertDescription, Button } from "@ewatrade/ui"
 import { useQuery } from "@tanstack/react-query"
+import { AccountMessage } from "./account-message"
 import { CustomerLedgerEntryDetail } from "./customer-ledger-entry-detail"
+import { EarlierOrdersLink } from "./earlier-orders"
 import { CustomerLedgerCommandForm } from "./forms/command-form"
 export function CustomerLedgerContent({
   actorUserId,
@@ -23,6 +28,7 @@ export function CustomerLedgerContent({
   allocationId?: string
 }) {
   const trpc = useTRPC()
+  const { setParams, close } = useCustomerLedgerParams()
   const query = useQuery(
     trpc.customerLedger.accountDetail.queryOptions(
       { accountId },
@@ -52,6 +58,24 @@ export function CustomerLedgerContent({
       <CustomerLedgerEntryDetail account={query.data} entryId={entryId} />
     ) : (
       <p>Choose an entry on the statement.</p>
+    )
+  if (mode === "remind" || mode === "summary")
+    return (
+      <AccountMessage
+        accountId={accountId}
+        kind={mode}
+        onKindChange={(kind) =>
+          void setParams({ ledgerAction: kind }, { history: "replace" })
+        }
+        onDone={() => void close()}
+      />
+    )
+  if (mode === "link")
+    return (
+      <EarlierOrdersLink
+        customerId={query.data.customer.id}
+        onDone={() => void close()}
+      />
     )
   if (!query.data.book)
     return <p>Set up Finance in this currency before recording payments.</p>

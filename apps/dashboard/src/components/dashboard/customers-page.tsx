@@ -236,6 +236,7 @@ export function CustomersPage({
         </div>
       </ScrollableContent>
       <CustomerFormSheet
+        canAddStartingBalance={canSeeBalances}
         onSaved={({ name, created }) => {
           setNotice(created ? `Added ${name}.` : `Saved ${name}’s details.`)
           void reload()

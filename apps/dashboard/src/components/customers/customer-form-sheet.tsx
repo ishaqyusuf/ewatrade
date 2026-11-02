@@ -9,15 +9,41 @@ import {
   Button,
   ControlField,
   Input,
+  MoneyInput,
+  RadioGroup,
+  RadioGroupItem,
   Sheet,
 } from "@ewatrade/ui"
+import { parseFinanceMoney } from "@ewatrade/utils/finance-money"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { type FormEvent, useEffect, useId, useState } from "react"
 
 type Fields = { name: string; phone: string; email: string }
-type FieldErrors = Partial<Record<keyof Fields, string>>
+type FieldErrors = Partial<Record<keyof Fields | "startAmount", string>>
+type StartingBalance = "none" | "owes" | "credit"
 
 const EMPTY: Fields = { name: "", phone: "", email: "" }
+/** The canonical opening needs a reason; the form doesn't ask for one. */
+const STARTING_BALANCE_REASON = "Starting balance added with the customer"
+
+/** A positive amount in minor units, or the reason it can't be used. */
+export function startingBalanceMinor(
+  start: StartingBalance,
+  amount: string,
+): { minor: string | null; error?: string } {
+  if (start === "none") return { minor: null }
+  try {
+    return { minor: parseFinanceMoney(amount.replace(/,/g, "")) }
+  } catch {
+    return {
+      minor: null,
+      error:
+        start === "owes"
+          ? "Enter how much they owe, like 5000."
+          : "Enter how much they paid ahead, like 5000.",
+    }
+  }
+}
 
 /** Plain checks before the server's own; the server stays the authority. */
 export function validateCustomerFields(fields: Fields): FieldErrors {
@@ -63,8 +89,11 @@ function errorCode(failure: unknown) {
  */
 export function CustomerFormSheet({
   onSaved,
+  canAddStartingBalance = false,
 }: {
   onSaved: (result: { name: string; created: boolean }) => void
+  /** Owners and Admins; the server checks again. */
+  canAddStartingBalance?: boolean
 }) {
   const { open, customerId, close } = useCustomerSheetParams()
   return (
@@ -78,6 +107,7 @@ export function CustomerFormSheet({
         <CustomerFormFrame
           key={customerId ?? "new"}
           customerId={customerId}
+          canAddStartingBalance={canAddStartingBalance}
           onClose={() => void close()}
           onSaved={(result) => {
             void close()
@@ -91,10 +121,12 @@ export function CustomerFormSheet({
 
 function CustomerFormFrame({
   customerId,
+  canAddStartingBalance,
   onClose,
   onSaved,
 }: {
   customerId: string | null
+  canAddStartingBalance: boolean
   onClose: () => void
   onSaved: (result: { name: string; created: boolean }) => void
 }) {
@@ -108,7 +140,21 @@ function CustomerFormFrame({
       { enabled: editing, retry: false },
     ),
   )
+  const book = useQuery(
+    trpc.finance.book.queryOptions(undefined, {
+      enabled: canAddStartingBalance && !editing,
+      retry: false,
+    }),
+  )
   const create = useMutation(trpc.customers.create.mutationOptions())
+  const createWithOpening = useMutation(
+    trpc.customerLedger.createCustomerWithOpening.mutationOptions(),
+  )
+  // One identity per form, so a retried save can't add the customer twice.
+  const [commandId] = useState(() => crypto.randomUUID())
+  const [start, setStart] = useState<StartingBalance>("none")
+  const [startAmount, setStartAmount] = useState("")
+  const showStart = canAddStartingBalance && !editing && Boolean(book.data)
   const update = useMutation(trpc.customers.update.mutationOptions())
   const [fields, setFields] = useState<Fields>(EMPTY)
   const [errors, setErrors] = useState<FieldErrors>({})
@@ -122,7 +168,8 @@ function CustomerFormFrame({
         email: loaded.email ?? "",
       })
   }, [loaded])
-  const pending = create.isPending || update.isPending
+  const pending =
+    create.isPending || update.isPending || createWithOpening.isPending
   const set = (key: keyof Fields) => (value: string) => {
     setFields((previous) => ({ ...previous, [key]: value }))
     if (errors[key])
@@ -132,7 +179,11 @@ function CustomerFormFrame({
   async function submit(event: FormEvent) {
     event.preventDefault()
     if (pending) return
-    const nextErrors = validateCustomerFields(fields)
+    const nextErrors: FieldErrors = validateCustomerFields(fields)
+    const opening = showStart
+      ? startingBalanceMinor(start, startAmount)
+      : { minor: null }
+    if (opening.error) nextErrors.startAmount = opening.error
     setErrors(nextErrors)
     setFormError(null)
     if (Object.keys(nextErrors).length) return
@@ -140,6 +191,24 @@ function CustomerFormFrame({
     const phone = fields.phone.trim()
     const email = fields.email.trim()
     try {
+      if (!customerId && book.data && opening.minor) {
+        await createWithOpening.mutateAsync({
+          bookId: book.data.id,
+          clientCommandId: commandId,
+          customer: {
+            name,
+            ...(phone ? { phone } : {}),
+            ...(email ? { email } : {}),
+          },
+          opening: {
+            direction: start === "owes" ? "DEBT" : "CREDIT",
+            amountMinor: opening.minor,
+            reason: STARTING_BALANCE_REASON,
+          },
+        })
+        onSaved({ name, created: true })
+        return
+      }
       if (!customerId) {
         await create.mutateAsync({
           name,
@@ -176,7 +245,13 @@ function CustomerFormFrame({
       onSaved({ name, created: false })
     } catch (failure) {
       const code = errorCode(failure)
-      setFormError(customerSaveError(customerId ? "update" : "create", code))
+      // A starting balance can fail for finance reasons (a closed period,
+      // Finance not set up); the server's own words say which.
+      setFormError(
+        !customerId && start !== "none" && failure instanceof Error && code
+          ? failure.message
+          : customerSaveError(customerId ? "update" : "create", code),
+      )
       if (customerId && code === "CONFLICT") void current.refetch()
     }
   }
@@ -286,6 +361,66 @@ function CustomerFormFrame({
               onChange={(event) => set("email")(event.target.value)}
             />
           </ControlField>
+          {showStart && book.data ? (
+            <fieldset className="grid gap-3">
+              <legend className="mb-3 text-sm font-medium">
+                Do they already owe you, or have they paid ahead?
+              </legend>
+              <RadioGroup
+                value={start}
+                onValueChange={(value) => {
+                  setStart(value as StartingBalance)
+                  setErrors((previous) => ({
+                    ...previous,
+                    startAmount: undefined,
+                  }))
+                }}
+                className="flex flex-wrap gap-4"
+                disabled={pending}
+              >
+                {(
+                  [
+                    ["none", "No"],
+                    ["owes", "They owe me"],
+                    ["credit", "They paid ahead"],
+                  ] as const
+                ).map(([value, label]) => (
+                  // biome-ignore lint/a11y/noLabelWithoutControl: the radio is the label's child
+                  <label
+                    key={value}
+                    className="inline-flex items-center gap-2 text-sm"
+                  >
+                    <RadioGroupItem value={value} />
+                    {label}
+                  </label>
+                ))}
+              </RadioGroup>
+              {start !== "none" ? (
+                <ControlField
+                  label={
+                    start === "owes" ? "Amount they owe" : "Amount paid ahead"
+                  }
+                  description="Added to their statement as a starting balance. No money moves."
+                  error={errors.startAmount}
+                >
+                  <MoneyInput
+                    currencyCode={book.data.currencyCode}
+                    placeholder="0"
+                    value={startAmount}
+                    disabled={pending}
+                    onChange={(event) => {
+                      setStartAmount(event.target.value)
+                      if (errors.startAmount)
+                        setErrors((previous) => ({
+                          ...previous,
+                          startAmount: undefined,
+                        }))
+                    }}
+                  />
+                </ControlField>
+              ) : null}
+            </fieldset>
+          ) : null}
           {editing ? (
             <p className="text-sm text-muted-foreground">
               To change what they owe, record a payment or add a starting
