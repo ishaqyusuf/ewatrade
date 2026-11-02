@@ -7,6 +7,7 @@ import { StatusBanner } from "@/components/mobile/status-banner"
 import { Icon } from "@/components/ui/icon"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Text } from "@/components/ui/text"
+import { useAuthContext } from "@/hooks/use-auth"
 import { useColors } from "@/hooks/use-color"
 import { createExpenseFixture } from "@/internal-tooling/fixture-recipes"
 import { financeUtcDate } from "@/lib/finance-expense-input"
@@ -26,6 +27,7 @@ import { KeyboardAwareScrollView } from "react-native-keyboard-controller"
 import { ClassicCustomerBookFilter } from "../appearances/classic/customer-book-screen"
 import { HeroCard } from "../green-till/hero-card"
 import {
+  GhostPreview,
   NudgeCard,
   QuickActionRow,
   RecordRow,
@@ -36,6 +38,8 @@ import {
 import { PaymentsToCheckNudge } from "../payment-links/payment-notifications"
 import { FinanceBankDateField } from "./finance-bank-date-field"
 import { FinanceCommandFeedback } from "./finance-command-feedback"
+import { financeDisplayDate } from "./finance-display"
+import { FinanceExpenseReviewSheet } from "./finance-expense-review-sheet"
 import { FinanceChoice } from "./finance-ledger-layout"
 import {
   type FinanceWorkspace,
@@ -87,6 +91,7 @@ function SpendingWorkspace({
   const trpc = useTRPC()
   const router = useRouter()
   const colors = useColors()
+  const { profile } = useAuthContext()
   const [status, setStatus] = useState<
     "UNPAID" | "PARTIAL" | "PAID" | "VOID" | undefined
   >()
@@ -144,6 +149,12 @@ function SpendingWorkspace({
         ).length
       : undefined
   const money = (v: string) => formatFinanceMoney(v, book.currencyCode)
+  // First use: the unfiltered book has no expense yet (Workshop 12, 01).
+  const firstUse = !status && bills.isSuccess && recordCount === 0
+  const startRecording = () => {
+    setCreating(true)
+    setFormError(null)
+  }
   function prepare() {
     try {
       const incurredAt = financeUtcDate(date, book.startsAt)
@@ -193,6 +204,27 @@ function SpendingWorkspace({
         <>
           {bills.isPending && !offline ? (
             <Skeleton className="h-52 rounded-[22px]" />
+          ) : firstUse ? (
+            <HeroCard
+              label="Business money"
+              pill={{
+                label: `Book from ${new Intl.DateTimeFormat(undefined, { day: "numeric", month: "short", timeZone: "UTC" }).format(new Date(book.startsAt))}`,
+                tone: "synced",
+              }}
+              title={`Record what ${profile?.businessName ?? "your business"} pays for`}
+              sub="Rent, stock, transport, repairs. Record each one to see what you have paid and what you still owe."
+            >
+              <View className="mt-4">
+                <ActionButton
+                  tone="cream"
+                  icon="Plus"
+                  disabled={!canSubmit}
+                  onPress={startRecording}
+                >
+                  Record first expense
+                </ActionButton>
+              </View>
+            </HeroCard>
           ) : (
             <HeroCard
               label={
@@ -231,10 +263,7 @@ function SpendingWorkspace({
                   tone="cream"
                   icon="Plus"
                   disabled={!canSubmit}
-                  onPress={() => {
-                    setCreating(true)
-                    setFormError(null)
-                  }}
+                  onPress={startRecording}
                 >
                   Record expense
                 </ActionButton>
@@ -273,6 +302,12 @@ function SpendingWorkspace({
             ]}
           />
           {offline ? null : <PaymentsToCheckNudge />}
+          {firstUse ? (
+            <GhostPreview
+              message="Your spending records appear here, newest first, with what is paid and what is owed."
+              variant="rows"
+            />
+          ) : null}
         </>
       ) : null}
       <FinanceCommandFeedback
@@ -281,129 +316,103 @@ function SpendingWorkspace({
         onRejected={() => setReview(null)}
       />
       {creating ? (
-        review ? (
-          <View className="gap-4">
-            <Text className="text-xl font-bold">Review before recording</Text>
-            <Text>{review.payeeName}</Text>
-            <Text>{review.description}</Text>
-            <Text className="text-2xl font-bold">
-              {money(review.lines[0].amountMinor)}
-            </Text>
-            <Text>
-              {categories.find((a) => a.id === review.lines[0].accountId)?.name}{" "}
-              · {new Date(review.incurredAt).toISOString().slice(0, 10)} UTC ·
-              Unpaid
-            </Text>
-            <Text className="text-sm text-muted-foreground">
-              This records an expense and the amount owed. It does not send
-              money.
-            </Text>
-            <ActionButton
-              disabled={!canSubmit}
-              isLoading={command.pending}
-              onPress={() => void confirm()}
-            >
-              Confirm and record
-            </ActionButton>
-            <ActionButton
-              variant="outline"
-              disabled={command.pending}
-              onPress={() => setReview(null)}
-            >
-              Back to details
-            </ActionButton>
-          </View>
-        ) : (
-          <View className="gap-4">
-            <QaQuickFillButton
-              canUndo={canUndoQuickFill}
-              formId="mobile.finance.expense"
-              isDirty={Boolean(payee || description || amount)}
-              onFill={(context, sequence) => {
-                quickFillSnapshot.current = { amount, date, description, payee }
-                const fixture = createExpenseFixture(context, sequence)
-                setPayee(fixture.payee)
-                setDescription(fixture.description)
-                setAmount(fixture.amount)
-                setDate(fixture.date)
-                setFormError(null)
-                setCanUndoQuickFill(true)
-              }}
-              onUndo={() => {
-                const snapshot = quickFillSnapshot.current
-                if (!snapshot) return
-                setPayee(snapshot.payee)
-                setDescription(snapshot.description)
-                setAmount(snapshot.amount)
-                setDate(snapshot.date)
-                quickFillSnapshot.current = null
-                setCanUndoQuickFill(false)
-              }}
+        <View className="gap-4">
+          <QaQuickFillButton
+            canUndo={canUndoQuickFill}
+            formId="mobile.finance.expense"
+            isDirty={Boolean(payee || description || amount)}
+            onFill={(context, sequence) => {
+              quickFillSnapshot.current = { amount, date, description, payee }
+              const fixture = createExpenseFixture(context, sequence)
+              setPayee(fixture.payee)
+              setDescription(fixture.description)
+              setAmount(fixture.amount)
+              setDate(fixture.date)
+              setFormError(null)
+              setCanUndoQuickFill(true)
+            }}
+            onUndo={() => {
+              const snapshot = quickFillSnapshot.current
+              if (!snapshot) return
+              setPayee(snapshot.payee)
+              setDescription(snapshot.description)
+              setAmount(snapshot.amount)
+              setDate(snapshot.date)
+              quickFillSnapshot.current = null
+              setCanUndoQuickFill(false)
+            }}
+          />
+          <FormField
+            label="Payee"
+            maxLength={160}
+            value={payee}
+            onChangeText={setPayee}
+          />
+          <FormField
+            label="Expense description"
+            maxLength={200}
+            value={description}
+            onChangeText={setDescription}
+          />
+          <MoneyField
+            label="Amount"
+            currencyCode={book.currencyCode}
+            value={amount}
+            onChangeValue={setAmount}
+          />
+          <FinanceBankDateField
+            label="Expense date"
+            value={date}
+            onChange={setDate}
+            minimum={new Date(book.startsAt).toISOString().slice(0, 10)}
+            maximum={new Date().toISOString().slice(0, 10)}
+            disabled={command.pending || offline}
+          />
+          <Text className="text-sm font-bold">Expense category</Text>
+          {balances.isError ? (
+            <StatusBanner
+              message={balances.error.message}
+              actionLabel="Try again"
+              onActionPress={() => void balances.refetch()}
+              tone="destructive"
             />
-            <FormField
-              label="Payee"
-              maxLength={160}
-              value={payee}
-              onChangeText={setPayee}
-            />
-            <FormField
-              label="Expense description"
-              maxLength={200}
-              value={description}
-              onChangeText={setDescription}
-            />
-            <MoneyField
-              label="Amount"
-              currencyCode={book.currencyCode}
-              value={amount}
-              onChangeValue={setAmount}
-            />
-            <FinanceBankDateField
-              label="Expense date"
-              value={date}
-              onChange={setDate}
-              minimum={new Date(book.startsAt).toISOString().slice(0, 10)}
-              maximum={new Date().toISOString().slice(0, 10)}
+          ) : null}
+          {categories.map((a) => (
+            <FinanceChoice
+              key={a.id}
+              label={a.name}
+              selected={categoryId === a.id}
+              onPress={() => setCategory(a.id)}
               disabled={command.pending || offline}
             />
-            <Text className="text-sm font-bold">Expense category</Text>
-            {balances.isError ? (
-              <StatusBanner
-                message={balances.error.message}
-                actionLabel="Try again"
-                onActionPress={() => void balances.refetch()}
-                tone="destructive"
-              />
-            ) : null}
-            {categories.map((a) => (
-              <FinanceChoice
-                key={a.id}
-                label={a.name}
-                selected={categoryId === a.id}
-                onPress={() => setCategory(a.id)}
-                disabled={command.pending || offline}
-              />
-            ))}
-            {formError ? (
-              <StatusBanner message={formError} tone="destructive" />
-            ) : null}
-            <ActionButton
-              disabled={!canSubmit || !categoryId}
-              onPress={prepare}
-            >
-              Review expense
-            </ActionButton>
-            <ActionButton
-              variant="outline"
-              disabled={command.pending}
-              onPress={() => setCreating(false)}
-            >
-              Back to spending
-            </ActionButton>
+          ))}
+          {formError ? (
+            <StatusBanner message={formError} tone="destructive" />
+          ) : null}
+          <ActionButton disabled={!canSubmit || !categoryId} onPress={prepare}>
+            Review expense
+          </ActionButton>
+          <ActionButton
+            variant="outline"
+            disabled={command.pending}
+            onPress={() => setCreating(false)}
+          >
+            Back to spending
+          </ActionButton>
+          <View className="flex-row gap-2 px-0.5">
+            <Icon
+              className="mt-0.5 size-[14px]"
+              color={colors.mutedForeground}
+              name="Info"
+            />
+            <Text className="min-w-0 flex-1 text-xs text-muted-foreground">
+              This records what you owe. It does not send money. Pay it later
+              from the expense.
+            </Text>
           </View>
-        )
+        </View>
       ) : null}
-      {!creating ? (
+      {!creating && !firstUse ? (
         <>
           <SectionHeader
             title={
@@ -457,17 +466,41 @@ function SpendingWorkspace({
       ) : null}
     </View>
   )
+  const reviewSheet = (
+    <FinanceExpenseReviewSheet
+      canConfirm={canSubmit}
+      pending={command.pending}
+      review={
+        review
+          ? {
+              amount: money(review.lines[0].amountMinor),
+              category:
+                categories.find((a) => a.id === review.lines[0].accountId)
+                  ?.name ?? "—",
+              date: financeDisplayDate(review.incurredAt),
+              description: review.description,
+              payee: review.payeeName,
+            }
+          : null
+      }
+      onBack={() => setReview(null)}
+      onConfirm={() => void confirm()}
+    />
+  )
   if (creating)
     return (
-      <KeyboardAwareScrollView
-        className="flex-1"
-        bottomOffset={120}
-        keyboardDismissMode="interactive"
-        keyboardShouldPersistTaps="handled"
-        disableScrollOnKeyboardHide
-      >
-        <View className="px-[18px] pb-12">{header}</View>
-      </KeyboardAwareScrollView>
+      <>
+        <KeyboardAwareScrollView
+          className="flex-1"
+          bottomOffset={120}
+          keyboardDismissMode="interactive"
+          keyboardShouldPersistTaps="handled"
+          disableScrollOnKeyboardHide
+        >
+          <View className="px-[18px] pb-12">{header}</View>
+        </KeyboardAwareScrollView>
+        {reviewSheet}
+      </>
     )
   return (
     <FlatList
@@ -484,7 +517,7 @@ function SpendingWorkspace({
       }}
       onEndReachedThreshold={0.4}
       ListEmptyComponent={
-        bills.isError ? null : bills.isPending && !offline ? (
+        bills.isError || firstUse ? null : bills.isPending && !offline ? (
           <ListSkeleton count={5} label="Loading spending" variant="ledger" />
         ) : (
           <Text className="py-6 text-muted-foreground">
@@ -546,14 +579,16 @@ function SpendingWorkspace({
               Loading more expenses…
             </Text>
           ) : null}
-          <NudgeCard
-            icon="Lock"
-            tint="sky"
-            title="Posting periods"
-            sub="Lock dates after you close a month"
-            actionLabel="Open"
-            onAction={() => router.push("/finance-periods-modal" as Href)}
-          />
+          {firstUse ? null : (
+            <NudgeCard
+              icon="Lock"
+              tint="sky"
+              title="Posting periods"
+              sub="Lock dates after you close a month"
+              actionLabel="Open"
+              onAction={() => router.push("/finance-periods-modal" as Href)}
+            />
+          )}
           <View className="flex-row gap-2 px-0.5">
             <Icon
               className="mt-0.5 size-[14px]"
