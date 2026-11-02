@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test"
 import {
+  ORDER_PAYMENT_FILTERS,
   ledgerDayHeaders,
   ledgerDayLabel,
   ledgerDayPositions,
@@ -8,6 +9,8 @@ import {
   ledgerMoney,
   ledgerOrderPayment,
   ledgerPayment,
+  orderTotalsMoney,
+  sumOrderTotals,
 } from "./orders-ledger-model"
 const order = {
   id: "a",
@@ -101,4 +104,48 @@ test("rows summarise items and show open fulfilment only", () => {
     "Ready for pickup",
   )
   expect(ledgerFulfillmentLine("COMPLETED")).toBeNull()
+})
+
+test("server totals sum by status and payment without mixing currencies", () => {
+  const group = (
+    currencyCode: string,
+    status: string,
+    paymentStatus: string,
+    orderCount: number,
+    orderValueMinor: number,
+    outstandingMinor: number,
+  ) => ({
+    currencyCode,
+    status,
+    paymentStatus,
+    orderCount,
+    orderValueMinor,
+    outstandingMinor,
+  })
+  const groups = [
+    group("NGN", "COMPLETED", "PAID", 3, 900_000, 0),
+    group("NGN", "CONFIRMED", "PENDING", 2, 50_000, 50_000),
+    group("NGN", "CANCELLED", "PENDING", 1, 20_000, 20_000),
+    group("USD", "CONFIRMED", "PARTIALLY_PAID", 1, 2_500, 1_000),
+  ]
+  const ngnUnpaid = sumOrderTotals(groups, {
+    statuses: ["CONFIRMED", "COMPLETED"],
+    paymentStatuses: ORDER_PAYMENT_FILTERS.unpaid,
+  })
+  expect(ngnUnpaid).toEqual({
+    currencies: [
+      {
+        currencyCode: "NGN",
+        orderCount: 2,
+        orderValueMinor: 50_000,
+        outstandingMinor: 50_000,
+      },
+    ],
+    orderCount: 2,
+  })
+  expect(orderTotalsMoney(ngnUnpaid)).toBe("₦500")
+  const all = sumOrderTotals(groups)
+  expect(all.orderCount).toBe(7)
+  expect(orderTotalsMoney(all)).toBe("Mixed currencies")
+  expect(orderTotalsMoney(sumOrderTotals([]))).toBe("—")
 })

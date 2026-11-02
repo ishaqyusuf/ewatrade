@@ -44,7 +44,14 @@ import {
 import type { NativeScrollEvent, NativeSyntheticEvent } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { SALE_STATUSES } from "../dashboard/green-till-home-model"
-import { ledgerDayHeaders, ledgerDayPositions } from "./orders-ledger-model"
+import {
+  ORDER_PAYMENT_FILTERS,
+  type OrderPaymentFilter,
+  ledgerDayHeaders,
+  ledgerDayPositions,
+  orderTotalsMoney,
+  sumOrderTotals,
+} from "./orders-ledger-model"
 
 import {
   ClassicFirstOrderGate,
@@ -109,6 +116,7 @@ export function OrdersScreen() {
   const scrollToTop = useScrollToTop()
   const [dateFilter, setDateFilter] = useState<DateFilter>("30_days")
   const [filter, setFilter] = useState<OrderFilter>("all")
+  const [paymentFilter, setPaymentFilter] = useState<OrderPaymentFilter>("any")
   const [mastheadHeight, setMastheadHeight] = useState(0)
   const [query, setQuery] = useState("")
   const searchFold = useSearchFold(query)
@@ -123,6 +131,7 @@ export function OrdersScreen() {
     auth.profile?.storeId,
     dateFilter,
     filter,
+    paymentFilter,
     query,
     isOffline,
     salesView,
@@ -134,54 +143,43 @@ export function OrdersScreen() {
     [dateFilter],
   )
   const statuses = useMemo(() => statusesForOrderFilter(filter), [filter])
-  // Classic hero and status counts come from the server for the period, not
-  // from the orders loaded so far. "All time" uses the bounded window path.
-  const reportWindow = useMemo(
-    () => ({
-      createdAfter: createdAfter ?? new Date(0),
-      mine: rep && salesView === "mine",
-    }),
-    [createdAfter, rep, salesView],
-  )
-  const reportEnabled = !isOffline
-  const salesReport = useQuery(
-    trpc.orders.reportSummary.queryOptions(
-      { ...reportWindow, statuses: [...SALE_STATUSES] },
-      { enabled: reportEnabled, retry: false },
+  const paymentStatuses = ORDER_PAYMENT_FILTERS[paymentFilter]
+  const mine = rep && salesView === "mine"
+  // Hero and chip counts are exact server totals for the period and search,
+  // by currency, status and payment, never the orders loaded so far.
+  const totalsQuery = useQuery(
+    trpc.orders.listTotals.queryOptions(
+      { createdAfter, mine, query: deferredQuery || undefined },
+      { enabled: !isOffline, retry: false },
     ),
   )
-  const countAll = useQuery(
-    trpc.orders.reportSummary.queryOptions(reportWindow, {
-      enabled: reportEnabled,
-      retry: false,
-    }),
-  )
-  const countOpen = useQuery(
-    trpc.orders.reportSummary.queryOptions(
-      { ...reportWindow, statuses: [...OPEN_STATUSES] },
-      { enabled: reportEnabled, retry: false },
-    ),
-  )
-  const countDone = useQuery(
-    trpc.orders.reportSummary.queryOptions(
-      { ...reportWindow, statuses: ["COMPLETED"] },
-      { enabled: reportEnabled, retry: false },
-    ),
-  )
-  const countCancelled = useQuery(
-    trpc.orders.reportSummary.queryOptions(
-      { ...reportWindow, statuses: ["CANCELLED", "REFUNDED"] },
-      { enabled: reportEnabled, retry: false },
-    ),
-  )
-  const statusCount = (value?: { orderCount: number }) =>
-    value ? ` ${value.orderCount}` : ""
+  const totalsFor = (
+    statusList: readonly string[] | undefined,
+    payments: readonly string[] | undefined = paymentStatuses,
+  ) =>
+    totalsQuery.data
+      ? sumOrderTotals(totalsQuery.data.groups, {
+          paymentStatuses: payments,
+          statuses: statusList,
+        })
+      : undefined
+  const statusCount = (statusList?: readonly string[]) => {
+    const totals = totalsFor(statusList)
+    return totals ? ` ${totals.orderCount}` : ""
+  }
+  const paymentCount = (value: OrderPaymentFilter) => {
+    const totals = totalsFor(statuses, ORDER_PAYMENT_FILTERS[value])
+    return totals ? ` ${totals.orderCount}` : ""
+  }
+  const salesTotals = totalsFor(SALE_STATUSES)
+  const salesCurrency = salesTotals?.currencies[0]
   const searchedOrders = useInfiniteQuery(
     trpc.orders.listPage.infiniteQueryOptions(
       {
         mine: rep && salesView === "mine",
         createdAfter,
         limit: LIST_PAGE_SIZE,
+        paymentStatuses: paymentStatuses ? [...paymentStatuses] : undefined,
         query: isOffline ? undefined : deferredQuery || undefined,
         statuses,
       },
@@ -213,14 +211,21 @@ export function OrdersScreen() {
     [orders.data?.pages],
   )
   const visibleOrders = useMemo(() => {
-    if (!isOffline || !query.trim()) return loadedOrders
+    if (!isOffline) return loadedOrders
+    // Saved pages hold every payment status; filter them on the device.
+    const paid = paymentStatuses
+      ? loadedOrders.filter((order) =>
+          (paymentStatuses as readonly string[]).includes(order.paymentStatus),
+        )
+      : loadedOrders
+    if (!query.trim()) return paid
     const needle = query.trim().toLowerCase()
-    return loadedOrders.filter((order) =>
+    return paid.filter((order) =>
       `${order.orderNumber} ${order.customerName ?? ""} ${order.customerPhone ?? ""} ${order.lines.map((line) => line.snapshot?.catalogItemName ?? "").join(" ")}`
         .toLowerCase()
         .includes(needle),
     )
-  }, [loadedOrders, isOffline, query])
+  }, [loadedOrders, isOffline, paymentStatuses, query])
   const dayHeaders = useMemo(
     () => ledgerDayHeaders(visibleOrders),
     [visibleOrders],
@@ -230,6 +235,40 @@ export function OrdersScreen() {
     [visibleOrders],
   )
   const lastDayId = [...dayHeaders.keys()].at(-1)
+  // The last day may continue on the next page: ask for its exact total.
+  const lastDayAt = visibleOrders.find(
+    (order) => order.id === lastDayId,
+  )?.createdAt
+  const lastDayWindow = useMemo(() => {
+    if (!lastDayAt || isOffline) return null
+    const start = new Date(lastDayAt)
+    start.setHours(0, 0, 0, 0)
+    const end = new Date(start)
+    end.setDate(end.getDate() + 1)
+    return {
+      createdAfter: createdAfter && createdAfter > start ? createdAfter : start,
+      createdBefore: end,
+    }
+  }, [createdAfter, isOffline, lastDayAt])
+  const lastDayTotals = useQuery(
+    trpc.orders.listTotals.queryOptions(
+      {
+        ...lastDayWindow,
+        mine,
+        paymentStatuses: paymentStatuses ? [...paymentStatuses] : undefined,
+        query: deferredQuery || undefined,
+        statuses,
+      },
+      {
+        enabled: Boolean(lastDayWindow && orders.hasNextPage),
+        retry: false,
+      },
+    ),
+  )
+  const lastDayExact =
+    lastDayTotals.data && orders.hasNextPage
+      ? sumOrderTotals(lastDayTotals.data.groups)
+      : null
   const revealRows = useFirstReveal(visibleOrders.length > 0)
   useEffect(() => {
     const eligible = new Set(
@@ -274,6 +313,7 @@ export function OrdersScreen() {
   const resetFilters = () => {
     setDateFilter("all")
     setFilter("all")
+    setPaymentFilter("any")
     setQuery("")
   }
   const handleScroll = useCallback(
@@ -327,14 +367,20 @@ export function OrdersScreen() {
                   message={
                     isOffline
                       ? "Reconnect to refresh Orders from your workspace."
-                      : query || filter !== "all" || dateFilter !== "all"
+                      : query ||
+                          filter !== "all" ||
+                          paymentFilter !== "any" ||
+                          dateFilter !== "all"
                         ? "Try another date, search, or status filter."
                         : "New orders for goods and services will appear here."
                   }
                   title={
                     isOffline
                       ? "No cached orders"
-                      : query || filter !== "all" || dateFilter !== "all"
+                      : query ||
+                          filter !== "all" ||
+                          paymentFilter !== "any" ||
+                          dateFilter !== "all"
                         ? "No matching orders"
                         : "No orders yet"
                   }
@@ -382,19 +428,17 @@ export function OrdersScreen() {
               <SearchFold folded={searchFold.folded}>
                 <ClassicOrdersSummary
                   report={
-                    salesReport.data
+                    salesTotals
                       ? {
-                          currencyCode: salesReport.data.currencyCode,
-                          orderCount: salesReport.data.orderCount,
-                          orderValueMinor: salesReport.data.orderValueMinor,
+                          currencyCode:
+                            salesCurrency?.currencyCode ??
+                            auth.profile?.currencyCode ??
+                            "NGN",
+                          mixedCurrencies: salesTotals.currencies.length > 1,
+                          orderCount: salesTotals.orderCount,
+                          orderValueMinor: salesCurrency?.orderValueMinor ?? 0,
                           outstandingMinor:
-                            "outstandingMinor" in salesReport.data
-                              ? salesReport.data.outstandingMinor
-                              : undefined,
-                          partial:
-                            "partial" in salesReport.data
-                              ? salesReport.data.partial
-                              : undefined,
+                            salesCurrency?.outstandingMinor ?? 0,
                         }
                       : null
                   }
@@ -454,13 +498,24 @@ export function OrdersScreen() {
                   <ClassicOrdersFilterRow
                     active={filter}
                     labels={{
-                      all: `All${statusCount(countAll.data)}`,
-                      cancelled: `Cancelled${statusCount(countCancelled.data)}`,
-                      completed: `Done${statusCount(countDone.data)}`,
-                      open: `Open${statusCount(countOpen.data)}`,
+                      all: `All${statusCount()}`,
+                      cancelled: `Cancelled${statusCount(statusesForOrderFilter("cancelled"))}`,
+                      completed: `Done${statusCount(statusesForOrderFilter("completed"))}`,
+                      open: `Open${statusCount(OPEN_STATUSES)}`,
                     }}
                     onChange={setFilter}
                     values={["all", "open", "completed", "cancelled"]}
+                  />
+                  <ClassicOrdersFilterRow
+                    active={paymentFilter}
+                    labels={{
+                      any: `Any payment${paymentCount("any")}`,
+                      paid: `Paid${paymentCount("paid")}`,
+                      part_paid: `Part paid${paymentCount("part_paid")}`,
+                      unpaid: `Unpaid${paymentCount("unpaid")}`,
+                    }}
+                    onChange={setPaymentFilter}
+                    values={["any", "unpaid", "part_paid", "paid"]}
                   />
                   {loadedOrders.length > 0 ? (
                     <ActionButton
@@ -520,7 +575,9 @@ export function OrdersScreen() {
                     {dayHeaders.get(item.id)?.label}
                   </Text>
                   <Text className="text-xs font-bold tabular-nums text-muted-foreground">
-                    {`${item.id === lastDayId && orders.hasNextPage ? "Loaded · " : ""}${dayHeaders.get(item.id)?.total} · ${dayHeaders.get(item.id)?.count}`}
+                    {item.id === lastDayId && lastDayExact
+                      ? `${orderTotalsMoney(lastDayExact)} · ${lastDayExact.orderCount}`
+                      : `${item.id === lastDayId && orders.hasNextPage ? "Loaded · " : ""}${dayHeaders.get(item.id)?.total} · ${dayHeaders.get(item.id)?.count}`}
                   </Text>
                 </View>
               ) : null}

@@ -46,10 +46,14 @@ function fixture(role: string, visibility = "OWN_SALES") {
         _count: { _all: 0 },
         _sum: { totalMinor: null },
       }),
+      groupBy: read("currencies", [{ currencyCode: "NGN" }]),
     },
     membership: { findMany: read("memberships", []) },
     retailOpsStaffProfile: { findMany: read("staff", []) },
-    commercialOrderPayment: { findMany: read("payments", []) },
+    commercialOrderPayment: {
+      findMany: read("payments", []),
+      groupBy: read("paymentTotals", []),
+    },
     customer: {
       findMany: read("customers", []),
       findFirst: read("customer", {
@@ -123,12 +127,26 @@ describe("order visibility API boundaries", () => {
           storeId: rep ? "store-a" : undefined,
           createdByUserId: creator,
         })
+        // Payment totals group the same scoped filter by currency.
+        expect(
+          f.reads.find((read) => read.table === "currencies")?.args.where,
+        ).toEqual({
+          tenantId: "tenant-a",
+          storeId: rep ? "store-a" : undefined,
+          createdByUserId: creator,
+        })
+        const paymentTotals = f.reads.find(
+          (read) => read.table === "paymentTotals",
+        )?.args.where as { AND?: Array<{ order?: { is: unknown } }> }
+        expect(paymentTotals?.AND?.[0]?.order?.is).toEqual({
+          tenantId: "tenant-a",
+          storeId: rep ? "store-a" : undefined,
+          createdByUserId: creator,
+        })
         const totals = f.sql[0]
         if (!totals) throw new Error("Expected customer count SQL")
-        expect(totals.sql.includes('orders."createdByUserId"')).toBe(
-          Boolean(creator),
-        )
-        expect(totals.sql.includes('orders."storeId"')).toBe(rep)
+        expect(totals.sql.includes('"createdByUserId"')).toBe(Boolean(creator))
+        expect(totals.sql.includes('"storeId"')).toBe(rep)
         if (creator) expect(totals.values).toContain(creator)
       })
 

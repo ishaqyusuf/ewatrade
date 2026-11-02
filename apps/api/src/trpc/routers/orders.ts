@@ -19,10 +19,12 @@ import {
   fulfillCommercialOrderProductLine,
   fulfillCommercialOrderProducts,
   getCommercialOrder,
+  getCommercialOrderListTotals,
   getCommercialOrderOperationalSummary,
   getCommercialOrderReminderSettings,
   getCommercialOrderReportSummary,
   getCommercialOrderSalesReport,
+  getCommercialPaymentTotals,
   listCommercialOrderPaymentsPage,
   listCommercialOrders,
   listCommercialOrdersPage,
@@ -64,8 +66,10 @@ import {
   commercialOrderGetSchema,
   commercialOrderListPageSchema,
   commercialOrderListSchema,
+  commercialOrderListTotalsSchema,
   commercialOrderOperationalSummarySchema,
   commercialOrderPaymentSchema,
+  commercialOrderPaymentTotalsSchema,
   commercialOrderPaymentsListPageSchema,
   commercialOrderReminderSettingsGetSchema,
   commercialOrderReminderSettingsUpdateSchema,
@@ -548,6 +552,24 @@ export const ordersRouter = createTRPCRouter({
       })
     }),
 
+  /** Exact totals for the list's filters, by currency, status and payment. */
+  listTotals: protectedProcedure
+    .input(commercialOrderListTotalsSchema)
+    .query(async ({ ctx, input }) => {
+      assertCanOperateOrders(ctx.tenantContext.membership.role)
+      const storeId = input.storeId
+        ? resolveStoreId(
+            ctx.tenantContext.stores,
+            ctx.tenantContext.activeStore,
+            input.storeId,
+          )
+        : undefined
+      return getCommercialOrderListTotals(ctx.db, {
+        ...input,
+        ...(await orderScope(ctx, { storeId, mine: input.mine })),
+      })
+    }),
+
   payments: protectedProcedure
     .input(commercialOrderPaymentsListPageSchema)
     .query(async ({ ctx, input }) => {
@@ -555,6 +577,16 @@ export const ordersRouter = createTRPCRouter({
       return listCommercialOrderPaymentsPage(ctx.db, {
         ...input,
         defaultCurrencyCode: ctx.tenantContext.tenant.currencyCode,
+        ...(await orderScope(ctx, input)),
+      })
+    }),
+
+  paymentTotals: protectedProcedure
+    .input(commercialOrderPaymentTotalsSchema)
+    .query(async ({ ctx, input }) => {
+      assertCanOperateOrders(ctx.tenantContext.membership.role)
+      return getCommercialPaymentTotals(ctx.db, {
+        ...input,
         ...(await orderScope(ctx, input)),
       })
     }),

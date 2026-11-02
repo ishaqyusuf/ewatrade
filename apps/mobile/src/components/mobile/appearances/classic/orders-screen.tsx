@@ -146,9 +146,11 @@ export function ClassicOrdersSummary({
         amount={
           isOffline
             ? ledgerMoney(orders)
-            : report
-              ? wholeMoney(report.orderValueMinor, report.currencyCode)
-              : "—"
+            : report?.mixedCurrencies
+              ? "Mixed currencies"
+              : report
+                ? wholeMoney(report.orderValueMinor, report.currencyCode)
+                : "—"
         }
         sub={
           isOffline
@@ -184,22 +186,26 @@ export function ClassicOrdersSummary({
                   value:
                     report?.outstandingMinor === undefined
                       ? "—"
-                      : wholeMoney(
-                          report.outstandingMinor,
-                          report.currencyCode,
-                        ),
+                      : report.mixedCurrencies
+                        ? "Mixed"
+                        : wholeMoney(
+                            report.outstandingMinor,
+                            report.currencyCode,
+                          ),
                   accent: true,
                 },
                 {
                   label: "Avg order",
-                  value: report?.orderCount
-                    ? wholeMoney(
-                        Math.round(
-                          report.orderValueMinor / report.orderCount / 100,
-                        ) * 100,
-                        report.currencyCode,
-                      )
-                    : "—",
+                  value: report?.mixedCurrencies
+                    ? "Mixed"
+                    : report?.orderCount
+                      ? wholeMoney(
+                          Math.round(
+                            report.orderValueMinor / report.orderCount / 100,
+                          ) * 100,
+                          report.currencyCode,
+                        )
+                      : "—",
                 },
               ]
         }

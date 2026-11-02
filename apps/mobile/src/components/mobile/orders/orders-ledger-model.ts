@@ -158,3 +158,75 @@ export function ledgerWhen(date: Date | string, now = new Date()) {
   }).format(value)
   return `${ledgerDayLabel(value, now)}, ${time}`
 }
+
+/** Payment chips on the Orders list and the payment statuses each covers. */
+export const ORDER_PAYMENT_FILTERS = {
+  any: undefined,
+  unpaid: ["PENDING", "AUTHORIZED", "FAILED"],
+  part_paid: ["PARTIALLY_PAID"],
+  paid: ["PAID"],
+} as const satisfies Record<string, readonly string[] | undefined>
+export type OrderPaymentFilter = keyof typeof ORDER_PAYMENT_FILTERS
+
+type OrderTotalsGroup = {
+  currencyCode: string
+  status: string
+  paymentStatus: string
+  orderCount: number
+  orderValueMinor: number
+  outstandingMinor: number
+}
+
+/**
+ * Sums the server's exact Orders totals for a status and payment filter,
+ * one entry per currency so different currencies are never added together.
+ */
+export function sumOrderTotals(
+  groups: readonly OrderTotalsGroup[],
+  filter: {
+    statuses?: readonly string[]
+    paymentStatuses?: readonly string[]
+  } = {},
+) {
+  const currencies = new Map<
+    string,
+    { orderCount: number; orderValueMinor: number; outstandingMinor: number }
+  >()
+  let orderCount = 0
+  for (const group of groups) {
+    if (filter.statuses && !filter.statuses.includes(group.status)) continue
+    if (
+      filter.paymentStatuses &&
+      !filter.paymentStatuses.includes(group.paymentStatus)
+    )
+      continue
+    orderCount += group.orderCount
+    const sum = currencies.get(group.currencyCode) ?? {
+      orderCount: 0,
+      orderValueMinor: 0,
+      outstandingMinor: 0,
+    }
+    sum.orderCount += group.orderCount
+    sum.orderValueMinor += group.orderValueMinor
+    sum.outstandingMinor += group.outstandingMinor
+    currencies.set(group.currencyCode, sum)
+  }
+  return {
+    currencies: [...currencies].map(([currencyCode, sum]) => ({
+      currencyCode,
+      ...sum,
+    })),
+    orderCount,
+  }
+}
+
+/** One currency's money, "Mixed currencies" across several, "—" for none. */
+export function orderTotalsMoney(
+  totals: ReturnType<typeof sumOrderTotals>,
+  key: "orderValueMinor" | "outstandingMinor" = "orderValueMinor",
+) {
+  const [first, ...rest] = totals.currencies
+  if (!first) return "—"
+  if (rest.length) return "Mixed currencies"
+  return formatMinorMoney(first[key], first.currencyCode).replace(/\.00$/, "")
+}

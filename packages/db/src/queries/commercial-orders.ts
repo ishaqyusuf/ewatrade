@@ -56,6 +56,10 @@ import {
   isCommercialOrderFulfillmentAllowed,
   readCommercialOrderLinesComplete,
 } from "./commercial-order-completion"
+import {
+  type CommercialOrderListFilter,
+  commercialOrderListWhere,
+} from "./commercial-order-list-where"
 import { allocateCommercialOrderNumber } from "./commercial-order-number"
 import { commercialOrderOfferingResolver } from "./commercial-order-offering-resolution"
 import {
@@ -1573,86 +1577,17 @@ export async function countCommercialOrderCustomers(
 
 export async function listCommercialOrdersPage(
   db: PrismaClient,
-  input: {
-    createdByUserId?: string
-    createdAfter?: Date
-    createdBefore?: Date
+  input: CommercialOrderListFilter & {
     cursor?: string
     limit?: number
-    query?: string
-    queryMode?: "all" | "customer"
     sort?: {
       direction: "asc" | "desc"
       field: "orderNumber" | "status" | "createdAt" | "total"
     }
-    statuses?: OrderStatus[]
-    storeId?: string
-    tenantId: string
   },
 ) {
   const limit = Math.min(Math.max(input.limit ?? 20, 1), 50)
-  const normalizedQuery = input.query?.trim()
-  const baseWhere: Prisma.CommercialOrderWhereInput = {
-    createdByUserId: input.createdByUserId,
-    createdAt:
-      input.createdAfter || input.createdBefore
-        ? {
-            ...(input.createdAfter ? { gte: input.createdAfter } : {}),
-            ...(input.createdBefore ? { lt: input.createdBefore } : {}),
-          }
-        : undefined,
-    status: input.statuses?.length ? { in: input.statuses } : undefined,
-    storeId: input.storeId,
-    tenantId: input.tenantId,
-  }
-  const where: Prisma.CommercialOrderWhereInput = normalizedQuery
-    ? {
-        ...baseWhere,
-        OR: [
-          ...(input.queryMode === "customer"
-            ? []
-            : [
-                {
-                  orderNumber: {
-                    contains: normalizedQuery,
-                    mode: "insensitive" as const,
-                  },
-                },
-              ]),
-          { customerName: { contains: normalizedQuery, mode: "insensitive" } },
-          {
-            customerPhone: {
-              contains: normalizedQuery,
-              mode: "insensitive",
-            },
-          },
-          {
-            customerEmail: {
-              contains: normalizedQuery,
-              mode: "insensitive",
-            },
-          },
-          ...(input.queryMode === "customer"
-            ? []
-            : [
-                {
-                  lines: {
-                    some: {
-                      snapshot: {
-                        is: {
-                          catalogItemName: {
-                            contains: normalizedQuery,
-                            mode: "insensitive" as const,
-                          },
-                        },
-                      },
-                    },
-                  },
-                },
-              ]),
-        ],
-      }
-    : baseWhere
+  const { baseWhere, where } = commercialOrderListWhere(input)
   const sortFields: Array<{
     direction: "asc" | "desc"
     field: "orderNumber" | "status" | "createdAt" | "totalMinor"

@@ -33,6 +33,8 @@ export type OrdersSummaryProps = {
     orderValueMinor: number
     outstandingMinor?: number
     partial?: boolean
+    /** Orders in more than one currency: money is never added across them. */
+    mixedCurrencies?: boolean
   } | null
 }
 

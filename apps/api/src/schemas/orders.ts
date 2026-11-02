@@ -176,6 +176,39 @@ export const commercialOrderSalesReportSchema = z
     { message: "Choose 366 days or fewer.", path: ["from"] },
   )
 
+export const commercialOrderPaymentStatusSchema = z.enum([
+  "PENDING",
+  "PARTIALLY_PAID",
+  "AUTHORIZED",
+  "PAID",
+  "FAILED",
+  "REFUNDED",
+])
+
+/** Exact Orders totals for the list's scope, dates and search. */
+export const commercialOrderListTotalsSchema = z
+  .object({
+    mine: z.boolean().optional(),
+    createdAfter: z.coerce.date().optional(),
+    createdBefore: z.coerce.date().optional(),
+    paymentStatuses: z
+      .array(commercialOrderPaymentStatusSchema)
+      .max(6)
+      .optional(),
+    query: z.string().trim().max(160).optional(),
+    queryMode: z.enum(["all", "customer"]).default("all"),
+    statuses: z.array(commercialOrderStatusSchema).max(9).optional(),
+    storeId: z.string().trim().min(1).optional(),
+  })
+  .strict()
+  .refine(
+    (input) =>
+      !input.createdAfter ||
+      !input.createdBefore ||
+      input.createdAfter < input.createdBefore,
+    { message: "End must follow start", path: ["createdBefore"] },
+  )
+
 export const commercialOrderListPageSchema = z
   .object({
     mine: z.boolean().optional(),
@@ -192,6 +225,10 @@ export const commercialOrderListPageSchema = z
         direction: z.enum(["asc", "desc"]),
       })
       .strict()
+      .optional(),
+    paymentStatuses: z
+      .array(commercialOrderPaymentStatusSchema)
+      .max(6)
       .optional(),
     statuses: z.array(commercialOrderStatusSchema).max(9).optional(),
     storeId: z.string().trim().min(1).optional(),
@@ -274,12 +311,47 @@ export const commercialOrderReminderSettingsGetSchema = z
   .object({ storeId: z.string().trim().min(1).optional() })
   .strict()
 
+const paymentWindowFields = {
+  methods: z
+    .array(z.enum(["bank_transfer", "card", "cash", "other", "pos"]))
+    .min(1)
+    .max(5)
+    .optional(),
+  query: z.string().trim().max(160).optional(),
+  recordedAfter: z.coerce.date().optional(),
+  recordedBefore: z.coerce.date().optional(),
+  storeId: z.string().trim().min(1).optional(),
+}
+
+function paymentWindowInOrder(input: {
+  recordedAfter?: Date
+  recordedBefore?: Date
+}) {
+  return (
+    !input.recordedAfter ||
+    !input.recordedBefore ||
+    input.recordedAfter < input.recordedBefore
+  )
+}
+
 export const commercialOrderPaymentsListPageSchema = z
   .object({
-    storeId: z.string().trim().min(1).optional(),
+    ...paymentWindowFields,
     cursor: z.string().trim().min(1).optional(),
     direction: z.enum(["forward", "backward"]).optional(),
     limit: z.number().int().min(1).max(50).default(20),
-    query: z.string().trim().max(160).optional(),
   })
   .strict()
+  .refine(paymentWindowInOrder, {
+    message: "End must follow start",
+    path: ["recordedBefore"],
+  })
+
+/** Exact received totals by currency and method for a dated window. */
+export const commercialOrderPaymentTotalsSchema = z
+  .object(paymentWindowFields)
+  .strict()
+  .refine(paymentWindowInOrder, {
+    message: "End must follow start",
+    path: ["recordedBefore"],
+  })

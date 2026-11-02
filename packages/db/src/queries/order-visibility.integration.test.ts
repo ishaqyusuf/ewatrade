@@ -116,8 +116,8 @@ if (enabled) setDefaultTimeout(120_000)
             defaultCurrencyCode: "NGN",
           })
           expect(payments.totalCount).toBe(1)
-          expect(payments.currencyTotals).toEqual([
-            { currencyCode: "NGN", totalAmountMinor: 50 },
+          expect(payments.currencyTotals).toMatchObject([
+            { currencyCode: "NGN", totalAmountMinor: 50, totalCount: 1 },
           ])
           expect(
             (

@@ -2,7 +2,7 @@ import {
   type MoneyAccountPurpose,
   moneyAccountPaymentMethods,
 } from "@ewatrade/utils/finance-payment-methods"
-import { Prisma, type PrismaClient } from "../../generated/prisma/client"
+import type { Prisma, PrismaClient } from "../../generated/prisma/client"
 import {
   CommercialPaymentMethod,
   CommercialPaymentType,
@@ -12,6 +12,11 @@ import {
   WorkAuthorizationStatus,
 } from "../../generated/prisma/enums"
 import { CatalogError } from "./catalog"
+import {
+  type CommercialPaymentListFilter,
+  commercialPaymentListWhere,
+  getCommercialPaymentTotalsForWhere,
+} from "./commercial-payment-totals"
 import { lockCustomerLedgerAccount } from "./customer-ledger/accounts"
 import {
   assertHeldCommerceFinancialOrder,
@@ -584,89 +589,15 @@ export async function recordCommercialOrderPayment(
 
 export async function listCommercialOrderPaymentsPage(
   db: PrismaClient,
-  input: {
-    createdByUserId?: string
+  input: CommercialPaymentListFilter & {
     cursor?: string
     defaultCurrencyCode: string
     limit?: number
-    query?: string
-    storeId?: string
-    tenantId: string
   },
 ) {
   const limit = Math.min(Math.max(input.limit ?? 20, 1), 50)
-  const query = input.query?.trim()
-  const matchingActors = query
-    ? await db.user.findMany({
-        select: { id: true },
-        where: {
-          memberships: { some: { tenantId: input.tenantId } },
-          OR: [
-            { displayName: { contains: query, mode: "insensitive" } },
-            { email: { contains: query, mode: "insensitive" } },
-            { name: { contains: query, mode: "insensitive" } },
-          ],
-        },
-      })
-    : []
-  const baseWhere: Prisma.CommercialOrderPaymentWhereInput = {
-    tenantId: input.tenantId,
-    order: {
-      is: {
-        tenantId: input.tenantId,
-        storeId: input.storeId,
-        createdByUserId: input.createdByUserId,
-      },
-    },
-    type: CommercialPaymentType.PAYMENT,
-    method: { not: CommercialPaymentMethod.CUSTOMER_CREDIT },
-  }
-  const where: Prisma.CommercialOrderPaymentWhereInput = query
-    ? {
-        ...baseWhere,
-        OR: [
-          { reference: { contains: query, mode: "insensitive" } },
-          {
-            recordedByUserId: {
-              in: matchingActors.map((actor) => actor.id),
-            },
-          },
-          {
-            order: {
-              is: {
-                OR: [
-                  {
-                    customerEmail: {
-                      contains: query,
-                      mode: "insensitive",
-                    },
-                  },
-                  {
-                    customerName: {
-                      contains: query,
-                      mode: "insensitive",
-                    },
-                  },
-                  {
-                    customerPhone: {
-                      contains: query,
-                      mode: "insensitive",
-                    },
-                  },
-                  {
-                    orderNumber: {
-                      contains: query,
-                      mode: "insensitive",
-                    },
-                  },
-                ],
-              },
-            },
-          },
-        ],
-      }
-    : baseWhere
-  const [records, currencyTotalRows] = await Promise.all([
+  const where = await commercialPaymentListWhere(db, input)
+  const [records, totals] = await Promise.all([
     db.commercialOrderPayment.findMany({
       cursor: input.cursor ? { id: input.cursor } : undefined,
       orderBy: [{ recordedAt: "desc" }, { id: "desc" }],
@@ -690,29 +621,8 @@ export async function listCommercialOrderPaymentsPage(
       take: limit + 1,
       where,
     }),
-    db.$queryRaw<
-      Array<{
-        currencyCode: string
-        totalAmountMinor: bigint
-        totalCount: bigint
-      }>
-    >(Prisma.sql`
-      SELECT
-        orders."currencyCode" AS "currencyCode",
-        COALESCE(SUM(payments."amountMinor"), 0)::bigint AS "totalAmountMinor",
-        COUNT(*)::bigint AS "totalCount"
-      FROM "CommercialOrderPayment" AS payments
-      JOIN "CommercialOrder" AS orders
-        ON orders."id" = payments."orderId"
-        AND orders."tenantId" = payments."tenantId"
-      WHERE payments."tenantId" = ${input.tenantId}
-        AND payments."type" = ${CommercialPaymentType.PAYMENT}
-        AND payments."method" <> ${CommercialPaymentMethod.CUSTOMER_CREDIT}
-        ${input.storeId ? Prisma.sql`AND orders."storeId" = ${input.storeId}` : Prisma.empty}
-        ${input.createdByUserId ? Prisma.sql`AND orders."createdByUserId" = ${input.createdByUserId}` : Prisma.empty}
-      GROUP BY orders."currencyCode"
-      ORDER BY orders."currencyCode" ASC
-    `),
+    // Totals follow the same search, dates and methods as the list.
+    getCommercialPaymentTotalsForWhere(db, { ...input, where }),
   ])
   const hasNextPage = records.length > limit
   const pageRecords = hasNextPage ? records.slice(0, limit) : records
@@ -720,22 +630,14 @@ export async function listCommercialOrderPaymentsPage(
     tenantId: input.tenantId,
     userIds: pageRecords.map((payment) => payment.recordedByUserId),
   })
-  const totalCount = currencyTotalRows.reduce(
-    (count, total) => count + Number(total.totalCount),
-    0,
-  )
-
   return {
-    currencyTotals: currencyTotalRows.map((total) => ({
-      currencyCode: total.currencyCode,
-      totalAmountMinor: Number(total.totalAmountMinor),
-    })),
+    currencyTotals: totals.currencyTotals,
     defaultCurrencyCode: input.defaultCurrencyCode,
     items: pageRecords.map((payment) => ({
       ...payment,
       recordedBy: actors.get(payment.recordedByUserId) ?? null,
     })),
     nextCursor: hasNextPage ? pageRecords.at(-1)?.id : undefined,
-    totalCount,
+    totalCount: totals.totalCount,
   }
 }
