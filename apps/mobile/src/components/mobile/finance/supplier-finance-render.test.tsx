@@ -111,6 +111,33 @@ mock.module("@/components/mobile/status-banner", () => ({
 }))
 mock.module("@/components/ui/pressable", () => ({ Pressable: button }))
 mock.module("@/components/ui/text", () => ({ Text: view }))
+// Chrome the screen gained after this test was written; each stub renders its
+// children so the scoped-read assertions still see the real trees.
+const headerTitles: string[] = []
+mock.module("../workflow-modal-screen", () => ({
+  useWorkflowHeader: (header: { title?: string } | null) => {
+    if (header?.title) headerTitles.push(header.title)
+  },
+}))
+mock.module("../appearances/classic/customer-book-screen", () => ({
+  ClassicCustomerBookFilter: ({ label }: { label: string }) =>
+    React.createElement("button", { type: "button" }, label),
+}))
+mock.module("../green-till/hero-card", () => ({ HeroCard: view }))
+mock.module("../green-till/kit", () => ({
+  RecordRow: view,
+  RowDivider: view,
+  SectionHeader: ({ title }: { title?: string }) =>
+    React.createElement("h2", null, title),
+  StatusPill: view,
+}))
+mock.module("./finance-bank-date-field", () => ({
+  FinanceBankDateField: view,
+}))
+mock.module("@/components/ui/skeleton", () => ({ Skeleton: view }))
+mock.module("@/components/ui/icon", () => ({ Icon: view }))
+mock.module("@/hooks/use-color", () => ({ useColors: () => ({}) }))
+mock.module("nativewind", () => ({ VariableContextProvider: view }))
 mock.module("react-native", () => ({
   View: view,
   FlatList: ({
@@ -210,7 +237,8 @@ test("renders the real supplier statement and aging component trees with scoped 
       onBack: () => undefined,
     }),
   )
-  expect(directoryMarkup).toContain("Suppliers")
+  // The directory title lives in the workflow header bar now.
+  expect(headerTitles).toContain("Suppliers")
   // Effects do not run in this static renderer, so cached query data remains
   // concealed until the protected-read transition tests authorize it.
   expect(directoryMarkup).not.toContain("Northside Foods")
