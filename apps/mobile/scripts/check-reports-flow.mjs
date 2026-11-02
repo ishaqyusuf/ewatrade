@@ -27,10 +27,10 @@ const contracts = [
     file: "apps/mobile/src/components/mobile/reports-presentation.ts",
     markers: [
       "No activity yet",
-      "Inventory",
+      "Stock on record",
       "Pending records",
       "Service work",
-      "WIP",
+      "${service.wip} open",
       "ready",
       "blocked",
       "overdue",
