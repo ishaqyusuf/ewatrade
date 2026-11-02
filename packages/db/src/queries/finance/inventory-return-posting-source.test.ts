@@ -18,6 +18,15 @@ function decimal(value: string) {
   return { toString: () => value, toFixed: () => value }
 }
 
+type ReturnReadArgs = { include?: Record<string, unknown> }
+/** Lets a test swap the return read after evidence is remembered, while still seeing the stored row. */
+type ReturnReadHooks = {
+  productReturnFindFirst?: (
+    args: ReturnReadArgs,
+    stored: Record<string, unknown>,
+  ) => Promise<unknown>
+}
+
 function fixture(
   options: {
     registered?: boolean
@@ -31,6 +40,7 @@ function fixture(
     allocationCount?: number
     movementCount?: number
     journalLineCount?: number
+    hooks?: ReturnReadHooks
   } = {},
 ) {
   const packaged = options.packaged ?? false
@@ -316,7 +326,10 @@ function fixture(
     $queryRaw: async (parts: TemplateStringsArray) => parts.join("").includes('FROM "CommercialOrder"') ? [order] : [{ id: book.id }],
     membership: { findFirst: async () => ({ tenant: { isActive: true } }) },
     productReturn: {
-      findFirst: async () => productReturn,
+      findFirst: async (args: ReturnReadArgs = {}) =>
+        options.hooks?.productReturnFindFirst
+          ? options.hooks.productReturnFindFirst(args, productReturn)
+          : productReturn,
       findMany: async (args: {
         select?: { financeCost?: { select?: { _count?: unknown } } }
       }) =>
@@ -732,23 +745,21 @@ describe("historical original restock source", () => {
 
 test("recorded valuation reuses physical evidence but reloads and validates new cost", async () => {
   const { rememberRecordedProductReturn } = await import("./product-return-journal-source-snapshot")
-  const tx = fixture()
+  const hooks: ReturnReadHooks = {}
+  const tx = fixture({ hooks })
   const returned = await tx.productReturn.findFirst({})
   const book = await tx.financeBook.findUnique({ where: { id: "book-1" } })
   if (!returned || !book) throw new Error("Missing fixture")
   const evidence = { book, productReturn: returned } as Parameters<typeof rememberRecordedProductReturn>[2]
   const token = {}
   rememberRecordedProductReturn(token, tx, evidence)
-  const read = tx.productReturn.findFirst
   let reads = 0
-  tx.productReturn.findFirst = (async (args: { include: Record<string, unknown> }) => {
+  hooks.productReturnFindFirst = async (args, stored) => {
     reads++
-    expect(Object.keys(args.include)).toEqual(["financeCost"])
-    const current = await read({})
-    if (!current) return null
-    const { order: _order, orderLine: _line, stockOperation: _stock, ...row } = current as typeof evidence.productReturn
+    expect(Object.keys(args.include ?? {})).toEqual(["financeCost"])
+    const { order: _order, orderLine: _line, stockOperation: _stock, ...row } = stored
     return row
-  }) as typeof tx.productReturn.findFirst
+  }
   const result = await resolveCommerceInventoryReturnPosting(tx, {
     tenantId: "tenant-1", productReturnId: "return-1", recordedValuation: token,
   })

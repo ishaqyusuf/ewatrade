@@ -57,7 +57,7 @@ test("canonical replay returns an existing blank Quick sale before new-write val
     fixture.tx,
     legacyInput,
   )
-  expect(result).toBe(fixture.order)
+  expect<unknown>(result).toBe(fixture.order)
   expect(result.id).toBe("legacy-order")
   expect(result.payloadHash).toBe(legacyHash)
   expect(result.lines[0]?.snapshot?.note).toBeNull()

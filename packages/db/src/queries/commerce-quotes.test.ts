@@ -329,8 +329,10 @@ describe("Commerce Quote caller-owned issuance preparation", () => {
     })
     expect(typeof result.token).toBe("string")
     if (!result.token) throw Error("Expected native private token")
+    const recordedDigest = fixture.tokenDigests[0]
+    if (!recordedDigest) throw Error("Expected a recorded token digest")
     expect(createHash("sha256").update(result.token).digest("hex")).toBe(
-      fixture.tokenDigests[0],
+      recordedDigest,
     )
   })
 })

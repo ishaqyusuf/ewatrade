@@ -1,13 +1,13 @@
 import { getCommercialProductReturnImpactReview } from "../commercial-product-return-impact-review"
 import { previewProductReturnOriginalCost } from "./preview-product-return-cost"
 import { describe, expect, test } from "bun:test"
-import type { Prisma } from "../../../generated/prisma/client"
+import { Prisma } from "../../../generated/prisma/client"
 import {
   allocateOriginalIssueReturnCost,
   recordProductReturnValuationInTransaction,
 } from "./valuation-returns"
 
-const decimal = (value: string) => ({ toFixed: () => value })
+const decimal = (value: string) => new Prisma.Decimal(value)
 const returnAt = new Date("2026-09-15T12:00:00.000Z")
 const actorUserId = "actor-1"
 
@@ -515,6 +515,7 @@ test("locked return reuses source history once but reads the new return and vali
   // Locked Book/source history must not be loaded again; current return still is.
   tx.financeBook.findUnique = (() => { throw Error("Repeated Book read") }) as typeof tx.financeBook.findUnique
   const saved = await recordProductReturnValuationInTransaction(tx, { tenantId: scope.tenantId, productReturnId: fixture.productReturn.id, costSourceToken: token })
+  if (preview.sourceCostMinor === null) throw Error("Expected a known original cost")
   expect(saved?.sourceCostMinor?.toString()).toBe(preview.sourceCostMinor)
   const { consumeRecordedProductReturn } = await import("./product-return-journal-source-snapshot")
   const journalSource = consumeRecordedProductReturn(saved!, tx, { tenantId: scope.tenantId, productReturnId: fixture.productReturn.id })

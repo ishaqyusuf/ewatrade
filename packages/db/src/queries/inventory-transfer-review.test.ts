@@ -117,7 +117,7 @@ test("partial receipt preview preserves dispatch and shows remaining transit and
     remainingAfter: "6.75",
     status: "IN_TRANSIT",
   })
-  expect(p.canonicalQuantity).toBe("39")
+  expect<string>(p.canonicalQuantity).toBe("39")
   expect([p.targetBefore, p.targetAfter, p.targetReserved]).toEqual([
     "2",
     "5.25",
@@ -140,8 +140,8 @@ test("cancel preview returns only remaining transit after previous receipt", asy
     storeId: "a",
     transition: "cancel",
   })
-  expect(p.plan.quantity).toBe("6.75")
-  expect(p.targetAfter).toBe("11.75")
+  expect<string>(p.plan.quantity).toBe("6.75")
+  expect<string>(p.targetAfter).toBe("11.75")
   expect(p.plan.status).toBe("CANCELLED")
 })
 
@@ -239,7 +239,7 @@ test("dispatch review projects only source-to-transit movement with original fac
   const f = dispatchFixture()
   const p = await previewStockTransferDispatch(f.tx, dispatchScope)
   expect([p.before, p.after, p.inTransitAfter]).toEqual(["5", "3.75", "1.25"])
-  expect(p.canonicalQuantity).toBe("15")
+  expect<string>(p.canonicalQuantity).toBe("15")
   expect(p.targetStore.id).toBe("b")
   expect(p.revision).toBe(1)
 })

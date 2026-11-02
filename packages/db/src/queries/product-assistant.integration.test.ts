@@ -667,10 +667,11 @@ describeWithServiceCommerceDatabase(
         if (!baseOffering)
           throw new Error("Fixture command has no base offering")
         const name = "Reviewed manual eggs"
+        const description = "Details reviewed in the ordinary form"
         const fullCommand: CreateCatalogItemInput = {
           ...canonical,
           name,
-          description: "Details reviewed in the ordinary form",
+          description,
           unitConfiguration: {
             ...canonical.unitConfiguration,
             units: [
@@ -728,7 +729,7 @@ describeWithServiceCommerceDatabase(
           },
         })
         expect(graph.name).toBe(name)
-        expect(graph.description).toBe(fullCommand.description)
+        expect(graph.description).toBe(description)
         expect(graph.product?.currentUnitConfiguration?.units).toHaveLength(2)
         expect(graph.variants[0]?.offerings).toHaveLength(2)
         expect(

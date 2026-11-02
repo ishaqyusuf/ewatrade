@@ -92,6 +92,6 @@ test("nonzero competing-owner counts still load the original ownership evidence"
   Object.assign(f.owner, { purchaseReceipts: [{ id: "receipt" }] })
   f.owner._count.purchaseReceipts = 1
   const graph = await readInventoryRelocationGraph(f.tx, input)
-  expect(graph.purchaseReceipts).toEqual([{ id: "receipt" }])
+  expect(graph).toMatchObject({ purchaseReceipts: [{ id: "receipt" }] })
   expect(f.requested()).toMatchObject({ where: { id: "operation-0", tenantId: "tenant" }, select: { purchaseReceipts: { take: 2, select: { id: true } } } })
 })

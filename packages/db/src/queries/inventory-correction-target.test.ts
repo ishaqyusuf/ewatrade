@@ -12,7 +12,7 @@ function fixture(change: Record<string, unknown> = {}, foreign = false) {
 }
 test("correction read binds original and movements to current Store", async () => {
   const f = fixture()
-  expect(await readStockCorrectionTarget(f.tx, input)).toBe(f.target)
+  expect<unknown>(await readStockCorrectionTarget(f.tx, input)).toBe(f.target)
   await expect(readStockCorrectionTarget(fixture({}, true).tx, input)).rejects.toMatchObject({ code: "INVALID_STOCK_OPERATION" })
 })
 test("correction review shares source-owner and already-corrected exclusions", async () => {

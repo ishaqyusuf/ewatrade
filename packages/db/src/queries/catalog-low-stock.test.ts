@@ -11,7 +11,7 @@ function fixture(
   }>,
 ) {
   let candidateQuery: unknown
-  const db = {
+  const delegates = {
     sellableOffering: {
       findMany: async (query: unknown) => {
         candidateQuery = query
@@ -79,8 +79,9 @@ function fixture(
             }
       },
     },
-  } as unknown as PrismaClient
-  return { db, query: () => candidateQuery }
+  }
+  const db = delegates as unknown as PrismaClient
+  return { db, delegates, query: () => candidateQuery }
 }
 const scope = { tenantId: "tenant", storeId: "store", threshold: "2" }
 
@@ -130,7 +131,7 @@ test("an empty matching page advances by the scanned candidate with tenant/store
 })
 
 test("bad inputs and unexpected database failures cannot become empty or zero stock", async () => {
-  const { db } = fixture([{ id: "a", onHand: "0" }])
+  const { db, delegates } = fixture([{ id: "a", onHand: "0" }])
   for (const threshold of ["-1", "NaN", "0.0000001"])
     await expect(
       listCatalogLowStockPage(db, { ...scope, threshold }),
@@ -138,7 +139,7 @@ test("bad inputs and unexpected database failures cannot become empty or zero st
   await expect(
     listCatalogLowStockPage(db, { ...scope, limit: 21 }),
   ).rejects.toThrow()
-  db.stockBalanceSource.findUnique = async () => {
+  delegates.stockBalanceSource.findUnique = async () => {
     throw new Error("connection lost")
   }
   await expect(listCatalogLowStockPage(db, scope)).rejects.toThrow(

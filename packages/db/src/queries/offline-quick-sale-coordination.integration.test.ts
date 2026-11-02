@@ -123,11 +123,15 @@ describeWithQaAccessDatabase(
       ) {
         return db.$transaction(fn, options)
       }
-      const firstTenant = tenantIds[0]
-      const firstStore = stores[0]
-      const firstDevice = devices[0]
-      if (!firstTenant || !firstStore || !firstDevice)
+      const scopedTenant = tenantIds[0]
+      const scopedStore = stores[0]
+      const scopedDevice = devices[0]
+      if (!scopedTenant || !scopedStore || !scopedDevice)
         throw Error("Missing QA scope")
+      // Hoisted helpers below do not see the narrowing, so keep non-null bindings.
+      const firstTenant = scopedTenant
+      const firstStore = scopedStore
+      const firstDevice = scopedDevice
       const orderExists = (tx: Prisma.TransactionClient, identity: string) =>
         tx.commercialOrder.findUnique({
           where: {
