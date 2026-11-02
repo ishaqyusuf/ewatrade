@@ -4,7 +4,10 @@ import {
   stockChangeLabel,
   stockHistoryPageInput,
   stockHistoryTotalsInput,
+  stockNetChangeText,
   stockSourceLabel,
+  stockTotalsFromText,
+  stockTotalsScopeNote,
   transferStatusLabel,
 } from "./inventory-labels"
 
@@ -83,5 +86,48 @@ describe("inventory labels", () => {
         categories: { categoryNameIds: [], uncategorized: false },
       }),
     ).toEqual({ storeId: undefined })
+  })
+
+  test("totals read as signed quantities with their scope", () => {
+    expect(stockNetChangeText("1180", "Egg")).toBe("+1,180 eggs")
+    expect(stockNetChangeText("-24", "Egg")).toBe("−24 eggs")
+    expect(stockNetChangeText("0", "Egg")).toBe("0 eggs")
+    expect(stockNetChangeText("1", "Bag")).toBe("+1 bag")
+    expect(stockNetChangeText("2.5", null)).toBe("+2.5")
+    expect(stockTotalsFromText({ operationCount: 3, correctionCount: 1 })).toBe(
+      "From 3 changes · 1 correction included",
+    )
+    expect(stockTotalsFromText({ operationCount: 1, correctionCount: 0 })).toBe(
+      "From 1 change",
+    )
+    expect(stockTotalsFromText({ operationCount: 0, correctionCount: 0 })).toBe(
+      "No changes",
+    )
+  })
+  test("the totals say when search or a group only narrows the list", () => {
+    const base = { storeLabel: "Main store" } as const
+    expect(
+      stockTotalsScopeNote({ ...base, categories: "names", filter: "all" }),
+    ).toBeNull()
+    expect(
+      stockTotalsScopeNote({
+        ...base,
+        categories: "names",
+        q: " house ",
+        filter: "in",
+      }),
+    ).toBe(
+      "Search “house” and Stock in only filter the list below. Net change counts every change with these categories.",
+    )
+    expect(
+      stockTotalsScopeNote({ ...base, categories: "none", filter: "count" }),
+    ).toBe(
+      "Counts only filters the list below. Net change counts every change in Main store.",
+    )
+    expect(
+      stockTotalsScopeNote({ ...base, categories: "uncategorized", q: "x" }),
+    ).toBe(
+      "Search “x” only filters the list below. Net change counts every change with no categories.",
+    )
   })
 })

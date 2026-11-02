@@ -1,5 +1,6 @@
 import type { StockHistoryCategoryFilter } from "@/hooks/use-stock-history-filter-params"
 import { compareExactDecimals } from "@ewatrade/utils/exact-decimal"
+import { formatStockQuantity } from "./inventory-view"
 
 /** Plain names for stock operation types, as a shop owner reads Stock history. */
 const STOCK_CHANGE_LABELS: Record<string, string> = {
@@ -113,6 +114,51 @@ function stockCategoryInput(filter?: StockHistoryCategoryFilter) {
   return filter?.categoryNameIds.length
     ? { categoryNameIds: filter.categoryNameIds }
     : {}
+}
+
+const plural = (count: number, noun: string) =>
+  `${count} ${noun}${count === 1 ? "" : "s"}`
+
+/** A net stock change with its sign and unit, e.g. "+1,180 eggs" or "−24 eggs". */
+export function stockNetChangeText(value: string, unitName: string | null) {
+  const sign = compareExactDecimals(value, "0")
+  const amount = value.replace(/^-/, "")
+  const text = unitName ? formatStockQuantity(amount, unitName) : amount
+  return `${sign > 0 ? "+" : sign < 0 ? "−" : ""}${text}`
+}
+
+/** "From 3 changes · 1 correction included" under the Stock history totals. */
+export function stockTotalsFromText(input: {
+  operationCount: number
+  correctionCount: number
+}) {
+  if (!input.operationCount) return "No changes"
+  return `From ${plural(input.operationCount, "change")}${input.correctionCount ? ` · ${plural(input.correctionCount, "correction")} included` : ""}`
+}
+
+/**
+ * Totals cover the Store and categories only. When the search or a group also
+ * narrows the list, say so, e.g. "Search “house” and Stock in only filter…".
+ */
+export function stockTotalsScopeNote(input: {
+  q?: string | null
+  filter?: string | null
+  categories: "names" | "uncategorized" | "none"
+  storeLabel: string
+}) {
+  const search = input.q?.trim()
+  const group = stockChangeGroups.find(
+    (row) => row.id !== "all" && row.id === input.filter,
+  )?.label
+  const parts = [search ? `Search “${search}”` : null, group].filter(Boolean)
+  if (!parts.length) return null
+  const covers =
+    input.categories === "names"
+      ? "with these categories"
+      : input.categories === "uncategorized"
+        ? "with no categories"
+        : `in ${input.storeLabel}`
+  return `${parts.join(" and ")} only ${parts.length > 1 ? "filter" : "filters"} the list below. Net change counts every change ${covers}.`
 }
 
 /** Dates in the viewer's own time, e.g. "19 Oct 2026, 10:15". */

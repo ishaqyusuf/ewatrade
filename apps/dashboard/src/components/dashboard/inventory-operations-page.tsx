@@ -2,9 +2,10 @@
 
 import { WorkspaceError } from "@/components/dashboard/workspace-error"
 import { inventoryHistoryViewOptions } from "@/components/inventory/inventory-header"
-import { InventoryLedgerFilters } from "@/components/inventory/inventory-ledger-filters"
 import { InventoryOperationMenu } from "@/components/inventory/inventory-operation-menu"
 import { InventoryTabs } from "@/components/inventory/inventory-tabs"
+import { StockHistoryFilters } from "@/components/inventory/stock-history-filters"
+import { StockHistoryTotals } from "@/components/inventory/stock-history-totals"
 import { PageHeader, PageToolbar } from "@/components/page-header"
 import { ScrollableContent } from "@/components/scrollable-content"
 import { InventoryOperationSheet } from "@/components/sheets/inventory-operation-sheet"
@@ -16,7 +17,6 @@ import { OperationsDataTable } from "@/components/tables/inventory-operations/da
 import { OperationsSkeleton } from "@/components/tables/inventory-operations/skeleton"
 import { ViewDropdown } from "@/components/view-switcher"
 import { useDirectoryView } from "@/hooks/use-directory-view"
-import { stockChangeGroups } from "@/lib/inventory-labels"
 import type { DirectoryViewSettings } from "@/utils/directory-view-settings"
 import type { TableSettings } from "@/utils/table-settings"
 import { Alert, AlertDescription, Button } from "@ewatrade/ui"
@@ -64,10 +64,7 @@ export function InventoryOperationsPage({
                 </>
               }
             >
-              <InventoryLedgerFilters
-                placeholder="Search reason, note or store"
-                filters={stockChangeGroups}
-              />
+              <StockHistoryFilters />
             </PageToolbar>
             <InventoryTabs />
           </PageHeader>
@@ -79,6 +76,10 @@ export function InventoryOperationsPage({
               </Button>
             </Alert>
           ) : null}
+          <StockHistoryTotals
+            storeId={allStores ? undefined : store.id}
+            storeLabel={allStores ? "All stores" : store.name}
+          />
           <ErrorBoundary errorComponent={WorkspaceError}>
             <Suspense
               fallback={
