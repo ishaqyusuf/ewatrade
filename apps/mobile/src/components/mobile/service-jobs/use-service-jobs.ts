@@ -508,9 +508,7 @@ export function useServiceJobs(focusedJob?: FocusedServiceJob) {
         setAttachments([...attachmentRef.current])
         if (attachmentRef.current.length)
           setError(
-            "The service order is accepted, but " +
-              attachmentRef.current.length +
-              " private evidence attachment(s) remain unconfirmed. Retry those attachments; do not create the order again.",
+            `The service order is accepted, but ${attachmentRef.current.length} private evidence attachment(s) remain unconfirmed. Retry those attachments; do not create the order again.`,
           )
         else setNotice("Service order and private device evidence recorded.")
       }
@@ -542,7 +540,7 @@ export function useServiceJobs(focusedJob?: FocusedServiceJob) {
       return
     }
     const prepared = prepareServiceIntake({
-      clientIntakeId: "intake-" + Crypto.randomUUID(),
+      clientIntakeId: `intake-${Crypto.randomUUID()}`,
       storeId,
       projection,
       serviceNames: new Map(
@@ -641,7 +639,7 @@ export function useServiceJobs(focusedJob?: FocusedServiceJob) {
       })
       const asset = result.assets?.[0]
       if (!command.canAct() || result.canceled || !asset) return null
-      const clientEvidenceId = "evidence-" + Crypto.randomUUID()
+      const clientEvidenceId = `evidence-${Crypto.randomUUID()}`
       return {
         assetReference: retainEvidenceAsset(asset, clientEvidenceId, mediaType),
         capturedAt: new Date(),

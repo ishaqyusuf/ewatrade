@@ -177,12 +177,11 @@ export function CatalogSetupHelperPicker({
                   accessibilityRole="header"
                   className="text-xl font-extrabold text-foreground"
                 >
-                  {kindLabel + " setups"}
+                  {`${kindLabel} setups`}
                 </Text>
                 <Text className="text-sm [-rn-line-height:22] text-muted-foreground">
                   {businessProfile && personalized.length
-                    ? businessProfile.title +
-                      " starting points appear first. Review every detail before saving."
+                    ? `${businessProfile.title} starting points appear first. Review every detail before saving.`
                     : "Choose a starting point. Review every detail before saving."}
                 </Text>
               </View>
@@ -200,10 +199,10 @@ export function CatalogSetupHelperPicker({
           {showSearch ? (
             <SearchFooterField
               localSearch
-              accessibilityLabel={"Search " + kindLabel + " setups"}
+              accessibilityLabel={`Search ${kindLabel} setups`}
               onChangeText={setQuery}
               maxLength={160}
-              placeholder={"Search " + kindLabel.toLowerCase() + " setups"}
+              placeholder={`Search ${kindLabel.toLowerCase()} setups`}
               value={query}
             />
           ) : null}

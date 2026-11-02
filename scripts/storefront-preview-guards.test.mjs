@@ -213,7 +213,7 @@ test("requires the source-matched legal policy, surface and invalid-token/app-li
     ),
     safe.androidAssociationResponse.replace(
       STOREFRONT_PREVIEW.androidCertificateSha256,
-      "AB:".repeat(31) + "AB",
+      `${"AB:".repeat(31)}AB`,
     ),
   ]) {
     expect(() =>

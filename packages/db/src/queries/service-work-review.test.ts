@@ -216,13 +216,13 @@ function fixture() {
   }
 }
 test("fresh current Store/actor and eligible assignee precede any mutation", async () => {
-  const f = fixture(),
-    input = {
-      ...scope,
-      operation: "assign" as const,
-      jobId: "job",
-      assigneeUserId: "staff",
-    }
+  const f = fixture()
+  const input = {
+    ...scope,
+    operation: "assign" as const,
+    jobId: "job",
+    assigneeUserId: "staff",
+  }
   for (const change of [
     () => {
       f.state.active = false
@@ -268,14 +268,14 @@ test("assignment preparation is read-only; execution keeps original history iden
   expect(f.state.nested).toBe(0)
 })
 test("reschedule preview discloses reminder replacement and binds settings/precise promise", async () => {
-  const f = fixture(),
-    input = {
-      ...scope,
-      operation: "reschedule" as const,
-      jobId: "job",
-      promisedAt: new Date("2026-10-15T10:00:00.123Z"),
-      reason: "Customer requested later pickup",
-    }
+  const f = fixture()
+  const input = {
+    ...scope,
+    operation: "reschedule" as const,
+    jobId: "job",
+    promisedAt: new Date("2026-10-15T10:00:00.123Z"),
+    reason: "Customer requested later pickup",
+  }
   f.state.autoReminder = true
   f.state.outstandingReminders = 2
   const first = await prepareReviewedServiceWorkInTransaction(f.tx, input)
@@ -297,14 +297,14 @@ test("reschedule preview discloses reminder replacement and binds settings/preci
   expect(f.state.nested).toBe(0)
 })
 test("line selection, canonical authorization and legal transitions fail closed before writing", async () => {
-  const f = fixture(),
-    input = {
-      ...scope,
-      operation: "transition" as const,
-      jobId: "job",
-      lineId: "foreign",
-      toStatus: "in_progress" as const,
-    }
+  const f = fixture()
+  const input = {
+    ...scope,
+    operation: "transition" as const,
+    jobId: "job",
+    lineId: "foreign",
+    toStatus: "in_progress" as const,
+  }
   await expect(
     prepareReviewedServiceWorkInTransaction(f.tx, input),
   ).rejects.toBeInstanceOf(Error)
@@ -327,14 +327,14 @@ test("line selection, canonical authorization and legal transitions fail closed 
   expect(f.state.events).toHaveLength(0)
 })
 test("ready refuses unimplemented automatic notification or pending-reminder cancellation", async () => {
-  const f = fixture(),
-    input = {
-      ...scope,
-      operation: "transition" as const,
-      jobId: "job",
-      lineId: "line",
-      toStatus: "ready_for_handoff" as const,
-    }
+  const f = fixture()
+  const input = {
+    ...scope,
+    operation: "transition" as const,
+    jobId: "job",
+    lineId: "line",
+    toStatus: "ready_for_handoff" as const,
+  }
   f.state.outstandingReminders = 1
   await expect(
     prepareReviewedServiceWorkInTransaction(f.tx, input),
@@ -374,8 +374,8 @@ test("native transition replay exposes the original event rather than creating a
   expect(f.state.nested).toBe(0)
 })
 test("root facades use fresh bounded options; stale native revisions and receipt failures propagate", async () => {
-  const f = fixture(),
-    options: unknown[] = []
+  const f = fixture()
+  const options: unknown[] = []
   const root = {
     $transaction: async (
       run: (tx: Prisma.TransactionClient) => Promise<unknown>,

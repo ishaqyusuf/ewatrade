@@ -108,7 +108,7 @@ export function useServiceActions({
       return false
     }
     const input: RouterInputs["services"]["transitionLine"] = {
-      clientCommandId: "service-" + Crypto.randomUUID(),
+      clientCommandId: `service-${Crypto.randomUUID()}`,
       expectedRevision: line.revision,
       lineId: line.id,
       reason: reason.trim() || undefined,
@@ -124,7 +124,7 @@ export function useServiceActions({
         { label: "Job", value: selectedJob.orderNumber },
         {
           label: "Work",
-          value: line.catalogItemName + " · " + line.allocatedQuantity,
+          value: `${line.catalogItemName} · ${line.allocatedQuantity}`,
         },
         { label: "New status", value: toStatus.replaceAll("_", " ") },
         { label: "Reason", value: reason.trim() || "Not required" },
@@ -144,7 +144,7 @@ export function useServiceActions({
     }
     const input = {
       body,
-      clientCommandId: "note-" + Crypto.randomUUID(),
+      clientCommandId: `note-${Crypto.randomUUID()}`,
       jobId: job.id,
     }
     return command.stage({
@@ -219,7 +219,7 @@ export function useServiceActions({
     const { amountMinor } = projection
     const input: RouterInputs["orders"]["recordPayment"] = {
       amountMinor,
-      clientPaymentId: "payment-" + Crypto.randomUUID(),
+      clientPaymentId: `payment-${Crypto.randomUUID()}`,
       method: fields.method,
       moneyAccountId: fields.moneyAccountId,
       orderId: job.commercialOrderId,
@@ -264,7 +264,7 @@ export function useServiceActions({
     }
     const { amountMinor } = projection
     const input: RouterInputs["services"]["handoff"] = {
-      clientCommandId: "handoff-" + Crypto.randomUUID(),
+      clientCommandId: `handoff-${Crypto.randomUUID()}`,
       expectedRevision: job.revision,
       jobId: job.id,
       note: "Collected by customer",
@@ -324,7 +324,7 @@ export function useServiceActions({
     }
     const input = {
       audienceKey: job.orderNumber,
-      businessEventKey: job.id + ":" + Crypto.randomUUID(),
+      businessEventKey: `${job.id}:${Crypto.randomUUID()}`,
       channel: fields.channel,
       jobId: job.id,
       renderedMessage: message,
