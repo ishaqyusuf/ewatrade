@@ -194,7 +194,9 @@ const contracts = [
     ],
   },
   {
-    file: "components/mobile/simple-catalog-item-screen.tsx",
+    // simple-catalog-item-screen.tsx re-exports Catalog setup; its classic
+    // appearance owns the large-text branches.
+    file: "components/mobile/appearances/classic/catalog-setup.tsx",
     markers: [
       "useLargeTextLayout",
       'largeTextLayout ? "gap-3" : "flex-row gap-3"',
@@ -219,11 +221,11 @@ const contracts = [
       '"-mx-2 min-h-16 flex-row items-start gap-3 rounded-2xl px-3 py-3 active:bg-destructive/10"',
       "largeTextLayout && hasOptions",
       '"min-h-12 w-full flex-row items-center justify-center gap-2 rounded-full bg-muted px-5"',
-      "<CatalogEssentialsFields",
+      "export function CatalogEssentialsFields(",
     ],
   },
   {
-    file: "components/mobile/catalog-setup/catalog-helper-picker.tsx",
+    file: "components/mobile/appearances/classic/catalog-helper-picker.tsx",
     markers: [
       "useLargeTextLayout",
       'largeTextLayout\n          ? "min-h-20 flex-row items-start',
@@ -233,23 +235,24 @@ const contracts = [
     ],
   },
   {
+    // Split on 19 Oct 2026: the list no longer truncates names and the
+    // actions sheet sizes to its content, so only the editor keeps branches.
     file: "components/mobile/catalog-setup/catalog-variant-manager.tsx",
+    markers: ["enableDynamicSizing"],
+  },
+  {
+    file: "components/mobile/catalog-setup/catalog-variant-basics.tsx",
     markers: [
       "useLargeTextLayout",
-      '"-mx-2 flex-row items-start gap-1 border-b border-border"',
-      'kind === "service" && largeTextLayout ? undefined : 2',
-      'kind === "product" && largeTextLayout',
-      "numberOfLines={largeTextLayout ? undefined : 2}",
-      '"mr-1 mt-4 h-11 w-11 items-center justify-center rounded-full bg-transparent active:bg-muted"',
-      '"min-h-20 w-full justify-between gap-2 rounded-2xl border-2 border-primary bg-muted px-4 py-3"',
-      'snapPoints={largeTextLayout ? ["96%"] : ["62%", "96%"]}',
       'largeTextLayout ? "gap-3" : "flex-row gap-3"',
-      "snapToIndex(largeTextLayout ? 0 : 1)",
-      '? "min-h-16 gap-3 px-3 py-3"',
-      '? "-mx-2 min-h-16 flex-row items-start gap-3 border-y border-border px-3 py-3 pr-20"',
-      'largeTextLayout\n                          ? "gap-2"',
-      '"min-h-11 w-full flex-row items-center justify-end gap-1"',
       'largeTextLayout && kind === "product" && !editorUnit',
+    ],
+  },
+  {
+    file: "components/mobile/catalog-setup/catalog-variant-details.tsx",
+    markers: [
+      "useLargeTextLayout",
+      '? "-mx-2 min-h-16 flex-row items-start gap-3 border-y border-border px-3 py-3 pr-3"',
     ],
   },
   {
@@ -265,7 +268,7 @@ const contracts = [
     markers: [
       "useLargeTextLayout",
       "largeTextLayout ? 64 : 50",
-      "!isSearchVariant && (!isAuthVariant || largeTextLayout)",
+      "const shouldShowLabel = !isAuthVariant || largeTextLayout",
       "numberOfLines={isMultiline ? inputProps.numberOfLines : 1}",
       "!isMultiline && largeTextLayout ? { height: 64 } : undefined",
     ],
