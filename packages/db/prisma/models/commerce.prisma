@@ -193,6 +193,7 @@ model Store {
 model Customer {
   ledgerAccounts   CustomerLedgerAccount[]
   commercialOrders CommercialOrder[]
+  orderLinks       CommercialOrderCustomerLink[]
   id               String                  @id @default(cuid())
   tenantId         String
   name             String

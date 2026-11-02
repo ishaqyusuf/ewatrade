@@ -164,3 +164,25 @@ model CustomerLedgerReceipt {
   @@unique([accountId, entryId])
   @@index([bookId, moneyAccountId, createdAt])
 }
+
+/// A reviewed link of an earlier unlinked Order to a saved Customer. It only
+/// sets Order.customerId; it posts no charge, payment or journal. Suggestions
+/// come from exact phone/email matches, never from a name.
+model CommercialOrderCustomerLink {
+  id              String          @id @default(cuid())
+  tenantId        String
+  orderId         String
+  customerId      String
+  clientCommandId String
+  payloadHash     String
+  /// PHONE, EMAIL or PHONE_AND_EMAIL at the time of review.
+  matchedBy       String
+  actorUserId     String
+  createdAt       DateTime        @default(now())
+  order           CommercialOrder @relation(fields: [tenantId, orderId], references: [tenantId, id], onDelete: Cascade)
+  customer        Customer        @relation(fields: [tenantId, customerId], references: [tenantId, id], onDelete: Cascade)
+
+  @@unique([tenantId, orderId])
+  @@index([tenantId, clientCommandId])
+  @@index([tenantId, customerId, createdAt])
+}

@@ -5,6 +5,7 @@ model CommercialOrder {
   customerId                     String?
   customer                       Customer?                           @relation(fields: [tenantId, customerId], references: [tenantId, id], onDelete: Restrict)
   ledgerEntries                  CustomerLedgerEntry[]
+  customerLink                   CommercialOrderCustomerLink?
   id                             String                              @id @default(cuid())
   tenantId                       String
   storeId                        String
