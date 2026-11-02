@@ -1,4 +1,5 @@
 import { Prisma, type PrismaClient } from "../../../generated/prisma/client"
+import type { RetailOpsPaidPlanId } from "../retail-ops-subscription-plans"
 import type { DbClient } from "../types"
 import {
   type OwnerBillingRepository,
@@ -66,7 +67,19 @@ export function runOwnerBillingTransaction<T>(
   )
 }
 
-const PAID_PLAN_IDS = new Set(["starter", "growth", "pro"])
+function toOwnerPaidPlanId(planId: string): RetailOpsPaidPlanId {
+  if (planId === "starter" || planId === "growth" || planId === "pro")
+    return planId
+  throw new OwnerBillingPolicyError("INVALID_STATE")
+}
+
+function toOwnerSubscriptionStatus(
+  status: string,
+): OwnerBillingSubscription["status"] {
+  if (status === "ACTIVE" || status === "SUSPENDED" || status === "CANCELLED")
+    return status
+  throw new OwnerBillingPolicyError("INVALID_STATE")
+}
 
 export function toOwnerBillingProvider(provider: string): OwnerBillingProvider {
   if (provider === "APP_STORE") return "app_store"
@@ -95,15 +108,13 @@ export function mapOwnerBillingSubscription(row: {
   status: string
   currentPeriodEndsAt: Date
 }): OwnerBillingSubscription {
-  if (!PAID_PLAN_IDS.has(row.planId))
-    throw new OwnerBillingPolicyError("INVALID_STATE")
   return {
     accountId: row.accountId,
     provider: toOwnerBillingProvider(row.provider),
     environment: toOwnerEnvironment(row.environment),
     purchaseDigest: row.purchaseDigest,
-    planId: row.planId as OwnerBillingSubscription["planId"],
-    status: row.status as OwnerBillingSubscription["status"],
+    planId: toOwnerPaidPlanId(row.planId),
+    status: toOwnerSubscriptionStatus(row.status),
     currentPeriodEndsAt: row.currentPeriodEndsAt,
   }
 }
@@ -349,6 +360,48 @@ export async function getOwnerBusinessAccess(
     ...projectOwnerBusinessAccess(snapshot, input.tenantId),
     currentPeriodEndsAt: snapshot.subscription?.currentPeriodEndsAt ?? null,
   }
+}
+
+/**
+ * Batched form of getOwnerBusinessAccess for readers that project many
+ * businesses or preloaded tenant rows: the plan of each currently covered
+ * Tenant, keyed by Tenant id. Uncovered, over-limit and stale rows are absent.
+ */
+export async function getOwnerCoveredPlanIds(
+  db: DbClient,
+  input: {
+    tenantIds: readonly string[]
+    environment: OwnerBillingEnvironment
+    now?: Date
+  },
+) {
+  const plans = new Map<string, RetailOpsPaidPlanId>()
+  if (!input.tenantIds.length) return plans
+  const rows = await db.ownerBusinessCoverage.findMany({
+    where: { activeTenantId: { in: [...new Set(input.tenantIds)] } },
+    select: { accountId: true, tenantId: true },
+  })
+  const byAccount = new Map<string, string[]>()
+  for (const row of rows)
+    byAccount.set(row.accountId, [
+      ...(byAccount.get(row.accountId) ?? []),
+      row.tenantId,
+    ])
+  for (const [accountId, tenantIds] of byAccount) {
+    const snapshot = await readOwnerCoverageSnapshot(db, {
+      accountId,
+      tenantIds,
+      environment: input.environment,
+      now: input.now,
+    })
+    if (!snapshot) continue
+    for (const tenantId of tenantIds) {
+      const access = projectOwnerBusinessAccess(snapshot, tenantId)
+      if (access.reason === "covered" && access.planId !== "free")
+        plans.set(tenantId, access.planId)
+    }
+  }
+  return plans
 }
 
 /** What the purchase screen needs: the owner's current receipt and this business. */

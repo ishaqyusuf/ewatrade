@@ -1,5 +1,6 @@
 import { readBusinessProfileKeyFromStoreMetadata } from "@ewatrade/utils"
 import type { Prisma } from "../../generated/prisma/client"
+import type { RetailOpsPlanId } from "./retail-ops-subscription-plans"
 import { resolveRetailOpsPlanId } from "./retail-ops-subscriptions"
 import type { TenantContext } from "./tenants"
 
@@ -56,7 +57,9 @@ export type TenantContextMembership = Prisma.MembershipGetPayload<{
 
 export function projectTenantContext(
   membership: TenantContextMembership | null,
-  requestedStoreId?: string | null,
+  requestedStoreId: string | null | undefined,
+  /** getRetailOpsOwnerPlanId for membership.tenantId; null while the switch is off. */
+  ownerPlanId: RetailOpsPlanId | null,
 ): TenantContext | null {
   const storeId = requestedStoreId?.trim() || undefined
   if (!membership) return null
@@ -134,6 +137,7 @@ export function projectTenantContext(
       retailOpsPlanId: resolveRetailOpsPlanId({
         metadata: membership.tenant.metadata,
         subscription: membership.tenant.subscription,
+        ownerPlanId,
       }),
     },
     stores,

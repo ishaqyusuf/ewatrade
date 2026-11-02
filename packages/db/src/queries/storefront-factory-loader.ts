@@ -9,6 +9,7 @@ import {
   storefrontBusinessTenantSelect,
 } from "./public-storefront"
 import type { PublicStorefrontQuery } from "./public-storefront-listing"
+import { getRetailOpsOwnerPlanId } from "./retail-ops-subscriptions"
 import { siteContentHash } from "./storefront-sites"
 import type { DbClient } from "./types"
 
@@ -89,6 +90,7 @@ export async function loadStorefrontContextForHost(db: DbClient, host: string) {
     row.tenant,
     row.store,
     authority.localQaPreview,
+    await getRetailOpsOwnerPlanId(db, row.tenantId),
   )
   if (!business) return null
   const context = {

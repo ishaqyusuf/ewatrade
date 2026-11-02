@@ -9,7 +9,10 @@ import {
   StaffStoreAssignmentStatus,
   StoreStaffRole,
 } from "@ewatrade/db/enums"
-import { resolveRetailOpsPlanId } from "@ewatrade/db/queries"
+import {
+  getRetailOpsOwnerPlanIds,
+  resolveRetailOpsPlanId,
+} from "@ewatrade/db/queries"
 import {
   findRetailOpsPlan,
   planHasFeature,
@@ -56,11 +59,14 @@ export function tenantSendsOrderReminders(tenant: {
     billingSubscriptionId?: string | null
     currentPeriodEndsAt?: Date | null
   } | null
+  /** getRetailOpsOwnerPlanIds; owner-wide coverage raises the plan. */
+  ownerPlanId?: Parameters<typeof resolveRetailOpsPlanId>[0]["ownerPlanId"]
 }) {
   const plan = findRetailOpsPlan(
     resolveRetailOpsPlanId({
       metadata: tenant.metadata,
       subscription: tenant.subscription,
+      ownerPlanId: tenant.ownerPlanId,
     }),
   )
   return !!plan && planHasFeature(plan, "orderReminders")
@@ -402,10 +408,16 @@ export async function commercialOrderRemindersHandler(
   let sent = 0
   let skipped = 0
 
+  const ownerPlanIds = await getRetailOpsOwnerPlanIds(prisma, [
+    ...byTenant.keys(),
+  ])
   for (const { orders, tenant } of byTenant.values()) {
     if (
       !isCommercialOrderDigestWindow(now, tenant.timezone) ||
-      !tenantSendsOrderReminders(tenant)
+      !tenantSendsOrderReminders({
+        ...tenant,
+        ownerPlanId: ownerPlanIds.get(tenant.id),
+      })
     ) {
       skipped += 1
       continue

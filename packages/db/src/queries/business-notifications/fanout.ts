@@ -5,6 +5,7 @@ import { BusinessActivityError } from "../business-activity/errors"
 import {
   RetailOpsSubscriptionError,
   assertRetailOpsPlanIdFeature,
+  getRetailOpsOwnerPlanId,
   resolveRetailOpsPlanId,
 } from "../retail-ops-subscriptions"
 import {
@@ -102,6 +103,7 @@ export async function fanoutBusinessNotificationsInTransaction(
       resolveRetailOpsPlanId({
         metadata: event.tenant.metadata,
         subscription: event.tenant.subscription,
+        ownerPlanId: await getRetailOpsOwnerPlanId(tx, lease.tenantId),
       }),
       "finance",
     )

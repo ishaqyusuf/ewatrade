@@ -1,4 +1,5 @@
 import { AccountAgeBand } from "../../generated/prisma/enums"
+import { getRetailOpsOwnerPlanId } from "./retail-ops-subscriptions"
 import { isEligibleAccountAgeBand } from "./store-conversation-age-authority"
 import {
   projectTenantContext,
@@ -12,7 +13,7 @@ const eligibleBands = Object.values(AccountAgeBand).filter(
 
 /** One current GET preference/scope projection; no protected profile for undeclared age. */
 export async function getWorkspaceReadPreference(
-  db: Pick<DbClient, "membership">,
+  db: DbClient,
   input: {
     userId: string
     tenantSlug: string
@@ -64,7 +65,11 @@ export async function getWorkspaceReadPreference(
               tenantSlug: input.tenantSlug,
               storeId: input.storeId,
             },
-            tenantContext: projectTenantContext(membership, input.storeId),
+            tenantContext: projectTenantContext(
+              membership,
+              input.storeId,
+              await getRetailOpsOwnerPlanId(db, membership.tenantId),
+            ),
           }
         : null,
   }

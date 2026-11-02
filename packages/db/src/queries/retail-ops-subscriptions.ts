@@ -10,6 +10,7 @@ import {
 } from "../../generated/prisma/enums"
 import {
   getOwnerBusinessAccess,
+  getOwnerCoveredPlanIds,
   ownerBillingRuntime,
 } from "./owner-billing/prisma-repository"
 import {
@@ -2374,7 +2375,42 @@ export function resolveRetailOpsPlanId(input: {
     billingSubscriptionId?: string | null
     currentPeriodEndsAt?: Date | null
   } | null
+  /** From getRetailOpsOwnerPlanId(s); raises the Tenant-bound plan, never lowers it. */
+  ownerPlanId?: RetailOpsPlanId | null
 }): RetailOpsPlanId {
+  const planId = resolveTenantBoundRetailOpsPlanId(input)
+  return input.ownerPlanId &&
+    RETAIL_OPS_PLAN_RANK[input.ownerPlanId] > RETAIL_OPS_PLAN_RANK[planId]
+    ? input.ownerPlanId
+    : planId
+}
+
+/**
+ * Owner-wide plans for synchronous readers that project preloaded tenant rows.
+ * Empty, with no query, while OWNER_BILLING_ENABLED is off.
+ */
+export async function getRetailOpsOwnerPlanIds(
+  db: DbClient,
+  tenantIds: readonly string[],
+): Promise<ReadonlyMap<string, RetailOpsPlanId>> {
+  const runtime = ownerBillingRuntime()
+  if (!runtime) return new Map()
+  return getOwnerCoveredPlanIds(db, {
+    tenantIds,
+    environment: runtime.environment,
+  })
+}
+
+export async function getRetailOpsOwnerPlanId(
+  db: DbClient,
+  tenantId: string,
+): Promise<RetailOpsPlanId | null> {
+  return (await getRetailOpsOwnerPlanIds(db, [tenantId])).get(tenantId) ?? null
+}
+
+function resolveTenantBoundRetailOpsPlanId(
+  input: Parameters<typeof resolveRetailOpsPlanId>[0],
+): RetailOpsPlanId {
   if (input.subscription) {
     const access = {
       ...input.subscription,

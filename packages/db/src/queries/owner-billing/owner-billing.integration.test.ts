@@ -9,6 +9,7 @@ import {
   createPrismaOwnerBillingRepository,
   getOrCreateOwnerBillingAccount,
   getOwnerBusinessAccess,
+  getOwnerCoveredPlanIds,
 } from "./prisma-repository"
 import {
   applyVerifiedOwnerSubscription,
@@ -181,6 +182,13 @@ const policyCode = (error: unknown) =>
         expect(covered.plan.limits.staff).toBe(2)
         expect(covered.plan.limits.ordersPerMonth).toBeNull()
         expect((await tenantPlan(tenantA)).plan.id).toBe("free")
+        // The batched reader behind the synchronous plan projections agrees.
+        expect(
+          await getOwnerCoveredPlanIds(prisma, {
+            tenantIds: [winner, tenantA],
+            environment: "sandbox",
+          }),
+        ).toEqual(new Map([[winner, "starter"]]))
         // Without the switch the Tenant-bound authority is unchanged.
         expect(
           (await getRetailOpsTenantPlan(prisma, { tenantId: winner })).plan.id,

@@ -4,6 +4,7 @@ import { isOrderSalesRep } from "../order-visibility"
 import {
   RetailOpsSubscriptionError,
   assertRetailOpsPlanIdFeature,
+  getRetailOpsOwnerPlanId,
   resolveRetailOpsPlanId,
 } from "../retail-ops-subscriptions"
 import { BusinessActivityError } from "./errors"
@@ -40,6 +41,7 @@ export async function businessActivityScope(
         resolveRetailOpsPlanId({
           metadata: member.tenant.metadata,
           subscription: member.tenant.subscription,
+          ownerPlanId: await getRetailOpsOwnerPlanId(tx, input.tenantId),
         }),
         "finance",
       )

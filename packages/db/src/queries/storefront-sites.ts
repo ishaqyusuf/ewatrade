@@ -5,6 +5,7 @@ import {
   planHasFeature,
 } from "./retail-ops-subscription-plans"
 import {
+  getRetailOpsOwnerPlanId,
   projectDurableReviewerAccess,
   projectDurableStoreAccess,
   resolveRetailOpsPlanId,
@@ -150,8 +151,11 @@ export async function lockStorefrontAuthorityInTransaction(
     select: { id: true, name: true },
   })
   if (!store) return { ok: false, reason: "store-unavailable" }
-  // Same durable access projection the public storefront applies.
+  // Same durable access projection the public storefront applies; current
+  // owner-wide coverage keeps a business with a lapsed Tenant receipt available.
+  const ownerPlanId = await getRetailOpsOwnerPlanId(tx, input.tenantId)
   if (
+    !ownerPlanId &&
     tenant.subscription &&
     (projectDurableStoreAccess(tenant.subscription) === false ||
       projectDurableReviewerAccess(tenant.subscription) === false)
@@ -161,6 +165,7 @@ export async function lockStorefrontAuthorityInTransaction(
     resolveRetailOpsPlanId({
       metadata: tenant.metadata,
       subscription: tenant.subscription,
+      ownerPlanId,
     }),
   )
   if (!plan) return { ok: false, reason: "plan-unavailable" }

@@ -18,7 +18,10 @@ import { createCommercialOrderInTransaction } from "./commercial-orders"
 import { publicCatalogItemWhere } from "./public-storefront"
 import { publicStockState } from "./public-storefront-display"
 import { findRetailOpsPlan } from "./retail-ops-subscription-plans"
-import { resolveRetailOpsPlanId } from "./retail-ops-subscriptions"
+import {
+  getRetailOpsOwnerPlanId,
+  resolveRetailOpsPlanId,
+} from "./retail-ops-subscriptions"
 import { assertStoreConversationTextScreened } from "./store-conversation-text-safety"
 import { resolveStorefrontCustomerScope } from "./storefront-customer-scope"
 import { loadLiveStorefrontForHost } from "./storefront-factory-loader"
@@ -1177,6 +1180,7 @@ export async function getStorefrontOrderRequestForStaff(
     resolveRetailOpsPlanId({
       metadata: tenant?.metadata,
       subscription: tenant?.subscription,
+      ownerPlanId: await getRetailOpsOwnerPlanId(db, input.tenantId),
     }),
   )
   const facts = await db.$transaction(
@@ -1331,6 +1335,7 @@ export async function confirmStorefrontOrderRequest(
       resolveRetailOpsPlanId({
         metadata: tenant?.metadata,
         subscription: tenant?.subscription,
+        ownerPlanId: await getRetailOpsOwnerPlanId(tx, scope.tenantId),
       }),
     )
     const facts = await readStorefrontPurchaseFacts(

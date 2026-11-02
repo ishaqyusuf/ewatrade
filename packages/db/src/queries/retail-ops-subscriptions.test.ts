@@ -6,6 +6,8 @@ import {
   assertRetailOpsPlanIdFeature,
   assertRetailOpsProductAllowance,
   createRetailOpsSubscriptionCheckoutIntent,
+  getRetailOpsOwnerPlanId,
+  getRetailOpsOwnerPlanIds,
   getRetailOpsSubscriptionSnapshot,
   registerRetailOpsOfflineDevice,
   resolveRetailOpsPlanId,
@@ -702,6 +704,64 @@ describe("Free plan and launch default", () => {
         subscription: { plan: { key: "legacy" } },
       }),
     ).toBe("starter")
+  })
+
+  test("owner-wide coverage raises the context plan and never lowers it", () => {
+    const lapsed = {
+      provider: "PLAY_STORE",
+      status: "ACTIVE",
+      billingSubscriptionId: "fixture",
+      currentPeriodEndsAt: new Date("2020-01-01T00:00:00Z"),
+      plan: { key: "pro" },
+    }
+    expect(
+      resolveRetailOpsPlanId({
+        metadata: FREE_METADATA,
+        ownerPlanId: "growth",
+      }),
+    ).toBe("growth")
+    // Current coverage outlives a lapsed Tenant-bound receipt.
+    expect(
+      resolveRetailOpsPlanId({
+        metadata: {},
+        subscription: lapsed,
+        ownerPlanId: "starter",
+      }),
+    ).toBe("starter")
+    // A higher legacy, manual or launch grant is kept.
+    expect(
+      resolveRetailOpsPlanId({
+        metadata: {},
+        subscription: { plan: { key: "pro" } },
+        ownerPlanId: "starter",
+      }),
+    ).toBe("pro")
+    expect(resolveRetailOpsPlanId({ metadata: {}, ownerPlanId: null })).toBe(
+      "starter",
+    )
+  })
+
+  test("owner plan readers make no query while the switch is off", async () => {
+    const previous = process.env.OWNER_BILLING_ENABLED
+    process.env.OWNER_BILLING_ENABLED = "false"
+    try {
+      const db = new Proxy(
+        {},
+        {
+          get() {
+            throw new Error("unexpected owner billing read")
+          },
+        },
+      ) as DbClient
+      expect(await getRetailOpsOwnerPlanIds(db, ["tenant_123"])).toEqual(
+        new Map(),
+      )
+      expect(await getRetailOpsOwnerPlanId(db, "tenant_123")).toBeNull()
+    } finally {
+      if (previous === undefined)
+        Reflect.deleteProperty(process.env, "OWNER_BILLING_ENABLED")
+      else process.env.OWNER_BILLING_ENABLED = previous
+    }
   })
 
   test("durable limits keep JSON null as unlimited and numbers as caps", async () => {

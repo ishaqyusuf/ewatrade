@@ -8,6 +8,8 @@ import type {
 } from "../../generated/prisma/client"
 import type { RetailOpsPlanId } from "./retail-ops-subscription-plans"
 import {
+  getRetailOpsOwnerPlanId,
+  getRetailOpsOwnerPlanIds,
   projectRetailOpsPlanFeatures,
   retailOpsPlanFeaturesSelect,
 } from "./retail-ops-subscriptions"
@@ -83,7 +85,11 @@ export async function getActiveTenantForUser(
     select: tenantContextMembershipSelect,
   })
 
-  return projectTenantContext(membership, storeId)
+  return projectTenantContext(
+    membership,
+    storeId,
+    membership ? await getRetailOpsOwnerPlanId(db, membership.tenantId) : null,
+  )
 }
 
 const workspaceMembershipSelect = {
@@ -192,6 +198,10 @@ export async function listDashboardWorkspaceMemberships(
         },
       },
     })
+    const ownerPlanIds = await getRetailOpsOwnerPlanIds(
+      db,
+      rows.map((row) => row.tenantId),
+    )
     return rows.map((row) => {
       const { metadata, subscription, ...tenant } = row.tenant
       return projectWorkspaceMembership({
@@ -201,6 +211,7 @@ export async function listDashboardWorkspaceMemberships(
           planFeatures: projectRetailOpsPlanFeatures({
             metadata,
             subscription,
+            ownerPlanId: ownerPlanIds.get(row.tenantId),
           }),
         },
       })

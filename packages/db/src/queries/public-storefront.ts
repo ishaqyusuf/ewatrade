@@ -29,10 +29,12 @@ import {
 } from "./public-storefront-listing"
 import { getStorefrontServiceRequestEntry } from "./public-storefront-service-request"
 import {
+  type RetailOpsPlanId,
   findRetailOpsPlan,
   planHasFeature,
 } from "./retail-ops-subscription-plans"
 import {
+  getRetailOpsOwnerPlanId,
   projectDurableReviewerAccess,
   projectDurableStoreAccess,
   resolveRetailOpsPlanId,
@@ -604,7 +606,12 @@ async function readStorefrontBusiness(
   })
   const store = tenant?.stores[0]
   if (!tenant || !store) return null
-  return projectStorefrontBusiness(tenant, store, localQaPreview)
+  return projectStorefrontBusiness(
+    tenant,
+    store,
+    localQaPreview,
+    await getRetailOpsOwnerPlanId(db, tenant.id),
+  )
 }
 
 export function projectStorefrontBusiness(
@@ -615,8 +622,11 @@ export function projectStorefrontBusiness(
     select: typeof storefrontBusinessStoreSelect
   }>,
   localQaPreview: boolean,
+  /** getRetailOpsOwnerPlanId; current coverage outlives a lapsed Tenant receipt. */
+  ownerPlanId: RetailOpsPlanId | null,
 ) {
   if (
+    !ownerPlanId &&
     tenant.subscription &&
     (projectDurableStoreAccess(tenant.subscription) === false ||
       projectDurableReviewerAccess(tenant.subscription) === false)
@@ -625,6 +635,7 @@ export function projectStorefrontBusiness(
   const planId = resolveRetailOpsPlanId({
     metadata: tenant.metadata,
     subscription: tenant.subscription,
+    ownerPlanId,
   })
   const plan = findRetailOpsPlan(planId)
   if (!plan) return null
@@ -1042,16 +1053,19 @@ export async function assertStorefrontCustomerMessages(
       },
     },
   })
+  const ownerPlanId = await getRetailOpsOwnerPlanId(db, tenantId)
   const planId = resolveRetailOpsPlanId({
     metadata: tenant?.metadata,
     subscription: tenant?.subscription,
+    ownerPlanId,
   })
   const plan = findRetailOpsPlan(planId)
   if (
     !tenant?.isActive ||
     !plan ||
     !planHasFeature(plan, "customerMessages") ||
-    (tenant.subscription &&
+    (!ownerPlanId &&
+      tenant.subscription &&
       (projectDurableStoreAccess(tenant.subscription) === false ||
         projectDurableReviewerAccess(tenant.subscription) === false))
   )

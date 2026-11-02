@@ -1,12 +1,13 @@
 import {
   assertRetailOpsPlanIdFeature,
+  getRetailOpsOwnerPlanId,
   resolveRetailOpsPlanId,
 } from "./retail-ops-subscriptions"
 import type { DbClient } from "./types"
 
 /** Fresh server boundary; never admit an upload from a cached client plan. */
 export async function assertAttachmentEntitlement(
-  db: Pick<DbClient, "tenant">,
+  db: DbClient,
   input: { tenantId: string },
 ) {
   const tenant = await db.tenant.findUniqueOrThrow({
@@ -28,6 +29,7 @@ export async function assertAttachmentEntitlement(
     resolveRetailOpsPlanId({
       metadata: tenant.metadata,
       subscription: tenant.subscription,
+      ownerPlanId: await getRetailOpsOwnerPlanId(db, input.tenantId),
     }),
     "attachments",
   )
