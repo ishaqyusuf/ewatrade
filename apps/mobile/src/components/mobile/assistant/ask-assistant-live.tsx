@@ -67,6 +67,9 @@ export function AskAssistantLive() {
   const saved = useModal()
   const editor = useModal()
   const [editing, setEditing] = useState<GeneralProposal | null>(null)
+  // The thread's notice sits behind the open editor, so a refused save is
+  // repeated inside the sheet instead of looking like a dead Save button.
+  const [saveFailed, setSaveFailed] = useState(false)
   const list = useRef<FlatList>(null)
   const input = useRef<TextInput>(null)
   const atBottom = useRef(true)
@@ -621,8 +624,28 @@ export function AskAssistantLive() {
             ) : null}
           </BottomSheetScrollView>
         </Modal>
-        <Modal ref={editor.ref} title="Edit draft" snapPoints={["90%"]}>
+        <Modal
+          ref={editor.ref}
+          title="Edit draft"
+          snapPoints={["90%"]}
+          onDismiss={() => {
+            setEditing(null)
+            setSaveFailed(false)
+          }}
+        >
           <SearchFooterScope sheet>
+            {saveFailed && !vm.pending ? (
+              <View className="px-[18px] pb-3">
+                <StatusBanner
+                  title="Draft not saved"
+                  tone="warning"
+                  message={
+                    vm.notice ??
+                    "Your changes are still here. Check the thread, then save again."
+                  }
+                />
+              </View>
+            ) : null}
             {editing ? (
               <GeneralProposalEditor
                 key={`${editing.id}:${editing.revision}`}
@@ -630,10 +653,9 @@ export function AskAssistantLive() {
                 currencyCode={vm.data?.currencyCode ?? "NGN"}
                 disabled={disabled || !!noAccess}
                 onSave={async (payload) => {
-                  if (await vm.save(editing, payload)) {
-                    editor.dismiss()
-                    setEditing(null)
-                  }
+                  setSaveFailed(false)
+                  if (await vm.save(editing, payload)) editor.dismiss()
+                  else setSaveFailed(true)
                 }}
               />
             ) : null}

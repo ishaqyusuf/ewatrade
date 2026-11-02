@@ -37,13 +37,22 @@ const BottomSheetKeyboardAwareScrollViewBase = forwardRef<
   BottomSheetScrollViewMethods,
   BottomSheetKeyboardAwareScrollViewProps
 >(function BottomSheetKeyboardAwareScrollViewBase(
-  { bottomOffset = 96, children, extraKeyboardSpace = 220, ...props },
+  {
+    bottomOffset = 96,
+    children,
+    extraKeyboardSpace = 220,
+    // A sheet's Save/Add button must act on the first tap while a field still
+    // has focus; React Native's "never" spends that tap closing the keyboard.
+    keyboardShouldPersistTaps = "handled",
+    ...props
+  },
   ref,
 ) {
   return (
     <BottomSheetKeyboardAwareScrollViewComponent
       bottomOffset={bottomOffset}
       extraKeyboardSpace={extraKeyboardSpace}
+      keyboardShouldPersistTaps={keyboardShouldPersistTaps}
       ref={ref}
       {...props}
     >
