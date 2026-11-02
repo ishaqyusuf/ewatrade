@@ -25,7 +25,9 @@ const DISALLOWED_PATTERNS = [
     reason: "fixed black/white NativeWind color token",
   },
   {
-    pattern: /\b(?:backgroundColor|borderColor|color|shadowColor)\s*:\s*["'`]/,
+    // `? color : "none"` is a ternary branch, not a color property.
+    pattern:
+      /(?<!\?\s*)\b(?:backgroundColor|borderColor|color|shadowColor)\s*:\s*["'`]/,
     reason: "fixed inline color string",
   },
   {
@@ -191,8 +193,12 @@ function findSourceFiles(targetPath) {
   return files
 }
 
+// Render fixtures pin literal colors to assert them; they are not app surfaces.
 function isSourceFile(filePath) {
-  return filePath.endsWith(".ts") || filePath.endsWith(".tsx")
+  return (
+    (filePath.endsWith(".ts") || filePath.endsWith(".tsx")) &&
+    !filePath.endsWith(".fixture.tsx")
+  )
 }
 
 function scanFile(filePath) {

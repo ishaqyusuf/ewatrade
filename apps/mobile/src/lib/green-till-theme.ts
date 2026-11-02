@@ -130,3 +130,12 @@ export type GreenTillTint = "mint" | "amber" | "sky" | "lilac" | "rose"
 export function tintChip(foregroundHex: string) {
   return `${foregroundHex}24`
 }
+
+/** Fixed owner-signup brand art: the hero glow, its watermark and the dark-only borders. */
+export const OWNER_SIGNUP_ART = {
+  darkBorder: "#2E3A34",
+  glow: { dark: "#257055", light: "#257F60" },
+  mark: "#FFFFFF",
+  /** Rose business-type ink on the dark avatar tint. */
+  darkRoseInk: "#F7A3A3",
+} as const

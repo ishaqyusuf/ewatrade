@@ -2,7 +2,7 @@ import { BrandLogo, BrandMark } from "@/components/mobile/brand"
 import { Icon } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
 import { useColorScheme, useColors } from "@/hooks/use-color"
-import { GREEN_TILL_THEME } from "@/lib/green-till-theme"
+import { GREEN_TILL_THEME, OWNER_SIGNUP_ART } from "@/lib/green-till-theme"
 import { nativeStackStatusBarStyle } from "@/lib/native-stack-status-bar"
 import { Stack } from "expo-router"
 import { StatusBar } from "expo-status-bar"
@@ -20,7 +20,8 @@ export function useOwnerSignupColors() {
   const { colorScheme } = useColorScheme()
   return {
     ...colors,
-    border: colorScheme === "dark" ? "#2E3A34" : colors.border,
+    border:
+      colorScheme === "dark" ? OWNER_SIGNUP_ART.darkBorder : colors.border,
   }
 }
 
@@ -115,7 +116,7 @@ export function OwnerSignupFrame({
                   >
                     <Stop
                       offset="0"
-                      stopColor={colorScheme === "dark" ? "#257055" : "#257F60"}
+                      stopColor={OWNER_SIGNUP_ART.glow[colorScheme]}
                     />
                     <Stop offset="0.4" stopColor={palette.heroFrom} />
                     <Stop offset="1" stopColor={palette.heroTo} />
@@ -131,7 +132,7 @@ export function OwnerSignupFrame({
                   opacity: 0.07,
                 }}
               >
-                <BrandMark color="#FFFFFF" size={200} />
+                <BrandMark color={OWNER_SIGNUP_ART.mark} size={200} />
               </View>
             </View>
             <View

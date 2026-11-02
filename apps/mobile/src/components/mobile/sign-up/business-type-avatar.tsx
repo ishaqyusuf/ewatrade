@@ -1,5 +1,5 @@
 import { useColorScheme, useColors } from "@/hooks/use-color"
-import { GREEN_TILL_THEME } from "@/lib/green-till-theme"
+import { GREEN_TILL_THEME, OWNER_SIGNUP_ART } from "@/lib/green-till-theme"
 import {
   BUSINESS_TYPE_GROUPS,
   findBusinessType,
@@ -23,7 +23,10 @@ export function BusinessTypeAvatar({
         amber: palette.amberForeground,
         sky: palette.skyForeground,
         lilac: palette.lilacForeground,
-        rose: colorScheme === "dark" ? "#F7A3A3" : palette.roseForeground,
+        rose:
+          colorScheme === "dark"
+            ? OWNER_SIGNUP_ART.darkRoseInk
+            : palette.roseForeground,
       }[group.tone]
     : colors.mutedForeground
   const xml = getCatalogIllustrationSvg(

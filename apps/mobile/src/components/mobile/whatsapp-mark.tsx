@@ -1,8 +1,9 @@
+import { WHATSAPP_GREEN } from "@/lib/brand-marks"
 import Svg, { Path } from "react-native-svg"
 
-/** WhatsApp's own glyph in its brand green, for WhatsApp sign-in and contact choices. */
-export const WHATSAPP_GREEN = "#25D366"
+export { WHATSAPP_GREEN }
 
+/** WhatsApp's own glyph in its brand green, for WhatsApp sign-in and contact choices. */
 export function WhatsAppMark({ size = 18 }: { size?: number }) {
   return (
     <Svg
