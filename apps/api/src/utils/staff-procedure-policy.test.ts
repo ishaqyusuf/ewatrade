@@ -162,3 +162,17 @@ test("scoped returns are order work; refunds are reconciliation", () => {
     "reconciliation",
   )
 })
+
+test("list and payment totals follow their list reads, pinned to the active Store", () => {
+  for (const [path, list] of [
+    ["orders.listTotals", "orders.listPage"],
+    ["orders.paymentTotals", "orders.payments"],
+    ["catalog.attentionSummary", "catalog.count"],
+  ]) {
+    expect(staffProcedureAction(path, "query")).toBe("read")
+    expect(staffProcedureAction(path, "mutation")).toBeNull()
+    expect(staffProcedureStoreInput.has(path)).toBe(
+      staffProcedureStoreInput.has(list),
+    )
+  }
+})

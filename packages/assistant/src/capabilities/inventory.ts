@@ -155,6 +155,11 @@ formOnly(
   "Generic item editor payload; assistant uses active-Store detail.overview with stock permission filtering.",
   ["catalog.getItem"],
 )
+formOnly(
+  "catalog",
+  "Catalog page type and problem counts behind its filters; the assistant counts products with catalog.count and pages them with listItemsPage.",
+  ["catalog.attentionSummary"],
+)
 excluded(
   "catalog",
   "Unbounded legacy list; assistant uses stable listItemsPage continuation.",
@@ -197,7 +202,7 @@ formOnly(
 formOnly(
   "customers",
   "Opening debt is captured by Setup and the ledger form; it is not new money.",
-  ["customerLedger.recordOpening"],
+  ["customerLedger.recordOpening", "customerLedger.createCustomerWithOpening"],
 )
 
 // Sales
@@ -206,7 +211,16 @@ formOnly(
   "Legacy payment/fulfilment lookup exception; assistant uses lookupOpenPage with normal list visibility and continuation.",
   ["orders.lookupOpen"],
 )
-planned("sales", "B05", ["orders.payments", "orders.prepareReceipts"])
+planned("sales", "B05", [
+  "orders.payments",
+  "orders.paymentTotals",
+  "orders.prepareReceipts",
+])
+formOnly(
+  "sales",
+  "Exact totals behind the Orders page filters; the assistant reads orders with listPage and totals with reportSummary.",
+  ["orders.listTotals"],
+)
 // Receipt/reminder settings and sales-rep visibility are supported by
 // settings.store.read and settings.store.change.
 excluded("sales", "Unbounded legacy list; the assistant reads bounded pages.", [

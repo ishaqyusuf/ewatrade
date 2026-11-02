@@ -1,0 +1,118 @@
+{
+  "version": 1,
+  "id": "2026-11-02-totals-gallery-ledger-coverage",
+  "tickets": ["B05", "E02"],
+  "summary": "Coverage catch-up after the 2 November parallel batch (Q1, Q7, Q8, Q11, Q13). Classifies the new Catalog attention counts, Orders list totals and payment totals next to their list siblings and refreshes COVERAGE.md for the Stock history, My images gallery, customer-ledger and Store subscription procedures that existing rules already matched. Scoped staff now pass orders.listTotals, orders.paymentTotals and catalog.attentionSummary as reads, pinned to the active Store like orders.listPage, orders.payments and catalog.count; before this they failed closed, so a scoped rep's mobile Orders, Payments received and Catalog heroes were refused.",
+  "noAssistantImpact": "No assistant tool, prompt authority, capability declaration or write is added. Every new row is form_only or planned; the staff policy change only admits Store-scoped page totals for the same staff who can already read the matching list.",
+  "capabilities": [],
+  "procedures": [
+    {
+      "path": "catalog.attentionSummary",
+      "status": "form_only",
+      "reason": "Catalog page type and problem counts; the assistant counts with catalog.count and pages with listItemsPage."
+    },
+    {
+      "path": "catalog.photos.addToGallery",
+      "status": "form_only",
+      "reason": "My images uploads belong to the photo forms (catalog.photos.* rule)."
+    },
+    {
+      "path": "catalog.photos.updateGalleryDetails",
+      "status": "form_only",
+      "reason": "My images titles and categories are edited in the gallery form (catalog.photos.* rule)."
+    },
+    {
+      "path": "customerLedger.accountMessageOpen",
+      "status": "planned",
+      "ticket": "E02",
+      "reason": "Customer account message hand-off; awaits the E02 customer ledger work."
+    },
+    {
+      "path": "customerLedger.accountMessagePreview",
+      "status": "planned",
+      "ticket": "E02",
+      "reason": "Customer account message preview; awaits E02."
+    },
+    {
+      "path": "customerLedger.aging",
+      "status": "planned",
+      "ticket": "E02",
+      "reason": "Owed-by-age read; awaits E02 alongside receivables."
+    },
+    {
+      "path": "customerLedger.createCustomerWithOpening",
+      "status": "form_only",
+      "reason": "Starting balance on Add customer is opening debt, like recordOpening; it is not new money."
+    },
+    {
+      "path": "customerLedger.linkOrders",
+      "status": "planned",
+      "ticket": "E02",
+      "reason": "Audited link of earlier Orders to a saved Customer; awaits E02."
+    },
+    {
+      "path": "customerLedger.orderLinkSuggestions",
+      "status": "planned",
+      "ticket": "E02",
+      "reason": "Suggestions behind linkOrders; awaits E02."
+    },
+    {
+      "path": "inventory.operationHistoryPage",
+      "status": "form_only",
+      "reason": "Stock history page filters; the assistant reads readStockOperations and readStockOperation."
+    },
+    {
+      "path": "inventory.operationTotals",
+      "status": "form_only",
+      "reason": "Stock history category totals behind the page filters."
+    },
+    {
+      "path": "orders.listTotals",
+      "status": "form_only",
+      "reason": "Exact totals behind the Orders page filters; the assistant reads listPage and reportSummary."
+    },
+    {
+      "path": "orders.paymentTotals",
+      "status": "planned",
+      "ticket": "B05",
+      "reason": "Payments received totals follow orders.payments under B05."
+    },
+    {
+      "path": "storeSubscriptions.enrollBusiness",
+      "status": "form_only",
+      "reason": "Subscription purchase and verification use the billing checkout."
+    },
+    {
+      "path": "storeSubscriptions.releaseBusiness",
+      "status": "form_only",
+      "reason": "Subscription purchase and verification use the billing checkout."
+    }
+  ],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "not_applicable",
+      "note": "Classification and staff-policy catch-up only; the owning feature docs were updated by the sessions that added these procedures."
+    },
+    {
+      "topic": "capability",
+      "status": "updated",
+      "path": "packages/assistant/src/capabilities/COVERAGE.md",
+      "note": "Regenerated with APP_ENV=local."
+    },
+    {
+      "topic": "permissions",
+      "status": "updated",
+      "path": "apps/api/src/utils/staff-procedure-policy.ts",
+      "note": "Totals reads mirror their list reads."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "apps/api/src/utils/staff-procedure-policy.test.ts",
+      "executed": true,
+      "result": "Staff policy and request access tests pass, including the new totals-follow-list test."
+    }
+  ]
+}

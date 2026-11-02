@@ -6,10 +6,10 @@ Tickets refer to the Brain plan `.brain/plans/2026-10-09-assistant-business-oper
 
 ## Summary
 
-- Router procedures: 772 (585 merchant, 187 public/account/internal)
+- Router procedures: 790 (600 merchant, 190 public/account/internal)
 - Merchant supported by a capability: 178
-- Merchant planned: 135
-- Merchant form-only: 210
+- Merchant planned: 141
+- Merchant form-only: 219
 - Merchant excluded: 62
 - Capabilities: 165 (87 read, 78 write)
 
@@ -368,7 +368,7 @@ track conversational evaluation separately from these source test links.
 |---|---|
 | B02 | 5 |
 | B03 | 5 |
-| B05 | 2 |
+| B05 | 3 |
 | C03 | 1 |
 | C05 | 1 |
 | D01 | 1 |
@@ -377,7 +377,7 @@ track conversational evaluation separately from these source test links.
 | D04 | 3 |
 | D05 | 4 |
 | E01 | 4 |
-| E02 | 4 |
+| E02 | 9 |
 | E03 | 3 |
 | E04 | 1 |
 | E05 | 2 |
@@ -455,6 +455,7 @@ track conversational evaluation separately from these source test links.
 | `catalog.addServiceChoice` | mutation | catalog | catalog | form_only | Explicit native Catalog sheet/menu commands; assistant model tools cannot invoke these writes. Assistant edits use the narrow price, details, identifier and availability capabilities. |
 | `catalog.archiveOffering` | mutation | catalog | catalog | supported | catalog.archive |
 | `catalog.archiveVariant` | mutation | catalog | catalog | supported | catalog.archive |
+| `catalog.attentionSummary` | query | read | catalog | form_only | Catalog page type and problem counts behind its filters; the assistant counts products with catalog.count and pages them with listItemsPage. |
 | `catalog.categories.attributes` | query | read | catalog | supported | catalog.categories.attributes |
 | `catalog.categories.browse` | query | read | catalog | supported | catalog.categories.suggest |
 | `catalog.categories.list` | query | read | catalog | planned | B02 |
@@ -473,12 +474,14 @@ track conversational evaluation separately from these source test links.
 | `catalog.listItemsPage` | query | read | services | supported | services.intake.options.read, catalog.page, sales.order.prepare, services.job.prepare |
 | `catalog.listUnitConfigurations` | query | read | catalog | planned | B03 |
 | `catalog.listUnitDefinitions` | query | read | catalog | planned | B03 |
+| `catalog.photos.addToGallery` | mutation | Owner/Admin only | catalog | form_only | Photo capture and upload belong to the product form. |
 | `catalog.photos.createIntent` | mutation | catalog | catalog | form_only | Photo capture and upload belong to the product form. |
 | `catalog.photos.gallery` | query | Owner/Admin only | catalog | form_only | Photo capture and upload belong to the product form. |
 | `catalog.photos.getMetadata` | query | catalog | catalog | form_only | Photo capture and upload belong to the product form. |
 | `catalog.photos.remove` | mutation | catalog | catalog | form_only | Photo capture and upload belong to the product form. |
 | `catalog.photos.replace` | mutation | catalog | catalog | form_only | Photo capture and upload belong to the product form. |
 | `catalog.photos.reuse` | mutation | Owner/Admin only | catalog | form_only | Photo capture and upload belong to the product form. |
+| `catalog.photos.updateGalleryDetails` | mutation | Owner/Admin only | catalog | form_only | Photo capture and upload belong to the product form. |
 | `catalog.productShare` | query | read | catalog | form_only | Dashboard Product Share reads an already public product link for explicit browser Share/Copy; no publishing, provider or model authority. |
 | `catalog.publishUnitConfiguration` | mutation | catalog | catalog | supported | catalog.units.publish |
 | `catalog.searchProductCategories` | query | read | catalog | supported | catalog.categories.suggest |
@@ -492,14 +495,20 @@ track conversational evaluation separately from these source test links.
 | `catalog.updateProductIdentifiers` | mutation | catalog | catalog | supported | catalog.identifiers.update |
 | `catalog.updateUnitConfigurationDraft` | mutation | catalog | catalog | supported | catalog.units.draft |
 | `customerLedger.accountDetail` | query | Owner/Admin only | finance | supported | customers.account.read |
+| `customerLedger.accountMessageOpen` | mutation | Owner/Admin only | customers | planned | E02 |
+| `customerLedger.accountMessagePreview` | query | Owner/Admin only | customers | planned | E02 |
 | `customerLedger.accounts` | query | Owner/Admin only | customers | supported | customers.accounts.read |
+| `customerLedger.aging` | query | Owner/Admin only | customers | planned | E02 |
 | `customerLedger.allocationHistory` | query | Owner/Admin only | finance | supported | customers.allocation_history.read |
 | `customerLedger.applyCredit` | mutation | Owner/Admin only | finance | supported | customers.credit.apply |
 | `customerLedger.cancelRefund` | mutation | Owner/Admin only | customers | form_only | Customer funds and refund requests use authenticated Finance forms, bank identity review and canonical ledger commands. Receipt analysis and customer proposals never authorize settlement or refunds; no assistant financial write is enabled. |
 | `customerLedger.commandStatus` | query | Owner/Admin only | customers | planned | E02 |
 | `customerLedger.completeRefund` | mutation | Owner/Admin only | customers | form_only | Customer funds and refund requests use authenticated Finance forms, bank identity review and canonical ledger commands. Receipt analysis and customer proposals never authorize settlement or refunds; no assistant financial write is enabled. |
+| `customerLedger.createCustomerWithOpening` | mutation | Owner/Admin only | customers | form_only | Opening debt is captured by Setup and the ledger form; it is not new money. |
 | `customerLedger.ensureAccount` | mutation | Owner/Admin only | customers | planned | E02 |
 | `customerLedger.entryDetail` | query | Owner/Admin only | finance | supported | customers.entry.read |
+| `customerLedger.linkOrders` | mutation | Owner/Admin only | customers | planned | E02 |
+| `customerLedger.orderLinkSuggestions` | query | Owner/Admin only | customers | planned | E02 |
 | `customerLedger.orderReturnReview` | query | Owner/Admin only | customers | form_only | Customer funds and refund requests use authenticated Finance forms, bank identity review and canonical ledger commands. Receipt analysis and customer proposals never authorize settlement or refunds; no assistant financial write is enabled. |
 | `customerLedger.receivables` | query | Owner/Admin only | customers | supported | customers.receivables.read |
 | `customerLedger.recordOpening` | mutation | Owner/Admin only | customers | form_only | Opening debt is captured by Setup and the ledger form; it is not new money. |
@@ -636,6 +645,8 @@ track conversational evaluation separately from these source test links.
 | `inventory.offeringAvailability` | query | read | inventory | form_only | Legacy availability may initialize a zero source; assistant uses configuredOfferingAvailability, which never creates missing stock. |
 | `inventory.operationAudit` | query | stock | inventory | supported | inventory.operations.read |
 | `inventory.operationHistory` | query | stock | inventory | supported | inventory.operations.history |
+| `inventory.operationHistoryPage` | query | stock | inventory | form_only | Stock history pages and category totals behind the Stock history page filters; the assistant reads recent operations with readStockOperations and one original with readStockOperation. |
+| `inventory.operationTotals` | query | stock | inventory | form_only | Stock history pages and category totals behind the Stock history page filters; the assistant reads recent operations with readStockOperations and one original with readStockOperation. |
 | `inventory.postBalanceOperation` | mutation | stock | inventory | supported | inventory.stock.receive, inventory.stock.adjust |
 | `inventory.reconciliationReport` | query | reconciliation | inventory | planned | C05 |
 | `inventory.recordInternalUse` | mutation | Owner/Admin only | inventory | planned | C03 |
@@ -676,12 +687,14 @@ track conversational evaluation separately from these source test links.
 | `orders.get` | query | read | sales | supported | sales.order.read |
 | `orders.list` | query | read | sales | excluded | Unbounded legacy list; the assistant reads bounded pages. |
 | `orders.listPage` | query | read | sales | supported | sales.orders.read |
+| `orders.listTotals` | query | read | sales | form_only | Exact totals behind the Orders page filters; the assistant reads orders with listPage and totals with reportSummary. |
 | `orders.lookupOpen` | query | read | sales | form_only | Legacy payment/fulfilment lookup exception; assistant uses lookupOpenPage with normal list visibility and continuation. |
 | `orders.lookupOpenPage` | query | read | sales | supported | sales.orders.lookup |
 | `orders.metadataReview` | query | reconciliation | sales | supported | sales.order.metadata.update |
 | `orders.operationalSummary` | query | read | sales | supported | sales.orders.summary |
 | `orders.paymentAccounts` | query | Owner/Admin only | sales | planned | D03 |
 | `orders.payments` | query | read | sales | planned | B05 |
+| `orders.paymentTotals` | query | read | sales | planned | B05 |
 | `orders.pendingChangeApprovals` | query | Owner/Admin only | sales | planned | D03 |
 | `orders.prepareReceipts` | query | read | sales | planned | B05 |
 | `orders.receiptSettings` | query | read | sales | supported | settings.store.read |
@@ -970,6 +983,8 @@ track conversational evaluation separately from these source test links.
 | `stores.updateContact` | mutation | Owner/Admin only | platform | form_only | Owner/Admin Store contact settings require explicit form review and current saved contact fields; no assistant configuration mutation or message send. |
 | `stores.updateOrderVisibility` | mutation | Owner/Admin only | sales | supported | settings.store.change |
 | `storeSubscriptions.catalog` | query | Owner/Admin only | platform | form_only | Subscription purchase and verification use the billing checkout. |
+| `storeSubscriptions.enrollBusiness` | mutation | Owner/Admin only | platform | form_only | Subscription purchase and verification use the billing checkout. |
+| `storeSubscriptions.releaseBusiness` | mutation | Owner/Admin only | platform | form_only | Subscription purchase and verification use the billing checkout. |
 | `storeSubscriptions.verifyPurchase` | mutation | Owner/Admin only | platform | form_only | Subscription purchase and verification use the billing checkout. |
 | `tenant.analyticsContext` | query | Owner/Admin only | platform | excluded | Client session context; the server supplies assistant scope. |
 | `tenant.createInventoryStore` | mutation | Owner/Admin only | platform | form_only | Creating a Store changes plan usage and setup; use Store management. |
