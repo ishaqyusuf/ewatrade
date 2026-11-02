@@ -30,7 +30,13 @@ import type { DbClient } from "./types"
 export type PhoneOtpRequest = Omit<
   Parameters<typeof createMobileOwnerOtp>[1],
   "email" | "accessToken" | "phone"
-> & { phone: string; qaEntryId?: string; qaToken?: string }
+> & {
+  phone: string
+  /** Optional second contact saved as the first Store's support email; never a login identity. */
+  contactEmail?: string | null
+  qaEntryId?: string
+  qaToken?: string
+}
 type Challenge = {
   attempts: number
   codeHash: string

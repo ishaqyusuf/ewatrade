@@ -291,9 +291,10 @@ describe("account phone verification queries", () => {
       canVerify: true,
     })
     const before = structuredClone(f.users.get("owner"))
+    if (!before?.phone) throw Error("Fixture owner needs a saved phone")
     const issued = await createAccountPhoneChallenge(f.db, actor, "192.0.2.40")
     expect(issued.code).toBe("123456")
-    expect(issued.phone).toBe(before?.phone)
+    expect(issued.phone).toBe(before.phone)
     expect(issued.value).not.toContain(issued.code)
     expect(issued.identifier).not.toContain(issued.phone)
 
