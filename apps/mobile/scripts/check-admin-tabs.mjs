@@ -41,7 +41,7 @@ const contracts = [
       "isOperationalNavigation",
       'textAlign: "center"',
       'width: "100%"',
-      'isOperationalNavigation && "w-full"',
+      'isOperationalNavigation ? "w-full rounded-2xl"',
     ],
   },
   {
@@ -55,7 +55,7 @@ const contracts = [
       "ClassicPendingOrderRow",
       "useAdminDockScroll",
       "Orders pending sync",
-      "Search order, customer, or item",
+      "Search order, customer or item",
       "No matching orders",
       "orders.refetch",
     ],
@@ -122,7 +122,7 @@ const contracts = [
   },
   {
     file: "src/components/mobile/appearances/classic/more-screen.tsx",
-    markers: ["Manage your store and account.", "StatusBadge"],
+    markers: ["Open sync status", "StatusBadge"],
   },
   {
     file: "src/components/mobile/app-theme-presentation.ts",
@@ -178,7 +178,12 @@ for (const contract of contracts) {
 }
 
 const gitignore = readFileSync(join(REPO_DIR, ".gitignore"), "utf8")
-if (!gitignore.split("\n").includes("/.designs/")) {
+// The root rule was broadened to `.designs/`, which still covers the archive.
+const gitignoreLines = gitignore.split("\n")
+if (
+  !gitignoreLines.includes("/.designs/") &&
+  !gitignoreLines.includes(".designs/")
+) {
   failures.push(".gitignore must ignore the root /.designs/ archive")
 }
 
