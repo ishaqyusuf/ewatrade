@@ -26,7 +26,8 @@ const requiredMarkers = [
       "Pressable",
       "haptic",
       "transition",
-      "numberOfLines={1}",
+      // One line, or two at large text so method labels never truncate.
+      "numberOfLines={largeTextLayout ? 2 : 1}",
     ],
   },
   {

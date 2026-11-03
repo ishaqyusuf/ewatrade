@@ -175,6 +175,7 @@ export function AuthMethodButton({
   variant = "default",
 }: AuthMethodButtonProps) {
   const colors = useColors()
+  const largeTextLayout = useLargeTextLayout()
   const isPrimary = tone === "primary"
   if (variant === "sso")
     return (
@@ -195,6 +196,7 @@ export function AuthMethodButton({
           minHeight: 48,
           opacity: disabled ? 0.45 : 1,
           paddingHorizontal: 12,
+          paddingVertical: largeTextLayout ? 8 : 0,
         }}
         transition
       >
@@ -206,8 +208,8 @@ export function AuthMethodButton({
           <Icon className="size-sm text-foreground" name={icon} />
         )}
         <Text
-          className="text-base font-extrabold [-rn-line-height:22] text-foreground"
-          numberOfLines={1}
+          className="min-w-0 shrink text-center text-base font-extrabold [-rn-line-height:22] text-foreground"
+          numberOfLines={largeTextLayout ? 2 : 1}
         >
           {pending && loadingLabel ? loadingLabel : label}
         </Text>
@@ -229,7 +231,12 @@ export function AuthMethodButton({
       }}
       transition
     >
-      <View className="min-h-[50px] flex-row items-center justify-center gap-2.5">
+      <View
+        className={cn(
+          "min-h-[50px] flex-row items-center justify-center gap-2.5",
+          largeTextLayout && "py-2",
+        )}
+      >
         {brandIcon === "whatsapp" ? (
           <WhatsAppMark size={26} />
         ) : (
@@ -262,10 +269,10 @@ export function AuthMethodButton({
         )}
         <Text
           className={cn(
-            "text-sm font-bold",
+            "min-w-0 shrink text-center text-sm font-bold",
             isPrimary ? "text-primary-foreground" : "text-foreground",
           )}
-          numberOfLines={1}
+          numberOfLines={largeTextLayout ? 2 : 1}
         >
           {pending && loadingLabel ? loadingLabel : label}
         </Text>

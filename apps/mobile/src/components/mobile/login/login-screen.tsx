@@ -16,6 +16,7 @@ import { StatusBanner } from "@/components/mobile/status-banner"
 import { Text as QaPhoneText } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
 import { useAuthContext } from "@/hooks/use-auth"
+import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
 import { useMobileAppleAuth } from "@/hooks/use-mobile-apple-auth"
 import { useMobileGoogleAuth } from "@/hooks/use-mobile-google-auth"
 import { useOnboardingStore } from "@/store/onboardingStore"
@@ -34,6 +35,7 @@ export function LoginScreen() {
   }>()
   const trpc = useTRPC()
   const auth = useAuthContext()
+  const largeTextLayout = useLargeTextLayout()
   const completeOnboarding = useOnboardingStore(
     (state) => state.completeOnboarding,
   )
@@ -191,8 +193,9 @@ export function LoginScreen() {
       }
     >
       {/* Grouped spacing (workshop mobile/sign-in-spacing 03): 10px inside a
-          group, 28px between groups. */}
-      <View className="gap-7">
+          group, 28px between groups (20px at large text, where the groups
+          already stand apart). */}
+      <View className={largeTextLayout ? "gap-5" : "gap-7"}>
         <View className="gap-2.5">
           {useWhatsApp ? (
             <View className="gap-3">
@@ -260,9 +263,11 @@ export function LoginScreen() {
                 : "Send login code"}
           </AuthActionButton>
         </View>
-        <View className="flex-row gap-2.5">
+        {/* At large text the two method switches stack so each label reads
+            in full instead of truncating at half width. */}
+        <View className={largeTextLayout ? "gap-2.5" : "flex-row gap-2.5"}>
           {phoneAvailability.data?.enabled ? (
-            <View className="flex-1">
+            <View className={largeTextLayout ? "w-full" : "flex-1"}>
               <AuthMethodButton
                 icon={useWhatsApp ? "Mail" : "WhatsApp"}
                 brandIcon={useWhatsApp ? undefined : "whatsapp"}
@@ -277,7 +282,7 @@ export function LoginScreen() {
               />
             </View>
           ) : null}
-          <View className="flex-1">
+          <View className={largeTextLayout ? "w-full" : "flex-1"}>
             <AuthMethodButton
               icon={usePassword ? "Mail" : "Lock"}
               label={usePassword ? "Use code" : "Use password"}

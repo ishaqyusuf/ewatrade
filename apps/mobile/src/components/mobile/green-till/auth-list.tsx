@@ -67,9 +67,19 @@ export function AuthListRow({
 }) {
   const { colorScheme } = useColorScheme()
   const palette = GREEN_TILL_THEME[colorScheme]
+  // At large text the copy wraps to several lines, so the row top-aligns and
+  // the control, icon chip and chevron sit beside the title's first line.
+  const largeTextLayout = useLargeTextLayout()
+  const rowClassName = largeTextLayout
+    ? "min-h-11 flex-row items-start gap-3 py-3"
+    : "min-h-11 flex-row items-center gap-3 py-3"
   const body = (
     <>
-      {control}
+      {control ? (
+        <View className={largeTextLayout ? "mt-2.5" : undefined}>
+          {control}
+        </View>
+      ) : null}
       {icon ? (
         <View
           style={{
@@ -78,6 +88,7 @@ export function AuthListRow({
             borderRadius: 11,
             height: 36,
             justifyContent: "center",
+            marginTop: largeTextLayout ? 4 : 0,
             width: 36,
           }}
         >
@@ -99,17 +110,16 @@ export function AuthListRow({
         ) : null}
       </View>
       {chevron ? (
-        <Icon
-          className="size-[18px] text-muted-foreground"
-          name="ChevronRight"
-        />
+        <View className={largeTextLayout ? "mt-3" : undefined}>
+          <Icon
+            className="size-[18px] text-muted-foreground"
+            name="ChevronRight"
+          />
+        </View>
       ) : null}
     </>
   )
-  if (!onPress)
-    return (
-      <View className="min-h-11 flex-row items-center gap-3 py-3">{body}</View>
-    )
+  if (!onPress) return <View className={rowClassName}>{body}</View>
   return (
     <Pressable
       accessibilityLabel={accessibilityLabel}
@@ -117,7 +127,7 @@ export function AuthListRow({
       accessibilityState={
         selected === undefined ? { disabled } : { selected, disabled }
       }
-      className="min-h-11 flex-row items-center gap-3 py-3 active:opacity-70"
+      className={cn(rowClassName, "active:opacity-70")}
       disabled={disabled}
       haptic
       onPress={onPress}
