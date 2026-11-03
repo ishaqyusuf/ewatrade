@@ -16,15 +16,62 @@ export type WhatsAppWorkflowPurpose = z.infer<
   typeof whatsAppWorkflowPurposeSchema
 >
 type Environment = Readonly<Record<string, string | undefined>>
+export const WHATSAPP_WORKFLOW_RELEASE_FLAG =
+  "ASSISTANT_WHATSAPP_WORKFLOWS_ENABLED"
+const releaseTokens = {
+  setup: "SETUP",
+  product_create: "PRODUCT_CREATE",
+} as const
+
+/**
+ * Explicit non-local release of named workflows, for example "setup,product_create".
+ * Unset or empty releases nothing. Any unknown, empty or repeated token makes the
+ * whole value invalid and releases nothing, so a typo can never widen access.
+ */
+export function whatsAppWorkflowRelease(env: Environment = process.env): {
+  configured: boolean
+  valid: boolean
+  purposes: WhatsAppWorkflowPurpose[]
+} {
+  const raw = env[WHATSAPP_WORKFLOW_RELEASE_FLAG]
+  if (raw === undefined || raw.trim() === "")
+    return { configured: false, valid: true, purposes: [] }
+  const tokens = raw.split(",").map((token) => token.trim())
+  const valid =
+    tokens.every((token) => Object.hasOwn(releaseTokens, token)) &&
+    new Set(tokens).size === tokens.length
+  return {
+    configured: true,
+    valid,
+    purposes: valid
+      ? tokens
+          .map((token) => releaseTokens[token as keyof typeof releaseTokens])
+          .sort()
+      : [],
+  }
+}
+
 export function whatsAppWorkflowPolicy(env: Environment = process.env) {
   const localSource = env.APP_ENV === "local" && env.NODE_ENV !== "production"
+  const release = whatsAppWorkflowRelease(env)
+  const released = (purpose: WhatsAppWorkflowPurpose) =>
+    release.purposes.includes(purpose)
   return {
     version: "whatsapp-workflow-policy-v1",
     localSource,
-    setup: localSource && env.ASSISTANT_WHATSAPP_SETUP_ENABLED === "true",
-    product: localSource && env.ASSISTANT_WHATSAPP_PRODUCT_ENABLED === "true",
+    setup:
+      (localSource && env.ASSISTANT_WHATSAPP_SETUP_ENABLED === "true") ||
+      released("SETUP"),
+    product:
+      (localSource && env.ASSISTANT_WHATSAPP_PRODUCT_ENABLED === "true") ||
+      released("PRODUCT_CREATE"),
     nativeWrites:
       localSource && env.ASSISTANT_WHATSAPP_WORKFLOW_WRITES_ENABLED === "true",
+    // Present only when the release flag is set, so the authority fingerprint of an
+    // unflagged deployment is byte-identical to the local-only policy.
+    ...(release.configured
+      ? { release: { valid: release.valid, purposes: release.purposes } }
+      : {}),
   }
 }
 export function whatsAppWorkflowEnabled(
@@ -37,6 +84,21 @@ export function whatsAppWorkflowEnabled(
     : purpose === "PRODUCT_CREATE"
       ? policy.product
       : false
+}
+/**
+ * Confirmed saves from a WhatsApp workflow review. A released purpose includes its
+ * own confirmed save; locally the separate writes toggle still applies. The channel
+ * writes toggle, owner role and exact review proof are checked by the callers.
+ */
+export function whatsAppWorkflowNativeWritesEnabled(
+  purpose: string,
+  env: Environment = process.env,
+) {
+  if (!whatsAppWorkflowEnabled(purpose, env)) return false
+  return (
+    whatsAppWorkflowPolicy(env).nativeWrites ||
+    whatsAppWorkflowRelease(env).purposes.some((entry) => entry === purpose)
+  )
 }
 
 const id = z.string().min(1).max(128)

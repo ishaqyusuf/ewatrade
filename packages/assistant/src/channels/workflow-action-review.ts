@@ -22,7 +22,7 @@ import { whatsAppPlainText } from "./render"
 import { whatsAppWorkflowPurposeSchema } from "./workflow"
 
 export const WHATSAPP_WORKFLOW_ACTION_REVIEW_VERSION =
-  "whatsapp-workflow-action-review-v1"
+  "whatsapp-workflow-action-review-v2"
 export const WHATSAPP_WORKFLOW_ACTION_MAX_SELECTION = 3
 const id = z.string().min(1).max(128)
 const key = z.string().min(1).max(140)
@@ -241,9 +241,26 @@ const appReview = (): WhatsAppWorkflowRenderedActionReview => ({
 function exact(value: string) {
   return !value.includes("…") && whatsAppPlainText(value) === value
 }
+/** WhatsApp emphasis only around text that cannot break or inject its own markers. */
+function mark(value: string, marker: "*" | "_") {
+  return /[*_~`]/.test(value) ? value : `${marker}${value}${marker}`
+}
+/** Whole amounts drop ".00" (₦8,900); any other amount keeps its exact minor units. */
+function reviewMoney(minor: number, currency: string) {
+  const text = generalMoney(minor, currency)
+  return Number.isInteger(minor) && minor % 100 === 0
+    ? text.replace(/\.00$/, "")
+    : text
+}
+const usageLabel = {
+  FOR_SALE: null,
+  INTERNAL_USE: "Shop use only, not for sale",
+  BOTH: "For sale and shop use",
+} as const
 function simpleRecordLines(
   record: WhatsAppWorkflowActionReview["records"][number],
   currency: string,
+  number: number | null,
 ) {
   const payload = record.payload
   if (
@@ -253,23 +270,19 @@ function simpleRecordLines(
     deriveSetupEntityState(payload, record.openQuestions).state !== "PROPOSED"
   )
     return null
-  const lines = [
-    `Draft key: ${record.key}`,
-    `Add ${payload.kind}: ${payload.name}`,
-  ]
   if (
     payload.kind === "money_account" ||
     (payload.kind === "customer" && payload.opening)
   )
     return null
+  const facts: string[] = []
+  const details: string[] = []
   if (payload.kind === "product" || payload.kind === "service") {
     if (
       payload.illustrationId ||
       (payload.categoryKey && !record.categoryLabel)
     )
       return null
-    if (record.categoryLabel) lines.push(`Category: ${record.categoryLabel}`)
-    if (payload.description) lines.push(`Description: ${payload.description}`)
   }
   if (payload.kind === "product") {
     if (
@@ -282,34 +295,75 @@ function simpleRecordLines(
           payload.openingStock.startsWith("-")))
     )
       return null
-    lines.push(
-      `Use: ${payload.usage ?? "FOR_SALE"}`,
-      `Counting unit: ${payload.unitName}`,
-      `Price per ${payload.unitName}: ${payload.priceMinor === undefined ? "Not sold; no selling price" : generalMoney(payload.priceMinor, currency)}`,
+    // The price names the counting unit once; stock repeats it only when no price does.
+    facts.push(
+      payload.priceMinor === undefined
+        ? "no selling price"
+        : `${reviewMoney(payload.priceMinor, currency)} per ${payload.unitName}`,
       payload.openingStock === undefined
-        ? "Opening stock: not supplied; no opening stock entry requested"
-        : `Opening stock: ${payload.openingStock} ${payload.unitName}`,
-      "One product with one counting unit; stock is recorded only as shown.",
+        ? "no opening stock"
+        : payload.priceMinor === undefined
+          ? `${payload.openingStock} ${payload.unitName} in stock`
+          : `${payload.openingStock} in stock`,
     )
+    const usage = usageLabel[payload.usage ?? "FOR_SALE"]
+    if (usage) details.push(usage)
   } else if (payload.kind === "service") {
     if (payload.pricing === "quote" && payload.priceMinor !== undefined)
       return null
-    lines.push(
+    facts.push(
+      "service",
       payload.pricing === "quote"
-        ? "Price: quote required for each job"
-        : `Fixed price: ${generalMoney(payload.priceMinor ?? 0, currency)}`,
-      "Service: no product stock movement.",
+        ? "priced per job"
+        : `${reviewMoney(payload.priceMinor ?? 0, currency)} fixed price`,
     )
-  } else {
-    lines.push(
-      `Phone: ${payload.phone ?? "Not supplied"}`,
-      `Email: ${payload.email ?? "Not supplied"}`,
-      "Customer directory record only; no opening debt or credit.",
+  } else
+    facts.push(
+      "customer",
+      payload.phone ?? "no phone",
+      payload.email ?? "no email",
     )
-  }
+  if (
+    (payload.kind === "product" || payload.kind === "service") &&
+    record.categoryLabel
+  )
+    details.push(`Category: ${record.categoryLabel}`)
+  if (
+    (payload.kind === "product" || payload.kind === "service") &&
+    payload.description
+  )
+    details.push(`Description: ${payload.description}`)
   for (const question of record.openQuestions)
-    lines.push(`Optional follow-up: ${question.question}`)
+    details.push(`Optional, later: ${question.question}`)
+  const lines = [
+    `${number === null ? "" : `${number}. `}${mark(payload.name, "*")} · ${facts.join(" · ")}`,
+    ...details.map((line) => `- ${line}`),
+  ]
   return lines.every(exact) ? lines : null
+}
+const kindNoun = {
+  product: "product",
+  service: "service",
+  customer: "customer",
+  money_account: "account",
+} as const
+function reviewHeader(review: WhatsAppWorkflowActionReview) {
+  const kinds = new Set(review.records.map((record) => record.payload.kind))
+  const [only] = kinds
+  const noun =
+    review.source.purpose === "PRODUCT_CREATE"
+      ? "product"
+      : kinds.size === 1 && only
+        ? kindNoun[only]
+        : "setup"
+  const count = review.records.length
+  return count === 1
+    ? `🧾 *${noun[0]?.toUpperCase()}${noun.slice(1)} draft*`
+    : `🧾 *${count} ${noun} drafts*`
+}
+function expiryLabel(expiresAt: string) {
+  const at = new Date(expiresAt)
+  return `${String(at.getUTCHours()).padStart(2, "0")}:${String(at.getUTCMinutes()).padStart(2, "0")} UTC`
 }
 
 /** Only canonical complete supported selections render. Hash computation and authority remain server-owned. */
@@ -348,14 +402,8 @@ export function renderWhatsAppWorkflowActionReviewBody(
     )
       return appReview()
   } else if (review.productSnapshot) return appReview()
-  const lines = [
-    `Add selected ${review.source.purpose === "SETUP" ? "Setup records" : "product"}`,
-    `Business: ${review.businessName}`,
-    `Store: ${review.storeName}`,
-    `Draft revision: ${review.source.draftRevision}`,
-    `Currency: ${review.currencyCode}`,
-    `Selected records: ${review.records.length}`,
-  ]
+  const numbered = review.records.length > 1
+  const lines = [reviewHeader(review)]
   for (const [index, record] of review.records.entries()) {
     const source = review.source.selection[index]
     if (
@@ -367,16 +415,38 @@ export function renderWhatsAppWorkflowActionReviewBody(
       source.state !== record.state
     )
       return appReview()
-    const facts = simpleRecordLines(record, review.currencyCode)
+    const facts = simpleRecordLines(
+      record,
+      review.currencyCode,
+      numbered ? index + 1 : null,
+    )
     if (!facts) return appReview()
     lines.push(...facts)
   }
+  const stocked = review.records.some(
+    (record) =>
+      record.payload.kind === "product" &&
+      record.payload.openingStock !== undefined,
+  )
   lines.push(
-    "Only the exact listed records are selected. Other drafts will not be added. Confirmation records business data; it does not send or collect money.",
-    `Review expires: ${review.expiresAt} (UTC).`,
+    "",
+    `${review.businessName} · ${review.storeName}`,
+    mark(
+      [
+        stocked ? `Stock goes to ${review.storeName}.` : null,
+        review.source.purpose === "SETUP"
+          ? `Only ${numbered ? `these ${review.records.length}` : "this one"} will be saved; other drafts stay as drafts.`
+          : null,
+        "Nothing is saved until you confirm.",
+      ]
+        .filter(Boolean)
+        .join(" "),
+      "_",
+    ),
+    `_To change ${numbered ? "one" : "it"}, send the fix by name. This review expires ${expiryLabel(review.expiresAt)}._`,
   )
   if (!lines.every(exact)) return appReview()
-  const body = lines.join("\n\n")
+  const body = lines.join("\n")
   return body.length <= max - WHATSAPP_ACTION_INSTRUCTION_RESERVE_UNITS
     ? {
         kind: "review",
@@ -385,6 +455,21 @@ export function renderWhatsAppWorkflowActionReviewBody(
         body,
       }
     : appReview()
+}
+/** Reply-button titles (each at most 20 characters); the ids carry the exact proof. */
+export function whatsAppWorkflowActionButtonTitles(
+  source: WhatsAppWorkflowActionSource,
+) {
+  const count = source.selection.length
+  return {
+    confirm:
+      source.purpose === "PRODUCT_CREATE"
+        ? "Save product"
+        : count > 1
+          ? `Save all ${count}`
+          : "Save",
+    cancel: "Cancel",
+  }
 }
 /** Dispatch-only memory: persist the body/source above, never these raw codes or instructions. */
 export function appendWhatsAppWorkflowActionInstructions(
@@ -399,7 +484,7 @@ export function appendWhatsAppWorkflowActionInstructions(
   )
     return appReview()
   const mode = purposeMode(review.source.purpose)
-  const body = `${review.body}\n\nReply to this review with Confirm ${mode} ${codes.confirmCode} to add only these selected records, or Cancel ${mode} ${codes.cancelCode} to cancel this review.`
+  const body = `${review.body}\n\nTo save, reply to this message with \`Confirm ${mode} ${codes.confirmCode}\`. To cancel, reply \`Cancel ${mode} ${codes.cancelCode}\`.`
   return body.length <= WHATSAPP_ACTION_REVIEW_MAX_UNITS
     ? { ...review, body }
     : appReview()

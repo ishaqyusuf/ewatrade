@@ -8,6 +8,7 @@ import {
   parseWhatsAppWorkflowReviewSelection,
   renderWhatsAppWorkflowActionReviewBody,
   whatsAppWorkflowActionButtonId,
+  whatsAppWorkflowActionButtonTitles,
   whatsAppWorkflowActionSourceSchema,
 } from "./workflow-action-review"
 
@@ -141,15 +142,12 @@ test("canonical exact selected review body has no raw code and dispatch instruct
   const body = render(review)
   expect(body.kind).toBe("review")
   for (const value of [
-    "Business: Original business",
-    "Store: Original Store",
-    "Draft revision: 7",
-    "Selected records: 1",
-    "Draft key: customer:amina",
-    "Amina",
-    "08030000000",
-    "amina@example.test",
-    "Other drafts will not be added",
+    "🧾 *Customer draft*",
+    "*Amina* · customer · 08030000000 · amina@example.test",
+    "Original business · Original Store",
+    "Only this one will be saved; other drafts stay as drafts.",
+    "Nothing is saved until you confirm.",
+    "This review expires 12:05 UTC.",
   ])
     expect(body.body).toContain(value)
   expect(body.body).not.toContain(codes.confirmCode)
@@ -157,8 +155,8 @@ test("canonical exact selected review body has no raw code and dispatch instruct
   const saved = JSON.stringify(body)
   const dispatch = appendWhatsAppWorkflowActionInstructions(body, codes)
   expect(dispatch.kind).toBe("review")
-  expect(dispatch.body).toContain(`Confirm setup ${codes.confirmCode}`)
-  expect(dispatch.body).toContain(`Cancel setup ${codes.cancelCode}`)
+  expect(dispatch.body).toContain(`\`Confirm setup ${codes.confirmCode}\``)
+  expect(dispatch.body).toContain(`\`Cancel setup ${codes.cancelCode}\``)
   expect(JSON.stringify(body)).toBe(saved)
   expect(
     appendWhatsAppWorkflowActionInstructions(body, {
@@ -216,8 +214,13 @@ test("simple Product review preserves canonical price/unit/stock and exact form 
   const product = productReview()
   const body = render(product)
   expect(body.kind).toBe("review")
-  expect(body.body).toContain("Price per Piece: ₦125.01")
-  expect(body.body).toContain("Opening stock: 12.12 Piece")
+  expect(body.body).toContain("🧾 *Product draft*")
+  expect(body.body).toContain("*Eggs* · ₦125.01 per Piece · 12.12 in stock")
+  expect(body.body).toContain("\n- Description: Large\n")
+  expect(body.body).toContain(
+    "_Stock goes to Original Store. Nothing is saved until you confirm._",
+  )
+  expect(body.body).not.toContain("other drafts")
   expect(appendWhatsAppWorkflowActionInstructions(body, codes).body).toContain(
     `Confirm product ${codes.confirmCode}`,
   )
@@ -258,7 +261,7 @@ test("simple Product review preserves canonical price/unit/stock and exact form 
         { ...record, payload: { ...record.payload, openingStock: undefined } },
       ],
     }).body,
-  ).toContain("not supplied; no opening stock entry requested")
+  ).toContain("*Eggs* · ₦125.01 per Piece · no opening stock")
 })
 
 test("incomplete, rich, media, opening balance and finance selections remain app review", () => {
@@ -343,7 +346,7 @@ test("incomplete, rich, media, opening balance and finance selections remain app
         },
       ],
     }).body,
-  ).toContain("quote required for each job")
+  ).toContain("*Laundry* · service · priced per job")
 })
 
 test("workflow typed confirmations require explicit purpose, exact opaque code and quoted provider reply", () => {
@@ -461,4 +464,116 @@ test("workflow button namespace is purpose-bound and never accepts generic or un
       "wamid.product",
     ),
   ).toBeNull()
+})
+
+function setupProduct(index: number, name: string, unitName: string) {
+  const source = {
+    ...selected,
+    entityId: `entity-${index}`,
+    key: `product:${index}`,
+  }
+  return {
+    source,
+    record: {
+      ...source,
+      payload: {
+        kind: "product" as const,
+        name,
+        unitName,
+        priceMinor: [890000, 190000, 1100000][index] ?? 100,
+        openingStock: ["12", "50", "8"][index] ?? "1",
+        illustrationId: null,
+      },
+      openQuestions: [],
+      errorCode: null,
+      committedRecordId: null,
+    },
+  }
+}
+
+test("several Setup products render as one numbered review that fits reply buttons", () => {
+  const items = [
+    setupProduct(0, "Groundnut Oil 3L", "bottle"),
+    setupProduct(1, "Brown Beans", "kg"),
+    setupProduct(2, "Ofada Rice 5kg", "bag"),
+  ]
+  const several: WhatsAppWorkflowActionReview = {
+    ...review,
+    businessName: "Mama Ada Provisions",
+    storeName: "Yaba Main",
+    source: { ...review.source, selection: items.map((item) => item.source) },
+    records: items.map((item) => item.record),
+  }
+  const body = render(several)
+  expect(body.kind).toBe("review")
+  expect(body.body).toBe(
+    [
+      "🧾 *3 product drafts*",
+      "1. *Groundnut Oil 3L* · ₦8,900 per bottle · 12 in stock",
+      "2. *Brown Beans* · ₦1,900 per kg · 50 in stock",
+      "3. *Ofada Rice 5kg* · ₦11,000 per bag · 8 in stock",
+      "",
+      "Mama Ada Provisions · Yaba Main",
+      "_Stock goes to Yaba Main. Only these 3 will be saved; other drafts stay as drafts. Nothing is saved until you confirm._",
+      "_To change one, send the fix by name. This review expires 12:05 UTC._",
+    ].join("\n"),
+  )
+  const dispatch = appendWhatsAppWorkflowActionInstructions(body, codes)
+  expect(dispatch.body.length).toBeLessThanOrEqual(1024)
+  if (body.kind !== "review") throw Error("review expected")
+  expect(whatsAppWorkflowActionButtonTitles(body.source)).toEqual({
+    confirm: "Save all 3",
+    cancel: "Cancel",
+  })
+  expect(whatsAppWorkflowActionButtonTitles(review.source).confirm).toBe("Save")
+  expect(
+    whatsAppWorkflowActionButtonTitles(productReview().source).confirm,
+  ).toBe("Save product")
+  const mixed = render({
+    ...several,
+    source: {
+      ...several.source,
+      selection: [items[0]?.source, selected],
+    },
+    records: [items[0]?.record, review.records[0]],
+  })
+  expect(mixed.body).toContain("🧾 *2 setup drafts*")
+  expect(mixed.body).toContain("2. *Amina* · customer")
+})
+
+test("record names with WhatsApp markers are shown plain, never re-formatted", () => {
+  const first = review.records[0]
+  if (!first || first.payload.kind !== "customer")
+    throw Error("Customer fixture missing")
+  const body = render({
+    ...review,
+    storeName: "Main_Store",
+    records: [{ ...first, payload: { ...first.payload, name: "A*mina_" } }],
+  })
+  expect(body.kind).toBe("review")
+  expect(body.body).toContain("\nA*mina_ · customer")
+  expect(body.body).toContain("\nOriginal business · Main_Store\n")
+})
+
+test("shop-use products without a price name their counting unit on the stock", () => {
+  const item = setupProduct(0, "Nylon bags", "pack")
+  const body = render({
+    ...review,
+    source: { ...review.source, selection: [item.source] },
+    records: [
+      {
+        ...item.record,
+        payload: {
+          ...item.record.payload,
+          priceMinor: undefined,
+          openingStock: "5",
+          usage: "INTERNAL_USE",
+        },
+      },
+    ],
+  })
+  expect(body.kind).toBe("review")
+  expect(body.body).toContain(
+    "*Nylon bags* · no selling price · 5 pack in stock\n- Shop use only, not for sale",
+  )
 })

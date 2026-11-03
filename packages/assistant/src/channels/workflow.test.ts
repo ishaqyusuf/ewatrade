@@ -4,6 +4,9 @@ import {
   parseWhatsAppWorkflowRequest,
   renderWhatsAppWorkflowReply,
   whatsAppWorkflowEnabled,
+  whatsAppWorkflowNativeWritesEnabled,
+  whatsAppWorkflowPolicy,
+  whatsAppWorkflowRelease,
   workflowConversationAppLink,
 } from "./workflow"
 
@@ -96,6 +99,86 @@ test("workflow source gates are explicit, independently default off and forbidde
   ).toBe(false)
   for (const purpose of ["GENERAL", "SUPPORT", "setup", "SETUP?execute=true"])
     expect(whatsAppWorkflowEnabled(purpose, local)).toBe(false)
+})
+
+test("workflow release flag opens only the named purposes outside local, strictly parsed", () => {
+  const production = { APP_ENV: "production", NODE_ENV: "production" }
+  // Unset: exactly the local-only gate, and the policy (authority fingerprint input) is unchanged.
+  expect(whatsAppWorkflowPolicy(production)).toEqual({
+    version: "whatsapp-workflow-policy-v1",
+    localSource: false,
+    setup: false,
+    product: false,
+    nativeWrites: false,
+  })
+  expect(
+    whatsAppWorkflowPolicy({
+      ...production,
+      ASSISTANT_WHATSAPP_WORKFLOWS_ENABLED: " ",
+    }),
+  ).not.toHaveProperty("release")
+  const both = {
+    ...production,
+    ASSISTANT_WHATSAPP_WORKFLOWS_ENABLED: "setup, product_create",
+  }
+  expect(whatsAppWorkflowEnabled("SETUP", both)).toBe(true)
+  expect(whatsAppWorkflowEnabled("PRODUCT_CREATE", both)).toBe(true)
+  expect(whatsAppWorkflowNativeWritesEnabled("SETUP", both)).toBe(true)
+  expect(whatsAppWorkflowPolicy(both).release).toEqual({
+    valid: true,
+    purposes: ["PRODUCT_CREATE", "SETUP"],
+  })
+  const setupOnly = {
+    APP_ENV: "preview",
+    ASSISTANT_WHATSAPP_WORKFLOWS_ENABLED: "setup",
+  }
+  expect(whatsAppWorkflowEnabled("SETUP", setupOnly)).toBe(true)
+  expect(whatsAppWorkflowEnabled("PRODUCT_CREATE", setupOnly)).toBe(false)
+  expect(whatsAppWorkflowNativeWritesEnabled("PRODUCT_CREATE", setupOnly)).toBe(
+    false,
+  )
+  for (const value of [
+    "SETUP",
+    "setup,",
+    "setup,setup",
+    "setup;product_create",
+    "setup,product",
+    "all",
+    "true",
+    "general",
+  ]) {
+    const env = { ...production, ASSISTANT_WHATSAPP_WORKFLOWS_ENABLED: value }
+    expect(whatsAppWorkflowRelease(env)).toEqual({
+      configured: true,
+      valid: false,
+      purposes: [],
+    })
+    expect(whatsAppWorkflowEnabled("SETUP", env)).toBe(false)
+    expect(whatsAppWorkflowEnabled("PRODUCT_CREATE", env)).toBe(false)
+  }
+  for (const purpose of ["GENERAL", "SUPPORT", "setup", "product_create"])
+    expect(whatsAppWorkflowEnabled(purpose, both)).toBe(false)
+  // The old per-purpose toggles alone still never open a non-local source.
+  expect(
+    whatsAppWorkflowEnabled("SETUP", {
+      ...production,
+      ASSISTANT_WHATSAPP_SETUP_ENABLED: "true",
+      ASSISTANT_WHATSAPP_WORKFLOW_WRITES_ENABLED: "true",
+    }),
+  ).toBe(false)
+  // Locally, drafting without the writes toggle keeps confirmed saves off.
+  const local = {
+    APP_ENV: "local",
+    NODE_ENV: "test",
+    ASSISTANT_WHATSAPP_SETUP_ENABLED: "true",
+  }
+  expect(whatsAppWorkflowNativeWritesEnabled("SETUP", local)).toBe(false)
+  expect(
+    whatsAppWorkflowNativeWritesEnabled("SETUP", {
+      ...local,
+      ASSISTANT_WHATSAPP_WORKFLOW_WRITES_ENABLED: "true",
+    }),
+  ).toBe(true)
 })
 
 test("workflow links use exact purpose-aware existing routes and original scope", () => {

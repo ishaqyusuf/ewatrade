@@ -1,0 +1,48 @@
+{
+  "version": 1,
+  "id": "2026-11-03-whatsapp-setup-product-workflows",
+  "tickets": ["H02"],
+  "summary": "WhatsApp Setup and Product workflows from Workshop ewatrade/assistant/conversations family 10 (p-biz, p-native; today scenes p-biz-today, p-today). New release flag ASSISTANT_WHATSAPP_WORKFLOWS_ENABLED, default unset: a strict comma list of setup and/or product_create (whitespace around tokens allowed; any unknown, empty, repeated or upper-case token makes the whole value invalid and releases nothing). A named purpose is available outside local development and includes its own confirmed save (the channel writes toggle ASSISTANT_WHATSAPP_WRITES_ENABLED, owner/admin role, pilot enrollment and the exact signed review proof still apply). Unset keeps exactly the old local-only gate (APP_ENV=local plus ASSISTANT_WHATSAPP_SETUP_ENABLED / ASSISTANT_WHATSAPP_PRODUCT_ENABLED / ASSISTANT_WHATSAPP_WORKFLOW_WRITES_ENABLED), and the workflow policy object that feeds the authority fingerprint is unchanged unless the flag is set. The workflow confirmation review (renderer whatsapp-workflow-action-review-v2) now follows the design: a 🧾 header (\"3 product drafts\", \"Setup draft\", \"Product draft\"), one numbered line per record (*name* · ₦8,900 per bottle · 12 in stock), the business and Store line, one italic safety line (stock goes to the Store; only these records are saved; nothing is saved until you confirm), how to change one and the expiry time. The compact body fits the 1024-character limit, so the reply buttons are sent; their titles are Save all N / Save / Save product and Cancel. Typed Confirm/Cancel codes still work. Pending v1 reviews (5-minute life) are refused after deploy, as before for any changed review. Not changed: the interview questions and their buttons (model prompt in workflow-turn.ts), Product mode stays one product per review, the receipt copy (workflow-action-result.ts) and Edit/Change one buttons.",
+  "noAssistantImpact": "No capability, tool, prompt or procedure changes. The flag only opens the existing Setup and Product WhatsApp workflows; the review stays bound to the same server-built source, payload and command hashes, and only its display text and button titles change.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/whatsapp-assistant-system-design.md"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/assistant/src/channels/workflow.test.ts",
+      "executed": true,
+      "result": "Release flag cases: unset policy identical to the local-only policy, setup/product_create opens only the named purposes in production and preview, invalid values release nothing, old toggles alone stay local-only. With workflow-action-review.test.ts, workflow-action-result.test.ts, readiness.test.ts and packages/db workflow-action-reviews.test.ts: 35 pass, 421 expects."
+    },
+    {
+      "kind": "test",
+      "path": "packages/assistant/src/channels/workflow-action-review.test.ts",
+      "executed": true,
+      "result": "Three Setup products render the exact designed review (numbered lines, Store note, expiry) and fit 1024 characters with codes; button titles Save all 3 / Save / Save product; names with WhatsApp markers stay plain; shop-use products without a price keep the unit on stock; existing app-review refusals unchanged. 11 pass."
+    },
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/assistant-whatsapp/workflow-action-reviews.test.ts",
+      "executed": true,
+      "result": "6 pass, 83 expects."
+    },
+    {
+      "kind": "test",
+      "path": "apps/api/src/assistant/channel-workflow-action-turn.test.ts",
+      "executed": true,
+      "result": "With channel-workflow-command.test.ts, channel-workflow-turn.test.ts and channel-delivery.test.ts (placeholder EWATRADE_DATABASE_URL, no database): 21 pass."
+    },
+    {
+      "kind": "test",
+      "path": "apps/api/src/assistant/channel-workflow-action.integration.test.ts",
+      "executed": false,
+      "result": "Not run: requires QA_ACCESS_ACCEPTANCE_DATABASE_HOST, which is not configured here. Review dispatch buttons and the release flag are unproven against a database and a real WhatsApp device."
+    }
+  ]
+}

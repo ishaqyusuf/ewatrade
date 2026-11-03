@@ -7,7 +7,7 @@ import {
 import { whatsAppChannelPolicy } from "@ewatrade/assistant/channels/policy"
 import {
   whatsAppWorkflowEnabled,
-  whatsAppWorkflowPolicy,
+  whatsAppWorkflowNativeWritesEnabled,
 } from "@ewatrade/assistant/channels/workflow"
 import {
   type WhatsAppWorkflowActionResult,
@@ -24,6 +24,7 @@ import {
   parseWhatsAppWorkflowReviewSelection,
   renderWhatsAppWorkflowActionReviewBody,
   whatsAppWorkflowActionButtonId,
+  whatsAppWorkflowActionButtonTitles,
   whatsAppWorkflowActionSourceSchema,
 } from "@ewatrade/assistant/channels/workflow-action-review"
 import { productWorkflowContextSchema } from "@ewatrade/assistant/product/contracts"
@@ -158,7 +159,7 @@ export function assistantWhatsAppWorkflowWritesEnabled(
   return (
     whatsAppWorkflowEnabled(workflowPurpose, env) &&
     whatsAppChannelPolicy(env).writes &&
-    whatsAppWorkflowPolicy(env).nativeWrites
+    whatsAppWorkflowNativeWritesEnabled(workflowPurpose, env)
   )
 }
 type Entity = Awaited<ReturnType<typeof readSetupDraft>>["entities"][number]
@@ -919,6 +920,7 @@ export async function prepareAssistantWhatsAppWorkflowReviewDispatch(
     { confirmCode, cancelCode },
   )
   if (rendered.kind !== "review") throw new AssistantWhatsAppError("CONFLICT")
+  const titles = whatsAppWorkflowActionButtonTitles(source)
   return {
     body: rendered.body,
     buttons:
@@ -930,7 +932,7 @@ export async function prepareAssistantWhatsAppWorkflowReviewDispatch(
                 confirmCode,
                 "confirm",
               ),
-              title: "Confirm",
+              title: titles.confirm,
             },
             {
               id: whatsAppWorkflowActionButtonId(
@@ -938,7 +940,7 @@ export async function prepareAssistantWhatsAppWorkflowReviewDispatch(
                 cancelCode,
                 "cancel",
               ),
-              title: "Cancel",
+              title: titles.cancel,
             },
           ]
         : undefined,
