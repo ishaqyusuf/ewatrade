@@ -24,6 +24,18 @@ export function assistantAttachmentKindAllowedForPurpose(
   return purpose === "SETUP" || purpose === "PRODUCT_CREATE"
 }
 
+/**
+ * WhatsApp GENERAL chat only: a spreadsheet is counted, never stored or read
+ * into the chat, and its rows are reviewed and imported in EwaTrade. Canonical
+ * app admission above is unchanged.
+ */
+export function whatsAppAttachmentCountedForImport(
+  kind: SetupAttachmentKind,
+  purpose: "GENERAL" | "SETUP" | "PRODUCT_CREATE",
+) {
+  return purpose === "GENERAL" && kind === "SPREADSHEET"
+}
+
 export const SETUP_ATTACHMENT_TYPES = {
   IMAGE: ["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"],
   AUDIO: ["audio/webm", "audio/ogg", "audio/mp4", "audio/mpeg", "audio/wav"],

@@ -1,6 +1,9 @@
 import { expect, test } from "bun:test"
 import type { PrismaClient } from "../../../generated/prisma/client"
-import { acceptAssistantWhatsAppIngress } from "./inbox"
+import {
+  acceptAssistantWhatsAppIngress,
+  assistantWhatsAppIngressActionContent,
+} from "./inbox"
 
 const now = new Date("2026-10-15T09:00:00Z")
 const base = {
@@ -44,4 +47,20 @@ test("invalid, expired and future ingress is rejected before database access", a
     ),
   ).toMatchObject({ kind: "ignored", reason: "stale" })
   expect(transactions).toBe(0)
+})
+
+test("photo choice buttons never become executable action decisions", () => {
+  for (const quickActionId of [
+    "wa-photo:attach",
+    "wa-photo:other",
+    "wa-photo:discard",
+    "wa-photo:unknown",
+  ])
+    expect(
+      assistantWhatsAppIngressActionContent({
+        type: "interactive",
+        quickActionId,
+        replyToMessageId: "wamid.review",
+      }),
+    ).toBeNull()
 })

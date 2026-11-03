@@ -91,7 +91,10 @@ import {
 import { resolveAssistantWhatsAppConversation } from "./conversations"
 import type { WhatsAppConversationPrincipal } from "./conversations"
 import { assistantWhatsAppAuthorityDigest } from "./execution"
-import { validateAssistantWhatsAppVoiceReview } from "./media-review"
+import {
+  validateAssistantWhatsAppMediaPrompt,
+  validateAssistantWhatsAppVoiceReview,
+} from "./media-review"
 import { assistantWhatsAppReadPaginationButtons } from "./read-pagination"
 import { assistantWhatsAppReplyChoiceButtons } from "./reply-choices"
 import { reserveAssistantWhatsAppTransportInTransaction } from "./usage"
@@ -684,6 +687,39 @@ export function beginAssistantWhatsAppDelivery(
             providerButtons = whatsAppVoiceReviewButtons.map((button) => ({
               ...button,
             }))
+        } else if (
+          row.renderKind === "photo_review" ||
+          row.renderKind === "import_handoff"
+        ) {
+          // Photo choice and spreadsheet handoff: re-rendered from the original TURN.
+          if (
+            row.inbox.kind !== "TURN" ||
+            row.runId ||
+            row.messageId ||
+            row.chunkCount !== 1 ||
+            row.chunkIndex !== 0
+          )
+            return cancel("cancelled", "SAVED_REPLY_CHANGED")
+          const expected = await validateAssistantWhatsAppMediaPrompt(
+            tx,
+            {
+              principal: {
+                kind: "linked_whatsapp",
+                phoneNumberId: identity.phoneNumberId,
+                senderId: identity.senderId,
+                bindingId: binding.id,
+                grantId: binding.grantId,
+                identityGeneration: binding.identityGeneration,
+                grantGeneration: binding.grantGeneration,
+                selectionGeneration: binding.selectionGeneration,
+              },
+              outboxId: row.id,
+            },
+            now,
+          )
+          if (expected.body !== body)
+            return cancel("cancelled", "SAVED_REPLY_CHANGED")
+          if (expected.buttons) providerButtons = expected.buttons
         } else if (row.inbox.kind === "ACTION") {
           if (
             row.runId ||

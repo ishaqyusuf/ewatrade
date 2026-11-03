@@ -336,3 +336,65 @@ test("a file over the WhatsApp size limit is refused as too large before any pri
   expect(h.events).toEqual(["authorize", "download"])
   expect(h.row()).toBeNull()
 })
+
+const sheetSource = {
+  type: "media",
+  media: {
+    id: "sheet-1",
+    mediaType: "text/csv",
+    sourceType: "document",
+    fileName: "products.csv",
+  },
+  text: "import these please",
+}
+
+test("a GENERAL spreadsheet is counted for an app import without any attachment, storage or job", async () => {
+  const h = harness()
+  const csv = new TextEncoder().encode(
+    "Name,Price\nRice,5000\nBeans,3000\n\nGarri,1200\n",
+  )
+  const result = await createWhatsAppMediaIngestor({
+    ...h.deps,
+    countedForImport: (policy) => policy.kind === "SPREADSHEET",
+    download: async (request) => {
+      h.events.push("download")
+      expect(request.maxBytes).toBe(2 * 1024 * 1024)
+      expect(request.expectedMediaType).toBe("text/csv")
+      return { bytes: csv, mediaType: "text/csv" }
+    },
+  })({ providerMessageId: "event", content: sheetSource })
+  expect(result).toEqual({
+    state: "import_handoff",
+    fileName: "products.csv",
+    rows: 3,
+  })
+  expect(h.events).toEqual(["authorize", "download", "authorize"])
+  expect(h.row()).toBeNull()
+})
+
+test("an unreadable, empty or oversized GENERAL spreadsheet is refused before anything is staged", async () => {
+  for (const [bytes, mediaType, code] of [
+    [new Uint8Array([0xff, 0xfe, 0x00]), "text/csv", "INVALID_MEDIA"],
+    [new TextEncoder().encode("Name,Price\n"), "text/csv", "INVALID_MEDIA"],
+    [new TextEncoder().encode("a,b\n1,2\n"), "text/plain", "INVALID_MEDIA"],
+  ] as const) {
+    const h = harness()
+    const result = await createWhatsAppMediaIngestor({
+      ...h.deps,
+      countedForImport: () => true,
+      download: async () => ({ bytes, mediaType }),
+    })({ providerMessageId: "event", content: sheetSource })
+    expect(result).toMatchObject({ state: "refused", code })
+    expect(h.row()).toBeNull()
+  }
+  const h = harness()
+  const tooLarge = await createWhatsAppMediaIngestor({
+    ...h.deps,
+    countedForImport: () => true,
+    download: async () => {
+      throw Object.assign(Error("too large"), { code: "MEDIA_TOO_LARGE" })
+    },
+  })({ providerMessageId: "event", content: sheetSource })
+  expect(tooLarge).toMatchObject({ state: "refused", code: "MEDIA_TOO_LARGE" })
+  expect(h.events).not.toContain("intent")
+})

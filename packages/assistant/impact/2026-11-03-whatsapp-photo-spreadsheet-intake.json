@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "id": "2026-11-03-whatsapp-photo-spreadsheet-intake",
+  "tickets": ["H02"],
+  "summary": "WhatsApp gaps from Workshop ewatrade/assistant/conversations scenes f-photo, f-late (3-media-control) and p-import (2-business). A linked owner's GENERAL photo whose caption names exactly one visible order (for example S-1038), sent by someone who may draft order_attachment_add, is now held unsent (never read) for at most 24 hours and answered with a fixed review and three reply buttons: Attach to <order>, Other order, Discard (wa-photo:*, bound to the tapped message's context id, stored and consumed like the voice review). Attach and Other order hand the photo with the owner's request text to the existing GENERAL turn, which drafts order_attachment_add for review (Other order asks which order); Discard removes the photo; a choice after the hold expired, or a second choice, gets fixed copy and changes nothing. Photos without a resolvable caption order keep the previous behaviour. A CSV/TSV/XLSX sent in WhatsApp GENERAL chat is no longer refused as unsupported: it is downloaded within the canonical 2 MB spreadsheet limit, its rows are counted with the shared provider-free parser, nothing is stored or imported, and a fixed handoff names the file and row count and links the saved chat (no dedicated app import route exists). App GENERAL attachment admission is unchanged. Local only; media stays behind its existing gate (off in Production); no provider, OTP, schema or deployment change.",
+  "noAssistantImpact": "No capability, tool, prompt or write path changes. Attach reuses the existing order_attachment_add draft and confirmation through the ordinary GENERAL turn; the photo is never interpreted. Spreadsheet rows are counted only and never reach the model or a write.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/whatsapp-assistant-system-design.md"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/assistant/src/channels/media-photo.test.ts",
+      "executed": true,
+      "result": "Photo review copy, three buttons with titles of 20 characters or fewer, button parsing bound to the tapped message, exact caption order references and strict stored content: pass."
+    },
+    {
+      "kind": "test",
+      "path": "packages/assistant/src/channels/notice.test.ts",
+      "executed": true,
+      "result": "Discarded and expired photo notices and the spreadsheet handoff (row count, singular row, sanitized name, saved-chat link only from a trusted origin, empty file refused): pass."
+    },
+    {
+      "kind": "test",
+      "path": "apps/api/src/assistant/whatsapp-media/ingest.test.ts",
+      "executed": true,
+      "result": "GENERAL spreadsheet is counted with no attachment, storage or job; unreadable, header-only, mislabelled and oversized files are refused: pass."
+    },
+    {
+      "kind": "test",
+      "path": "apps/api/src/assistant/whatsapp-media/ingest-csv-parity-retention.integration.test.ts",
+      "executed": false,
+      "result": "GENERAL CSV assertion updated from MEDIA_NOT_AVAILABLE to an import handoff of 2 rows with no attachment; not run (QA_ACCESS_ACCEPTANCE_DATABASE_HOST not configured)."
+    }
+  ]
+}

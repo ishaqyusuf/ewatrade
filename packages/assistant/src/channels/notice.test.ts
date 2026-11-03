@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test"
 import {
+  renderWhatsAppImportHandoff,
   renderWhatsAppNotice,
   whatsAppMediaRefusalNotice,
   whatsAppNoticeCodeSchema,
@@ -193,4 +194,69 @@ test("a missed 24-hour reply gets a fixed welcome-back preface without scope lab
     ).toBe(
       "👋 Welcome back. My last reply couldn't be delivered because the chat was quiet for over 24 hours. Ask again and I'll answer.",
     )
+})
+
+test("photo choice notices are bare design copy with no app link", () => {
+  const scope = {
+    businessName: "Mama Ada Provisions",
+    storeName: "Yaba Main",
+    tenantId: "tenant",
+    storeId: "store",
+    conversationId: "chat",
+    purpose: "GENERAL" as const,
+  }
+  expect(
+    renderWhatsAppNotice("PHOTO_DISCARDED", scope, "https://dash.example.test"),
+  ).toBe("❌ Photo discarded. It wasn't saved to EwaTrade.")
+  expect(
+    renderWhatsAppNotice(
+      "PHOTO_CHOICE_EXPIRED",
+      scope,
+      "https://dash.example.test",
+    ),
+  ).toBe(
+    "⏳ That choice expired. Nothing was changed.\n\nPhotos are removed if they aren't attached within 24 hours. Send it again to attach it.",
+  )
+})
+
+test("spreadsheet handoff counts rows, never imports and links the exact saved chat", () => {
+  const scope = {
+    businessName: "Mama Ada Provisions",
+    storeName: "Yaba Main",
+    tenantId: "tenant",
+    storeId: "store",
+    conversationId: "chat-original",
+    purpose: "GENERAL" as const,
+  }
+  const body = renderWhatsAppImportHandoff(
+    { name: "products.xlsx", rows: 42 },
+    scope,
+    "https://dash.example.test",
+  )
+  expect(body).toBe(
+    "📎 *products.xlsx* · 42 rows\nReview and import them in EwaTrade. You check every row before anything is added.\n\nMama Ada Provisions · Yaba Main\nOpen saved chat in EwaTrade: https://dash.example.test/assistant/c/chat-original",
+  )
+  expect(
+    renderWhatsAppImportHandoff(
+      { name: "one.csv", rows: 1 },
+      scope,
+      "https://dash.example.test",
+    ),
+  ).toContain("· 1 row\n")
+  expect(
+    renderWhatsAppImportHandoff(
+      { name: "*bold*_x_.csv", rows: 3 },
+      scope,
+      "https://untrusted.example/path",
+    ),
+  ).toBe(
+    "📎 *boldx.csv* · 3 rows\nReview and import them in EwaTrade. You check every row before anything is added.\n\nMama Ada Provisions · Yaba Main",
+  )
+  expect(
+    renderWhatsAppImportHandoff(
+      { name: "empty.csv", rows: 0 },
+      scope,
+      "https://dash.example.test",
+    ),
+  ).toBeNull()
 })

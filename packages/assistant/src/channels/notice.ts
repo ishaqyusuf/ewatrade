@@ -14,6 +14,8 @@ export const whatsAppNoticeCodeSchema = z.enum([
   "VOICE_UNAVAILABLE",
   "VOICE_INVALID",
   "VOICE_CANCELLED",
+  "PHOTO_DISCARDED",
+  "PHOTO_CHOICE_EXPIRED",
   "TRANSPORT_RATE_LIMITED",
   "ASSISTANT_UNAVAILABLE",
   "REPLY_WINDOW_MISSED",
@@ -41,6 +43,9 @@ const notices: Record<WhatsAppNoticeCode, string> = {
     "Reply to the original voice transcript with Use transcript, Edit transcript: followed by your corrected text, or Cancel transcript. If it expired, send a new voice note.",
   VOICE_CANCELLED:
     "Voice note cancelled. Its transcript was not sent as an assistant request.",
+  PHOTO_DISCARDED: "❌ Photo discarded. It wasn't saved to EwaTrade.",
+  PHOTO_CHOICE_EXPIRED:
+    "⏳ That choice expired. Nothing was changed.\n\nPhotos are removed if they aren't attached within 24 hours. Send it again to attach it.",
   TRANSPORT_RATE_LIMITED:
     "This WhatsApp connection has reached its message limit. Try again later, or continue this saved chat in EwaTrade. No new assistant request or action was started by this message.",
   ASSISTANT_UNAVAILABLE:
@@ -92,20 +97,24 @@ const withoutAppLink = new Set<WhatsAppNoticeCode>([
   "ASSISTANT_UNAVAILABLE",
   "REPLY_WINDOW_MISSED",
 ])
-/** A preface sent right before a scoped reply; that reply already names the business and Store. */
-const withoutScopeLabel = new Set<WhatsAppNoticeCode>(["REPLY_WINDOW_MISSED"])
-export function renderWhatsAppNotice(
-  code: WhatsAppNoticeCode,
-  scope: {
-    businessName: string
-    storeName: string
-    tenantId: string
-    storeId: string
-    conversationId: string
-    purpose: "GENERAL" | "SETUP" | "PRODUCT_CREATE"
-  },
-  trustedAppOrigin: string,
-) {
+/**
+ * Sent bare: a preface right before a scoped reply (that reply already names the
+ * business and Store), or a short answer to a choice on the message above it.
+ */
+const withoutScopeLabel = new Set<WhatsAppNoticeCode>([
+  "REPLY_WINDOW_MISSED",
+  "PHOTO_DISCARDED",
+  "PHOTO_CHOICE_EXPIRED",
+])
+type NoticeScope = {
+  businessName: string
+  storeName: string
+  tenantId: string
+  storeId: string
+  conversationId: string
+  purpose: "GENERAL" | "SETUP" | "PRODUCT_CREATE"
+}
+function savedChatHref(scope: NoticeScope, trustedAppOrigin: string) {
   const origin = { tenantId: scope.tenantId, storeId: scope.storeId }
   const target = {
     conversationId: scope.conversationId,
@@ -119,14 +128,43 @@ export function renderWhatsAppNotice(
           { ...target, purpose: scope.purpose },
           { currentScope: origin, trustedAppOrigin },
         )
+  return typeof link === "string" ? link : link?.href
+}
+
+/**
+ * A spreadsheet sent in GENERAL chat: only its rows are counted. Nothing is
+ * imported from chat; the owner reviews every row in EwaTrade. The app has no
+ * dedicated import route yet, so the link opens this saved chat.
+ */
+export function renderWhatsAppImportHandoff(
+  file: { name: string; rows: number },
+  scope: NoticeScope,
+  trustedAppOrigin: string,
+) {
+  const name = whatsAppPlainText(file.name)
+    .replace(/[*_~`]/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 80)
+  if (!name || !Number.isSafeInteger(file.rows) || file.rows < 1) return null
+  const href = savedChatHref(scope, trustedAppOrigin)
+  const business = whatsAppPlainText(scope.businessName)
+  const store = whatsAppPlainText(scope.storeName)
+  const body = `📎 *${name}* · ${file.rows.toLocaleString("en-US")} row${file.rows === 1 ? "" : "s"}\nReview and import them in EwaTrade. You check every row before anything is added.\n\n${business} · ${store}${href ? `\nOpen saved chat in EwaTrade: ${href}` : ""}`
+  return body.length <= 1024 ? body : null
+}
+
+export function renderWhatsAppNotice(
+  code: WhatsAppNoticeCode,
+  scope: NoticeScope,
+  trustedAppOrigin: string,
+) {
   if (withoutScopeLabel.has(code)) return notices[code]
   const business = whatsAppPlainText(scope.businessName)
   const store = whatsAppPlainText(scope.storeName)
   const href = withoutAppLink.has(code)
     ? undefined
-    : typeof link === "string"
-      ? link
-      : link?.href
+    : savedChatHref(scope, trustedAppOrigin)
   const body = `${business} · ${store}\n\n${notices[code]}${href ? `\nSelect this original business and Store.\nOpen saved chat in EwaTrade: ${href}` : ""}`
   return body.length <= 3000 ? body : notices[code]
 }

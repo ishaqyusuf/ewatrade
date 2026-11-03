@@ -10,8 +10,10 @@ import {
   whatsAppIngressSchema,
 } from "@ewatrade/assistant/channels/ingress"
 import {
+  isWhatsAppPhotoButton,
   isWhatsAppVoiceButton,
   isWhatsAppVoiceChoiceIntent,
+  parseWhatsAppPhotoButton,
   parseWhatsAppVoiceButton,
   parseWhatsAppVoiceChoice,
 } from "@ewatrade/assistant/channels/media"
@@ -44,7 +46,8 @@ export function assistantWhatsAppIngressActionContent(
 ) {
   if (
     (event.type === "text" && isWhatsAppVoiceChoiceIntent(event.text)) ||
-    isWhatsAppVoiceButton(event.quickActionId)
+    isWhatsAppVoiceButton(event.quickActionId) ||
+    isWhatsAppPhotoButton(event.quickActionId)
   )
     return null
   const workflow =
@@ -159,14 +162,17 @@ export async function acceptAssistantWhatsAppIngress(
   const voiceIntent =
     voiceButton ||
     (event.type === "text" && isWhatsAppVoiceChoiceIntent(event.text))
-  const readPage = event.flowResponse
-    ? null
-    : parseWhatsAppReadPageIntent(event)
-  const replyChoice = event.flowResponse
-    ? null
-    : parseWhatsAppReplyChoiceIntent(event)
+  const photoButton = isWhatsAppPhotoButton(event.quickActionId)
+  const readPage =
+    event.flowResponse || photoButton
+      ? null
+      : parseWhatsAppReadPageIntent(event)
+  const replyChoice =
+    event.flowResponse || photoButton
+      ? null
+      : parseWhatsAppReplyChoiceIntent(event)
   const action =
-    voiceIntent || readPage || replyChoice
+    voiceIntent || photoButton || readPage || replyChoice
       ? null
       : assistantWhatsAppIngressActionContent(event)
   const voiceChoice = voiceButton
@@ -178,6 +184,15 @@ export async function acceptAssistantWhatsAppIngress(
     ? { type: "voice_choice" as const, choice: voiceChoice }
     : voiceIntent
       ? { type: "invalid_voice_choice" as const }
+      : null
+  // A tapped photo choice is bound to the exact review message it was tapped on.
+  const photoChoice = photoButton
+    ? parseWhatsAppPhotoButton(event.quickActionId, event.replyToMessageId)
+    : null
+  const photo = photoChoice
+    ? { type: "photo_choice" as const, choice: photoChoice }
+    : photoButton
+      ? { type: "invalid_photo_choice" as const }
       : null
   const inboxKind = action ? "ACTION" : "TURN"
   const flowData =
@@ -211,7 +226,8 @@ export async function acceptAssistantWhatsAppIngress(
         : { type: "invalid_reply_choice" as const }
       : null) ??
     action ??
-    voice ?? {
+    voice ??
+    photo ?? {
       type: event.type,
       ...(event.text !== undefined ? { text: event.text } : {}),
       // Opaque review/selection proofs must never be recoverable from queued content.

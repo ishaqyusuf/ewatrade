@@ -1,12 +1,23 @@
 import { createHash } from "node:crypto"
 import {
+  WHATSAPP_IMPORT_HANDOFF_VERSION,
+  WHATSAPP_PHOTO_HOLD_MS,
+  WHATSAPP_PHOTO_REVIEW_VERSION,
   WHATSAPP_VOICE_REVIEW_VERSION,
+  type WhatsAppPhotoChoice,
+  type WhatsAppPhotoOrder,
   type WhatsAppVoiceChoice,
+  renderWhatsAppPhotoReview,
   renderWhatsAppVoiceReview,
+  whatsAppImportHandoffContentSchema,
   whatsAppMediaContentSchema,
+  whatsAppPhotoChoiceContentSchema,
+  whatsAppPhotoReviewButtons,
+  whatsAppPhotoReviewContentSchema,
   whatsAppVoiceChoiceContentSchema,
   whatsAppVoiceReviewContentSchema,
 } from "@ewatrade/assistant/channels/media"
+import { renderWhatsAppImportHandoff } from "@ewatrade/assistant/channels/notice"
 import { whatsAppChannelPolicy } from "@ewatrade/assistant/channels/policy"
 import { whatsAppWorkflowEnabled } from "@ewatrade/assistant/channels/workflow"
 import { Prisma } from "../../../generated/prisma/client"
@@ -370,4 +381,433 @@ export async function consumeAssistantWhatsAppVoiceReviewInTransaction(
     text:
       choice.decision === "edit" ? choice.text : (attachment.transcript ?? ""),
   }
+}
+
+type Resolved = Awaited<ReturnType<typeof resolveAssistantWhatsAppConversation>>
+const trustedAppOrigin = () =>
+  process.env.DASHBOARD_URL ??
+  process.env.NEXT_PUBLIC_DASHBOARD_URL ??
+  "https://dash.ewatrade.com"
+
+/** The original media TURN's own canonical attachment id, never a caller pointer alone. */
+function sourceAttachmentId(
+  resolved: Resolved,
+  inbox: { phoneNumberId: string; providerMessageId: string },
+  mediaId: string,
+) {
+  return assistantAttachmentRequestId(
+    resolved.scope,
+    resolved.conversation.id,
+    assistantWhatsAppMediaClientRequestId(
+      inbox.phoneNumberId,
+      inbox.providerMessageId,
+      mediaId,
+    ),
+  )
+}
+
+async function photo(
+  db: DbClient,
+  resolved: Resolved,
+  review: { attachmentId: string; contentDigest?: string },
+  now: Date,
+) {
+  const row = await db.assistantAttachment.findFirst({
+    where: {
+      id: review.attachmentId,
+      conversationId: resolved.conversation.id,
+      tenantId: resolved.scope.tenantId,
+      storeId: resolved.scope.storeId,
+      actorUserId: resolved.scope.userId,
+      kind: "IMAGE",
+      status: "READY",
+      messageId: null,
+      retentionUntil: { gt: now },
+      ...(review.contentDigest ? { contentDigest: review.contentDigest } : {}),
+    },
+  })
+  if (!row) throw new AssistantWhatsAppError("EXPIRED")
+  return row
+}
+
+function photoOrder(order: {
+  id: string
+  orderNumber: string
+  customerName: string | null
+}): WhatsAppPhotoOrder {
+  return {
+    id: order.id,
+    orderNumber: order.orderNumber,
+    customerName: order.customerName ?? null,
+  }
+}
+
+/**
+ * Completes the original GENERAL photo TURN without a model: the photo is held
+ * unsent for at most 24 hours while the owner picks Attach, Other order or
+ * Discard on this exact review message. The caller resolved the visible order.
+ */
+export async function stageAssistantWhatsAppPhotoReviewInTransaction(
+  db: Prisma.TransactionClient,
+  input: PrincipalInput & { attachmentId: string; orderId: string },
+  now = new Date(),
+) {
+  const { resolved, inbox, authorityDigest } = await fresh(db, input, now)
+  const source = whatsAppMediaContentSchema.safeParse(inbox.content)
+  if (
+    !source.success ||
+    resolved.conversation.purpose !== "GENERAL" ||
+    inbox.runId ||
+    input.attachmentId !==
+      sourceAttachmentId(resolved, inbox, source.data.media.id)
+  )
+    throw new AssistantWhatsAppError("CONFLICT")
+  await db.$queryRaw`SELECT id FROM "AssistantAttachment" WHERE id=${input.attachmentId} FOR UPDATE`
+  const attachment = await photo(db, resolved, input, now)
+  const order = await db.commercialOrder.findFirst({
+    where: { id: input.orderId, tenantId: resolved.scope.tenantId },
+    select: { id: true, orderNumber: true, customerName: true },
+  })
+  const reviewOrder = order && photoOrder(order)
+  const body = reviewOrder && renderWhatsAppPhotoReview(reviewOrder)
+  if (!reviewOrder || !body) throw new AssistantWhatsAppError("CONFLICT")
+  // The photo hold never outlives the original event or the attachment itself.
+  const hold = Math.min(
+    inbox.expiresAt.getTime(),
+    attachment.retentionUntil.getTime(),
+    now.getTime() + WHATSAPP_PHOTO_HOLD_MS,
+  )
+  const expiresAt = new Date(
+    Math.min(
+      hold,
+      resolved.grant.expiresAt.getTime(),
+      resolved.grant.idleExpiresAt.getTime(),
+    ),
+  )
+  if (expiresAt <= now) throw new AssistantWhatsAppError("EXPIRED")
+  const content = whatsAppPhotoReviewContentSchema.parse({
+    type: "photo_review",
+    source: source.data,
+    review: {
+      attachmentId: attachment.id,
+      contentDigest: attachment.contentDigest,
+      order: reviewOrder,
+      retentionUntil: attachment.retentionUntil.toISOString(),
+      authorityDigest,
+      expiresAt: expiresAt.toISOString(),
+    },
+  })
+  if (await db.assistantWhatsAppOutbox.count({ where: { inboxId: inbox.id } }))
+    throw new AssistantWhatsAppError("CONFLICT")
+  const outbox = await db.assistantWhatsAppOutbox.create({
+    data: {
+      inboxId: inbox.id,
+      phoneNumberId: inbox.phoneNumberId,
+      responseRevision: 1,
+      chunkIndex: 0,
+      chunkCount: 1,
+      rendererVersion: WHATSAPP_PHOTO_REVIEW_VERSION,
+      renderKind: "photo_review",
+      authorityDigest,
+      content: body,
+      contentDigest: digest(body),
+      expiresAt,
+    },
+  })
+  // An unchosen photo is removed by the existing retention job after the hold.
+  await db.assistantAttachment.update({
+    where: { id: attachment.id },
+    data: { retentionUntil: new Date(hold) },
+  })
+  await db.assistantWhatsAppInbox.update({
+    where: { id: inbox.id },
+    data: {
+      content,
+      state: "COMPLETED",
+      completedAt: now,
+      leaseOwner: null,
+      leaseExpiresAt: null,
+      nextAttemptAt: null,
+      errorCode: null,
+    },
+  })
+  return { state: "completed" as const, outboxId: outbox.id }
+}
+
+/** Durable ingress claims one photo choice once; Attach and Other order hand the photo to the canonical turn. */
+export async function consumeAssistantWhatsAppPhotoReviewInTransaction(
+  db: Prisma.TransactionClient,
+  input: PrincipalInput & { choice: WhatsAppPhotoChoice },
+  now = new Date(),
+): Promise<
+  | { state: "discarded" }
+  | {
+      state: "attach" | "other"
+      attachmentId: string
+      order: WhatsAppPhotoOrder
+    }
+> {
+  const { resolved, inbox, authorityDigest } = await fresh(db, input, now)
+  const chosen = whatsAppPhotoChoiceContentSchema.safeParse(inbox.content)
+  if (
+    !chosen.success ||
+    resolved.conversation.purpose !== "GENERAL" ||
+    chosen.data.choice.decision !== input.choice.decision ||
+    chosen.data.choice.replyToMessageId !== input.choice.replyToMessageId
+  )
+    throw new AssistantWhatsAppError("UNAUTHORIZED")
+  const choice = chosen.data.choice
+  const outbox = await db.assistantWhatsAppOutbox.findFirst({
+    where: {
+      phoneNumberId: input.principal.phoneNumberId,
+      providerMessageId: choice.replyToMessageId,
+      state: { in: ["SENT", "DELIVERED", "READ"] },
+      renderKind: "photo_review",
+      deliveryAttempts: {
+        some: { state: "ACCEPTED", providerMessageId: choice.replyToMessageId },
+      },
+      inbox: {
+        bindingId: resolved.binding.id,
+        kind: "TURN",
+        state: "COMPLETED",
+      },
+    },
+    include: { inbox: true },
+  })
+  if (!outbox) throw new AssistantWhatsAppError("UNAUTHORIZED")
+  await db.$queryRaw`SELECT id FROM "AssistantWhatsAppInbox" WHERE id=${outbox.inboxId} FOR UPDATE`
+  const original = await db.assistantWhatsAppInbox.findUniqueOrThrow({
+    where: { id: outbox.inboxId },
+  })
+  const parsed = whatsAppPhotoReviewContentSchema.safeParse(original.content)
+  if (!parsed.success) throw new AssistantWhatsAppError("UNAUTHORIZED")
+  const review = parsed.data.review
+  if (
+    original.expiresAt <= now ||
+    new Date(review.expiresAt) <= now ||
+    outbox.expiresAt <= now
+  )
+    throw new AssistantWhatsAppError("EXPIRED")
+  if (
+    outbox.rendererVersion !== WHATSAPP_PHOTO_REVIEW_VERSION ||
+    outbox.chunkCount !== 1 ||
+    outbox.chunkIndex !== 0 ||
+    outbox.runId ||
+    outbox.messageId ||
+    original.runId ||
+    original.executionAuthorityDigest !== authorityDigest ||
+    outbox.authorityDigest !== authorityDigest ||
+    review.authorityDigest !== authorityDigest ||
+    !outbox.content ||
+    outbox.content !== renderWhatsAppPhotoReview(review.order) ||
+    outbox.contentDigest !== digest(outbox.content)
+  )
+    throw new AssistantWhatsAppError("UNAUTHORIZED")
+  if (review.consumedBy && review.consumedBy !== inbox.id)
+    throw new AssistantWhatsAppError("EXPIRED")
+  if (review.consumedBy && review.decision !== choice.decision)
+    throw new AssistantWhatsAppError("CONFLICT")
+  if (review.consumedBy === inbox.id && choice.decision === "discard")
+    return { state: "discarded" }
+  await db.$queryRaw`SELECT id FROM "AssistantAttachment" WHERE id=${review.attachmentId} FOR UPDATE`
+  const attachment = await photo(db, resolved, review, now)
+  if (!review.consumedBy)
+    await db.assistantWhatsAppInbox.update({
+      where: { id: original.id },
+      data: {
+        content: {
+          ...parsed.data,
+          review: {
+            ...review,
+            consumedBy: inbox.id,
+            decision: choice.decision,
+          },
+        },
+      },
+    })
+  if (choice.decision === "discard") {
+    // The retention job deletes the unsent row and its bytes; nothing reaches the chat.
+    await db.assistantAttachment.update({
+      where: { id: attachment.id },
+      data: {
+        status: "FAILED",
+        errorCode: "PHOTO_DISCARDED",
+        retentionUntil: new Date(now.getTime() - 1),
+        extraction: Prisma.DbNull,
+      },
+    })
+    return { state: "discarded" }
+  }
+  // Kept: the photo returns to the canonical attachment retention.
+  const retained = new Date(review.retentionUntil)
+  if (retained > attachment.retentionUntil)
+    await db.assistantAttachment.update({
+      where: { id: attachment.id },
+      data: { retentionUntil: retained },
+    })
+  return {
+    state: choice.decision,
+    attachmentId: attachment.id,
+    order: review.order,
+  }
+}
+
+/** Completes a GENERAL spreadsheet TURN with the fixed row-count handoff; nothing is stored or imported. */
+export async function stageAssistantWhatsAppImportHandoffInTransaction(
+  db: Prisma.TransactionClient,
+  input: PrincipalInput & { fileName: string; rows: number },
+  now = new Date(),
+) {
+  const { resolved, inbox, authorityDigest } = await fresh(db, input, now)
+  const source = whatsAppMediaContentSchema.safeParse(inbox.content)
+  const store = resolved.tenantContext.activeStore
+  if (
+    !source.success ||
+    resolved.conversation.purpose !== "GENERAL" ||
+    inbox.runId ||
+    !store
+  )
+    throw new AssistantWhatsAppError("CONFLICT")
+  const content = whatsAppImportHandoffContentSchema.parse({
+    type: "import_handoff",
+    source: source.data,
+    file: { name: input.fileName, rows: input.rows },
+  })
+  const body = importHandoffBody(content.file, resolved)
+  if (!body) throw new AssistantWhatsAppError("CONFLICT")
+  const expiresAt = new Date(
+    Math.min(
+      inbox.expiresAt.getTime(),
+      resolved.grant.expiresAt.getTime(),
+      resolved.grant.idleExpiresAt.getTime(),
+    ),
+  )
+  if (expiresAt <= now) throw new AssistantWhatsAppError("EXPIRED")
+  if (await db.assistantWhatsAppOutbox.count({ where: { inboxId: inbox.id } }))
+    throw new AssistantWhatsAppError("CONFLICT")
+  const outbox = await db.assistantWhatsAppOutbox.create({
+    data: {
+      inboxId: inbox.id,
+      phoneNumberId: inbox.phoneNumberId,
+      responseRevision: 1,
+      chunkIndex: 0,
+      chunkCount: 1,
+      rendererVersion: WHATSAPP_IMPORT_HANDOFF_VERSION,
+      renderKind: "import_handoff",
+      authorityDigest,
+      content: body,
+      contentDigest: digest(body),
+      expiresAt,
+    },
+  })
+  await db.assistantWhatsAppInbox.update({
+    where: { id: inbox.id },
+    data: {
+      content,
+      state: "COMPLETED",
+      completedAt: now,
+      leaseOwner: null,
+      leaseExpiresAt: null,
+      nextAttemptAt: null,
+      errorCode: null,
+    },
+  })
+  return { state: "completed" as const, outboxId: outbox.id }
+}
+
+function importHandoffBody(
+  file: { name: string; rows: number },
+  resolved: Resolved,
+) {
+  const store = resolved.tenantContext.activeStore
+  return store
+    ? renderWhatsAppImportHandoff(
+        file,
+        {
+          businessName: resolved.tenantContext.tenant.name,
+          storeName: store.name,
+          tenantId: resolved.scope.tenantId,
+          storeId: resolved.scope.storeId,
+          conversationId: resolved.conversation.id,
+          purpose: resolved.conversation.purpose,
+        },
+        trustedAppOrigin(),
+      )
+    : null
+}
+
+/**
+ * Fresh dispatch proof for photo reviews and spreadsheet handoffs: the saved
+ * body must re-render from the original TURN, and photo buttons only while the
+ * held photo is still unsent and unchosen.
+ */
+export async function validateAssistantWhatsAppMediaPrompt(
+  db: DbClient,
+  input: { principal: WhatsAppConversationPrincipal; outboxId: string },
+  now = new Date(),
+): Promise<{
+  body: string
+  buttons?: Array<{ id: string; title: string }>
+}> {
+  if (!whatsAppChannelPolicy().media)
+    throw new AssistantWhatsAppError("UNAVAILABLE")
+  const resolved = await resolveAssistantWhatsAppConversation(
+    db,
+    input.principal,
+    now,
+  )
+  const outbox = await db.assistantWhatsAppOutbox.findFirst({
+    where: { id: input.outboxId },
+    include: { inbox: true },
+  })
+  if (
+    !outbox ||
+    resolved.conversation.purpose !== "GENERAL" ||
+    outbox.phoneNumberId !== input.principal.phoneNumberId ||
+    outbox.inbox.bindingId !== resolved.binding.id ||
+    outbox.inbox.kind !== "TURN" ||
+    outbox.inbox.runId ||
+    outbox.runId ||
+    outbox.messageId ||
+    outbox.inbox.state !== "COMPLETED" ||
+    outbox.chunkCount !== 1 ||
+    outbox.chunkIndex !== 0 ||
+    outbox.expiresAt <= now ||
+    outbox.inbox.expiresAt <= now ||
+    outbox.inbox.executionAuthorityDigest !== outbox.authorityDigest ||
+    outbox.authorityDigest !==
+      (await assistantWhatsAppAuthorityDigest(db, resolved))
+  )
+    throw new AssistantWhatsAppError("UNAUTHORIZED")
+  if (outbox.renderKind === "import_handoff") {
+    const parsed = whatsAppImportHandoffContentSchema.safeParse(
+      outbox.inbox.content,
+    )
+    const body = parsed.success && importHandoffBody(parsed.data.file, resolved)
+    if (
+      outbox.rendererVersion !== WHATSAPP_IMPORT_HANDOFF_VERSION ||
+      !body ||
+      body !== outbox.content ||
+      digest(body) !== outbox.contentDigest
+    )
+      throw new AssistantWhatsAppError("CONFLICT")
+    return { body }
+  }
+  const parsed = whatsAppPhotoReviewContentSchema.safeParse(
+    outbox.inbox.content,
+  )
+  if (
+    outbox.renderKind !== "photo_review" ||
+    outbox.rendererVersion !== WHATSAPP_PHOTO_REVIEW_VERSION ||
+    !parsed.success ||
+    new Date(parsed.data.review.expiresAt) <= now ||
+    parsed.data.review.consumedBy ||
+    parsed.data.review.authorityDigest !== outbox.authorityDigest
+  )
+    throw new AssistantWhatsAppError("UNAUTHORIZED")
+  await photo(db, resolved, parsed.data.review, now)
+  const body = renderWhatsAppPhotoReview(parsed.data.review.order)
+  if (!body || body !== outbox.content || digest(body) !== outbox.contentDigest)
+    throw new AssistantWhatsAppError("CONFLICT")
+  return { body, buttons: whatsAppPhotoReviewButtons(parsed.data.review.order) }
 }

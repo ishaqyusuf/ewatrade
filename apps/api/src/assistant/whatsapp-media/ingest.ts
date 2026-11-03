@@ -7,6 +7,10 @@ import {
   whatsAppMediaPolicy,
 } from "@ewatrade/assistant/channels/media"
 import {
+  SetupFileParseError,
+  parseSpreadsheet,
+} from "@ewatrade/assistant/files/spreadsheet"
+import {
   SETUP_ATTACHMENTS_PER_CONVERSATION,
   SETUP_ATTACHMENT_PART,
   SETUP_ATTACHMENT_RETENTION_MS,
@@ -14,6 +18,7 @@ import {
   type SetupAttachmentKind,
   assistantAttachmentKindAllowedForPurpose,
   validateSetupAttachmentIntent,
+  whatsAppAttachmentCountedForImport,
 } from "@ewatrade/assistant/setup/attachments"
 import type { AssistantScope } from "@ewatrade/db/assistant"
 import {
@@ -45,6 +50,8 @@ type Storage = ReturnType<
 export type WhatsAppMediaIngestDependencies = {
   enabled(): boolean
   allows(policy: Policy, scope: Scope): Promise<boolean>
+  /** GENERAL spreadsheets are counted for an app import, never stored or read into chat. */
+  countedForImport?(policy: Policy): boolean
   authorize(): Promise<{
     scope: Scope
     conversationId: string
@@ -86,6 +93,7 @@ export type WhatsAppMediaIngestResult =
       transcriptDigest: string
       processingGeneration: number
     }
+  | { state: "import_handoff"; fileName: string; rows: number }
   | { state: "refused"; code: string; message: string }
 
 const sha256 = (value: string | Uint8Array) =>
@@ -106,6 +114,59 @@ export function whatsAppAttachmentKindAllowedForPurpose(
       (purpose !== "PRODUCT_CREATE" &&
         (kind !== "IMAGE" || purpose === "GENERAL")))
   )
+}
+
+/**
+ * Downloads within the canonical spreadsheet limit and counts rows with the
+ * shared provider-free parser. No attachment, storage object or job is created.
+ */
+async function countForImport(
+  deps: WhatsAppMediaIngestDependencies,
+  policy: Policy,
+  media: { id: string; sha256?: string },
+  signal?: AbortSignal,
+): Promise<WhatsAppMediaIngestResult> {
+  if (policy.kind !== "SPREADSHEET") return refused("UNSUPPORTED_MEDIA")
+  let downloaded: Awaited<ReturnType<typeof deps.download>>
+  try {
+    downloaded = await deps.download({
+      mediaId: media.id,
+      maxBytes: policy.maxBytes,
+      expectedMediaType: policy.contentType,
+      expectedSha256: media.sha256,
+      signal,
+    })
+  } catch (error) {
+    if ((error as { code?: unknown })?.code === "MEDIA_TOO_LARGE")
+      return refused("MEDIA_TOO_LARGE")
+    throw error
+  }
+  const intent = validateSetupAttachmentIntent({
+    contentType: policy.contentType,
+    sizeBytes: downloaded.bytes.byteLength,
+  })
+  if (!intent.ok && intent.reason === "TOO_LARGE")
+    return refused("MEDIA_TOO_LARGE")
+  if (
+    downloaded.mediaType !== policy.contentType ||
+    !intent.ok ||
+    !acceptsAssistantAttachmentBytes(downloaded.bytes, policy.contentType)
+  )
+    return refused("INVALID_MEDIA")
+  let rows: number
+  try {
+    // One kept row bounds memory; the parser still counts every data row.
+    rows = parseSpreadsheet(downloaded.bytes, policy.contentType, {
+      limits: { maxRows: 1 },
+    }).totalRows
+  } catch (error) {
+    if (error instanceof SetupFileParseError) return refused("INVALID_MEDIA")
+    throw error
+  }
+  if (rows < 1) return refused("INVALID_MEDIA")
+  // Recheck the captured linked scope after HTTP before staging any reply.
+  await deps.authorize()
+  return { state: "import_handoff", fileName: policy.fileName, rows }
 }
 
 /** Injectable I/O; never accepts an actor, workspace or download URL from ingress. */
@@ -130,6 +191,8 @@ export function createWhatsAppMediaIngestor(
     const { scope, conversationId, phoneNumberId } = await deps.authorize()
     if (!(await deps.allows(policy, scope)))
       return refused("MEDIA_NOT_AVAILABLE", WHATSAPP_MEDIA_UNSUPPORTED)
+    if (deps.countedForImport?.(policy))
+      return countForImport(deps, policy, parsed.data.media, input.signal)
     const clientRequestId = assistantWhatsAppMediaClientRequestId(
       phoneNumberId,
       input.providerMessageId,
@@ -380,6 +443,13 @@ export async function createDefaultWhatsAppMediaIngestDependencies(
   }
   return {
     allows: async (policy, scope) => {
+      if (whatsAppAttachmentCountedForImport(policy.kind, purpose))
+        return assistantMediaAvailability(
+          scope.dataClassification,
+          process.env,
+          undefined,
+          true,
+        ).files
       if (!whatsAppAttachmentKindAllowedForPurpose(policy.kind, purpose))
         return false
       if (policy.kind === "AUDIO") return true
@@ -391,6 +461,8 @@ export async function createDefaultWhatsAppMediaIngestDependencies(
       )
       return policy.kind === "IMAGE" ? available.photos : available.files
     },
+    countedForImport: (policy) =>
+      whatsAppAttachmentCountedForImport(policy.kind, purpose),
     enabled: () =>
       Boolean(communications.readAssistantWhatsAppConfig()) &&
       whatsAppChannelPolicy().media &&

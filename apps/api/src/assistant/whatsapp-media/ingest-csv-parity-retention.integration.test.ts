@@ -113,11 +113,15 @@ beforeAll(async () => {
     await createDefaultWhatsAppMediaIngestDependencies(deniedContext)
   if (!deniedDefaults) throw Error("Expected real General ingest dependencies")
   let deniedDownloads = 0
+  // GENERAL chat only counts the rows for an app import; nothing is stored or read.
   const deniedIngest = createWhatsAppMediaIngestor({
     ...deniedDefaults,
     download: async () => {
       deniedDownloads += 1
-      throw Error("General CSV must refuse before download")
+      return { bytes: csv, mediaType: "text/csv" }
+    },
+    createIntent: async () => {
+      throw Error("General CSV must not create an attachment")
     },
     enqueue: async () => {
       throw Error("General CSV must not enqueue")
@@ -128,8 +132,8 @@ beforeAll(async () => {
       providerMessageId: deniedInbox.providerMessageId,
       content: deniedInbox.content,
     }),
-  ).toMatchObject({ state: "refused", code: "MEDIA_NOT_AVAILABLE" })
-  expect(deniedDownloads).toBe(0)
+  ).toMatchObject({ state: "import_handoff", rows: 2 })
+  expect(deniedDownloads).toBe(1)
   expect(
     await fixture.db.assistantAttachment.count({
       where: { tenantId: fixture.tenantId },

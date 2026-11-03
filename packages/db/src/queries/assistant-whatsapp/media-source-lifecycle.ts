@@ -1,5 +1,6 @@
 import {
   whatsAppMediaContentSchema,
+  whatsAppPhotoReviewContentSchema,
   whatsAppVoiceReviewContentSchema,
 } from "@ewatrade/assistant/channels/media"
 import {
@@ -68,11 +69,16 @@ export function assistantWhatsAppMediaSourceReference(row: Source) {
     return null
   const raw = whatsAppMediaContentSchema.safeParse(row.content)
   const voice = whatsAppVoiceReviewContentSchema.safeParse(row.content)
+  // A held photo awaiting Attach/Discard is still this message's source, so
+  // revoke and privacy cleanup remove it like any other pending media.
+  const photo = whatsAppPhotoReviewContentSchema.safeParse(row.content)
   const media = raw.success
     ? raw.data
     : voice.success
       ? voice.data.source
-      : null
+      : photo.success
+        ? photo.data.source
+        : null
   if (!media) return null
   const scope = {
     tenantId: binding.conversation.tenantId,
@@ -91,7 +97,8 @@ export function assistantWhatsAppMediaSourceReference(row: Source) {
   )
   if (
     (media.attachmentId && media.attachmentId !== attachmentId) ||
-    (voice.success && voice.data.review.attachmentId !== attachmentId)
+    (voice.success && voice.data.review.attachmentId !== attachmentId) ||
+    (photo.success && photo.data.review.attachmentId !== attachmentId)
   )
     return null
   return {

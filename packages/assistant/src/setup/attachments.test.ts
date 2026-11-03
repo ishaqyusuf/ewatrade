@@ -1,10 +1,12 @@
 import { describe, expect, test } from "bun:test"
 import {
+  assistantAttachmentKindAllowedForPurpose,
   sanitizeSetupAttachmentName,
   setupAttachmentContentTypeFor,
   setupAttachmentModelText,
   summarizeSetupAttachment,
   validateSetupAttachmentIntent,
+  whatsAppAttachmentCountedForImport,
 } from "./attachments"
 import { parseSetupRehearsalLines } from "./rehearsal"
 import { type SetupDraftEntityWrite, createSetupAssistantTools } from "./tools"
@@ -212,4 +214,15 @@ describe("draft provenance", () => {
     )
     expect(JSON.stringify(result)).toContain("photo for Feed was not found")
   })
+})
+
+test("WhatsApp GENERAL spreadsheets are counted for import while app GENERAL admission is unchanged", () => {
+  expect(whatsAppAttachmentCountedForImport("SPREADSHEET", "GENERAL")).toBe(
+    true,
+  )
+  expect(whatsAppAttachmentCountedForImport("SPREADSHEET", "SETUP")).toBe(false)
+  expect(whatsAppAttachmentCountedForImport("IMAGE", "GENERAL")).toBe(false)
+  expect(
+    assistantAttachmentKindAllowedForPurpose("SPREADSHEET", "GENERAL"),
+  ).toBe(false)
 })

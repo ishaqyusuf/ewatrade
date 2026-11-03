@@ -176,3 +176,134 @@ export function renderWhatsAppVoiceReview(transcript: string) {
     return null
   return `🎙️ Voice note transcript\n\n${text}\n\nCheck the whole transcript. Tap Use transcript or Cancel transcript. To fix it, reply to this message with Edit transcript: and the corrected text. Nothing runs until you choose.`
 }
+
+/**
+ * A linked owner's photo whose caption names one visible order. The photo is
+ * kept as sent (never read); the owner chooses where it goes. Choices bind to
+ * the exact review message and expire with the photo hold.
+ */
+export const WHATSAPP_PHOTO_REVIEW_VERSION = "whatsapp-photo-review-v1"
+export const WHATSAPP_PHOTO_HOLD_MS = 24 * 60 * 60_000
+export const whatsAppPhotoChoiceSchema = z
+  .object({
+    decision: z.enum(["attach", "other", "discard"]),
+    replyToMessageId: z.string().min(1).max(256),
+  })
+  .strict()
+export type WhatsAppPhotoChoice = z.infer<typeof whatsAppPhotoChoiceSchema>
+export const whatsAppPhotoChoiceContentSchema = z
+  .object({
+    type: z.literal("photo_choice"),
+    choice: whatsAppPhotoChoiceSchema,
+  })
+  .strict()
+const photoOrderSchema = z
+  .object({
+    id: z.string().min(1).max(128),
+    orderNumber: z.string().trim().min(1).max(40),
+    customerName: z.string().max(200).nullable(),
+  })
+  .strict()
+export type WhatsAppPhotoOrder = z.infer<typeof photoOrderSchema>
+export const whatsAppPhotoReviewContentSchema = z
+  .object({
+    type: z.literal("photo_review"),
+    source: whatsAppMediaContentSchema,
+    review: z
+      .object({
+        attachmentId: z.string().min(1).max(64),
+        contentDigest: z.string().regex(/^[a-f0-9]{64}$/),
+        order: photoOrderSchema,
+        /** The attachment's own retention, restored once the owner keeps the photo. */
+        retentionUntil: z.iso.datetime(),
+        authorityDigest: z.string().regex(/^[a-f0-9]{64}$/),
+        expiresAt: z.iso.datetime(),
+        consumedBy: z.string().min(1).max(128).optional(),
+        decision: z.enum(["attach", "other", "discard"]).optional(),
+      })
+      .strict(),
+  })
+  .strict()
+
+/** Order references written like ORD-1038 or S-1038; matched exactly against saved orders. */
+export function whatsAppCaptionOrderNumbers(caption?: string) {
+  const found = new Set<string>()
+  for (const match of (caption ?? "").matchAll(
+    /(?<![A-Za-z0-9-])([A-Za-z]{1,6}-\d{1,10})(?![A-Za-z0-9-])/g,
+  ))
+    if (match[1]) found.add(match[1].toUpperCase())
+  return [...found].slice(0, 3)
+}
+
+function photoOrderLabel(order: Pick<WhatsAppPhotoOrder, "orderNumber">) {
+  const number = whatsAppPlainText(order.orderNumber).replace(/`/g, "").trim()
+  return number && number.length <= 40 ? number : null
+}
+
+export function renderWhatsAppPhotoReview(order: WhatsAppPhotoOrder) {
+  const number = photoOrderLabel(order)
+  if (!number) return null
+  const customer = whatsAppPlainText(order.customerName ?? "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 60)
+  return `📎 Photo kept as sent. I don't read what's in photos.\n\nAttach it to \`\`\`${number}\`\`\`${customer ? ` · ${customer}` : ""}?\n_Attaching doesn't record a payment._`
+}
+
+/** Reply buttons (≤3, titles ≤20). Ids carry no authority; the stored review is re-checked. */
+export function whatsAppPhotoReviewButtons(
+  order: Pick<WhatsAppPhotoOrder, "orderNumber">,
+) {
+  const number = photoOrderLabel(order)
+  const attach = number ? `Attach to ${number}` : "Attach"
+  return [
+    {
+      id: "wa-photo:attach",
+      title: attach.length <= 20 ? attach : "Attach",
+    },
+    { id: "wa-photo:other", title: "Other order" },
+    { id: "wa-photo:discard", title: "Discard" },
+  ]
+}
+export function isWhatsAppPhotoButton(quickActionId?: string) {
+  return quickActionId?.startsWith("wa-photo:") ?? false
+}
+/** A tapped photo choice, bound to the exact review message it was tapped on. */
+export function parseWhatsAppPhotoButton(
+  quickActionId?: string,
+  replyToMessageId?: string,
+): WhatsAppPhotoChoice | null {
+  const decision = /^wa-photo:(attach|other|discard)$/.exec(
+    quickActionId ?? "",
+  )?.[1]
+  const parsed = whatsAppPhotoChoiceSchema.safeParse(
+    decision ? { decision, replyToMessageId } : null,
+  )
+  return parsed.success ? parsed.data : null
+}
+
+/** The owner's own words for the chosen photo; the model drafts the attach for review. */
+export function whatsAppPhotoChoiceText(
+  decision: "attach" | "other",
+  order: Pick<WhatsAppPhotoOrder, "orderNumber">,
+) {
+  const number = photoOrderLabel(order)
+  return decision === "attach" && number
+    ? `Attach this photo to order ${number}.`
+    : "Attach this photo to a different order. Ask me which one."
+}
+
+/** Spreadsheets in GENERAL chat are counted only; rows are reviewed and imported in the app. */
+export const WHATSAPP_IMPORT_HANDOFF_VERSION = "whatsapp-import-handoff-v1"
+export const whatsAppImportHandoffContentSchema = z
+  .object({
+    type: z.literal("import_handoff"),
+    source: whatsAppMediaContentSchema,
+    file: z
+      .object({
+        name: z.string().min(1).max(120),
+        rows: z.number().int().nonnegative().max(1_000_000),
+      })
+      .strict(),
+  })
+  .strict()

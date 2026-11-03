@@ -412,3 +412,35 @@ test("a pinned pending source still rereads exact original grant generations and
     }
   }
 })
+
+test("a held photo awaiting a choice still resolves to its original source for cleanup", () => {
+  const row = source()
+  row.content = {
+    type: "media",
+    media: {
+      id: "provider-photo",
+      mediaType: "image/jpeg",
+      sourceType: "image",
+    },
+  }
+  const ref = assistantWhatsAppMediaSourceReference(row)
+  if (!ref) throw Error("Expected exact synthetic photo source")
+  const review = {
+    attachmentId: ref.attachmentId,
+    contentDigest: "b".repeat(64),
+    order: { id: "order", orderNumber: "S-1038", customerName: "Musa Ibrahim" },
+    retentionUntil: now.toISOString(),
+    authorityDigest: "a".repeat(64),
+    expiresAt: now.toISOString(),
+  }
+  row.content = { type: "photo_review", source: ref.media, review }
+  expect(assistantWhatsAppMediaSourceReference(row)?.attachmentId).toBe(
+    ref.attachmentId,
+  )
+  row.content = {
+    type: "photo_review",
+    source: ref.media,
+    review: { ...review, attachmentId: "other-attachment" },
+  }
+  expect(assistantWhatsAppMediaSourceReference(row)).toBeNull()
+})
