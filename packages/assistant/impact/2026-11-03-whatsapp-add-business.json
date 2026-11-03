@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "id": "2026-11-03-whatsapp-add-business",
+  "tickets": ["H02"],
+  "summary": "WhatsApp design case c-addbiz-n (family 4, Workshop ewatrade/assistant/conversations scenes/wa/1-onboarding.json): an already-linked sender can create a new business under the same EwaTrade account from chat, behind ASSISTANT_WHATSAPP_ADD_BUSINESS_ENABLED=1 (default unset keeps today's ADD BUSINESS app pointer). Deterministic onboarding handler, never model input: one grouped message collects the facts the app's createBusinessSchema requires (name, country · currency short list, street address, city; store phone defaults to this WhatsApp number and is shown), then a review with Create business / Edit / Cancel. Create sends an email code to the linked account's email (implementation standard: email proof before business creation); a valid code for the same linked user runs createAssistantWhatsAppOnboardingBusiness, which rechecks the onboarding lease, fresh non-QA proof session and linked identity and then calls the canonical createOwnerBusiness (age, QA and retail-ops entitlement checks unchanged; idempotent per operation). The receipt offers Switch to it (canonical connectAssistantWhatsAppOnboarding grant + selection within the fresh-proof window) or Stay here (no grant; CONNECT later). Stale signed taps reply 'That choice expired. Nothing was changed.' Local only; no provider, OTP, env or deployment change.",
+  "noAssistantImpact": "Identity/onboarding channel handler only. No assistant tool, prompt, capability declaration or model-driven write is added; business creation reuses createOwnerBusiness and the switch reuses the existing link authority unchanged.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/whatsapp-assistant-system-design.md"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "apps/api/src/communications/whatsapp-onboarding-add-business.test.ts",
+      "executed": true,
+      "result": "9 pass: entry phrases, grouped/labeled/short-list collection, flag off keeps the app pointer, review → Create → email proof → create → Switch, Stay grants nothing, Cancel/Edit never create, Create before review or after expiry does nothing, account mismatch, rejected create."
+    },
+    {
+      "kind": "test",
+      "path": "apps/api/src/communications/whatsapp-onboarding-runtime.test.ts",
+      "executed": true,
+      "result": "12 pass (with a placeholder EWATRADE_DATABASE_URL; no connection is made), including flag OFF free text stays with the assistant and a stale Create tap after a correction expires without effect."
+    },
+    {
+      "kind": "test",
+      "path": "apps/api/src/communications/whatsapp-onboarding.test.ts",
+      "executed": true,
+      "result": "Existing connection and registration dialogue unchanged; with whatsapp-registration-flow.test.ts all pass."
+    },
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/assistant-whatsapp/onboarding.ts",
+      "executed": false,
+      "result": "Not run: no database integration test for createAssistantWhatsAppOnboardingBusiness; QA_ACCESS_ACCEPTANCE_DATABASE_HOST is not configured here. Lease, fresh-session, identity and idempotency checks are unproven against a database."
+    }
+  ]
+}

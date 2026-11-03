@@ -24,6 +24,12 @@ import {
   whatsAppOnboardingButtons,
 } from "./whatsapp-onboarding"
 import {
+  isWhatsAppAddBusinessCommand,
+  whatsAppAddBusinessEntry,
+  whatsAppAddBusinessExpiredReply,
+} from "./whatsapp-onboarding-add-business"
+import { whatsAppAddBusinessProductionAdapter } from "./whatsapp-onboarding-add-business-runtime"
+import {
   issueWhatsAppOnboardingEmail,
   verifyWhatsAppOnboardingEmail,
 } from "./whatsapp-onboarding-auth"
@@ -59,8 +65,12 @@ const stateSchema = z
       "choose",
       "consent",
       "complete",
+      "add_details",
+      "add_review",
+      "add_code",
+      "add_created",
     ]),
-    mode: z.enum(["login", "sign_up"]),
+    mode: z.enum(["login", "sign_up", "add_business"]),
     expiresAt: z.number(),
     attempts: z.number().int().min(0).max(5),
     requestedAt: z.number().optional(),
@@ -88,6 +98,28 @@ const stateSchema = z
     choices: z.array(choiceSchema).max(100).optional(),
     page: z.number().int().min(0).optional(),
     selected: choiceSchema.optional(),
+    business: z
+      .object({
+        businessName: z.string().max(120).optional(),
+        countryCode: z.string().max(2).nullable().optional(),
+        currencyCode: z
+          .enum(["NGN", "USD", "GHS", "KES", "ZAR", "EGP"])
+          .optional(),
+        addressLine1: z.string().max(200).optional(),
+        city: z.string().max(120).optional(),
+        phone: z.string().max(40).optional(),
+      })
+      .strict()
+      .optional(),
+    current: z
+      .object({
+        businessName: z.string().max(300),
+        storeName: z.string().max(300),
+        ownerName: z.string().max(300).optional(),
+      })
+      .strict()
+      .optional(),
+    created: choiceSchema.optional(),
     lastMessageId: z.string().max(256).optional(),
     lastReply: z.string().max(4096).optional(),
   })
@@ -202,6 +234,12 @@ function readOnboardingButton(
   return command
 }
 
+/** Unverified label only, to choose the stale-tap wording; never executed. */
+function staleOnboardingCommand(id: string | undefined) {
+  const encoded = /^waonb:([A-Za-z0-9_-]{1,64}):/.exec(id ?? "")?.[1]
+  return encoded ? Buffer.from(encoded, "base64url").toString() : ""
+}
+
 function flowToken(
   address: WhatsAppOnboardingAddress,
   env: Dependencies["env"],
@@ -228,6 +266,13 @@ async function cleanExpired(tx: Prisma.TransactionClient, now: Date) {
     })
 }
 
+/** Default OFF: unset keeps today's app pointer for ADD BUSINESS. */
+export function isWhatsAppAddBusinessEnabled(
+  env: Record<string, string | undefined>,
+) {
+  return env.ASSISTANT_WHATSAPP_ADD_BUSINESS_ENABLED === "1"
+}
+
 /** Shared effective publication for native registration and the typed interview. */
 export function getWhatsAppOnboardingLegal(
   env: Record<string, string | undefined> = process.env,
@@ -250,6 +295,7 @@ function productionAdapters(
   dependencies: Dependencies,
   lease: { token: string; nonce: string },
   occurredAt: Date,
+  address: WhatsAppOnboardingAddress,
 ): WhatsAppOnboardingAdapters {
   return {
     legal: getWhatsAppOnboardingLegal(dependencies.env),
@@ -276,6 +322,16 @@ function productionAdapters(
         onboardingLease: lease,
       })
     },
+    ...(isWhatsAppAddBusinessEnabled(dependencies.env)
+      ? {
+          addBusiness: whatsAppAddBusinessProductionAdapter(
+            dependencies.db,
+            address,
+            lease,
+            dependencies.now,
+          ),
+        }
+      : {}),
   }
 }
 
@@ -379,6 +435,8 @@ export async function processWhatsAppOnboardingMessage(
     /^(?:connect|register|register chat|register form|open registration form|create account|add business|i want to add another business|keep)$/i.test(
       text,
     ) ||
+    (isWhatsAppAddBusinessEnabled(dependencies.env) &&
+      whatsAppAddBusinessEntry(text) !== null) ||
     Boolean(event.quickActionId?.startsWith("waonb:")) ||
     Boolean(structured)
   const token = flowToken(address, dependencies.env)
@@ -496,16 +554,28 @@ export async function processWhatsAppOnboardingMessage(
     return { handled: true, outcome: claimed.kind }
   let advanced: WhatsAppOnboardingResult
   try {
-    const adapters =
+    const supplied =
       dependencies.adapters?.(event, { token, nonce }) ??
-      productionAdapters(dependencies, { token, nonce }, occurredAt)
+      productionAdapters(dependencies, { token, nonce }, occurredAt, address)
+    // The flag gates every source of the capability, including injected adapters.
+    const { addBusiness, ...base } = supplied
+    const adapters: WhatsAppOnboardingAdapters = isWhatsAppAddBusinessEnabled(
+      dependencies.env,
+    )
+      ? { ...base, ...(addBusiness ? { addBusiness } : {}) }
+      : base
     // Invalid native payloads are consumed here, never interpreted as a name, code or model input.
     advanced =
       claimed.nativeAction === null
         ? {
             state: claimed.state,
             reply:
-              "That option expired or belongs to an earlier step. Use the current options, type your answer, or send CONNECT to start again.",
+              claimed.state?.mode === "add_business" ||
+              isWhatsAppAddBusinessCommand(
+                staleOnboardingCommand(event.quickActionId),
+              )
+                ? whatsAppAddBusinessExpiredReply
+                : "That option expired or belongs to an earlier step. Use the current options, type your answer, or send CONNECT to start again.",
             connected: false,
             buttons: whatsAppOnboardingButtons(claimed.state),
           }

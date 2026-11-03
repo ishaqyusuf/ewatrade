@@ -2,6 +2,13 @@ import { findCountry } from "@ewatrade/utils/countries"
 import type { OperatingCurrencyCode } from "@ewatrade/utils/currency"
 import { isOperatingCurrencyCode } from "@ewatrade/utils/currency"
 import {
+  type WhatsAppAddBusinessAdapter,
+  type WhatsAppAddBusinessDraft,
+  advanceWhatsAppAddBusiness,
+  whatsAppAddBusinessButtons,
+  whatsAppAddBusinessEntry,
+} from "./whatsapp-onboarding-add-business"
+import {
   collectWhatsAppRegistrationDetails,
   whatsAppRegistrationEntry,
   whatsAppRegistrationFields,
@@ -48,12 +55,16 @@ type Stage =
   | "choose"
   | "consent"
   | "complete"
+  | "add_details"
+  | "add_review"
+  | "add_code"
+  | "add_created"
 
 /** Server-only state. Never persist a code, password, session token or raw inbound body. */
 export type WhatsAppOnboardingState = WhatsAppOnboardingAddress & {
   version: 1
   stage: Stage
-  mode: "login" | "sign_up"
+  mode: "login" | "sign_up" | "add_business"
   expiresAt: number
   attempts: number
   requestedAt?: number
@@ -64,6 +75,10 @@ export type WhatsAppOnboardingState = WhatsAppOnboardingAddress & {
   choices?: WhatsAppOnboardingChoice[]
   page?: number
   selected?: WhatsAppOnboardingChoice
+  /** Add business (linked sender): draft facts, server-derived current scope and the created result. */
+  business?: WhatsAppAddBusinessDraft
+  current?: { businessName: string; storeName: string; ownerName?: string }
+  created?: WhatsAppOnboardingChoice
   lastMessageId?: string
   lastReply?: string
 }
@@ -120,6 +135,8 @@ export type WhatsAppOnboardingAdapters = {
         operationId: string
       },
   ) => Promise<void>
+  /** In-chat Add business; only supplied when ASSISTANT_WHATSAPP_ADD_BUSINESS_ENABLED=1. */
+  addBusiness?: WhatsAppAddBusinessAdapter
 }
 
 const lifetimeMs = 30 * 60_000
@@ -164,6 +181,7 @@ export function whatsAppOnboardingButtons(
   state: WhatsAppOnboardingState | null,
 ): WhatsAppOnboardingButton[] {
   const cancel = { command: "CANCEL", title: "Cancel" }
+  if (state?.mode === "add_business") return whatsAppAddBusinessButtons(state)
   if (!state)
     return [
       { command: "CONNECT", title: "Connect account" },
@@ -346,6 +364,22 @@ export async function advanceWhatsAppOnboarding(
   const text = entry || originalText
   const rawCommand = text.toUpperCase()
   const command = entry !== null ? "REGISTER" : rawCommand
+  // Flagged in-chat Add business for a linked sender; flag off keeps the app pointer below.
+  const addEntry = whatsAppAddBusinessEntry(originalText)
+  if (
+    previous?.mode === "add_business" ||
+    (adapters.addBusiness &&
+      (adapters.connected || adapters.connectedChoice) &&
+      addEntry &&
+      !message.signupForm)
+  )
+    return advanceWhatsAppAddBusiness(
+      previous?.mode === "add_business" ? previous : null,
+      message,
+      addEntry,
+      adapters,
+      () => connectedReply(message, adapters, true),
+    )
   // A linked identity cannot reach new-account registration through a later restart or form.
   if (
     (adapters.connected || adapters.connectedChoice) &&
@@ -363,7 +397,7 @@ export async function advanceWhatsAppOnboarding(
     return result(
       null,
       message,
-      "Go ahead — what do you need? Try asking about sales or stock. Nothing is saved until you confirm. Reply ADD BUSINESS to create another business in the app, CONNECT to verify another existing business, or DISCONNECT to remove WhatsApp access.",
+      `Go ahead — what do you need? Try asking about sales or stock. Nothing is saved until you confirm. Reply ADD BUSINESS to create another business ${adapters.addBusiness ? "here" : "in the app"}, CONNECT to verify another existing business, or DISCONNECT to remove WhatsApp access.`,
       false,
       [{ command: "HELP", title: "What can I ask?" }],
     )
@@ -446,7 +480,7 @@ export async function advanceWhatsAppOnboarding(
         phoneNumberId: message.phoneNumberId,
         senderId: message.senderId,
         email: state.email,
-        mode: state.mode,
+        mode: state.mode === "sign_up" ? "sign_up" : "login",
         ...(signup ? { signup } : {}),
         operationId: message.messageId,
       })
@@ -832,7 +866,7 @@ export async function advanceWhatsAppOnboarding(
           phoneNumberId: message.phoneNumberId,
           senderId: message.senderId,
           email: state.email ?? "",
-          mode: state.mode,
+          mode: state.mode === "sign_up" ? "sign_up" : "login",
           ...(completeSignup(state.signup)
             ? { signup: completeSignup(state.signup) }
             : {}),
@@ -979,5 +1013,8 @@ export async function advanceWhatsAppOnboarding(
         "Your connection is complete. Send HELP for guidance, or DISCONNECT to remove it.",
         true,
       )
+    default:
+      // Add business stages are handled above; an orphaned one never acts.
+      return result(null, message, greeting)
   }
 }

@@ -32,6 +32,7 @@ function harness(unknownSend = false, linked = false) {
   let inTransaction = false
   let sent = 0
   let lastButtons: { id: string; title: string }[] = []
+  let lastBody = ""
   let sequence = 0
   const db = {
     $transaction: async <T>(run: (tx: unknown) => Promise<T>) => {
@@ -120,15 +121,19 @@ function harness(unknownSend = false, linked = false) {
     provider: {
       sendButtons: async ({
         buttons,
-      }: { buttons: { id: string; title: string }[] }) => {
+        body,
+      }: { buttons: { id: string; title: string }[]; body: string }) => {
         expect(inTransaction).toBe(false)
         lastButtons = buttons
+        lastBody = body
         sent++
         if (unknownSend) throw new Error("transport lost")
         return { messageId: `outbound-${sent}` }
       },
-      sendText: async () => {
+      sendText: async ({ body }: { body: string }) => {
         expect(inTransaction).toBe(false)
+        lastBody = body
+        lastButtons = []
         sent++
         if (unknownSend) throw new Error("transport lost")
         return { messageId: `outbound-${sent}` }
@@ -150,6 +155,9 @@ function harness(unknownSend = false, linked = false) {
     message,
     get lastButtons() {
       return lastButtons
+    },
+    get lastBody() {
+      return lastBody
     },
     get sent() {
       return sent
@@ -392,4 +400,105 @@ test("a cancelled native form cannot start a new email-proof workflow after canc
   expect(result).toEqual({ handled: true, outcome: "duplicate" })
   expect(h.rows.size).toBe(1)
   expect(h.sent).toBe(0)
+})
+
+function addBusinessDependencies(
+  h: ReturnType<typeof harness>,
+  flag: boolean,
+  created: unknown[],
+) {
+  const base = h.dependencies.adapters()
+  return {
+    ...h.dependencies,
+    env: flag ? { ...env, ASSISTANT_WHATSAPP_ADD_BUSINESS_ENABLED: "1" } : env,
+    adapters: (): WhatsAppOnboardingAdapters => ({
+      ...base,
+      addBusiness: {
+        account: async () => ({
+          userId: "user",
+          email: "owner@example.com",
+          ownerName: "Owner",
+          businessName: "Mama Ada Provisions",
+          storeName: "Yaba Main",
+        }),
+        create: async (input) => {
+          created.push(input)
+          throw new Error("must not be reached in these tests")
+        },
+      },
+    }),
+  }
+}
+
+test("Add business flag OFF: linked free text stays with the assistant and ADD BUSINESS keeps the app pointer", async () => {
+  const h = harness(false, true)
+  const created: unknown[] = []
+  const dependencies = addBusinessDependencies(h, false, created)
+  expect(
+    await processWhatsAppOnboardingMessage(
+      h.message("add another business called Ada Kitchen"),
+      config,
+      dependencies,
+    ),
+  ).toEqual({ handled: false })
+  await processWhatsAppOnboardingMessage(
+    h.message("ADD BUSINESS"),
+    config,
+    dependencies,
+  )
+  expect(h.lastBody).toContain("Open the EwaTrade app")
+  expect(created).toHaveLength(0)
+})
+
+test("Add business flag ON: review buttons bind the exact review; a stale Create expires without effect", async () => {
+  const h = harness(false, true)
+  const created: unknown[] = []
+  const dependencies = addBusinessDependencies(h, true, created)
+  const send = (text: string) =>
+    processWhatsAppOnboardingMessage(h.message(text), config, dependencies)
+  expect((await send("add another business called Ada Kitchen")).outcome).toBe(
+    "sent",
+  )
+  expect(h.lastBody).toContain("Ada Kitchen")
+  await send("Nigeria · NGN\nAddress: 12 Allen Avenue\nCity: Ikeja")
+  expect(h.lastBody).toContain("Review new business")
+  const staleCreate = required(
+    h.lastButtons.find((button) => button.title === "Create business"),
+  ).id
+  // A correction produces a new review; the earlier Create no longer verifies.
+  await send("City: Lagos")
+  expect(h.lastBody).toContain("12 Allen Avenue, Lagos")
+  await processWhatsAppOnboardingMessage(
+    {
+      ...h.message("Create business"),
+      type: "interactive" as const,
+      quickActionId: staleCreate,
+    },
+    config,
+    dependencies,
+  )
+  expect(h.lastBody).toContain("That choice expired. Nothing was changed.")
+  const flow = required(
+    [...h.rows.values()].find((row) => row.token.startsWith("wa-flow_")),
+  )
+  expect(flow.formData).toMatchObject({
+    state: { mode: "add_business", stage: "add_review" },
+  })
+  expect(created).toHaveLength(0)
+  const cancel = required(
+    h.lastButtons.find((button) => button.title === "Cancel"),
+  ).id
+  await processWhatsAppOnboardingMessage(
+    {
+      ...h.message("Cancel"),
+      type: "interactive" as const,
+      quickActionId: cancel,
+    },
+    config,
+    dependencies,
+  )
+  expect(h.lastBody).toContain("No business was created")
+  expect(
+    [...h.rows.values()].find((row) => row.token === flow.token)?.formData,
+  ).toMatchObject({ state: null })
 })
