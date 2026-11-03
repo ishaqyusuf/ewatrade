@@ -82,7 +82,8 @@ async function current(
     )
       throw new TRPCError({
         code: "CONFLICT",
-        message: "An order changed. Review the links again.",
+        message:
+          "An order changed before Confirm, so nothing was created. Read the unpaid orders again for a fresh review.",
       })
     rows = fresh
   }
@@ -127,10 +128,11 @@ async function current(
         paymentCount: row._count.payments,
       }),
   }))
-  if (orders.some((row) => row.balance <= 0))
+  const paid = orders.filter((row) => row.balance <= 0)
+  if (paid.length)
     throw new TRPCError({
       code: "CONFLICT",
-      message: "An order is already paid. Read the unpaid orders again.",
+      message: `${paid.map((row) => row.orderNumber).join(", ")} ${paid.length === 1 ? "is" : "are"} already paid, so nothing was created. Read the unpaid orders again for a fresh review.`,
     })
   return {
     scope,
@@ -217,7 +219,7 @@ async function execute(
 }
 export const paymentLinksCreate: GeneralActionAdapter<Action> = {
   stale:
-    "An order balance or receiving account changed. Review the links again.",
+    "An order or the receiving account changed before Confirm, so nothing was created. Read the unpaid orders again for a fresh review.",
   unavailable: "These payment links are unavailable in the current Store.",
   validate: async (ctx, payload, lock) =>
     (await current(ctx, payload, lock)).target,

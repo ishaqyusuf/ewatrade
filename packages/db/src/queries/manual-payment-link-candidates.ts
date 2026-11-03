@@ -111,10 +111,26 @@ export async function manualPaymentLinkCandidates(
     include: {
       _count: { select: { payments: true } },
       serviceJobs: { select: { id: true, clientJobId: true }, take: 5 },
+      manualPaymentLinks: {
+        orderBy: { createdAt: "desc" },
+        take: 1,
+        select: {
+          amountMinor: true,
+          expiresAt: true,
+          closedAt: true,
+          reports: {
+            where: {
+              status: { in: ["SUBMITTED", "CONFIRMED", "NOT_RECEIVED"] },
+            },
+            select: { status: true },
+          },
+        },
+      },
     },
     orderBy: { id: "desc" },
     take: 21,
   })
+  const now = new Date()
   const items = rows
     .slice(0, 20)
     .map((order) => ({
@@ -132,6 +148,7 @@ export async function manualPaymentLinkCandidates(
       ),
       currencyCode: order.currencyCode,
       createdAt: order.createdAt,
+      latestLink: latestLinkState(order.manualPaymentLinks[0], now),
     }))
     .filter((row) => row.balanceMinor > 0)
   const book = await db.financeBook.findFirst({
@@ -178,5 +195,40 @@ export async function manualPaymentLinkCandidates(
     from: bounds?.from ?? null,
     before: bounds?.before ?? null,
     dateBasis: "order_created_at" as const,
+  }
+}
+
+/**
+ * The Order's newest payment link and what customers reported on it. Reports
+ * are unverified claims: only the merchant's decision in EwaTrade records money.
+ * No payer name, phone or receipt leaves this summary.
+ */
+export function latestLinkState(
+  link:
+    | {
+        amountMinor: number
+        expiresAt: Date
+        closedAt: Date | null
+        reports: Array<{
+          status: "DRAFT" | "SUBMITTED" | "CONFIRMED" | "NOT_RECEIVED"
+        }>
+      }
+    | undefined,
+  now: Date,
+) {
+  if (!link) return null
+  const count = (status: string) =>
+    link.reports.filter((report) => report.status === status).length
+  return {
+    state: link.closedAt
+      ? ("closed" as const)
+      : link.expiresAt <= now
+        ? ("expired" as const)
+        : ("active" as const),
+    amountMinor: link.amountMinor,
+    expiresAt: link.expiresAt,
+    reportsWaitingForReview: count("SUBMITTED"),
+    reportsConfirmed: count("CONFIRMED"),
+    reportsNotReceived: count("NOT_RECEIVED"),
   }
 }

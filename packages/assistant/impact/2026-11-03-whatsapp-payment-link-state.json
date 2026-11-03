@@ -1,0 +1,59 @@
+{
+  "version": 1,
+  "id": "2026-11-03-whatsapp-payment-link-state",
+  "tickets": ["H02"],
+  "summary": "Payment-link follow-ups from Workshop ewatrade/assistant/conversations v2 (revision 378e5ca2), family 18 scenes bk-link-state and bk-link-batch. businessBanking.linkCandidates items gain an additive latestLink summary: the Order's newest link state (active, expired or closed), amount, expiry and counts of customer payment reports waiting for review, confirmed or marked not received. No payer name, phone or receipt is included. The readPaymentLinkOrders tool description tells the assistant to use it for link status and that a waiting report is a claim confirmed in EwaTrade, never in chat. Changed-order refusals in payment_links_create now say nothing was created and name already-paid Orders, asking for a fresh read. Existing clients ignore the new field. Local only; no deployment.",
+  "capabilities": [
+    {
+      "id": "sales.payment_links.read",
+      "change": "unchanged",
+      "rollout": "source",
+      "note": "Same tool and procedure; the result adds latestLink so the assistant can say whether a link expired or a customer reported paying. Roles, clients and rollout are unchanged."
+    },
+    {
+      "id": "sales.payment_links.create",
+      "change": "unchanged",
+      "rollout": "source",
+      "note": "Refusal copy only: changed or already-paid Orders say nothing was created and ask for a fresh review. Atomic batch behaviour is unchanged."
+    }
+  ],
+  "procedures": [
+    {
+      "path": "businessBanking.linkCandidates",
+      "status": "supported",
+      "reason": "Additive latestLink field on each candidate; the input, scope, staff policy and paging are unchanged."
+    }
+  ],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/whatsapp-assistant-system-design.md"
+    },
+    {
+      "topic": "api",
+      "status": "local_only",
+      "path": ".brain/qa/2026-10-26-manual-payment-implementation.md",
+      "note": "3 Nov note records the additive latestLink field on businessBanking.linkCandidates."
+    },
+    {
+      "topic": "capability",
+      "status": "local_only",
+      "path": ".brain/features/whatsapp-assistant-system-design.md"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/manual-payment-link-candidates.test.ts",
+      "executed": true,
+      "result": "1 pass, 6 expects: no link, active, expired, closed and report counts; no payer fields."
+    },
+    {
+      "kind": "test",
+      "path": "apps/api/src/assistant/general-payment-links.test.ts",
+      "executed": true,
+      "result": "With payment-link-result.test.ts: 6 pass, 20 expects. Coverage snapshot check: current."
+    }
+  ]
+}
