@@ -88,6 +88,8 @@ export function QaAuthorizationSheet() {
       closedOffset={0}
       errorText={serverProblem ?? domainError ?? qa.authorizationError}
       keyboardType="url"
+      // The full hint clips in the one-line field at 200% text.
+      largeTextPlaceholder="QA domain"
       loading={qa.isLoading || qa.isAuthorizing}
       onChangeText={(value) => {
         setQaDomain(value)

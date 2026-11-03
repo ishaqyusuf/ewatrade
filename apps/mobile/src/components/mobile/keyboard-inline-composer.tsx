@@ -234,6 +234,7 @@ export const KeyboardInlineComposer = forwardRef<
               onPress={submit}
               disabled={!canSubmit}
               icon={submitIconName}
+              isLoading={loading}
             >
               {submitLabel}
             </ActionButton>
