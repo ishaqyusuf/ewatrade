@@ -153,9 +153,11 @@ export function OrdersScreen() {
       { enabled: !isOffline, retry: false },
     ),
   )
+  // `payments` is required: "Any payment" passes undefined and must not fall
+  // back to the selected payment chip.
   const totalsFor = (
     statusList: readonly string[] | undefined,
-    payments: readonly string[] | undefined = paymentStatuses,
+    payments: readonly string[] | undefined,
   ) =>
     totalsQuery.data
       ? sumOrderTotals(totalsQuery.data.groups, {
@@ -164,14 +166,14 @@ export function OrdersScreen() {
         })
       : undefined
   const statusCount = (statusList?: readonly string[]) => {
-    const totals = totalsFor(statusList)
+    const totals = totalsFor(statusList, paymentStatuses)
     return totals ? ` ${totals.orderCount}` : ""
   }
   const paymentCount = (value: OrderPaymentFilter) => {
     const totals = totalsFor(statuses, ORDER_PAYMENT_FILTERS[value])
     return totals ? ` ${totals.orderCount}` : ""
   }
-  const salesTotals = totalsFor(SALE_STATUSES)
+  const salesTotals = totalsFor(SALE_STATUSES, paymentStatuses)
   const salesCurrency = salesTotals?.currencies[0]
   const searchedOrders = useInfiniteQuery(
     trpc.orders.listPage.infiniteQueryOptions(
