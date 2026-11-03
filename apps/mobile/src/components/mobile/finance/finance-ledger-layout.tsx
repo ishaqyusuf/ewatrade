@@ -2,6 +2,7 @@ import { Icon } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Text } from "@/components/ui/text"
+import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
 import { cn } from "@/lib/utils"
 import type { ReactNode } from "react"
 import { View } from "react-native"
@@ -86,12 +87,28 @@ export function HistoryTimeline({
     }
   }>
 }) {
+  // Large text: the amount goes under the title so a long figure is not
+  // broken across lines in a narrow right-hand column.
+  const largeText = useLargeTextLayout()
   return (
     <View>
       <SectionHeader title={heading} />
       <View className="rounded-[20px] bg-card px-3.5 pt-3.5 shadow-sm">
         {items.map((item, index) => {
           const muted = item.dot === "muted"
+          const amount = item.amount ? (
+            <Text
+              className={cn(
+                "text-[13.5px] font-extrabold tabular-nums",
+                !largeText && "max-w-[45%] text-right",
+                muted
+                  ? "text-muted-foreground line-through"
+                  : "text-foreground",
+              )}
+            >
+              {item.amount}
+            </Text>
+          ) : null
           return (
             <View key={item.id} className="flex-row gap-2.5">
               <View className="w-4 items-center">
@@ -109,6 +126,7 @@ export function HistoryTimeline({
                 <Text className="text-sm font-bold text-foreground">
                   {item.title}
                 </Text>
+                {largeText ? amount : null}
                 <Text className="text-xs text-muted-foreground">
                   {item.detail}
                 </Text>
@@ -134,18 +152,7 @@ export function HistoryTimeline({
                   </Pressable>
                 ) : null}
               </View>
-              {item.amount ? (
-                <Text
-                  className={cn(
-                    "max-w-[45%] text-right text-[13.5px] font-extrabold tabular-nums",
-                    muted
-                      ? "text-muted-foreground line-through"
-                      : "text-foreground",
-                  )}
-                >
-                  {item.amount}
-                </Text>
-              ) : null}
+              {largeText ? null : amount}
             </View>
           )
         })}
