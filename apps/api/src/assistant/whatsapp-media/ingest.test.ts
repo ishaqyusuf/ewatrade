@@ -321,3 +321,18 @@ test("deferred Setup image reading refuses before bytes or persistence while ori
   for (const purpose of ["GENERAL", "SETUP", "PRODUCT_CREATE"] as const)
     expect(whatsAppAttachmentKindAllowedForPurpose("AUDIO", purpose)).toBe(true)
 })
+
+test("a file over the WhatsApp size limit is refused as too large before any private write", async () => {
+  const h = harness()
+  h.deps.download = async () => {
+    h.events.push("download")
+    throw Object.assign(new Error("too large"), { code: "MEDIA_TOO_LARGE" })
+  }
+  const result = await createWhatsAppMediaIngestor(h.deps)({
+    providerMessageId: "large-event",
+    content: source,
+  })
+  expect(result).toMatchObject({ state: "refused", code: "MEDIA_TOO_LARGE" })
+  expect(h.events).toEqual(["authorize", "download"])
+  expect(h.row()).toBeNull()
+})

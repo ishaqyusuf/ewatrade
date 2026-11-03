@@ -160,19 +160,30 @@ export function createWhatsAppMediaIngestor(
         return refused("VOICE_UNAVAILABLE")
       const storage = deps.storage(scope)
       storage.assertAvailable()
-      const downloaded = await deps.download({
-        mediaId: parsed.data.media.id,
-        maxBytes: policy.maxBytes,
-        expectedMediaType: policy.contentType,
-        expectedSha256: parsed.data.media.sha256,
-        signal: input.signal,
+      let downloaded: Awaited<ReturnType<typeof deps.download>>
+      try {
+        downloaded = await deps.download({
+          mediaId: parsed.data.media.id,
+          maxBytes: policy.maxBytes,
+          expectedMediaType: policy.contentType,
+          expectedSha256: parsed.data.media.sha256,
+          signal: input.signal,
+        })
+      } catch (error) {
+        // Only the fixed size code is surfaced; every other failure keeps its path.
+        if ((error as { code?: unknown })?.code === "MEDIA_TOO_LARGE")
+          return refused("MEDIA_TOO_LARGE")
+        throw error
+      }
+      const intent = validateSetupAttachmentIntent({
+        contentType: policy.contentType,
+        sizeBytes: downloaded.bytes.byteLength,
       })
+      if (!intent.ok && intent.reason === "TOO_LARGE")
+        return refused("MEDIA_TOO_LARGE")
       if (
         downloaded.mediaType !== policy.contentType ||
-        !validateSetupAttachmentIntent({
-          contentType: policy.contentType,
-          sizeBytes: downloaded.bytes.byteLength,
-        }).ok ||
+        !intent.ok ||
         !acceptsAssistantAttachmentBytes(downloaded.bytes, policy.contentType)
       )
         return refused("INVALID_MEDIA")
@@ -252,7 +263,10 @@ export function createWhatsAppMediaIngestor(
       return refused("ATTACHMENT_UNAVAILABLE")
     if (row.status === "UPLOADED" || row.status === "PROCESSING")
       return { state: "processing", attachmentId: row.id }
-    if (row.status !== "READY") return refused("PROCESSING_FAILED")
+    if (row.status !== "READY")
+      return refused(
+        row.kind === "AUDIO" ? "TRANSCRIPTION_FAILED" : "PROCESSING_FAILED",
+      )
     if (row.kind === "AUDIO") {
       if (!row.transcript || !renderWhatsAppVoiceReview(row.transcript))
         return refused("TRANSCRIPT_REQUIRES_APP")

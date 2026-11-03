@@ -9,6 +9,9 @@ export const whatsAppNoticeCodeSchema = z.enum([
   "MEDIA_DISABLED",
   "MEDIA_FAILED",
   "MEDIA_UNSUPPORTED",
+  "MEDIA_TOO_LARGE",
+  "VOICE_FAILED",
+  "VOICE_UNAVAILABLE",
   "VOICE_INVALID",
   "VOICE_CANCELLED",
   "TRANSPORT_RATE_LIMITED",
@@ -26,6 +29,12 @@ const notices: Record<WhatsAppNoticeCode, string> = {
     "This attachment could not be processed in WhatsApp. Open this same chat in EwaTrade and attach the original file again.",
   MEDIA_UNSUPPORTED:
     "This file type or processing mode is not supported in WhatsApp. Open this same chat in EwaTrade to attach a supported file, or use Import for a larger list.",
+  MEDIA_TOO_LARGE:
+    "⚠️ That file is too large for WhatsApp. Attach it in this same chat in EwaTrade, or use Import for a spreadsheet. You check every row there before anything is added.\n\n_Nothing was saved._",
+  VOICE_FAILED:
+    "🎙️ I couldn't make out that voice note. Nothing was done.\nType it, or record again somewhere quieter.",
+  VOICE_UNAVAILABLE:
+    "⏳ Voice notes are paused right now. Nothing was done.\nType your message. Everything else works as usual.",
   VOICE_INVALID:
     "Reply to the original voice transcript with Use transcript, Edit transcript: followed by your corrected text, or Cancel transcript. If it expired, send a new voice note.",
   VOICE_CANCELLED:
@@ -39,8 +48,18 @@ export function whatsAppMediaRefusalNotice(code: string): WhatsAppNoticeCode {
   if (code === "MEDIA_DISABLED") return "MEDIA_DISABLED"
   if (code === "UNSUPPORTED_MEDIA" || code === "MEDIA_NOT_AVAILABLE")
     return "MEDIA_UNSUPPORTED"
+  if (code === "MEDIA_TOO_LARGE") return "MEDIA_TOO_LARGE"
+  if (code === "VOICE_UNAVAILABLE") return "VOICE_UNAVAILABLE"
+  if (code === "INVALID_AUDIO" || code === "TRANSCRIPTION_FAILED")
+    return "VOICE_FAILED"
   return "MEDIA_FAILED"
 }
+/** Voice notices ask for typed text; the app link would only distract. */
+const withoutAppLink = new Set<WhatsAppNoticeCode>([
+  "VOICE_FAILED",
+  "VOICE_UNAVAILABLE",
+  "VOICE_CANCELLED",
+])
 export function renderWhatsAppNotice(
   code: WhatsAppNoticeCode,
   scope: {
@@ -68,7 +87,11 @@ export function renderWhatsAppNotice(
         )
   const business = whatsAppPlainText(scope.businessName)
   const store = whatsAppPlainText(scope.storeName)
-  const href = typeof link === "string" ? link : link?.href
+  const href = withoutAppLink.has(code)
+    ? undefined
+    : typeof link === "string"
+      ? link
+      : link?.href
   const body = `${business} · ${store}\n\n${notices[code]}${href ? `\nSelect this original business and Store.\nOpen saved chat in EwaTrade: ${href}` : ""}`
   return body.length <= 3000 ? body : notices[code]
 }

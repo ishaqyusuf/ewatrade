@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "id": "2026-11-03-whatsapp-media-voice-notices",
+  "tickets": ["H02"],
+  "summary": "WhatsApp gaps from Workshop ewatrade/assistant/conversations v2 (revision 378e5ca2), scenes f-big, v-fail and v-budget. Media ingest now returns MEDIA_TOO_LARGE when the provider download or the attachment size limit refuses a file (before any private write), and TRANSCRIPTION_FAILED when a voice note's processing failed. Three fixed notices replace the generic MEDIA_FAILED for these cases: MEDIA_TOO_LARGE (attach in the same chat in EwaTrade or use Import; nothing saved), VOICE_FAILED (type it or record again; nothing done) and VOICE_UNAVAILABLE (voice notes paused right now; type instead). Voice notices omit the app link. Local only; media stays off in Production, and no provider, OTP or deployment change.",
+  "noAssistantImpact": "Channel transport notices only. No tool, prompt, capability declaration, write or authority changes; the codes are fixed strings and raw adapter errors still never reach a reply.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/whatsapp-assistant-system-design.md"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/assistant/src/channels/notice.test.ts",
+      "executed": true,
+      "result": "3 pass: refusal codes map to MEDIA_TOO_LARGE, VOICE_FAILED and VOICE_UNAVAILABLE; voice notices carry no link."
+    },
+    {
+      "kind": "test",
+      "path": "apps/api/src/assistant/whatsapp-media/ingest.test.ts",
+      "executed": true,
+      "result": "With notice.test.ts: 10 pass, 72 expects. A MEDIA_TOO_LARGE download stops after authorize and download with no intent or storage write."
+    },
+    {
+      "kind": "test",
+      "path": "apps/api/src/assistant/channel-media-review.integration.test.ts",
+      "executed": false,
+      "result": "Database integration suite not run in this change; voice cancel and review paths are unchanged."
+    }
+  ]
+}

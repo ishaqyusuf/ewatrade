@@ -89,3 +89,40 @@ test("quota and failed unsent media notices preserve exact chat guidance without
   expect(quota).toContain("No new assistant request or action was started")
   expect(quota).toContain("/assistant/c/chat")
 })
+
+test("too-large files and failed or paused voice notes get their own notices", () => {
+  expect(whatsAppMediaRefusalNotice("MEDIA_TOO_LARGE")).toBe("MEDIA_TOO_LARGE")
+  expect(whatsAppMediaRefusalNotice("INVALID_AUDIO")).toBe("VOICE_FAILED")
+  expect(whatsAppMediaRefusalNotice("TRANSCRIPTION_FAILED")).toBe(
+    "VOICE_FAILED",
+  )
+  expect(whatsAppMediaRefusalNotice("VOICE_UNAVAILABLE")).toBe(
+    "VOICE_UNAVAILABLE",
+  )
+  const scope = {
+    businessName: "Original business",
+    storeName: "Main",
+    tenantId: "tenant",
+    storeId: "store",
+    conversationId: "original",
+    purpose: "GENERAL" as const,
+  }
+  const large = renderWhatsAppNotice(
+    "MEDIA_TOO_LARGE",
+    scope,
+    "https://dashboard.example.test",
+  )
+  expect(large).toContain("too large for WhatsApp")
+  expect(large).toContain("Nothing was saved.")
+  expect(large).toContain("/assistant/c/original")
+  for (const code of ["VOICE_FAILED", "VOICE_UNAVAILABLE"] as const) {
+    const voice = renderWhatsAppNotice(
+      code,
+      scope,
+      "https://dashboard.example.test",
+    )
+    expect(voice).toContain("Nothing was done.")
+    expect(voice).toContain("Type")
+    expect(voice).not.toContain("https://")
+  }
+})
