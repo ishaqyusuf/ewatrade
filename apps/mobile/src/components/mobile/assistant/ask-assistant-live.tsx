@@ -21,7 +21,12 @@ import { readRecordTargetSchema } from "@ewatrade/assistant/general/read-record-
 import { BottomSheetScrollView } from "@gorhom/bottom-sheet"
 import { useRouter } from "expo-router"
 import { useEffect, useRef, useState } from "react"
-import { FlatList, type TextInput } from "react-native"
+import {
+  FlatList,
+  type NativeScrollEvent,
+  type ScrollView,
+  type TextInput,
+} from "react-native"
 import { KeyboardAvoidingView } from "react-native-keyboard-controller"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { ActionButton } from "../action-button"
@@ -58,6 +63,9 @@ import { GeneralProposalEditor } from "./general-proposal-editor"
 import { paymentLinksReviewLine } from "./native-payment-links-values"
 import { useAssistantPrefillFocus } from "./use-assistant-prefill"
 import { useGeneralAssistant } from "./use-general-assistant"
+const nearEnd = (n: NativeScrollEvent) =>
+  n.contentSize.height - n.layoutMeasurement.height - n.contentOffset.y < 100
+
 export function AskAssistantLive() {
   const vm = useGeneralAssistant()
   const [answerOrigin] = useState(() => getSession())
@@ -163,6 +171,10 @@ export function AskAssistantLive() {
       setEditing(null)
     }
   }, [vm.offline, vm.scopeChanged, editor.dismiss])
+  // A chat opens at its newest message and follows it as the thread loads.
+  useEffect(() => {
+    if (vm.conversationId) atBottom.current = true
+  }, [vm.conversationId])
   const messages = vm.scopeChanged
     ? []
     : vm.offline
@@ -228,17 +240,26 @@ export function AskAssistantLive() {
           keyExtractor={(item) => item.id}
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={{ padding: 18, gap: 14, paddingBottom: 30 }}
-          onScroll={(event) => {
-            const n = event.nativeEvent
-            atBottom.current =
-              n.contentSize.height -
-                n.layoutMeasurement.height -
-                n.contentOffset.y <
-              100
+          // Only the owner's own scrolling decides whether the thread follows
+          // new content; scroll events from the list re-laying out while a
+          // chat loads do not.
+          onScrollEndDrag={(event) => {
+            atBottom.current = nearEnd(event.nativeEvent)
           }}
-          scrollEventThrottle={100}
+          onMomentumScrollEnd={(event) => {
+            atBottom.current = nearEnd(event.nativeEvent)
+          }}
+          // FlatList's scrollToEnd works from the rows it has measured, which a
+          // just-loaded thread does not have yet, so a reopened chat stayed at
+          // the top. The native scroll view scrolls to its real end once the
+          // new content is laid out.
           onContentSizeChange={() => {
-            if (atBottom.current) list.current?.scrollToEnd({ animated: false })
+            if (atBottom.current)
+              requestAnimationFrame(() =>
+                (
+                  list.current?.getNativeScrollRef() as ScrollView | null
+                )?.scrollToEnd({ animated: false }),
+              )
           }}
           ListHeaderComponent={
             <View className="gap-3 pb-3">
