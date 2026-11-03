@@ -7,7 +7,7 @@ import {
   whatsAppCapabilityEnabled,
   whatsAppChannelPolicy,
 } from "./policy"
-import { whatsAppWorkflowPolicy } from "./workflow"
+import { whatsAppWorkflowPolicy, whatsAppWorkflowRelease } from "./workflow"
 
 export const WHATSAPP_READINESS_VERSION = "whatsapp-readiness-v1"
 export const WHATSAPP_EXTERNAL_EVIDENCE_MAX_AGE_MS = 7 * 24 * 60 * 60_000
@@ -83,6 +83,7 @@ export function assistantWhatsAppReadiness(input: {
   const now = input.now ?? new Date()
   const policy = whatsAppChannelPolicy(env)
   const workflow = whatsAppWorkflowPolicy(env)
+  const workflowRelease = whatsAppWorkflowRelease(env)
   const enabled = env.ASSISTANT_WHATSAPP_ENABLED === "true"
   const invalidToggles = toggleNames.filter(
     (name) =>
@@ -101,6 +102,7 @@ export function assistantWhatsAppReadiness(input: {
   const checks = {
     environment: environmentSchema.safeParse(env.APP_ENV).success,
     toggles: invalidToggles === 0,
+    workflowRelease: workflowRelease.valid,
     rolloutMode: [undefined, "", "pilot", "public"].includes(
       env.ASSISTANT_WHATSAPP_ROLLOUT_MODE,
     ),
@@ -141,6 +143,7 @@ export function assistantWhatsAppReadiness(input: {
   }
   const invalid =
     !checks.toggles ||
+    !checks.workflowRelease ||
     (enabled && Object.values(checks).some((value) => !value))
   const evidence = whatsAppReleaseEvidenceSchema.safeParse(input.evidence)
   const checkedAt = evidence.success
@@ -186,7 +189,9 @@ export function assistantWhatsAppReadiness(input: {
       media: policy.media,
       setup: workflow.setup,
       product: workflow.product,
-      workflowNativeWrites: workflow.nativeWrites,
+      workflowNativeWrites:
+        workflow.nativeWrites || workflowRelease.purposes.length > 0,
+      workflowReleased: workflowRelease.purposes,
       localSource: policy.localSource,
     },
     capabilities: {

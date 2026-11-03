@@ -59,6 +59,7 @@ test("default off and shared OTP configuration never imply an enabled or availab
     setup: false,
     product: false,
     workflowNativeWrites: false,
+    workflowReleased: [],
     localSource: false,
   })
   const otpOnly = evaluate({
@@ -230,4 +231,19 @@ test("explicit public enrollment needs no pilot lists but preserves every extern
       }).configuration.status,
     ).toBe("invalid")
   }
+})
+
+test("a workflow release flag is validated and reported", () => {
+  const released = evaluate({
+    environment: { ASSISTANT_WHATSAPP_WORKFLOWS_ENABLED: "setup" },
+  })
+  expect(released.flags.setup).toBe(true)
+  expect(released.flags.workflowNativeWrites).toBe(true)
+  expect(released.flags.workflowReleased).toEqual(["SETUP"])
+  const typo = evaluate({
+    environment: { ASSISTANT_WHATSAPP_WORKFLOWS_ENABLED: "setup,prodcut" },
+  })
+  expect(typo.configuration.status).toBe("invalid")
+  expect(typo.flags.workflowReleased).toEqual([])
+  expect(typo.flags.setup).toBe(false)
 })
