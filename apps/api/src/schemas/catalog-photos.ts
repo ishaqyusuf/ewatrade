@@ -66,6 +66,8 @@ export const catalogPhotoGallerySchema = z
     category: z.string().trim().max(40).optional(),
     cursor: z.string().max(200).optional(),
     limit: z.number().int().min(1).max(60).optional(),
+    // useInfiniteQuery adds the paging direction to the input.
+    direction: z.enum(["forward", "backward"]).optional(),
   })
   .strict()
 

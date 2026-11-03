@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import { catalogCreateServiceSchema } from "./catalog"
 import {
+  catalogPhotoGallerySchema,
   catalogPhotoIntentSchema,
   catalogPhotoMetadataSchema,
 } from "./catalog-photos"
@@ -90,4 +91,13 @@ describe("Catalog private photo contracts", () => {
           .success,
       ).toBe(false)
   })
+})
+
+test("My images gallery accepts the infinite-list paging direction only", () => {
+  expect(
+    catalogPhotoGallerySchema.parse({ direction: "forward" }).direction,
+  ).toBe("forward")
+  expect(() =>
+    catalogPhotoGallerySchema.parse({ direction: "sideways" }),
+  ).toThrow()
 })
