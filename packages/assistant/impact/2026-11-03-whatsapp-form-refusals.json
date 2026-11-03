@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "id": "2026-11-03-whatsapp-form-refusals",
+  "tickets": ["H02"],
+  "summary": "WhatsApp form polish from Workshop ewatrade/assistant/conversations v2 (revision 378e5ca2), family 16 scenes fl-invalid, fl-expired, fl-dup and the form launch. A refused form return now says why, from fixed copy: already used, opened for a different business or Store (or access changed), expired, or answers that can't be used; each says nothing was saved and offers a new form or typing. The launch message reads \"Fill in the form, or type the details here. Nothing is saved until you confirm.\" and the sale form adds that it records money only and stock isn't changed. Refusal logic, proposal drafting and authority checks are unchanged. Local only; no Meta Flow publication or deployment.",
+  "noAssistantImpact": "Channel copy and refusal classification only. No tool, prompt, capability declaration or write changes; a refused return still never reaches a model or creates a proposal.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/whatsapp-assistant-system-design.md"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "apps/api/src/assistant/channel-flow-turn.test.ts",
+      "executed": true,
+      "result": "With channel-flow-state.test.ts: 5 pass, 40 expects. Each refusal reason has distinct copy that says nothing was saved."
+    },
+    {
+      "kind": "test",
+      "path": "apps/api/src/assistant/channel-flow-turn.ts",
+      "executed": false,
+      "result": "No database or Meta client check of an actual expired, reused or Store-switched form return was run."
+    }
+  ]
+}

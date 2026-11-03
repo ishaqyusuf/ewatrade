@@ -252,7 +252,7 @@ export async function processAssistantWhatsAppFlowTurn(
           screen: whatsAppFlowFirstScreen[launch.kind],
           data: launch.data,
           body: presentWhatsAppMessage(
-            `${String(launch.data.scope_label)}\n\nComplete the form to prepare a draft. Submission never saves a business change.`,
+            `${String(launch.data.scope_label)}\n\nFill in the form, or type the details here. Nothing is saved until you confirm.${launch.kind === "sale" ? "\n\n_The form records money only. Stock isn't changed._" : ""}`,
             { family: "form", maxUnits: 1024 },
           ),
           cta: "Open form",
@@ -341,12 +341,20 @@ export async function processAssistantWhatsAppFlowTurn(
             row.expiresAt,
           )
         )
-          throw Error("Form expired, changed or already used.")
+          throw new FlowReturnRefusal(
+            row?.completed || (saved.success && saved.data.consumedBy)
+              ? "used"
+              : saved.success && saved.data.scopeDigest !== scopeDigest
+                ? "scope"
+                : row && row.expiresAt <= new Date()
+                  ? "expired"
+                  : "other",
+          )
         const kind = saved.data.formKind
         assertBusinessFlowAuthority(fresh, kind)
         const parsed = parseWhatsAppFlowSubmission(kind, returned.data.data)
         if (!parsed.success || !("action" in parsed.data))
-          throw Error("Review the form fields and submit a new form.")
+          throw new FlowReturnRefusal("fields")
         let action: GeneralAction = parsed.data
         if (action.action === "expense_record_simple" && action.effectiveAt) {
           const options = await simpleExpenseOptions(fresh)
@@ -493,7 +501,9 @@ export async function processAssistantWhatsAppFlowTurn(
           parts: [
             {
               type: "text",
-              text: "That form is expired, already used, invalid, or your access changed. Start a new form or type the details here. Nothing was saved.",
+              text: flowRefusalText(
+                error instanceof FlowReturnRefusal ? error.reason : "other",
+              ),
             },
           ],
         },
@@ -501,4 +511,29 @@ export async function processAssistantWhatsAppFlowTurn(
     })
   }
   return true
+}
+
+/** Why a returned form was refused. Only fixed copy reaches the chat. */
+class FlowReturnRefusal extends Error {
+  constructor(
+    readonly reason: "used" | "scope" | "expired" | "fields" | "other",
+  ) {
+    super("WhatsApp form refused.")
+  }
+}
+export function flowRefusalText(
+  reason: "used" | "scope" | "expired" | "fields" | "other",
+) {
+  switch (reason) {
+    case "used":
+      return "That form was already used. Nothing new was saved. Its draft or receipt is earlier in this chat."
+    case "scope":
+      return "That form was opened for a different business or Store, or your access changed, so it can't be used. Nothing was saved. Open a new form here, or type the details."
+    case "expired":
+      return "That form expired. Nothing was saved. Open a new form, or type the details here."
+    case "fields":
+      return "Some answers in that form can't be used. Nothing was saved. Fix them in a new form, or type the details here."
+    default:
+      return "That form can't be used. Nothing was saved. Open a new form, or type the details here."
+  }
 }
