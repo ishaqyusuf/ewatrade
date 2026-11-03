@@ -5,6 +5,7 @@ import {
 } from "@ewatrade/db/customer-messages"
 import {
   CustomerDirectoryError,
+  FinanceError,
   applyCustomerLedgerCredit,
   cancelCustomerFundsRefund,
   completeCustomerFundsRefund,
@@ -37,6 +38,7 @@ import {
   returnCustomerOrderFunds,
   reverseCustomerLedgerEntry,
 } from "@ewatrade/db/queries"
+import { ruleRejectedError } from "@ewatrade/errors"
 import { ReceiptRenderError } from "@ewatrade/order-receipts"
 import { customerStatementFilename } from "@ewatrade/order-receipts/statement"
 import { TRPCError } from "@trpc/server"
@@ -353,8 +355,18 @@ export const customerLedgerRouter = createTRPCRouter({
           ...ctx.financeActor,
         })
       } catch (error) {
-        if (error instanceof CustomerDirectoryError)
-          throw new TRPCError({ code: "CONFLICT", message: error.message })
+        // A duplicate phone/email or a closed period is something the owner
+        // can fix, so keep the refusal's own words; the error formatter
+        // would otherwise show the generic "This information changed".
+        if (
+          error instanceof CustomerDirectoryError ||
+          (error instanceof FinanceError && error.code === "CLOSED_PERIOD")
+        )
+          throw new TRPCError({
+            code: "CONFLICT",
+            message: error.message,
+            cause: ruleRejectedError(error),
+          })
         throw error
       }
     }),

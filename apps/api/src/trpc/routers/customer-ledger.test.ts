@@ -1,5 +1,10 @@
 import { expect, test } from "bun:test"
-import { FinanceError, getCustomerLedgerStatement } from "@ewatrade/db/queries"
+import {
+  CustomerDirectoryError,
+  FinanceError,
+  getCustomerLedgerStatement,
+} from "@ewatrade/db/queries"
+import { toPublicError } from "@ewatrade/errors"
 import { createCallerFactory } from "../init"
 import type { RouterInputs } from "./_app"
 import { customerLedgerRouter } from "./customer-ledger"
@@ -626,4 +631,30 @@ test("Owner reversal derives actor and Tenant then rechecks live membership befo
     },
   })
   expect(financeWrites).toBe(0)
+})
+
+test("Add customer with a starting balance keeps duplicate and closed-period words", async () => {
+  for (const refusal of [
+    new CustomerDirectoryError(
+      "DUPLICATE_CUSTOMER",
+      "A customer with this phone number or email address already exists.",
+    ),
+    new FinanceError("CLOSED_PERIOD", "This accounting period is closed."),
+  ]) {
+    const caller = createCaller(
+      baseContext({
+        db: {
+          $transaction: async () => {
+            throw refusal
+          },
+        },
+        role: "OWNER",
+      }) as never,
+    )
+    const failure = await caller
+      .createCustomerWithOpening(inputs.createCustomerWithOpening)
+      .catch((error: unknown) => error)
+    expect(failure).toMatchObject({ code: "CONFLICT" })
+    expect(toPublicError(failure).message).toBe(refusal.message)
+  }
 })
