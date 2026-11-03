@@ -104,7 +104,7 @@ export function StatementPdfActions({
               disabled: working,
             }}
             disabled={working}
-            className={`rounded-xl border px-4 py-2 ${option.key === preset ? "border-primary bg-accent" : "border-border"}`}
+            className={`rounded-xl border px-4 py-3 ${option.key === preset ? "border-primary bg-accent" : "border-border"}`}
             onPress={() => setPreset(option.key)}
           >
             <Text>{option.label}</Text>
