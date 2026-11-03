@@ -48,6 +48,7 @@ import {
 } from "@ewatrade/assistant/channels/policy"
 import type { WhatsAppMessageFamily } from "@ewatrade/assistant/channels/presentation"
 import { supportedWhatsAppReplyRenderer } from "@ewatrade/assistant/channels/render"
+import { whatsAppReplyChoiceButtons } from "@ewatrade/assistant/channels/reply-choices"
 import {
   WHATSAPP_WEB_REVIEW_RESULT_VERSION,
   WHATSAPP_WEB_REVIEW_VERSION,
@@ -878,6 +879,15 @@ export function beginAssistantWhatsAppDelivery(
             if (!dispatch) return cancel("cancelled", "WEB_REVIEW_UNAVAILABLE")
             providerBody = dispatch.body
             dispatchBefore = Math.min(dispatchBefore, dispatch.expiresAt)
+            // Fixed Cancel draft / New link taps, bound to this exact outbox row.
+            const buttons =
+              dispatch.body.length <= 1000
+                ? whatsAppReplyChoiceButtons(
+                    row.id,
+                    dispatch.choices.map((title) => ({ title, text: title })),
+                  )
+                : []
+            if (buttons.length) providerButtons = buttons
           } else if (row.renderKind === "web_review_result") {
             if (
               row.rendererVersion !== WHATSAPP_WEB_REVIEW_RESULT_VERSION ||

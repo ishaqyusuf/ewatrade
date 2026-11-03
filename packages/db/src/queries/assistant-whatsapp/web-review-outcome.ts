@@ -1,12 +1,18 @@
 import { createHash } from "node:crypto"
 import { renderWhatsAppActionResult } from "@ewatrade/assistant/channels/action-result"
 import {
+  type WhatsAppReplyChoiceCommand,
+  whatsAppReplyChoiceCommandSchema,
+} from "@ewatrade/assistant/channels/reply-choices"
+import {
   type AssistantReviewLinkSource,
   WHATSAPP_REVIEW_LINK_RECOVERY_MODEL,
   WHATSAPP_WEB_REVIEW_RESULT_VERSION,
   WHATSAPP_WEB_REVIEW_VERSION,
+  type WhatsAppWebReviewDetails,
   assistantReviewLinkSourceSchema,
   renderWhatsAppWebReview,
+  whatsAppWebReviewLinkChoices,
 } from "@ewatrade/assistant/channels/review-links"
 import {
   generalReceiptSchema,
@@ -17,6 +23,11 @@ import type { Prisma } from "../../../generated/prisma/client"
 import type { DbClient } from "../types"
 import { assistantWhatsAppActionPayloadDigest } from "./action-reviews"
 import { AssistantWhatsAppError } from "./authority"
+import {
+  type WhatsAppConversationPrincipal,
+  resolveAssistantWhatsAppConversation,
+} from "./conversations"
+import { assistantWhatsAppAuthorityDigest } from "./execution"
 import {
   assistantReviewShortOutboxId,
   assistantReviewTokenFromBody,
@@ -145,6 +156,8 @@ export async function stageAssistantWhatsAppWebReviewRenewalInTransaction(
     source: AssistantReviewLinkSource
     scopeLabel: string
     trustedAppOrigin: string
+    /** Summary and changed fields from the canonical reviews of both revisions. */
+    details?: Omit<WhatsAppWebReviewDetails, "renewal">
   },
   now = new Date(),
 ) {
@@ -166,6 +179,7 @@ export async function stageAssistantWhatsAppWebReviewRenewalInTransaction(
     token,
     trustedAppOrigin: input.trustedAppOrigin,
     scopeLabel: input.scopeLabel,
+    details: { ...input.details, renewal: "edited" },
   })
   if (!body) throw new AssistantWhatsAppError("UNAVAILABLE")
   const responseRevision = webReviewResponseRevision(
@@ -375,10 +389,19 @@ export async function readAssistantWhatsAppWebReviewRecoveryTarget(
     replyToMessageId?: string
     /** Button taps must come from a fixed recovery reply, never a model reply. */
     requireRecoveryReply?: boolean
+    /** A tap on the link message's own buttons: the quoted row must be exactly this link. */
+    linkOutboxId?: string
   },
 ): Promise<
-  { proposalId: string; latest: AssistantReviewLinkSource } | undefined
+  | {
+      proposalId: string
+      latest: AssistantReviewLinkSource
+      /** The quoted link itself, when the reply quoted a link message. */
+      quoted?: AssistantReviewLinkSource
+    }
+  | undefined
 > {
+  if (input.linkOutboxId && !input.replyToMessageId) return
   const current = await db.assistantWhatsAppInbox.findFirst({
     where: { id: input.inboxId, bindingId: input.bindingId },
     select: { sequence: true },
@@ -399,6 +422,9 @@ export async function readAssistantWhatsAppWebReviewRecoveryTarget(
   const anchor = input.replyToMessageId
     ? await db.assistantWhatsAppOutbox.findFirst({
         where: {
+          ...(input.linkOutboxId
+            ? { id: input.linkOutboxId, renderKind: "web_review" }
+            : {}),
           phoneNumberId: input.phoneNumberId,
           providerMessageId: input.replyToMessageId,
           state: { in: [...sentStates] },
@@ -437,8 +463,14 @@ export async function readAssistantWhatsAppWebReviewRecoveryTarget(
       select,
     })
   let proposalId: string | undefined
-  if (anchor.renderKind === "web_review" && !input.requireRecoveryReply)
-    proposalId = sentReviewSource(anchor, input.bindingId)?.proposalId
+  let quoted: AssistantReviewLinkSource | undefined
+  if (
+    anchor.renderKind === "web_review" &&
+    (input.linkOutboxId || !input.requireRecoveryReply)
+  ) {
+    quoted = sentReviewSource(anchor, input.bindingId)
+    proposalId = quoted?.proposalId
+  } else if (input.linkOutboxId) return
   else if (anchor.renderKind === "reply" && anchor.runId) {
     const recovery = await db.assistantRun.findFirst({
       where: {
@@ -458,6 +490,64 @@ export async function readAssistantWhatsAppWebReviewRecoveryTarget(
   if (!proposalId) return
   for (const row of await links(current.sequence)) {
     const source = sentReviewSource(row, input.bindingId)
-    if (source?.proposalId === proposalId) return { proposalId, latest: source }
+    if (source?.proposalId === proposalId)
+      return { proposalId, latest: source, ...(quoted ? { quoted } : {}) }
   }
+}
+
+/**
+ * The fixed label behind a Cancel draft / New link tap on a sent review link.
+ * Bound to that exact sent message, this binding and current authority; the
+ * caller still re-reads the draft under the channel locks before acting.
+ */
+export async function resolveAssistantWhatsAppWebReviewLinkChoice(
+  db: DbClient,
+  principal: WhatsAppConversationPrincipal,
+  raw: WhatsAppReplyChoiceCommand,
+  now = new Date(),
+): Promise<string | undefined> {
+  const parsed = whatsAppReplyChoiceCommandSchema.safeParse(raw)
+  if (!parsed.success || !parsed.data.sourceOutboxId) return
+  const command = parsed.data
+  const current = await resolveAssistantWhatsAppConversation(db, principal, now)
+  if (current.conversation.purpose !== "GENERAL") return
+  const digest = await assistantWhatsAppAuthorityDigest(db, current)
+  const row = await db.assistantWhatsAppOutbox.findFirst({
+    where: {
+      id: command.sourceOutboxId,
+      phoneNumberId: principal.phoneNumberId,
+      providerMessageId: command.replyToMessageId,
+      renderKind: "web_review",
+      rendererVersion: WHATSAPP_WEB_REVIEW_VERSION,
+      state: { in: [...sentStates] },
+      authorityDigest: digest,
+      inbox: {
+        bindingId: principal.bindingId,
+        kind: "TURN",
+        state: "COMPLETED",
+      },
+      deliveryAttempts: {
+        some: {
+          state: "ACCEPTED",
+          providerMessageId: command.replyToMessageId,
+        },
+      },
+    },
+    select: {
+      inboxId: true,
+      renderKind: true,
+      rendererVersion: true,
+      content: true,
+      chunkIndex: true,
+      chunkCount: true,
+    },
+  })
+  if (
+    !row?.content ||
+    row.chunkIndex !== 0 ||
+    row.chunkCount !== 1 ||
+    !sentReviewSource(row, principal.bindingId)
+  )
+    return
+  return whatsAppWebReviewLinkChoices(row.content)?.[command.index - 1]
 }

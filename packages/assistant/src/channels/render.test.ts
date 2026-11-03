@@ -252,3 +252,58 @@ test("SDK tool envelopes and approval-bearing unknown parts never become queued 
     expect(rendered.chunks.join("")).not.toContain("never-publish")
   }
 })
+
+test("a planned report answer links its app page next to the saved chat, in the same scope only", () => {
+  const origin = { tenantId: "business-one", storeId: "store-one" }
+  const handoff = (capabilityId: string) => ({
+    kind: "action_app_handoff",
+    version: 1,
+    capabilityId,
+    action: "readPostedProfitReport",
+    reason: "complete_app_review",
+    conversation: { conversationId: "saved-chat", purpose: "GENERAL", origin },
+  })
+  const parts = (capabilityId: string) => [
+    {
+      type: "data-general-answer",
+      data: {
+        id: "report-one",
+        title: "Profit and loss",
+        value: "Open in EwaTrade",
+        scope: "Yaba Main",
+        asOf,
+        detail:
+          "📊 Reports and exports aren't in WhatsApp yet. Open the report in EwaTrade to view or export it.",
+        handoff: handoff(capabilityId),
+      },
+    },
+  ]
+  const options = {
+    trustedAppOrigin: "https://dash.example.test",
+    currentScope: origin,
+  }
+  const text = renderWhatsAppFinalReply(
+    parts("finance.posted_profit.report"),
+    options,
+  ).chunks.join("")
+  const report = text.indexOf(
+    "Open profit and loss in EwaTrade:\nhttps://dash.example.test/finance/reports",
+  )
+  const chat = text.indexOf("https://dash.example.test/assistant/c/saved-chat")
+  expect(report).toBeGreaterThan(-1)
+  expect(chat).toBeGreaterThan(report)
+  // A report without a stable page keeps the saved chat link only.
+  const aging = renderWhatsAppFinalReply(
+    parts("finance.supplier_aging.report"),
+    options,
+  ).chunks.join("")
+  expect(aging).toContain("/assistant/c/saved-chat")
+  expect(aging).not.toContain("/finance/reports")
+  // Another Store: neither link.
+  expect(
+    renderWhatsAppFinalReply(parts("finance.posted_profit.report"), {
+      ...options,
+      currentScope: { ...origin, storeId: "other" },
+    }).chunks.join(""),
+  ).not.toContain("https://")
+})

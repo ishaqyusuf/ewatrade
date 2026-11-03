@@ -4,6 +4,7 @@ import {
   generalProposalReferenceSchema,
   generalStoredPartSchema,
 } from "../general/contracts"
+import { generalReviewPresentationSchema } from "../general/review-presentation"
 import { trustedAssistantAppOrigin } from "./conversation-links"
 import { whatsAppPlainText } from "./render"
 
@@ -74,13 +75,49 @@ export function assistantReviewLink(
 }
 
 /**
+ * Optional server-derived lines naming the draft. `summary` and `changes` come
+ * from the canonical review presentation, never model text; `renewal` marks a
+ * replacement link for the same draft ("edited" after a saved page edit,
+ * "reissued" after New link).
+ */
+export type WhatsAppWebReviewDetails = {
+  renewal?: "edited" | "reissued"
+  summary?: string
+  changes?: string[]
+}
+const REVIEW_LINK_SAFETY =
+  "Expires in 15 minutes. Nothing is saved until you approve it."
+const EARLIER_LINK_CLOSED = "The earlier link no longer works."
+const RENEWED_PREFIX = "🔗 Same draft, new link for "
+const SUMMARY_MAX = 120
+const CHANGE_MAX = 160
+const MAX_CHANGE_LINES = 4
+
+/** Idempotent: one plain line, bounded by code points, never a link line. */
+function detailLine(value: unknown, max: number): string | undefined {
+  if (typeof value !== "string") return undefined
+  const text = whatsAppPlainText(value).replace(/\s+/g, " ").trim()
+  if (!text || /^review draft\b/i.test(text) || /^[-•]/.test(text))
+    return undefined
+  const points = [...text]
+  return points.length > max
+    ? `${points
+        .slice(0, max - 1)
+        .join("")
+        .trimEnd()}…`
+    : text
+}
+
+/**
  * Fixed-purpose message: no approval token, chat navigation or claimed completed effect.
- * Dispatch re-renders this from the same inputs, so the shape stays input-only.
+ * Dispatch re-renders this from the token, scope, origin and the detail lines it
+ * reads back, so any other body shape is refused before sending.
  */
 export function renderWhatsAppWebReview(input: {
   token: string
   trustedAppOrigin: string
   scopeLabel: string
+  details?: WhatsAppWebReviewDetails
 }): string | undefined {
   const href = assistantReviewLink(input.token, input.trustedAppOrigin)
   const scope = whatsAppPlainText(input.scopeLabel)
@@ -88,11 +125,160 @@ export function renderWhatsAppWebReview(input: {
     .trim()
     .slice(0, 240)
   if (!href || !scope) return undefined
+  const renewal = input.details?.renewal
+  const summary = detailLine(input.details?.summary, SUMMARY_MAX)
+  const changes =
+    renewal === "edited"
+      ? (input.details?.changes ?? [])
+          .slice(0, MAX_CHANGE_LINES)
+          .flatMap((change) => detailLine(change, CHANGE_MAX) ?? [])
+      : []
   return [
-    `🧾 Draft ready for ${scope}.`,
+    renewal ? `${RENEWED_PREFIX}${scope}.` : `🧾 Draft ready for ${scope}.`,
+    ...(summary ? [summary] : []),
+    ...changes.map((change) => `- ${change}`),
     `Review draft: ${href}`,
-    "Expires in 15 minutes. Nothing is saved until you approve it.",
+    REVIEW_LINK_SAFETY,
+    ...(renewal === "edited" ? [EARLIER_LINK_CLOSED] : []),
   ].join("\n")
+}
+
+/**
+ * Reads the detail lines back out of a rendered link message. Callers must
+ * re-render with them and compare, so only a canonical shape is accepted.
+ */
+export function readWhatsAppWebReviewDetails(
+  content: string,
+): WhatsAppWebReviewDetails | undefined {
+  if (content.length > 4096) return undefined
+  const lines = content.split("\n")
+  const link = lines.findIndex((line) => /^Review draft: \S+$/.test(line))
+  if (link < 1) return undefined
+  const renewal = lines[0]?.startsWith(RENEWED_PREFIX)
+    ? lines.at(-1) === EARLIER_LINK_CLOSED
+      ? ("edited" as const)
+      : ("reissued" as const)
+    : undefined
+  const middle = lines.slice(1, link)
+  const summary = middle.filter((line) => !line.startsWith("- "))
+  const changes = middle
+    .filter((line) => line.startsWith("- "))
+    .map((line) => line.slice(2))
+  if (summary.length > 1) return undefined
+  return {
+    ...(renewal ? { renewal } : {}),
+    ...(summary[0] ? { summary: summary[0] } : {}),
+    ...(changes.length ? { changes } : {}),
+  }
+}
+
+const draftKinds: ReadonlyArray<readonly [RegExp, string]> = [
+  [/^(?:stock_|inventory_)/, "Stock"],
+  [/^(?:product_|catalog_)/, "Product"],
+  [/^customer_(?:create|update)$/, "Customer"],
+  [/^order_/, "Order"],
+  [/^sale_record$/, "Sale"],
+  [/^(?:payment_record|customer_receipt)$/, "Payment"],
+  [/^(?:expense_|bill_)/, "Expense"],
+  [/^(?:money_|cash_)/, "Money"],
+]
+const draftKind = (action: unknown) =>
+  (typeof action === "string" &&
+    draftKinds.find(([pattern]) => pattern.test(action))?.[1]) ||
+  "Draft"
+
+/**
+ * "Stock draft: +20 bags Rice · 50kg" from the canonical review presentation.
+ * Undefined when the presentation is missing or unreadable; the link message
+ * then keeps its plain three lines.
+ */
+export function whatsAppWebReviewSummary(proposal: {
+  payload: { action: string }
+  presentation?: unknown
+}): string | undefined {
+  const parsed = generalReviewPresentationSchema.safeParse(
+    proposal.presentation,
+  )
+  if (!parsed.success) return undefined
+  const kind = draftKind(proposal.payload.action)
+  const { party, amount } = parsed.data.summary
+  const name = party.trim()
+  const named =
+    name && !name.toLowerCase().startsWith(kind.toLowerCase()) ? name : ""
+  const what = [amount?.trim(), named].filter(Boolean).join(" ")
+  if (!what) return undefined
+  const label = kind === "Draft" ? "Draft" : `${kind} draft`
+  return detailLine(`${label}: ${what}`, SUMMARY_MAX)
+}
+
+function reviewFacts(presentation: unknown, action: string) {
+  const parsed = generalReviewPresentationSchema.safeParse(presentation)
+  if (!parsed.success) return undefined
+  const { summary, facts } = parsed.data
+  const kind = draftKind(action)
+  const entries: Array<[string, string]> = [
+    [kind === "Stock" || kind === "Product" ? "Item" : "For", summary.party],
+  ]
+  if (summary.amount) {
+    const label = summary.amountLabel?.trim() || "Amount"
+    entries.push([
+      `${label.charAt(0).toUpperCase()}${label.slice(1)}`,
+      summary.amount,
+    ])
+  }
+  for (const fact of facts ?? [])
+    if (fact.label) entries.push([fact.label, fact.value])
+  const map = new Map<string, { label: string; value: string }>()
+  for (const [label, value] of entries) {
+    const key = label.trim().toLowerCase()
+    const shown = value.replace(/\s+/g, " ").trim()
+    if (key && shown && !map.has(key))
+      map.set(key, { label: label.trim(), value: shown })
+  }
+  return map
+}
+
+const clipPoints = (value: string, max: number) => {
+  const points = [...value]
+  return points.length > max
+    ? `${points
+        .slice(0, max - 1)
+        .join("")
+        .trimEnd()}…`
+    : value
+}
+
+/**
+ * Up to three "Label: ~old~ *new*" lines between two readable revisions of the
+ * same draft's canonical review. Undefined when either side is unreadable.
+ */
+export function whatsAppWebReviewChanges(
+  before: { payload: { action: string }; presentation?: unknown },
+  after: { payload: { action: string }; presentation?: unknown },
+): string[] | undefined {
+  if (before.payload.action !== after.payload.action) return undefined
+  const old = reviewFacts(before.presentation, before.payload.action)
+  const next = reviewFacts(after.presentation, after.payload.action)
+  if (!old || !next) return undefined
+  const changed: string[] = []
+  for (const [key, current] of next) {
+    const previous = old.get(key)
+    if (!previous || previous.value === current.value) continue
+    const label = clipPoints(current.label, 40)
+    const from = clipPoints(previous.value, 60)
+    const to = clipPoints(current.value, 60)
+    changed.push(
+      /[*_~`]/.test(`${label}${from}${to}`)
+        ? `${label}: ${from} → ${to}`
+        : `${label}: ~${from}~ *${to}*`,
+    )
+  }
+  if (changed.length <= 3) return changed
+  const more = changed.length - 3
+  return [
+    ...changed.slice(0, 3),
+    `+${more} more change${more === 1 ? "" : "s"} on the page`,
+  ]
 }
 
 /** Deterministic run identity for link recovery replies; never a model or approval. */
@@ -139,6 +325,22 @@ export function parseWhatsAppReviewLinkRecoveryIntent(
   if (expiredPattern.test(normalized)) return "expired"
   if (uncertainPattern.test(normalized)) return "uncertain"
   return undefined
+}
+/**
+ * Fixed reply buttons on the link message itself: Cancel draft, plus New link
+ * on a replacement link. Read from the verified body, never from model output.
+ */
+export function whatsAppWebReviewLinkChoices(
+  content: string,
+): string[] | undefined {
+  const details = readWhatsAppWebReviewDetails(content)
+  if (!details) return undefined
+  return details.renewal
+    ? [
+        WHATSAPP_REVIEW_LINK_CHOICES.newLink,
+        WHATSAPP_REVIEW_LINK_CHOICES.cancelDraft,
+      ]
+    : [WHATSAPP_REVIEW_LINK_CHOICES.cancelDraft]
 }
 export function whatsAppReviewLinkChoiceIntent(
   text: string | undefined,

@@ -1,6 +1,8 @@
 import {
   assistantReviewLinkTokenSchema,
+  readWhatsAppWebReviewDetails,
   renderWhatsAppWebReview,
+  whatsAppWebReviewLinkChoices,
 } from "@ewatrade/assistant/channels/review-links"
 import { generalStoredPartSchema } from "@ewatrade/assistant/general/contracts"
 import type { DbClient } from "../types"
@@ -28,7 +30,7 @@ export async function resolveAssistantWhatsAppWebReviewDispatch(
     trustedAppOrigin: string
     now: Date
   },
-): Promise<{ body: string; expiresAt: number } | undefined> {
+): Promise<{ body: string; expiresAt: number; choices: string[] } | undefined> {
   const href = input.content.match(/^Review draft: (\S+)$/m)?.[1]
   if (!href) return undefined
   let token: string
@@ -94,12 +96,18 @@ export async function resolveAssistantWhatsAppWebReviewDispatch(
     source.expiresAt > proposal.expiresAt.getTime()
   )
     return undefined
+  // Summary and change lines were derived from the canonical review of this
+  // exact revision when staged; re-rendering accepts only that fixed shape.
+  const details = readWhatsAppWebReviewDetails(input.content)
+  if (!details) return undefined
   const body = renderWhatsAppWebReview({
     token,
     trustedAppOrigin: input.trustedAppOrigin,
     scopeLabel: input.scopeLabel,
+    details,
   })
   if (body !== input.content) return undefined
+  const choices = whatsAppWebReviewLinkChoices(body) ?? []
   if (input.outboxId?.startsWith("wa-review_")) {
     const locator = createAssistantReviewShortLocator(token)
     if (input.outboxId !== assistantReviewShortOutboxId(locator))
@@ -108,10 +116,11 @@ export async function resolveAssistantWhatsAppWebReviewDispatch(
       token: locator,
       trustedAppOrigin: input.trustedAppOrigin,
       scopeLabel: input.scopeLabel,
+      details,
     })
     return shortBody
-      ? { body: shortBody, expiresAt: source.expiresAt }
+      ? { body: shortBody, expiresAt: source.expiresAt, choices }
       : undefined
   }
-  return { body, expiresAt: source.expiresAt }
+  return { body, expiresAt: source.expiresAt, choices }
 }

@@ -81,6 +81,8 @@ function database(rows: Row[], recoveryRuns: string[] = []) {
     assistantWhatsAppOutbox: {
       findFirst: async (query: {
         where: {
+          id?: string
+          renderKind?: string
           providerMessageId?: string
           inbox: { sequence: { lt: number } }
         }
@@ -88,6 +90,9 @@ function database(rows: Row[], recoveryRuns: string[] = []) {
         const row = rows.find(
           (candidate) =>
             candidate.sequence < query.where.inbox.sequence.lt &&
+            (query.where.id === undefined || candidate.id === query.where.id) &&
+            (query.where.renderKind === undefined ||
+              candidate.renderKind === query.where.renderKind) &&
             (query.where.providerMessageId === undefined ||
               candidate.providerMessageId === query.where.providerMessageId),
         )
@@ -190,6 +195,49 @@ test("button taps cannot start from a link, and another binding's token is ignor
     await readAssistantWhatsAppWebReviewRecoveryTarget(database([foreign]), {
       ...input,
       replyToMessageId: "wamid-foreign",
+    }),
+  ).toBeUndefined()
+})
+
+test("a tap on the link's own button is bound to that exact link message", async () => {
+  const original = link("original", 1, { revision: 1, expiresAt })
+  const renewed = link("renewed", 1, {
+    revision: 2,
+    expiresAt: expiresAt + 60_000,
+  })
+  const tapped = await readAssistantWhatsAppWebReviewRecoveryTarget(
+    database([renewed, original]),
+    {
+      ...input,
+      replyToMessageId: "wamid-original",
+      linkOutboxId: "original",
+    },
+  )
+  // The caller sees the tapped revision and the newest one, and refuses a mismatch.
+  expect(tapped?.quoted?.revision).toBe(1)
+  expect(tapped?.latest.revision).toBe(2)
+  // The quoted message must be that same outbox row, and a link, never a reply.
+  expect(
+    await readAssistantWhatsAppWebReviewRecoveryTarget(
+      database([renewed, original]),
+      {
+        ...input,
+        replyToMessageId: "wamid-original",
+        linkOutboxId: "renewed",
+      },
+    ),
+  ).toBeUndefined()
+  const notice = reply("notice", 2, "recovery-run")
+  expect(
+    await readAssistantWhatsAppWebReviewRecoveryTarget(
+      database([notice, original], ["recovery-run"]),
+      { ...input, replyToMessageId: "wamid-notice", linkOutboxId: "notice" },
+    ),
+  ).toBeUndefined()
+  expect(
+    await readAssistantWhatsAppWebReviewRecoveryTarget(database([original]), {
+      ...input,
+      linkOutboxId: "original",
     }),
   ).toBeUndefined()
 })

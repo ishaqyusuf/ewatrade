@@ -360,6 +360,7 @@ suite("actual linked principal and canonical domain callers", () => {
         "readStockTransfers",
         "readStockTransfer",
         "handoffAction",
+        "openReportInApp",
       ].sort(),
     )
     const search = tools.searchRecords?.execute

@@ -19,7 +19,7 @@ import {
   whatsAppLiteralText,
   whatsAppModelText,
 } from "./presentation"
-import { readRecordAppLink } from "./read-record-links"
+import { plannedReportAppLink, readRecordAppLink } from "./read-record-links"
 
 export const WHATSAPP_RENDER_VERSION = "whatsapp-reply-v3"
 export function supportedWhatsAppReplyRenderer(version: string) {
@@ -149,6 +149,11 @@ function answerText(answer: GeneralAnswer, options: ReadLinkOptions) {
       trustedAppOrigin,
       currentScope,
     })
+    // A planned report also names its app page, beside the same saved chat.
+    const report = handoff
+      ? plannedReportAppLink(answer.handoff.capabilityId, { trustedAppOrigin })
+      : undefined
+    if (report) links.push(`${report.label}:\n${report.href}`)
     if (handoff) links.push(`${handoff.label}:\n${handoff.href}`)
   }
   return links.length

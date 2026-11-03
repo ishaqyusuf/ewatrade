@@ -1,0 +1,83 @@
+{
+  "version": 1,
+  "id": "2026-11-03-whatsapp-review-link-summary-report-links",
+  "tickets": ["H02"],
+  "summary": "WhatsApp gaps from Workshop ewatrade/assistant/conversations: family 16b scenes x-link-product, x-link-edited and x-link-expired, and family 8 scene rd-rep. (1) The review link message now names the draft with one bounded line from the canonical review presentation of that exact proposal revision (for example \"Stock draft: +20 bags Long-grain Rice · 50kg\"), never model text. After a saved edit on the review page the replacement link says \"🔗 Same draft, new link for <Business · Store>.\", lists up to three changed fields as \"Label: ~old~ *new*\" (plus \"+N more changes on the page\") when both revisions' review facts are readable, and ends with \"The earlier link no longer works.\" A New link reply's link uses the same header without change lines. Scope, link, \"Expires in 15 minutes. Nothing is saved until you approve it.\" stay on every message; an unreadable review falls back to the previous three lines. Dispatch reads the detail lines back, re-renders and refuses any other shape, and still re-reads the exact pending proposal revision and payload digest. (2) The link message carries fixed reply buttons: Cancel draft, plus New link on a replacement link. Taps are accepted only from that exact sent link outbox row on this binding with current authority, and act only on the revision that message showed; otherwise the fixed \"That link or draft just changed\" reply. Cancel uses the canonical proposal decision; New link reuses the existing recovery plan. (3) A WhatsApp request for a planned report (profit and loss, money collected, customer balances, stock) gets the openReportInApp navigation tool: a saved answer with the fixed \"Reports and exports aren't in WhatsApp yet\" instruction, the report's existing dashboard page (/finance/reports, /customer-ledger, /inventory) and the saved chat link, offered only to roles the report capability allows. Local only; no provider, OTP, schema or deployment change.",
+  "capabilities": [
+    {
+      "id": "finance.posted_profit.report",
+      "change": "unchanged",
+      "rollout": "planned",
+      "note": "Still planned and unreadable in WhatsApp. The linked WhatsApp session may save a navigation answer pointing to the existing /finance/reports page next to the saved chat link; no figures, export or new read."
+    },
+    {
+      "id": "sales.collections.report",
+      "change": "unchanged",
+      "rollout": "planned",
+      "note": "Navigation-only answer to /finance/reports beside the saved chat link; declaration and rollout unchanged."
+    },
+    {
+      "id": "customers.debt.report",
+      "change": "unchanged",
+      "rollout": "planned",
+      "note": "Navigation-only answer to /customer-ledger beside the saved chat link; declaration and rollout unchanged."
+    },
+    {
+      "id": "inventory.stock.report",
+      "change": "unchanged",
+      "rollout": "planned",
+      "note": "Navigation-only answer to /inventory beside the saved chat link; declaration and rollout unchanged."
+    }
+  ],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/whatsapp-assistant-system-design.md"
+    },
+    {
+      "topic": "capability",
+      "status": "not_applicable",
+      "note": "No capability declaration, rollout, client or permission change. openReportInApp is a navigation-only tool over existing planned report declarations, gated by their role ceiling; the app rechecks role, Store and plan."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/assistant/src/channels/review-links.test.ts",
+      "executed": true,
+      "result": "10 pass, 62 expects: summary from canonical presentation, bounds and link-line safety, edit renewal change lines and round trip, New link renewal, link-message choices."
+    },
+    {
+      "kind": "test",
+      "path": "packages/assistant/src/channels/render.test.ts",
+      "executed": true,
+      "result": "10 pass, 60 expects: planned report answer prints the report page before the saved chat link; no page for reports without one; no links in another Store."
+    },
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/assistant-whatsapp/web-review-dispatch.test.ts",
+      "executed": true,
+      "result": "4 pass, 38 expects: named and renewed bodies dispatch with Cancel draft / New link choices; tampered detail lines are refused."
+    },
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/assistant-whatsapp/web-review-outcome.test.ts",
+      "executed": true,
+      "result": "5 pass, 13 expects: a link-button tap is bound to the exact quoted link row and reports the tapped and newest revisions."
+    },
+    {
+      "kind": "test",
+      "path": "apps/api/src/assistant/channel-principal.integration.test.ts",
+      "executed": false,
+      "result": "Not run: the linked tool list now includes openReportInApp; DB integration needs QA_ACCESS_ACCEPTANCE_DATABASE_HOST, which is not configured."
+    },
+    {
+      "kind": "test",
+      "path": "apps/api/src/assistant/review-links.ts",
+      "executed": false,
+      "result": "Not run: transactional link-button recovery and edit renewal staging have no database-backed test here; DB integration needs QA_ACCESS_ACCEPTANCE_DATABASE_HOST, which is not configured."
+    }
+  ]
+}

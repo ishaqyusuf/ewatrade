@@ -2,13 +2,20 @@ import {
   capabilityManifest,
   writeCapabilities,
 } from "@ewatrade/assistant/capabilities/manifest"
-import type { Capability } from "@ewatrade/assistant/capabilities/types"
+import type {
+  Capability,
+  CapabilityRole,
+} from "@ewatrade/assistant/capabilities/types"
 import {
   capabilityActionHandoffInstruction,
   capabilityActionHandoffLink,
   capabilityActionHandoffSchema,
   classifyCapabilityAction,
 } from "@ewatrade/assistant/channels/capability-action-handoff"
+import {
+  plannedReportAppInstruction,
+  plannedReportAppLink,
+} from "@ewatrade/assistant/channels/read-record-links"
 import { whatsAppChatQuestionSchema } from "@ewatrade/assistant/channels/reply-choices"
 import { generalBookingReadInput } from "@ewatrade/assistant/general/booking-read"
 import { generalMoneyAccountBalancesPage } from "@ewatrade/assistant/general/contracts"
@@ -80,6 +87,7 @@ import {
   statedTimeFromCanonical,
   statedTimeJsonSchema,
 } from "@ewatrade/assistant/general/stated-time"
+import { normalizeRole } from "@ewatrade/auth/roles"
 import { canStaffPerform } from "@ewatrade/auth/store-access"
 import { TRPCError } from "@trpc/server"
 import { type Tool, type ToolSet, jsonSchema, tool, zodSchema } from "ai"
@@ -547,6 +555,27 @@ export function createGeneralTools(
         return false
       }
     },
+  )
+  // Planned reports are not readable in WhatsApp; only their existing app
+  // page is offered, to roles the report itself allows. The app rechecks all.
+  const reportAllowed = (fresh: GeneralContext, capability: Capability) => {
+    const role = normalizeRole(fresh.tenantContext.membership.role)
+    return (
+      isLinkedAssistantIdentity(fresh.session) &&
+      capability.mode === "read" &&
+      capability.rollout === "planned" &&
+      capability.clients.includes("dashboard") &&
+      Boolean(role) &&
+      capability.policy.roles.includes(role as CapabilityRole) &&
+      Boolean(
+        plannedReportAppLink(capability.id, {
+          trustedAppOrigin: handoffOrigin,
+        }),
+      )
+    )
+  }
+  const plannedReportCapabilities = capabilityManifest.filter((capability) =>
+    reportAllowed(ctx, capability),
   )
   const allowedActions = availableWriteCapabilities.map(
     (capability) => capability.schema,
@@ -2945,5 +2974,69 @@ export function createGeneralTools(
           }
         }),
     })
+  const [firstReport, ...otherReports] = plannedReportCapabilities.map(
+    (capability) => capability.id,
+  )
+  if (firstReport)
+    listed.openReportInApp = tool({
+      description:
+        "Reports and exports WhatsApp can't show yet: profit and loss, money collected, customer debt or balances, and the stock report. When the user asks for one of these (including as Excel or PDF), call this once with the matching report instead of answering with figures. Saves the report's EwaTrade page link next to this chat's link. Navigation only: shows no figures, creates nothing, sends no file. Never claim the report was sent or invent numbers.",
+      inputSchema: z
+        .object({ report: z.enum([firstReport, ...otherReports]) })
+        .strict(),
+      execute: ({ report }) =>
+        wrap("openReportInApp", async (fresh) => {
+          const capability = plannedReportCapabilities.find(
+            (entry) => entry.id === report,
+          )
+          if (
+            !capability ||
+            !reportAllowed(fresh, capability) ||
+            fresh.assistantConversationId !== conversationId
+          )
+            throw new TRPCError({ code: "FORBIDDEN" })
+          const current = requireGeneralScope(fresh)
+          const handoff = capabilityActionHandoffSchema.parse({
+            kind: "action_app_handoff",
+            version: 1,
+            capabilityId: capability.id,
+            action: capability.tool,
+            reason: "complete_app_review",
+            conversation: {
+              conversationId,
+              purpose: "GENERAL",
+              origin: { tenantId: current.tenantId, storeId: current.storeId },
+            },
+          })
+          if (
+            !capabilityActionHandoffLink(handoff, {
+              trustedAppOrigin: handoffOrigin,
+              currentScope: readOrigin,
+            })
+          )
+            throw new TRPCError({ code: "FORBIDDEN" })
+          onAnswer({
+            id: `report_handoff_${crypto.randomUUID()}`,
+            title: plannedReportTitles[capability.id] ?? capability.title,
+            value: "Open in EwaTrade",
+            scope: fresh.tenantContext.activeStore?.name ?? "Store",
+            asOf: new Date().toISOString(),
+            detail: plannedReportAppInstruction,
+            handoff,
+          })
+          return {
+            status: "app_report",
+            report: capability.id,
+            instruction: plannedReportAppInstruction,
+          }
+        }),
+    })
   return listed
+}
+
+const plannedReportTitles: Partial<Record<string, string>> = {
+  "finance.posted_profit.report": "Profit and loss",
+  "sales.collections.report": "Money collected",
+  "customers.debt.report": "Customer balances",
+  "inventory.stock.report": "Stock report",
 }

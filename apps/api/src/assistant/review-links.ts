@@ -7,6 +7,8 @@ import {
   planWhatsAppReviewLinkRecovery,
   whatsAppReviewLinkChoiceIntent,
   whatsAppReviewLinkRecoveryParts,
+  whatsAppWebReviewChanges,
+  whatsAppWebReviewSummary,
 } from "@ewatrade/assistant/channels/review-links"
 import {
   type GeneralAction,
@@ -27,6 +29,7 @@ import {
   readAssistantWhatsAppWebReviewRecoveryTarget,
   readAssistantWhatsAppWebReviewSource,
   resolveAssistantWhatsAppReplyChoice,
+  resolveAssistantWhatsAppWebReviewLinkChoice,
   stageAssistantWhatsAppWebReviewOutcomeInTransaction,
   stageAssistantWhatsAppWebReviewRenewalInTransaction,
   stampAssistantWhatsAppExecution,
@@ -228,8 +231,13 @@ export async function editAssistantReviewLink(
   requireBrowserIdentity(ctx.session)
   const source = await readAssistantReviewLinkLocator(ctx.db, input.token)
   if (!source || source.expiresAt <= Date.now()) return unavailable()
-  if ((await resolveReview(ctx, source)).status !== "ready")
-    return unavailable()
+  const before = await resolveReview(ctx, source)
+  if (before.status !== "ready") return unavailable()
+  // Display facts of the revision being replaced; unreadable means no change lines.
+  const previous = await generalProposalWithReview(
+    ctx,
+    before.saved.proposal,
+  ).catch(() => undefined)
   const result = await inFreshGeneralTransaction(
     ctx,
     async (fresh) => {
@@ -243,6 +251,7 @@ export async function editAssistantReviewLink(
       const row = await fresh.db.assistantActionProposal.findUniqueOrThrow({
         where: { id: proposal.id },
       })
+      const details = await renewalDetails(fresh, row, previous)
       const staged = await stageAssistantWhatsAppWebReviewRenewalInTransaction(
         fresh.db,
         {
@@ -259,6 +268,7 @@ export async function editAssistantReviewLink(
             process.env.DASHBOARD_URL ??
             process.env.NEXT_PUBLIC_DASHBOARD_URL ??
             "https://dash.ewatrade.com",
+          details,
         },
       )
       return { token: staged.token, proposal, outboxId: staged.outboxId }
@@ -271,6 +281,47 @@ export async function editAssistantReviewLink(
     console.error("[assistant] review renewal dispatch deferred to recovery")
   }
   return { token: result.token, proposal: result.proposal }
+}
+
+/**
+ * Summary and changed fields for a renewed link, from the canonical reviews of
+ * the replaced and the saved revision. Any unreadable side drops those lines;
+ * the link, scope and safety facts never depend on them.
+ */
+async function renewalDetails(
+  fresh: GeneralTransactionContext,
+  row: Parameters<typeof generalProposalWithReview>[1],
+  previous: GeneralProposal | undefined,
+) {
+  // Only the database read sits inside the savepoint, so a failed display read
+  // rolls back to it and never aborts the edit itself.
+  await fresh.db.$executeRaw`SAVEPOINT review_link_details`
+  let current: GeneralProposal
+  try {
+    // Review adapters only read; they run on this transaction's client.
+    current = await generalProposalWithReview(
+      { ...fresh, db: fresh.db as unknown as GeneralContext["db"] },
+      row,
+    )
+  } catch {
+    await fresh.db.$executeRaw`ROLLBACK TO SAVEPOINT review_link_details`
+    return undefined
+  }
+  await fresh.db.$executeRaw`RELEASE SAVEPOINT review_link_details`
+  try {
+    if (current.revision !== row.revision) return undefined
+    const summary = whatsAppWebReviewSummary(current)
+    const changes =
+      previous && previous.revision < current.revision
+        ? whatsAppWebReviewChanges(previous, current)
+        : undefined
+    return {
+      ...(summary ? { summary } : {}),
+      ...(changes?.length ? { changes } : {}),
+    }
+  } catch {
+    return undefined
+  }
 }
 
 const RECOVERY_MODEL = {
@@ -316,6 +367,7 @@ export async function processAssistantWhatsAppReviewLinkRecoveryTurn(
   let replyToMessageId: string | undefined
   let userText = ""
   let saved: string | undefined
+  let fromLink = false
   if (text.success) {
     intent = parseWhatsAppReviewLinkRecoveryIntent(text.data.text)
     replyToMessageId = text.data.replyToMessageId
@@ -327,6 +379,15 @@ export async function processAssistantWhatsAppReviewLinkRecoveryTurn(
       principal,
       choice.data.command,
     )
+    // Or the link message's own Cancel draft / New link button.
+    if (!saved && choice.data.command.sourceOutboxId) {
+      saved = await resolveAssistantWhatsAppWebReviewLinkChoice(
+        ctx.db,
+        principal,
+        choice.data.command,
+      )
+      fromLink = Boolean(saved)
+    }
     intent = whatsAppReviewLinkChoiceIntent(saved)
     replyToMessageId = choice.data.command.replyToMessageId
     userText = saved ?? ""
@@ -339,7 +400,11 @@ export async function processAssistantWhatsAppReviewLinkRecoveryTurn(
       bindingId: lease.bindingId,
       phoneNumberId: principal.phoneNumberId,
       replyToMessageId,
-      requireRecoveryReply: fromChoice,
+      requireRecoveryReply: fromChoice && !fromLink,
+      linkOutboxId:
+        fromLink && choice?.success
+          ? choice.data.command.sourceOutboxId
+          : undefined,
     })
   const target = await locate(ctx.db)
   if (!target) return undefined
@@ -376,10 +441,13 @@ export async function processAssistantWhatsAppReviewLinkRecoveryTurn(
     // A replayed request already has its committed answer; never repeat a decision.
     if (begun.replay) return { kind: "completed" as const }
     const latest = await locate(fresh.db)
+    const resolveChoice = fromLink
+      ? resolveAssistantWhatsAppWebReviewLinkChoice
+      : resolveAssistantWhatsAppReplyChoice
     const sameChoice =
       !fromChoice ||
       (choice?.success &&
-        (await resolveAssistantWhatsAppReplyChoice(
+        (await resolveChoice(
           fresh.db,
           fresh.session.principal,
           choice.data.command,
@@ -409,7 +477,12 @@ export async function processAssistantWhatsAppReviewLinkRecoveryTurn(
       now,
     }
     let parts = whatsAppReviewLinkRecoveryParts({ kind: "changed" }, context)
-    if (proposal && latest) {
+    // A link button acts only on the revision that message showed.
+    const linkCurrent =
+      !fromLink ||
+      (latest?.quoted?.revision === proposal?.revision &&
+        latest?.quoted?.payloadHash === proposal?.payloadHash)
+    if (proposal && latest && linkCurrent) {
       const link = latest.latest
       const receipt =
         proposal.status === "COMPLETED"

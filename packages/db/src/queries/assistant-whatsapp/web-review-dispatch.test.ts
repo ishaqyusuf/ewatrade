@@ -93,7 +93,11 @@ test("focused review dispatch has exact committed source and no native approval 
         ...options,
         content,
       }),
-    ).toEqual({ body: content, expiresAt: source.expiresAt })
+    ).toEqual({
+      body: content,
+      expiresAt: source.expiresAt,
+      choices: ["Cancel draft"],
+    })
     const href = content.match(/^Review draft: (\S+)$/m)?.[1]
     if (!href) throw Error("Expected review href")
     expect(new URL(href).pathname).toBe("/assistant-review")
@@ -179,6 +183,70 @@ test("dispatch refuses stale, tampered, foreign and replaced proposal reviews", 
         { ...options, content },
       ),
     ).toBeUndefined()
+  } finally {
+    if (old === undefined)
+      Reflect.deleteProperty(process.env, "ASSISTANT_APPROVAL_SIGNING_KEY")
+    else process.env.ASSISTANT_APPROVAL_SIGNING_KEY = old
+  }
+})
+
+test("summary and change lines pass only in the exact rendered shape", async () => {
+  const old = process.env.ASSISTANT_APPROVAL_SIGNING_KEY
+  process.env.ASSISTANT_APPROVAL_SIGNING_KEY = signingKey
+  try {
+    const named = renderWhatsAppWebReview({
+      ...options,
+      token,
+      details: { summary: "Stock draft: +20 bags Rice · 50kg" },
+    })
+    if (!named) throw Error("Expected named review fixture")
+    const locator = createAssistantReviewShortLocator(token, signingKey)
+    const sent = await resolveAssistantWhatsAppWebReviewDispatch(database(), {
+      ...options,
+      content: named,
+      outboxId: assistantReviewShortOutboxId(locator),
+    })
+    expect(sent?.body.split("\n")).toEqual([
+      "🧾 Draft ready for Zeroes & One · Main.",
+      "Stock draft: +20 bags Rice · 50kg",
+      `Review draft: https://dash.ewatrade.com/r/${locator.slice(2)}`,
+      "Expires in 15 minutes. Nothing is saved until you approve it.",
+    ])
+    expect(sent?.choices).toEqual(["Cancel draft"])
+    const renewed = renderWhatsAppWebReview({
+      ...options,
+      token,
+      details: {
+        renewal: "edited",
+        summary: "Stock draft: +18 bags Rice · 50kg",
+        changes: ["Received: ~+20 bags~ *+18 bags*"],
+      },
+    })
+    if (!renewed) throw Error("Expected renewed review fixture")
+    expect(
+      (
+        await resolveAssistantWhatsAppWebReviewDispatch(database(), {
+          ...options,
+          content: renewed,
+        })
+      )?.choices,
+    ).toEqual(["New link", "Cancel draft"])
+    // Anything outside the rendered shape is refused, never sent as-is.
+    for (const tampered of [
+      named.replace("Stock draft", "Stock draft: x\nSecond line"),
+      named.replace("Stock draft: +20", "Stock  draft: +20"),
+      named.replace(
+        "Stock draft: +20 bags Rice · 50kg",
+        "Stock draft: https://other.example/pay",
+      ),
+      renewed.replace("The earlier link no longer works.", ""),
+    ])
+      expect(
+        await resolveAssistantWhatsAppWebReviewDispatch(database(), {
+          ...options,
+          content: tampered,
+        }),
+      ).toBeUndefined()
   } finally {
     if (old === undefined)
       Reflect.deleteProperty(process.env, "ASSISTANT_APPROVAL_SIGNING_KEY")

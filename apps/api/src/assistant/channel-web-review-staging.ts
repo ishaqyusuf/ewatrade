@@ -1,6 +1,8 @@
 import {
   ASSISTANT_REVIEW_LINK_TTL_MS,
+  WHATSAPP_REVIEW_LINK_RECOVERY_MODEL,
   renderWhatsAppWebReview,
+  whatsAppWebReviewSummary,
 } from "@ewatrade/assistant/channels/review-links"
 import {
   generalActionSchema,
@@ -121,6 +123,30 @@ export async function prepareAssistantWhatsAppWebReview(
       process.env.NEXT_PUBLIC_DASHBOARD_URL ??
       "https://dash.ewatrade.com",
     scopeLabel: `${ctx.tenantContext.tenant.name} · ${ctx.tenantContext.activeStore?.name ?? "Store"}`,
+    details: webReviewDetails(proposal, run),
   })
   return body ? { source, body, expiresAt } : undefined
+}
+
+/**
+ * The draft's name from its canonical review of this exact revision, never
+ * model text. A deterministic New link reply marks the same draft's new link.
+ */
+function webReviewDetails(
+  proposal: Parameters<typeof whatsAppWebReviewSummary>[0],
+  run: { provider: string; model: string },
+) {
+  let summary: string | undefined
+  try {
+    summary = whatsAppWebReviewSummary(proposal)
+  } catch {
+    summary = undefined
+  }
+  const reissued =
+    run.provider === "deterministic" &&
+    run.model === WHATSAPP_REVIEW_LINK_RECOVERY_MODEL
+  return {
+    ...(reissued ? { renewal: "reissued" as const } : {}),
+    ...(summary ? { summary } : {}),
+  }
 }

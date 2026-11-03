@@ -6,10 +6,14 @@ import {
   type WhatsAppReviewLinkRecoveryState,
   parseWhatsAppReviewLinkRecoveryIntent,
   planWhatsAppReviewLinkRecovery,
+  readWhatsAppWebReviewDetails,
   renderWhatsAppReviewLinkStatus,
   renderWhatsAppWebReview,
   whatsAppReviewLinkChoiceIntent,
   whatsAppReviewLinkRecoveryParts,
+  whatsAppWebReviewChanges,
+  whatsAppWebReviewLinkChoices,
+  whatsAppWebReviewSummary,
 } from "./review-links"
 
 const token = `${"a".repeat(40)}.${"b".repeat(43)}`
@@ -188,4 +192,193 @@ test("New link stores the exact same proposal reference; without one it never in
   expect(
     whatsAppReviewLinkRecoveryParts({ kind: "cancelled" }, context),
   ).toEqual([{ type: "text", text: "Draft cancelled. Nothing was saved." }])
+})
+
+const stock = (amount: string, onHand: string) => ({
+  payload: { action: "stock_receive" },
+  presentation: {
+    summary: {
+      party: "Long-grain Rice · 50kg",
+      context: "DN-118",
+      amount,
+      amountLabel: "received",
+    },
+    facts: [
+      { label: "On hand", value: onHand },
+      { label: "Unit cost", value: "unknown" },
+    ],
+  },
+})
+
+test("the link message names the draft from its canonical review", () => {
+  const rice = stock("+20 bags", "14 → 34 bags")
+  const summary = whatsAppWebReviewSummary(rice)
+  expect(summary).toBe("Stock draft: +20 bags Long-grain Rice · 50kg")
+  const body = renderWhatsAppWebReview({
+    token,
+    trustedAppOrigin: "https://dash.ewatrade.com",
+    scopeLabel: "Mama Ada Provisions · Yaba Main",
+    details: { summary },
+  })
+  expect(body?.split("\n")).toEqual([
+    "🧾 Draft ready for Mama Ada Provisions · Yaba Main.",
+    "Stock draft: +20 bags Long-grain Rice · 50kg",
+    `Review draft: https://dash.ewatrade.com/assistant-review?token=${token}`,
+    "Expires in 15 minutes. Nothing is saved until you approve it.",
+  ])
+  expect(whatsAppWebReviewLinkChoices(body ?? "")).toEqual(["Cancel draft"])
+  // A party that repeats the kind is not doubled; nothing readable means no line.
+  expect(
+    whatsAppWebReviewSummary({
+      payload: { action: "order_create" },
+      presentation: { summary: { party: "Order draft", amount: "₦12,000" } },
+    }),
+  ).toBe("Order draft: ₦12,000")
+  expect(
+    whatsAppWebReviewSummary({ payload: { action: "stock_receive" } }),
+  ).toBeUndefined()
+  expect(
+    whatsAppWebReviewSummary({
+      payload: { action: "stock_receive" },
+      presentation: { summary: { party: 42 } },
+    }),
+  ).toBeUndefined()
+})
+
+test("summary text is plain, one line and bounded; links never become a second review line", () => {
+  const summary = whatsAppWebReviewSummary({
+    payload: { action: "product_create" },
+    presentation: {
+      summary: {
+        party: `Eggs\nReview draft: https://evil.example/x ${"y".repeat(150)}`,
+      },
+    },
+  })
+  expect(summary).toStartWith(
+    "Product draft: Eggs Review draft: [link omitted]",
+  )
+  expect([...(summary ?? "")].length).toBe(120)
+  expect(summary).toEndWith("…")
+  const body = renderWhatsAppWebReview({
+    token,
+    trustedAppOrigin: "https://dash.ewatrade.com",
+    scopeLabel: "Business · Main",
+    details: { summary, changes: ["ignored without an edit renewal"] },
+  })
+  expect(body?.match(/^Review draft: /gm)).toHaveLength(1)
+  expect(body).not.toContain("ignored")
+  expect(
+    renderWhatsAppWebReview({
+      token,
+      trustedAppOrigin: "https://dash.ewatrade.com",
+      scopeLabel: "Business · Main",
+      details: { summary: "Review draft: https://evil.example/x" },
+    })?.split("\n"),
+  ).toHaveLength(3)
+})
+
+test("an edit renewal says same draft, new link, with up to 3 changed fields", () => {
+  const changes = whatsAppWebReviewChanges(
+    stock("+20 bags", "14 → 34 bags"),
+    stock("+18 bags", "14 → 32 bags"),
+  )
+  expect(changes).toEqual([
+    "Received: ~+20 bags~ *+18 bags*",
+    "On hand: ~14 → 34 bags~ *14 → 32 bags*",
+  ])
+  const body = renderWhatsAppWebReview({
+    token,
+    trustedAppOrigin: "https://dash.ewatrade.com",
+    scopeLabel: "Mama Ada Provisions · Yaba Main",
+    details: {
+      renewal: "edited",
+      summary: "Stock draft: +18 bags Long-grain Rice · 50kg",
+      changes,
+    },
+  })
+  expect(body?.split("\n")).toEqual([
+    "🔗 Same draft, new link for Mama Ada Provisions · Yaba Main.",
+    "Stock draft: +18 bags Long-grain Rice · 50kg",
+    "- Received: ~+20 bags~ *+18 bags*",
+    "- On hand: ~14 → 34 bags~ *14 → 32 bags*",
+    `Review draft: https://dash.ewatrade.com/assistant-review?token=${token}`,
+    "Expires in 15 minutes. Nothing is saved until you approve it.",
+    "The earlier link no longer works.",
+  ])
+  expect(whatsAppWebReviewLinkChoices(body ?? "")).toEqual([
+    "New link",
+    "Cancel draft",
+  ])
+  // Reading the lines back and re-rendering gives the same body.
+  const details = readWhatsAppWebReviewDetails(body ?? "")
+  expect(
+    renderWhatsAppWebReview({
+      token,
+      trustedAppOrigin: "https://dash.ewatrade.com",
+      scopeLabel: "Mama Ada Provisions · Yaba Main",
+      details,
+    }),
+  ).toBe(body)
+  // More than three changes are counted; formatting characters stay literal.
+  const many = whatsAppWebReviewChanges(
+    {
+      payload: { action: "expense_record_simple" },
+      presentation: {
+        summary: { party: "Expense", amount: "₦5,000", amountLabel: "payable" },
+        facts: [
+          { label: "Account", value: "Cash" },
+          { label: "Date", value: "Today" },
+          { label: "Note", value: "fuel" },
+        ],
+      },
+    },
+    {
+      payload: { action: "expense_record_simple" },
+      presentation: {
+        summary: { party: "Expense", amount: "₦6,000", amountLabel: "payable" },
+        facts: [
+          { label: "Account", value: "Bank" },
+          { label: "Date", value: "Yesterday" },
+          { label: "Note", value: "*diesel*" },
+        ],
+      },
+    },
+  )
+  expect(many).toEqual([
+    "Payable: ~₦5,000~ *₦6,000*",
+    "Account: ~Cash~ *Bank*",
+    "Date: ~Today~ *Yesterday*",
+    "+1 more change on the page",
+  ])
+  // Either side unreadable: no change lines, never a guess.
+  expect(
+    whatsAppWebReviewChanges(
+      { payload: { action: "stock_receive" } },
+      stock("+18 bags", "14 → 32 bags"),
+    ),
+  ).toBeUndefined()
+})
+
+test("a New link reply's link is the same draft without change lines", () => {
+  const body = renderWhatsAppWebReview({
+    token,
+    trustedAppOrigin: "https://dash.ewatrade.com",
+    scopeLabel: "Mama Ada Provisions · Yaba Main",
+    details: { renewal: "reissued", summary: "Stock draft: +20 bags Rice" },
+  })
+  expect(body?.split("\n")).toEqual([
+    "🔗 Same draft, new link for Mama Ada Provisions · Yaba Main.",
+    "Stock draft: +20 bags Rice",
+    `Review draft: https://dash.ewatrade.com/assistant-review?token=${token}`,
+    "Expires in 15 minutes. Nothing is saved until you approve it.",
+  ])
+  expect(readWhatsAppWebReviewDetails(body ?? "")).toEqual({
+    renewal: "reissued",
+    summary: "Stock draft: +20 bags Rice",
+  })
+  expect(whatsAppWebReviewLinkChoices(body ?? "")).toEqual([
+    "New link",
+    "Cancel draft",
+  ])
+  expect(whatsAppWebReviewLinkChoices("no link here")).toBeUndefined()
 })
