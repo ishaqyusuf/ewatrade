@@ -162,18 +162,21 @@ export function ClassicSellingUnitFields({
         </NativeText>
         {stepper}
         <NativeText
-          numberOfLines={1}
+          numberOfLines={largeTextLayout ? undefined : 1}
           style={{
             color: colors.accentForeground,
             flexShrink: 1,
             fontSize: 16,
             fontWeight: "800",
+            textAlign: "center",
           }}
         >
           {right}
         </NativeText>
       </View>
-      <View className="flex-row gap-2">
+      {/* At large text the two directions stack full width and wrap, so the
+          unit name in each label is never cut off. */}
+      <View className={largeTextLayout ? "gap-2" : "flex-row gap-2"}>
         {(
           [
             ["canonical_per_unit", `Bigger pack of ${referenceName}`],
@@ -187,7 +190,8 @@ export function ClassicSellingUnitFields({
               accessibilityRole="radio"
               accessibilityState={{ selected: on }}
               className={cn(
-                "min-h-9 flex-1 items-center justify-center rounded-full border-[1.5px] px-3",
+                "items-center justify-center rounded-full border-[1.5px] px-3",
+                largeTextLayout ? "min-h-11 w-full py-2" : "min-h-9 flex-1",
                 on
                   ? "border-primary/40 bg-accent"
                   : "border-transparent bg-muted",
@@ -196,9 +200,9 @@ export function ClassicSellingUnitFields({
               onPress={() => onChangeDirection(value)}
             >
               <Text
-                numberOfLines={1}
+                numberOfLines={largeTextLayout ? undefined : 1}
                 className={cn(
-                  "text-xs font-bold",
+                  "text-center text-xs font-bold",
                   on ? "text-accent-foreground" : "text-muted-foreground",
                 )}
               >
@@ -289,7 +293,8 @@ export function ClassicSellingUnitFields({
               accessibilityRole="radio"
               accessibilityState={{ selected: on }}
               className={cn(
-                "min-h-[62px] flex-row items-center gap-3 py-3",
+                "min-h-[62px] flex-row gap-3 py-3",
+                largeTextLayout ? "items-start" : "items-center",
                 index > 0 && "border-t border-border",
               )}
               haptic
@@ -303,6 +308,8 @@ export function ClassicSellingUnitFields({
                   borderWidth: 2,
                   height: 22,
                   justifyContent: "center",
+                  // Beside the label's first line once the copy wraps.
+                  marginTop: largeTextLayout ? 9 : 0,
                   width: 22,
                 }}
               >

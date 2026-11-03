@@ -26,6 +26,7 @@ import { View } from "@/components/ui/view"
 import { useAuthContext } from "@/hooks/use-auth"
 import { useBottomSearchScroll } from "@/hooks/use-bottom-search-scroll"
 import { useColorScheme } from "@/hooks/use-color"
+import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
 import { useScrollEdgeFeedback } from "@/hooks/use-scroll-edge-feedback"
 import { useScrollToTop } from "@/hooks/use-scroll-to-top"
 import { GREEN_TILL_THEME } from "@/lib/green-till-theme"
@@ -83,6 +84,7 @@ export function CatalogItemsContent({
   const router = useRouter()
   const insets = useSafeAreaInsets()
   const { height } = useWindowDimensions()
+  const largeTextLayout = useLargeTextLayout()
   const trpc = useTRPC()
   const isOffline = useOperationalModeStore((state) => state.isOfflineMode)
   const greenTill = GREEN_TILL_THEME[useColorScheme().colorScheme]
@@ -301,7 +303,14 @@ export function CatalogItemsContent({
                 />
               ) : null}
               {availabilityQuery.data?.hasCatalogItems && mixedCatalog ? (
-                <View className="flex-row rounded-[13px] border border-border bg-muted p-[3px]">
+                // At large text the type switch wraps, so "Services" moves
+                // to its own line instead of breaking mid-word.
+                <View
+                  className={cn(
+                    "flex-row rounded-[13px] border border-border bg-muted p-[3px]",
+                    largeTextLayout && "flex-wrap",
+                  )}
+                >
                   <ClassicCatalogFilter
                     active={kindFilter === "all"}
                     count={counts?.all}
@@ -586,7 +595,7 @@ export function CatalogItemsContent({
         ref={addSheet.ref}
         snapPoints={[]}
         enableDynamicSizing
-        maxDynamicContentSize={height * 0.8}
+        maxDynamicContentSize={height * (largeTextLayout ? 0.92 : 0.8)}
         title={`Add to ${catalogTitle}`}
         onDismiss={completeAddDismissal}
       >
@@ -605,9 +614,19 @@ export function CatalogItemsContent({
               accessibilityState={{ disabled: isOffline || !canEdit }}
               disabled={isOffline || !canEdit}
               onPress={() => chooseAdd("images")}
-              className="min-h-14 flex-row items-center gap-3 rounded-2xl border border-border bg-card px-4 py-3"
+              className={
+                largeTextLayout
+                  ? "min-h-14 flex-row items-start gap-3 rounded-2xl border border-border bg-card px-4 py-3"
+                  : "min-h-14 flex-row items-center gap-3 rounded-2xl border border-border bg-card px-4 py-3"
+              }
             >
-              <Icon className="size-[20px] text-foreground" name="Image" />
+              <Icon
+                className={cn(
+                  "size-[20px] text-foreground",
+                  largeTextLayout && "mt-3",
+                )}
+                name="Image"
+              />
               <View className="flex-1">
                 <Text className="text-base font-semibold text-foreground">
                   My images

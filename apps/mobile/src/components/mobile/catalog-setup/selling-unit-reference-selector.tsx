@@ -2,6 +2,8 @@ import { Icon } from "@/components/ui/icon"
 import { Modal } from "@/components/ui/modal"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
+import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
+import { cn } from "@/lib/utils"
 import {
   type BottomSheetModal,
   BottomSheetScrollView,
@@ -28,6 +30,7 @@ export function SellingUnitReferenceSelector({
 }) {
   const sheet = useContext(SellingUnitReferenceSheetContext)
   const { height } = useWindowDimensions()
+  const largeTextLayout = useLargeTextLayout()
   const units = fields.referenceUnits ?? []
   const current = fields.unitEditorDraft
   // Exclude descendants as well as self, so an edited ancestor cannot form a cycle.
@@ -75,15 +78,21 @@ export function SellingUnitReferenceSelector({
         accessibilityLabel="Build this unit from"
         snapPoints={[]}
         enableDynamicSizing
-        maxDynamicContentSize={height * 0.65}
+        // Taller at large text so more units show before the list scrolls.
+        maxDynamicContentSize={height * (largeTextLayout ? 0.92 : 0.65)}
         onDismiss={sheet.onDismiss}
       >
         <BottomSheetScrollView keyboardShouldPersistTaps="handled">
           <View className="gap-2 px-5 pt-2 pb-6">
-            <View className="flex-row items-center gap-3">
+            <View
+              className={cn(
+                "flex-row gap-3",
+                largeTextLayout ? "items-start" : "items-center",
+              )}
+            >
               <Text
                 accessibilityRole="header"
-                className="flex-1 text-xl font-bold text-foreground"
+                className="min-w-0 flex-1 text-xl font-bold text-foreground"
               >
                 Build this unit from
               </Text>

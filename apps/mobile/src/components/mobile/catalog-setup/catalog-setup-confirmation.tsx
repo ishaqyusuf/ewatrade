@@ -2,6 +2,7 @@ import { ActionButton } from "@/components/mobile/action-button"
 import { Modal } from "@/components/ui/modal"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
+import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
 import { BottomSheetScrollView } from "@gorhom/bottom-sheet"
 import { useWindowDimensions } from "react-native"
 import type { CatalogSetupModel } from "./use-catalog-setup"
@@ -10,6 +11,7 @@ export function CatalogSetupConfirmation({
   model,
 }: { model: CatalogSetupModel }) {
   const { height } = useWindowDimensions()
+  const largeTextLayout = useLargeTextLayout()
   const {
     confirmationCopy,
     locked,
@@ -22,7 +24,9 @@ export function CatalogSetupConfirmation({
       hideHeader
       snapPoints={[]}
       enableDynamicSizing
-      maxDynamicContentSize={height * 0.44}
+      // At large text the copy and both 64pt buttons outgrow 44%; let the
+      // sheet rise instead of hiding Keep editing below a scroll.
+      maxDynamicContentSize={height * (largeTextLayout ? 0.92 : 0.44)}
       onDismiss={model.dismissSetupConfirmation}
     >
       <BottomSheetScrollView keyboardShouldPersistTaps="handled">

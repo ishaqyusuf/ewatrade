@@ -179,7 +179,12 @@ export function ClassicCatalogRow({
       <Pressable
         accessibilityLabel={`Open ${item.name}, ${item.priceLabel}, ${item.availabilityLabel}`}
         accessibilityRole="button"
-        className="-mx-3.5 min-h-[62px] flex-row items-center gap-3 px-3.5 py-3 active:opacity-80"
+        className={cn(
+          "-mx-3.5 min-h-[62px] flex-row gap-3 px-3.5 py-3 active:opacity-80",
+          // Stacked name, price and pill run tall at large text; the avatar
+          // stays beside the name instead of floating mid-row.
+          largeText ? "items-start" : "items-center",
+        )}
         haptic
         onPress={onPress}
       >
@@ -257,7 +262,8 @@ export function ClassicCatalogFilter({
   label: string
   onPress: () => void
 }) {
-  // Counts give way at large text so the three labels still fit.
+  // Counts give way at large text, and segments size to their label and
+  // wrap (the parent switches to flex-wrap) so no label breaks mid-word.
   const largeText = useLargeTextLayout()
   const showCount = count !== undefined && !largeText
   return (
@@ -266,7 +272,8 @@ export function ClassicCatalogFilter({
       accessibilityRole="button"
       accessibilityState={{ selected: active }}
       className={cn(
-        "min-h-9 min-w-0 flex-1 flex-row items-center justify-center gap-[5px] rounded-[10px] px-2 py-1",
+        "min-h-9 flex-row items-center justify-center gap-[5px] rounded-[10px] px-2 py-1",
+        largeText ? "min-h-11 grow px-3" : "min-w-0 flex-1",
         active ? "bg-card shadow-sm" : "bg-transparent",
       )}
       haptic
