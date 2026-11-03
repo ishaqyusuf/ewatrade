@@ -11,6 +11,7 @@ import type {
   WhatsAppOnboardingAdapters,
   WhatsAppOnboardingButton,
   WhatsAppOnboardingChoice,
+  WhatsAppOnboardingList,
   WhatsAppOnboardingMessage,
   WhatsAppOnboardingResult,
   WhatsAppOnboardingState,
@@ -75,9 +76,30 @@ const marketChoices = [
   ["ZA", "ZAR"],
   ["EG", "EGP"],
 ] as const
-const marketList = `${marketChoices
-  .map(([code, currency]) => `${findCountry(code)?.name} · ${currency}`)
-  .join(", ")} or Other · USD`
+const marketTitles = [
+  ...marketChoices.map(
+    ([code, currency]) => `${findCountry(code)?.name} · ${currency}`,
+  ),
+  "Other · USD",
+]
+const marketList = `${marketTitles.slice(0, -1).join(", ")} or Other · USD`
+/** Each row replays its exact title, the same text a typed answer parses. */
+const marketPickList: WhatsAppOnboardingList = {
+  button: "Choose country",
+  sectionTitle: "Country and currency",
+  rows: marketTitles.map((title) => ({ command: title, title })),
+}
+
+/** Offered while the country and currency is still open. */
+export function whatsAppAddBusinessList(
+  state: WhatsAppOnboardingState,
+): WhatsAppOnboardingList | undefined {
+  return state.mode === "add_business" &&
+    state.stage === "add_details" &&
+    state.business?.countryCode === undefined
+    ? marketPickList
+    : undefined
+}
 
 export const whatsAppAddBusinessCommands = {
   create: "CREATE BUSINESS",
@@ -422,14 +444,18 @@ export async function advanceWhatsAppAddBusiness(
     reply: string,
     connected = false,
     buttons?: WhatsAppOnboardingButton[],
-  ): WhatsAppOnboardingResult => ({
-    state: state
-      ? { ...state, lastMessageId: message.messageId, lastReply: reply }
-      : null,
-    reply,
-    connected,
-    buttons: buttons ?? (state ? whatsAppAddBusinessButtons(state) : []),
-  })
+  ): WhatsAppOnboardingResult => {
+    const list = state && !buttons ? whatsAppAddBusinessList(state) : undefined
+    return {
+      state: state
+        ? { ...state, lastMessageId: message.messageId, lastReply: reply }
+        : null,
+      reply,
+      connected,
+      buttons: buttons ?? (state ? whatsAppAddBusinessButtons(state) : []),
+      ...(list ? { list } : {}),
+    }
+  }
   const add = adapters.addBusiness
   // Flag off mid-flow, or no live link: nothing is created; the app path stays.
   if (!add || !(adapters.connected || adapters.connectedChoice))

@@ -93,11 +93,20 @@ export type WhatsAppOnboardingMessage = WhatsAppOnboardingAddress & {
 
 export type WhatsAppOnboardingButton = { command: string; title: string }
 
+/** A native pick-list; each row replays its `command` as the typed answer. */
+export type WhatsAppOnboardingList = {
+  button: string
+  sectionTitle: string
+  rows: Array<WhatsAppOnboardingButton & { description?: string }>
+}
+
 export type WhatsAppOnboardingResult = {
   state: WhatsAppOnboardingState | null
   reply: string
   connected: boolean
   buttons?: WhatsAppOnboardingButton[]
+  /** Sent instead of buttons when the provider supports lists. */
+  list?: WhatsAppOnboardingList
 }
 
 export type WhatsAppOnboardingAdapters = {

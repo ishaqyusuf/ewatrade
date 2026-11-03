@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "id": "2026-11-03-whatsapp-receipt-cancel-lists",
+  "tickets": ["H02"],
+  "summary": "WhatsApp gaps from Workshop ewatrade/assistant/conversations scenes w-recv, fl-recv and c-addbiz-n. (1) A cancelled native draft now says what stayed unchanged: stock_receive 'Stock is unchanged.', payment_record 'Nothing was recorded.', product_price_update 'The price is unchanged.', order_attachment_add 'Nothing was attached.'; other actions keep 'Draft cancelled.'. The 'Draft cancelled.' prefix still selects the cancelled heading, and the presenter drops the repeated prefix under it. Paths that only know the status (delivery retries, web-review outcome) keep the generic line. (2) Add business: while the country and currency is open, the prompt is sent as a WhatsApp list (Nigeria · NGN, Ghana · GHS, Kenya · KES, South Africa · ZAR, Egypt · EGP, Other · USD). Row ids use the existing signed onboarding ids bound to the exact persisted prompt; a tapped row replays its title as the typed answer, so typed answers keep working and stale or forged rows expire without effect. DirectMetaWhatsAppProvider gains sendList (single section; rejects button over 20, more than 10 rows, row title over 24, description over 72, duplicate ids). The supplier-bill link after a stock receipt was not added: the dashboard has no stable route for recording a supplier bill (Finance bill sheets only open an existing bill). Local only; no provider configuration, OTP, schema or deployment change.",
+  "noAssistantImpact": "Channel copy and transport only. Cancel lines are fixed per action type; list rows map onto the existing typed onboarding answers; no tool, prompt, capability or write changes.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/whatsapp-assistant-system-design.md"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/assistant/src/channels/action-result.test.ts",
+      "executed": true,
+      "result": "Per-action cancel lines and the presented heading; with the rest of packages/assistant/src/channels and packages/communications/src: 184 pass, 0 fail."
+    },
+    {
+      "kind": "test",
+      "path": "packages/communications/src/whatsapp-list.test.ts",
+      "executed": true,
+      "result": "List payload shape and Meta limit rejections before any request: pass."
+    },
+    {
+      "kind": "test",
+      "path": "apps/api/src/communications/whatsapp-onboarding-runtime.test.ts",
+      "executed": true,
+      "result": "Country list sent with six rows; forged and earlier-prompt rows expire; a current row fills only the country; typed details still reach the review. Onboarding tests: 40 pass, 0 fail."
+    }
+  ]
+}

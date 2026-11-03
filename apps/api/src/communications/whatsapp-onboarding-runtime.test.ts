@@ -502,3 +502,90 @@ test("Add business flag ON: review buttons bind the exact review; a stale Create
     [...h.rows.values()].find((row) => row.token === flow.token)?.formData,
   ).toMatchObject({ state: null })
 })
+
+test("Add business country is a native list bound to its exact prompt; typed answers still work", async () => {
+  const h = harness(false, true)
+  const created: unknown[] = []
+  const base = addBusinessDependencies(h, true, created)
+  type SentList = { button: string; rows: { id: string; title: string }[] }
+  const seen: { list: SentList | null } = { list: null }
+  const sentList = (): SentList | null => seen.list
+  let body = ""
+  const provider = base.provider
+  const dependencies = {
+    ...base,
+    provider: {
+      sendText: async (input: Parameters<typeof provider.sendText>[0]) => {
+        body = input.body
+        return provider.sendText(input)
+      },
+      sendButtons: async (
+        input: Parameters<typeof provider.sendButtons>[0],
+      ) => {
+        body = input.body
+        return provider.sendButtons(input)
+      },
+      sendList: async (input: {
+        body: string
+        button: string
+        rows: { id: string; title: string }[]
+      }) => {
+        body = input.body
+        seen.list = { button: input.button, rows: input.rows }
+        return { messageId: "outbound-list" }
+      },
+    },
+  }
+  const send = (text: string, quickActionId?: string) =>
+    processWhatsAppOnboardingMessage(
+      {
+        ...h.message(text),
+        ...(quickActionId
+          ? { type: "interactive" as const, quickActionId }
+          : {}),
+      },
+      config,
+      dependencies,
+    )
+  await send("add another business called Ada Kitchen")
+  const first = required(sentList() ?? undefined)
+  expect(first.button).toBe("Choose country")
+  expect(first.rows.map((row) => row.title)).toEqual([
+    "Nigeria · NGN",
+    "Ghana · GHS",
+    "Kenya · KES",
+    "South Africa · ZAR",
+    "Egypt · EGP",
+    "Other · USD",
+  ])
+  const ghana = required(first.rows.find((row) => row.title === "Ghana · GHS"))
+  // A forged row ID never verifies.
+  seen.list = null
+  await send("Ghana · GHS", `${ghana.id.slice(0, -1)}0`)
+  expect(body).toContain("That choice expired")
+  // The list from the current prompt fills only the country.
+  const current = required(sentList() ?? undefined)
+  const kenya = required(
+    current.rows.find((row) => row.title === "Kenya · KES"),
+  )
+  seen.list = null
+  await send("Kenya · KES", kenya.id)
+  expect(sentList()).toBeNull()
+  const flow = required(
+    [...h.rows.values()].find((row) => row.token.startsWith("wa-flow_")),
+  )
+  expect(flow.formData).toMatchObject({
+    state: {
+      stage: "add_details",
+      business: { countryCode: "KE", currencyCode: "KES" },
+    },
+  })
+  // A row from an earlier prompt is stale after the flow moved on.
+  await send("Nigeria · NGN", kenya.id)
+  expect(body).toContain("That choice expired")
+  // Typed answers still complete the details.
+  await send("Address: 12 Moi Avenue\nCity: Nairobi")
+  expect(body).toContain("Review new business")
+  expect(body).toContain("Kenya · KES")
+  expect(created).toHaveLength(0)
+})

@@ -27,6 +27,7 @@ import {
   isWhatsAppAddBusinessCommand,
   whatsAppAddBusinessEntry,
   whatsAppAddBusinessExpiredReply,
+  whatsAppAddBusinessList,
 } from "./whatsapp-onboarding-add-business"
 import { whatsAppAddBusinessProductionAdapter } from "./whatsapp-onboarding-add-business-runtime"
 import {
@@ -161,7 +162,7 @@ type Flow = z.infer<typeof flowSchema>
 type Dependencies = {
   db: PrismaClient
   provider: Pick<WhatsAppProvider, "sendText"> &
-    Partial<Pick<WhatsAppProvider, "sendButtons">>
+    Partial<Pick<WhatsAppProvider, "sendButtons" | "sendList">>
   env: Record<string, string | undefined>
   now(): Date
   adapters?: (
@@ -578,6 +579,10 @@ export async function processWhatsAppOnboardingMessage(
                 : "That option expired or belongs to an earlier step. Use the current options, type your answer, or send CONNECT to start again.",
             connected: false,
             buttons: whatsAppOnboardingButtons(claimed.state),
+            // An expired row re-offers the current list, freshly signed.
+            ...(claimed.state && whatsAppAddBusinessList(claimed.state)
+              ? { list: whatsAppAddBusinessList(claimed.state) }
+              : {}),
           }
         : await advanceWhatsAppOnboarding(
             claimed.state,
@@ -729,12 +734,30 @@ export async function processWhatsAppOnboardingMessage(
       ),
       title: button.title,
     }))
+    // List rows use the same signed IDs as buttons, bound to this exact prompt.
+    const list = advanced.list
     const sent =
-      buttons?.length &&
-      payload.body.length <= 1024 &&
-      dependencies.provider.sendButtons
-        ? await dependencies.provider.sendButtons({ ...payload, buttons })
-        : await dependencies.provider.sendText(payload)
+      list && payload.body.length <= 1024 && dependencies.provider.sendList
+        ? await dependencies.provider.sendList({
+            ...payload,
+            button: list.button,
+            sectionTitle: list.sectionTitle,
+            rows: list.rows.slice(0, 10).map((row) => ({
+              id: onboardingButtonId(
+                token,
+                event.messageId,
+                row.command,
+                dependencies.env,
+              ),
+              title: row.title,
+              ...(row.description ? { description: row.description } : {}),
+            })),
+          })
+        : buttons?.length &&
+            payload.body.length <= 1024 &&
+            dependencies.provider.sendButtons
+          ? await dependencies.provider.sendButtons({ ...payload, buttons })
+          : await dependencies.provider.sendText(payload)
     providerMessageId = sent.messageId
     outcome = "sent"
   } catch (error) {

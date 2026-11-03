@@ -74,6 +74,22 @@ export type NormalizedWhatsAppEvent =
   | NormalizedWhatsAppStatusEvent
 
 export type WhatsAppButton = { id: string; title: string }
+/** One list row; Meta limits: id ≤200, title ≤24, description ≤72. */
+export type WhatsAppListRow = {
+  id: string
+  title: string
+  description?: string
+}
+export type WhatsAppListSendInput = {
+  callbackData?: string
+  body: string
+  /** The button that opens the list, ≤20 characters. */
+  button: string
+  /** Optional section title, ≤24 characters. */
+  sectionTitle?: string
+  rows: WhatsAppListRow[]
+  to: string
+}
 
 export interface WhatsAppProvider {
   readonly key: string
@@ -111,6 +127,9 @@ export interface WhatsAppProvider {
       buttons: WhatsAppButton[]
       to: string
     },
+  ): Promise<{ messageId: string }>
+  sendList?(
+    input: WhatsAppCredentials & WhatsAppListSendInput,
   ): Promise<{ messageId: string }>
   sendTemplate(
     input: WhatsAppCredentials & {
@@ -474,6 +493,59 @@ export class DirectMetaWhatsAppProvider implements WhatsAppProvider {
         },
         body: { text: input.body },
         type: "button",
+      },
+      to: input.to,
+      type: "interactive",
+    })
+  }
+
+  /** A single-section interactive list; rejects anything Meta would refuse. */
+  sendList(input: WhatsAppCredentials & WhatsAppListSendInput) {
+    const ids = new Set(input.rows.map((row) => row.id))
+    if (
+      (input.callbackData !== undefined &&
+        !/^[a-zA-Z0-9:_-]{1,128}$/.test(input.callbackData)) ||
+      !input.body.trim() ||
+      input.body.length > 1024 ||
+      !input.button.trim() ||
+      input.button.length > 20 ||
+      (input.sectionTitle !== undefined && input.sectionTitle.length > 24) ||
+      input.rows.length < 1 ||
+      input.rows.length > 10 ||
+      ids.size !== input.rows.length ||
+      input.rows.some(
+        (row) =>
+          !row.id ||
+          row.id.length > 200 ||
+          !row.title.trim() ||
+          row.title.length > 24 ||
+          (row.description !== undefined && row.description.length > 72),
+      )
+    )
+      throw new WhatsAppProviderSendError(
+        "PROVIDER_REJECTED",
+        "DEFINITE_FAILURE",
+      )
+    return this.#send(input, {
+      ...(input.callbackData
+        ? { biz_opaque_callback_data: input.callbackData }
+        : {}),
+      interactive: {
+        action: {
+          button: input.button,
+          sections: [
+            {
+              ...(input.sectionTitle ? { title: input.sectionTitle } : {}),
+              rows: input.rows.map((row) => ({
+                id: row.id,
+                title: row.title,
+                ...(row.description ? { description: row.description } : {}),
+              })),
+            },
+          ],
+        },
+        body: { text: input.body },
+        type: "list",
       },
       to: input.to,
       type: "interactive",

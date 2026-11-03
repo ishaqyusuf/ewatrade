@@ -93,15 +93,28 @@ function moneyReceipt(receipt: unknown) {
     (receipt as { kind?: unknown }).kind === "payment"
   )
 }
+/** What stayed safe after a cancel; the "Draft cancelled." prefix carries the heading. */
+const cancelSafetyLines: Record<string, string> = {
+  stock_receive: "Stock is unchanged.",
+  payment_record: "Nothing was recorded.",
+  product_price_update: "The price is unchanged.",
+  order_attachment_add: "Nothing was attached.",
+}
 /** Only canonical, already-authorized receipt labels. No credentials or internal identities. */
 export function renderWhatsAppActionResult(
   proposal: {
     status: string
     receipt: { title: string; detail: string } | null
+    payload?: { action: string }
   },
   appLink?: string,
 ) {
-  if (proposal.status === "CANCELLED") return "Draft cancelled."
+  if (proposal.status === "CANCELLED") {
+    const safety = proposal.payload
+      ? cancelSafetyLines[proposal.payload.action]
+      : undefined
+    return safety ? `Draft cancelled. ${safety}` : "Draft cancelled."
+  }
   if (proposal.status !== "COMPLETED" || !proposal.receipt)
     throw Error("Canonical receipt unavailable")
   const text = whatsAppPlainText(

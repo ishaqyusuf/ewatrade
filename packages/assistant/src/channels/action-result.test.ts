@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test"
 import { renderWhatsAppActionResult } from "./action-result"
+import { presentWhatsAppMessage } from "./presentation"
 
 const completed = (receipt: Record<string, unknown>) => ({
   status: "COMPLETED",
@@ -53,6 +54,31 @@ test("receipts for the added native reviews say what was recorded or changed", (
   expect(
     renderWhatsAppActionResult({ status: "CANCELLED", receipt: null }),
   ).toBe("Draft cancelled.")
+})
+
+test("a cancelled native draft says what stayed unchanged", () => {
+  const cancelled = (action: string) =>
+    renderWhatsAppActionResult({
+      status: "CANCELLED",
+      receipt: null,
+      payload: { action },
+    })
+  expect(cancelled("stock_receive")).toBe(
+    "Draft cancelled. Stock is unchanged.",
+  )
+  expect(cancelled("payment_record")).toBe(
+    "Draft cancelled. Nothing was recorded.",
+  )
+  expect(cancelled("product_price_update")).toBe(
+    "Draft cancelled. The price is unchanged.",
+  )
+  expect(cancelled("order_attachment_add")).toBe(
+    "Draft cancelled. Nothing was attached.",
+  )
+  expect(cancelled("customer_create")).toBe("Draft cancelled.")
+  expect(
+    presentWhatsAppMessage(cancelled("stock_receive"), { family: "result" }),
+  ).toBe("↩️ *Draft cancelled*\n\nStock is unchanged.")
 })
 
 test("a money receipt never claims money was sent, moved or transferred", () => {

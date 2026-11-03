@@ -156,8 +156,11 @@ export function presentWhatsAppMessage(
     } else if (
       options.family === "result" &&
       /^(?:Draft cancelled\.|Workflow review cancelled\.)/.test(text)
-    )
+    ) {
       heading = "↩️ *Draft cancelled*"
+      // A safety line after the prefix stands alone under the heading.
+      text = text.replace(/^Draft cancelled\. (?=\S)/, "")
+    }
     // An existing short standalone title is the heading, rather than extra framing.
     const [first, ...rest] = text.split("\n")
     if (heading) text = `${heading}\n\n${text}`
