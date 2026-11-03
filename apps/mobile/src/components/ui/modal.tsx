@@ -152,15 +152,32 @@ export const Modal = React.forwardRef(
       },
       [onChange],
     )
+    // Gorhom's dismiss() on a sheet that is not presented (never opened, or
+    // already closed) leaves it "dismissing" with nothing to close, and its
+    // portal then refuses to render on every later present(). Sheets that
+    // sync to an `open` flag call dismiss() on mount, so that call is a no-op
+    // here until the sheet is presented again.
+    const presented = React.useRef(false)
     const handleDismiss = React.useCallback(() => {
+      presented.current = false
       setOpen(false)
       onDismiss?.()
     }, [onDismiss])
 
-    React.useImperativeHandle(
-      ref,
-      () => (modal.ref.current as BottomSheetModal) || null,
-    )
+    React.useImperativeHandle(ref, () => {
+      const sheet = modal.ref.current
+      if (!sheet) return null as unknown as BottomSheetModal
+      return {
+        ...sheet,
+        present: (data?: never) => {
+          presented.current = true
+          sheet.present(data)
+        },
+        dismiss: (animationConfigs) => {
+          if (presented.current) sheet.dismiss(animationConfigs)
+        },
+      } as BottomSheetModal
+    })
     const renderBackgroundComponent = React.useCallback(
       ({ pointerEvents, style }: BottomSheetBackgroundProps) => (
         <View

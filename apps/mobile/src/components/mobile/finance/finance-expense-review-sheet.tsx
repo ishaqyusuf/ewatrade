@@ -67,60 +67,67 @@ export function FinanceExpenseReviewSheet({
           latest.current.onBack()
       }}
     >
-      <BottomSheetView className="px-5 pb-6 pt-5">
-        {summary ? (
-          <>
-            <Text
-              accessibilityRole="header"
-              className="text-lg font-extrabold tracking-[-0.4px] text-foreground"
-            >
-              Review before recording
-            </Text>
-            <Text className="mt-0.5 text-xs text-muted-foreground">
-              {summary.payee} · {summary.description}
-            </Text>
-            <Text className="mb-0.5 mt-2.5 text-[34px] font-extrabold tracking-[-1.2px] tabular-nums text-foreground">
-              {summary.amount}
-            </Text>
-            {[
-              { label: "Category", value: summary.category },
-              { label: "Date", value: summary.date },
-            ].map((row) => (
-              <View
-                key={row.label}
-                className="flex-row justify-between gap-3 border-t border-border py-2.5"
+      {/* BottomSheetView takes no className; the padding lives on a View. */}
+      <BottomSheetView>
+        <View className="px-5 pb-6 pt-5">
+          {summary ? (
+            <>
+              <Text
+                accessibilityRole="header"
+                className="text-lg font-extrabold tracking-[-0.4px] text-foreground"
               >
-                <Text className="text-sm text-muted-foreground">
-                  {row.label}
-                </Text>
-                <Text className="min-w-0 flex-1 text-right text-sm font-bold text-foreground">
-                  {row.value}
-                </Text>
-              </View>
-            ))}
-            <View className="flex-row items-center justify-between gap-3 border-t border-border py-2.5">
-              <Text className="text-sm text-muted-foreground">
-                Status after recording
+                Review before recording
               </Text>
-              <StatusPill
-                label={`Unpaid · ${summary.amount} owed`}
-                tone="warn"
-              />
-            </View>
-            <View className="mt-3.5 gap-1">
-              <ActionButton
-                disabled={!canConfirm}
-                isLoading={pending}
-                onPress={onConfirm}
-              >
-                Confirm and record
-              </ActionButton>
-              <ActionButton disabled={pending} variant="ghost" onPress={onBack}>
-                Back to details
-              </ActionButton>
-            </View>
-          </>
-        ) : null}
+              <Text className="mt-0.5 text-xs text-muted-foreground">
+                {summary.payee} · {summary.description}
+              </Text>
+              <Text className="mb-0.5 mt-2.5 text-[34px] font-extrabold tracking-[-1.2px] tabular-nums text-foreground">
+                {summary.amount}
+              </Text>
+              {[
+                { label: "Category", value: summary.category },
+                { label: "Date", value: summary.date },
+              ].map((row) => (
+                <View
+                  key={row.label}
+                  className="flex-row justify-between gap-3 border-t border-border py-2.5"
+                >
+                  <Text className="text-sm text-muted-foreground">
+                    {row.label}
+                  </Text>
+                  <Text className="min-w-0 flex-1 text-right text-sm font-bold text-foreground">
+                    {row.value}
+                  </Text>
+                </View>
+              ))}
+              <View className="flex-row items-center justify-between gap-3 border-t border-border py-2.5">
+                <Text className="text-sm text-muted-foreground">
+                  Status after recording
+                </Text>
+                <StatusPill
+                  label={`Unpaid · ${summary.amount} owed`}
+                  tone="warn"
+                />
+              </View>
+              <View className="mt-3.5 gap-1">
+                <ActionButton
+                  disabled={!canConfirm}
+                  isLoading={pending}
+                  onPress={onConfirm}
+                >
+                  Confirm and record
+                </ActionButton>
+                <ActionButton
+                  disabled={pending}
+                  variant="ghost"
+                  onPress={onBack}
+                >
+                  Back to details
+                </ActionButton>
+              </View>
+            </>
+          ) : null}
+        </View>
       </BottomSheetView>
     </Modal>
   )

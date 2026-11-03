@@ -395,7 +395,10 @@ function SpendingWorkspace({
           <ActionButton
             variant="outline"
             disabled={command.pending}
-            onPress={() => setCreating(false)}
+            onPress={() => {
+              setReview(null)
+              setCreating(false)
+            }}
           >
             Back to spending
           </ActionButton>
