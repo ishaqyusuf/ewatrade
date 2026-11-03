@@ -33,7 +33,10 @@ import {
   WHATSAPP_DELIVERY_RETRY_MS,
   whatsAppAssistantCallbackSchema,
 } from "@ewatrade/assistant/channels/delivery"
-import { WHATSAPP_VOICE_REVIEW_VERSION } from "@ewatrade/assistant/channels/media"
+import {
+  WHATSAPP_VOICE_REVIEW_VERSION,
+  whatsAppVoiceReviewButtons,
+} from "@ewatrade/assistant/channels/media"
 import {
   WHATSAPP_NOTICE_VERSION,
   renderWhatsAppNotice,
@@ -676,6 +679,11 @@ export function beginAssistantWhatsAppDelivery(
           )
           if (expected.body !== body)
             return cancel("cancelled", "SAVED_REPLY_CHANGED")
+          // Interactive bodies stop at 1024 characters; longer transcripts keep the typed replies.
+          if (body.length <= 1024)
+            providerButtons = whatsAppVoiceReviewButtons.map((button) => ({
+              ...button,
+            }))
         } else if (row.inbox.kind === "ACTION") {
           if (
             row.runId ||

@@ -486,9 +486,7 @@ suite("measured WhatsApp WAV through default canonical QA processing", () => {
         messageId: null,
       })
       expect(outbox.content).toContain(SETUP_REHEARSAL_TRANSCRIPT)
-      expect(outbox.content).toContain(
-        "Nothing in this recording has been sent as an assistant request yet",
-      )
+      expect(outbox.content).toContain("Nothing runs until you choose.")
       const accepted = await fixture.fakeAcceptedDelivery(outbox.id)
       const cancel = await fixture.incoming(
         "Cancel transcript",

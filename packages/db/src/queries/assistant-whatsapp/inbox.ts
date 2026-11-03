@@ -10,7 +10,9 @@ import {
   whatsAppIngressSchema,
 } from "@ewatrade/assistant/channels/ingress"
 import {
+  isWhatsAppVoiceButton,
   isWhatsAppVoiceChoiceIntent,
+  parseWhatsAppVoiceButton,
   parseWhatsAppVoiceChoice,
 } from "@ewatrade/assistant/channels/media"
 import { assistantWhatsAppUserAllowed } from "@ewatrade/assistant/channels/policy"
@@ -40,7 +42,10 @@ export function assistantWhatsAppIngressActionContent(
     "type" | "text" | "quickActionId" | "replyToMessageId"
   >,
 ) {
-  if (event.type === "text" && isWhatsAppVoiceChoiceIntent(event.text))
+  if (
+    (event.type === "text" && isWhatsAppVoiceChoiceIntent(event.text)) ||
+    isWhatsAppVoiceButton(event.quickActionId)
+  )
     return null
   const workflow =
     parseWhatsAppWorkflowActionButton(
@@ -150,8 +155,10 @@ export async function acceptAssistantWhatsAppIngress(
     now,
   )
   if (control) return control
+  const voiceButton = isWhatsAppVoiceButton(event.quickActionId)
   const voiceIntent =
-    event.type === "text" && isWhatsAppVoiceChoiceIntent(event.text)
+    voiceButton ||
+    (event.type === "text" && isWhatsAppVoiceChoiceIntent(event.text))
   const readPage = event.flowResponse
     ? null
     : parseWhatsAppReadPageIntent(event)
@@ -162,9 +169,11 @@ export async function acceptAssistantWhatsAppIngress(
     voiceIntent || readPage || replyChoice
       ? null
       : assistantWhatsAppIngressActionContent(event)
-  const voiceChoice = voiceIntent
-    ? parseWhatsAppVoiceChoice(event.text, event.replyToMessageId)
-    : null
+  const voiceChoice = voiceButton
+    ? parseWhatsAppVoiceButton(event.quickActionId, event.replyToMessageId)
+    : voiceIntent
+      ? parseWhatsAppVoiceChoice(event.text, event.replyToMessageId)
+      : null
   const voice = voiceChoice
     ? { type: "voice_choice" as const, choice: voiceChoice }
     : voiceIntent

@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "id": "2026-11-03-whatsapp-voice-review-buttons",
+  "tickets": ["H02"],
+  "summary": "WhatsApp gap from Workshop ewatrade/assistant/conversations v2 (revision 378e5ca2), scene v-review. A voice-note transcript review is now sent with two reply buttons, Use transcript and Cancel transcript (when the body fits WhatsApp's 1024-character interactive limit; longer transcripts keep typed replies). Tapped buttons (wa-voice:use / wa-voice:cancel, bound to the tapped message's context id) become the same voice_choice inbox content as the typed replies, so the existing review consumption, expiry and authority checks decide. Edit stays a typed reply (Edit transcript: plus the corrected text). The review copy is shorter: check the transcript, tap a button or reply to edit, nothing runs until you choose. Local only; media and voice stay off in Production; no provider, OTP or deployment change.",
+  "noAssistantImpact": "Channel transport only. Button ids carry no authority and map to the existing voice choice schema; no tool, prompt, capability or write changes.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/whatsapp-assistant-system-design.md"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/assistant/src/channels/media.test.ts",
+      "executed": true,
+      "result": "Buttons map to use/cancel only with the tapped message id; titles fit 20 characters. With packages/db assistant-whatsapp unit tests: 74 pass, 1 fail (media-review.test.ts 'Cancel guessed' expects invalid_action from the typed action parser, unchanged since 23 Oct and failing before this change)."
+    },
+    {
+      "kind": "test",
+      "path": "apps/api/src/assistant/channel-media-review.integration.test.ts",
+      "executed": false,
+      "result": "Copy assertion updated to the new review text in this file and the two ingest-audio integration tests; not run (QA_ACCESS_ACCEPTANCE_DATABASE_HOST not configured)."
+    }
+  ]
+}

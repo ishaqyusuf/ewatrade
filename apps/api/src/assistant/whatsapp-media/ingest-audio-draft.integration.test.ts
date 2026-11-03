@@ -600,9 +600,7 @@ suite("measured WhatsApp audio to explicitly edited canonical draft", () => {
         messageId: null,
       })
       expect(outbox.content).toContain(SETUP_REHEARSAL_TRANSCRIPT)
-      expect(outbox.content).toContain(
-        "Nothing in this recording has been sent as an assistant request yet",
-      )
+      expect(outbox.content).toContain("Nothing runs until you choose.")
       const accepted = await fixture.fakeAcceptedDelivery(outbox.id)
       const deps: ChannelTurnDependencies = {
         enabled: () => true,

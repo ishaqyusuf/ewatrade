@@ -118,6 +118,31 @@ export function isWhatsAppVoiceChoiceIntent(text?: string) {
   return /^(?:use|edit|cancel) transcript(?:\b|:)/i.test(text?.trim() ?? "")
 }
 
+/** Reply buttons on a transcript review. The id carries no authority; the review is re-checked. */
+export const whatsAppVoiceReviewButtons = [
+  { id: "wa-voice:use", title: "Use transcript" },
+  { id: "wa-voice:cancel", title: "Cancel transcript" },
+] as const
+export function isWhatsAppVoiceButton(quickActionId?: string) {
+  return quickActionId?.startsWith("wa-voice:") ?? false
+}
+/** A tapped review button, bound to the exact message it was tapped on. */
+export function parseWhatsAppVoiceButton(
+  quickActionId?: string,
+  replyToMessageId?: string,
+): WhatsAppVoiceChoice | null {
+  const decision =
+    quickActionId === "wa-voice:use"
+      ? "use"
+      : quickActionId === "wa-voice:cancel"
+        ? "cancel"
+        : undefined
+  const parsed = whatsAppVoiceChoiceSchema.safeParse(
+    decision ? { decision, replyToMessageId } : null,
+  )
+  return parsed.success ? parsed.data : null
+}
+
 /** An ordinary sentence, unquoted reply or amount never approves a transcript. */
 export function parseWhatsAppVoiceChoice(
   text?: string,
@@ -149,5 +174,5 @@ export function renderWhatsAppVoiceReview(transcript: string) {
     whatsAppPlainText(text) !== text
   )
     return null
-  return `Voice note transcript\n\n${text}\n\nReview the whole transcript above. Reply to this message with Use transcript, Edit transcript: followed by your corrected text, or Cancel transcript. Nothing in this recording has been sent as an assistant request yet.`
+  return `🎙️ Voice note transcript\n\n${text}\n\nCheck the whole transcript. Tap Use transcript or Cancel transcript. To fix it, reply to this message with Edit transcript: and the corrected text. Nothing runs until you choose.`
 }

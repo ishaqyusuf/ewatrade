@@ -1,9 +1,12 @@
 import { expect, test } from "bun:test"
 import {
+  isWhatsAppVoiceButton,
+  parseWhatsAppVoiceButton,
   parseWhatsAppVoiceChoice,
   renderWhatsAppVoiceReview,
   whatsAppMediaPolicy,
   whatsAppMediaSchema,
+  whatsAppVoiceReviewButtons,
 } from "./media"
 
 test("media policy uses canonical limits and forbids audio masquerading as a document", () => {
@@ -93,4 +96,20 @@ test("review preserves the whole original transcript and refuses oversized appro
   expect(renderWhatsAppVoiceReview(" ")).toBeNull()
   expect(renderWhatsAppVoiceReview("Hidden \u202eamount")).toBeNull()
   expect(renderWhatsAppVoiceReview("Open https://untrusted.example")).toBeNull()
+})
+
+test("transcript review buttons map to Use and Cancel on the exact tapped message only", () => {
+  expect(parseWhatsAppVoiceButton("wa-voice:use", "review-message")).toEqual({
+    decision: "use",
+    replyToMessageId: "review-message",
+  })
+  expect(parseWhatsAppVoiceButton("wa-voice:cancel", "review-message")).toEqual(
+    { decision: "cancel", replyToMessageId: "review-message" },
+  )
+  expect(parseWhatsAppVoiceButton("wa-voice:use", undefined)).toBeNull()
+  expect(parseWhatsAppVoiceButton("wa-voice:edit", "review-message")).toBeNull()
+  expect(isWhatsAppVoiceButton("wa-voice:anything")).toBe(true)
+  expect(isWhatsAppVoiceButton("wa-reply:1")).toBe(false)
+  for (const button of whatsAppVoiceReviewButtons)
+    expect(button.title.length).toBeLessThanOrEqual(20)
 })

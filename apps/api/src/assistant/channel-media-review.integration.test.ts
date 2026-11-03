@@ -287,9 +287,7 @@ async function voiceReview(transcript: string) {
   expect(outbox.runId).toBeNull()
   expect(outbox.messageId).toBeNull()
   expect(outbox.content).toContain(transcript)
-  expect(outbox.content).toContain(
-    "Nothing in this recording has been sent as an assistant request yet",
-  )
+  expect(outbox.content).toContain("Nothing runs until you choose.")
   const sent = await fixture.fakeAcceptedDelivery(outbox.id)
   expect(modelTurns).toBe(beforeModels)
   expect(await requests()).toBe(beforeRequests)
