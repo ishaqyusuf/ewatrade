@@ -2,6 +2,7 @@ import { ActionButton } from "@/components/mobile/action-button"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
+import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
 import { getSession } from "@/lib/session-store"
 import { cn } from "@/lib/utils"
 import { useOperationalModeStore } from "@/store/operationalModeStore"
@@ -196,6 +197,8 @@ function SupplierPurchaseList({
     ? recognitionPages.flatMap((page) => page.items)
     : []
   const summary = visible ? query.data?.pages[0]?.summary : undefined
+  // Large text: Incurred and Still owed stack so the amounts stay whole.
+  const largeText = useLargeTextLayout()
   const money = (value: string) => formatFinanceMoney(value, book.currencyCode)
   return (
     <FlatList
@@ -329,7 +332,12 @@ function SupplierPurchaseList({
             }
           />
           {summary ? (
-            <View className="flex-row rounded-[20px] bg-card px-4 py-3 shadow-sm">
+            <View
+              className={cn(
+                "rounded-[20px] bg-card px-4 py-3 shadow-sm",
+                largeText ? "gap-2" : "flex-row",
+              )}
+            >
               {[
                 ["Incurred", money(summary.incurredMinor)],
                 ["Still owed", money(summary.outstandingMinor)],
