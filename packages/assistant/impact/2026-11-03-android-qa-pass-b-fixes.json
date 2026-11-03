@@ -35,9 +35,9 @@
     },
     {
       "kind": "run",
-      "path": "Android emulator-5556, Sweet Crumbs Bakery (Demo QA) owner, 200% text",
+      "path": "apps/mobile/src/components/mobile/catalog-item/catalog-photo-gallery-picker.tsx",
       "executed": true,
-      "result": "After the API restart: My images lists, uploads a QA fixture image with title and category (APPROVED, gallery-only), edits details and removes it; New image sheet stays above the keyboard; Ask draft picture shows None inside its thumb."
+      "result": "Android emulator-5556, Sweet Crumbs Bakery (Demo QA) owner, 200% text, after the API restart: My images lists, uploads a QA fixture image with title and category (APPROVED, gallery-only), edits details and removes it; New image sheet stays above the keyboard; Ask draft picture shows None inside its thumb."
     }
   ]
 }
