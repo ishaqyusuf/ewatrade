@@ -167,13 +167,23 @@ export function GeneralProductPictureField({
               accessibilityLabel="New item photo"
             />
           ) : picture.keptPhoto ? (
-            <Text className="px-1 text-center text-xs text-muted-foreground">
+            // The 64pt thumb does not grow, so its placeholder text stops
+            // scaling at 1.3x instead of breaking mid-word at large text.
+            <Text
+              maxFontSizeMultiplier={1.3}
+              className="px-1 text-center text-xs text-muted-foreground"
+            >
               Photo added
             </Text>
           ) : illustration ? (
             <CatalogIllustrationPreview id={illustration.id} size={56} />
           ) : (
-            <Text className="text-xs text-muted-foreground">None</Text>
+            <Text
+              maxFontSizeMultiplier={1.3}
+              className="text-xs text-muted-foreground"
+            >
+              None
+            </Text>
           )}
         </View>
         <View className="flex-1 flex-row flex-wrap gap-2">
