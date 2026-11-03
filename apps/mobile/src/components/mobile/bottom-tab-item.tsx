@@ -13,6 +13,8 @@ import type {
   MobileBottomTabsProps,
 } from "./bottom-tabs.types"
 
+const DOCK_LABEL_LARGE_TEXT_SCALE_CAP = 1.15
+
 type MobileBottomTabItemProps = {
   haptic: boolean
   index: number
@@ -151,11 +153,19 @@ export function MobileBottomTabItem({
               name={tab.icon}
             />
           )}
+          {/* Five slots share the dock, so a slot is about 68pt wide: a label
+              at the display cap overflows into its neighbours and two lines
+              push the icon out of the dock. Large text keeps one line just
+              above normal size, shrinking a little for a long label. */}
           <RNText
-            adjustsFontSizeToFit={!largeTextLayout}
-            maxFontSizeMultiplier={DISPLAY_TEXT_FONT_SCALE_CAP}
-            minimumFontScale={largeTextLayout ? undefined : 0.9}
-            numberOfLines={largeTextLayout ? 2 : 1}
+            adjustsFontSizeToFit
+            maxFontSizeMultiplier={
+              largeTextLayout
+                ? DOCK_LABEL_LARGE_TEXT_SCALE_CAP
+                : DISPLAY_TEXT_FONT_SCALE_CAP
+            }
+            minimumFontScale={largeTextLayout ? 0.85 : 0.9}
+            numberOfLines={1}
             style={{
               color: isActive
                 ? MOBILE_OPERATIONAL_BOTTOM_TAB_TOKENS.activeForeground

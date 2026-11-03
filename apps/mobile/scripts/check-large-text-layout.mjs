@@ -22,11 +22,14 @@ const contracts = [
     ],
   },
   {
+    // The operational dock keeps one line just above normal size at large
+    // text (3 Nov 2026): wider labels collided and two lines pushed icons
+    // out of the dock. Other variants still wrap to two lines.
     file: "components/mobile/bottom-tab-item.tsx",
     markers: [
       "useLargeTextLayout",
       "DISPLAY_TEXT_FONT_SCALE_CAP",
-      "adjustsFontSizeToFit={!largeTextLayout}",
+      "DOCK_LABEL_LARGE_TEXT_SCALE_CAP = 1.15",
       "numberOfLines={largeTextLayout ? 2 : 1}",
     ],
   },
