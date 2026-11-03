@@ -2,16 +2,25 @@ import { createHash } from "node:crypto"
 import {
   WHATSAPP_IMPORT_HANDOFF_VERSION,
   WHATSAPP_PHOTO_HOLD_MS,
+  WHATSAPP_PHOTO_ORDER_LIST_MAX,
+  WHATSAPP_PHOTO_ORDER_LIST_VERSION,
   WHATSAPP_PHOTO_REVIEW_VERSION,
   WHATSAPP_VOICE_REVIEW_VERSION,
   type WhatsAppPhotoChoice,
+  type WhatsAppPhotoOfferOrder,
   type WhatsAppPhotoOrder,
+  type WhatsAppPhotoOrderPick,
   type WhatsAppVoiceChoice,
   renderWhatsAppPhotoReview,
   renderWhatsAppVoiceReview,
   whatsAppImportHandoffContentSchema,
   whatsAppMediaContentSchema,
   whatsAppPhotoChoiceContentSchema,
+  whatsAppPhotoOrderList,
+  whatsAppPhotoOrderListFallback,
+  whatsAppPhotoOrderOfferContentSchema,
+  whatsAppPhotoOrderOfferRows,
+  whatsAppPhotoOrderPickContentSchema,
   whatsAppPhotoReviewButtons,
   whatsAppPhotoReviewContentSchema,
   whatsAppVoiceChoiceContentSchema,
@@ -534,13 +543,22 @@ export async function stageAssistantWhatsAppPhotoReviewInTransaction(
   return { state: "completed" as const, outboxId: outbox.id }
 }
 
-/** Durable ingress claims one photo choice once; Attach and Other order hand the photo to the canonical turn. */
+/**
+ * Durable ingress claims one photo choice once. Attach hands the photo to the
+ * canonical turn. Other order completes this choice TURN with a list of the
+ * caller-resolved visible orders (still holding the photo) when any can be
+ * offered, else hands the photo to the canonical turn to ask.
+ */
 export async function consumeAssistantWhatsAppPhotoReviewInTransaction(
   db: Prisma.TransactionClient,
-  input: PrincipalInput & { choice: WhatsAppPhotoChoice },
+  input: PrincipalInput & {
+    choice: WhatsAppPhotoChoice
+    offerOrderIds?: readonly string[]
+  },
   now = new Date(),
 ): Promise<
   | { state: "discarded" }
+  | { state: "offered"; outboxId: string }
   | {
       state: "attach" | "other"
       attachmentId: string
@@ -638,6 +656,19 @@ export async function consumeAssistantWhatsAppPhotoReviewInTransaction(
     })
     return { state: "discarded" }
   }
+  if (choice.decision === "other" && input.offerOrderIds?.length) {
+    const offered = await offerPhotoOrders(db, {
+      resolved,
+      inbox,
+      authorityDigest,
+      choice,
+      sourceInboxId: original.id,
+      review: { ...review, attachmentId: attachment.id },
+      orderIds: input.offerOrderIds,
+      now,
+    })
+    if (offered) return offered
+  }
   // Kept: the photo returns to the canonical attachment retention.
   const retained = new Date(review.retentionUntil)
   if (retained > attachment.retentionUntil)
@@ -650,6 +681,224 @@ export async function consumeAssistantWhatsAppPhotoReviewInTransaction(
     attachmentId: attachment.id,
     order: review.order,
   }
+}
+
+/** Saves the offer on the choice TURN and its one list outbox; the photo stays held. */
+async function offerPhotoOrders(
+  db: Prisma.TransactionClient,
+  input: {
+    resolved: Resolved
+    inbox: Awaited<ReturnType<typeof fresh>>["inbox"]
+    authorityDigest: string
+    choice: WhatsAppPhotoChoice
+    sourceInboxId: string
+    review: {
+      attachmentId: string
+      contentDigest: string
+      retentionUntil: string
+      expiresAt: string
+    }
+    orderIds: readonly string[]
+    now: Date
+  },
+) {
+  const { resolved, inbox, now } = input
+  const ids = [...new Set(input.orderIds)].slice(
+    0,
+    WHATSAPP_PHOTO_ORDER_LIST_MAX,
+  )
+  const found = await db.commercialOrder.findMany({
+    where: {
+      id: { in: ids },
+      tenantId: resolved.scope.tenantId,
+      storeId: resolved.scope.storeId,
+    },
+    select: {
+      id: true,
+      orderNumber: true,
+      customerName: true,
+      totalMinor: true,
+      currencyCode: true,
+    },
+  })
+  const byId = new Map(found.map((order) => [order.id, order]))
+  const candidates: WhatsAppPhotoOfferOrder[] = []
+  for (const id of ids) {
+    const order = byId.get(id)
+    if (order && order.totalMinor >= 0 && /^[A-Z]{3}$/.test(order.currencyCode))
+      candidates.push({
+        ...photoOrder(order),
+        totalMinor: order.totalMinor,
+        currencyCode: order.currencyCode,
+      })
+  }
+  const orders = whatsAppPhotoOrderOfferRows(candidates).map((row) => row.order)
+  if (
+    !orders.length ||
+    !whatsAppPhotoOrderList(orders) ||
+    (await db.assistantWhatsAppOutbox.count({ where: { inboxId: inbox.id } }))
+  )
+    return null
+  const expiresAt = new Date(
+    Math.min(
+      new Date(input.review.expiresAt).getTime(),
+      inbox.expiresAt.getTime(),
+      resolved.grant.expiresAt.getTime(),
+      resolved.grant.idleExpiresAt.getTime(),
+    ),
+  )
+  if (expiresAt <= now) throw new AssistantWhatsAppError("EXPIRED")
+  const content = whatsAppPhotoOrderOfferContentSchema.parse({
+    type: "photo_order_offer",
+    choice: input.choice,
+    offer: {
+      sourceInboxId: input.sourceInboxId,
+      attachmentId: input.review.attachmentId,
+      contentDigest: input.review.contentDigest,
+      orders,
+      retentionUntil: input.review.retentionUntil,
+      authorityDigest: input.authorityDigest,
+      expiresAt: expiresAt.toISOString(),
+    },
+  })
+  const body = whatsAppPhotoOrderListFallback(orders)
+  const outbox = await db.assistantWhatsAppOutbox.create({
+    data: {
+      inboxId: inbox.id,
+      phoneNumberId: inbox.phoneNumberId,
+      responseRevision: 1,
+      chunkIndex: 0,
+      chunkCount: 1,
+      rendererVersion: WHATSAPP_PHOTO_ORDER_LIST_VERSION,
+      renderKind: "photo_order_list",
+      authorityDigest: input.authorityDigest,
+      content: body,
+      contentDigest: digest(body),
+      expiresAt,
+    },
+  })
+  await db.assistantWhatsAppInbox.update({
+    where: { id: inbox.id },
+    data: {
+      content,
+      state: "COMPLETED",
+      completedAt: now,
+      leaseOwner: null,
+      leaseExpiresAt: null,
+      nextAttemptAt: null,
+      errorCode: null,
+    },
+  })
+  return { state: "offered" as const, outboxId: outbox.id }
+}
+
+/**
+ * Durable ingress claims one row of a sent order list once. The row resolves
+ * only against the offer saved on that exact list message; the still-held
+ * photo then goes to the canonical turn like Attach (or, for Not listed, like
+ * the previous Other order question).
+ */
+export async function consumeAssistantWhatsAppPhotoOrderPickInTransaction(
+  db: Prisma.TransactionClient,
+  input: PrincipalInput & { pick: WhatsAppPhotoOrderPick },
+  now = new Date(),
+): Promise<
+  | { state: "attach"; attachmentId: string; order: WhatsAppPhotoOrder }
+  | { state: "other"; attachmentId: string }
+> {
+  const { resolved, inbox, authorityDigest } = await fresh(db, input, now)
+  const chosen = whatsAppPhotoOrderPickContentSchema.safeParse(inbox.content)
+  if (
+    !chosen.success ||
+    resolved.conversation.purpose !== "GENERAL" ||
+    chosen.data.choice.row !== input.pick.row ||
+    chosen.data.choice.replyToMessageId !== input.pick.replyToMessageId
+  )
+    throw new AssistantWhatsAppError("UNAUTHORIZED")
+  const pick = chosen.data.choice
+  const outbox = await db.assistantWhatsAppOutbox.findFirst({
+    where: {
+      phoneNumberId: input.principal.phoneNumberId,
+      providerMessageId: pick.replyToMessageId,
+      state: { in: ["SENT", "DELIVERED", "READ"] },
+      renderKind: "photo_order_list",
+      deliveryAttempts: {
+        some: { state: "ACCEPTED", providerMessageId: pick.replyToMessageId },
+      },
+      inbox: {
+        bindingId: resolved.binding.id,
+        kind: "TURN",
+        state: "COMPLETED",
+      },
+    },
+    include: { inbox: true },
+  })
+  if (!outbox) throw new AssistantWhatsAppError("UNAUTHORIZED")
+  await db.$queryRaw`SELECT id FROM "AssistantWhatsAppInbox" WHERE id=${outbox.inboxId} FOR UPDATE`
+  const listed = await db.assistantWhatsAppInbox.findUniqueOrThrow({
+    where: { id: outbox.inboxId },
+  })
+  const parsed = whatsAppPhotoOrderOfferContentSchema.safeParse(listed.content)
+  if (!parsed.success) throw new AssistantWhatsAppError("UNAUTHORIZED")
+  const offer = parsed.data.offer
+  if (
+    listed.expiresAt <= now ||
+    new Date(offer.expiresAt) <= now ||
+    outbox.expiresAt <= now
+  )
+    throw new AssistantWhatsAppError("EXPIRED")
+  const body = whatsAppPhotoOrderListFallback(offer.orders)
+  if (
+    outbox.rendererVersion !== WHATSAPP_PHOTO_ORDER_LIST_VERSION ||
+    outbox.chunkCount !== 1 ||
+    outbox.chunkIndex !== 0 ||
+    outbox.runId ||
+    outbox.messageId ||
+    listed.runId ||
+    listed.executionAuthorityDigest !== authorityDigest ||
+    outbox.authorityDigest !== authorityDigest ||
+    offer.authorityDigest !== authorityDigest ||
+    outbox.content !== body ||
+    outbox.contentDigest !== digest(body)
+  )
+    throw new AssistantWhatsAppError("UNAUTHORIZED")
+  if (offer.consumedBy && offer.consumedBy !== inbox.id)
+    throw new AssistantWhatsAppError("EXPIRED")
+  if (offer.consumedBy && offer.picked !== pick.row)
+    throw new AssistantWhatsAppError("CONFLICT")
+  const order = pick.row === "none" ? null : offer.orders[pick.row - 1]
+  if (pick.row !== "none" && !order)
+    throw new AssistantWhatsAppError("UNAUTHORIZED")
+  await db.$queryRaw`SELECT id FROM "AssistantAttachment" WHERE id=${offer.attachmentId} FOR UPDATE`
+  const attachment = await photo(db, resolved, offer, now)
+  if (!offer.consumedBy)
+    await db.assistantWhatsAppInbox.update({
+      where: { id: listed.id },
+      data: {
+        content: {
+          ...parsed.data,
+          offer: { ...offer, consumedBy: inbox.id, picked: pick.row },
+        },
+      },
+    })
+  // Kept: the photo returns to the canonical attachment retention.
+  const retained = new Date(offer.retentionUntil)
+  if (retained > attachment.retentionUntil)
+    await db.assistantAttachment.update({
+      where: { id: attachment.id },
+      data: { retentionUntil: retained },
+    })
+  return order
+    ? {
+        state: "attach",
+        attachmentId: attachment.id,
+        order: {
+          id: order.id,
+          orderNumber: order.orderNumber,
+          customerName: order.customerName,
+        },
+      }
+    : { state: "other", attachmentId: attachment.id }
 }
 
 /** Completes a GENERAL spreadsheet TURN with the fixed row-count handoff; nothing is stored or imported. */
@@ -748,6 +997,7 @@ export async function validateAssistantWhatsAppMediaPrompt(
 ): Promise<{
   body: string
   buttons?: Array<{ id: string; title: string }>
+  list?: NonNullable<ReturnType<typeof whatsAppPhotoOrderList>>
 }> {
   if (!whatsAppChannelPolicy().media)
     throw new AssistantWhatsAppError("UNAVAILABLE")
@@ -792,6 +1042,32 @@ export async function validateAssistantWhatsAppMediaPrompt(
     )
       throw new AssistantWhatsAppError("CONFLICT")
     return { body }
+  }
+  if (outbox.renderKind === "photo_order_list") {
+    const parsed = whatsAppPhotoOrderOfferContentSchema.safeParse(
+      outbox.inbox.content,
+    )
+    if (
+      outbox.rendererVersion !== WHATSAPP_PHOTO_ORDER_LIST_VERSION ||
+      !parsed.success ||
+      new Date(parsed.data.offer.expiresAt) <= now ||
+      parsed.data.offer.consumedBy ||
+      parsed.data.offer.authorityDigest !== outbox.authorityDigest
+    )
+      throw new AssistantWhatsAppError("UNAUTHORIZED")
+    await photo(db, resolved, parsed.data.offer, now)
+    const body = whatsAppPhotoOrderListFallback(parsed.data.offer.orders)
+    const list = whatsAppPhotoOrderList(
+      parsed.data.offer.orders,
+      resolved.tenantContext.activeStore?.name,
+    )
+    if (
+      !list ||
+      body !== outbox.content ||
+      digest(body) !== outbox.contentDigest
+    )
+      throw new AssistantWhatsAppError("CONFLICT")
+    return { body, list }
   }
   const parsed = whatsAppPhotoReviewContentSchema.safeParse(
     outbox.inbox.content,

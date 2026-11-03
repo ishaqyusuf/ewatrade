@@ -104,6 +104,70 @@ test("review buttons use the same admitted body, callback and effect ledger", as
     { kind: "accepted", providerMessageId: "wamid.synthetic.buttons" },
   ])
 })
+test("a photo order list goes out natively, and as the saved text when lists are unavailable", async () => {
+  const list = {
+    body: "Which order is the photo for?",
+    button: "Choose order",
+    sectionTitle: "Orders · Yaba Main",
+    rows: [
+      {
+        id: "wa-photo-order:1",
+        title: "S-1042",
+        description: "Chidi Eze · ₦156,000",
+      },
+      {
+        id: "wa-photo-order:none",
+        title: "Not listed",
+        description: "Tell me which order it's for",
+      },
+    ],
+  }
+  const withList = (deps: ChannelDeliveryDependencies) => ({
+    ...deps,
+    begin: async (
+      ...args: Parameters<ChannelDeliveryDependencies["begin"]>
+    ) => {
+      const begun = await deps.begin(...args)
+      return begun.kind === "started" ? { ...begun, list } : begun
+    },
+  })
+  const native = fixture()
+  const lists: unknown[] = []
+  expect(
+    await processAssistantChannelDelivery("out", {
+      ...withList(native.deps),
+      sendList: async (input) => {
+        lists.push(input)
+        return { messageId: "wamid.synthetic.list" }
+      },
+    }),
+  ).toEqual({ status: "sent" })
+  expect(native.sends).toHaveLength(0)
+  expect(lists).toEqual([
+    {
+      accessToken: "synthetic",
+      phoneNumberId: "123456789",
+      to: "2348000000001",
+      body: "Which order is the photo for?",
+      callbackData: "ewa-wa-v1:00000000-0000-4000-8000-000000000000",
+      button: "Choose order",
+      sectionTitle: "Orders · Yaba Main",
+      rows: list.rows,
+    },
+  ])
+  expect(native.outcomes).toEqual([
+    { kind: "accepted", providerMessageId: "wamid.synthetic.list" },
+  ])
+  const text = fixture()
+  expect(
+    await processAssistantChannelDelivery("out", withList(text.deps)),
+  ).toEqual({ status: "sent" })
+  expect(text.sends).toEqual([
+    expect.objectContaining({
+      body: "📋 *Business · Store*\n\nExact saved reply",
+    }),
+  ])
+})
 test("disabled admission and a switch flipped before network both send nothing", async () => {
   const { deps, sends, outcomes } = fixture()
   expect(

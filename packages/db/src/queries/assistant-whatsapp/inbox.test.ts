@@ -3,6 +3,7 @@ import type { PrismaClient } from "../../../generated/prisma/client"
 import {
   acceptAssistantWhatsAppIngress,
   assistantWhatsAppIngressActionContent,
+  assistantWhatsAppPhotoIngressContent,
 } from "./inbox"
 
 const now = new Date("2026-10-15T09:00:00Z")
@@ -55,6 +56,9 @@ test("photo choice buttons never become executable action decisions", () => {
     "wa-photo:other",
     "wa-photo:discard",
     "wa-photo:unknown",
+    "wa-photo-order:1",
+    "wa-photo-order:none",
+    "wa-photo-order:x",
   ])
     expect(
       assistantWhatsAppIngressActionContent({
@@ -63,4 +67,50 @@ test("photo choice buttons never become executable action decisions", () => {
         replyToMessageId: "wamid.review",
       }),
     ).toBeNull()
+})
+
+test("photo order list rows bind to the tapped list message and carry only a position", () => {
+  expect(
+    assistantWhatsAppPhotoIngressContent({
+      quickActionId: "wa-photo-order:3",
+      replyToMessageId: "wamid.list",
+    }),
+  ).toEqual({
+    type: "photo_order_choice",
+    choice: { row: 3, replyToMessageId: "wamid.list" },
+  })
+  expect(
+    assistantWhatsAppPhotoIngressContent({
+      quickActionId: "wa-photo-order:none",
+      replyToMessageId: "wamid.list",
+    }),
+  ).toEqual({
+    type: "photo_order_choice",
+    choice: { row: "none", replyToMessageId: "wamid.list" },
+  })
+  for (const quickActionId of [
+    "wa-photo-order:0",
+    "wa-photo-order:10",
+    "wa-photo-order:order-id",
+  ])
+    expect(
+      assistantWhatsAppPhotoIngressContent({
+        quickActionId,
+        replyToMessageId: "wamid.list",
+      }),
+    ).toEqual({ type: "invalid_photo_choice" })
+  // Without the list message's context id there is nothing to bind to.
+  expect(
+    assistantWhatsAppPhotoIngressContent({ quickActionId: "wa-photo-order:1" }),
+  ).toEqual({ type: "invalid_photo_choice" })
+  expect(
+    assistantWhatsAppPhotoIngressContent({
+      quickActionId: "wa-photo:other",
+      replyToMessageId: "wamid.review",
+    }),
+  ).toEqual({
+    type: "photo_choice",
+    choice: { decision: "other", replyToMessageId: "wamid.review" },
+  })
+  expect(assistantWhatsAppPhotoIngressContent({})).toBeNull()
 })

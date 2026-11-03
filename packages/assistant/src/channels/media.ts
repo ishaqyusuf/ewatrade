@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { generalMoney } from "../general/contracts"
 import {
   SETUP_ATTACHMENT_LIMITS,
   sanitizeSetupAttachmentName,
@@ -285,12 +286,159 @@ export function parseWhatsAppPhotoButton(
 /** The owner's own words for the chosen photo; the model drafts the attach for review. */
 export function whatsAppPhotoChoiceText(
   decision: "attach" | "other",
-  order: Pick<WhatsAppPhotoOrder, "orderNumber">,
+  order?: Pick<WhatsAppPhotoOrder, "orderNumber">,
 ) {
-  const number = photoOrderLabel(order)
+  const number = order && photoOrderLabel(order)
   return decision === "attach" && number
     ? `Attach this photo to order ${number}.`
     : "Attach this photo to a different order. Ask me which one."
+}
+
+/**
+ * "Other order" answers with a native list of recent open orders the sender
+ * can see. The offered orders are saved server-side on the choice TURN; a row
+ * id is only a position in that saved offer and carries no authority.
+ */
+export const WHATSAPP_PHOTO_ORDER_LIST_VERSION = "whatsapp-photo-order-list-v1"
+/** Meta allows 10 rows; the last one is always "Not listed". */
+export const WHATSAPP_PHOTO_ORDER_LIST_MAX = 9
+const photoOfferOrderSchema = photoOrderSchema
+  .extend({
+    totalMinor: z.number().int().nonnegative(),
+    currencyCode: z.string().regex(/^[A-Z]{3}$/),
+  })
+  .strict()
+export type WhatsAppPhotoOfferOrder = z.infer<typeof photoOfferOrderSchema>
+const photoOrderRowSchema = z.union([
+  z.number().int().min(1).max(WHATSAPP_PHOTO_ORDER_LIST_MAX),
+  z.literal("none"),
+])
+export const whatsAppPhotoOrderPickSchema = z
+  .object({
+    row: photoOrderRowSchema,
+    replyToMessageId: z.string().min(1).max(256),
+  })
+  .strict()
+export type WhatsAppPhotoOrderPick = z.infer<
+  typeof whatsAppPhotoOrderPickSchema
+>
+export const whatsAppPhotoOrderPickContentSchema = z
+  .object({
+    type: z.literal("photo_order_choice"),
+    choice: whatsAppPhotoOrderPickSchema,
+  })
+  .strict()
+export const whatsAppPhotoOrderOfferContentSchema = z
+  .object({
+    type: z.literal("photo_order_offer"),
+    choice: whatsAppPhotoChoiceSchema,
+    offer: z
+      .object({
+        sourceInboxId: z.string().min(1).max(128),
+        attachmentId: z.string().min(1).max(64),
+        contentDigest: z.string().regex(/^[a-f0-9]{64}$/),
+        orders: z
+          .array(photoOfferOrderSchema)
+          .min(1)
+          .max(WHATSAPP_PHOTO_ORDER_LIST_MAX),
+        retentionUntil: z.iso.datetime(),
+        authorityDigest: z.string().regex(/^[a-f0-9]{64}$/),
+        expiresAt: z.iso.datetime(),
+        consumedBy: z.string().min(1).max(128).optional(),
+        picked: photoOrderRowSchema.optional(),
+      })
+      .strict(),
+  })
+  .strict()
+
+export const WHATSAPP_PHOTO_ORDER_LIST_BODY = "Which order is the photo for?"
+const PHOTO_ORDER_ROW_PREFIX = "wa-photo-order:"
+
+function photoOrderMoney(order: WhatsAppPhotoOfferOrder) {
+  const text = generalMoney(order.totalMinor, order.currencyCode)
+  return order.totalMinor % 100 === 0 ? text.replace(/\.00$/, "") : text
+}
+
+/** Offer rows that fit Meta's list limits (title ≤24, description ≤72); others are left out. */
+export function whatsAppPhotoOrderOfferRows(
+  orders: readonly WhatsAppPhotoOfferOrder[],
+) {
+  return orders
+    .slice(0, WHATSAPP_PHOTO_ORDER_LIST_MAX)
+    .map((order) => {
+      const number = photoOrderLabel(order)
+      const money = photoOrderMoney(order)
+      const customer = whatsAppPlainText(order.customerName ?? "")
+        .replace(/[*_~`]/g, "")
+        .replace(/\s+/g, " ")
+        .trim()
+      const room = 72 - money.length - 3
+      const name =
+        customer.length > room
+          ? `${customer.slice(0, Math.max(0, room - 1)).trimEnd()}…`
+          : customer
+      return number && number.length <= 24 && money.length <= 72
+        ? {
+            order,
+            title: number,
+            description: name && room > 1 ? `${name} · ${money}` : money,
+          }
+        : null
+    })
+    .filter((row) => row !== null)
+}
+
+/** The native list for a saved offer: positional ids, then a fixed "Not listed" row. */
+export function whatsAppPhotoOrderList(
+  orders: readonly WhatsAppPhotoOfferOrder[],
+  storeName?: string,
+) {
+  const rows = whatsAppPhotoOrderOfferRows(orders)
+  if (!rows.length || rows.length !== orders.length) return null
+  const section = `Orders · ${whatsAppPlainText(storeName ?? "").trim()}`
+  return {
+    body: WHATSAPP_PHOTO_ORDER_LIST_BODY,
+    button: "Choose order",
+    sectionTitle:
+      storeName?.trim() && section.length <= 24 ? section : "Orders",
+    rows: [
+      ...rows.map((row, index) => ({
+        id: `${PHOTO_ORDER_ROW_PREFIX}${index + 1}`,
+        title: row.title,
+        description: row.description,
+      })),
+      {
+        id: `${PHOTO_ORDER_ROW_PREFIX}none`,
+        title: "Not listed",
+        description: "Tell me which order it's for",
+      },
+    ],
+  }
+}
+
+/** Text used only when the list cannot be sent natively; nothing is chosen by typing. */
+export function whatsAppPhotoOrderListFallback(
+  orders: readonly WhatsAppPhotoOfferOrder[],
+) {
+  const rows = whatsAppPhotoOrderOfferRows(orders)
+  return `${WHATSAPP_PHOTO_ORDER_LIST_BODY}\n\n${rows.map((row) => `- ${row.title} · ${row.description}`).join("\n")}\n\nTo attach it, send the photo again with the order number in the caption.`
+}
+
+export function isWhatsAppPhotoOrderRow(quickActionId?: string) {
+  return quickActionId?.startsWith(PHOTO_ORDER_ROW_PREFIX) ?? false
+}
+/** A tapped list row, bound to the exact list message it was tapped on. */
+export function parseWhatsAppPhotoOrderRow(
+  quickActionId?: string,
+  replyToMessageId?: string,
+): WhatsAppPhotoOrderPick | null {
+  const raw = /^wa-photo-order:(none|[1-9])$/.exec(quickActionId ?? "")?.[1]
+  const parsed = whatsAppPhotoOrderPickSchema.safeParse(
+    raw
+      ? { row: raw === "none" ? "none" : Number(raw), replyToMessageId }
+      : null,
+  )
+  return parsed.success ? parsed.data : null
 }
 
 /** Spreadsheets in GENERAL chat are counted only; rows are reviewed and imported in the app. */

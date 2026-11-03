@@ -1,0 +1,48 @@
+{
+  "version": 1,
+  "id": "2026-11-03-whatsapp-photo-order-list",
+  "tickets": ["H02"],
+  "summary": "WhatsApp gap from Workshop ewatrade/assistant/conversations scenes f-photo (step other) and f-late (3-media-control). Tapping Other order on a held photo review no longer sends a model question first: when the sender may draft order_attachment_add and has visible open orders in this Store (same resolveOrderScope visibility as the caption lookup, newest first), the choice TURN completes model-free with a native WhatsApp list (Which order is the photo for? / Choose order / Orders · <Store>) of up to 9 orders titled by order number with customer and total as the description, plus a last Not listed row. The offered order ids, photo attachment and expiry are saved server-side on that TURN; row ids (wa-photo-order:<position>|none) carry no authority and resolve only against the offer saved on the exact tapped list message while the photo is still held. A listed row continues exactly like Attach to <order> (Attach this photo to order <n>. plus the photo into the ordinary GENERAL turn, which drafts order_attachment_add for review); Not listed, no visible orders, no permission or a failed lookup keep the previous model question. An expired, consumed or foreign list choice gets the existing PHOTO_CHOICE_EXPIRED notice. Delivery re-validates the saved offer and sends it with sendList, falling back to a fixed text listing (send the photo again with the order number) when lists are unavailable. Typed replies are unchanged. Local only; media stays behind its existing gate; no provider, OTP, schema or deployment change.",
+  "noAssistantImpact": "No capability, tool, prompt or write path changes. The chosen order reaches the existing order_attachment_add draft and confirmation through the ordinary GENERAL turn; the list only narrows which order the owner's request text names, and the photo is never interpreted.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/whatsapp-assistant-system-design.md"
+    },
+    {
+      "topic": "capability",
+      "status": "not_applicable",
+      "path": "packages/assistant/src/capabilities/COVERAGE.md",
+      "note": "No capability, rollout or coverage change; Other order only lists orders for the existing order_attachment_add draft."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/assistant/src/channels/media-photo.test.ts",
+      "executed": true,
+      "result": "Order list body, button, section title, order-number row titles, customer and total descriptions within Meta limits, Not listed last, at most 10 rows, unrenderable orders refused, text fallback copy, positional row parsing bound to the tapped message and strict stored offer content: pass."
+    },
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/assistant-whatsapp/inbox.test.ts",
+      "executed": true,
+      "result": "List row taps become photo_order_choice bound to the list message, malformed or unbound rows become invalid_photo_choice, and rows never become executable action decisions: pass."
+    },
+    {
+      "kind": "test",
+      "path": "apps/api/src/assistant/channel-media-turn.test.ts",
+      "executed": true,
+      "result": "Offered orders use the Store visibility, open-order filter, newest first and the list cap; a sales rep sees only orders they may already see; no usable scope reads nothing: pass."
+    },
+    {
+      "kind": "test",
+      "path": "apps/api/src/assistant/channel-delivery.test.ts",
+      "executed": true,
+      "result": "A photo order list is sent with sendList (same recipient, callback and effect ledger) and falls back to the saved text when lists are unavailable: pass."
+    }
+  ]
+}

@@ -50,16 +50,19 @@ export function defaultChannelDeliveryDependencies() {
       provider.sendText(input),
     sendButtons: (input: Parameters<typeof provider.sendButtons>[0]) =>
       provider.sendButtons(input),
+    sendList: (input: Parameters<typeof provider.sendList>[0]) =>
+      provider.sendList(input),
     next: (id: string) => nextAssistantWhatsAppOutbox(prisma, id),
   }
 }
 export type ChannelDeliveryDependencies = Omit<
   ReturnType<typeof defaultChannelDeliveryDependencies>,
-  "sendButtons"
+  "sendButtons" | "sendList"
 > & {
   sendButtons?: ReturnType<
     typeof defaultChannelDeliveryDependencies
   >["sendButtons"]
+  sendList?: ReturnType<typeof defaultChannelDeliveryDependencies>["sendList"]
 }
 /** ID-only service operation. The repository admits each possible effect once with fresh merchant authority. */
 export async function processAssistantChannelDelivery(
@@ -108,10 +111,24 @@ export async function processAssistantChannelDelivery(
       }),
       callbackData: claim.callbackData,
     }
+    // A native list only when it is available; otherwise the saved text body.
+    const list = claim.list
+    const sendList = list ? deps.sendList : undefined
     sent =
-      claim.buttons?.length && deps.sendButtons
-        ? await deps.sendButtons({ ...input, buttons: claim.buttons })
-        : await deps.send(input)
+      list && sendList
+        ? await sendList({
+            ...input,
+            body: presentWhatsAppMessage(list.body, {
+              family: claim.presentationFamily,
+              maxUnits: 1024,
+            }),
+            button: list.button,
+            sectionTitle: list.sectionTitle,
+            rows: list.rows,
+          })
+        : claim.buttons?.length && deps.sendButtons
+          ? await deps.sendButtons({ ...input, buttons: claim.buttons })
+          : await deps.send(input)
   } catch (error) {
     const outcome =
       error instanceof WhatsAppProviderSendError &&

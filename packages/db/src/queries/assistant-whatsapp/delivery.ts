@@ -371,6 +371,9 @@ export function beginAssistantWhatsAppDelivery(
     const body = row.content
     let providerBody = body
     let providerButtons: { id: string; title: string }[] | undefined
+    let providerList:
+      | Awaited<ReturnType<typeof validateAssistantWhatsAppMediaPrompt>>["list"]
+      | undefined
     // Only the fixed outage notice may leave a terminally FAILED turn.
     let failedTurnNotice = false
     if (!body || hash(body) !== row.contentDigest)
@@ -687,9 +690,10 @@ export function beginAssistantWhatsAppDelivery(
             }))
         } else if (
           row.renderKind === "photo_review" ||
+          row.renderKind === "photo_order_list" ||
           row.renderKind === "import_handoff"
         ) {
-          // Photo choice and spreadsheet handoff: re-rendered from the original TURN.
+          // Photo choice, photo order list and spreadsheet handoff: re-rendered from the saved TURN.
           if (
             row.inbox.kind !== "TURN" ||
             row.runId ||
@@ -718,6 +722,8 @@ export function beginAssistantWhatsAppDelivery(
           if (expected.body !== body)
             return cancel("cancelled", "SAVED_REPLY_CHANGED")
           if (expected.buttons) providerButtons = expected.buttons
+          // The saved body is the text fallback; the native list carries the rows.
+          if (expected.list) providerList = expected.list
         } else if (row.inbox.kind === "ACTION") {
           if (
             row.runId ||
@@ -1184,6 +1190,7 @@ export function beginAssistantWhatsAppDelivery(
       body: providerBody ?? body,
       ...presentation,
       ...(providerButtons ? { buttons: providerButtons } : {}),
+      ...(providerList ? { list: providerList } : {}),
       phoneNumberId: row.phoneNumberId,
       senderId: identity.senderId,
       userId: identity.userId,

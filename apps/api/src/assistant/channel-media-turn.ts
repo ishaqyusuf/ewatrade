@@ -1,16 +1,19 @@
 import { capabilityForAction } from "@ewatrade/assistant/capabilities/manifest"
 import { parseWhatsAppTypedAction } from "@ewatrade/assistant/channels/action-review"
 import {
+  WHATSAPP_PHOTO_ORDER_LIST_MAX,
   whatsAppCaptionOrderNumbers,
   whatsAppMediaContentSchema,
   whatsAppPhotoChoiceContentSchema,
   whatsAppPhotoChoiceText,
+  whatsAppPhotoOrderPickContentSchema,
   whatsAppVoiceChoiceContentSchema,
 } from "@ewatrade/assistant/channels/media"
 import { whatsAppMediaRefusalNotice } from "@ewatrade/assistant/channels/notice"
 import { SETUP_ATTACHMENT_PART } from "@ewatrade/assistant/setup/attachments"
 import {
   type WhatsAppInboxLease,
+  consumeAssistantWhatsAppPhotoOrderPickInTransaction,
   consumeAssistantWhatsAppPhotoReviewInTransaction,
   consumeAssistantWhatsAppVoiceReviewInTransaction,
   deferAssistantWhatsAppMediaInbox,
@@ -20,7 +23,7 @@ import {
   stageAssistantWhatsAppVoiceReviewInTransaction,
 } from "@ewatrade/db/assistant-whatsapp"
 import { runInOwnSerializableTransaction } from "@ewatrade/db/own-transaction"
-import { resolveOrderScope } from "@ewatrade/db/queries"
+import { openOrderWhere, resolveOrderScope } from "@ewatrade/db/queries"
 import { isLinkedAssistantIdentity } from "./channel-principal"
 import {
   type GeneralContext,
@@ -41,6 +44,18 @@ export type WhatsAppPreparedMediaTurn =
  * orders and exactly one visible order matches. Anything else keeps the
  * ordinary photo turn.
  */
+function photoOrderVisibility(ctx: GeneralContext) {
+  const scope = requireGeneralScope(ctx)
+  return resolveOrderScope(ctx.db, {
+    tenantId: scope.tenantId,
+    storeId: scope.storeId,
+    activeStoreId: scope.storeId,
+    userId: scope.userId,
+    role: ctx.tenantContext.membership.role,
+    allowedStoreIds: ctx.tenantContext.stores.map((store) => store.id),
+  })
+}
+
 export async function resolveAssistantWhatsAppCaptionOrder(
   ctx: GeneralContext,
   caption: string | undefined,
@@ -51,21 +66,49 @@ export async function resolveAssistantWhatsAppCaptionOrder(
     !canDraftGeneralCapability(ctx, capabilityForAction("order_attachment_add"))
   )
     return null
-  const scope = requireGeneralScope(ctx)
-  const visibility = await resolveOrderScope(ctx.db, {
-    tenantId: scope.tenantId,
-    storeId: scope.storeId,
-    activeStoreId: scope.storeId,
-    userId: scope.userId,
-    role: ctx.tenantContext.membership.role,
-    allowedStoreIds: ctx.tenantContext.stores.map((store) => store.id),
-  })
+  const visibility = await photoOrderVisibility(ctx)
   const orders = await ctx.db.commercialOrder.findMany({
     where: { ...visibility, orderNumber: { in: numbers } },
     select: { id: true },
     take: 2,
   })
   return orders.length === 1 ? (orders[0] ?? null) : null
+}
+
+/**
+ * The recent open orders "Other order" may offer: same visibility and
+ * permission as the caption lookup, newest first. Empty (or a failed lookup)
+ * keeps the model question.
+ */
+export async function listAssistantWhatsAppPhotoOfferOrders(
+  ctx: GeneralContext,
+) {
+  if (
+    !canDraftGeneralCapability(ctx, capabilityForAction("order_attachment_add"))
+  )
+    return []
+  const visibility = await photoOrderVisibility(ctx)
+  const orders = await ctx.db.commercialOrder.findMany({
+    where: { ...visibility, ...openOrderWhere },
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    select: { id: true },
+    take: WHATSAPP_PHOTO_ORDER_LIST_MAX,
+  })
+  return orders.map((order) => order.id)
+}
+
+function photoTurnInput(
+  text: string,
+  attachmentId: string,
+): WhatsAppPreparedMediaTurn {
+  // The canonical turn drafts order_attachment_add for review; nothing is attached here.
+  return {
+    kind: "input",
+    parts: [
+      { type: "text", text },
+      { type: SETUP_ATTACHMENT_PART, data: { attachmentId } },
+    ],
+  }
 }
 
 export async function prepareAssistantWhatsAppMediaTurn(
@@ -91,6 +134,11 @@ export async function prepareAssistantWhatsAppMediaTurn(
   }
   const photoChoice = whatsAppPhotoChoiceContentSchema.safeParse(inbox.content)
   if (photoChoice.success) {
+    // Other order offers a list of visible orders; a failed lookup keeps the question.
+    const offerOrderIds =
+      photoChoice.data.choice.decision === "other"
+        ? await listAssistantWhatsAppPhotoOfferOrders(ctx).catch(() => [])
+        : []
     let picked: Awaited<
       ReturnType<typeof consumeAssistantWhatsAppPhotoReviewInTransaction>
     >
@@ -100,26 +148,42 @@ export async function prepareAssistantWhatsAppMediaTurn(
           principal,
           lease,
           choice: photoChoice.data.choice,
+          offerOrderIds,
         }),
       )
     } catch {
       return notice("PHOTO_CHOICE_EXPIRED")
     }
     if (picked.state === "discarded") return notice("PHOTO_DISCARDED")
-    // The canonical turn drafts order_attachment_add for review; nothing is attached here.
-    return {
-      kind: "input",
-      parts: [
-        {
-          type: "text",
-          text: whatsAppPhotoChoiceText(picked.state, picked.order),
-        },
-        {
-          type: SETUP_ATTACHMENT_PART,
-          data: { attachmentId: picked.attachmentId },
-        },
-      ],
+    if (picked.state === "offered") return { kind: "completed" }
+    return photoTurnInput(
+      whatsAppPhotoChoiceText(picked.state, picked.order),
+      picked.attachmentId,
+    )
+  }
+  const photoPick = whatsAppPhotoOrderPickContentSchema.safeParse(inbox.content)
+  if (photoPick.success) {
+    let picked: Awaited<
+      ReturnType<typeof consumeAssistantWhatsAppPhotoOrderPickInTransaction>
+    >
+    try {
+      picked = await runInOwnSerializableTransaction(ctx.db, (tx) =>
+        consumeAssistantWhatsAppPhotoOrderPickInTransaction(tx, {
+          principal,
+          lease,
+          pick: photoPick.data.choice,
+        }),
+      )
+    } catch {
+      return notice("PHOTO_CHOICE_EXPIRED")
     }
+    // A listed order continues exactly like Attach; Not listed asks as before.
+    return photoTurnInput(
+      picked.state === "attach"
+        ? whatsAppPhotoChoiceText("attach", picked.order)
+        : whatsAppPhotoChoiceText("other"),
+      picked.attachmentId,
+    )
   }
   if (
     inbox.content &&

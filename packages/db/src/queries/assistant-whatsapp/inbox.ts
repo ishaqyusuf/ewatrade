@@ -11,9 +11,11 @@ import {
 } from "@ewatrade/assistant/channels/ingress"
 import {
   isWhatsAppPhotoButton,
+  isWhatsAppPhotoOrderRow,
   isWhatsAppVoiceButton,
   isWhatsAppVoiceChoiceIntent,
   parseWhatsAppPhotoButton,
+  parseWhatsAppPhotoOrderRow,
   parseWhatsAppVoiceButton,
   parseWhatsAppVoiceChoice,
 } from "@ewatrade/assistant/channels/media"
@@ -47,7 +49,8 @@ export function assistantWhatsAppIngressActionContent(
   if (
     (event.type === "text" && isWhatsAppVoiceChoiceIntent(event.text)) ||
     isWhatsAppVoiceButton(event.quickActionId) ||
-    isWhatsAppPhotoButton(event.quickActionId)
+    isWhatsAppPhotoButton(event.quickActionId) ||
+    isWhatsAppPhotoOrderRow(event.quickActionId)
   )
     return null
   const workflow =
@@ -99,6 +102,32 @@ export function assistantWhatsAppIngressActionContent(
     ),
     replyToMessageId: command.replyToMessageId,
   }
+}
+
+/**
+ * A tapped photo choice or order-list row, bound to the exact message it was
+ * tapped on. A row is only a position in the offer saved on that list message.
+ */
+export function assistantWhatsAppPhotoIngressContent(
+  event: Pick<WhatsAppIngressInput, "quickActionId" | "replyToMessageId">,
+) {
+  if (isWhatsAppPhotoOrderRow(event.quickActionId)) {
+    const pick = parseWhatsAppPhotoOrderRow(
+      event.quickActionId,
+      event.replyToMessageId,
+    )
+    return pick
+      ? { type: "photo_order_choice" as const, choice: pick }
+      : { type: "invalid_photo_choice" as const }
+  }
+  if (!isWhatsAppPhotoButton(event.quickActionId)) return null
+  const choice = parseWhatsAppPhotoButton(
+    event.quickActionId,
+    event.replyToMessageId,
+  )
+  return choice
+    ? { type: "photo_choice" as const, choice }
+    : { type: "invalid_photo_choice" as const }
 }
 
 export type WhatsAppInboxReceipt =
@@ -162,7 +191,9 @@ export async function acceptAssistantWhatsAppIngress(
   const voiceIntent =
     voiceButton ||
     (event.type === "text" && isWhatsAppVoiceChoiceIntent(event.text))
-  const photoButton = isWhatsAppPhotoButton(event.quickActionId)
+  const photoButton =
+    isWhatsAppPhotoButton(event.quickActionId) ||
+    isWhatsAppPhotoOrderRow(event.quickActionId)
   const readPage =
     event.flowResponse || photoButton
       ? null
@@ -185,15 +216,7 @@ export async function acceptAssistantWhatsAppIngress(
     : voiceIntent
       ? { type: "invalid_voice_choice" as const }
       : null
-  // A tapped photo choice is bound to the exact review message it was tapped on.
-  const photoChoice = photoButton
-    ? parseWhatsAppPhotoButton(event.quickActionId, event.replyToMessageId)
-    : null
-  const photo = photoChoice
-    ? { type: "photo_choice" as const, choice: photoChoice }
-    : photoButton
-      ? { type: "invalid_photo_choice" as const }
-      : null
+  const photo = assistantWhatsAppPhotoIngressContent(event)
   const inboxKind = action ? "ACTION" : "TURN"
   const flowData =
     event.flowResponse?.status === "valid"
