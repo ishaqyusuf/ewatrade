@@ -249,7 +249,9 @@ export function HeroCard({
               accessibilityLabel={`${stat.label}: ${stat.value}`}
               key={stat.label}
               style={[
-                styles.stat,
+                // Stacked stats size to their text: flex 1 in a column gives
+                // each a zero basis, and the Orders hero drew them 0 tall.
+                largeText ? styles.statStacked : styles.stat,
                 index > 0 &&
                   !largeText && {
                     borderLeftColor: palette.heroLine,
@@ -394,6 +396,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   stat: { flex: 1, minWidth: 0 },
+  statStacked: { minWidth: 0 },
   statLabel: { fontSize: 16, fontWeight: "600", lineHeight: 22 },
   statValue: {
     fontSize: 16,
