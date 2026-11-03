@@ -324,3 +324,39 @@ test("released native source writes still require the exact write gate", () => {
     }),
   ).toBe(true)
 })
+
+test("newer native reviews stay on web review in hosted releases until explicitly named", () => {
+  const payment: Capability | undefined = capabilityManifest.find(
+    (capability: Capability) =>
+      capability.mode === "write" && capability.action === "payment_record",
+  )
+  if (!payment) throw Error("payment_record capability required")
+  const hosted = {
+    APP_ENV: "production",
+    NODE_ENV: "production",
+    ASSISTANT_WHATSAPP_WRITES_ENABLED: "true",
+    ASSISTANT_WHATSAPP_ROLLOUT_MODE: "public",
+    ASSISTANT_WHATSAPP_RELEASED_CAPABILITY_IDS: payment.id,
+  }
+  expect(whatsAppWebReviewDraftEnabled(payment, hosted)).toBe(true)
+  expect(whatsAppCapabilityEnabled(payment, hosted)).toBe(false)
+  expect(
+    whatsAppCapabilityEnabled(payment, {
+      ...hosted,
+      ASSISTANT_WHATSAPP_NATIVE_REVIEW_ACTIONS: "stock_receive, payment_record",
+    }),
+  ).toBe(payment.whatsapp?.mode === "native")
+  expect(
+    whatsAppCapabilityEnabled(payment, {
+      APP_ENV: "local",
+      ASSISTANT_WHATSAPP_WRITES_ENABLED: "true",
+    }),
+  ).toBe(false)
+  expect(
+    whatsAppCapabilityEnabled(payment, {
+      APP_ENV: "local",
+      ASSISTANT_WHATSAPP_WRITES_ENABLED: "true",
+      ASSISTANT_WHATSAPP_NATIVE_REVIEW_ACTIONS: "payment_record",
+    }),
+  ).toBe(payment.whatsapp?.mode === "native")
+})

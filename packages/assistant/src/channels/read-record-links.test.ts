@@ -1,5 +1,9 @@
 import { expect, test } from "bun:test"
-import { readRecordAppLink } from "./read-record-links"
+import {
+  plannedReportAppInstruction,
+  plannedReportAppLink,
+  readRecordAppLink,
+} from "./read-record-links"
 
 const scope = { tenantId: "business-one", storeId: "store-one" }
 const options = {
@@ -136,4 +140,35 @@ test("record identities cannot insert routes, credential parameters or external 
       options,
     ),
   ).toBeUndefined()
+})
+
+test("planned reports deep link only to verified stable report pages", () => {
+  const reportOptions = { trustedAppOrigin: "https://dash.ewatrade.com" }
+  expect(
+    plannedReportAppLink("finance.posted_profit.report", reportOptions),
+  ).toEqual({
+    href: "https://dash.ewatrade.com/finance/reports",
+    label: "Open profit and loss in EwaTrade",
+    kind: "report",
+  })
+  expect(
+    plannedReportAppLink("customers.debt.report", reportOptions)?.href,
+  ).toBe("https://dash.ewatrade.com/customer-ledger")
+  expect(
+    plannedReportAppLink("inventory.stock.report", reportOptions)?.href,
+  ).toBe("https://dash.ewatrade.com/inventory")
+  // No single stable page yet: keep the saved chat link only.
+  for (const id of [
+    "sales.items.report",
+    "finance.supplier_aging.report",
+    "toString",
+    "__proto__",
+  ])
+    expect(plannedReportAppLink(id, reportOptions)).toBeUndefined()
+  expect(
+    plannedReportAppLink("finance.posted_profit.report", {
+      trustedAppOrigin: "https://dash.ewatrade.com?token=secret",
+    }),
+  ).toBeUndefined()
+  expect(plannedReportAppInstruction).toStartWith("📊 ")
 })

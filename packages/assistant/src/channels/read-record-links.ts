@@ -64,3 +64,47 @@ export function readRecordAppLink(
     }
   }
 }
+
+/**
+ * Planned report capabilities stay in the app. Only reports with one stable,
+ * verified dashboard page get a deep link; the rest keep the saved chat link.
+ */
+const plannedReportPages = {
+  "finance.posted_profit.report": {
+    path: "/finance/reports",
+    label: "Open profit and loss in EwaTrade",
+  },
+  "sales.collections.report": {
+    path: "/finance/reports",
+    label: "Open money collected in EwaTrade",
+  },
+  "customers.debt.report": {
+    path: "/customer-ledger",
+    label: "Open customer balances in EwaTrade",
+  },
+  "inventory.stock.report": {
+    path: "/inventory",
+    label: "Open stock in EwaTrade",
+  },
+} as const satisfies Record<string, { path: string; label: string }>
+export type PlannedReportCapabilityId = keyof typeof plannedReportPages
+
+export const plannedReportAppInstruction =
+  "📊 Reports and exports aren't in WhatsApp yet. Open the report in EwaTrade to view or export it."
+
+/** Navigation only: no IDs, filters or credentials. The app rechecks role, Store and plan. */
+export function plannedReportAppLink(
+  capabilityId: string,
+  options: { trustedAppOrigin: string },
+): { href: string; label: string; kind: "report" } | undefined {
+  const origin = trustedAssistantAppOrigin(options.trustedAppOrigin)
+  const page = Object.hasOwn(plannedReportPages, capabilityId)
+    ? plannedReportPages[capabilityId as PlannedReportCapabilityId]
+    : undefined
+  if (!origin || !page) return
+  return {
+    href: new URL(page.path, origin).href,
+    label: page.label,
+    kind: "report",
+  }
+}

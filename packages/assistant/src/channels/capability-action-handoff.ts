@@ -16,6 +16,10 @@ export const nativeWhatsAppReviewActions = [
   "money_in_record",
   "money_transfer_simple",
   "payment_links_create",
+  "stock_receive",
+  "payment_record",
+  "product_price_update",
+  "order_attachment_add",
 ] as const
 
 export const capabilityActionHandoffReasonSchema = z.enum([

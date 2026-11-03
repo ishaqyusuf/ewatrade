@@ -252,7 +252,7 @@ export async function processAssistantWhatsAppFlowTurn(
           screen: whatsAppFlowFirstScreen[launch.kind],
           data: launch.data,
           body: presentWhatsAppMessage(
-            `${String(launch.data.scope_label)}\n\nFill in the form, or type the details here. Nothing is saved until you confirm.${launch.kind === "sale" ? "\n\n_The form records money only. Stock isn't changed._" : ""}`,
+            `${String(launch.data.scope_label)}\n\nFill in the form, or type the details here. Nothing is saved until you confirm.${launch.kind === "sale" ? "\n\n_The form records money only. Stock isn't changed._" : launch.kind === "stock_receive" ? "\n\n_Adds stock only. No bill or payment is recorded._" : ""}`,
             { family: "form", maxUnits: 1024 },
           ),
           cta: "Open form",
@@ -370,15 +370,24 @@ export async function processAssistantWhatsAppFlowTurn(
         }
         if (action.action !== nativeFlowActions[kind])
           throw Error("Form purpose changed.")
-        if (action.action === "stock_receive") {
+        const handoff =
+          action.action === "stock_receive"
+            ? classifyCapabilityAction(capabilityForAction("stock_receive"))
+            : undefined
+        if (
+          handoff &&
+          handoff.kind !== "app_review" &&
+          handoff.kind !== "native_review"
+        )
+          throw Error("Stock receipt unavailable.")
+        if (
+          action.action === "stock_receive" &&
+          handoff?.kind === "app_review"
+        ) {
           const preview = await previewOrdinaryStockReceipt(fresh.db, {
             ...requireGeneralScope(fresh),
             ...action,
           })
-          const handoff = classifyCapabilityAction(
-            capabilityForAction("stock_receive"),
-          )
-          if (handoff.kind !== "app_review") throw Error("App review required.")
           const summary = `Receive ${preview.enteredQuantity} ${preview.enteredUnitName} of ${preview.productName} · ${preview.variantName}. Source: ${action.source}. Reason: ${action.reason}.${action.supplierName ? ` Supplier: ${action.supplierName}.` : ""}${action.unitCostMinor !== undefined ? ` Unit cost (minor units): ${action.unitCostMinor}.` : ""}`
           // This is a saved request, not a proposal or a credential-bearing app URL.
           await fresh.db.assistantMessage.update({

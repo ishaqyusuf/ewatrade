@@ -1,0 +1,78 @@
+{
+  "version": 1,
+  "id": "2026-11-03-whatsapp-native-review-more-actions",
+  "tickets": [
+    "H02"
+  ],
+  "summary": "WhatsApp native Confirm/Edit/Cancel review for stock_receive, payment_record, product_price_update and order_attachment_add (Workshop ewatrade/assistant/conversations scenes w-recv, w-pay, w-price, batch-stock, fl-recv, fl-unit). The four actions join nativeWhatsAppReviewActions and their manifest WhatsApp mode becomes native; capability rollout and whatsapp.rollout stay source, so native review still needs whatsAppCapabilityEnabled (local source or the released capability list). Strict per-action guards in channel-proposal-review prove the review shows every effect: stock quantity, entered unit and factor, on hand before → after, source, reason, supplier, effective time and cost; payment order, amount and method, receiving account and balance after; price old → new, reason and all-Store scope; order attachment order, file or note and that order items, totals and payments stay unchanged. Anything incomplete, clipped or differently shaped falls back to app/web review. The WhatsApp stock form drafts a proposal when stock_receive is native-reviewable and keeps the app handoff otherwise. Money receipts never say sent, moved or transferred. Planned reports gain a verified report-page deep-link helper (wiring pending). Local only; no deployment. Coordinator gate added before commit: these four native reviews are off everywhere until named in ASSISTANT_WHATSAPP_NATIVE_REVIEW_ACTIONS (comma list of action names, default empty), enforced in whatsAppCapabilityEnabled, so a capability released for web review never switches to chat confirmation on deploy; web review and app handoff stay exactly as before.",
+  "capabilities": [
+    {
+      "id": "inventory.stock.receive",
+      "change": "unchanged",
+      "rollout": "source",
+      "note": "WhatsApp mode app_review → native; rollout fields unchanged. Same canonical adapter, roles and confirmation; chat review only when released."
+    },
+    {
+      "id": "sales.payment.record",
+      "change": "unchanged",
+      "rollout": "source",
+      "note": "WhatsApp mode app_review → native; rollout fields unchanged. Native review requires a named receiving account; records money already received."
+    },
+    {
+      "id": "catalog.price.update",
+      "change": "unchanged",
+      "rollout": "source",
+      "note": "WhatsApp mode app_review → native; rollout fields unchanged. Review shows old → new price and that it applies in every Store."
+    },
+    {
+      "id": "sales.order.attachment.add",
+      "change": "unchanged",
+      "rollout": "source",
+      "note": "WhatsApp mode app_review → native; rollout fields unchanged. Review names the order and the note or sent file; the order itself is unchanged."
+    }
+  ],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/whatsapp-assistant-system-design.md"
+    },
+    {
+      "topic": "capability",
+      "status": "local_only",
+      "path": ".brain/features/whatsapp-assistant-system-design.md"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "apps/api/src/assistant/channel-proposal-review.test.ts",
+      "executed": true,
+      "result": "8 pass, 60 expects. Payment, price and order attachment reviews come from the real adapters with stubbed reads; stock receipt mirrors its adapter lines. Missing or altered facts fall back to app review."
+    },
+    {
+      "kind": "test",
+      "path": "packages/assistant/src/channels/capability-action-handoff.test.ts",
+      "executed": true,
+      "result": "6 pass, 80 expects: native list, app-review list and production release gate."
+    },
+    {
+      "kind": "test",
+      "path": "packages/assistant/src/channels/action-result.test.ts",
+      "executed": true,
+      "result": "2 pass: receipts and the money wording guard."
+    },
+    {
+      "kind": "test",
+      "path": "packages/assistant/src/channels/read-record-links.test.ts",
+      "executed": true,
+      "result": "Pass: report deep links only to /finance/reports, /customer-ledger and /inventory."
+    },
+    {
+      "kind": "test",
+      "path": "apps/api/src/assistant/channel-stock-receipt-handoff.integration.test.ts",
+      "executed": false
+    }
+  ]
+}

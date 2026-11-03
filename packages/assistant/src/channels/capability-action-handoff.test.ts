@@ -36,8 +36,11 @@ const options = {
 test("current native actions and other eligible writes receive explicit honest classifications", () => {
   const native = writeCapabilities.filter(
     (capability) =>
-      classifyCapabilityAction(capability, environment).kind ===
-      "native_review",
+      classifyCapabilityAction(capability, {
+        ...environment,
+        ASSISTANT_WHATSAPP_NATIVE_REVIEW_ACTIONS:
+          "stock_receive,payment_record,product_price_update,order_attachment_add",
+      }).kind === "native_review",
   )
   expect(native.map((capability) => capability.action).sort()).toEqual([
     "customer_create",
@@ -45,20 +48,27 @@ test("current native actions and other eligible writes receive explicit honest c
     "expense_record_simple",
     "money_in_record",
     "money_transfer_simple",
+    "order_attachment_add",
     "payment_links_create",
+    "payment_record",
     "product_create",
+    "product_price_update",
     "sale_record",
+    "stock_receive",
   ])
   const app = writeCapabilities.filter(
     (capability) =>
-      classifyCapabilityAction(capability, environment).kind === "app_review",
+      classifyCapabilityAction(capability, {
+        ...environment,
+        ASSISTANT_WHATSAPP_NATIVE_REVIEW_ACTIONS:
+          "stock_receive,payment_record,product_price_update,order_attachment_add",
+      }).kind === "app_review",
   )
   expect(app.map((capability): string => capability.id).sort()).toEqual(
     [
       "catalog.availability.update",
       "catalog.details.update",
       "catalog.identifiers.update",
-      "catalog.price.update",
       "catalog.units.draft",
       "catalog.units.publish",
       "finance.expense.record",
@@ -78,16 +88,13 @@ test("current native actions and other eligible writes receive explicit honest c
       "inventory.count.finalize",
       "inventory.stock.adjust",
       "inventory.stock.correct",
-      "inventory.stock.receive",
       "inventory.transfer.cancel",
       "inventory.transfer.dispatch",
       "inventory.transfer.receive",
-      "sales.order.attachment.add",
       "sales.order.cancel",
       "sales.order.create",
       "sales.order.metadata.update",
       "sales.order.replace",
-      "sales.payment.record",
       "sales.product.fulfill",
       "sales.products.fulfill",
       "sales.service.authorize",
@@ -152,7 +159,7 @@ test("source/disabled native confirmations hand off without granting execution a
     (capability) => capability.action === "customer_create",
   )
   const inventory = writeCapabilities.find(
-    (capability) => capability.action === "stock_receive",
+    (capability) => capability.action === "stock_adjust",
   )
   if (!customer || !inventory)
     throw Error("Expected fixed canonical capability")
@@ -252,5 +259,57 @@ test("malformed saved metadata drops without failing old answers and cannot carr
         handoff: invalid,
       }).handoff,
     ).toBeUndefined()
+  }
+})
+
+test("the four added native reviews keep the release gate: production without release hands off to the app", () => {
+  for (const action of [
+    "stock_receive",
+    "payment_record",
+    "product_price_update",
+    "order_attachment_add",
+  ]) {
+    const capability: Capability | undefined = writeCapabilities.find(
+      (entry) => entry.action === action,
+    )
+    if (!capability) throw Error(`Expected ${action}`)
+    expect(capability.whatsapp).toEqual({ mode: "native", rollout: "source" })
+    expect(classifyCapabilityAction(capability, environment)).toEqual({
+      kind: "app_review",
+      reason: "channel_confirmation_unavailable",
+    })
+    expect(
+      classifyCapabilityAction(capability, {
+        ...environment,
+        ASSISTANT_WHATSAPP_NATIVE_REVIEW_ACTIONS: action,
+      }),
+    ).toEqual({ kind: "native_review" })
+    const production = {
+      APP_ENV: "production",
+      NODE_ENV: "production",
+      ASSISTANT_WHATSAPP_WRITES_ENABLED: "true",
+      ASSISTANT_WHATSAPP_ROLLOUT_MODE: "public",
+    }
+    expect(classifyCapabilityAction(capability, production)).toEqual({
+      kind: "app_review",
+      reason: "channel_confirmation_unavailable",
+    })
+    // Released for web review alone stays on web review.
+    expect(
+      classifyCapabilityAction(capability, {
+        ...production,
+        ASSISTANT_WHATSAPP_RELEASED_CAPABILITY_IDS: capability.id,
+      }),
+    ).toEqual({
+      kind: "app_review",
+      reason: "channel_confirmation_unavailable",
+    })
+    expect(
+      classifyCapabilityAction(capability, {
+        ...production,
+        ASSISTANT_WHATSAPP_RELEASED_CAPABILITY_IDS: capability.id,
+        ASSISTANT_WHATSAPP_NATIVE_REVIEW_ACTIONS: action,
+      }),
+    ).toEqual({ kind: "native_review" })
   }
 })

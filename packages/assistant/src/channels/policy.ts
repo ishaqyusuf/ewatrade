@@ -87,11 +87,39 @@ export function whatsAppChannelPolicy(env: Environment = process.env) {
   }
 }
 /** Compatibility and rollout are independent of canonical role/scope/Book authority. */
+/**
+ * Writes whose native chat review is newer than their web review. They stay on
+ * web review (or the app) until named in ASSISTANT_WHATSAPP_NATIVE_REVIEW_ACTIONS,
+ * so releasing a capability for web review never switches it to chat confirmation.
+ */
+export const stagedNativeReviewActions = [
+  "stock_receive",
+  "payment_record",
+  "product_price_update",
+  "order_attachment_add",
+] as const
+export function stagedNativeReviewReleased(
+  action: string | undefined,
+  env: Environment = process.env,
+) {
+  if (!stagedNativeReviewActions.some((staged) => staged === action))
+    return true
+  return (env.ASSISTANT_WHATSAPP_NATIVE_REVIEW_ACTIONS ?? "")
+    .split(",")
+    .map((value) => value.trim())
+    .includes(action ?? "")
+}
+
 export function whatsAppCapabilityEnabled(
   capability: Capability,
   env: Environment = process.env,
 ) {
   const policy = whatsAppChannelPolicy(env)
+  if (
+    capability.mode === "write" &&
+    !stagedNativeReviewReleased(capability.action, env)
+  )
+    return false
   if (
     !capability.clients.includes("whatsapp") ||
     !capability.whatsapp ||

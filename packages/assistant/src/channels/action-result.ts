@@ -86,6 +86,13 @@ function savedChatLink(value: string | undefined) {
     return ""
   }
 }
+function moneyReceipt(receipt: unknown) {
+  return (
+    Boolean(receipt) &&
+    typeof receipt === "object" &&
+    (receipt as { kind?: unknown }).kind === "payment"
+  )
+}
 /** Only canonical, already-authorized receipt labels. No credentials or internal identities. */
 export function renderWhatsAppActionResult(
   proposal: {
@@ -100,8 +107,14 @@ export function renderWhatsAppActionResult(
   const text = whatsAppPlainText(
     `${proposal.receipt.title}\n\n${proposal.receipt.detail}`,
   )
-  if (text && text.length <= 2500) return `Saved in EwaTrade.\n\n${text}`
   const link = savedChatLink(appLink)
+  // A recorded payment never claims money was sent, moved or transferred.
+  if (
+    moneyReceipt(proposal.receipt) &&
+    /\b(?:sent|moved|transferred)\b/i.test(text)
+  )
+    return `Payment recorded in EwaTrade. Open the saved chat for the complete original receipt.${link ? `\n${link}` : ""}`
+  if (text && text.length <= 2500) return `Saved in EwaTrade.\n\n${text}`
   return `Saved in EwaTrade. Open the saved chat for the complete original receipt.${link ? `\n${link}` : ""}`
 }
 

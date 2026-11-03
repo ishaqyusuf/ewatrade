@@ -47,6 +47,11 @@ function allStrings(value: unknown): string[] {
     ? Object.values(value).flatMap(allStrings)
     : []
 }
+/** Canonical adapters for these reviews emit exact text lines and no card presentation. */
+const linesOnlyReviewActions: ReadonlySet<GeneralAction["action"]> = new Set([
+  "payment_record",
+  "order_attachment_add",
+])
 function completeFacts(
   proposal: GeneralProposal,
   currencyCode: string,
@@ -54,13 +59,14 @@ function completeFacts(
 ) {
   const payload = proposal.payload
   const presentation = proposal.presentation
+  const lines = proposal.review ?? []
   const finalSaleInstruction =
     payload.action === "sale_record" &&
     simpleSaleStep(payload) === "review" &&
     proposal.question === simpleSaleQuestions.review
   if (
-    !presentation ||
-    !proposal.review?.length ||
+    (!presentation && !linesOnlyReviewActions.has(payload.action)) ||
+    !lines.length ||
     (proposal.question && !finalSaleInstruction) ||
     (proposal.choices?.length &&
       !(
@@ -73,14 +79,16 @@ function completeFacts(
   const shown = allStrings({ review: proposal.review, presentation }).join("\n")
   const has = (value: string | undefined) =>
     value === undefined || shown.includes(value)
-  const scopedBook = presentation.sections?.some((section) =>
+  const scopedBook = presentation?.sections?.some((section) =>
     section.rows?.some(
       (row) =>
         row.label === "Book" &&
         row.value === `${businessName} · ${currencyCode}`,
     ),
   )
-  const bookTimezone = presentation.facts?.some(
+  const fact = (label: string) =>
+    presentation?.facts?.find((entry) => entry.label === label)?.value
+  const bookTimezone = presentation?.facts?.some(
     (fact) => fact.label === "Book timezone" && Boolean(fact.value.trim()),
   )
   if (
@@ -93,6 +101,7 @@ function completeFacts(
   switch (payload.action) {
     case "payment_links_create":
       return (
+        presentation !== undefined &&
         currencyCode === "NGN" &&
         payload.orderIds.length <= 5 &&
         presentation.table?.rows.length === payload.orderIds.length &&
@@ -128,7 +137,7 @@ function completeFacts(
       return has(payload.name) && has(payload.phone) && has(payload.email)
     case "customer_update":
       return (
-        Boolean(presentation.table?.rows.length) &&
+        Boolean(presentation?.table?.rows.length) &&
         [payload.name, payload.phone, payload.email].every(
           (value) => value === null || has(value),
         )
@@ -213,6 +222,75 @@ function completeFacts(
         /\b(?:cash|bank.transfer)\b/i.test(shown) &&
         /\b(?:stock|catalog.free|no inventory)\b/i.test(shown)
       )
+    case "stock_receive": {
+      // Stock before → after in the balance unit, plus the entered unit and its factor.
+      const onHand = fact("On hand")
+      const unitCost = fact("Unit cost")
+      return (
+        presentation?.summary.amountLabel === "received" &&
+        /^\+\S+ \S/.test(presentation.summary.amount ?? "") &&
+        onHand !== undefined &&
+        /^\S+ → \S+ \S/.test(onHand) &&
+        lines.includes(`On hand: ${onHand}`) &&
+        lines.some((line) =>
+          /^Receive \S+ .+ · factor \S+ · canonical increase \S+$/.test(line),
+        ) &&
+        lines.includes(
+          `Source: ${payload.source} · Reason: ${payload.reason}`,
+        ) &&
+        (payload.supplierName === undefined ||
+          lines.some((line) =>
+            line.startsWith(`Supplier name: ${payload.supplierName} (`),
+          )) &&
+        (payload.categories ?? []).every((category) => has(category.name)) &&
+        payload.effectiveAt !== undefined &&
+        lines.includes(`Effective: ${payload.effectiveAt}`) &&
+        (payload.unitCostMinor === undefined
+          ? unitCost === "unknown" &&
+            shown.includes("no purchase payment recorded")
+          : unitCost === generalMoney(payload.unitCostMinor, currencyCode) &&
+            shown.includes("not purchase recognition or payment"))
+      )
+    }
+    case "payment_record":
+      // Order, amount and method, receiving account, and remaining balance.
+      return (
+        Boolean(payload.moneyAccountId) &&
+        lines.length === (payload.note ? 5 : 4) &&
+        /^\S.* · \S+$/.test(lines[0] ?? "") &&
+        lines[1] ===
+          `${generalMoney(payload.amountMinor, currencyCode)} · ${payload.method.replaceAll("_", " ")}` &&
+        /^Received into: \S/.test(lines[2] ?? "") &&
+        /^Balance after: [^-\s][^-]*$/.test(lines[3] ?? "") &&
+        (!payload.note || lines[4] === payload.note)
+      )
+    case "product_price_update": {
+      const was = fact("Was")
+      const next = generalMoney(payload.priceMinor, currencyCode)
+      return (
+        presentation?.summary.amountLabel === "new price" &&
+        presentation.summary.amount === next &&
+        was !== undefined &&
+        was !== "No fixed price" &&
+        was !== next &&
+        lines.includes(`Price: ${was} → ${next}`) &&
+        lines.includes(`Reason: ${payload.reason}`) &&
+        shown.includes("Applies in every Store") &&
+        shown.includes("Past orders keep their saved prices")
+      )
+    }
+    case "order_attachment_add":
+      // The order, what is added (file or note) and that the order itself is unchanged.
+      return (
+        lines.length === (payload.note ? 3 : 2) &&
+        (payload.attachmentId
+          ? /^Attach this (?:photo|file) to \S+ · \S/.test(lines[0] ?? "")
+          : Boolean(payload.note) &&
+            /^Add a note to \S+ · \S/.test(lines[0] ?? "")) &&
+        (!payload.note || lines[1] === `Note: ${payload.note}`) &&
+        lines.at(-1) ===
+          "Adds it to the order's Notes & photos. The order's items, totals and payments do not change."
+      )
     default:
       return false
   }
@@ -226,6 +304,16 @@ const titles: Partial<Record<GeneralAction["action"], string>> = {
   expense_record_simple: "Record simple expense",
   money_in_record: "Record owner funds already received",
   sale_record: "Record simple sale",
+  stock_receive: "🧾 Review stock received",
+  payment_record: "🧾 Review payment already received",
+  product_price_update: "🧾 Review price change",
+  order_attachment_add: "🧾 Review addition to order",
+}
+/** Fixed channel wording for effects the canonical lines leave implicit. */
+const channelNotes: Partial<Record<GeneralAction["action"], string>> = {
+  stock_receive: "Adds stock only. No bill or payment is recorded.",
+  payment_record:
+    "Records money already received for this order. No bill or other payment is recorded.",
 }
 /** Exact current canonical app review in, token-free channel projection out. Does not grant authority. */
 export function projectChannelProposalReview(
@@ -267,10 +355,15 @@ export function projectChannelProposalReview(
     title,
     businessName: scope.businessName,
     storeName: scope.storeName,
-    reviewLines: proposal.review ?? [],
+    reviewLines: [
+      ...(proposal.review ?? []),
+      ...(channelNotes[proposal.payload.action]
+        ? [channelNotes[proposal.payload.action] as string]
+        : []),
+    ],
     presentation: proposal.presentation,
     complete: true,
-    requiresPresentation: true,
+    requiresPresentation: !linesOnlyReviewActions.has(proposal.payload.action),
     expiresAt: proposal.expiresAt,
   }
   return renderWhatsAppActionReviewBody(review, { now }).kind === "review"

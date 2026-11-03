@@ -25,8 +25,10 @@ export function assertBusinessFlowAuthority(
   const action = nativeFlowActions[kind]
   if (kind !== "stock_receive") return assertGeneralAction(ctx, action)
   const capability = capabilityForAction(action)
-  if (classifyCapabilityAction(capability).kind !== "app_review")
-    throw Error("Stock receipt requires app review.")
+  // Released native review drafts in chat; otherwise the form still ends in an app handoff.
+  const channel = classifyCapabilityAction(capability).kind
+  if (channel === "native_review") return assertGeneralAction(ctx, action)
+  if (channel !== "app_review") throw Error("Stock receipt is unavailable.")
   return assertGeneralActionHandoffAuthority(ctx, capability)
 }
 const option = (row: { id: string; name: string }) => ({
