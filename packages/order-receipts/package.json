@@ -7,7 +7,9 @@
     ".": "./src/types.ts",
     "./pdf": "./src/pdf.tsx",
     "./images": "./src/images.ts",
-    "./files": "./src/files.ts"
+    "./files": "./src/files.ts",
+    "./statement": "./src/statement.ts",
+    "./statement-pdf": "./src/statement-pdf.tsx"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

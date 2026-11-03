@@ -92,6 +92,24 @@ export const customerLedgerReverseEntrySchema = command
   })
   .strict()
 
+const localDay = z.string().regex(/^\d{4}-\d{2}-\d{2}$/)
+
+/** A printable statement for local dates `from`–`through` (both inclusive). */
+export const customerLedgerStatementPdfSchema = z
+  .object({
+    accountId: id,
+    from: localDay,
+    through: localDay,
+    snapshotSequence: revision.optional(),
+    storeId: id.optional(),
+    showPaymentDetails: z.boolean().default(true),
+  })
+  .strict()
+  .refine((value) => value.from <= value.through, {
+    path: ["through"],
+    message: "The end date must be on or after the start date.",
+  })
+
 export const customerLedgerStatementSchema = z
   .object({
     accountId: id,

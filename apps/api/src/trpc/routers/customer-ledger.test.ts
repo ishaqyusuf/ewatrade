@@ -40,6 +40,7 @@ test("ledger router loads implemented repository procedures", () => {
     "reverseEntry",
     "sources",
     "statement",
+    "statementPdf",
   ])
 })
 
@@ -137,6 +138,11 @@ const inputs = {
     effectiveAt: new Date("2026-10-01T10:00:00.000Z"),
   },
   statement: { accountId: "account-1" },
+  statementPdf: {
+    accountId: "account-1",
+    from: "2026-10-01",
+    through: "2026-10-31",
+  },
   commandStatus: { accountId: "account-1", clientCommandId: "receipt-1" },
   accounts: { customerId: "customer-1" },
   accountDetail: { accountId: "account-1" },
@@ -227,6 +233,7 @@ function callEveryProcedure(caller: Caller) {
     caller.refundUnusedCredit(inputs.refundUnusedCredit),
     caller.reverseEntry(inputs.reverseEntry),
     caller.statement(inputs.statement),
+    caller.statementPdf(inputs.statementPdf),
     caller.commandStatus(inputs.commandStatus),
     caller.accounts(inputs.accounts),
     caller.accountDetail(inputs.accountDetail),
@@ -357,6 +364,18 @@ test("strict runtime input rejects actor and tenant overrides before DB effects"
   ).rejects.toMatchObject({ code: "BAD_REQUEST" })
   await expect(
     caller.statement({ accountId: "account-1", afterSequence: "10" }),
+  ).rejects.toMatchObject({ code: "BAD_REQUEST" })
+  await expect(
+    caller.statementPdf({
+      ...inputs.statementPdf,
+      from: "2026-11-01",
+    }),
+  ).rejects.toMatchObject({ code: "BAD_REQUEST" })
+  await expect(
+    caller.statementPdf({
+      ...inputs.statementPdf,
+      tenantId: "caller-tenant",
+    } as never),
   ).rejects.toMatchObject({ code: "BAD_REQUEST" })
   await expect(
     caller.sources({

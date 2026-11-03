@@ -19,6 +19,7 @@ import {
   getCustomerLedgerEntryDetail,
   getCustomerLedgerStatement,
   getCustomerOrderReturnReview,
+  getCustomerStatementDocument,
   linkCustomerHistoricalOrders,
   listCustomerFundsRefunds,
   listCustomerLedgerAccounts,
@@ -36,6 +37,8 @@ import {
   returnCustomerOrderFunds,
   reverseCustomerLedgerEntry,
 } from "@ewatrade/db/queries"
+import { ReceiptRenderError } from "@ewatrade/order-receipts"
+import { customerStatementFilename } from "@ewatrade/order-receipts/statement"
 import { TRPCError } from "@trpc/server"
 import {
   customerAccountMessageOpenSchema,
@@ -65,6 +68,7 @@ import {
   customerLedgerReleaseAllocationSchema,
   customerLedgerReverseEntrySchema,
   customerLedgerSourcesSchema,
+  customerLedgerStatementPdfSchema,
   customerLedgerStatementSchema,
   customerOrderFundsReturnSchema,
   customerOrderReturnReviewSchema,
@@ -253,6 +257,48 @@ export const customerLedgerRouter = createTRPCRouter({
         ...ctx.financeActor,
       }),
     ),
+  /**
+   * The statement for chosen dates as an A4 PDF (base64), with the same
+   * Owner/Admin rule as `statement`. The header uses the active Store unless
+   * another Store of this business is named.
+   */
+  statementPdf: financeProcedure
+    .input(customerLedgerStatementPdfSchema)
+    .query(async ({ ctx, input }) => {
+      const { showPaymentDetails, storeId, ...period } = input
+      const statement = await getCustomerStatementDocument(ctx.db, {
+        ...period,
+        ...ctx.financeActor,
+        storeId: storeId ?? ctx.tenantContext.activeStore?.id,
+        includePaymentAccounts: showPaymentDetails,
+      })
+      try {
+        const { renderCustomerStatement } = await import(
+          "@ewatrade/order-receipts/statement-pdf"
+        )
+        const pdf = await renderCustomerStatement(statement)
+        return {
+          pdfBase64: pdf.toString("base64"),
+          filename: customerStatementFilename({
+            customerName: statement.customer.name,
+            from: statement.from,
+            through: statement.through,
+          }),
+          snapshotSequence: statement.snapshotSequence,
+          currencyCode: statement.currencyCode,
+          openingMinor: statement.openingMinor,
+          chargedMinor: statement.chargedMinor,
+          paidMinor: statement.paidMinor,
+          closingMinor: statement.closingMinor,
+          lineCount: statement.lines.length,
+          paymentAccountCount: statement.paymentAccounts.length,
+        }
+      } catch (error) {
+        if (error instanceof ReceiptRenderError)
+          throw new TRPCError({ code: "BAD_REQUEST", message: error.message })
+        throw error
+      }
+    }),
   sources: financeProcedure
     .input(customerLedgerSourcesSchema)
     .query(({ ctx, input }) =>
