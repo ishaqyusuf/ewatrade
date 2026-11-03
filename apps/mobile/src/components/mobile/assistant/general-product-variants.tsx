@@ -12,9 +12,11 @@ import { cn } from "@/lib/utils"
 import { formatMinorMoney } from "@ewatrade/utils"
 import { majorToMinor } from "@ewatrade/utils/currency"
 import { type ReactNode, useState } from "react"
+import { Alert } from "react-native"
 import {
   MAX_OPTION_GROUPS,
   type ProductDraft,
+  type VariantGroup,
   type VariantRow,
   type VariantsState,
   addGroup,
@@ -70,6 +72,31 @@ function rowSummary(
     row.barcode.trim() ? "Barcode" : null,
   ].filter(Boolean)
   return { prices: prices.join(" · "), details: details.join(" · ") }
+}
+
+/**
+ * Removing an option merges the variants it told apart, so the owner
+ * confirms first; an option with no values goes straight away.
+ */
+function confirmRemoveGroup(
+  state: VariantsState,
+  group: VariantGroup,
+  onChange: (state: VariantsState) => void,
+) {
+  const next = removeGroup(state, group.id)
+  if (!group.values.length) return onChange(next)
+  const name = group.name.trim() || "this option"
+  const merged = state.rows.length - next.rows.length
+  Alert.alert(
+    `Remove ${name}?`,
+    merged > 0
+      ? `Its values come off every variant. Variants go from ${state.rows.length} to ${next.rows.length}, and the price, stock and codes of the ${merged} merged ${merged === 1 ? "variant are" : "variants are"} dropped.`
+      : "Its values come off every variant.",
+    [
+      { style: "cancel", text: "Keep option" },
+      { onPress: () => onChange(next), style: "destructive", text: "Remove" },
+    ],
+  )
 }
 
 /** Options, then one row per variant; a row opens that variant's page. */
@@ -155,7 +182,7 @@ export function GeneralProductVariantList({
                 disabled={disabled}
                 haptic
                 className="min-h-11 items-center justify-center self-start rounded-full px-3"
-                onPress={() => onChange(removeGroup(state, group.id))}
+                onPress={() => confirmRemoveGroup(state, group, onChange)}
               >
                 <Text className="text-sm font-bold text-destructive">
                   Remove
