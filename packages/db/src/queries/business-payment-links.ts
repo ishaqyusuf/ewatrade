@@ -51,6 +51,7 @@ import {
   runInOwnSerializableTransaction,
   runInOwnTransaction,
 } from "./own-transaction"
+import { reservePaymentReportOutcomeNotificationsInTransaction } from "./payment-report-notifications/outcome"
 import { reservePaymentNotificationGroupInTransaction } from "./payment-report-notifications/quota"
 
 type Actor = { tenantId: string; actorUserId: string }
@@ -1044,6 +1045,8 @@ export type ManualPaymentDecision = Actor & {
   allocationReview?: ManualPaymentAllocationReview
   destinationEncryptionKey?: string
   note?: string
+  /** Queue the merchant-only WhatsApp result; replays never queue again. */
+  outcomeNotificationEnabled?: boolean
 }
 export async function reviewManualPaymentReport(
   db: PrismaClient,
@@ -1091,8 +1094,17 @@ export async function reviewManualPaymentReport(
           "CONFLICT",
           "This report was already reviewed differently. Open the current result.",
         )
-      return { report, replay: true }
+      return { report, replay: true, outcomeNotificationIds: [] as string[] }
     }
+    const outcomeNotifications = (outcome: "CONFIRMED" | "NOT_RECEIVED") =>
+      input.outcomeNotificationEnabled
+        ? reservePaymentReportOutcomeNotificationsInTransaction(tx, {
+            tenantId: input.tenantId,
+            reportId: report.id,
+            outcome,
+            decisionDigest,
+          })
+        : Promise.resolve([] as string[])
     if (
       report.status !== "SUBMITTED" ||
       report.revision !== input.expectedRevision
@@ -1118,7 +1130,11 @@ export async function reviewManualPaymentReport(
           revision: { increment: 1 },
         },
       })
-      return { report: saved, replay: false }
+      return {
+        report: saved,
+        replay: false,
+        outcomeNotificationIds: await outcomeNotifications("NOT_RECEIVED"),
+      }
     }
     if (
       input.bankCheckAttested !== true ||
@@ -1259,7 +1275,11 @@ export async function reviewManualPaymentReport(
         revision: { increment: 1 },
       },
     })
-    return { report: saved, replay: false }
+    return {
+      report: saved,
+      replay: false,
+      outcomeNotificationIds: await outcomeNotifications("CONFIRMED"),
+    }
   })
 }
 

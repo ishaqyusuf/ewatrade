@@ -72,6 +72,29 @@ model PaymentNotificationIntent {
   @@index([status, createdAt])
 }
 
+/// Merchant-only WhatsApp result of a terminal review decision; one per report recipient.
+/// Never addressed to the payer. Content is re-derived at dispatch from the report.
+model PaymentReportOutcomeNotification {
+  id                String   @id @default(cuid())
+  tenantId          String
+  reportId          String
+  recipientUserId   String
+  membershipId      String
+  outcome           String
+  decisionDigest    String
+  status            String   @default("PENDING")
+  claimId           String?
+  sendStartedAt     DateTime?
+  providerMessageId String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  tenant            Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  report            ManualPaymentReport @relation(fields: [reportId], references: [id], onDelete: Restrict)
+  membership        Membership @relation(fields: [membershipId, tenantId], references: [id, tenantId], onDelete: Restrict)
+  @@unique([tenantId, reportId, recipientUserId])
+  @@index([status, createdAt])
+}
+
 model PaymentNotificationNotice {
   id            String @id @default(cuid())
   tenantId      String

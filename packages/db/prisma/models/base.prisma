@@ -3,6 +3,7 @@ model Tenant {
   manualPaymentAlertSettings ManualPaymentAlertSetting[]
   paymentNotificationQuotas PaymentNotificationQuota[]
   paymentNotificationIntents PaymentNotificationIntent[]
+  paymentReportOutcomeNotifications PaymentReportOutcomeNotification[]
   paymentNotificationNotices PaymentNotificationNotice[]
   storefrontOrderRequests                           StorefrontOrderRequest[]
   storefrontServiceRequestContexts                  StorefrontServiceRequestContext[]
@@ -493,6 +494,7 @@ model Verification {
 
 model Membership {
   paymentNotificationIntents PaymentNotificationIntent[]
+  paymentReportOutcomeNotifications PaymentReportOutcomeNotification[]
   paymentNotificationNoticeReads PaymentNotificationNoticeRead[]
   assistantWhatsAppLinks AssistantWhatsAppLink[]
   assistantWhatsAppGrants AssistantWhatsAppGrant[]

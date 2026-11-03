@@ -421,6 +421,10 @@ export async function enqueueDomainConnectionVerification(
 
 export { runInBackground, runWithRetry } from "./queue"
 export { enqueueManualPaymentAlerts } from "./manual-payment-alerts"
+export {
+  enqueueManualPaymentOutcomes,
+  paymentReportOutcomesEnabled,
+} from "./manual-payment-outcomes"
 export { isTriggerConfigured, triggerJob, triggerJobAt } from "./trigger"
 export { notificationDispatchHandler }
 export { serviceNotificationDispatchHandler }

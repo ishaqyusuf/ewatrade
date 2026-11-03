@@ -17,6 +17,7 @@ import {
 } from "../assistant-whatsapp"
 import { isCommercialOrderDigestWindow } from "../handlers/commercial-order-reminder-digest"
 import { runManualPaymentAlertSweep } from "../manual-payment-alerts"
+import { runManualPaymentOutcomeSweep } from "../manual-payment-outcomes"
 import { automaticJobCron } from "../schedule-policy"
 import { accountPrivacyNoticeAlert } from "./account-privacy-notice-alert"
 import { accountPrivacyRetention } from "./account-privacy-retention"
@@ -132,6 +133,7 @@ export const SCHEDULED_CADENCES = {
       ),
       sweep("services.notification.schedule", runServiceNotificationSchedule),
       sweep("manual-payment.notification-sweep", runManualPaymentAlertSweep),
+      sweep("manual-payment.outcome-sweep", runManualPaymentOutcomeSweep),
       sweep("store-conversation.notification-schedule", () =>
         runStoreConversationNotificationSchedule(),
       ),

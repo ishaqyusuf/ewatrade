@@ -99,6 +99,7 @@ describe("scheduled cadences", () => {
       "assistant.maintenance": "0 * * * * task",
       "auth.phone-otp-expiry": "*/5 * * * * sweep",
       "manual-payment.notification-sweep": "*/5 * * * * sweep",
+      "manual-payment.outcome-sweep": "*/5 * * * * sweep",
       "catalog.photo.cleanup": "0 * * * * task",
       "catalog.photo.review-recovery": "*/15 * * * * task",
       "domains.reconcile": "0 * * * * task",

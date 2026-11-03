@@ -34,7 +34,11 @@ import {
   manualPaymentAlertDeliveries,
   readManualPaymentAlertSettings,
 } from "@ewatrade/db/queries"
-import { enqueueManualPaymentAlerts } from "@ewatrade/jobs"
+import {
+  enqueueManualPaymentAlerts,
+  enqueueManualPaymentOutcomes,
+  paymentReportOutcomesEnabled,
+} from "@ewatrade/jobs"
 import {
   createPaymentLinkToken,
   paymentLinkPreview,
@@ -608,8 +612,14 @@ export const businessBankingRouter = createTRPCRouter({
           ...input,
           ...actor(ctx),
           destinationEncryptionKey: process.env.CUSTOMER_FUNDS_DESTINATION_KEY,
+          outcomeNotificationEnabled: paymentReportOutcomesEnabled(),
         }),
       )
+      // Merchant-only WhatsApp result; queued after commit, never to the payer.
+      await enqueueManualPaymentOutcomes({
+        tenantId: ctx.tenantContext.tenant.id,
+        notificationIds: result.outcomeNotificationIds,
+      }).catch(() => undefined)
       await publishManualPaymentStatus(result.report.id)
       const status = await mapped(() =>
         manualPaymentReportStatus(ctx.db, result.report.id),

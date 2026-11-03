@@ -1,0 +1,54 @@
+{
+  "version": 1,
+  "id": "2026-11-03-whatsapp-payment-outcome-push",
+  "tickets": ["H02"],
+  "summary": "Merchant-only WhatsApp review result from Workshop ewatrade/assistant/conversations family 18, scene bk-claim-outcome (18.6), narrowed by the owner to the merchant message only. After the first decision on a manual payment report, reviewManualPaymentReport creates PaymentReportOutcomeNotification rows in the same transaction (LIVE tenants only; recipients whose WhatsApp payment alert for that report was accepted and who still opt in and may review it). The router queues manual-payment.outcome-dispatch after commit; an ID-only fenced job sends one approved template from the existing payment-alert number: 'Recorded in EwaTrade' with received amount, account name and balance, or 'Marked not received' with balance and the merchant's reason, plus an Open report button. No payer phone, receipt, bank number or reference; nothing is sent to the customer, who is still reached through the app's Copy/Share message. Default OFF until PAYMENT_REPORT_OUTCOME_WHATSAPP_TEMPLATE and _LANGUAGE are set alongside PAYMENT_REPORT_ALERTS_ENABLED. Local only; no template, env or deployment.",
+  "noAssistantImpact": "No assistant capability, tool or chat flow changes. The message is a provider template sent by a background job from the payment-alert number, not an assistant reply; payment decisions remain form-only in EwaTrade and no WhatsApp approval path is added.",
+  "capabilities": [],
+  "procedures": [
+    {
+      "path": "businessBanking.reviewReport",
+      "status": "form_only",
+      "reason": "Input and output unchanged; the first decision now also queues the merchant-only WhatsApp result when switched on. Review still happens only in the app form."
+    }
+  ],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/payment-report-notification-policy.md",
+      "note": "3 Nov section: review result on WhatsApp, recipients, guards and switch-on steps."
+    },
+    {
+      "topic": "api",
+      "status": "local_only",
+      "path": ".brain/qa/2026-10-26-manual-payment-implementation.md",
+      "note": "3 Nov paragraph: reviewReport contract unchanged; post-commit outcome enqueue and default-off switch."
+    },
+    {
+      "topic": "schema",
+      "status": "local_only",
+      "path": ".brain/database/schema.md",
+      "note": "PaymentReportOutcomeNotification table and back-relations."
+    },
+    {
+      "topic": "schema",
+      "status": "local_only",
+      "path": ".brain/database/migrations.md",
+      "note": "Prisma-generated additive migration 20261103074202_payment_report_outcome_notifications on local QA only."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/jobs/src/handlers/manual-payment-outcome-dispatch.test.ts",
+      "executed": true,
+      "result": "With the alert provider, dispatch, jobs, cadence and api manual-payment contract tests: 35 pass, 0 fail (cadence test needs the workspace env wrapper)."
+    },
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/business-payment-links.integration.test.ts",
+      "executed": false
+    }
+  ]
+}
