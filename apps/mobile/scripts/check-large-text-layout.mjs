@@ -31,62 +31,106 @@ const contracts = [
     ],
   },
   {
+    // QA entry is the keyboard inline composer (fbc699e11, 8 Oct 2026); the
+    // composer stacks the field over a labelled button at large text, and the
+    // QA hint is shortened so it does not clip in the one-line field.
     file: "components/mobile/qa-authorization-sheet.tsx",
     markers: [
-      "useLargeTextLayout",
-      "largeTextLayout ? (",
-      '<View className="flex-row items-center justify-between gap-3">',
-      "<QaMark />",
-      "<ModeBadge label={modeLabel} />",
+      "<KeyboardInlineComposer",
+      'largeTextPlaceholder="QA domain"',
+      'submitLabel={retryServer ? "Retry" : "Load QA businesses"}',
     ],
   },
   {
-    file: "app/login.tsx",
+    // Green Till 03 auth shell (login, sign-up age, verify, onboarding,
+    // no-access): at large text the mint stage collapses and its preview
+    // cards are dropped so the form starts near the top.
+    file: "components/mobile/green-till/auth-screen.tsx",
     markers: [
       "useLargeTextLayout",
-      'largeTextLayout ? "justify-start gap-5" : "justify-start gap-7"',
+      "const LARGE_TEXT_STAGE_HEIGHT = 120",
+      "? LARGE_TEXT_STAGE_HEIGHT",
+      "largeText || stageCollapsed",
     ],
   },
   {
-    file: "app/sign-up.tsx",
+    // AuthListRow (no-access, age) top-aligns its icon, control and chevron
+    // with the first line once the copy wraps.
+    file: "components/mobile/green-till/auth-list.tsx",
     markers: [
       "useLargeTextLayout",
-      'largeTextLayout ? "justify-start gap-5" : "justify-start gap-6"',
-      'largeTextLayout ? "gap-3" : "flex-row gap-3"',
-      '"min-h-14 w-full items-center justify-center rounded-2xl',
-      "key={step}",
+      '"min-h-11 flex-row items-start gap-3 py-3"',
+      "marginTop: largeTextLayout ? 4 : 0",
+      'className={largeTextLayout ? "mt-2.5" : undefined}',
     ],
   },
   {
-    file: "app/no-access.tsx",
-    markers: ['title="No workspace available yet"'],
-  },
-  {
-    file: "app/verify-email.tsx",
+    // app/login.tsx renders this screen.
+    file: "components/mobile/login/login-screen.tsx",
     markers: [
       "useLargeTextLayout",
-      "largeTextLayout ? styles.heroLarge : styles.hero",
-      "numberOfLines={largeTextLayout ? 2 : 1}",
-      "largeTextLayout ? -58 : -48",
+      "<ClassicLoginScreen",
+      'largeTextLayout ? "gap-5" : "gap-7"',
+      'largeTextLayout ? "gap-2.5" : "flex-row gap-2.5"',
+      'largeTextLayout ? "w-full" : "flex-1"',
     ],
   },
   {
-    file: "app/onboarding.tsx",
+    file: "components/mobile/appearances/classic/login-screen.tsx",
+    markers: ["<GreenTillAuthScreen"],
+  },
+  {
+    // app/sign-up.tsx renders the owner account form.
+    file: "components/mobile/sign-up/owner-account-screen.tsx",
     markers: [
       "useLargeTextLayout",
-      'largeTextLayout ? "justify-start gap-6" : "justify-between gap-8"',
-      "<HeroMark compact={largeTextLayout}",
-      "compactHeroWrap",
-      'largeTextLayout\n                  ? "text-4xl font-bold leading-tight text-foreground"',
+      'className={largeText ? "gap-2" : "flex-row flex-wrap gap-2"}',
     ],
+  },
+  {
+    file: "components/mobile/sign-up/owner-store-step.tsx",
+    markers: [
+      "useLargeTextLayout",
+      'flexDirection: largeText ? "column" : "row"',
+      "numberOfLines={largeText ? undefined : 1}",
+    ],
+  },
+  {
+    file: "components/mobile/sign-up/owner-type-picker.tsx",
+    markers: [
+      "useLargeTextLayout",
+      'flexDirection: largeText ? "column" : "row"',
+    ],
+  },
+  {
+    // app/no-access.tsx renders this screen on the auth shell.
+    file: "components/mobile/green-till/no-access-screen.tsx",
+    markers: [
+      "<GreenTillAuthScreen",
+      'title="No business on this account yet"',
+      "<AuthListRow",
+    ],
+  },
+  {
+    // app/verify-email.tsx: auth shell + Green Till OTP cells and keypad.
+    file: "components/mobile/appearances/classic/verify-email-screen.tsx",
+    markers: ["<GreenTillAuthScreen", "stage={<VerifyStage"],
+  },
+  {
+    file: "components/mobile/verify-email/verify-email-screen.tsx",
+    markers: ["<OtpInput", "<OtpKeypad", 'variant="green-till"'],
+  },
+  {
+    // app/onboarding.tsx: intro copy on the auth shell (stage collapses).
+    file: "components/mobile/appearances/classic/onboarding-screen.tsx",
+    markers: ["<GreenTillAuthScreen", "stage={<IntroStage"],
   },
   {
     file: "components/mobile/otp-input.tsx",
     markers: [
       "useLargeTextLayout",
-      "styles.largeTextReferenceCell",
-      "height: 64",
-      "width: 48",
+      'largeTextLayout ? "h-[64px]" : "h-[54px]"',
+      'largeTextLayout ? "h-16 w-12" : "h-14 w-10"',
     ],
   },
   {
@@ -111,6 +155,7 @@ const contracts = [
       '"min-h-12 w-full flex-row items-center justify-center gap-2 rounded-full px-5"',
       "largeTextPlaceholder",
       "submitLabel",
+      "isLoading={loading}",
     ],
   },
   {
@@ -118,7 +163,7 @@ const contracts = [
     markers: [
       "useLargeTextLayout",
       "numberOfLines={largeTextLayout ? 2 : 1}",
-      'className="gap-2 bg-background px-5 pb-4"',
+      '? "gap-2 bg-background px-[18px] pb-4"',
       "Your conversations with stores",
     ],
   },
@@ -144,7 +189,7 @@ const contracts = [
     file: "components/mobile/customer-conversations/customer-conversation-list-item.tsx",
     markers: [
       "useLargeTextLayout",
-      '"relative min-h-[112px] flex-row items-start',
+      '"min-h-[112px] flex-row items-start gap-3.5',
       "numberOfLines={2}",
     ],
   },
@@ -165,23 +210,51 @@ const contracts = [
     ],
   },
   {
-    file: "components/mobile/catalog-items-sheet.tsx",
+    // catalog-items-sheet.tsx re-exports the Catalog items list and add sheet.
+    file: "components/mobile/catalog/catalog-screen.tsx",
     markers: [
       "useLargeTextLayout",
-      'largeTextLayout\n                  ? "min-h-[72px] flex-row items-start',
-      'largeTextLayout\n                    ? "mt-1 size-11',
-      'largeTextLayout\n                    ? "mt-1 size-sm text-primary"',
+      'largeTextLayout && "flex-wrap"',
+      "height * (largeTextLayout ? 0.92 : 0.8)",
+      '? "min-h-14 flex-row items-start gap-3 rounded-2xl border border-border bg-card px-4 py-3"',
     ],
   },
   {
-    file: "components/mobile/admin-tabs/admin-more-screen.tsx",
+    file: "components/mobile/appearances/classic/catalog-screen.tsx",
+    markers: [
+      "useLargeTextLayout",
+      'largeText ? "items-start" : "items-center"',
+      "numberOfLines={largeText ? undefined : 1}",
+      'largeText ? "items-start" : "max-w-[44%] items-end"',
+      'largeText ? "min-h-11 grow px-3" : "min-w-0 flex-1"',
+      "const showCount = count !== undefined && !largeText",
+    ],
+  },
+  {
+    // admin-more-screen.tsx re-exports More; its classic appearance and the
+    // shared Green Till RecordRow own the large-text branches.
+    file: "components/mobile/appearances/classic/more-screen.tsx",
     markers: [
       "useLargeTextLayout",
       'largeTextLayout\n          ? "mb-5 items-start gap-3"',
-      "numberOfLines={largeTextLayout ? undefined : 1}",
-      'largeTextLayout\n            ? "min-w-0 flex-1 flex-row items-start',
-      'className={largeTextLayout ? "mt-1" : undefined}',
+      'largeTextLayout ? "min-w-0" : "min-w-0 flex-1"',
+      "stackDetails",
     ],
+  },
+  {
+    file: "components/mobile/green-till/kit.tsx",
+    markers: [
+      'stackDetails && largeText ? "items-start" : "flex-row items-center"',
+      "const lines = largeText ? undefined : 1",
+    ],
+  },
+  {
+    file: "components/mobile/more/more-approval-card.tsx",
+    markers: ["useLargeTextLayout", 'largeText ? "gap-2" : "flex-row gap-2"'],
+  },
+  {
+    file: "components/mobile/more/more-sheets.tsx",
+    markers: ["useLargeTextLayout", '!largeText && "flex-row"'],
   },
   {
     file: "components/mobile/admin-tabs/admin-create-action-sheet.tsx",
@@ -206,17 +279,13 @@ const contracts = [
       '? "mt-1 size-sm text-muted-foreground"',
       '"-mx-2 min-h-16 flex-row items-start gap-3 border-b border-border bg-accent px-3 py-3"',
       '"-mx-2 min-h-16 flex-row items-start gap-3 border-b border-border px-3 py-3 active:bg-accent/60"',
-      'largeTextLayout\n              ? "text-xs leading-5 text-muted-foreground"',
+      'largeTextLayout\n              ? "text-xs [-rn-line-height:22] text-muted-foreground"',
       '"mt-1 h-5 w-5 items-center justify-center rounded-full border-[6px] border-primary"',
       '? "mt-1 h-7 w-12 items-end justify-center rounded-full bg-primary px-1"',
       'largeTextLayout ? "gap-3" : "flex-row items-start justify-between gap-3"',
       'largeTextLayout ? "gap-1" : "min-w-0 flex-1 gap-1"',
       '"min-h-12 w-full flex-row items-center justify-center gap-2 rounded-full bg-muted px-5"',
-      'snapPoints={largeTextLayout ? ["96%"] : ["88%"]}',
-      'largeTextLayout ? "gap-2" : "flex-row gap-2"',
-      '? "min-h-20 w-full justify-center rounded-2xl border border-primary bg-primary/10 px-4 py-3"',
       'largeTextLayout ? "gap-3" : "flex-row gap-3"',
-      '? "min-h-20 flex-row items-start gap-3 rounded-2xl border border-primary bg-primary/10 px-3 py-3"',
       '"-mx-2 min-h-16 flex-row items-start gap-3 rounded-2xl px-3 py-3 active:bg-muted"',
       '"-mx-2 min-h-16 flex-row items-start gap-3 rounded-2xl px-3 py-3 active:bg-destructive/10"',
       "largeTextLayout && hasOptions",
@@ -225,12 +294,42 @@ const contracts = [
     ],
   },
   {
+    // The selling-unit editor left Catalog setup for a full-screen editor
+    // (5495e83ed, 9 Oct 2026); its large-text branches live here now.
+    file: "components/mobile/appearances/classic/selling-unit-editor.tsx",
+    markers: [
+      "useLargeTextLayout",
+      'flexDirection: largeTextLayout ? "column" : "row"',
+      'largeTextLayout ? "gap-2" : "flex-row gap-2"',
+      'largeTextLayout ? "min-h-11 w-full py-2" : "min-h-9 flex-1"',
+      'largeTextLayout ? "items-start" : "items-center"',
+      "marginTop: largeTextLayout ? 9 : 0",
+    ],
+  },
+  {
+    // Catalog setup sheets size to their content; at large text they may
+    // rise to 92% so actions are not pushed below a scroll.
+    file: "components/mobile/catalog-setup/catalog-setup-confirmation.tsx",
+    markers: [
+      "useLargeTextLayout",
+      "BottomSheetScrollView",
+      "height * (largeTextLayout ? 0.92 : 0.44)",
+    ],
+  },
+  {
+    file: "components/mobile/catalog-setup/selling-unit-reference-selector.tsx",
+    markers: [
+      "useLargeTextLayout",
+      "BottomSheetScrollView",
+      "height * (largeTextLayout ? 0.92 : 0.65)",
+    ],
+  },
+  {
     file: "components/mobile/appearances/classic/catalog-helper-picker.tsx",
     markers: [
       "useLargeTextLayout",
       'largeTextLayout\n          ? "min-h-20 flex-row items-start',
       "largeTextLayout && badgeLabel",
-      "largeTextLayout && selectedKey === null",
       '? "mt-1 size-sm text-muted-foreground"',
     ],
   },
@@ -261,6 +360,8 @@ const contracts = [
       "useLargeTextLayout",
       '"flex-row items-center"',
       '"w-full text-left"',
+      "numberOfLines={largeTextLayout ? 2 : 1}",
+      "paddingVertical: largeTextLayout ? 8 : 0",
     ],
   },
   {
