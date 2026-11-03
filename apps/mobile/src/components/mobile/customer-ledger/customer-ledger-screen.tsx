@@ -29,6 +29,7 @@ import {
 import { CustomerLedgerGate } from "./customer-ledger-gate"
 import { EarlierOrdersBanner } from "./earlier-orders"
 import { OwedForCard } from "./owed-for-card"
+import { StatementPdfActions } from "./statement-pdf-actions"
 import { ledgerLabels } from "./types"
 export function CustomerLedgerScreen({ customerId }: { customerId: string }) {
   return (
@@ -459,10 +460,16 @@ function Statement({
             />
           ) : null}
           {offline ? null : (
-            <ReportExportActions
-              filename={statementFilename(customerName, s.snapshotSequence)}
-              build={(cancelled) => exportStatement(s, cancelled)}
-            />
+            <View className="gap-4">
+              <ReportExportActions
+                filename={statementFilename(customerName, s.snapshotSequence)}
+                build={(cancelled) => exportStatement(s, cancelled)}
+              />
+              <StatementPdfActions
+                accountId={accountId}
+                snapshotSequence={s.snapshotSequence}
+              />
+            </View>
           )}
           {error ? <StatusBanner message={error} tone="destructive" /> : null}
           <SectionHeader

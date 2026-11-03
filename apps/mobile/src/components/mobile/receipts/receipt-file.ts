@@ -43,6 +43,8 @@ export async function deliverReceiptFile(
   file: ReceiptFile,
   action: "save" | "share",
   assertCurrent: () => void = () => undefined,
+  /** What the file is, for the share title and messages. */
+  noun = "receipt",
 ) {
   assertCurrent()
   const encoded = base64(file.bytes)
@@ -98,7 +100,7 @@ export async function deliverReceiptFile(
       )
       throw error
     }
-    return "Receipt saved to your selected folder."
+    return `${noun[0]?.toUpperCase() ?? ""}${noun.slice(1)} saved to your selected folder.`
   }
   const sharing = await import("expo-sharing")
   assertCurrent()
@@ -120,7 +122,7 @@ export async function deliverReceiptFile(
     await sharing.shareAsync(uri, {
       mimeType: file.mimeType,
       UTI: RECEIPT_UTI[file.mimeType],
-      dialogTitle: action === "save" ? "Save receipt" : "Share receipt",
+      dialogTitle: action === "save" ? `Save ${noun}` : `Share ${noun}`,
     })
     // The share sheet reports nothing useful back, so show no notice.
     return ""

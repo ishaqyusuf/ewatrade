@@ -4,6 +4,8 @@ export async function deliverReceiptFile(
   file: ReceiptFile,
   action: "save" | "share",
   assertCurrent: () => void = () => undefined,
+  /** What the file is, for the share title and messages. */
+  noun = "receipt",
 ) {
   assertCurrent()
   const blob = new Blob([Uint8Array.from(file.bytes)], { type: file.mimeType })
@@ -15,7 +17,10 @@ export async function deliverReceiptFile(
       )
     try {
       assertCurrent()
-      await navigator.share({ files: [output], title: "Order receipt" })
+      await navigator.share({
+        files: [output],
+        title: noun === "receipt" ? "Order receipt" : noun,
+      })
       return "Share sheet closed."
     } catch (error) {
       if (error instanceof Error && error.name === "AbortError")
