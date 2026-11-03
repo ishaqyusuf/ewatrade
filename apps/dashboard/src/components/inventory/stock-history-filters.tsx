@@ -46,6 +46,8 @@ function useCategoryChoices(query: string) {
   )
 }
 
+const MENU_KEYS = new Set(["Escape", "ArrowDown", "ArrowUp"])
+
 function toggle(filter: StockHistoryCategoryFilter, id: number) {
   return filter.categoryNameIds.includes(id)
     ? filter.categoryNameIds.filter((value) => value !== id)
@@ -138,9 +140,10 @@ function CategoryChoices({
       placeholder="Search categories"
       aria-label="Search categories"
       className="h-9 rounded-none"
-      // Typing stays in the field instead of moving the menu's highlight.
+      // Typing stays in the field instead of moving the menu's highlight;
+      // the arrows go on to the menu so the keyboard reaches the results.
       onKeyDown={(event) => {
-        if (event.key !== "Escape") event.stopPropagation()
+        if (!MENU_KEYS.has(event.key)) event.stopPropagation()
       }}
       onChange={(event) => setQuery(event.target.value)}
     />
