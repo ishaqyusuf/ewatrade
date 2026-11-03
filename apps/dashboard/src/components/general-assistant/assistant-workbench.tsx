@@ -6,15 +6,12 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
+  cn,
 } from "@ewatrade/ui"
 import {
-  Clock01Icon,
-  MoreHorizontalIcon,
   PlusSignIcon,
+  Search01Icon,
+  SidebarLeftIcon,
 } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { useParams, useRouter, useSearchParams } from "next/navigation"
@@ -39,9 +36,10 @@ const COLUMN = "mx-auto w-full max-w-[720px]"
 
 /**
  * The assistant page: one focused chat. Saved chats sit on the left on very
- * large screens; below that they open from the top-right menu. Drafts,
- * product chat, setup and the allowance are quiet links under the composer.
- * The bottom-right widget is the quick version of the same chat.
+ * large screens, where the header's panel button hides them; below that the
+ * same button opens them in a dialog. Drafts, product chat, setup and the
+ * allowance are quiet links under the composer. The bottom-right widget is
+ * the quick version of the same chat.
  */
 export function AssistantWorkbench() {
   const routeId = useParams<{ id?: string }>().id ?? null
@@ -59,6 +57,8 @@ export function AssistantWorkbench() {
   const pendingChats = new Set(pending.map((row) => row.conversationId))
   const focus = useReviewFocus(vm)
   const [historyOpen, setHistoryOpen] = useState(false)
+  const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [chatQuery, setChatQuery] = useState("")
   const review = (row: GeneralPendingReview) => focus.review(row)
   // A new chat is /assistant; its first message creates the conversation.
   const newChat = () => {
@@ -132,74 +132,85 @@ export function AssistantWorkbench() {
     // -mb-4 cancels the shell's bottom padding so only the columns scroll.
     <div className="-mx-4 -mb-4 flex flex-1 flex-col md:-mx-8">
       <h1 className="sr-only">AI assistant</h1>
-      <div className="grid h-[calc(100svh-70px)] min-h-[32rem] overflow-hidden xl:grid-cols-[236px_minmax(0,1fr)]">
+      <div
+        className={cn(
+          "grid h-[calc(100svh-70px)] min-h-[32rem] overflow-hidden",
+          sidebarOpen && "xl:grid-cols-[272px_minmax(0,1fr)]",
+        )}
+      >
         <nav
           aria-label="Saved chats"
-          className="hidden min-h-0 flex-col gap-2 overflow-y-auto border-r bg-muted/20 p-3 xl:flex"
+          className={cn(
+            "hidden min-h-0 flex-col gap-1 overflow-y-auto border-r p-3",
+            sidebarOpen && "xl:flex",
+          )}
         >
-          <Button size="sm" disabled={navigationDisabled} onClick={newChat}>
+          <Button
+            variant="secondary"
+            className="justify-start"
+            disabled={navigationDisabled}
+            onClick={newChat}
+          >
             <HugeiconsIcon icon={PlusSignIcon} className="size-4" />
             New chat
           </Button>
-          <GeneralChatList vm={vm} pendingChats={pendingChats} />
+          <ChatSearch value={chatQuery} onChange={setChatQuery} />
+          <GeneralChatList
+            vm={vm}
+            pendingChats={pendingChats}
+            query={chatQuery}
+          />
         </nav>
         <section
           aria-label="Assistant"
           className="flex min-h-0 min-w-0 flex-col"
         >
-          <header className="flex shrink-0 items-center justify-between gap-2 px-4 py-2.5 sm:px-6">
-            <div className="min-w-0">
-              <h2 className="truncate text-sm font-semibold">
+          <header className="flex shrink-0 items-center gap-2 px-3 py-2.5 sm:px-4">
+            <Button
+              size="icon-sm"
+              variant="ghost"
+              className="hidden xl:inline-flex"
+              aria-label={sidebarOpen ? "Hide saved chats" : "Show saved chats"}
+              aria-expanded={sidebarOpen}
+              title={sidebarOpen ? "Hide saved chats" : "Show saved chats"}
+              onClick={() => setSidebarOpen((open) => !open)}
+            >
+              <HugeiconsIcon icon={SidebarLeftIcon} className="size-5" />
+            </Button>
+            <Button
+              size="icon-sm"
+              variant="ghost"
+              className="xl:hidden"
+              aria-label="Chat history"
+              title="Chat history"
+              onClick={() => setHistoryOpen(true)}
+            >
+              <HugeiconsIcon icon={SidebarLeftIcon} className="size-5" />
+            </Button>
+            <div className="flex min-w-0 flex-1 items-baseline gap-2">
+              <h2 className="truncate text-sm font-medium">
                 {generalChatTitle(vm)}
               </h2>
               {vm.data ? (
-                <p className="truncate text-xs text-muted-foreground">
+                <p className="truncate text-xs text-muted-foreground max-sm:hidden">
                   {[...new Set([vm.data.businessName, vm.data.storeName])].join(
                     " · ",
                   )}
                 </p>
               ) : null}
             </div>
-            <div className="flex shrink-0 items-center gap-1">
-              {vm.chat.messages.length ? (
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  disabled={navigationDisabled}
-                  onClick={newChat}
-                >
-                  <HugeiconsIcon icon={PlusSignIcon} className="size-4" />
-                  New
-                </Button>
-              ) : null}
-              <DropdownMenu>
-                <DropdownMenuTrigger
-                  render={
-                    <Button
-                      size="icon-sm"
-                      variant="ghost"
-                      className="xl:hidden"
-                      aria-label="Assistant menu"
-                    />
-                  }
-                >
-                  <HugeiconsIcon icon={MoreHorizontalIcon} className="size-4" />
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48">
-                  <DropdownMenuItem onClick={() => setHistoryOpen(true)}>
-                    <HugeiconsIcon icon={Clock01Icon} className="size-4" />
-                    Chat history
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    disabled={navigationDisabled}
-                    onClick={newChat}
-                  >
-                    <HugeiconsIcon icon={PlusSignIcon} className="size-4" />
-                    New chat
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
+            {vm.chat.messages.length ? (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="shrink-0"
+                disabled={navigationDisabled}
+                onClick={newChat}
+              >
+                <HugeiconsIcon icon={PlusSignIcon} className="size-4" />
+                New chat
+              </Button>
+            ) : null}
           </header>
           {vm.availability.isPending ? (
             <output className="p-6 text-sm">Loading your assistant…</output>
@@ -266,6 +277,7 @@ export function AssistantWorkbench() {
           </DialogHeader>
           <Button
             size="sm"
+            variant="secondary"
             className="self-start"
             disabled={navigationDisabled}
             onClick={newChat}
@@ -273,15 +285,40 @@ export function AssistantWorkbench() {
             <HugeiconsIcon icon={PlusSignIcon} className="size-4" />
             New chat
           </Button>
+          <ChatSearch value={chatQuery} onChange={setChatQuery} />
           <div className="-mx-2 min-h-0 overflow-x-hidden overflow-y-auto">
             <GeneralChatList
               vm={vm}
               pendingChats={pendingChats}
+              query={chatQuery}
               onChosen={() => setHistoryOpen(false)}
             />
           </div>
         </DialogContent>
       </Dialog>
     </div>
+  )
+}
+
+/** Filters saved chats by title. */
+function ChatSearch({
+  value,
+  onChange,
+}: {
+  value: string
+  onChange: (value: string) => void
+}) {
+  return (
+    <label className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-sm text-muted-foreground focus-within:bg-muted/60 hover:bg-muted/60">
+      <HugeiconsIcon icon={Search01Icon} className="size-4 shrink-0" />
+      <input
+        type="search"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        placeholder="Search"
+        aria-label="Search saved chats"
+        className="min-w-0 flex-1 bg-transparent text-foreground outline-none placeholder:text-muted-foreground [&::-webkit-search-cancel-button]:hidden"
+      />
+    </label>
   )
 }

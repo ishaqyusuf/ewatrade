@@ -42,8 +42,10 @@ import {
 import {
   ArrowDown01Icon,
   ArrowUpRight01Icon,
+  Copy01Icon,
   PlusSignIcon,
   SparklesIcon,
+  Tick02Icon,
 } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
@@ -79,15 +81,14 @@ const suggestions = [
   "Record a sale",
   "What can you do?",
 ]
+// Text size comes from the reply column: smaller in the widget than the page.
 const markdownComponents = {
-  p: ({ children }: { children?: React.ReactNode }) => (
-    <p className="text-sm leading-relaxed">{children}</p>
-  ),
+  p: ({ children }: { children?: React.ReactNode }) => <p>{children}</p>,
   ul: ({ children }: { children?: React.ReactNode }) => (
-    <ul className="list-disc space-y-1 pl-5 text-sm">{children}</ul>
+    <ul className="list-disc space-y-1 pl-5">{children}</ul>
   ),
   ol: ({ children }: { children?: React.ReactNode }) => (
-    <ol className="list-decimal space-y-1 pl-5 text-sm">{children}</ol>
+    <ol className="list-decimal space-y-1 pl-5">{children}</ol>
   ),
   strong: ({ children }: { children?: React.ReactNode }) => (
     <strong className="font-semibold text-foreground">{children}</strong>
@@ -241,7 +242,7 @@ export function GeneralThread({
     const outcomes = proposals.filter(isGeneralOutcome)
     const drafts = proposals.filter((proposal) => !isGeneralOutcome(proposal))
     return (
-      <div className={cn("flex flex-col gap-3", !compact && "pl-10")}>
+      <div className="flex flex-col gap-3">
         {outcomes.length ? (
           <GeneralOutcomeList
             heading={heading}
@@ -439,7 +440,12 @@ export function GeneralThread({
                       <GeneralSentFile key={file.attachmentId} file={file} />
                     ))}
                     {text ? (
-                      <p className="min-w-0 max-w-[85%] whitespace-pre-wrap [overflow-wrap:anywhere] rounded-2xl rounded-br-sm bg-primary px-4 py-2.5 text-sm text-primary-foreground">
+                      <p
+                        className={cn(
+                          "min-w-0 max-w-[85%] whitespace-pre-wrap [overflow-wrap:anywhere] rounded-xl border bg-muted/50 px-4 py-2.5 text-foreground",
+                          compact ? "text-sm" : "text-[15px] leading-relaxed",
+                        )}
+                      >
                         {text}
                       </p>
                     ) : null}
@@ -449,40 +455,39 @@ export function GeneralThread({
               )
             }
             const answers = generalAnswers(message.parts)
+            const streaming = vm.busy && message.id === last?.id
             return (
               <Fragment key={message.id}>
-                <div className="flex gap-3">
-                  <span
-                    aria-hidden
-                    className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary"
-                  >
-                    <HugeiconsIcon icon={SparklesIcon} className="size-3.5" />
-                  </span>
-                  <div className="flex min-w-0 max-w-[85%] flex-col gap-2 text-foreground/85">
-                    {text ? (
-                      <Streamdown
-                        className="space-y-2"
-                        components={markdownComponents}
-                        isAnimating={vm.busy && message.id === last?.id}
-                      >
-                        {text}
-                      </Streamdown>
-                    ) : null}
-                    {answers.map((answer) => (
-                      <GeneralAnswerCard
-                        key={answer.id}
-                        answer={answer}
-                        messageId={message.id}
-                      />
-                    ))}
-                  </div>
+                <div className="flex min-w-0 flex-col gap-2 text-foreground">
+                  {text ? (
+                    <Streamdown
+                      className={cn(
+                        "space-y-3",
+                        compact
+                          ? "text-sm leading-relaxed"
+                          : "text-[15px] leading-7",
+                      )}
+                      components={markdownComponents}
+                      isAnimating={streaming}
+                    >
+                      {text}
+                    </Streamdown>
+                  ) : null}
+                  {answers.map((answer) => (
+                    <GeneralAnswerCard
+                      key={answer.id}
+                      answer={answer}
+                      messageId={message.id}
+                    />
+                  ))}
+                  {text && !streaming ? <ReplyFooter text={text} /> : null}
                 </div>
                 {proposalGroup(placed.after.get(message.id))}
               </Fragment>
             )
           })}
           {vm.chat.status === "submitted" ? (
-            <p className="animate-pulse pl-10 text-xs text-muted-foreground">
+            <p className="animate-pulse text-xs text-muted-foreground">
               Thinking…
             </p>
           ) : null}
@@ -628,6 +633,39 @@ export function GeneralComposer({
   )
 }
 
+/** Who wrote the reply, and a copy button, under each finished reply. */
+function ReplyFooter({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false)
+  useEffect(() => {
+    if (!copied) return
+    const timer = setTimeout(() => setCopied(false), 1500)
+    return () => clearTimeout(timer)
+  }, [copied])
+  return (
+    <div className="-mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
+      <span>EwaTrade AI</span>
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon-xs"
+        aria-label={copied ? "Copied" : "Copy reply"}
+        title={copied ? "Copied" : "Copy reply"}
+        onClick={() =>
+          void navigator.clipboard
+            ?.writeText(text)
+            .then(() => setCopied(true))
+            .catch(() => {})
+        }
+      >
+        <HugeiconsIcon
+          icon={copied ? Tick02Icon : Copy01Icon}
+          className="size-3.5"
+        />
+      </Button>
+    </div>
+  )
+}
+
 /** Starter questions that fill the composer. */
 export function GeneralSuggestions({
   vm,
@@ -706,18 +744,34 @@ export function GeneralChatList({
   vm,
   pendingChats,
   onChosen,
+  query = "",
 }: {
   vm: GeneralAssistantVM
   pendingChats: Set<string>
   /** Called after a chat is opened, e.g. to close the history dialog. */
   onChosen?: () => void
+  /** Only chats whose title contains this text. */
+  query?: string
 }) {
   const { navigationDisabled } = generalChatFlags(vm)
+  const needle = query.trim().toLowerCase()
+  const groups = groupChats(
+    savedChats(vm).filter(
+      (chat) =>
+        !needle || (chat.title ?? "New chat").toLowerCase().includes(needle),
+    ),
+  )
+  if (needle && !groups.length)
+    return (
+      <p className="px-2 py-1.5 text-sm text-muted-foreground">
+        No chats match “{query.trim()}”.
+      </p>
+    )
   return (
     <div className="flex flex-col gap-0.5">
-      {groupChats(savedChats(vm)).map(([group, chats]) => (
+      {groups.map(([group, chats]) => (
         <section key={group} aria-label={group}>
-          <h3 className="mt-3 mb-1 px-2 text-[11px] font-semibold tracking-wide text-muted-foreground uppercase first:mt-1">
+          <h3 className="mt-4 mb-1 px-2 text-xs text-muted-foreground first:mt-1">
             {group}
           </h3>
           <ul className="flex flex-col gap-0.5">
@@ -732,9 +786,9 @@ export function GeneralChatList({
                     onChosen?.()
                   }}
                   className={cn(
-                    "w-full rounded-md px-2 py-1.5 text-left text-sm hover:bg-muted disabled:opacity-60",
+                    "w-full rounded-lg px-2.5 py-2 text-left text-sm hover:bg-muted disabled:opacity-60",
                     conversation.id === vm.conversationId &&
-                      "bg-muted font-medium",
+                      "bg-primary/10 text-primary hover:bg-primary/10",
                   )}
                 >
                   <span className="block truncate">
@@ -745,11 +799,7 @@ export function GeneralChatList({
                       <span className="size-1.5 rounded-full bg-current" />
                       Needs review
                     </span>
-                  ) : (
-                    <span className="block text-xs font-normal text-muted-foreground">
-                      {new Date(conversation.updatedAt).toLocaleDateString()}
-                    </span>
-                  )}
+                  ) : null}
                 </button>
               </li>
             ))}
