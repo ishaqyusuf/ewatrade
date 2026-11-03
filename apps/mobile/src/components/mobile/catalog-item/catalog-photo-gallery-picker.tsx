@@ -23,13 +23,12 @@ import * as Crypto from "expo-crypto"
 import { Image } from "expo-image"
 import { useEffect, useRef, useState } from "react"
 import {
-  KeyboardAvoidingView,
-  Platform,
   Modal as RNModal,
   ScrollView,
   View,
   useWindowDimensions,
 } from "react-native"
+import { KeyboardAvoidingView } from "react-native-keyboard-controller"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import {
   type CatalogImageDraft,
@@ -684,6 +683,7 @@ function ImageDetailsSheet({
 }) {
   const insets = useSafeAreaInsets()
   const colors = useColors()
+  const { height } = useWindowDimensions()
   const open = Boolean(entry || image)
   return (
     <RNModal
@@ -702,9 +702,19 @@ function ImageDetailsSheet({
         transition={false}
         style={{ backgroundColor: colors.overlay, flex: 1 }}
       />
+      {/* The translucent modal window never resizes for the keyboard on
+          Android, so the sheet pads itself above it on both platforms. */}
       <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        style={{ bottom: 0, left: 0, position: "absolute", right: 0 }}
+        behavior="padding"
+        pointerEvents="box-none"
+        style={{
+          bottom: 0,
+          justifyContent: "flex-end",
+          left: 0,
+          position: "absolute",
+          right: 0,
+          top: insets.top + 8,
+        }}
       >
         <View
           accessibilityViewIsModal
@@ -712,7 +722,10 @@ function ImageDetailsSheet({
             backgroundColor: colors.card,
             borderTopLeftRadius: 24,
             borderTopRightRadius: 24,
-            maxHeight: "92%",
+            // A percentage resolves against this auto-height wrapper and
+            // clipped the sheet's last row (Add to My images, Remove).
+            flexShrink: 1,
+            maxHeight: height * 0.92,
             paddingBottom: 16 + insets.bottom,
             paddingTop: 16,
           }}

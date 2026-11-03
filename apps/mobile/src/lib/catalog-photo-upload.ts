@@ -43,11 +43,11 @@ export async function uploadMobileCatalogPhoto(input: {
     assertCurrent,
     readBytes: () => new File(input.image.uri).bytes(),
     digest: async (bytes) => {
-      const buffer = new ArrayBuffer(bytes.byteLength)
-      new Uint8Array(buffer).set(bytes)
+      // Android's native digest takes a typed array; a bare ArrayBuffer fails
+      // with "Cannot convert '[object ArrayBuffer]' to a Kotlin type".
       const digest = await Crypto.digest(
         Crypto.CryptoDigestAlgorithm.SHA256,
-        buffer,
+        Uint8Array.from(bytes),
       )
       return Array.from(new Uint8Array(digest), (byte) =>
         byte.toString(16).padStart(2, "0"),
@@ -56,15 +56,18 @@ export async function uploadMobileCatalogPhoto(input: {
     upload: async (assetId, bytes, contentType: CatalogPhotoContentType) => {
       const buffer = new ArrayBuffer(bytes.byteLength)
       new Uint8Array(buffer).set(bytes)
+      // Hermes has no AbortSignal.timeout.
+      const controller = new AbortController()
+      const timer = setTimeout(() => controller.abort(), 90_000)
       const response = await fetch(
         `${getBaseUrl()}/api/catalog/photos/${encodeURIComponent(assetId)}/upload?storeId=${encodeURIComponent(input.storeId)}`,
         {
           method: "PUT",
           headers: { ...headers, "Content-Type": contentType },
           body: buffer,
-          signal: AbortSignal.timeout(90_000),
+          signal: controller.signal,
         },
-      )
+      ).finally(() => clearTimeout(timer))
       const result: unknown = await response.json()
       if (!response.ok) {
         const message =
