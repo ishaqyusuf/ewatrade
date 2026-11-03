@@ -3,9 +3,10 @@ import { ActionButton } from "@/components/mobile/action-button"
 import { Modal, useModal } from "@/components/ui/modal"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
+import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
 import {
   type BottomSheetBackdropProps,
-  BottomSheetView,
+  BottomSheetScrollView,
 } from "@gorhom/bottom-sheet"
 import { useCallback, useEffect, useRef } from "react"
 import { StatusPill } from "../green-till/kit"
@@ -37,6 +38,7 @@ export function FinanceExpenseReviewSheet({
   review: ExpenseReviewSummary | null
 }) {
   const modal = useModal()
+  const largeText = useLargeTextLayout()
   const open = Boolean(review)
   const latest = useRef({ open, pending, onBack })
   latest.current = { open, pending, onBack }
@@ -58,6 +60,9 @@ export function FinanceExpenseReviewSheet({
     <Modal
       ref={modal.ref}
       hideHeader
+      // Content height only: with the default 60% snap point as well, index
+      // 0 was the 60% stop and large text cut off Back to details.
+      snapPoints={[]}
       enableDynamicSizing
       enablePanDownToClose={!pending}
       backdropComponent={renderBackdrop}
@@ -67,8 +72,9 @@ export function FinanceExpenseReviewSheet({
           latest.current.onBack()
       }}
     >
-      {/* BottomSheetView takes no className; the padding lives on a View. */}
-      <BottomSheetView>
+      {/* Gorhom views take no className; the padding lives on a View. It
+          scrolls when the content is taller than the screen allows. */}
+      <BottomSheetScrollView>
         <View className="px-5 pb-6 pt-5">
           {summary ? (
             <>
@@ -100,7 +106,14 @@ export function FinanceExpenseReviewSheet({
                   </Text>
                 </View>
               ))}
-              <View className="flex-row items-center justify-between gap-3 border-t border-border py-2.5">
+              {/* Large text: the pill goes under its label, not off the edge. */}
+              <View
+                className={
+                  largeText
+                    ? "items-start gap-1.5 border-t border-border py-2.5"
+                    : "flex-row items-center justify-between gap-3 border-t border-border py-2.5"
+                }
+              >
                 <Text className="text-sm text-muted-foreground">
                   Status after recording
                 </Text>
@@ -128,7 +141,7 @@ export function FinanceExpenseReviewSheet({
             </>
           ) : null}
         </View>
-      </BottomSheetView>
+      </BottomSheetScrollView>
     </Modal>
   )
 }
