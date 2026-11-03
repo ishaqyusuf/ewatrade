@@ -58,7 +58,7 @@ test("bare CANCEL with no draft keeps the connection and makes no canonical deci
       "request",
       f.deps,
     ),
-  ).toContain("connection stays active")
+  ).toContain("You're still connected")
   expect(f.decisions).toEqual([])
 })
 
@@ -100,7 +100,7 @@ test("multiple pending drafts require an exact Cancel option without selecting a
       "request",
       f.deps,
     ),
-  ).toContain("exact draft's Cancel button")
+  ).toContain("Tap Cancel on the draft you want to drop")
   expect(f.decisions).toEqual([])
 })
 

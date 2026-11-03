@@ -504,3 +504,15 @@ test("STOP still attempts typed-proof cancellation when native cleanup fails", a
     "disconnect",
   ])
 })
+
+test("STOP uses the receipt-capable stop path when present; DISCONNECT without config still disconnects", async () => {
+  const h = hybridHarness()
+  await processPlatformWhatsAppEvent(message("STOP"), {
+    ...h.deps,
+    stop: async () => {
+      h.operations.push("stop")
+    },
+  })
+  expect(h.operations.at(-1)).toBe("stop")
+  expect(h.operations).not.toContain("disconnect")
+})

@@ -47,7 +47,7 @@ export async function cancelAssistantWhatsAppCurrentDraft(
     qaSessionScope: null,
   }
   if (await deps.cancelEdit(fresh))
-    return "Draft cancelled. No business record was changed. Your WhatsApp connection stays active."
+    return "Draft cancelled. Nothing was changed."
   const rows = await db.assistantActionProposal.findMany({
     where: {
       tenantId: scope.tenantId,
@@ -61,9 +61,9 @@ export async function cancelAssistantWhatsAppCurrentDraft(
     select: { id: true, revision: true },
   })
   if (!rows.length)
-    return "There is no pending draft to cancel in this chat. Your WhatsApp connection stays active."
+    return "Nothing to cancel in this chat. You're still connected. To remove this WhatsApp, send DISCONNECT."
   if (rows.length > 1)
-    return "More than one draft is pending in this chat. Use the exact draft's Cancel button, or open this saved chat in EwaTrade. Nothing was cancelled. Your WhatsApp connection stays active."
+    return "More than one draft is open in this chat. Tap Cancel on the draft you want to drop. Nothing was cancelled."
 
   const row = rows[0]
   if (!row) throw Error("Draft selection changed.")
@@ -74,5 +74,5 @@ export async function cancelAssistantWhatsAppCurrentDraft(
   })
   if (cancelled.status !== "CANCELLED")
     throw Error("Draft cancellation changed.")
-  return "Draft cancelled. No business record was changed. Your WhatsApp connection stays active."
+  return "Draft cancelled. Nothing was changed."
 }

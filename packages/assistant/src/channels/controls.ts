@@ -55,6 +55,26 @@ export type WhatsAppControlCommand = z.infer<
   typeof whatsAppControlCommandSchema
 >
 
+const supportPhrases = [
+  "talk to a person",
+  "talk to someone",
+  "speak to a person",
+  "speak to someone",
+  "i need to talk to a person",
+  "i want to talk to a person",
+  "i need to speak to someone",
+  "customer care",
+  "customer service",
+]
+const privacyPhrases = [
+  "what data do you keep",
+  "what data do you keep about me",
+  "what do you know about me",
+  "what can you see",
+  "can you read my chats",
+  "delete my data",
+]
+
 /** Exact command grammar; an unqualified amount or an ordinary sentence is never a menu choice. */
 export function parseWhatsAppControl(
   text: string | undefined,
@@ -66,11 +86,15 @@ export function parseWhatsAppControl(
     .replace(/^\//, "")
     .replace(/\s+/g, " ")
   if (!value) return null
+  // Whole messages only, with a trailing ? or . ignored; a longer sentence stays model input.
+  const phrase = value.replace(/[?.!]+$/, "")
   if (["help", "support", "contact support"].includes(value))
     return { kind: "help" }
+  if (supportPhrases.includes(phrase)) return { kind: "help" }
   if (["menu", "main menu"].includes(value)) return { kind: "menu" }
   if (["privacy", "my data", "assistant data"].includes(value))
     return { kind: "privacy" }
+  if (privacyPhrases.includes(phrase)) return { kind: "privacy" }
   if (value === "cancel") return { kind: "cancel" }
   if (
     ["business", "businesses", "switch business", "change business"].includes(

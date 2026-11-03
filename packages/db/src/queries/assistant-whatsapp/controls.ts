@@ -276,26 +276,22 @@ async function buildControlMenu(
     throw new AssistantWhatsAppError("CONFLICT")
   if (action.kind === "cancel") {
     const selected = await selectedScope(tx, identity, now)
-    const menu = await buildControlMenu(
-      tx,
+    // One short answer: the draft outcome, or that nothing needed cancelling.
+    return menuBase(
       identity,
       primary,
-      { kind: "help" },
-      now,
-      options,
-    )
-    menu.detail =
+      "Cancel",
       selected && options.cancelDraft
         ? await options.cancelDraft(selected, tx, requestId)
-        : "There is no current accessible draft to cancel here. Your WhatsApp connection stays active. Choose the draft's original business, Store and chat to cancel it."
-    return menu
+        : "Nothing to cancel here. You're still connected. To remove this WhatsApp, send DISCONNECT.",
+    )
   }
   if (action.kind === "privacy") {
     const menu = menuBase(
       identity,
       primary,
-      "WhatsApp assistant privacy",
-      "I use messages you send to this EwaTrade number and business records your current access allows. I cannot read your other WhatsApp chats, contacts or email inbox. Verification codes are handled separately from ordinary assistant requests. Review assistant data in EwaTrade. Send DISCONNECT for confirmation or STOP to disconnect immediately; phone sign-in codes keep working.",
+      "🔒 Your data",
+      "I only see messages you send to this EwaTrade number, and the records your access allows. I can't see your other chats, contacts or email. Sign-in codes are handled separately.\n\nSee or download what the assistant keeps in EwaTrade under Account › Assistant data. Send DISCONNECT to remove this WhatsApp, or STOP to remove it at once.",
     )
     menu.choices = [
       { label: "Help", action: { kind: "help" } },
@@ -304,15 +300,26 @@ async function buildControlMenu(
     return menu
   }
   if (action.kind === "disconnect") {
+    const grants = await tx.assistantWhatsAppGrant.findMany({
+      where: { identityId: identity.id, ...liveControlGrant(now) },
+      orderBy: { id: "asc" },
+      take: 6,
+      select: { tenant: { select: { name: true } } },
+    })
+    const names = [...new Set(grants.map((grant) => grant.tenant.name))]
+    const listed = names
+      .slice(0, 5)
+      .map((name) => `- ${whatsAppControlLabel(name, 60)}`)
+    if (names.length > 5) listed.push("- and more")
     const menu = menuBase(
       identity,
       primary,
-      "Disconnect WhatsApp?",
-      "This disconnects this WhatsApp number from all connected businesses. Your EwaTrade account, business records and saved chats stay in EwaTrade. STOP disconnects immediately at any time.",
+      "Disconnect this WhatsApp?",
+      `${listed.length ? `It will stop working with:\n${listed.join("\n")}\n\n` : ""}Your businesses, chats and drafts stay in EwaTrade. Phone sign-in codes keep working.`,
     )
     menu.choices = [
       { label: "Disconnect", action: { kind: "disconnect_confirm" } },
-      { label: "Stay connected", action: { kind: "help" } },
+      { label: "Keep connected", action: { kind: "help" } },
     ]
     return menu
   }

@@ -21,6 +21,10 @@ test("only explicit navigation commands bypass model input; amounts and ordinary
     ["New chat", "new"],
     ["Continue chat", "chats"],
     ["Disconnect", "disconnect"],
+    ["I need to talk to a person", "help"],
+    ["Customer care", "help"],
+    ["what data do you keep about me?", "privacy"],
+    ["Delete my data.", "privacy"],
   ] as const)
     expect(parseWhatsAppControl(text)?.kind).toBe(kind)
   for (const text of [
@@ -28,6 +32,8 @@ test("only explicit navigation commands bypass model input; amounts and ordinary
     "123456",
     "new product",
     "help me record a sale",
+    "talk to a person about Chidi's order",
+    "what data do you keep about Chidi",
     "choosecustomer",
     "choose Shop cash",
     "choose customer Amina",

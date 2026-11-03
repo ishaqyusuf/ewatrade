@@ -188,6 +188,41 @@ export function disconnectAssistantWhatsApp(
   )
 }
 
+/**
+ * STOP: the same canonical revocation, plus who to tell. A receipt is offered
+ * only when this call revoked a live connection, so a redelivered STOP or a
+ * sender with no connection gets nothing, and synthetic QA businesses never
+ * produce a live provider message.
+ */
+export function stopAssistantWhatsApp(
+  db: PrismaClient,
+  input: { phoneNumberId: string; senderId: string },
+  now = new Date(),
+) {
+  return runInOwnSerializableTransaction(db, async (tx) => {
+    await disconnectAssistantWhatsAppInTransaction(tx, input, now)
+    const identity = await tx.assistantWhatsAppIdentity.findUnique({
+      where: { phoneNumberId_senderId: input },
+      select: { id: true, revokedAt: true },
+    })
+    if (identity?.revokedAt?.getTime() !== now.getTime())
+      return { disconnected: true as const, receipt: null }
+    const grants = await tx.assistantWhatsAppGrant.findMany({
+      where: { identityId: identity.id, revokedAt: now },
+      orderBy: { id: "asc" },
+      select: { tenant: { select: { name: true, dataClassification: true } } },
+    })
+    if (grants.some((grant) => grant.tenant.dataClassification === "QA"))
+      return { disconnected: true as const, receipt: null }
+    return {
+      disconnected: true as const,
+      receipt: {
+        businessNames: [...new Set(grants.map((grant) => grant.tenant.name))],
+      },
+    }
+  })
+}
+
 /** Internal canonical revocation for callers already holding the sender identity lock. */
 export async function disconnectAssistantWhatsAppInTransaction(
   tx: Prisma.TransactionClient,

@@ -17,6 +17,7 @@ import {
   claimAssistantWhatsAppLink,
   disconnectAssistantWhatsApp,
   nextAssistantWhatsAppOutbox,
+  stopAssistantWhatsApp,
 } from "@ewatrade/db/assistant-whatsapp"
 
 import {
@@ -24,6 +25,7 @@ import {
   enqueueAssistantWhatsAppTurn,
 } from "@ewatrade/jobs/assistant-whatsapp"
 
+import { sendAssistantWhatsAppStopNotice } from "../assistant/channel-disconnect-notice"
 import { cancelWhatsAppBusinessFlows } from "./whatsapp-business-flow-lifecycle"
 import {
   isWhatsAppCredentialSubmission,
@@ -69,6 +71,11 @@ type PlatformDependencies = {
     providerOccurredAt?: Date
   }) => Promise<boolean>
   disconnect: (input: {
+    phoneNumberId: string
+    senderId: string
+  }) => Promise<unknown>
+  /** STOP: disconnect, then a one-time receipt. Falls back to disconnect. */
+  stop?: (input: {
     phoneNumberId: string
     senderId: string
   }) => Promise<unknown>
@@ -132,6 +139,19 @@ export async function processPlatformWhatsAppEvent(
       return claimed
     },
     disconnect: (input) => disconnectAssistantWhatsApp(prisma, input),
+    stop: async (input) => {
+      const result = await stopAssistantWhatsApp(prisma, input)
+      if (result.receipt)
+        try {
+          await sendAssistantWhatsAppStopNotice({
+            ...input,
+            businessNames: result.receipt.businessNames,
+          })
+        } catch {
+          console.error("[assistant] STOP receipt outcome unavailable")
+        }
+      return result
+    },
   },
 ) {
   if (!isPlatformWhatsAppNumber(event.phoneNumberId, dependencies.env))
@@ -152,6 +172,7 @@ export async function processPlatformWhatsAppEvent(
       phoneNumberId: event.phoneNumberId,
       senderId: event.externalCustomerId,
     }
+    const stop = /^(?:stop|unsubscribe)$/i.test(event.text?.trim() ?? "")
     try {
       try {
         await dependencies.cancelRegistrationFlow?.(address)
@@ -163,7 +184,9 @@ export async function processPlatformWhatsAppEvent(
         }
       }
     } finally {
-      await dependencies.disconnect(address)
+      await (stop && dependencies.stop
+        ? dependencies.stop(address)
+        : dependencies.disconnect(address))
     }
     return true
   }

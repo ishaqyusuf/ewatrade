@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "id": "2026-11-03-whatsapp-control-replies",
+  "tickets": ["H02"],
+  "summary": "WhatsApp gaps from Workshop ewatrade/assistant/conversations v2 (revision 378e5ca2), family 14 scenes k-stop, k-disc, k-cancel, k-support and k-privacy. STOP now sends a one-time receipt naming the disconnected businesses (stopAssistantWhatsApp runs the same canonical revocation and offers a receipt only when this call revoked a live connection and no QA business was connected, so a redelivered STOP sends nothing). The DISCONNECT confirmation lists the connected businesses and offers Disconnect / Keep connected; its receipt names them and says older buttons no longer work. CANCEL answers with one short line (draft cancelled, or nothing to cancel, still connected) instead of the full Help menu. Whole-message support phrases (\"I need to talk to a person\", \"customer care\") open the support help, and privacy questions (\"what data do you keep about me?\", \"delete my data\") open the privacy answer, which now points to Account › Assistant data. Longer sentences stay model input. Local only; no provider, OTP or deployment change.",
+  "noAssistantImpact": "Channel control replies only. No tool, prompt, capability declaration or write is added; revocation reuses disconnectAssistantWhatsAppInTransaction unchanged, and the phrase lists are exact whole-message matches.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/whatsapp-assistant-system-design.md"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/assistant/src/channels/controls.test.ts",
+      "executed": true,
+      "result": "Support and privacy phrases route to help and privacy; longer sentences stay null. With channel-draft-controls.test.ts: 11 pass, 81 expects."
+    },
+    {
+      "kind": "test",
+      "path": "apps/api/src/communications/whatsapp-platform-runtime.test.ts",
+      "executed": true,
+      "result": "15 pass, 62 expects, including STOP using the stop path when present and the existing revoke-before-config cases."
+    },
+    {
+      "kind": "test",
+      "path": "apps/api/src/assistant/channel-controls.integration.test.ts",
+      "executed": false,
+      "result": "Not run: requires QA_ACCESS_ACCEPTANCE_DATABASE_HOST, which is not configured here. STOP receipt detection and the disconnect business list are therefore unproven against a database."
+    }
+  ]
+}
