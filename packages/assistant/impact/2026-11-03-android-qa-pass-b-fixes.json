@@ -1,0 +1,43 @@
+{
+  "version": 1,
+  "id": "2026-11-03-android-qa-pass-b-fixes",
+  "tickets": ["H02"],
+  "summary": "Android device-test fixes from the 2 Nov queue pass B (Q11 My images, Q3 Ask draft picture). catalog.photos.gallery accepts the optional infinite-query paging direction its strict schema refused, so mobile My images loads (95c18fa45). Mobile catalog photo upload passes a typed array to Crypto.digest and uses an AbortController timer instead of AbortSignal.timeout, both of which failed on Android/Hermes; the New image / Image details sheet pads above the keyboard and caps its height in pixels so Title, Category and Add to My images stay reachable (d8aaef49). The Ask product draft picture placeholder stops scaling at 1.3x inside its fixed 64pt thumb at large text.",
+  "noAssistantImpact": "No capability, tool, prompt or write path changes. The gallery input change only accepts a client paging hint; upload and sheet fixes are client transport and layout; the Ask draft picture change is placeholder text scaling only.",
+  "capabilities": [],
+  "procedures": [
+    {
+      "path": "catalog.photos.gallery",
+      "status": "form_only",
+      "reason": "Input gains an optional direction (forward or backward) that useInfiniteQuery always sends; output and permissions unchanged. My images stays an app picker with no assistant tool."
+    }
+  ],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/product-service-catalog-items.md",
+      "note": "My images behaviour unchanged; fixes make the documented mobile flow work on Android."
+    },
+    {
+      "topic": "api",
+      "status": "local_only",
+      "path": ".brain/qa/pending-ui-test-ledger.md",
+      "note": "Q11 row covers the My images gallery contract retested on device."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "apps/api/src/schemas/catalog-photos.test.ts",
+      "executed": true,
+      "result": "4 pass, 0 fail, including the gallery direction test."
+    },
+    {
+      "kind": "run",
+      "path": "Android emulator-5556, Sweet Crumbs Bakery (Demo QA) owner, 200% text",
+      "executed": true,
+      "result": "After the API restart: My images lists, uploads a QA fixture image with title and category (APPROVED, gallery-only), edits details and removes it; New image sheet stays above the keyboard; Ask draft picture shows None inside its thumb."
+    }
+  ]
+}
