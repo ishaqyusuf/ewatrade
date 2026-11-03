@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "id": "2026-11-03-whatsapp-form-phrases-payment-report-guard",
+  "tickets": ["H02"],
+  "summary": "WhatsApp gaps from Workshop ewatrade/assistant/conversations v2 (revision 378e5ca2), families 16 and 18. (1) The WhatsApp form launcher accepts the phrases the design uses: an optional a/an/new between the verb and the noun and a trailing full stop or ! (\"record a sale\", \"Add a customer.\", \"add new product\", \"record an expense!\"). Matching stays exact, so \"record a sale of bread for 150\" still goes to the model. (2) The general prompt now says a customer's \"I have paid\" report on a payment link is a claim that is confirmed or marked not received in EwaTrade on the payment report, and that the assistant never drafts payment_record or another payment for it. Local only; no Meta Flow, provider, OTP or deployment change.",
+  "capabilities": [
+    {
+      "id": "sales.payment_links.create",
+      "change": "unchanged",
+      "rollout": "source",
+      "note": "Prompt guidance only: payment reports from customers are confirmed in EwaTrade, never in chat, and never become a payment_record draft. The capability's action, roles, clients and rollout are unchanged."
+    }
+  ],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/whatsapp-assistant-system-design.md"
+    },
+    {
+      "topic": "capability",
+      "status": "local_only",
+      "path": ".brain/features/whatsapp-assistant-system-design.md",
+      "note": "3 Nov gap implementation section lists the form phrases and the payment-report guard."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "apps/api/src/assistant/channel-flow-state.test.ts",
+      "executed": true,
+      "result": "4 pass, 31 expects: a/an/new and trailing punctuation launch the form; requests with extra words still return null."
+    }
+  ]
+}

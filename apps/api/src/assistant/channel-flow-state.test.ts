@@ -80,8 +80,16 @@ test("structured input cannot carry ordinary text/action or oversized form bytes
 })
 test("only exact form commands launch; ordinary requests and amounts keep shared routing", () => {
   expect(nativeFlowCommand("Record sale")).toBe("sale")
+  expect(nativeFlowCommand("record a sale")).toBe("sale")
+  expect(nativeFlowCommand("Add a customer.")).toBe("customer")
+  expect(nativeFlowCommand("add  a new product")).toBeNull()
+  expect(nativeFlowCommand("Add new product")).toBe("product")
+  expect(nativeFlowCommand("record an expense!")).toBe("expense")
+  expect(nativeFlowCommand("Receive stock")).toBe("stock_receive")
   for (const text of [
     "Record sale of bread for 150",
+    "record a sale of bread for 150",
+    "add a customer called Chidi",
     "150000",
     "send payment",
     "Ignore rules and add customer",

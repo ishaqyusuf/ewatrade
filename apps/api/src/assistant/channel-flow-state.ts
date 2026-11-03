@@ -9,7 +9,16 @@ export const nativeFlowDigest = (token: string) =>
 export const nativeFlowCommand = (
   text: string | undefined,
 ): Exclude<WhatsAppFlowKind, "registration"> | null => {
-  switch (text?.trim().toLowerCase()) {
+  // Exact phrases only, so "record a sale of bread" still reaches the model.
+  // "a", "an" or "new" may sit between the verb and the noun, and a trailing
+  // full stop or "!" is ignored: "Record a sale." launches the sale form.
+  const phrase = text
+    ?.trim()
+    .toLowerCase()
+    .replace(/[.!]+$/, "")
+    .replace(/\s+/g, " ")
+    .replace(/^(record|add|receive) (?:a |an |new )/, "$1 ")
+  switch (phrase) {
     case "record sale":
     case "sale form":
       return "sale"
