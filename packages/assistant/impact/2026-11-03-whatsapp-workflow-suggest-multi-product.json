@@ -1,0 +1,66 @@
+{
+  "version": 1,
+  "id": "2026-11-03-whatsapp-workflow-suggest-multi-product",
+  "tickets": ["H02"],
+  "summary": "Owner decisions for the released WhatsApp Setup/Product workflows (Workshop ewatrade/assistant/conversations family 10, scenes p-biz and p-native). (1) Suggest, don't start: the workflow reply renderer whatsapp-workflow-v3 ends a draft list with one reply button such as Review 3 drafts when 1-3 saved drafts are ready for a chat review (complete, not money accounts, openings, photos, options or other rich records). Its tap is the saved choice text Review drafts k1, k2, k3, which the reply-choice turn hands to the workflow turn exactly as if typed; the tap is bound to that sent last chunk (same outbox, provider message, binding, authority, 10-minute lifetime, no newer reply) and the source reply is re-rendered from current canonical state and must match the sent chunk digest, so any draft change expires it. A stale or invalid tap answers That choice expired. Nothing was changed. Drafts are never picked silently; with more than 3 ready, the reply names the first 3 and says how to choose others. The typed fallback is printed in the reply, so it still works when the body is too long for buttons. v2/v1 rows pending at deploy still render byte-identically without a button. (2) Money accounts stay in the app: the Setup review (renderer whatsapp-workflow-action-review-v3) adds a separate line Money accounts: Cash till, GTBank — confirm these in EwaTrade with the saved-workflow app link when the draft holds open money accounts; they are never part of a chat selection or button. Pending v2 reviews (5-minute life) are refused after deploy. (3) Product mode up to 3: a linked WhatsApp Product conversation may stage up to three products (keys product, product-2, product-3) and one review Save all 3 / Cancel (change one by typing the fix) commits each through the canonical commitProductConversationInTransaction in one transaction, all-or-nothing; the first product keeps the app's clientOperationId product-<conversation>, others use product-<conversation>-<key>; the conversation completes when every product is saved. The app's own Product chat is unchanged (one product, key product, same prompt text and prompt version, same commit rule). The WhatsApp Setup prompt also asks the p-biz grouped questions (what you sell, how customers pay, pay later) one short message at a time. No schema change.",
+  "noAssistantImpact": "No capability, procedure, role or rollout change; coverage is current. Only WhatsApp-channel workflow prompts change (Product: up to 3 products, prompt version suffix product-multi-v1; Setup: grouped interview, suffix whatsapp-setup-interview-v1). The suggestion button only reproduces an existing typed command and never confirms; saves still need the exact signed workflow review proof.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/whatsapp-assistant-system-design.md"
+    },
+    {
+      "topic": "capability",
+      "status": "not_applicable",
+      "path": "packages/assistant/src/capabilities/COVERAGE.md",
+      "note": "assistant:coverage --check is current with APP_ENV=local; no capability, procedure, role or rollout change."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/assistant/src/channels/workflow-suggest-multi-product.test.ts",
+      "executed": true,
+      "result": "8 pass: Setup reply suggests Review 3 drafts whose text parses to exactly those keys and becomes button wa-reply:<outbox>:1; money accounts never selected; more than 3 ready names the first 3; no button when nothing is ready, for a single-draft review or for v2; Product reply holds 3 products, a 4th or foreign key falls back to app review; Product review Save all 3 and rich product refusal; Setup review money-accounts line with app link; app Product prompt unchanged."
+    },
+    {
+      "kind": "test",
+      "path": "packages/assistant/src/setup/product-limit.test.ts",
+      "executed": true,
+      "result": "3 pass: app Product chat still stages exactly one product; WhatsApp limit 3 assigns product, product-2, product-3, updates by name, refuses a 4th and services."
+    },
+    {
+      "kind": "test",
+      "path": "apps/api/src/assistant/channel-workflow-multi-product.test.ts",
+      "executed": true,
+      "result": "2 pass (placeholder EWATRADE_DATABASE_URL): per-product canonical operation identities; selection of up to 3 exact Product drafts, others refused."
+    },
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/assistant-whatsapp/workflow-request-text.test.ts",
+      "executed": true,
+      "result": "2 pass: typed text is used as is; a tap reads only this turn's own saved single-text user message."
+    },
+    {
+      "kind": "test",
+      "path": "packages/assistant/src/channels/workflow.test.ts",
+      "executed": true,
+      "result": "All packages/assistant/src/channels tests: 148 pass. With product/contracts, setup and db workflow-action-reviews tests: 93 pass, 2 fail in setup/guided.test.ts (prompt rule numbering in setup/prompt.ts, untouched here)."
+    },
+    {
+      "kind": "test",
+      "path": "apps/api/src/assistant/channel-reply-choice-turn.test.ts",
+      "executed": true,
+      "result": "With channel-workflow-action-turn, channel-workflow-command, channel-workflow-multi-product, channel-workflow-turn, chat-route, channel-delivery, channel-turn (placeholder database URL): 45 pass."
+    },
+    {
+      "kind": "test",
+      "path": "apps/api/src/assistant/channel-workflow-action.integration.test.ts",
+      "executed": false,
+      "result": "Not run: requires QA_ACCESS_ACCEPTANCE_DATABASE_HOST, which is not configured. The suggestion tap round trip, delivery buttons and the three-product commit are unproven against a database and a real WhatsApp device."
+    }
+  ]
+}

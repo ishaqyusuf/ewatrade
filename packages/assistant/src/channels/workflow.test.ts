@@ -65,8 +65,15 @@ test("formatted workflow replies retain a byte-compatible legacy renderer for pe
     ...options,
     rendererVersion: "whatsapp-workflow-v1",
   })
-  expect(current.version).toBe("whatsapp-workflow-v2")
+  const prior = renderWhatsAppWorkflowReply(input, {
+    ...options,
+    rendererVersion: "whatsapp-workflow-v2",
+  })
+  expect(current.version).toBe("whatsapp-workflow-v3")
+  expect(prior.version).toBe("whatsapp-workflow-v2")
   expect(legacy.version).toBe("whatsapp-workflow-v1")
+  expect(prior.chunks.join("\n")).toContain("Assistant draft guidance:")
+  expect(prior.choices).toBeUndefined()
   expect(current.chunks.join("\n")).toContain("*Missing price*")
   expect(legacy.chunks.join("\n")).toContain(
     "Assistant draft guidance:\n\nMissing price",
@@ -228,15 +235,23 @@ test("bounded draft listing preserves state/missing facts and ignores settled to
     })),
   }
   const first = body(many)
+  const prior = renderWhatsAppWorkflowReply(many, {
+    ...options,
+    rendererVersion: "whatsapp-workflow-v2",
+  }).chunks.join("\n")
   expect(first).toContain("Setup draft revision: 7")
+  expect(first).toContain(
+    "To review, send Review drafts with up to 3 draft keys.",
+  )
+  expect(first).toContain("yes or proceed never confirms anything")
   expect(first).toContain("Product 0 · PRODUCT · NEEDS_INPUT")
   expect(first).toContain("More saved drafts: Draft list page 2")
   expect(first).not.toContain("Product 4")
   expect(first).not.toContain("not-display-data")
-  expect(first).toContain("If WhatsApp returns a complete confirmation review")
-  expect(first).toContain("reply to that exact message")
-  expect(first).toContain("If no confirmation review is issued")
-  expect(first).toContain(
+  expect(prior).toContain("If WhatsApp returns a complete confirmation review")
+  expect(prior).toContain("reply to that exact message")
+  expect(prior).toContain("If no confirmation review is issued")
+  expect(prior).toContain(
     "failed additions, retries and partial-success follow-up require app review",
   )
   expect(first).not.toContain("final confirmation stay in EwaTrade")
@@ -283,7 +298,7 @@ test("selected product review keeps exact saved units, variant stock and money w
   const shown = result.chunks.join("\n")
   expect(shown).toContain("nothing added by this summary")
   expect(shown).toContain(
-    "A draft summary, yes or proceed never confirms anything",
+    "a draft summary, yes or proceed never confirms anything",
   )
   for (const fact of [
     "Opening stock: 12.125 Piece",

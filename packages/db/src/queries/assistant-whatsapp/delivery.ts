@@ -53,10 +53,7 @@ import {
   WHATSAPP_WEB_REVIEW_RESULT_VERSION,
   WHATSAPP_WEB_REVIEW_VERSION,
 } from "@ewatrade/assistant/channels/review-links"
-import {
-  WHATSAPP_WORKFLOW_LEGACY_RENDER_VERSION,
-  WHATSAPP_WORKFLOW_RENDER_VERSION,
-} from "@ewatrade/assistant/channels/workflow"
+import { supportedWhatsAppWorkflowRenderVersion } from "@ewatrade/assistant/channels/workflow"
 import {
   WHATSAPP_WORKFLOW_ACTION_DISABLED_REPLY,
   WHATSAPP_WORKFLOW_ACTION_INVALID_REPLY,
@@ -980,8 +977,7 @@ export function beginAssistantWhatsAppDelivery(
               review.proposal.expiresAt.getTime(),
             )
           } else if (
-            row.rendererVersion === WHATSAPP_WORKFLOW_RENDER_VERSION ||
-            row.rendererVersion === WHATSAPP_WORKFLOW_LEGACY_RENDER_VERSION
+            supportedWhatsAppWorkflowRenderVersion(row.rendererVersion)
           ) {
             if (
               binding.purpose !== "SETUP" &&
@@ -1008,6 +1004,18 @@ export function beginAssistantWhatsAppDelivery(
               rendered.chunks[row.chunkIndex] !== body
             )
               return cancel("cancelled", "SAVED_REPLY_CHANGED")
+            // One saved "Review N drafts" suggestion, bound to this exact last chunk.
+            if (
+              rendered.choices?.length &&
+              row.chunkIndex === row.chunkCount - 1 &&
+              body.length <= 1024
+            ) {
+              const buttons = whatsAppReplyChoiceButtons(
+                row.id,
+                rendered.choices,
+              )
+              if (buttons.length) providerButtons = buttons
+            }
           } else if (
             !supportedWhatsAppReplyRenderer(row.rendererVersion) ||
             !["reply", "app_review"].includes(row.renderKind)

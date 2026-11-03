@@ -7,6 +7,20 @@ import { setupProductQuestions } from "./variants"
 
 export const SETUP_ASSISTANT_PROMPT_VERSION = "ewatrade-setup-assistant-v14"
 export const SETUP_DRAFT_MAX_ENTITIES = 200
+/**
+ * Product-mode draft keys. The app's own Product chat stages only the first; a linked
+ * WhatsApp Product conversation may stage up to all three, one review saves them together.
+ */
+export const PRODUCT_WORKFLOW_DRAFT_KEYS = [
+  "product",
+  "product-2",
+  "product-3",
+] as const
+export const WHATSAPP_PRODUCT_WORKFLOW_LIMIT =
+  PRODUCT_WORKFLOW_DRAFT_KEYS.length
+export function isProductWorkflowDraftKey(key: string) {
+  return (PRODUCT_WORKFLOW_DRAFT_KEYS as readonly string[]).includes(key)
+}
 
 /** Model-facing money is a major-unit decimal; storage is integer minor units. */
 export function majorAmountToMinor(value: string | number | null | undefined) {

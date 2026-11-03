@@ -62,3 +62,15 @@ test("review-link recovery words from an unlinked identity touch no persistence"
       }),
     ).toEqual({ kind: "none" })
 })
+
+test("a Setup or Product suggestion tap from an unlinked identity touches no persistence", async () => {
+  for (const purpose of ["SETUP", "PRODUCT_CREATE"]) {
+    const workflow = {
+      ...unbranded,
+      session: { ...unbranded.session, purpose },
+    } as unknown as GeneralContext
+    await expect(
+      processAssistantWhatsAppReplyChoiceTurn(workflow, lease, inbox),
+    ).rejects.toMatchObject({ code: "UNAUTHORIZED" })
+  }
+})

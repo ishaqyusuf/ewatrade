@@ -5,6 +5,7 @@ import {
 } from "@ewatrade/assistant/channels/instructions"
 import {
   PRODUCT_ASSISTANT_PROMPT_VERSION,
+  PRODUCT_MULTI_CHANNEL_PROMPT_VERSION,
   productAssistantInstructions,
   productWorkflowContextSchema,
 } from "@ewatrade/assistant/product/contracts"
@@ -12,7 +13,10 @@ import {
   SETUP_ATTACHMENTS_PER_MESSAGE,
   SETUP_ATTACHMENT_PART,
 } from "@ewatrade/assistant/setup/attachments"
-import { SETUP_ASSISTANT_PROMPT_VERSION } from "@ewatrade/assistant/setup/contracts"
+import {
+  SETUP_ASSISTANT_PROMPT_VERSION,
+  WHATSAPP_PRODUCT_WORKFLOW_LIMIT,
+} from "@ewatrade/assistant/setup/contracts"
 import type { SetupAssistantDataParts } from "@ewatrade/assistant/setup/messages"
 import { buildSetupAssistantInstructions } from "@ewatrade/assistant/setup/prompt"
 import { createSetupAssistantTools } from "@ewatrade/assistant/setup/tools"
@@ -63,6 +67,13 @@ export { WorkflowTurnError } from "./workflow-turn-contract"
 export type SetupUIMessage = UIMessage<never, SetupAssistantDataParts>
 
 const foregroundDeadlineMs = 45_000
+export const WHATSAPP_SETUP_INTERVIEW_PROMPT_VERSION =
+  "whatsapp-setup-interview-v1"
+
+/** Workshop p-biz: three short grouped questions, one per message, then one draft. */
+export function whatsAppSetupInterviewInstructions() {
+  return " WhatsApp setup interview: when the business basics are unknown, ask at most three short questions, one per message, each answerable with a tap or a few words. First message: one line naming the business, then 'Nothing is saved until you confirm.', then *1.* What do you sell? (products, services or both). Then *2.* How do customers pay you? (cash, transfer, POS). Then *3.* Can customers pay later? Skip any question the owner already answered and never repeat one. After the answers, stage the draft and summarise it in a few short lines. Money accounts are confirmed in EwaTrade, never from chat."
+}
 
 export const workflowTurnInputSchema = z
   .object({
@@ -178,6 +189,11 @@ export async function createWorkflowAssistantTurn(
     )
   const draftId = conversation.setupDraft?.id
   const productMode = conversation.purpose === "PRODUCT_CREATE"
+  // Only a linked WhatsApp Product chat holds up to 3 products; the app keeps one.
+  const channelProductLimit =
+    productMode && options.channel === "whatsapp"
+      ? WHATSAPP_PRODUCT_WORKFLOW_LIMIT
+      : 1
   const productSnapshot = productMode
     ? productWorkflowContextSchema.parse(conversation.workflowContext).snapshot
     : null
@@ -251,7 +267,7 @@ export async function createWorkflowAssistantTurn(
             ? PRODUCT_ASSISTANT_PROMPT_VERSION
             : SETUP_ASSISTANT_PROMPT_VERSION) +
           (options.channel === "whatsapp"
-            ? `+${WHATSAPP_ASSISTANT_PROMPT_VERSION}`
+            ? `+${WHATSAPP_ASSISTANT_PROMPT_VERSION}+${productMode ? PRODUCT_MULTI_CHANNEL_PROMPT_VERSION : WHATSAPP_SETUP_INTERVIEW_PROMPT_VERSION}`
             : ""),
         provider: model.provider,
         requestId: body.requestId,
@@ -405,6 +421,7 @@ export async function createWorkflowAssistantTurn(
               ),
             }),
           productOnly: productMode,
+          productLimit: channelProductLimit,
           productSeed: productSnapshot?.form,
           context: business,
           sourceMessageId: body.message.id,
@@ -450,11 +467,14 @@ export async function createWorkflowAssistantTurn(
           model: model.model,
           instructions:
             (productMode
-              ? productAssistantInstructions(business)
+              ? productAssistantInstructions(business, {
+                  maxProducts: channelProductLimit,
+                })
               : buildSetupAssistantInstructions(business)) +
             (options.channel === "whatsapp"
               ? whatsAppPresentationInstructions() +
-                whatsAppCollectionInstructions()
+                whatsAppCollectionInstructions() +
+                (productMode ? "" : whatsAppSetupInterviewInstructions())
               : ""),
           tools,
           stopWhen: stepCountIs(8),

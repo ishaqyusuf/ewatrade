@@ -1,7 +1,10 @@
+import { isExactDecimal } from "@ewatrade/utils/exact-decimal"
 import { z } from "zod"
 import { generalMoney } from "../general/contracts"
 import { readRecordOriginSchema } from "../general/read-record-target"
 import {
+  deriveSetupEntityState,
+  isProductWorkflowDraftKey,
   setupEntityPayloadSchema,
   setupOpenQuestionSchema,
 } from "../setup/contracts"
@@ -9,8 +12,23 @@ import { trustedAssistantAppOrigin } from "./conversation-links"
 import { chunkWhatsAppFormattedReply, whatsAppModelText } from "./presentation"
 import { chunkWhatsAppReply, whatsAppPlainText } from "./render"
 
-export const WHATSAPP_WORKFLOW_RENDER_VERSION = "whatsapp-workflow-v2"
+/** v3 ends a draft list with one "Review N drafts" suggestion; v2/v1 rows still render as sent. */
+export const WHATSAPP_WORKFLOW_RENDER_VERSION = "whatsapp-workflow-v3"
+export const WHATSAPP_WORKFLOW_PRIOR_RENDER_VERSION = "whatsapp-workflow-v2"
 export const WHATSAPP_WORKFLOW_LEGACY_RENDER_VERSION = "whatsapp-workflow-v1"
+export type WhatsAppWorkflowRenderVersion =
+  | typeof WHATSAPP_WORKFLOW_RENDER_VERSION
+  | typeof WHATSAPP_WORKFLOW_PRIOR_RENDER_VERSION
+  | typeof WHATSAPP_WORKFLOW_LEGACY_RENDER_VERSION
+export function supportedWhatsAppWorkflowRenderVersion(
+  value: string,
+): value is WhatsAppWorkflowRenderVersion {
+  return (
+    value === WHATSAPP_WORKFLOW_RENDER_VERSION ||
+    value === WHATSAPP_WORKFLOW_PRIOR_RENDER_VERSION ||
+    value === WHATSAPP_WORKFLOW_LEGACY_RENDER_VERSION
+  )
+}
 export const whatsAppWorkflowPurposeSchema = z.enum(["SETUP", "PRODUCT_CREATE"])
 export type WhatsAppWorkflowPurpose = z.infer<
   typeof whatsAppWorkflowPurposeSchema
@@ -102,6 +120,7 @@ export function whatsAppWorkflowNativeWritesEnabled(
 }
 
 const id = z.string().min(1).max(128)
+export const WHATSAPP_WORKFLOW_ACTION_MAX_SELECTION = 3
 export const whatsAppWorkflowReplySchema = z
   .object({
     purpose: whatsAppWorkflowPurposeSchema,
@@ -139,11 +158,11 @@ export const whatsAppWorkflowReplySchema = z
   .strict()
 export type WhatsAppWorkflowReply = z.infer<typeof whatsAppWorkflowReplySchema>
 export type WhatsAppWorkflowRenderedReply = {
-  version:
-    | typeof WHATSAPP_WORKFLOW_RENDER_VERSION
-    | typeof WHATSAPP_WORKFLOW_LEGACY_RENDER_VERSION
+  version: WhatsAppWorkflowRenderVersion
   kind: "reply" | "app_review"
   chunks: string[]
+  /** v3 only: one reply button on the last chunk; its text is the typed command. */
+  choices?: Array<{ title: string; text: string }>
 }
 
 export function parseWhatsAppWorkflowRequest(text: string) {
@@ -281,13 +300,12 @@ export function renderWhatsAppWorkflowReply(
     currentScope: { tenantId: string; storeId: string }
     scopeLabel: string
     trustedAppOrigin: string
-    rendererVersion?:
-      | typeof WHATSAPP_WORKFLOW_RENDER_VERSION
-      | typeof WHATSAPP_WORKFLOW_LEGACY_RENDER_VERSION
+    rendererVersion?: WhatsAppWorkflowRenderVersion
   },
 ): WhatsAppWorkflowRenderedReply {
   const version = options.rendererVersion ?? WHATSAPP_WORKFLOW_RENDER_VERSION
   const legacy = version === WHATSAPP_WORKFLOW_LEGACY_RENDER_VERSION
+  const suggests = version === WHATSAPP_WORKFLOW_RENDER_VERSION
   const narrationText = legacy ? whatsAppPlainText : whatsAppModelText
   const fallback = (savedLink?: string): WhatsAppWorkflowRenderedReply => ({
     version,
@@ -304,9 +322,10 @@ export function renderWhatsAppWorkflowReply(
     reply.origin.tenantId !== options.currentScope.tenantId ||
     reply.origin.storeId !== options.currentScope.storeId ||
     (reply.purpose === "PRODUCT_CREATE" &&
-      (reply.entities.length > 1 ||
+      (reply.entities.length > WHATSAPP_WORKFLOW_ACTION_MAX_SELECTION ||
         reply.entities.some(
-          (entity) => entity.key !== "product" || entity.kind !== "PRODUCT",
+          (entity) =>
+            !isProductWorkflowDraftKey(entity.key) || entity.kind !== "PRODUCT",
         )))
   )
     return fallback()
@@ -336,11 +355,16 @@ export function renderWhatsAppWorkflowReply(
       return fallback(link)
   }
   const request = parseWhatsAppWorkflowRequest(reply.requestText)
+  const suggestion =
+    suggests && request?.kind !== "review"
+      ? whatsAppWorkflowReviewSuggestion(reply.entities, reply.purpose)
+      : undefined
   const lines = [
     options.scopeLabel,
     `${reply.purpose === "SETUP" ? "Setup" : "Product"} draft revision: ${reply.revision}`,
   ]
-  if (narration.length) lines.push("Assistant draft guidance:", ...narration)
+  if (narration.length)
+    lines.push(...(suggests ? [] : ["Assistant draft guidance:"]), ...narration)
   if (request?.kind === "review") {
     const entity = reply.entities.find((entry) => entry.key === request.key)
     const detail = entity && entityLines(entity, reply.currencyCode)
@@ -379,9 +403,30 @@ export function renderWhatsAppWorkflowReply(
     lines.push(
       "This product retains richer form details. Continue its exact form in EwaTrade.",
     )
+  if (suggests) {
+    if (suggestion) {
+      lines.push(
+        `Ready to review: ${suggestion.names.join(", ")}.\nTap ${suggestion.title}, or send: ${suggestion.text}`,
+      )
+      if (suggestion.readyCount > suggestion.keys.length)
+        lines.push(
+          `${suggestion.readyCount - suggestion.keys.length} more ready. To choose others, send Review drafts with up to 3 draft keys.`,
+        )
+    } else lines.push("To review, send Review drafts with up to 3 draft keys.")
+    lines.push(
+      "Send corrections here to update the saved draft. Nothing is saved until you confirm a review; a draft summary, yes or proceed never confirms anything.",
+    )
+    if (
+      reply.purpose === "SETUP" &&
+      whatsAppWorkflowAppOnlyMoneyAccounts(reply.entities).length
+    )
+      lines.push("Money accounts are confirmed in EwaTrade.")
+  } else
+    lines.push(
+      "To request an exact review: Review draft <draft key>, or Review drafts <key1>, <key2>, <key3> for up to three selected Setup drafts. Send missing or corrected details to update the saved draft. Setup can skip an area when you ask.",
+      "If WhatsApp returns a complete confirmation review with its own instructions, reply to that exact message using its Confirm or Cancel command and code. A draft summary, yes or proceed never confirms anything. If no confirmation review is issued, continue in the exact saved workflow in EwaTrade. Rich or incomplete records, failed additions, retries and partial-success follow-up require app review.",
+    )
   lines.push(
-    "To request an exact review: Review draft <draft key>, or Review drafts <key1>, <key2>, <key3> for up to three selected Setup drafts. Send missing or corrected details to update the saved draft. Setup can skip an area when you ask.",
-    "If WhatsApp returns a complete confirmation review with its own instructions, reply to that exact message using its Confirm or Cancel command and code. A draft summary, yes or proceed never confirms anything. If no confirmation review is issued, continue in the exact saved workflow in EwaTrade. Rich or incomplete records, failed additions, retries and partial-success follow-up require app review.",
     "Open this saved workflow in EwaTrade; select the original business and Store:",
     link,
   )
@@ -394,8 +439,168 @@ export function renderWhatsAppWorkflowReply(
       chunks: legacy
         ? chunkWhatsAppReply(plain)
         : chunkWhatsAppFormattedReply(plain, 3000),
+      ...(suggestion
+        ? { choices: [{ title: suggestion.title, text: suggestion.text }] }
+        : {}),
     }
   } catch {
     return fallback(link)
   }
+}
+
+/** Explicit user-selected keys only. Omitted keys, wildcards and duplicate selections never mean all. */
+export function parseWhatsAppWorkflowReviewSelection(text: string | undefined) {
+  const value = text?.trim()
+  if (!value || !/^review drafts?(?:\b|[.!?:])/i.test(value)) return null
+  const match = /^review (draft|drafts) (.+)$/i.exec(value)
+  if (!match) return { kind: "invalid_workflow_selection" as const }
+  const keys = (match[2] ?? "").split(",").map((entry) => entry.trim())
+  if (
+    (match[1]?.toLowerCase() === "draft" && keys.length !== 1) ||
+    !keys.length ||
+    keys.length > WHATSAPP_WORKFLOW_ACTION_MAX_SELECTION ||
+    keys.some(
+      (entry) =>
+        !/^[\p{L}\p{N}][\p{L}\p{N}:._-]{0,139}$/u.test(entry) ||
+        /^(?:all|everything)$/i.test(entry),
+    ) ||
+    new Set(keys).size !== keys.length
+  )
+    return { kind: "invalid_workflow_selection" as const }
+  return { kind: "review_selection" as const, keys }
+}
+
+export type WhatsAppWorkflowDraftView = {
+  key: string
+  kind: string
+  state: string
+  payload: unknown
+  openQuestions: unknown
+  errorCode: string | null
+  committedRecordId: string | null
+}
+/**
+ * Saved drafts a chat review can show and save exactly as they are. Money accounts,
+ * openings, photos, options and other richer records always stay in EwaTrade.
+ */
+export function whatsAppWorkflowDraftChatReady(
+  entity: WhatsAppWorkflowDraftView,
+  purpose: "SETUP" | "PRODUCT_CREATE",
+) {
+  if (
+    !["PROPOSED", "CONFIRMED"].includes(entity.state) ||
+    entity.errorCode ||
+    entity.committedRecordId
+  )
+    return false
+  const parsed = setupEntityPayloadSchema.safeParse(entity.payload)
+  const questions = z
+    .array(setupOpenQuestionSchema)
+    .max(40)
+    .safeParse(entity.openQuestions ?? [])
+  if (
+    !parsed.success ||
+    !questions.success ||
+    parsed.data.kind.toUpperCase() !== entity.kind ||
+    questions.data.some((question) => question.required) ||
+    deriveSetupEntityState(parsed.data, questions.data).state !== "PROPOSED"
+  )
+    return false
+  const payload = parsed.data
+  if (purpose === "PRODUCT_CREATE")
+    return (
+      payload.kind === "product" &&
+      isProductWorkflowDraftKey(entity.key) &&
+      simpleProduct(payload)
+    )
+  if (payload.kind === "money_account") return false
+  if (payload.kind === "customer") return !payload.opening
+  if (payload.illustrationId) return false
+  if (payload.kind === "service")
+    return !(payload.pricing === "quote" && payload.priceMinor !== undefined)
+  return simpleProduct(payload)
+}
+function simpleProduct(
+  payload: Extract<
+    z.infer<typeof setupEntityPayloadSchema>,
+    { kind: "product" }
+  >,
+) {
+  return !(
+    payload.illustrationId ||
+    payload.photoAttachmentId ||
+    payload.options?.length ||
+    payload.variants?.length ||
+    payload.sellingUnits?.length ||
+    (payload.openingStock !== undefined &&
+      (!isExactDecimal(payload.openingStock, { maxScale: 2 }) ||
+        payload.openingStock.startsWith("-")))
+  )
+}
+/**
+ * Suggest, never start: names the first ready drafts in saved order. The returned
+ * text is exactly the typed `Review drafts` command for those keys.
+ */
+export function whatsAppWorkflowReviewSuggestion(
+  entities: readonly WhatsAppWorkflowDraftView[],
+  purpose: "SETUP" | "PRODUCT_CREATE",
+) {
+  const ready = entities.filter((entity) =>
+    whatsAppWorkflowDraftChatReady(entity, purpose),
+  )
+  const chosen = ready.slice(0, WHATSAPP_WORKFLOW_ACTION_MAX_SELECTION)
+  if (!chosen.length) return undefined
+  const keys = chosen.map((entity) => entity.key)
+  const text = `Review drafts ${keys.join(", ")}`
+  const parsed = parseWhatsAppWorkflowReviewSelection(text)
+  if (
+    parsed?.kind !== "review_selection" ||
+    parsed.keys.join("\n") !== keys.join("\n")
+  )
+    return undefined
+  return {
+    keys,
+    names: chosen.map(
+      (entity) => setupEntityPayloadSchema.parse(entity.payload).name,
+    ),
+    readyCount: ready.length,
+    title: keys.length === 1 ? "Review draft" : `Review ${keys.length} drafts`,
+    text,
+  }
+}
+/** Open setup money accounts, named for the app-only line of a Setup review. */
+export function whatsAppWorkflowAppOnlyMoneyAccounts(
+  entities: readonly WhatsAppWorkflowDraftView[],
+) {
+  return entities.flatMap((entity) => {
+    if (entity.kind !== "MONEY_ACCOUNT" || entity.committedRecordId) return []
+    const parsed = setupEntityPayloadSchema.safeParse(entity.payload)
+    return parsed.success &&
+      parsed.data.kind === "money_account" &&
+      whatsAppPlainText(parsed.data.name) === parsed.data.name &&
+      !parsed.data.name.includes("…")
+      ? [parsed.data.name]
+      : []
+  })
+}
+/** Same app-only part for staging, issue and consumption, so the review body is stable. */
+export function whatsAppWorkflowReviewAppOnly(
+  input: {
+    purpose: "SETUP" | "PRODUCT_CREATE"
+    conversationId: string
+    origin: { tenantId: string; storeId: string }
+    entities: readonly WhatsAppWorkflowDraftView[]
+  },
+  options: {
+    trustedAppOrigin: string
+    currentScope: { tenantId: string; storeId: string }
+  },
+) {
+  if (input.purpose !== "SETUP") return undefined
+  const moneyAccounts = whatsAppWorkflowAppOnlyMoneyAccounts(
+    input.entities,
+  ).slice(0, 20)
+  if (!moneyAccounts.length) return undefined
+  const link = workflowConversationAppLink(input, options)
+  return link ? { moneyAccounts, link } : undefined
 }

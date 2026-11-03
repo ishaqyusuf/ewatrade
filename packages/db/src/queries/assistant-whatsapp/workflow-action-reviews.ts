@@ -26,12 +26,18 @@ import {
   whatsAppWorkflowActionButtonId,
   whatsAppWorkflowActionButtonTitles,
   whatsAppWorkflowActionSourceSchema,
+  whatsAppWorkflowReviewAppOnly,
 } from "@ewatrade/assistant/channels/workflow-action-review"
 import { productWorkflowContextSchema } from "@ewatrade/assistant/product/contracts"
-import { setupEntityPayloadSchema } from "@ewatrade/assistant/setup/contracts"
+import {
+  WHATSAPP_PRODUCT_WORKFLOW_LIMIT,
+  isProductWorkflowDraftKey,
+  setupEntityPayloadSchema,
+} from "@ewatrade/assistant/setup/contracts"
 import { z } from "zod"
 import type { Prisma } from "../../../generated/prisma/client"
 import { readSetupDraft } from "../assistant"
+import type { DbClient } from "../types"
 import { assistantWhatsAppActionPayloadDigest } from "./action-reviews"
 import { AssistantWhatsAppError } from "./authority"
 import {
@@ -52,6 +58,16 @@ const equal = (left: string, right: string) =>
   Buffer.byteLength(left) === Buffer.byteLength(right) &&
   timingSafeEqual(Buffer.from(left), Buffer.from(right))
 const digest = (value: unknown) => assistantWhatsAppActionPayloadDigest(value)
+/** Same trusted dashboard origin as every saved-workflow link this channel sends. */
+export function workflowTrustedAppOrigin(
+  env: Readonly<Record<string, string | undefined>> = process.env,
+) {
+  return (
+    env.DASHBOARD_URL ??
+    env.NEXT_PUBLIC_DASHBOARD_URL ??
+    "https://dash.ewatrade.com"
+  )
+}
 export const whatsAppWorkflowActionIngressContentSchema = z
   .object({
     type: z.literal("workflow_action"),
@@ -162,6 +178,40 @@ export function assistantWhatsAppWorkflowWritesEnabled(
     whatsAppWorkflowNativeWritesEnabled(workflowPurpose, env)
   )
 }
+const requestTextContent = z
+  .object({ type: z.literal("text"), text: z.string().min(1).max(8000) })
+  .passthrough()
+/**
+ * The owner's request text for a workflow turn. Typed text is the inbox text; a tapped
+ * saved suggestion is the exact command the turn persisted as this inbox's user message,
+ * so a tap and the same typed command select exactly the same drafts.
+ */
+export async function assistantWhatsAppWorkflowRequestText(
+  db: DbClient,
+  inbox: { content: unknown; userMessageId: string },
+  conversationId: string,
+) {
+  const typed = requestTextContent.safeParse(inbox.content)
+  if (typed.success) return typed.data.text
+  if (
+    !inbox.content ||
+    typeof inbox.content !== "object" ||
+    !("type" in inbox.content) ||
+    inbox.content.type !== "reply_choice"
+  )
+    return undefined
+  const message = await db.assistantMessage.findFirst({
+    where: { id: inbox.userMessageId, conversationId, role: "user" },
+    select: { parts: true },
+  })
+  const parts = z
+    .array(
+      z.object({ type: z.literal("text"), text: z.string().min(1).max(8000) }),
+    )
+    .length(1)
+    .safeParse(message?.parts)
+  return parts.success ? parts.data[0]?.text : undefined
+}
 type Entity = Awaited<ReturnType<typeof readSetupDraft>>["entities"][number]
 /** API supplies the existing canonical prepared-command digest; DB never imports app adapters. */
 export type WhatsAppWorkflowCommandProjector = (
@@ -234,7 +284,11 @@ async function currentSource(
   if (
     draft.revision !== source.draftRevision ||
     (source.purpose === "PRODUCT_CREATE" &&
-      (draft.entities.length !== 1 ||
+      (draft.entities.length < 1 ||
+        draft.entities.length > WHATSAPP_PRODUCT_WORKFLOW_LIMIT ||
+        draft.entities.some(
+          (entity) => !isProductWorkflowDraftKey(entity.key),
+        ) ||
         source.workflowContextHash !== digest(conversation.workflowContext)))
   )
     throw new AssistantWhatsAppError("CONFLICT")
@@ -292,6 +346,21 @@ async function currentSource(
       ? productWorkflowContextSchema.safeParse(conversation.workflowContext)
       : null
   if (product && !product.success) throw new AssistantWhatsAppError("CONFLICT")
+  const appOnly = whatsAppWorkflowReviewAppOnly(
+    {
+      purpose: source.purpose,
+      conversationId: source.conversationId,
+      origin: source.origin,
+      entities: draft.entities,
+    },
+    {
+      trustedAppOrigin: workflowTrustedAppOrigin(),
+      currentScope: {
+        tenantId: resolved.scope.tenantId,
+        storeId: resolved.scope.storeId,
+      },
+    },
+  )
   return {
     source,
     businessName: conversation.tenant.name,
@@ -299,6 +368,7 @@ async function currentSource(
     currencyCode: conversation.store.currencyCode,
     records,
     ...(product?.success ? { productSnapshot: product.data.snapshot } : {}),
+    ...(appOnly ? { appOnly } : {}),
   }
 }
 type IssueInput = {
@@ -339,17 +409,16 @@ export async function issueAssistantWhatsAppWorkflowReviewInTransaction(
     where: { id: input.reviewOutboxId },
     include: { inbox: true },
   })
-  const request =
-    outbox?.inbox.content &&
-    typeof outbox.inbox.content === "object" &&
-    !Array.isArray(outbox.inbox.content) &&
-    "text" in outbox.inbox.content
-      ? parseWhatsAppWorkflowReviewSelection(
-          typeof outbox.inbox.content.text === "string"
-            ? outbox.inbox.content.text
-            : undefined,
-        )
-      : null
+  const requestText = outbox
+    ? await assistantWhatsAppWorkflowRequestText(
+        tx,
+        outbox.inbox,
+        source.conversationId,
+      )
+    : undefined
+  const request = requestText
+    ? parseWhatsAppWorkflowReviewSelection(requestText)
+    : null
   const rendered = renderWhatsAppWorkflowActionReviewBody(
     { ...projection, expiresAt: input.expiresAt.toISOString() },
     { now: now.getTime() },

@@ -8,7 +8,9 @@ import {
   productRequiresForm,
 } from "../product/contracts"
 import {
+  WHATSAPP_PRODUCT_WORKFLOW_LIMIT,
   deriveSetupEntityState,
+  isProductWorkflowDraftKey,
   setupEntityPayloadSchema,
   setupOpenQuestionSchema,
 } from "../setup/contracts"
@@ -19,11 +21,21 @@ import {
   whatsAppActionCodeSchema,
 } from "./action-review"
 import { whatsAppPlainText } from "./render"
-import { whatsAppWorkflowPurposeSchema } from "./workflow"
+import {
+  WHATSAPP_WORKFLOW_ACTION_MAX_SELECTION,
+  whatsAppWorkflowPurposeSchema,
+} from "./workflow"
+export {
+  WHATSAPP_WORKFLOW_ACTION_MAX_SELECTION,
+  parseWhatsAppWorkflowReviewSelection,
+  whatsAppWorkflowAppOnlyMoneyAccounts,
+  whatsAppWorkflowDraftChatReady,
+  whatsAppWorkflowReviewAppOnly,
+  whatsAppWorkflowReviewSuggestion,
+} from "./workflow"
 
 export const WHATSAPP_WORKFLOW_ACTION_REVIEW_VERSION =
-  "whatsapp-workflow-action-review-v2"
-export const WHATSAPP_WORKFLOW_ACTION_MAX_SELECTION = 3
+  "whatsapp-workflow-action-review-v3"
 const id = z.string().min(1).max(128)
 const key = z.string().min(1).max(140)
 const hash = z.string().regex(/^[a-f0-9]{64}$/)
@@ -75,11 +87,12 @@ export const whatsAppWorkflowActionSourceSchema = z
       })
     if (
       source.purpose === "PRODUCT_CREATE" &&
-      (source.selection.length !== 1 || source.selection[0]?.key !== "product")
+      (source.selection.length > WHATSAPP_PRODUCT_WORKFLOW_LIMIT ||
+        source.selection.some((entry) => !isProductWorkflowDraftKey(entry.key)))
     )
       context.addIssue({
         code: "custom",
-        message: "Product mode reviews one saved product.",
+        message: "Product mode reviews up to three saved products.",
       })
   })
 export type WhatsAppWorkflowActionSource = z.infer<
@@ -94,6 +107,17 @@ export const whatsAppWorkflowActionReviewSchema = z
     expiresAt: z.iso.datetime(),
     /** Canonical actual snapshot is required for PRODUCT_CREATE; richer details stay app-review. */
     productSnapshot: productFormSnapshotSchema.optional(),
+    /**
+     * Setup money accounts are never confirmed from chat. The review only names the
+     * draft's open accounts and links the exact saved workflow where they are confirmed.
+     */
+    appOnly: z
+      .object({
+        moneyAccounts: z.array(z.string().min(1).max(160)).min(1).max(20),
+        link: z.url().max(2000),
+      })
+      .strict()
+      .optional(),
     records: z
       .array(
         selectedSource
@@ -129,28 +153,6 @@ const modePurpose = (mode: string) =>
     : ("PRODUCT_CREATE" as const)
 const purposeMode = (purpose: "SETUP" | "PRODUCT_CREATE") =>
   purpose === "SETUP" ? "setup" : "product"
-
-/** Explicit user-selected keys only. Omitted keys, wildcards and duplicate selections never mean all. */
-export function parseWhatsAppWorkflowReviewSelection(text: string | undefined) {
-  const value = text?.trim()
-  if (!value || !/^review drafts?(?:\b|[.!?:])/i.test(value)) return null
-  const match = /^review (draft|drafts) (.+)$/i.exec(value)
-  if (!match) return { kind: "invalid_workflow_selection" as const }
-  const keys = (match[2] ?? "").split(",").map((entry) => entry.trim())
-  if (
-    (match[1]?.toLowerCase() === "draft" && keys.length !== 1) ||
-    !keys.length ||
-    keys.length > WHATSAPP_WORKFLOW_ACTION_MAX_SELECTION ||
-    keys.some(
-      (entry) =>
-        !/^[\p{L}\p{N}][\p{L}\p{N}:._-]{0,139}$/u.test(entry) ||
-        /^(?:all|everything)$/i.test(entry),
-    ) ||
-    new Set(keys).size !== keys.length
-  )
-    return { kind: "invalid_workflow_selection" as const }
-  return { kind: "review_selection" as const, keys }
-}
 
 /** Parse before the generic action guard. Bare yes/proceed never becomes workflow approval. */
 export function parseWhatsAppTypedWorkflowAction(
@@ -392,13 +394,17 @@ export function renderWhatsAppWorkflowActionReviewBody(
     const snapshot = review.productSnapshot
     if (
       !snapshot ||
+      review.appOnly ||
       snapshot.storeId !== review.source.origin.storeId ||
       productRequiresForm(snapshot) ||
       snapshot.photoAssetIds.length ||
       snapshot.illustrationId ||
-      !productCreationReady(review.records[0]?.payload, snapshot) ||
-      review.records[0]?.payload.kind !== "product" ||
-      (snapshot.category && !review.records[0].categoryLabel)
+      review.records.some(
+        (record) =>
+          record.payload.kind !== "product" ||
+          !productCreationReady(record.payload, snapshot) ||
+          (snapshot.category && !record.categoryLabel),
+      )
     )
       return appReview()
   } else if (review.productSnapshot) return appReview()
@@ -445,8 +451,16 @@ export function renderWhatsAppWorkflowActionReviewBody(
     ),
     `_To change ${numbered ? "one" : "it"}, send the fix by name. This review expires ${expiryLabel(review.expiresAt)}._`,
   )
+  if (review.appOnly)
+    lines.push(
+      "",
+      `Money accounts: ${review.appOnly.moneyAccounts.join(", ")} — confirm these in EwaTrade`,
+    )
   if (!lines.every(exact)) return appReview()
-  const body = lines.join("\n")
+  // The link is checked as a URL above; plain-text cleaning would omit it.
+  const body = review.appOnly
+    ? `${lines.join("\n")}\n${review.appOnly.link}`
+    : lines.join("\n")
   return body.length <= max - WHATSAPP_ACTION_INSTRUCTION_RESERVE_UNITS
     ? {
         kind: "review",
@@ -463,10 +477,10 @@ export function whatsAppWorkflowActionButtonTitles(
   const count = source.selection.length
   return {
     confirm:
-      source.purpose === "PRODUCT_CREATE"
-        ? "Save product"
-        : count > 1
-          ? `Save all ${count}`
+      count > 1
+        ? `Save all ${count}`
+        : source.purpose === "PRODUCT_CREATE"
+          ? "Save product"
           : "Save",
     cancel: "Cancel",
   }

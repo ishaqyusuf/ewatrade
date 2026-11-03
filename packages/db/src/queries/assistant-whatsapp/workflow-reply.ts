@@ -1,6 +1,5 @@
 import {
-  type WHATSAPP_WORKFLOW_LEGACY_RENDER_VERSION,
-  type WHATSAPP_WORKFLOW_RENDER_VERSION,
+  type WhatsAppWorkflowRenderVersion,
   renderWhatsAppWorkflowReply,
   whatsAppWorkflowEnabled,
   whatsAppWorkflowPurposeSchema,
@@ -9,12 +8,8 @@ import {
   productRequiresForm,
   productWorkflowContextSchema,
 } from "@ewatrade/assistant/product/contracts"
-import { z } from "zod"
 import type { DbClient } from "../types"
-
-const textContent = z
-  .object({ type: z.literal("text"), text: z.string().min(1).max(8000) })
-  .passthrough()
+import { assistantWhatsAppWorkflowRequestText } from "./workflow-action-reviews"
 
 /** Owning settlement transaction supplies only exact persisted source IDs and freshly authorized scope. */
 export async function renderAssistantWhatsAppWorkflowReply(
@@ -27,9 +22,7 @@ export async function renderAssistantWhatsAppWorkflowReply(
     storeId: string
     purpose: "SETUP" | "PRODUCT_CREATE"
     trustedAppOrigin: string
-    rendererVersion?:
-      | typeof WHATSAPP_WORKFLOW_RENDER_VERSION
-      | typeof WHATSAPP_WORKFLOW_LEGACY_RENDER_VERSION
+    rendererVersion?: WhatsAppWorkflowRenderVersion
   },
 ) {
   if (!whatsAppWorkflowEnabled(input.purpose)) return undefined
@@ -79,12 +72,15 @@ export async function renderAssistantWhatsAppWorkflowReply(
     },
   })
   const conversation = inbox?.binding?.conversation
-  const request = textContent.safeParse(inbox?.content)
+  const requestText =
+    inbox && conversation
+      ? await assistantWhatsAppWorkflowRequestText(db, inbox, conversation.id)
+      : undefined
   if (
     !inbox?.binding ||
     !inbox.executionAuthorityDigest ||
     !conversation?.setupDraft ||
-    !request.success ||
+    requestText === undefined ||
     !whatsAppWorkflowPurposeSchema.safeParse(conversation.purpose).success ||
     inbox.binding.purpose !== input.purpose ||
     conversation.purpose !== input.purpose ||
@@ -135,7 +131,7 @@ export async function renderAssistantWhatsAppWorkflowReply(
       currencyCode: conversation.store.currencyCode,
       revision: conversation.setupDraft.revision,
       parts: run.assistantMessage.parts,
-      requestText: request.data.text,
+      requestText,
       requiresForm: product?.success
         ? productRequiresForm(product.data.snapshot)
         : false,

@@ -7,13 +7,17 @@ import {
   productWorkflowContextSchema,
 } from "@ewatrade/assistant/product/contracts"
 import {
+  PRODUCT_WORKFLOW_DRAFT_KEYS,
+  WHATSAPP_PRODUCT_WORKFLOW_LIMIT,
   deriveSetupEntityState,
+  isProductWorkflowDraftKey,
   setupEntityPayloadSchema,
   setupOpenQuestionSchema,
 } from "@ewatrade/assistant/setup/contracts"
 import {
   type AssistantScope,
   commitProductConversationInTransaction,
+  productClientOperationId,
   readAssistantConversation,
   readSetupDraft,
   recordSetupDraftCommitOutcomeInTransaction,
@@ -133,7 +137,8 @@ export function prepareReviewedWorkflowCommand(
     return refuse()
   let command: CreateCatalogItemInput
   if (source.purpose === "PRODUCT_CREATE") {
-    if (entity.key !== "product" || value.kind !== "product") return refuse()
+    if (!isProductWorkflowDraftKey(entity.key) || value.kind !== "product")
+      return refuse()
     const context = productWorkflowContextSchema.safeParse(
       input.workflowContext,
     )
@@ -152,7 +157,10 @@ export function prepareReviewedWorkflowCommand(
         input.workflowContext,
       ),
       // The canonical Product repository overrides this identity at execution too.
-      clientOperationId: `product-${source.conversationId}`,
+      clientOperationId: productClientOperationId(
+        source.conversationId,
+        entity.key,
+      ),
     }
   } else
     command = catalogCommandForSetupEntity(entity.id, value, {
@@ -239,7 +247,11 @@ export function prepareReviewedWorkflowSelection(input: {
     draft.id !== source.draftId ||
     draft.revision !== source.draftRevision ||
     (source.purpose === "PRODUCT_CREATE" &&
-      (draft.entities.length !== 1 ||
+      (draft.entities.length < 1 ||
+        draft.entities.length > WHATSAPP_PRODUCT_WORKFLOW_LIMIT ||
+        draft.entities.some(
+          (entity) => !isProductWorkflowDraftKey(entity.key),
+        ) ||
         digest(conversation.workflowContext) !== source.workflowContextHash))
   )
     return refuse()
@@ -323,53 +335,60 @@ export async function executeReviewedWorkflowSelectionInTransaction(
     draft,
   })
   if (source.purpose === "PRODUCT_CREATE") {
-    const item = selected[0]
-    if (
-      !item ||
-      item.prepared.kind !== "catalog" ||
-      item.entity.kind !== "PRODUCT"
-    )
-      return refuse()
-    await assertReviewedWorkflowProductHasNoMatches(
-      source,
-      item.prepared,
-      (query) => tx.catalogItem.count(query),
-    )
-    const result = await commitProductConversationInTransaction(
-      tx,
-      scope,
-      {
-        conversationId: source.conversationId,
-        expectedRevision: source.draftRevision,
-      },
-      (entity, workflowContext) => {
-        const command = prepareReviewedWorkflowCommand({
-          source,
-          entity,
-          workflowContext,
-          scope,
-        })
-        if (
-          command.kind !== "catalog" ||
-          digest(command.command) !== source.selection[0]?.commandHash
-        )
-          return refuse()
-        return command.command
-      },
-    )
+    // All-or-nothing: each reviewed product goes through the canonical Product
+    // commit in this one transaction; any refusal rolls every product back.
+    for (const item of selected) {
+      if (item.prepared.kind !== "catalog" || item.entity.kind !== "PRODUCT")
+        return refuse()
+      await assertReviewedWorkflowProductHasNoMatches(
+        source,
+        item.prepared,
+        (query) => tx.catalogItem.count(query),
+      )
+    }
+    const records: ReviewedWorkflowSelectionResult["records"] = []
+    for (const [index, item] of selected.entries()) {
+      const expectedHash = source.selection[index]?.commandHash
+      const result = await commitProductConversationInTransaction(
+        tx,
+        scope,
+        {
+          conversationId: source.conversationId,
+          expectedRevision: source.draftRevision,
+          channelEntity: {
+            key: item.entity.key,
+            allowedKeys: PRODUCT_WORKFLOW_DRAFT_KEYS,
+          },
+        },
+        (entity, workflowContext) => {
+          if (entity.id !== item.entity.id) return refuse()
+          const command = prepareReviewedWorkflowCommand({
+            source,
+            entity,
+            workflowContext,
+            scope,
+          })
+          if (
+            command.kind !== "catalog" ||
+            digest(command.command) !== expectedHash
+          )
+            return refuse()
+          return command.command
+        },
+      )
+      records.push({
+        entityId: item.entity.id,
+        key: item.entity.key,
+        kind: "PRODUCT",
+        recordId: result.recordId,
+        name: result.name,
+      })
+    }
     return {
       purpose: source.purpose,
       conversationId: source.conversationId,
       draftId: source.draftId,
-      records: [
-        {
-          entityId: item.entity.id,
-          key: item.entity.key,
-          kind: "PRODUCT",
-          recordId: result.recordId,
-          name: result.name,
-        },
-      ],
+      records,
     }
   }
   const proposedKeys = selected

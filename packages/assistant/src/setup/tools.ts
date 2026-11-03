@@ -11,13 +11,16 @@ import {
   summarizeSetupAreas,
 } from "./areas"
 import {
+  PRODUCT_WORKFLOW_DRAFT_KEYS,
   SETUP_DRAFT_MAX_ENTITIES,
   type SetupEntityKind,
   type SetupEntityPayload,
   type SetupEntitySource,
   type SetupOpenQuestion,
   type SetupProductPayload,
+  WHATSAPP_PRODUCT_WORKFLOW_LIMIT,
   deriveSetupEntityState,
+  isProductWorkflowDraftKey,
   majorAmountToMinor,
   normalizeQuantity,
   sanitizeVocabulary,
@@ -79,6 +82,50 @@ export type SetupKnownAttachment = {
   imageKind?: "document" | "product_photo" | "other" | null
 }
 
+/**
+ * Keeps an existing product's key (by key, then same name) and gives new products the
+ * next free product key. Undefined when more products would be held than allowed.
+ */
+export function productDraftKeys(
+  items: ReadonlyArray<{ key?: string; name: string }>,
+  current: ReadonlyArray<{ key: string; payload: unknown }>,
+  limit: number,
+) {
+  const allowed = PRODUCT_WORKFLOW_DRAFT_KEYS.slice(
+    0,
+    limit,
+  ) as readonly string[]
+  if (current.some((entity) => !allowed.includes(entity.key))) return undefined
+  const nameOf = (payload: unknown) =>
+    payload && typeof payload === "object" && "name" in payload
+      ? String(payload.name).trim().toLowerCase()
+      : ""
+  const used = new Set<string>()
+  const keys: string[] = []
+  for (const item of items) {
+    const byKey =
+      item.key && current.some((entity) => entity.key === item.key)
+        ? item.key
+        : undefined
+    const byName = current.find(
+      (entity) =>
+        !used.has(entity.key) &&
+        nameOf(entity.payload) === item.name.trim().toLowerCase(),
+    )?.key
+    const existing = byKey && !used.has(byKey) ? byKey : byName
+    const key =
+      existing ??
+      allowed.find(
+        (entry) =>
+          !used.has(entry) && !current.some((entity) => entity.key === entry),
+      )
+    if (!key) return undefined
+    used.add(key)
+    keys.push(key)
+  }
+  return keys
+}
+
 export type SetupToolDependencies = {
   productPreparationEnabled?: boolean
   onProductPrepared?: (
@@ -89,6 +136,11 @@ export type SetupToolDependencies = {
   searchProductCategories?: (query: string) => unknown[]
   readProductCategoryAttributes?: (key: string) => unknown
   productOnly?: boolean
+  /**
+   * Products one Product conversation may hold. The app keeps 1 (key "product"); a
+   * linked WhatsApp Product chat passes up to 3 (keys product, product-2, product-3).
+   */
+  productLimit?: number
   productSeed?: unknown
   context: SetupBusinessContext
   sourceMessageId: string | null
@@ -620,6 +672,13 @@ const NOT_AUTHORIZED: ToolEnvelope<never> = {
 
 export function createSetupAssistantTools(deps: SetupToolDependencies) {
   const authorized = async () => (deps.authorize ? deps.authorize() : true)
+  const productLimit = Math.max(
+    1,
+    Math.min(
+      Math.trunc(deps.productLimit ?? 1),
+      WHATSAPP_PRODUCT_WORKFLOW_LIMIT,
+    ),
+  )
   const known = new Map(
     (deps.knownAttachments ?? []).map((attachment) => [
       attachment.id,
@@ -687,7 +746,11 @@ export function createSetupAssistantTools(deps: SetupToolDependencies) {
         continue
       }
       const key = deps.productOnly
-        ? "product"
+        ? productLimit > 1 &&
+          candidate.key &&
+          isProductWorkflowDraftKey(candidate.key)
+          ? candidate.key
+          : "product"
         : candidate.key &&
             current.some((entity) => entity.key === candidate.key)
           ? candidate.key
@@ -926,16 +989,40 @@ export function createSetupAssistantTools(deps: SetupToolDependencies) {
       execute: async ({ items, finishedArea }) => {
         if (
           deps.productOnly &&
+          productLimit === 1 &&
           (items.length !== 1 || items[0]?.kind !== "product")
         )
           return {
             status: "failed" as const,
             warnings: ["Stage exactly one product."],
           }
-        if (deps.productOnly)
-          items = items.map((item) => ({ ...item, key: "product" }))
+        if (
+          deps.productOnly &&
+          (items.length > productLimit ||
+            items.some((item) => item.kind !== "product"))
+        )
+          return {
+            status: "failed" as const,
+            warnings: [`Stage up to ${productLimit} products only.`],
+          }
         const warnings: string[] = []
         const current = await deps.readDraft()
+        if (deps.productOnly && productLimit === 1)
+          items = items.map((item) => ({ ...item, key: "product" }))
+        else if (deps.productOnly) {
+          const assigned = productDraftKeys(items, current, productLimit)
+          if (!assigned)
+            return {
+              status: "failed" as const,
+              warnings: [
+                `This chat holds up to ${productLimit} products. Update one of them, or save or cancel these first.`,
+              ],
+            }
+          items = items.map((item, index) => ({
+            ...item,
+            key: assigned[index],
+          }))
+        }
         const result = await stage(
           items.map((item) => ({
             key: item.key,

@@ -2,6 +2,7 @@ import {
   parseWhatsAppWorkflowReviewSelection,
   renderWhatsAppWorkflowActionReviewBody,
   whatsAppWorkflowActionSourceSchema,
+  whatsAppWorkflowReviewAppOnly,
 } from "@ewatrade/assistant/channels/workflow-action-review"
 import { productWorkflowContextSchema } from "@ewatrade/assistant/product/contracts"
 import {
@@ -15,7 +16,9 @@ import {
 import {
   type WhatsAppInboxLease,
   assistantWhatsAppActionPayloadDigest,
+  assistantWhatsAppWorkflowRequestText,
   assistantWhatsAppWorkflowWritesEnabled,
+  workflowTrustedAppOrigin,
 } from "@ewatrade/db/assistant-whatsapp"
 import type { PrismaClient } from "@ewatrade/db/types"
 import { z } from "zod"
@@ -51,12 +54,14 @@ export async function prepareAssistantWhatsAppWorkflowReview(
     !assistantWhatsAppWorkflowWritesEnabled(binding.purpose)
   )
     return undefined
-  const text = z
-    .object({ type: z.literal("text"), text: z.string() })
-    .passthrough()
-    .safeParse(inbox.content)
-  const selection = text.success
-    ? parseWhatsAppWorkflowReviewSelection(text.data.text)
+  // A tapped suggestion uses the exact command its turn persisted, like typed text.
+  const requestText = await assistantWhatsAppWorkflowRequestText(
+    db,
+    inbox,
+    binding.conversationId,
+  )
+  const selection = requestText
+    ? parseWhatsAppWorkflowReviewSelection(requestText)
     : null
   if (selection?.kind !== "review_selection") return undefined
   const run = await db.assistantRun.findFirst({
@@ -163,10 +168,23 @@ export async function prepareAssistantWhatsAppWorkflowReview(
       (run.completedAt ?? run.startedAt).getTime() + 5 * 60_000,
     ),
   )
+  const appOnly = whatsAppWorkflowReviewAppOnly(
+    {
+      purpose: source.purpose,
+      conversationId: source.conversationId,
+      origin: source.origin,
+      entities: draft.entities,
+    },
+    {
+      trustedAppOrigin: workflowTrustedAppOrigin(),
+      currentScope: { tenantId: scope.tenantId, storeId: scope.storeId },
+    },
+  )
   const rendered = renderWhatsAppWorkflowActionReviewBody(
     {
       source,
       records,
+      ...(appOnly ? { appOnly } : {}),
       businessName: ctx.tenantContext.tenant.name,
       storeName: ctx.tenantContext.activeStore?.name ?? "",
       currencyCode:

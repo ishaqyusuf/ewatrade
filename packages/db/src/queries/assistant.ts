@@ -750,6 +750,13 @@ export async function commitProductConversation(
   )
 }
 
+/** One stable idempotency identity per Product draft; the first keeps its original form. */
+export function productClientOperationId(conversationId: string, key: string) {
+  return key === "product"
+    ? `product-${conversationId}`
+    : `product-${conversationId}-${key}`
+}
+
 /** Existing canonical product commit inside an already-owning authority/proof transaction. */
 export async function commitProductConversationInTransaction(
   tx: Prisma.TransactionClient,
@@ -758,6 +765,12 @@ export async function commitProductConversationInTransaction(
     conversationId: string
     expectedRevision: number
     manualEntity?: SetupDraftEntityInput
+    /**
+     * Linked-channel Product review only: commit this one reviewed draft of a
+     * conversation that holds up to `allowedKeys.length` products. The app passes
+     * nothing and keeps its one-product rule.
+     */
+    channelEntity?: { key: string; allowedKeys: readonly string[] }
   },
   prepare: (
     entity: Awaited<ReturnType<typeof readSetupDraft>>["entities"][number],
@@ -781,7 +794,9 @@ export async function commitProductConversationInTransaction(
     Prisma.sql`SELECT "id" FROM "SetupDraft" WHERE "id" = ${conversation.setupDraft.id} FOR UPDATE`,
   )
   const draft = await readSetupDraft(tx, conversation.setupDraft.id)
-  let entity = draft.entities.find((entity) => entity.key === "product")
+  const channel = input.channelEntity
+  const key = channel?.key ?? "product"
+  let entity = draft.entities.find((entity) => entity.key === key)
   const membership = await tx.membership.findFirst({
     where: {
       tenantId: scope.tenantId,
@@ -811,6 +826,17 @@ export async function commitProductConversationInTransaction(
       "CONVERSATION_CLOSED",
       "The product draft changed or a reply is still running. Review it again before creating.",
     )
+  if (
+    channel &&
+    (input.manualEntity ||
+      !channel.allowedKeys.includes(key) ||
+      draft.entities.length > channel.allowedKeys.length ||
+      draft.entities.some((row) => !channel.allowedKeys.includes(row.key)))
+  )
+    throw new AssistantRecordError(
+      "ENTITY_NOT_FOUND",
+      "Review these products again before creating them.",
+    )
   if (input.manualEntity) {
     await upsertSetupDraftEntitiesInTransaction(tx, {
       draftId: draft.id,
@@ -820,7 +846,11 @@ export async function commitProductConversationInTransaction(
       (entity) => entity.key === "product",
     )
   }
-  if (!entity || draft.entities.length > 1 || entity.kind !== "PRODUCT")
+  if (
+    !entity ||
+    (!channel && draft.entities.length > 1) ||
+    entity.kind !== "PRODUCT"
+  )
     throw new AssistantRecordError(
       "ENTITY_NOT_FOUND",
       "Describe one product before creating it.",
@@ -828,16 +858,28 @@ export async function commitProductConversationInTransaction(
   const command = prepare(entity, conversation.workflowContext)
   const item = await createCatalogItemInTransaction(tx, {
     ...command,
-    clientOperationId: `product-${conversation.id}`,
+    clientOperationId: productClientOperationId(conversation.id, key),
   })
   await tx.setupDraftEntity.update({
     where: { id: entity.id },
     data: { state: "COMMITTED", committedRecordId: item.id, errorCode: null },
   })
-  await tx.assistantConversation.update({
-    where: { id: conversation.id },
-    data: { status: "COMPLETED", title: item.name },
-  })
+  const committedId = entity.id
+  const pending = draft.entities.filter(
+    (row) => row.id !== committedId && row.state !== "COMMITTED",
+  )
+  // The conversation finishes once every product it holds is saved.
+  if (!pending.length)
+    await tx.assistantConversation.update({
+      where: { id: conversation.id },
+      data: {
+        status: "COMPLETED",
+        title:
+          draft.entities.length > 1
+            ? `${draft.entities.length} products`
+            : item.name,
+      },
+    })
   return { recordId: item.id, name: item.name }
 }
 
