@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "id": "2026-11-03-whatsapp-failure-window-notices",
+  "tickets": ["H02"],
+  "summary": "WhatsApp gaps from Workshop ewatrade/assistant/conversations scenes k-outage and k-window. A terminally failed assistant TURN (attempts exhausted, or a settled turn failed with an outage-class code such as STREAM_FAILED, FINALIZATION_FAILED or TURN_INTERRUPTED) now stages one fixed ASSISTANT_UNAVAILABLE notice (I can't reach your business data right now. Nothing was changed. Try again in a minute.) on the same inbox, at most once, and the inbox stays FAILED with its error code. Retries, budget, authority, workflow and bad-input outcomes are unchanged. A turn reply cancelled because the 24-hour window closed (MESSAGE_WINDOW_CLOSED) is still never resent; the binding's next staged turn reply is prefaced once per missed batch by a fixed REPLY_WINDOW_MISSED notice on response revision 0 of the same inbox, delivered before that reply. Both notices are text only with no app link; the design's Try again and quick-reply buttons are not implemented because notices have no button path. No schema change, local only, and no provider, OTP or deployment change.",
+  "noAssistantImpact": "Channel transport notices only. No tool, prompt, capability declaration, model run, draft, write or authority changes; both notices are fixed strings rendered from the server-resolved scope and re-checked at delivery.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/whatsapp-assistant-system-design.md"
+    },
+    {
+      "topic": "capability",
+      "status": "not_applicable",
+      "path": "packages/assistant/src/capabilities/COVERAGE.md",
+      "note": "apps/api/src/assistant/channel-turn.ts only dispatches the staged failure notice; no capability, procedure, role or rollout change."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/assistant/src/channels/notice.test.ts",
+      "executed": true,
+      "result": "6 pass, 60 expects: outage-class codes map to ASSISTANT_UNAVAILABLE and budget, authority, workflow, bad-input and retry codes do not; both notices render without a link and the window preface without a scope label."
+    },
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/assistant-whatsapp/failure-window-notices.test.ts",
+      "executed": true,
+      "result": "4 pass, 28 expects: exhausted attempts stage one revision-1 notice with no run or message and keep the inbox FAILED; an existing outbox row or changed authority stages none; settled STREAM_FAILED stages it while BUDGET_EXHAUSTED and BAD_REQUEST do not; a missed window reply stages one revision-0 preface only when no later inbox has an outbox row."
+    },
+    {
+      "kind": "test",
+      "path": "apps/api/src/assistant/channel-turn.integration.test.ts",
+      "executed": false,
+      "result": "Database integration suite not run in this change; no local QA database was confirmed."
+    }
+  ]
+}

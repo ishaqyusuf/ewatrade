@@ -18,6 +18,7 @@ import {
 import { TRPCError } from "@trpc/server"
 import { z } from "zod"
 import { processAssistantWhatsAppAction } from "./channel-action-turn"
+import { dispatchAssistantWhatsAppReply } from "./channel-delivery"
 import { sendAssistantWhatsAppDisconnectNotice } from "./channel-disconnect-notice"
 import { cancelAssistantWhatsAppCurrentDraft } from "./channel-draft-controls"
 import { processAssistantWhatsAppFlowTurn } from "./channel-flow-turn"
@@ -167,6 +168,8 @@ export function defaultChannelTurnDependencies() {
       bindingId: string,
     ): Promise<Awaited<ReturnType<typeof nextAssistantWhatsAppInbox>>> =>
       nextAssistantWhatsAppInbox(prisma, bindingId),
+    /** A failed turn's fixed outage notice; the route only dispatches completed turns. */
+    dispatchNotice: dispatchAssistantWhatsAppReply,
   }
 }
 export type ChannelTurnDependencies = Omit<
@@ -181,7 +184,9 @@ export type ChannelTurnDependencies = Omit<
   | "readPage"
   | "replyChoice"
   | "typing"
+  | "dispatchNotice"
 > & {
+  dispatchNotice?: (ingressId: string) => Promise<unknown>
   typing?: (
     ctx: Parameters<typeof startAssistantWhatsAppTyping>[0],
     inbox: Parameters<typeof startAssistantWhatsAppTyping>[1],
@@ -212,19 +217,30 @@ export async function processAssistantChannelTurn(
   const control = await deps.control?.(ingressId)
   if (control) return control
   const claim = await deps.claim(ingressId)
+  const dispatchNotice = async (id: string) => {
+    try {
+      await deps.dispatchNotice?.(id)
+    } catch {
+      console.error("[assistant] notice dispatch deferred to recovery")
+    }
+  }
   const next = async () => {
     const bindingId =
       claim.kind === "claimed" ? claim.lease.bindingId : claim.bindingId
     const row = bindingId ? await deps.next(bindingId) : null
     return row && row.id !== ingressId ? { nextIngressId: row.id } : {}
   }
-  if (claim.kind !== "claimed")
+  if (claim.kind !== "claimed") {
+    if ("notice" in claim && claim.notice) await dispatchNotice(ingressId)
     return {
       status: claim.kind,
       ...(claim.kind === "busy" ? {} : await next()),
     }
+  }
   const finish = async (errorCode?: string): Promise<WhatsAppTurnResult> => {
     const settled = await deps.settle(claim.lease, errorCode)
+    if (settled && "notice" in settled && settled.notice)
+      await dispatchNotice(claim.lease.inboxId)
     return {
       status: !settled
         ? "busy"

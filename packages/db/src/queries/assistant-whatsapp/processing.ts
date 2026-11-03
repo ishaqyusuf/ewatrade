@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto"
+import { whatsAppTurnFailureNotice } from "@ewatrade/assistant/channels/notice"
 import { assistantWhatsAppUserAllowed } from "@ewatrade/assistant/channels/policy"
 import {
   WHATSAPP_TURN_LEASE_MS,
@@ -26,6 +27,8 @@ import {
   type AssistantWhatsAppStagedReview,
   type AssistantWhatsAppStagedWebReview,
   type AssistantWhatsAppStagedWorkflowReview,
+  stageAssistantWhatsAppMissedReplyNoticeInTransaction,
+  stageAssistantWhatsAppNoticeInTransaction,
   stageAssistantWhatsAppOutboxInTransaction,
 } from "./outbox"
 import {
@@ -69,6 +72,60 @@ function proof(row: {
 }
 async function lockIdentity(db: DbClient, inboxId: string) {
   await db.$queryRaw`SELECT i.id FROM "AssistantWhatsAppIdentity" i JOIN "AssistantWhatsAppBinding" b ON b."identityId"=i.id JOIN "AssistantWhatsAppInbox" q ON q."bindingId"=b.id WHERE q.id=${inboxId} FOR UPDATE OF i`
+}
+type ResolvedConversation = Awaited<
+  ReturnType<typeof resolveAssistantWhatsAppConversation>
+>
+/**
+ * A terminally failed TURN gets one fixed outage notice. Retries never reach
+ * this; the caller is the single PROCESSING/PENDING to FAILED transition, and
+ * an existing outbox row for the inbox also prevents a second notice. No run,
+ * draft, review or new authority is created.
+ */
+async function stageTurnFailureNoticeInTransaction(
+  tx: Prisma.TransactionClient,
+  inbox: {
+    id: string
+    kind: string
+    phoneNumberId: string
+    expiresAt: Date
+    executionAuthorityDigest: string | null
+  },
+  resolved: ResolvedConversation | undefined,
+  errorCode: string,
+  now: Date,
+) {
+  const code = whatsAppTurnFailureNotice(errorCode)
+  if (
+    !code ||
+    inbox.kind !== "TURN" ||
+    inbox.expiresAt <= now ||
+    !resolved?.tenantContext.activeStore
+  )
+    return undefined
+  const authorityDigest = await assistantWhatsAppAuthorityDigest(tx, resolved)
+  if (
+    inbox.executionAuthorityDigest &&
+    inbox.executionAuthorityDigest !== authorityDigest
+  )
+    return undefined
+  if (
+    await tx.assistantWhatsAppOutbox.findFirst({
+      where: { inboxId: inbox.id },
+      select: { id: true },
+    })
+  )
+    return undefined
+  await stageAssistantWhatsAppNoticeInTransaction(tx, inbox, {
+    code,
+    resolved,
+    authorityDigest,
+  })
+  await cancelAssistantWhatsAppPendingMediaInTransaction(tx, [inbox.id], now)
+  return {
+    content: { type: "channel_notice", code },
+    executionAuthorityDigest: authorityDigest,
+  } as const
 }
 export async function assertAssistantWhatsAppInboxLease(
   db: DbClient,
@@ -132,6 +189,7 @@ export function claimAssistantWhatsAppInbox(
       return { kind: "expired" as const, bindingId: row.bindingId }
     }
     const principal = proof(row)
+    let resolved: ResolvedConversation | undefined
     try {
       if (
         !assistantWhatsAppUserAllowed(
@@ -141,7 +199,11 @@ export function claimAssistantWhatsAppInbox(
       )
         throw new AssistantWhatsAppError("UNAUTHORIZED")
       try {
-        await resolveAssistantWhatsAppConversation(tx, principal, now)
+        resolved = await resolveAssistantWhatsAppConversation(
+          tx,
+          principal,
+          now,
+        )
       } catch (error) {
         if (!(error instanceof AssistantWhatsAppError) || row.kind !== "ACTION")
           throw error
@@ -198,17 +260,29 @@ export function claimAssistantWhatsAppInbox(
           })
         : null
     if (row.attempts >= WHATSAPP_TURN_MAX_ATTEMPTS && !recoverable) {
+      const notice = await stageTurnFailureNoticeInTransaction(
+        tx,
+        row,
+        resolved,
+        "ATTEMPTS_EXHAUSTED",
+        now,
+      )
       await tx.assistantWhatsAppInbox.update({
         where: { id: row.id },
         data: {
           state: "FAILED",
           errorCode: "ATTEMPTS_EXHAUSTED",
+          ...(notice ?? {}),
           leaseOwner: null,
           leaseExpiresAt: null,
           completedAt: now,
         },
       })
-      return { kind: "failed" as const, bindingId: row.bindingId }
+      return {
+        kind: "failed" as const,
+        bindingId: row.bindingId,
+        ...(notice ? { notice: true as const } : {}),
+      }
     }
     // The identity lock and FIFO fence bind every fragment to this exact turn.
     // Retried/started runs are immutable and never absorb a later message.
@@ -388,8 +462,9 @@ export function settleAssistantWhatsAppInbox(
     )
     let scopeLabel = ""
     let navigationScope: { tenantId: string; storeId: string } | undefined
+    let resolved: ResolvedConversation | undefined
     try {
-      const resolved = await resolveAssistantWhatsAppConversation(
+      resolved = await resolveAssistantWhatsAppConversation(
         tx,
         proof(current),
         now,
@@ -433,7 +508,7 @@ export function settleAssistantWhatsAppInbox(
       run.assistantMessage?.conversationId === current.binding.conversationId &&
       run.assistantMessage.role === "assistant"
     const state = !authorized ? "CANCELLED" : completed ? "COMPLETED" : "FAILED"
-    if (completed && run && current.executionAuthorityDigest)
+    if (completed && run && current.executionAuthorityDigest) {
       await stageAssistantWhatsAppOutboxInTransaction(
         tx,
         current,
@@ -454,6 +529,29 @@ export function settleAssistantWhatsAppInbox(
           : undefined,
         options.webReview,
       )
+      if (resolved)
+        await stageAssistantWhatsAppMissedReplyNoticeInTransaction(
+          tx,
+          current,
+          resolved,
+          current.executionAuthorityDigest,
+        )
+    }
+    const errorCode = !authorized
+      ? "AUTHORITY_CHANGED"
+      : completed
+        ? null
+        : (options.errorCode ?? run?.errorCode ?? "TURN_FAILED")
+    const notice =
+      state === "FAILED" && errorCode
+        ? await stageTurnFailureNoticeInTransaction(
+            tx,
+            current,
+            resolved,
+            errorCode,
+            now,
+          )
+        : undefined
     if (!authorized)
       await cancelAssistantWhatsAppPendingMediaInTransaction(
         tx,
@@ -466,17 +564,14 @@ export function settleAssistantWhatsAppInbox(
         state,
         content: !authorized ? Prisma.DbNull : undefined,
         runId: run?.id,
-        errorCode: !authorized
-          ? "AUTHORITY_CHANGED"
-          : completed
-            ? null
-            : (options.errorCode ?? run?.errorCode ?? "TURN_FAILED"),
+        errorCode,
+        ...(notice ?? {}),
         completedAt: now,
         leaseOwner: null,
         leaseExpiresAt: null,
       },
     })
-    return { state }
+    return notice ? { state, notice: true as const } : { state }
   })
 }
 

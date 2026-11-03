@@ -367,6 +367,8 @@ export function beginAssistantWhatsAppDelivery(
     const body = row.content
     let providerBody = body
     let providerButtons: { id: string; title: string }[] | undefined
+    // Only the fixed outage notice may leave a terminally FAILED turn.
+    let failedTurnNotice = false
     if (!body || hash(body) !== row.contentDigest)
       return cancel("cancelled", "SAVED_REPLY_CHANGED")
     let identity: NonNullable<typeof row.inbox.identity>
@@ -608,6 +610,14 @@ export function beginAssistantWhatsAppDelivery(
             row.inbox.content,
           )
           const store = resolved.tenantContext.activeStore
+          // Revision 0 is the fixed missed-window preface before this inbox's
+          // own reply; revision 1 is the inbox's own saved notice code.
+          const code =
+            row.responseRevision === 0
+              ? ("REPLY_WINDOW_MISSED" as const)
+              : row.responseRevision === 1 && notice.success
+                ? notice.data.code
+                : undefined
           if (
             row.inbox.kind !== "TURN" ||
             row.runId ||
@@ -615,12 +625,14 @@ export function beginAssistantWhatsAppDelivery(
             row.rendererVersion !== WHATSAPP_NOTICE_VERSION ||
             row.chunkCount !== 1 ||
             row.chunkIndex !== 0 ||
-            !notice.success ||
+            !code ||
             !store
           )
             return cancel("cancelled", "SAVED_REPLY_CHANGED")
+          failedTurnNotice =
+            row.responseRevision === 1 && code === "ASSISTANT_UNAVAILABLE"
           const expected = renderWhatsAppNotice(
-            notice.data.code,
+            code,
             {
               businessName: resolved.tenantContext.tenant.name,
               storeName: store.name,
@@ -984,7 +996,8 @@ export function beginAssistantWhatsAppDelivery(
           identity.userId,
           options.permittedUserIds,
         ) ||
-        row.inbox.state !== "COMPLETED" ||
+        (row.inbox.state !== "COMPLETED" &&
+          !(failedTurnNotice && row.inbox.state === "FAILED")) ||
         !row.inbox.executionAuthorityDigest ||
         row.authorityDigest !== row.inbox.executionAuthorityDigest
       )
@@ -1019,7 +1032,11 @@ export function beginAssistantWhatsAppDelivery(
         : { kind: "busy" as const }
     const head = await tx.assistantWhatsAppOutbox.findFirst({
       where: { inbox: association, state: { in: [...pending] } },
-      orderBy: [{ inbox: { sequence: "asc" } }, { chunkIndex: "asc" }],
+      orderBy: [
+        { inbox: { sequence: "asc" } },
+        { chunkIndex: "asc" },
+        { responseRevision: "asc" },
+      ],
       select: { id: true },
     })
     if (head?.id !== outboxId) return { kind: "busy" as const }
@@ -1418,7 +1435,7 @@ export function listAssistantWhatsAppOutboxRecovery(
     AND NOT EXISTS (
       SELECT 1 FROM "AssistantWhatsAppOutbox" p JOIN "AssistantWhatsAppInbox" previous ON previous.id=p."inboxId"
       WHERE ((previous.kind IN ('TURN','ACTION') AND q.kind IN ('TURN','ACTION') AND previous."bindingId"=q."bindingId") OR (previous.kind='CONTROL' AND q.kind='CONTROL' AND previous.id=q.id)) AND p.state IN ('PENDING','SENDING','UNKNOWN')
-      AND (previous.sequence<q.sequence OR (previous.sequence=q.sequence AND p."chunkIndex"<o."chunkIndex"))
+      AND (previous.sequence<q.sequence OR (previous.sequence=q.sequence AND (p."chunkIndex"<o."chunkIndex" OR (p."chunkIndex"=o."chunkIndex" AND p."responseRevision"<o."responseRevision"))))
     )
     ORDER BY o."createdAt" ASC LIMIT 50
   `
@@ -1468,7 +1485,11 @@ function txHead(
   if (!association) return Promise.resolve(null)
   return db.assistantWhatsAppOutbox.findFirst({
     where: { inbox: association, state: { in: [...pending] } },
-    orderBy: [{ inbox: { sequence: "asc" } }, { chunkIndex: "asc" }],
+    orderBy: [
+      { inbox: { sequence: "asc" } },
+      { chunkIndex: "asc" },
+      { responseRevision: "asc" },
+    ],
     select: { id: true },
   })
 }
@@ -1478,7 +1499,7 @@ export function firstAssistantWhatsAppOutboxForIngress(
 ) {
   return db.assistantWhatsAppOutbox.findFirst({
     where: { inboxId },
-    orderBy: { chunkIndex: "asc" },
+    orderBy: [{ chunkIndex: "asc" }, { responseRevision: "asc" }],
     select: { id: true },
   })
 }

@@ -1,9 +1,4 @@
-import { createHash } from "node:crypto"
-import {
-  WHATSAPP_NOTICE_VERSION,
-  type WhatsAppNoticeCode,
-  renderWhatsAppNotice,
-} from "@ewatrade/assistant/channels/notice"
+import type { WhatsAppNoticeCode } from "@ewatrade/assistant/channels/notice"
 import type { PrismaClient } from "../../../generated/prisma/client"
 import { runInOwnSerializableTransaction } from "../own-transaction"
 import { AssistantWhatsAppError } from "./authority"
@@ -13,6 +8,7 @@ import {
 } from "./conversations"
 import { assistantWhatsAppAuthorityDigest } from "./execution"
 import { cancelAssistantWhatsAppPendingMediaInTransaction } from "./media-source-lifecycle"
+import { stageAssistantWhatsAppNoticeInTransaction } from "./outbox"
 import {
   type WhatsAppInboxLease,
   assertAssistantWhatsAppInboxLease,
@@ -42,37 +38,13 @@ export function settleAssistantWhatsAppNotice(
       input.principal,
       now,
     )
-    const store = resolved.tenantContext.activeStore
-    if (!store) throw new AssistantWhatsAppError("UNAUTHORIZED")
+    if (!resolved.tenantContext.activeStore)
+      throw new AssistantWhatsAppError("UNAUTHORIZED")
     const authorityDigest = await assistantWhatsAppAuthorityDigest(tx, resolved)
-    const content = renderWhatsAppNotice(
-      input.code,
-      {
-        businessName: resolved.tenantContext.tenant.name,
-        storeName: store.name,
-        tenantId: resolved.scope.tenantId,
-        storeId: resolved.scope.storeId,
-        conversationId: resolved.conversation.id,
-        purpose: resolved.conversation.purpose,
-      },
-      process.env.DASHBOARD_URL ??
-        process.env.NEXT_PUBLIC_DASHBOARD_URL ??
-        "https://dash.ewatrade.com",
-    )
-    await tx.assistantWhatsAppOutbox.create({
-      data: {
-        inboxId: inbox.id,
-        phoneNumberId: inbox.phoneNumberId,
-        responseRevision: 1,
-        chunkIndex: 0,
-        chunkCount: 1,
-        rendererVersion: WHATSAPP_NOTICE_VERSION,
-        renderKind: "notice",
-        authorityDigest,
-        content,
-        contentDigest: createHash("sha256").update(content).digest("hex"),
-        expiresAt: inbox.expiresAt,
-      },
+    await stageAssistantWhatsAppNoticeInTransaction(tx, inbox, {
+      code: input.code,
+      resolved,
+      authorityDigest,
     })
     await cancelAssistantWhatsAppPendingMediaInTransaction(tx, [inbox.id], now)
     await tx.assistantWhatsAppInbox.update({

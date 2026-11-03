@@ -1,5 +1,10 @@
 import { createHash } from "node:crypto"
 import { WHATSAPP_ACTION_REVIEW_VERSION } from "@ewatrade/assistant/channels/action-review"
+import {
+  WHATSAPP_NOTICE_VERSION,
+  type WhatsAppNoticeCode,
+  renderWhatsAppNotice,
+} from "@ewatrade/assistant/channels/notice"
 import { renderWhatsAppFinalReply } from "@ewatrade/assistant/channels/render"
 import { WHATSAPP_WEB_REVIEW_VERSION } from "@ewatrade/assistant/channels/review-links"
 import {
@@ -11,17 +16,20 @@ import type { Prisma, PrismaClient } from "../../../generated/prisma/client"
 import { runInOwnSerializableTransaction } from "../own-transaction"
 import { issueAssistantWhatsAppActionReviewInTransaction } from "./action-reviews"
 import { AssistantWhatsAppError } from "./authority"
-import type { WhatsAppConversationPrincipal } from "./conversations"
-import {
-  type WhatsAppWorkflowCommandProjector,
-  issueAssistantWhatsAppWorkflowReviewInTransaction,
-} from "./workflow-action-reviews"
-import { renderAssistantWhatsAppWorkflowReply } from "./workflow-reply"
+import type {
+  WhatsAppConversationPrincipal,
+  resolveAssistantWhatsAppConversation,
+} from "./conversations"
 import {
   assistantReviewShortOutboxId,
   assistantReviewTokenFromBody,
   createAssistantReviewShortLocator,
 } from "./web-review-token"
+import {
+  type WhatsAppWorkflowCommandProjector,
+  issueAssistantWhatsAppWorkflowReviewInTransaction,
+} from "./workflow-action-reviews"
+import { renderAssistantWhatsAppWorkflowReply } from "./workflow-reply"
 
 export type AssistantWhatsAppStagedReview = {
   source: { proposalId: string; revision: number; payloadHash: string }
@@ -39,6 +47,126 @@ export type AssistantWhatsAppStagedWorkflowReview = {
   body: string
   expiresAt: Date
   projectCommand: WhatsAppWorkflowCommandProjector
+}
+
+type ResolvedConversation = Awaited<
+  ReturnType<typeof resolveAssistantWhatsAppConversation>
+>
+/** Revision 0 holds at most one fixed preface sent before the same inbox's own reply (revision 1). */
+export const ASSISTANT_WHATSAPP_PREFACE_REVISION = 0
+export const ASSISTANT_WHATSAPP_WINDOW_CLOSED = "MESSAGE_WINDOW_CLOSED"
+
+/** The fixed notice body for the current resolved scope; delivery re-renders and compares it. */
+export function assistantWhatsAppNoticeBody(
+  code: WhatsAppNoticeCode,
+  resolved: ResolvedConversation,
+) {
+  const store = resolved.tenantContext.activeStore
+  if (!store) return undefined
+  return renderWhatsAppNotice(
+    code,
+    {
+      businessName: resolved.tenantContext.tenant.name,
+      storeName: store.name,
+      tenantId: resolved.scope.tenantId,
+      storeId: resolved.scope.storeId,
+      conversationId: resolved.conversation.id,
+      purpose: resolved.conversation.purpose,
+    },
+    process.env.DASHBOARD_URL ??
+      process.env.NEXT_PUBLIC_DASHBOARD_URL ??
+      "https://dash.ewatrade.com",
+  )
+}
+
+/** A fixed notice row has no run, message, draft, review or execution authority of its own. */
+export async function stageAssistantWhatsAppNoticeInTransaction(
+  db: Prisma.TransactionClient,
+  inbox: { id: string; phoneNumberId: string; expiresAt: Date },
+  input: {
+    code: WhatsAppNoticeCode
+    resolved: ResolvedConversation
+    authorityDigest: string
+    responseRevision?: 0 | 1
+  },
+) {
+  const content = assistantWhatsAppNoticeBody(input.code, input.resolved)
+  if (!content) throw new AssistantWhatsAppError("UNAUTHORIZED")
+  await db.assistantWhatsAppOutbox.create({
+    data: {
+      inboxId: inbox.id,
+      phoneNumberId: inbox.phoneNumberId,
+      responseRevision: input.responseRevision ?? 1,
+      chunkIndex: 0,
+      chunkCount: 1,
+      rendererVersion: WHATSAPP_NOTICE_VERSION,
+      renderKind: "notice",
+      authorityDigest: input.authorityDigest,
+      content,
+      contentDigest: createHash("sha256").update(content).digest("hex"),
+      expiresAt: inbox.expiresAt,
+    },
+  })
+}
+
+/**
+ * Replies cancelled by the 24-hour window are never resent. The binding's next
+ * staged turn reply gets one fixed preface per missed batch: the latest missed
+ * TURN reply with no outbox row on any later inbox before this one.
+ */
+export async function stageAssistantWhatsAppMissedReplyNoticeInTransaction(
+  db: Prisma.TransactionClient,
+  inbox: {
+    id: string
+    bindingId: string | null
+    sequence: number
+    phoneNumberId: string
+    expiresAt: Date
+  },
+  resolved: ResolvedConversation,
+  authorityDigest: string,
+) {
+  if (!inbox.bindingId) return false
+  const missed = await db.assistantWhatsAppOutbox.findFirst({
+    where: {
+      state: "EXPIRED",
+      errorCode: ASSISTANT_WHATSAPP_WINDOW_CLOSED,
+      inbox: {
+        bindingId: inbox.bindingId,
+        identityId: null,
+        kind: "TURN",
+        sequence: { lt: inbox.sequence },
+      },
+    },
+    orderBy: { inbox: { sequence: "desc" } },
+    select: { inbox: { select: { sequence: true } } },
+  })
+  if (!missed) return false
+  const answered = await db.assistantWhatsAppOutbox.findFirst({
+    where: {
+      OR: [
+        {
+          inbox: {
+            bindingId: inbox.bindingId,
+            sequence: { gt: missed.inbox.sequence, lt: inbox.sequence },
+          },
+        },
+        {
+          inboxId: inbox.id,
+          responseRevision: ASSISTANT_WHATSAPP_PREFACE_REVISION,
+        },
+      ],
+    },
+    select: { id: true },
+  })
+  if (answered) return false
+  await stageAssistantWhatsAppNoticeInTransaction(db, inbox, {
+    code: "REPLY_WINDOW_MISSED",
+    resolved,
+    authorityDigest,
+    responseRevision: ASSISTANT_WHATSAPP_PREFACE_REVISION,
+  })
+  return true
 }
 
 /** Only called by the lease-authorized settlement transaction with its scoped canonical reply. */

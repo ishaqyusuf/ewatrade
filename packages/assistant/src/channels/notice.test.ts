@@ -1,5 +1,10 @@
 import { expect, test } from "bun:test"
-import { renderWhatsAppNotice, whatsAppMediaRefusalNotice } from "./notice"
+import {
+  renderWhatsAppNotice,
+  whatsAppMediaRefusalNotice,
+  whatsAppNoticeCodeSchema,
+  whatsAppTurnFailureNotice,
+} from "./notice"
 
 test("transport notices link the exact original saved workflow and never infer a different scope", () => {
   const scope = {
@@ -125,4 +130,67 @@ test("too-large files and failed or paused voice notes get their own notices", (
     expect(voice).toContain("Type")
     expect(voice).not.toContain("https://")
   }
+})
+
+test("terminal assistant failures get one plain outage notice; other outcomes keep their own handling", () => {
+  for (const code of [
+    "ATTEMPTS_EXHAUSTED",
+    "TURN_FAILED",
+    "TURN_INTERRUPTED",
+    "STREAM_FAILED",
+    "FINALIZATION_FAILED",
+  ])
+    expect(whatsAppTurnFailureNotice(code)).toBe("ASSISTANT_UNAVAILABLE")
+  for (const code of [
+    undefined,
+    null,
+    "",
+    "RETRY_PENDING",
+    "AUTHORITY_CHANGED",
+    "BUDGET_EXHAUSTED",
+    "WORKFLOW_NOT_READY",
+    "BAD_REQUEST",
+    "NOT_FOUND",
+    "private-provider-error",
+  ])
+    expect(whatsAppTurnFailureNotice(code)).toBeUndefined()
+  const body = renderWhatsAppNotice(
+    "ASSISTANT_UNAVAILABLE",
+    {
+      businessName: "Mama Ada Provisions",
+      storeName: "Yaba Main",
+      tenantId: "tenant",
+      storeId: "store",
+      conversationId: "chat",
+      purpose: "GENERAL",
+    },
+    "https://dashboard.example.test",
+  )
+  expect(body).toBe(
+    "Mama Ada Provisions · Yaba Main\n\n⚠️ I can't reach your business data right now. Nothing was changed.\nTry again in a minute.",
+  )
+  expect(body).not.toContain("https://")
+})
+
+test("a missed 24-hour reply gets a fixed welcome-back preface without scope label or link", () => {
+  expect(whatsAppNoticeCodeSchema.parse("REPLY_WINDOW_MISSED")).toBe(
+    "REPLY_WINDOW_MISSED",
+  )
+  for (const purpose of ["GENERAL", "SETUP", "PRODUCT_CREATE"] as const)
+    expect(
+      renderWhatsAppNotice(
+        "REPLY_WINDOW_MISSED",
+        {
+          businessName: "Business",
+          storeName: "Store",
+          tenantId: "tenant",
+          storeId: "store",
+          conversationId: "chat",
+          purpose,
+        },
+        "https://dashboard.example.test",
+      ),
+    ).toBe(
+      "👋 Welcome back. My last reply couldn't be delivered because the chat was quiet for over 24 hours. Ask again and I'll answer.",
+    )
 })
