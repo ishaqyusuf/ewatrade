@@ -46,6 +46,7 @@ import {
   catalogSubcategoryLinks,
 } from "../shared/catalog-listing"
 import { useDetailHistory } from "../shared/detail-history"
+import { SubcategoryNav } from "../shared/subcategory-nav"
 import type { CatalogV4Layout } from "./layout"
 import type { CatalogV4Item, CatalogV4Store } from "./types"
 
@@ -254,7 +255,7 @@ export function StorefrontCatalog({
         </nav>
       ) : null}
       {layout.showCategories && subcategories.length ? (
-        <nav aria-label="Subcategories" className="sf-subnav">
+        <SubcategoryNav className="sf-subnav" current={store.subcategory}>
           {subcategories.map((link) => (
             <Link
               prefetch={false}
@@ -265,7 +266,7 @@ export function StorefrontCatalog({
               {link.label}
             </Link>
           ))}
-        </nav>
+        </SubcategoryNav>
       ) : null}
       {store.items.length || filtered || query.sort || after ? (
         <CatalogListingControls

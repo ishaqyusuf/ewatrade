@@ -68,6 +68,7 @@ import {
   catalogSubcategoryLinks,
 } from "../shared/catalog-listing"
 import { TemplateActions, useCommerceDetail } from "../shared/commerce"
+import { SubcategoryNav } from "../shared/subcategory-nav"
 
 type Copy = (field: string, fallback?: string, multiline?: boolean) => ReactNode
 
@@ -295,9 +296,9 @@ export function MarketHallFloor({
           ) : null}
           {subcategories.length ? (
             // Roots stay one tablist; the active root's subcategories follow it as links.
-            <nav
-              aria-label="Subcategories"
+            <SubcategoryNav
               className={wide ? "mh-subtree" : "mh-subtabs"}
+              current={catalog.subcategory}
             >
               {subcategories.map((link) => (
                 <Link
@@ -310,7 +311,7 @@ export function MarketHallFloor({
                   {link.label}
                 </Link>
               ))}
-            </nav>
+            </SubcategoryNav>
           ) : null}
           {catalog.items.length || filtered || query.sort || after ? (
             <CatalogListingControls

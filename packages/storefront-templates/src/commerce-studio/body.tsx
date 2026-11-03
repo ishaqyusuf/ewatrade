@@ -42,6 +42,7 @@ import {
   catalogRootCurrent,
   catalogSubcategoryLinks,
 } from "../shared/catalog-listing"
+import { SubcategoryNav } from "../shared/subcategory-nav"
 import { formatMoney, itemSoldOut, stockWording } from "./commerce"
 import {
   CommerceStudioProvider,
@@ -550,7 +551,7 @@ function Catalog({ section }: { section: SectionInstance }) {
           </nav>
         ) : null}
         {subcategories.length ? (
-          <nav className="cs-subnav" aria-label="Subcategories">
+          <SubcategoryNav className="cs-subnav" current={catalog.subcategory}>
             {subcategories.map((link) => (
               <CommerceLink
                 key={link.id}
@@ -568,7 +569,7 @@ function Catalog({ section }: { section: SectionInstance }) {
                 {link.label}
               </CommerceLink>
             ))}
-          </nav>
+          </SubcategoryNav>
         ) : null}
         {showSearch ? (
           <CatalogListingControls
@@ -601,7 +602,7 @@ function Catalog({ section }: { section: SectionInstance }) {
             <EmptyContent>
               <CommerceLink
                 className={buttonVariants({ variant: "outline" })}
-                href={href("/shop")}
+                href={href(catalogListingPathHref("/shop", catalog))}
               >
                 Clear search
               </CommerceLink>

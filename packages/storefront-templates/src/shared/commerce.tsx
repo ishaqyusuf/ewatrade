@@ -54,6 +54,7 @@ import {
   catalogSubcategoryLinks,
 } from "./catalog-listing"
 import { type DetailHistory, useDetailHistory } from "./detail-history"
+import { SubcategoryNav } from "./subcategory-nav"
 
 /** Host route retains scope and authority; the templates request typed navigation only. */
 export function TemplateHost({
@@ -423,7 +424,7 @@ export function CommerceCollection({
         ) : null}
       </div>
       {subcategories.length ? (
-        <nav className="tf-subnav" aria-label="Subcategories">
+        <SubcategoryNav className="tf-subnav" current={catalog.subcategory}>
           {subcategories.map((link) => (
             <Link
               prefetch={false}
@@ -434,7 +435,7 @@ export function CommerceCollection({
               {link.label}
             </Link>
           ))}
-        </nav>
+        </SubcategoryNav>
       ) : null}
       {items.length || filtered || query.sort || after ? (
         <CatalogListingControls
