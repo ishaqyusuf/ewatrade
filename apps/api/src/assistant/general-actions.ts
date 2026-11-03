@@ -15,6 +15,7 @@ import { orderPreparationIssues } from "@ewatrade/assistant/general/order-prepar
 import {
   isSimpleProductCreate,
   productCreateDraft,
+  productCreateInventoryCodes,
   productCreateIssues,
   productCreatePayload,
 } from "@ewatrade/assistant/general/product-create"
@@ -493,6 +494,32 @@ const productCreate: GeneralActionAdapter<Action<"product_create">> = {
   async validate(ctx, payload, lock) {
     const issue = lock ? productCreateIssues(payload)[0] : undefined
     if (issue) throw new TRPCError({ code: "BAD_REQUEST", message: issue })
+    // SKUs and barcodes are unique per business. Checked on every save so the
+    // editor shows the clash before Confirm, not as a failed create.
+    const codes = productCreateInventoryCodes(payload)
+    if (codes.sku.length || codes.barcode.length) {
+      const scope = requireGeneralScope(ctx)
+      const taken = await ctx.db.productUnitOffering.findFirst({
+        where: {
+          tenantId: scope.tenantId,
+          OR: [
+            ...(codes.sku.length ? [{ sku: { in: codes.sku } }] : []),
+            ...(codes.barcode.length
+              ? [{ barcode: { in: codes.barcode } }]
+              : []),
+          ],
+        },
+        select: { sku: true },
+      })
+      if (taken)
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message:
+            taken.sku && codes.sku.includes(taken.sku)
+              ? `SKU ${taken.sku} is already used by another item.`
+              : "That barcode is already used by another item.",
+        })
+    }
     if (!payload.photoAssetId) return null
     const scope = requireGeneralScope(ctx)
     const photo = await ctx.db.catalogPhotoAsset.findFirst({

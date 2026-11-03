@@ -104,6 +104,8 @@ export function setupProductVariants(payload: SetupProductPayload) {
               : setupPackPrice(priceMinor, unit.containsQuantity)),
         })),
       openingStock: setupVariantStock(payload, override),
+      sku: override?.sku,
+      barcode: override?.barcode,
     }
   })
 }

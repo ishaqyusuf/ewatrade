@@ -307,6 +307,9 @@ export function catalogCommandForSetupEntity(
             key: offeringKey(canonicalKey),
             name: payload.unitName,
             pricingPolicy: "fixed" as const,
+            // Codes belong to the main-unit listing, as in the Catalog editor.
+            ...(row.sku ? { sku: row.sku } : {}),
+            ...(row.barcode ? { barcode: row.barcode } : {}),
           },
           ...sellingUnits.map((unit) => ({
             fixedPriceMinor: row.sellingUnits.find(

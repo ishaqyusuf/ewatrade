@@ -7,7 +7,6 @@ import {
   type GeneralProposal,
   generalActionSchema,
 } from "@ewatrade/assistant/general/contracts"
-import { isSimpleProductCreate } from "@ewatrade/assistant/general/product-create"
 import {
   CATALOG_FREE_LINE_LABELS,
   catalogFreeLineDescriptionError,
@@ -29,11 +28,23 @@ import { GeneralChangeEditor } from "./general-change-editor"
 import { GeneralMoneyOperationEditor } from "./general-money-operation-editor"
 import { GeneralOrderOperationEditor } from "./general-order-operation-editor"
 import { GeneralPaymentLinksEditor } from "./general-payment-links-editor"
-import { GeneralProductCreateRows } from "./general-product-create-rows"
 import {
   GeneralProductPictureField,
   useProductPicture,
 } from "./general-product-picture"
+import {
+  GeneralProductVariantHeader,
+  GeneralProductVariantList,
+  GeneralProductVariantPage,
+} from "./general-product-variants"
+import {
+  type VariantsState,
+  variantIssue,
+  variantLabel,
+  variantsFromDraft,
+  variantsIssue,
+  variantsPayload,
+} from "./general-product-variants-model"
 import { GeneralQuoteDecisionEditor } from "./general-quote-decision-editor"
 import { GeneralServiceIntakeEditor } from "./general-service-intake-editor"
 import { GeneralServiceMessageEditor } from "./general-service-message-editor"
@@ -206,15 +217,36 @@ function useDraftLineKeys(count: number) {
 
 function GeneralRecordEditor({
   proposal,
+  currencyCode,
   disabled,
   onSave,
 }: {
   proposal: GeneralProposal
+  currencyCode: string
   disabled: boolean
   onSave: (payload: GeneralAction) => void
 }) {
   const initial = proposal.payload
   const [payload, setPayload] = useState(initial)
+  // Options and variants (Workshop MQW 25 v2, 02 Variant page in the sheet).
+  const [variants, setVariantsState] = useState<VariantsState>(() =>
+    initial.action === "product_create"
+      ? variantsFromDraft(initial)
+      : { groups: [], rows: [] },
+  )
+  const [variantsTouched, setVariantsTouched] = useState(false)
+  const [variantPage, setVariantPage] = useState<string | null>(null)
+  const [variantPageError, setVariantPageError] = useState<string | null>(null)
+  const setVariants = (next: VariantsState) => {
+    setVariantsState(next)
+    setVariantsTouched(true)
+    setVariantPageError(null)
+  }
+  // One price and one stock count until there are packs or options.
+  const simpleProduct =
+    payload.action === "product_create" &&
+    !payload.sellingUnits?.length &&
+    !variants.rows.length
   const [price, setPrice] = useState(
     initial.action === "product_create" && "priceMinor" in initial
       ? minorToMajorInput(initial.priceMinor)
@@ -249,14 +281,23 @@ function GeneralRecordEditor({
     if (disabled || picture.uploading || !native) return
     const amount = majorToMinor(price)
     if (
-      ((payload.action === "product_create" &&
-        isSimpleProductCreate(payload) &&
-        price.trim() !== "") ||
+      ((simpleProduct && price.trim() !== "") ||
         payload.action === "payment_record") &&
       amount === null
     ) {
       setError("Enter a valid amount.")
       return
+    }
+    if (payload.action === "product_create" && !simpleProduct) {
+      const issue = variantsIssue(variants, payload, currencyCode)
+      if (issue) {
+        setError(issue.message)
+        if (issue.rowId) {
+          setVariantPage(issue.rowId)
+          setVariantPageError(issue.message)
+        }
+        return
+      }
     }
     if (payload.action === "order_create") {
       const problems: Record<number, string> = {}
@@ -282,9 +323,14 @@ function GeneralRecordEditor({
       ...payload,
       ...media,
       ...(payload.action === "product_create"
-        ? isSimpleProductCreate(payload)
-          ? { priceMinor: amount ?? undefined }
-          : { priceMinor: undefined, openingStock: undefined }
+        ? simpleProduct
+          ? {
+              priceMinor: amount ?? undefined,
+              options: undefined,
+              variants: undefined,
+              variantMode: undefined,
+            }
+          : variantsPayload(variants, payload)
         : payload.action === "payment_record"
           ? { amountMinor: amount }
           : payload.action === "customer_create"
@@ -314,287 +360,349 @@ function GeneralRecordEditor({
     setError(null)
     onSave(parsed.data)
   }
+  const openVariant =
+    payload.action === "product_create" && variantPage
+      ? variants.rows.find((row) => row.id === variantPage)
+      : undefined
+  const closeVariant = () => {
+    setVariantPage(null)
+    setVariantPageError(null)
+  }
   return (
     <BottomSheetInputProvider>
+      {openVariant && payload.action === "product_create" ? (
+        <GeneralProductVariantHeader
+          title={variantLabel(openVariant, payload.name)}
+          disabled={disabled}
+          onBack={closeVariant}
+          onDone={() => {
+            const issue = variantIssue(openVariant, payload, currencyCode)
+            if (issue) setVariantPageError(issue)
+            else {
+              closeVariant()
+              setError(null)
+            }
+          }}
+        />
+      ) : null}
       <BottomSheetKeyboardAwareScrollView
+        // Opening or leaving a variant page starts that page at its top.
+        key={openVariant ? openVariant.id : "draft"}
         contentContainerStyle={{
           gap: 16,
           paddingHorizontal: 18,
+          paddingTop: openVariant ? 16 : 0,
           paddingBottom: 32,
         }}
       >
-        {native ? null : (
-          <Text className="text-sm text-foreground">
-            Edit this draft on the dashboard. Nothing changes until it is
-            reviewed and confirmed there.
-          </Text>
-        )}
-        <Text className="text-sm text-muted-foreground">
-          Save changes, then review the updated card before confirming.
-        </Text>
-        <QaQuickFillButton
-          formId="general-assistant-proposal"
-          isDirty={
-            JSON.stringify(payload) !== JSON.stringify(initial) ||
-            phone !== ("phone" in initial ? initial.phone : "")
-          }
-          canUndo={!!undo}
-          onFill={(_context, sequence) => {
-            if (disabled) return
-            setUndo({ payload, price, phone, country })
-            if (payload.action === "customer_create") {
-              patch({ name: `QA customer ${sequence}`, email: undefined })
-              setPhone(`0801234${String(sequence).padStart(4, "0")}`)
-            } else if (payload.action === "product_create") {
-              patch({
-                name: `QA product ${sequence}`,
-                canonicalUnitName: "Piece",
-              })
-              setPrice("1500")
-            } else if (payload.action === "payment_record") setPrice("100")
-            else patch({ notes: `QA order note ${sequence}` })
-          }}
-          onUndo={() => {
-            if (disabled || !undo) return
-            setPayload(undo.payload)
-            setPrice(undo.price)
-            setPhone(undo.phone)
-            setCountry(undo.country)
-            setUndo(null)
-          }}
-        />
-        {"name" in payload ? (
-          <FormField
-            label="Name"
-            value={payload.name}
-            editable={!disabled}
-            onChangeText={(name) => patch({ name })}
-          />
-        ) : null}
-        {payload.action === "customer_create" ? (
+        {openVariant && payload.action === "product_create" ? (
           <>
-            <CountrySelect
-              value={country}
+            <GeneralProductVariantPage
+              draft={payload}
+              state={variants}
+              rowId={openVariant.id}
+              currencyCode={currencyCode}
               disabled={disabled}
-              onChange={setCountry}
+              error={variantPageError}
+              onChange={setVariants}
+              onRemoved={closeVariant}
             />
-            <FormField
-              label="Phone"
-              value={phone}
-              editable={!disabled}
-              keyboardType="phone-pad"
-              onChangeText={setPhone}
-            />
-            <FormField
-              label="Email"
-              value={payload.email ?? ""}
-              editable={!disabled}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              onChangeText={(email) =>
-                patch({ email: email.trim() || undefined })
-              }
-            />
+            <SearchFooterSpacer />
           </>
-        ) : null}
-        {payload.action === "customer_update" ? (
+        ) : (
           <>
+            {native ? null : (
+              <Text className="text-sm text-foreground">
+                Edit this draft on the dashboard. Nothing changes until it is
+                reviewed and confirmed there.
+              </Text>
+            )}
             <Text className="text-sm text-muted-foreground">
-              Leave a field as it is to keep it. Clear phone or email to remove
-              it.
+              Save changes, then review the updated card before confirming.
             </Text>
-            <FormField
-              label="Phone"
-              value={payload.phone ?? ""}
-              editable={!disabled}
-              keyboardType="phone-pad"
-              onChangeText={(phone) => patch({ phone: phone.trim() || null })}
-            />
-            <FormField
-              label="Email"
-              value={payload.email ?? ""}
-              editable={!disabled}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              onChangeText={(email) => patch({ email: email.trim() || null })}
-            />
-          </>
-        ) : null}
-        {payload.action === "product_create"
-          ? payload.sellingUnits?.map((unit, index) => (
-              <FormField
-                key={unit.name}
-                label={`${unit.referenceUnitName || payload.canonicalUnitName} per ${unit.name}`}
-                value={unit.referenceQuantity ?? unit.containsQuantity}
-                editable={!disabled}
-                keyboardType="decimal-pad"
-                onChangeText={(value) =>
+            <QaQuickFillButton
+              formId="general-assistant-proposal"
+              isDirty={
+                JSON.stringify(payload) !== JSON.stringify(initial) ||
+                variantsTouched ||
+                phone !== ("phone" in initial ? initial.phone : "")
+              }
+              canUndo={!!undo}
+              onFill={(_context, sequence) => {
+                if (disabled) return
+                setUndo({ payload, price, phone, country })
+                if (payload.action === "customer_create") {
+                  patch({ name: `QA customer ${sequence}`, email: undefined })
+                  setPhone(`0801234${String(sequence).padStart(4, "0")}`)
+                } else if (payload.action === "product_create") {
                   patch({
-                    sellingUnits: payload.sellingUnits?.map((entry, at) =>
-                      index !== at
-                        ? entry
-                        : {
-                            ...entry,
-                            quantityDefault: undefined,
-                            ...(entry.referenceUnitName
-                              ? { referenceQuantity: value }
-                              : { containsQuantity: value }),
-                          },
-                    ),
+                    name: `QA product ${sequence}`,
+                    canonicalUnitName: "Piece",
                   })
+                  setPrice("1500")
+                } else if (payload.action === "payment_record") setPrice("100")
+                else patch({ notes: `QA order note ${sequence}` })
+              }}
+              onUndo={() => {
+                if (disabled || !undo) return
+                setPayload(undo.payload)
+                setPrice(undo.price)
+                setPhone(undo.phone)
+                setCountry(undo.country)
+                setUndo(null)
+              }}
+            />
+            {"name" in payload ? (
+              <FormField
+                label="Name"
+                value={payload.name}
+                editable={!disabled}
+                onChangeText={(name) => patch({ name })}
+              />
+            ) : null}
+            {payload.action === "customer_create" ? (
+              <>
+                <CountrySelect
+                  value={country}
+                  disabled={disabled}
+                  onChange={setCountry}
+                />
+                <FormField
+                  label="Phone"
+                  value={phone}
+                  editable={!disabled}
+                  keyboardType="phone-pad"
+                  onChangeText={setPhone}
+                />
+                <FormField
+                  label="Email"
+                  value={payload.email ?? ""}
+                  editable={!disabled}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  onChangeText={(email) =>
+                    patch({ email: email.trim() || undefined })
+                  }
+                />
+              </>
+            ) : null}
+            {payload.action === "customer_update" ? (
+              <>
+                <Text className="text-sm text-muted-foreground">
+                  Leave a field as it is to keep it. Clear phone or email to
+                  remove it.
+                </Text>
+                <FormField
+                  label="Phone"
+                  value={payload.phone ?? ""}
+                  editable={!disabled}
+                  keyboardType="phone-pad"
+                  onChangeText={(phone) =>
+                    patch({ phone: phone.trim() || null })
+                  }
+                />
+                <FormField
+                  label="Email"
+                  value={payload.email ?? ""}
+                  editable={!disabled}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  onChangeText={(email) =>
+                    patch({ email: email.trim() || null })
+                  }
+                />
+              </>
+            ) : null}
+            {payload.action === "product_create"
+              ? payload.sellingUnits?.map((unit, index) => (
+                  <FormField
+                    key={unit.name}
+                    label={`${unit.referenceUnitName || payload.canonicalUnitName} per ${unit.name}`}
+                    value={unit.referenceQuantity ?? unit.containsQuantity}
+                    editable={!disabled}
+                    keyboardType="decimal-pad"
+                    onChangeText={(value) =>
+                      patch({
+                        sellingUnits: payload.sellingUnits?.map((entry, at) =>
+                          index !== at
+                            ? entry
+                            : {
+                                ...entry,
+                                quantityDefault: undefined,
+                                ...(entry.referenceUnitName
+                                  ? { referenceQuantity: value }
+                                  : { containsQuantity: value }),
+                              },
+                        ),
+                      })
+                    }
+                  />
+                ))
+              : null}
+            {payload.action === "product_create" ? (
+              <GeneralProductVariantList
+                draft={payload}
+                state={variants}
+                currencyCode={currencyCode}
+                disabled={disabled}
+                onChange={setVariants}
+                onOpen={(rowId) => {
+                  setVariantPage(rowId)
+                  setVariantPageError(null)
+                }}
+                seed={{ price, stock: payload.openingStock }}
+              />
+            ) : null}
+            {simpleProduct ? (
+              <FormField
+                label="Unit"
+                value={payload.canonicalUnitName}
+                editable={!disabled}
+                onChangeText={(canonicalUnitName) =>
+                  patch({ canonicalUnitName })
                 }
               />
-            ))
-          : null}
-        {payload.action === "product_create" &&
-        !isSimpleProductCreate(payload) ? (
-          <GeneralProductCreateRows
-            payload={payload}
-            disabled={disabled}
-            onChange={(variants) => patch({ variants })}
-          />
-        ) : null}
-        {payload.action === "product_create" &&
-        isSimpleProductCreate(payload) ? (
-          <FormField
-            label="Unit"
-            value={payload.canonicalUnitName}
-            editable={!disabled}
-            onChangeText={(canonicalUnitName) => patch({ canonicalUnitName })}
-          />
-        ) : null}
-        {(payload.action === "product_create" &&
-          isSimpleProductCreate(payload)) ||
-        payload.action === "payment_record" ? (
-          <FormField
-            label={
-              payload.action === "product_create"
-                ? "Unit price"
-                : "Payment amount"
-            }
-            value={price}
-            editable={!disabled}
-            keyboardType="decimal-pad"
-            onChangeText={setPrice}
-          />
-        ) : null}
-        {payload.action === "product_create" ? (
-          <GeneralProductPictureField picture={picture} disabled={disabled} />
-        ) : null}
-        {payload.action === "payment_record" ? (
-          <>
-            <Text className="text-sm font-bold text-foreground">
-              Payment method
-            </Text>
-            <View className="flex-row flex-wrap gap-2">
-              {(["cash", "bank_transfer", "card", "pos", "other"] as const).map(
-                (method) => (
-                  <ActionButton
-                    key={method}
-                    disabled={disabled}
-                    variant={payload.method === method ? "default" : "outline"}
-                    onPress={() => patch({ method })}
-                  >
-                    {method.replaceAll("_", " ")}
-                  </ActionButton>
-                ),
-              )}
-            </View>
-            <FormField
-              label="Note"
-              value={payload.note ?? ""}
-              editable={!disabled}
-              onChangeText={(note) => patch({ note: note.trim() || undefined })}
-            />
-          </>
-        ) : null}
-        {payload.action === "order_create" ? (
-          <>
-            <Text className="text-sm text-muted-foreground">
-              Use the sale form to change items or the customer. Here you can
-              adjust quantities, notes and what each typed-price line was for.
-            </Text>
-            {payload.lines.map((line, index) =>
-              "custom" in line ? (
+            ) : null}
+            {simpleProduct || payload.action === "payment_record" ? (
+              <FormField
+                label={
+                  payload.action === "product_create"
+                    ? "Unit price"
+                    : "Payment amount"
+                }
+                value={price}
+                editable={!disabled}
+                keyboardType="decimal-pad"
+                onChangeText={setPrice}
+              />
+            ) : null}
+            {payload.action === "product_create" ? (
+              <GeneralProductPictureField
+                picture={picture}
+                disabled={disabled}
+              />
+            ) : null}
+            {payload.action === "payment_record" ? (
+              <>
+                <Text className="text-sm font-bold text-foreground">
+                  Payment method
+                </Text>
+                <View className="flex-row flex-wrap gap-2">
+                  {(
+                    ["cash", "bank_transfer", "card", "pos", "other"] as const
+                  ).map((method) => (
+                    <ActionButton
+                      key={method}
+                      disabled={disabled}
+                      variant={
+                        payload.method === method ? "default" : "outline"
+                      }
+                      onPress={() => patch({ method })}
+                    >
+                      {method.replaceAll("_", " ")}
+                    </ActionButton>
+                  ))}
+                </View>
                 <FormField
-                  key={lineKeys[index]}
-                  label={
-                    line.custom === "quick_sale"
-                      ? `What was sold? · line ${index + 1}`
-                      : `${CATALOG_FREE_LINE_LABELS[line.custom]} description · line ${index + 1}`
-                  }
-                  helper={`${line.custom === "quick_sale" ? "Required" : "Optional"} · ${CATALOG_FREE_LINE_LABELS[line.custom]} ${minorToMajorInput(line.amountMinor)}`}
-                  error={lineErrors[index]}
-                  value={line.description ?? ""}
+                  label="Note"
+                  value={payload.note ?? ""}
                   editable={!disabled}
-                  maxLength={240}
-                  onChangeText={(description) => {
-                    patch({
-                      lines: payload.lines.map((current, i) =>
-                        i === index
-                          ? {
-                              ...current,
-                              description: description || undefined,
-                            }
-                          : current,
-                      ),
-                    })
-                    if (lineErrors[index])
-                      setLineErrors((current) => {
-                        const next = { ...current }
-                        const problem = catalogFreeLineDescriptionError({
-                          kind: line.custom,
-                          description: description.trim(),
+                  onChangeText={(note) =>
+                    patch({ note: note.trim() || undefined })
+                  }
+                />
+              </>
+            ) : null}
+            {payload.action === "order_create" ? (
+              <>
+                <Text className="text-sm text-muted-foreground">
+                  Use the sale form to change items or the customer. Here you
+                  can adjust quantities, notes and what each typed-price line
+                  was for.
+                </Text>
+                {payload.lines.map((line, index) =>
+                  "custom" in line ? (
+                    <FormField
+                      key={lineKeys[index]}
+                      label={
+                        line.custom === "quick_sale"
+                          ? `What was sold? · line ${index + 1}`
+                          : `${CATALOG_FREE_LINE_LABELS[line.custom]} description · line ${index + 1}`
+                      }
+                      helper={`${line.custom === "quick_sale" ? "Required" : "Optional"} · ${CATALOG_FREE_LINE_LABELS[line.custom]} ${minorToMajorInput(line.amountMinor)}`}
+                      error={lineErrors[index]}
+                      value={line.description ?? ""}
+                      editable={!disabled}
+                      maxLength={240}
+                      onChangeText={(description) => {
+                        patch({
+                          lines: payload.lines.map((current, i) =>
+                            i === index
+                              ? {
+                                  ...current,
+                                  description: description || undefined,
+                                }
+                              : current,
+                          ),
                         })
-                        if (problem) next[index] = problem
-                        else delete next[index]
-                        return next
-                      })
-                  }}
-                />
-              ) : (
+                        if (lineErrors[index])
+                          setLineErrors((current) => {
+                            const next = { ...current }
+                            const problem = catalogFreeLineDescriptionError({
+                              kind: line.custom,
+                              description: description.trim(),
+                            })
+                            if (problem) next[index] = problem
+                            else delete next[index]
+                            return next
+                          })
+                      }}
+                    />
+                  ) : (
+                    <FormField
+                      key={`${line.offeringId}:${index}`}
+                      label={`Quantity · line ${index + 1}`}
+                      value={line.quantity}
+                      editable={!disabled}
+                      keyboardType="decimal-pad"
+                      onChangeText={(quantity) =>
+                        patch({
+                          lines: payload.lines.map((current, i) =>
+                            i === index ? { ...current, quantity } : current,
+                          ),
+                        })
+                      }
+                    />
+                  ),
+                )}
                 <FormField
-                  key={`${line.offeringId}:${index}`}
-                  label={`Quantity · line ${index + 1}`}
-                  value={line.quantity}
+                  label="Notes"
+                  value={payload.notes ?? ""}
                   editable={!disabled}
-                  keyboardType="decimal-pad"
-                  onChangeText={(quantity) =>
-                    patch({
-                      lines: payload.lines.map((current, i) =>
-                        i === index ? { ...current, quantity } : current,
-                      ),
-                    })
+                  multiline
+                  onChangeText={(notes) =>
+                    patch({ notes: notes.trim() || undefined })
                   }
                 />
-              ),
-            )}
-            <FormField
-              label="Notes"
-              value={payload.notes ?? ""}
-              editable={!disabled}
-              multiline
-              onChangeText={(notes) =>
-                patch({ notes: notes.trim() || undefined })
-              }
-            />
+              </>
+            ) : null}
+            {error ? (
+              <Text
+                accessibilityLiveRegion="polite"
+                className="text-sm text-destructive"
+              >
+                {error}
+              </Text>
+            ) : null}
+            <ActionButton
+              disabled={disabled || picture.uploading || !native}
+              onPress={() => void save()}
+            >
+              Save draft
+            </ActionButton>
+            <SearchFooterSpacer />
           </>
-        ) : null}
-        {error ? (
-          <Text
-            accessibilityLiveRegion="polite"
-            className="text-sm text-destructive"
-          >
-            {error}
-          </Text>
-        ) : null}
-        <ActionButton
-          disabled={disabled || picture.uploading || !native}
-          onPress={() => void save()}
-        >
-          Save draft
-        </ActionButton>
-        <SearchFooterSpacer />
+        )}
       </BottomSheetKeyboardAwareScrollView>
     </BottomSheetInputProvider>
   )

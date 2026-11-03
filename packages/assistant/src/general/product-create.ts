@@ -77,7 +77,26 @@ export function productCreateIssues(action: ProductCreateAction): string[] {
         issues.push(
           `Enter the selling price for ${row.label} per ${unit.name}.`,
         )
+  for (const kind of ["sku", "barcode"] as const) {
+    // Exact match, like the database's per-business uniqueness.
+    const codes = productCreateInventoryCodes(action)[kind]
+    if (new Set(codes).size !== codes.length)
+      issues.push(
+        `Give each ${action.name} variant a different ${kind === "sku" ? "SKU" : "barcode"}.`,
+      )
+  }
   return [...new Set(issues)]
+}
+
+/** SKUs and barcodes the draft would save, one per variant that has them. */
+export function productCreateInventoryCodes(action: ProductCreateAction) {
+  const rows = productCreateVariants(action)
+  const codes = (kind: "sku" | "barcode") =>
+    rows.flatMap((row) => {
+      const code = row[kind]?.trim()
+      return code ? [code] : []
+    })
+  return { sku: codes("sku"), barcode: codes("barcode") }
 }
 
 export function productCreatePayload(
@@ -220,7 +239,11 @@ export function productCreateSummary(
       ),
     ]
     const label = action.options?.length ? `${row.label}: ` : ""
-    return `${label}${prices.join(" · ")} · ${stockText(row.openingStock)}`
+    const codes = [
+      row.sku ? `SKU ${row.sku}` : null,
+      row.barcode ? `barcode ${row.barcode}` : null,
+    ].filter(Boolean)
+    return `${label}${prices.join(" · ")} · ${stockText(row.openingStock)}${codes.length ? ` · ${codes.join(" · ")}` : ""}`
   })
   return [
     `${action.name} · counted in ${unit}${packs ? ` · ${packs}` : ""}`,

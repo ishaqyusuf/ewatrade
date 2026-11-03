@@ -157,13 +157,15 @@ export function productCreatePresentation(
             : `${money(row.priceMinor)} / ${unit}`,
           stock(row.openingStock),
         ],
-        detail: row.sellingUnits
-          .map((pack) =>
+        detail: [
+          ...row.sellingUnits.map((pack) =>
             pack.priceMinor === undefined
               ? `${pack.name} price needed`
               : `${money(pack.priceMinor)} / ${pack.name}${action.variants?.find((variant) => setupSelectionsEqual(variant.selections, row.selections))?.sellingUnitPrices?.some((price) => price.unitName === pack.name && price.derivedFromUnit) ? " (suggested)" : ""}`,
-          )
-          .join(" · "),
+          ),
+          ...(row.sku ? [`SKU ${clip(row.sku, 120)}`] : []),
+          ...(row.barcode ? [`Barcode ${clip(row.barcode, 120)}`] : []),
+        ].join(" · "),
       })),
       preview: 6,
     },

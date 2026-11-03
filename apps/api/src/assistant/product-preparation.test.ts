@@ -43,6 +43,70 @@ test("partial product drafts are editable but fail the confirmation boundary bef
   ).resolves.toBeNull()
 })
 
+test("variant SKUs and barcodes already used in the business are refused on save", async () => {
+  const payload = productCreateDraft(
+    {
+      action: "product_create",
+      name: "Eggs",
+      canonicalUnitName: "Piece",
+      options: [{ name: "Size", values: ["Big", "Small"] }],
+      variants: [
+        {
+          selections: [{ optionName: "Size", value: "Big" }],
+          priceMinor: 25000,
+          sku: "EGG-BIG",
+        },
+        {
+          selections: [{ optionName: "Size", value: "Small" }],
+          priceMinor: 20000,
+          barcode: "6150000000011",
+        },
+      ],
+    },
+    "NGN",
+  )
+  const queries: unknown[] = []
+  let taken: { sku: string | null } | null = { sku: "EGG-BIG" }
+  const ctx = {
+    session: { user: { id: "owner" } },
+    tenantContext: {
+      tenant: { id: "business", dataClassification: "LIVE" },
+      membership: { role: "OWNER" },
+      activeStore: { id: "store" },
+      staffAccess: { status: "ACTIVE", mode: "ALL" },
+    },
+    db: {
+      productUnitOffering: {
+        findFirst: async (query: unknown) => {
+          queries.push(query)
+          return taken
+        },
+      },
+    },
+  } as unknown as GeneralTransactionContext
+  const adapter = generalActionAdapter(payload)
+  await expect(adapter.validate(ctx, payload, false)).rejects.toMatchObject({
+    code: "BAD_REQUEST",
+    message: "SKU EGG-BIG is already used by another item.",
+  })
+  expect(queries[0]).toEqual({
+    where: {
+      tenantId: "business",
+      OR: [
+        { sku: { in: ["EGG-BIG"] } },
+        { barcode: { in: ["6150000000011"] } },
+      ],
+    },
+    select: { sku: true },
+  })
+  taken = { sku: null }
+  await expect(adapter.validate(ctx, payload, false)).rejects.toMatchObject({
+    message: "That barcode is already used by another item.",
+  })
+  taken = null
+  expect(await adapter.validate(ctx, payload, true)).toBeNull()
+})
+
 test("even a signed pending partial product gets no app confirmation token; completing it enables its current revision", () => {
   const payload = productCreateDraft(
     { action: "product_create", name: "T-shirt", canonicalUnitName: "Piece" },

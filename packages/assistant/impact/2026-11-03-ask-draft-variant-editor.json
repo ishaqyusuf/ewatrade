@@ -1,0 +1,60 @@
+{
+  "version": 1,
+  "id": "2026-11-03-ask-draft-variant-editor",
+  "tickets": ["H02"],
+  "summary": "Full variant editor in the mobile Ask product draft editor (queue Q22, Workshop legacy/mobile-quality-workshop revision aa365dec v21, screen 25 v2, option 02 Variant page in the sheet). Owners can rename options, add and remove option values and options, remove variants and add missing combinations back, and edit each variant's price per unit and pack, opening stock counted per unit (kept as stockByUnit for the server to convert) and SKU/barcode. The draft schema's setup variant gains optional sku and barcode (trimmed, 1-120 characters, the Catalog editor's limit). Saved edits use variantMode explicit so removed combinations are not created. Setup's Catalog mapping puts a variant's codes on its main-unit listing, as the Catalog editor does. product_create validation refuses codes shared between variants of the draft and, on every save, codes already used in the business (exact match, the database's per-business uniqueness), so the clash shows in the editor before Confirm. The card text and review table show each variant's SKU and barcode. Local only; no deployment; device acceptance deferred.",
+  "capabilities": [
+    {
+      "id": "catalog.product.create",
+      "change": "unchanged",
+      "rollout": "source",
+      "note": "The draft schema gains optional per-variant sku and barcode; existing drafts parse unchanged, and the action protocol stays compatible v1. Authority is unchanged: edits still go through editGeneralProposal (assertGeneralDraftAction, managers on the active Store) and Confirm through the same locked validate/execute path into createCatalogItemInTransaction. Coverage regenerated with APP_ENV=local shows no row change."
+    }
+  ],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/frictionless-commerce-assistant.md"
+    },
+    {
+      "topic": "capability",
+      "status": "not_applicable",
+      "path": "packages/assistant/src/capabilities/COVERAGE.md",
+      "note": "Regenerated with APP_ENV=local; no capability, procedure, role or rollout change."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/assistant/src/general/product-create.test.ts",
+      "executed": true,
+      "result": "With product/preparation and setup tests: 89 pass; the 2 failures are pre-existing setup/guided.test.ts prompt-numbering expectations untouched by this change. New case: explicit variants drop removed combinations, codes trim and show on the card, shared SKUs are an issue, 121-character codes are refused."
+    },
+    {
+      "kind": "test",
+      "path": "apps/api/src/assistant/setup-commit.test.ts",
+      "executed": true,
+      "result": "With product-preparation and catalog-review-presentations tests: 19 pass (APP_ENV=local, .env.local). Explicit variants create only drafted combinations; codes land on the main-unit offering only and pass Catalog command validation."
+    },
+    {
+      "kind": "test",
+      "path": "apps/api/src/assistant/product-preparation.test.ts",
+      "executed": true,
+      "result": "3 pass. Codes already used in the business are refused on save with the SKU or barcode message; the tenant-scoped lookup is exact; partial drafts still validate without database access."
+    },
+    {
+      "kind": "test",
+      "path": "apps/mobile/src/components/mobile/assistant/general-product-variants-model.test.ts",
+      "executed": true,
+      "result": "6 pass, 31 expects: draft to rows, per-unit stock and codes to payload, add/remove values and variants, rename/add/remove options, single-price draft to first variant, Catalog price/quantity/code checks per variant."
+    },
+    {
+      "kind": "review",
+      "path": "apps/mobile/src/components/mobile/assistant/general-proposal-editor.tsx",
+      "executed": false,
+      "result": "Device check pending: list and variant page, keyboard open, 200% text, dark mode, barcode scan from inside the sheet."
+    }
+  ]
+}

@@ -201,6 +201,44 @@ describe("setup options become catalog variants", () => {
     )
   })
 
+  test("explicit variants keep only drafted combinations and their codes", async () => {
+    const command = catalogCommandForSetupEntity(
+      "ent_11",
+      {
+        ...fabric,
+        variantMode: "explicit",
+        options: [{ name: "Size", values: ["Small", "Large", "Jumbo"] }],
+        variants: [
+          {
+            selections: [{ optionName: "Size", value: "Large" }],
+            priceMinor: 400_000,
+            sku: "ANK-L",
+            barcode: "6151234567890",
+          },
+          { selections: [{ optionName: "Size", value: "Small" }] },
+        ],
+      },
+      scope,
+    )
+    if (command.kind !== "product") throw new Error("expected a product")
+    expect(command.variants.map((variant) => variant.name)).toEqual([
+      "Small",
+      "Large",
+    ])
+    const [small, large] = command.variants
+    expect(small?.offerings[0]).not.toHaveProperty("sku")
+    expect(large?.offerings[0]).toMatchObject({
+      fixedPriceMinor: 400_000,
+      sku: "ANK-L",
+      barcode: "6151234567890",
+    })
+    // Packs never carry the variant's codes.
+    expect(large?.offerings[1]).not.toHaveProperty("sku")
+    await expect(createCatalogItem(validationOnlyDb, command)).rejects.toBe(
+      reachedDatabase,
+    )
+  })
+
   test("products without options keep the single default variant", async () => {
     const command = catalogCommandForSetupEntity(
       "ent_10",

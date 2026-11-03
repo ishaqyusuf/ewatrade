@@ -3,6 +3,7 @@ import { generalActionSchema, generalActionSummary } from "./contracts"
 import {
   isSimpleProductCreate,
   productCreateDraft,
+  productCreateInventoryCodes,
   productCreateIssues,
   productCreatePayload,
 } from "./product-create"
@@ -254,4 +255,44 @@ test("a stated stock correction converts Small crates without changing Big or ei
     { unit: 15000, crate: 400000 },
     { unit: 20000, crate: 550000 },
   ])
+})
+
+test("edited variants keep codes, drop removed combinations and flag shared codes", () => {
+  const parsed = generalActionSchema.parse({
+    ...eggs,
+    options: [{ name: "Size", values: ["Small", "Big", "Jumbo"] }],
+    variantMode: "explicit",
+    variants: [
+      { ...eggs.variants[0], sku: " EGG-S ", barcode: "6150000000011" },
+      { ...eggs.variants[1], sku: "EGG-B" },
+    ],
+  })
+  if (parsed.action !== "product_create") throw Error("wrong action")
+  const draft = productCreateDraft(parsed)
+  // Jumbo is an option value without a drafted variant, so it is not created.
+  expect(
+    draft.variants?.map((variant) => variant.selections[0]?.value),
+  ).toEqual(["Small", "Big"])
+  expect(draft.variants?.[0]?.sku).toBe("EGG-S")
+  expect(productCreateInventoryCodes(draft)).toEqual({
+    sku: ["EGG-S", "EGG-B"],
+    barcode: ["6150000000011"],
+  })
+  expect(productCreateIssues(draft)).toEqual([])
+  expect(generalActionSummary(draft, "NGN")).toContain(
+    "SKU EGG-S · barcode 6150000000011",
+  )
+  const clash = productCreateDraft({
+    ...draft,
+    variants: draft.variants?.map((variant) => ({ ...variant, sku: "EGG" })),
+  })
+  expect(productCreateIssues(clash)).toContain(
+    "Give each Eggs variant a different SKU.",
+  )
+  expect(
+    generalActionSchema.safeParse({
+      ...eggs,
+      variants: [{ ...eggs.variants[0], sku: "x".repeat(121) }],
+    }).success,
+  ).toBe(false)
 })

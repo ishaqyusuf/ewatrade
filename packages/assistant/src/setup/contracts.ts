@@ -77,6 +77,14 @@ const illustrationIdField = z
   .nullable()
   .optional()
 
+/** Same limit as the Catalog editor; unique per business, checked on save. */
+const inventoryCode = z
+  .string()
+  .trim()
+  .min(1)
+  .max(120, "Keep inventory codes within 120 characters.")
+  .optional()
+
 export const setupProductPayloadSchema = z
   .object({
     kind: z.literal("product"),
@@ -148,6 +156,9 @@ export const setupProductPayloadSchema = z
             .array(z.object({ unitName: name, quantity: z.string() }))
             .max(6)
             .optional(),
+          /** Inventory codes on the main-unit listing, as the Catalog editor saves them. */
+          sku: inventoryCode,
+          barcode: inventoryCode,
         }),
       )
       .max(36)
