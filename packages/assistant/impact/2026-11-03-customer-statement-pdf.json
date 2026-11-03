@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "id": "2026-11-03-customer-statement-pdf",
+  "tickets": ["E02", "H02"],
+  "summary": "Printable / PDF customer statement (queue Q20, Workshop dashboard/web-app/customers/customers-pages revision ab75381d, option 07). New Owner/Admin finance query customerLedger.statementPdf renders an A4 PDF of one customer ledger account for local dates: business and Store header, customer, opening balance before the start date, dated charges and payments with a running balance, closing balance and optional How to pay from Finance bank money accounts. It reads the same pinned snapshot and uses the same finance gate as customerLedger.statement; merchant entry notes are never printed. The dashboard statement gains Print or save as PDF and the native statement Share/Save PDF. Read only; no ledger, finance or schema write. Local only; no deployment; UI acceptance deferred.",
+  "capabilities": [],
+  "noAssistantImpact": "No capability changes. The assistant already reads the same statement figures through customers.statement.read; producing and delivering a PDF file is a client action, so customerLedger.statementPdf stays planned under E02 with the rest of customerLedger.",
+  "procedures": [
+    {
+      "path": "customerLedger.statementPdf",
+      "status": "planned",
+      "reason": "Read-only Owner/Admin file output for the merchant to print, download or share. Not an assistant tool yet: the assistant answers statement questions with customers.statement.read, and sending a statement file to a customer would need the same manual-delivery review as the WhatsApp account summary (E02)."
+    }
+  ],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/customer-ledger.md"
+    },
+    {
+      "topic": "api",
+      "status": "local_only",
+      "path": ".brain/plans/2026-10-01-customer-debit-credit-ledger.md",
+      "note": "Q20 result section records customerLedger.statementPdf."
+    },
+    {
+      "topic": "capability",
+      "status": "updated",
+      "path": "packages/assistant/src/capabilities/COVERAGE.md"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/order-receipts/src/statement.test.ts",
+      "executed": true,
+      "result": "6 pass, 20 expects: running balance, empty period, negative refusal, customer-facing words, money words and file name, rendered PDF text."
+    },
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/customer-ledger/statement-document.integration.test.ts",
+      "executed": true,
+      "result": "1 pass, 12 expects on the verified local profile: opening/lines/closing, period after the opening, empty earlier period, pinned snapshot, bank details on/off, invalid dates and snapshot, MANAGER and foreign tenant refused; QA tenant cleaned."
+    },
+    {
+      "kind": "test",
+      "path": "apps/api/src/trpc/routers/customer-ledger.test.ts",
+      "executed": true,
+      "result": "8 pass, 159 expects: statementPdf listed, unauthenticated and MANAGER callers refused before DB effects, reversed dates and tenant override rejected by the strict schema."
+    }
+  ]
+}

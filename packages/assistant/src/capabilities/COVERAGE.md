@@ -6,9 +6,9 @@ Tickets refer to the Brain plan `.brain/plans/2026-10-09-assistant-business-oper
 
 ## Summary
 
-- Router procedures: 790 (600 merchant, 190 public/account/internal)
+- Router procedures: 791 (601 merchant, 190 public/account/internal)
 - Merchant supported by a capability: 178
-- Merchant planned: 141
+- Merchant planned: 142
 - Merchant form-only: 219
 - Merchant excluded: 62
 - Capabilities: 165 (87 read, 78 write)
@@ -377,7 +377,7 @@ track conversational evaluation separately from these source test links.
 | D04 | 3 |
 | D05 | 4 |
 | E01 | 4 |
-| E02 | 9 |
+| E02 | 10 |
 | E03 | 3 |
 | E04 | 1 |
 | E05 | 2 |
@@ -525,6 +525,7 @@ track conversational evaluation separately from these source test links.
 | `customerLedger.reverseEntry` | mutation | Owner/Admin only | customers | planned | E02 |
 | `customerLedger.sources` | query | Owner/Admin only | finance | supported | customers.sources.read |
 | `customerLedger.statement` | query | Owner/Admin only | finance | supported | customers.statement.read |
+| `customerLedger.statementPdf` | query | Owner/Admin only | customers | planned | E02 |
 | `customerMessages.catalog` | query | read | platform | planned | G05 |
 | `customerMessages.draftWithAi` | mutation | Owner/Admin only | platform | form_only | Manual WhatsApp composition/settings and reviewed AI drafts; no assistant provider-send or template-write authority. |
 | `customerMessages.prepareOpen` | mutation | orders | platform | form_only | Manual WhatsApp composition/settings and reviewed AI drafts; no assistant provider-send or template-write authority. |
