@@ -8,11 +8,14 @@ pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   import.meta.url,
 ).toString()
 
-export default function ReceiptPdfPreview({ url }: { url: string }) {
+export default function ReceiptPdfPreview({
+  url,
+  label = "Receipt PDF preview",
+}: { url: string; label?: string }) {
   const [pages, setPages] = useState(0)
   return (
     <section
-      aria-label="Receipt PDF preview"
+      aria-label={label}
       className="max-h-[65dvh] min-h-[420px] overflow-auto border border-border bg-muted p-3"
     >
       <Document

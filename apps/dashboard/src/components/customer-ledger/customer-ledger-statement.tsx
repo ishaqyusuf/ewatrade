@@ -23,6 +23,7 @@ import { type ReactNode, useCallback, useEffect, useState } from "react"
 import { EarlierOrdersBanner } from "./earlier-orders"
 import { OwedByAge } from "./owed-by-age"
 import { useCustomerLedgerExport } from "./statement-export"
+import { StatementPdfSheet } from "./statement-pdf-sheet"
 
 type LedgerMode =
   | "receipt"
@@ -56,6 +57,7 @@ export function CustomerLedgerStatement({
   const { ledgerSnapshot, ledgerAfter, setParams } = useCustomerLedgerParams()
   const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [printing, setPrinting] = useState(false)
   const query = useQuery(
     trpc.customerLedger.statement.queryOptions(
       {
@@ -216,6 +218,12 @@ export function CustomerLedgerStatement({
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem
+            disabled={!query.data}
+            onClick={() => setPrinting(true)}
+          >
+            Print or save as PDF
+          </DropdownMenuItem>
+          <DropdownMenuItem
             disabled={!query.data || exporter.busy}
             onClick={() => void exporter.download()}
           >
@@ -267,6 +275,14 @@ export function CustomerLedgerStatement({
   return (
     <section className="flex min-w-0 flex-col gap-5">
       {renderHeader(actions)}
+      <StatementPdfSheet
+        open={printing}
+        onOpenChange={setPrinting}
+        accountId={accountId}
+        snapshotSequence={statement.snapshotSequence}
+        customerName={customerName ?? current?.customer.name}
+        currencyCode={statement.currencyCode}
+      />
       {current ? (
         <EarlierOrdersBanner
           customerId={current.customer.id}
