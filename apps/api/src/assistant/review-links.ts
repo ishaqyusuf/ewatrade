@@ -1,22 +1,44 @@
-import type { AssistantReviewLinkSource } from "@ewatrade/assistant/channels/review-links"
+import { whatsAppReplyChoiceContentSchema } from "@ewatrade/assistant/channels/reply-choices"
+import {
+  type AssistantReviewLinkSource,
+  WHATSAPP_REVIEW_LINK_RECOVERY_MODEL,
+  type WhatsAppReviewLinkRecoveryIntent,
+  parseWhatsAppReviewLinkRecoveryIntent,
+  planWhatsAppReviewLinkRecovery,
+  whatsAppReviewLinkChoiceIntent,
+  whatsAppReviewLinkRecoveryParts,
+} from "@ewatrade/assistant/channels/review-links"
 import {
   type GeneralAction,
   type GeneralProposal,
   generalActionSchema,
+  generalReceiptSchema,
 } from "@ewatrade/assistant/general/contracts"
 import {
+  beginAssistantRunInTransaction,
+  completeAssistantRunInTransaction,
+} from "@ewatrade/db/assistant"
+import { readGeneralActiveRun } from "@ewatrade/db/assistant-general"
+import {
+  type WhatsAppInboxLease,
   assistantReviewLinkMatchesProposal,
   assistantWhatsAppAuthorityDigest,
   readAssistantReviewLinkLocator,
+  readAssistantWhatsAppWebReviewRecoveryTarget,
   readAssistantWhatsAppWebReviewSource,
+  resolveAssistantWhatsAppReplyChoice,
   stageAssistantWhatsAppWebReviewOutcomeInTransaction,
   stageAssistantWhatsAppWebReviewRenewalInTransaction,
+  stampAssistantWhatsAppExecution,
 } from "@ewatrade/db/assistant-whatsapp"
 import type { Prisma } from "@ewatrade/db/types"
 import { enqueueAssistantWhatsAppDelivery } from "@ewatrade/jobs/assistant-whatsapp"
 import { TRPCError } from "@trpc/server"
+import { z } from "zod"
 import { dispatchStaffInvitationProposalEmail } from "../staff/invitation-dispatch"
 import {
+  isLinkedAssistantIdentity,
+  lockLinkedAssistantIdentity,
   requireBrowserIdentity,
   resolveLinkedAssistantIdentity,
 } from "./channel-principal"
@@ -249,4 +271,186 @@ export async function editAssistantReviewLink(
     console.error("[assistant] review renewal dispatch deferred to recovery")
   }
   return { token: result.token, proposal: result.proposal }
+}
+
+const RECOVERY_MODEL = {
+  provider: "deterministic",
+  model: WHATSAPP_REVIEW_LINK_RECOVERY_MODEL,
+  promptVersion: WHATSAPP_REVIEW_LINK_RECOVERY_MODEL,
+}
+const recoveryTextSchema = z.object({
+  type: z.literal("text"),
+  text: z.string().max(4096),
+  replyToMessageId: z.string().min(1).max(256).optional(),
+})
+type RecoveryInbox = {
+  requestId: string
+  userMessageId: string
+  content: unknown
+}
+
+/**
+ * Deterministic WhatsApp replies about a sent review link: New link, Cancel
+ * draft, Check status, "the link expired" and "did it save". Message text and
+ * button IDs only locate the link; actor, scope, draft and choice are re-read
+ * under the channel locks. A new link reuses the normal web-review staging for
+ * the same proposal revision; cancel uses the canonical decision.
+ */
+export async function processAssistantWhatsAppReviewLinkRecoveryTurn(
+  ctx: GeneralContext,
+  lease: WhatsAppInboxLease,
+  inbox: RecoveryInbox,
+): Promise<{ kind: "completed" } | undefined> {
+  if (
+    !isLinkedAssistantIdentity(ctx.session) ||
+    ctx.session.purpose !== "GENERAL" ||
+    ctx.session.principal.bindingId !== lease.bindingId
+  )
+    return undefined
+  const principal = ctx.session.principal
+  const text = recoveryTextSchema.safeParse(inbox.content)
+  const choice = text.success
+    ? undefined
+    : whatsAppReplyChoiceContentSchema.safeParse(inbox.content)
+  let intent: WhatsAppReviewLinkRecoveryIntent | undefined
+  let replyToMessageId: string | undefined
+  let userText = ""
+  let saved: string | undefined
+  if (text.success) {
+    intent = parseWhatsAppReviewLinkRecoveryIntent(text.data.text)
+    replyToMessageId = text.data.replyToMessageId
+    userText = text.data.text.trim()
+  } else if (choice?.success) {
+    // Only a fixed recovery reply's own saved choice; model choices stay input.
+    saved = await resolveAssistantWhatsAppReplyChoice(
+      ctx.db,
+      principal,
+      choice.data.command,
+    )
+    intent = whatsAppReviewLinkChoiceIntent(saved)
+    replyToMessageId = choice.data.command.replyToMessageId
+    userText = saved ?? ""
+  }
+  if (!intent || !userText) return undefined
+  const fromChoice = Boolean(choice?.success)
+  const locate = (db: GeneralContext["db"] | GeneralTransactionContext["db"]) =>
+    readAssistantWhatsAppWebReviewRecoveryTarget(db, {
+      inboxId: lease.inboxId,
+      bindingId: lease.bindingId,
+      phoneNumberId: principal.phoneNumberId,
+      replyToMessageId,
+      requireRecoveryReply: fromChoice,
+    })
+  const target = await locate(ctx.db)
+  if (!target) return undefined
+  const resolvedIntent = intent
+  return inFreshGeneralTransaction(ctx, async (fresh) => {
+    if (
+      !isLinkedAssistantIdentity(fresh.session) ||
+      fresh.session.purpose !== "GENERAL"
+    )
+      throw new TRPCError({ code: "UNAUTHORIZED" })
+    const current = await lockLinkedAssistantIdentity(fresh.db, fresh.session)
+    await stampAssistantWhatsAppExecution(fresh.db, lease, current)
+    await fresh.db
+      .$queryRaw`SELECT id FROM "AssistantConversation" WHERE id=${current.conversation.id} FOR UPDATE`
+    if (
+      await readGeneralActiveRun(
+        fresh.db,
+        current.scope,
+        current.conversation.id,
+      )
+    )
+      throw new TRPCError({ code: "CONFLICT", message: "A reply is running." })
+    const begun = await beginAssistantRunInTransaction(fresh.db, {
+      ...RECOVERY_MODEL,
+      actorUserId: current.scope.userId,
+      conversationId: current.conversation.id,
+      requestId: inbox.requestId,
+      userMessage: {
+        id: inbox.userMessageId,
+        role: "user",
+        parts: [{ type: "text", text: userText.slice(0, 2000) }],
+      },
+    })
+    // A replayed request already has its committed answer; never repeat a decision.
+    if (begun.replay) return { kind: "completed" as const }
+    const latest = await locate(fresh.db)
+    const sameChoice =
+      !fromChoice ||
+      (choice?.success &&
+        (await resolveAssistantWhatsAppReplyChoice(
+          fresh.db,
+          fresh.session.principal,
+          choice.data.command,
+        )) === saved)
+    const proposal =
+      latest?.proposalId === target.proposalId && sameChoice
+        ? await fresh.db.assistantActionProposal.findFirst({
+            where: {
+              id: target.proposalId,
+              actorUserId: current.scope.userId,
+              tenantId: current.scope.tenantId,
+              storeId: current.scope.storeId,
+              conversationId: current.conversation.id,
+            },
+          })
+        : null
+    const now = new Date()
+    const context = {
+      reference: proposal
+        ? {
+            proposalId: proposal.id,
+            revision: proposal.revision,
+            payloadHash: proposal.payloadHash,
+          }
+        : undefined,
+      scopeLabel: `${fresh.tenantContext.tenant.name} · ${fresh.tenantContext.activeStore?.name ?? "Store"}`,
+      now,
+    }
+    let parts = whatsAppReviewLinkRecoveryParts({ kind: "changed" }, context)
+    if (proposal && latest) {
+      const link = latest.latest
+      const receipt =
+        proposal.status === "COMPLETED"
+          ? generalReceiptSchema.safeParse(proposal.executedResult)
+          : undefined
+      const plan = planWhatsAppReviewLinkRecovery(resolvedIntent, {
+        status: proposal.status,
+        draftOpen: proposal.status === "PENDING" && proposal.expiresAt > now,
+        linkUsable:
+          link.revision === proposal.revision &&
+          link.payloadHash === proposal.payloadHash &&
+          link.expiresAt > now.getTime(),
+        linkMinutesLeft: Math.max(
+          1,
+          Math.ceil((link.expiresAt - now.getTime()) / 60_000),
+        ),
+        receipt: receipt?.success
+          ? { title: receipt.data.title, detail: receipt.data.detail }
+          : null,
+      })
+      if (plan.kind === "cancel") {
+        await decideGeneralProposalInTransaction(fresh, {
+          proposalId: proposal.id,
+          revision: proposal.revision,
+          decision: "cancel",
+        })
+        parts = whatsAppReviewLinkRecoveryParts({ kind: "cancelled" }, context)
+      } else parts = whatsAppReviewLinkRecoveryParts(plan, context)
+    }
+    await completeAssistantRunInTransaction(fresh.db, {
+      ...RECOVERY_MODEL,
+      runId: begun.run.id,
+      tenantId: current.scope.tenantId,
+      actorUserId: current.scope.userId,
+      status: "COMPLETED",
+      assistantMessage: {
+        id: `${inbox.requestId}-review-link`,
+        role: "assistant",
+        parts: parts as Prisma.InputJsonValue,
+      },
+    })
+    return { kind: "completed" as const }
+  })
 }

@@ -52,3 +52,13 @@ test("ordinary business text remains outside the saved-choice adapter", async ()
     }),
   ).toEqual({ kind: "none" })
 })
+
+test("review-link recovery words from an unlinked identity touch no persistence", async () => {
+  for (const text of ["New link", "Cancel draft", "the link says expired"])
+    expect(
+      await processAssistantWhatsAppReplyChoiceTurn(unbranded, lease, {
+        ...inbox,
+        content: { type: "text", text, replyToMessageId: "provider-sent-test" },
+      }),
+    ).toEqual({ kind: "none" })
+})

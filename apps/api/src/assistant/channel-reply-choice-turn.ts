@@ -16,6 +16,7 @@ import {
 } from "./channel-principal"
 import type { GeneralContext } from "./general-context"
 import { inFreshGeneralTransaction } from "./general-proposals"
+import { processAssistantWhatsAppReviewLinkRecoveryTurn } from "./review-links"
 
 type Inbox = { requestId: string; userMessageId: string; content: unknown }
 export type WhatsAppReplyChoiceTurnResult =
@@ -36,6 +37,13 @@ export async function processAssistantWhatsAppReplyChoiceTurn(
   lease: WhatsAppInboxLease,
   inbox: Inbox,
 ): Promise<WhatsAppReplyChoiceTurnResult> {
+  // Fixed review-link replies (New link, Cancel draft, Check status) answer first.
+  const recovery = await processAssistantWhatsAppReviewLinkRecoveryTurn(
+    ctx,
+    lease,
+    inbox,
+  )
+  if (recovery) return recovery
   const parsed = whatsAppReplyChoiceContentSchema.safeParse(inbox.content)
   const invalid = Boolean(
     inbox.content &&

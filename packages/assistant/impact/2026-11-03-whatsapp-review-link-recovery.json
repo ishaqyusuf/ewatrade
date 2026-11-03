@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "id": "2026-11-03-whatsapp-review-link-recovery",
+  "tickets": ["H02"],
+  "summary": "WhatsApp gaps from Workshop ewatrade/assistant/conversations, family 16b scenes x-link-expired, x-link-uncertain and x-link-edited (disposable web review links). The link message is now three lines: a draft-ready line naming the business and Store, the Review draft link, and \"Expires in 15 minutes. Nothing is saved until you approve it.\" Replies about a sent review link are now answered deterministically before the model: \"New link\" issues a fresh 15-minute link for the same pending proposal revision through the existing web-review staging, only when the newest link has expired or no longer matches the draft (a still-working link is pointed to, never duplicated); \"Cancel draft\" cancels through the canonical decideGeneralProposalInTransaction; \"Check status\" re-reads the canonical proposal and receipt and reports Saved once (receipt title and detail), Not saved, or Still checking, never re-executing. A short \"link expired\" complaint about an open draft gets a fixed notice with New link and Cancel draft buttons; \"I approved but the page said check status\" gets \"That save isn't confirmed yet. Don't approve it again.\" with a Check status button. Buttons are the existing saved reply choices on a deterministic run; taps only count when they come from that fixed reply, and the link, actor, Store, conversation, draft and choice are re-read under the channel locks. Local only; no provider, OTP, schema or deployment change.",
+  "noAssistantImpact": "Channel rendering and deterministic recovery replies only. No tool, prompt, capability declaration or new write is added: the new link reuses prepareAssistantWhatsAppWebReview for the existing proposal reference, and cancel reuses the canonical proposal decision.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/whatsapp-assistant-system-design.md"
+    },
+    {
+      "topic": "capability",
+      "status": "not_applicable",
+      "note": "No capability declaration, tool, rollout or permission change; recovery reuses existing web-review staging and the canonical proposal decision."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/assistant/src/channels/review-links.test.ts",
+      "executed": true,
+      "result": "6 pass, 40 expects: link message shape, recovery phrase matching, the New link / Cancel draft / Check status decision table, and notice parts that validate and carry the fixed reply choices."
+    },
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/assistant-whatsapp/web-review-outcome.test.ts",
+      "executed": true,
+      "result": "4 pass, 8 expects: quoted link, unquoted latest link, fixed recovery reply versus model reply, and foreign-binding tokens."
+    },
+    {
+      "kind": "test",
+      "path": "apps/api/src/assistant/channel-reply-choice-turn.test.ts",
+      "executed": true,
+      "result": "3 pass: recovery words from an unlinked identity touch no persistence; existing reply-choice guards unchanged."
+    },
+    {
+      "kind": "test",
+      "path": "apps/api/src/assistant/review-links.ts",
+      "executed": false,
+      "result": "Not run: the transactional recovery turn (fresh link staging, canonical cancel, status re-read) has no database-backed test here; DB integration needs QA_ACCESS_ACCEPTANCE_DATABASE_HOST, which is not configured."
+    }
+  ]
+}

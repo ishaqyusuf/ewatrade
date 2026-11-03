@@ -2,6 +2,7 @@ import { createHash } from "node:crypto"
 import { renderWhatsAppActionResult } from "@ewatrade/assistant/channels/action-result"
 import {
   type AssistantReviewLinkSource,
+  WHATSAPP_REVIEW_LINK_RECOVERY_MODEL,
   WHATSAPP_WEB_REVIEW_RESULT_VERSION,
   WHATSAPP_WEB_REVIEW_VERSION,
   assistantReviewLinkSourceSchema,
@@ -18,8 +19,10 @@ import { assistantWhatsAppActionPayloadDigest } from "./action-reviews"
 import { AssistantWhatsAppError } from "./authority"
 import {
   assistantReviewShortOutboxId,
+  assistantReviewTokenFromBody,
   createAssistantReviewLinkToken,
   createAssistantReviewShortLocator,
+  readAssistantReviewLinkToken,
 } from "./web-review-token"
 
 /** Provenance lookup only. Browser/channel authorization is mandatory before exposing its result. */
@@ -331,4 +334,130 @@ export async function resolveAssistantWhatsAppWebReviewOutcome(
     receipt: receipt?.success ? receipt.data : null,
   })
   return { body }
+}
+
+const sentStates = ["SENT", "DELIVERED", "READ"] as const
+type SentRow = {
+  inboxId: string
+  renderKind: string
+  rendererVersion: string
+  content: string | null
+}
+
+/** Only a verified private web-review body that belongs to this binding and inbox. */
+function sentReviewSource(row: SentRow, bindingId: string) {
+  if (
+    row.renderKind !== "web_review" ||
+    row.rendererVersion !== WHATSAPP_WEB_REVIEW_VERSION ||
+    !row.content
+  )
+    return undefined
+  const token = assistantReviewTokenFromBody(row.content)
+  const source = token ? readAssistantReviewLinkToken(token) : undefined
+  return source &&
+    source.bindingId === bindingId &&
+    source.inboxId === row.inboxId
+    ? source
+    : undefined
+}
+
+/**
+ * Locates the review link a reply is about: the quoted link, a quoted fixed
+ * recovery reply, or (without a quote) the binding's latest sent message.
+ * Location only; callers recheck actor, scope and the canonical draft.
+ */
+export async function readAssistantWhatsAppWebReviewRecoveryTarget(
+  db: DbClient,
+  input: {
+    inboxId: string
+    bindingId: string
+    phoneNumberId: string
+    replyToMessageId?: string
+    /** Button taps must come from a fixed recovery reply, never a model reply. */
+    requireRecoveryReply?: boolean
+  },
+): Promise<
+  { proposalId: string; latest: AssistantReviewLinkSource } | undefined
+> {
+  const current = await db.assistantWhatsAppInbox.findFirst({
+    where: { id: input.inboxId, bindingId: input.bindingId },
+    select: { sequence: true },
+  })
+  if (!current) return
+  const earlier = {
+    bindingId: input.bindingId,
+    sequence: { lt: current.sequence },
+  }
+  const select = {
+    inboxId: true,
+    renderKind: true,
+    rendererVersion: true,
+    content: true,
+    runId: true,
+    inbox: { select: { sequence: true } },
+  } as const
+  const anchor = input.replyToMessageId
+    ? await db.assistantWhatsAppOutbox.findFirst({
+        where: {
+          phoneNumberId: input.phoneNumberId,
+          providerMessageId: input.replyToMessageId,
+          state: { in: [...sentStates] },
+          inbox: earlier,
+          deliveryAttempts: {
+            some: {
+              state: "ACCEPTED",
+              providerMessageId: input.replyToMessageId,
+            },
+          },
+        },
+        select,
+      })
+    : await db.assistantWhatsAppOutbox.findFirst({
+        where: {
+          phoneNumberId: input.phoneNumberId,
+          state: { in: [...sentStates] },
+          sentAt: { not: null },
+          inbox: earlier,
+        },
+        orderBy: [{ sentAt: "desc" }, { createdAt: "desc" }],
+        select,
+      })
+  if (!anchor) return
+  const links = (before: number) =>
+    db.assistantWhatsAppOutbox.findMany({
+      where: {
+        phoneNumberId: input.phoneNumberId,
+        renderKind: "web_review",
+        state: { in: [...sentStates] },
+        sentAt: { not: null },
+        inbox: { bindingId: input.bindingId, sequence: { lt: before } },
+      },
+      orderBy: [{ sentAt: "desc" }, { createdAt: "desc" }],
+      take: 20,
+      select,
+    })
+  let proposalId: string | undefined
+  if (anchor.renderKind === "web_review" && !input.requireRecoveryReply)
+    proposalId = sentReviewSource(anchor, input.bindingId)?.proposalId
+  else if (anchor.renderKind === "reply" && anchor.runId) {
+    const recovery = await db.assistantRun.findFirst({
+      where: {
+        id: anchor.runId,
+        provider: "deterministic",
+        model: WHATSAPP_REVIEW_LINK_RECOVERY_MODEL,
+        status: "COMPLETED",
+      },
+      select: { id: true },
+    })
+    if (!recovery) return
+    for (const row of await links(anchor.inbox.sequence)) {
+      proposalId = sentReviewSource(row, input.bindingId)?.proposalId
+      if (proposalId) break
+    }
+  }
+  if (!proposalId) return
+  for (const row of await links(current.sequence)) {
+    const source = sentReviewSource(row, input.bindingId)
+    if (source?.proposalId === proposalId) return { proposalId, latest: source }
+  }
 }
