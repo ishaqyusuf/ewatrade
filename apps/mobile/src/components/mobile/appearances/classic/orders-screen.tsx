@@ -475,6 +475,7 @@ export function ClassicOrdersRow({
                 <NativeText
                   style={{
                     color: palette.skyForeground,
+                    flexShrink: 1,
                     fontSize: 16,
                     fontWeight: "700",
                   }}
