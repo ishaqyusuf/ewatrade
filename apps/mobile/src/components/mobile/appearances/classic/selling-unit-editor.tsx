@@ -98,7 +98,7 @@ export function ClassicSellingUnitFields({
         keyboardType="decimal-pad"
         maxFontSizeMultiplier={1.3}
         onChangeText={(value) => onChangeDraft({ relationCount: value })}
-        placeholder="12"
+        placeholder="?"
         placeholderTextColor={colors.mutedForeground}
         selectTextOnFocus
         style={{
