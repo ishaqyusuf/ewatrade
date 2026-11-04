@@ -9,9 +9,8 @@ import {
   parseMarkdown,
 } from "./assistant-markdown"
 
+// Not tabular-nums: on Android it drops this Text back to the system 14sp.
 const BODY = "text-base [-rn-line-height:24] text-foreground"
-// Money and counts line up in columns and don't jitter while they stream.
-const NUMBERS = { fontVariant: ["tabular-nums" as const] }
 
 function Inline({ line }: { line: MarkdownLine }) {
   return line.map((part, index) =>
@@ -59,7 +58,6 @@ function Table({
                 key={column}
                 selectable
                 className={cn(BODY, column === 0 && "font-bold")}
-                style={NUMBERS}
               >
                 {column > 0 ? (
                   <Text className="text-muted-foreground">
@@ -113,7 +111,6 @@ function Table({
                 "text-sm [-rn-line-height:20] text-foreground",
                 cellClass(column),
               )}
-              style={NUMBERS}
             >
               <Inline line={cell} />
             </Text>
@@ -147,11 +144,10 @@ function Block({ block, large }: { block: MarkdownBlock; large: boolean }) {
                 "text-muted-foreground",
                 block.ordered ? "min-w-[22px] text-right" : "min-w-[12px]",
               )}
-              style={NUMBERS}
             >
               {block.ordered ? `${block.start + index}.` : "•"}
             </Text>
-            <Text selectable className={cn(BODY, "flex-1")} style={NUMBERS}>
+            <Text selectable className={cn(BODY, "flex-1")}>
               <Inline line={item} />
             </Text>
           </View>
@@ -160,7 +156,7 @@ function Block({ block, large }: { block: MarkdownBlock; large: boolean }) {
     )
   if (block.type === "table") return <Table block={block} large={large} />
   return (
-    <Text selectable className={BODY} style={NUMBERS}>
+    <Text selectable className={BODY}>
       {block.lines.map((line, index) => (
         // biome-ignore lint/suspicious/noArrayIndexKey: lines keep their order
         <Fragment key={index}>

@@ -172,7 +172,7 @@ function PromptGlyph({ send }: { send: boolean }) {
     >
       <Icon
         className={cn(
-          "size-4",
+          "size-[16px]",
           send ? "text-foreground" : "text-muted-foreground",
         )}
         name={send ? "ArrowUp" : "Pencil"}
@@ -209,7 +209,7 @@ export function AssistantHome({
     <View className="pt-0.5">
       <Text
         accessibilityRole="header"
-        className="mb-3.5 text-2xl font-extrabold tracking-tight text-foreground"
+        className="mb-3.5 text-2xl font-extrabold tracking-tight [-rn-line-height:30] text-foreground"
       >
         {homeGreeting(new Date().getHours())}
         {firstName ? `, ${firstName}` : ""}
@@ -217,7 +217,7 @@ export function AssistantHome({
       {state === "setup" ? (
         <View className="mt-10 items-center gap-1.5 px-3">
           <View className="mb-2 size-[52px] items-center justify-center rounded-full bg-muted">
-            <Icon className="size-6 text-muted-foreground" name="Clock" />
+            <Icon className="size-[24px] text-muted-foreground" name="Clock" />
           </View>
           <Text className="text-center text-lg font-extrabold text-foreground">
             Not ready yet

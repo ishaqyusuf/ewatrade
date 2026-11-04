@@ -263,7 +263,8 @@ export function AskAssistantLive() {
           // the top. The native scroll view scrolls to its real end once the
           // new content is laid out.
           onContentSizeChange={() => {
-            if (atBottom.current)
+            // The home reads from the top; only a thread follows its end.
+            if (atBottom.current && !home)
               requestAnimationFrame(() =>
                 (
                   list.current?.getNativeScrollRef() as ScrollView | null

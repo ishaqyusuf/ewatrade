@@ -5,6 +5,7 @@ import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
 import { useColors } from "@/hooks/use-color"
 import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
+import { cn } from "@/lib/utils"
 import { useTRPC } from "@/trpc/client"
 import { formatStoreConversationVoiceElapsed } from "@ewatrade/utils"
 import { useQuery } from "@tanstack/react-query"
@@ -156,7 +157,17 @@ export function AssistantChatBox({
             canTalk
               ? {
                   recording: state.kind === "recording",
-                  levels: state.kind === "recording" ? state.levels : undefined,
+                  // The meter ticks every 100ms; only ticks since the start show.
+                  levels:
+                    state.kind === "recording"
+                      ? state.levels.slice(
+                          state.levels.length -
+                            Math.min(
+                              state.levels.length,
+                              Math.ceil(state.elapsedMs / 100),
+                            ),
+                        )
+                      : undefined,
                   working: receipts.transcribing || state.kind === "requesting",
                   elapsedLabel:
                     state.kind === "recording"
@@ -253,12 +264,14 @@ function ReceiptThumb({
     <View
       accessible
       accessibilityLabel={`${item.fileName}, ${item.phase === "ready" ? "ready" : item.phase === "failed" ? "failed" : item.phase === "reading" ? "reading" : "uploading"}`}
-      className="overflow-hidden rounded-[18px] bg-muted"
       style={{
+        backgroundColor: colors.muted,
         borderColor:
           item.phase === "failed" ? colors.destructive : "transparent",
+        borderRadius: 18,
         borderWidth: 2,
         height: size,
+        overflow: "hidden",
         width: size,
       }}
     >
@@ -270,7 +283,7 @@ function ReceiptThumb({
         />
       ) : (
         <View className="flex-1 justify-end gap-1 p-2">
-          <Icon className="size-6 text-muted-foreground" name="FileText" />
+          <Icon className="size-[24px] text-muted-foreground" name="FileText" />
           <Text
             className="text-xs font-bold [-rn-line-height:16] text-foreground"
             numberOfLines={2}
@@ -348,12 +361,17 @@ function AttachMenu({
   return (
     <View
       accessibilityViewIsModal
-      className="overflow-hidden rounded-[20px] border border-border bg-card py-1.5"
       style={{
+        backgroundColor: colors.card,
+        borderColor: colors.border,
+        borderRadius: 20,
+        borderWidth: 1,
         bottom,
         elevation: 8,
         left: 12,
         minWidth: 224,
+        overflow: "hidden",
+        paddingVertical: 6,
         position: "absolute",
         shadowColor: "#000",
         shadowOffset: { height: 6, width: 0 },
@@ -366,11 +384,13 @@ function AttachMenu({
           key={option.source}
           accessibilityRole="button"
           accessibilityState={{ disabled: full }}
-          className="min-h-[52px] flex-row items-center gap-3.5 px-4"
+          className={cn(
+            "min-h-[52px] flex-row items-center gap-3.5 px-4",
+            full && "opacity-45",
+          )}
           disabled={full}
           haptic
           onPress={() => onPick(option.source)}
-          style={{ opacity: full ? 0.45 : 1 }}
         >
           <Icon
             className="size-[22px]"

@@ -11,6 +11,7 @@ import {
   LayoutAnimation,
   Text as NativeText,
   TextInput,
+  useWindowDimensions,
 } from "react-native"
 import { useKeyboardState } from "react-native-keyboard-controller"
 import { useReducedMotion } from "react-native-reanimated"
@@ -63,11 +64,16 @@ export function AssistantHeader({
         <View className="min-w-0 flex-1">
           <Text
             accessibilityRole="header"
-            className="text-lg font-bold text-foreground"
+            className="text-lg font-bold [-rn-line-height:26] text-foreground"
           >
             {title}
           </Text>
-          <Text className="text-base [-rn-line-height:22] text-muted-foreground">
+          {/* One line: a wrapped line here was measured one line tall and
+              clipped at large text. */}
+          <Text
+            className="text-base [-rn-line-height:22] text-muted-foreground"
+            numberOfLines={1}
+          >
             {business}
           </Text>
         </View>
@@ -159,7 +165,7 @@ export type AssistantComposerVoice = {
   /** Uploading or writing out the recording. */
   working: boolean
   elapsedLabel: string
-  /** Microphone levels (0–1, newest last) for the waveform. */
+  /** Microphone levels since the start (0–1, newest last) for the waveform. */
   levels?: number[]
   status: string | null
   error: string | null
@@ -217,12 +223,18 @@ export function AssistantComposer({
   const keyboardVisible = useKeyboardState((state) => state.isVisible)
   const colors = useColors()
   const reduceMotion = useReducedMotion()
+  // One line of scaled text plus padding, so 200% text isn't clipped.
+  const { fontScale } = useWindowDimensions()
+  const lineHeight = Math.ceil(22 * fontScale)
   const [focused, setFocused] = useState(false)
   // Idle, the box is one pill row. Focused, or holding text, files or the
   // attach menu, it opens into a card: the text on top, its buttons below.
   const stacked =
     !voice?.recording &&
-    (focused || !!value || Children.toArray(children).length > 0)
+    // Android's Back hides the keyboard without blurring the field.
+    ((focused && keyboardVisible) ||
+      !!value ||
+      Children.toArray(children).length > 0)
   const working = voice?.working === true
   const sendDisabled =
     !busy || !onStop
@@ -399,8 +411,9 @@ export function AssistantComposer({
                 style={{
                   color: colors.foreground,
                   fontSize: 16,
+                  lineHeight: 22,
                   maxHeight: 160,
-                  minHeight: stacked ? 44 : 40,
+                  minHeight: Math.max(stacked ? 44 : 40, lineHeight + 18),
                   paddingHorizontal: stacked ? 10 : 6,
                   paddingBottom: stacked ? 6 : 9,
                   paddingTop: stacked ? 10 : 9,
@@ -417,6 +430,7 @@ export function AssistantComposer({
                   style={{
                     color: colors.mutedForeground,
                     fontSize: 16,
+                    lineHeight: 22,
                     left: stacked ? 10 : 6,
                     position: "absolute",
                     right: stacked ? 10 : 6,
@@ -458,8 +472,6 @@ export function AssistantComposer({
  */
 function VoiceWave({ levels, label }: { levels: number[]; label: string }) {
   const colors = useColors()
-  const start = levels.findIndex((level) => level > 0)
-  const bars = start < 0 ? [] : levels.slice(start)
   return (
     <View
       accessible
@@ -484,7 +496,7 @@ function VoiceWave({ levels, label }: { levels: number[]; label: string }) {
           width: 4,
         }}
       />
-      {bars.map((level, index) => (
+      {levels.map((level, index) => (
         <View
           // biome-ignore lint/suspicious/noArrayIndexKey: bars keep their order
           key={index}

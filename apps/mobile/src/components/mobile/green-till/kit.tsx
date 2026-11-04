@@ -41,7 +41,7 @@ export function SectionHeader({
     <View className="mb-2.5 mt-[22px] flex-row items-end justify-between gap-3">
       <Text
         accessibilityRole="header"
-        className="min-w-0 flex-1 text-base font-extrabold tracking-tight text-foreground"
+        className="min-w-0 flex-1 text-base font-extrabold tracking-tight [-rn-line-height:22] text-foreground"
       >
         {title}
       </Text>
@@ -54,7 +54,9 @@ export function SectionHeader({
           hitSlop={8}
           onPress={onAction}
         >
-          <Text className="text-xs font-bold text-primary">{actionLabel}</Text>
+          <Text className="text-xs font-bold [-rn-line-height:18] text-primary">
+            {actionLabel}
+          </Text>
         </Pressable>
       ) : null}
     </View>
