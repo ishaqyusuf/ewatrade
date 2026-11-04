@@ -6,6 +6,7 @@ import {
   ClassicOrderPaymentChoice,
 } from "@/components/mobile/appearances/classic/order-action-presentation"
 import { FormField } from "@/components/mobile/form-field"
+import { FullScreenModal } from "@/components/mobile/full-screen-form"
 import { MoneyField } from "@/components/mobile/money-field"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { BottomSheetKeyboardAwareScrollView } from "@/components/ui/bottom-sheet-keyboard-aware-scroll-view"
@@ -72,13 +73,20 @@ export const OrderPaymentSheet = forwardRef<
   },
   ref,
 ) {
-  const largeTextLayout = useLargeTextLayout()
-
   return (
-    <Modal
+    <FullScreenModal
       ref={ref}
-      snapPoints={[largeTextLayout ? "92%" : "72%"]}
       title="Record payment"
+      footer={
+        <ClassicOrderActionStack
+          actionLabel="Save payment"
+          disabled={isOffline}
+          isLoading={isLoading}
+          loadingLabel="Saving…"
+          onCancel={onCancel}
+          onConfirm={onConfirm}
+        />
+      }
     >
       <View className="flex-1">
         <BottomSheetKeyboardAwareScrollView
@@ -86,7 +94,7 @@ export const OrderPaymentSheet = forwardRef<
           extraKeyboardSpace={24}
           keyboardShouldPersistTaps="handled"
         >
-          <View className="gap-5 px-5 pb-6">
+          <View className="gap-5 px-5 pb-6 pt-1">
             <ClassicOrderActionSummary
               label="Balance due"
               value={balanceLabel}
@@ -154,18 +162,8 @@ export const OrderPaymentSheet = forwardRef<
             />
           </View>
         </BottomSheetKeyboardAwareScrollView>
-        <View className="border-t border-border px-5 pb-5 pt-3">
-          <ClassicOrderActionStack
-            actionLabel="Save payment"
-            disabled={isOffline}
-            isLoading={isLoading}
-            loadingLabel="Saving…"
-            onCancel={onCancel}
-            onConfirm={onConfirm}
-          />
-        </View>
       </View>
-    </Modal>
+    </FullScreenModal>
   )
 })
 
