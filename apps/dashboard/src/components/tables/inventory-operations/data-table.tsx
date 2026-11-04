@@ -77,6 +77,19 @@ export function OperationsDataTable({
   const record = rows.find((row) => row.id === params.record) ?? null
   return (
     <div className="grid gap-4">
+      {/* Above the table: a link to a change outside the loaded pages must be seen. */}
+      {params.record && !record ? (
+        <output className="flex flex-wrap items-center justify-between gap-2 rounded-md border px-4 py-3 text-sm">
+          This stock change is not in the loaded list.
+          <button
+            type="button"
+            className="underline underline-offset-4"
+            onClick={() => void setParams({ record: null })}
+          >
+            Dismiss
+          </button>
+        </output>
+      ) : null}
       <InventoryLedgerTable
         rows={rows}
         columns={columns}
@@ -118,18 +131,6 @@ export function OperationsDataTable({
           />
         }
       />
-      {params.record && !record ? (
-        <output>
-          This stock change is not in the loaded list.{" "}
-          <button
-            type="button"
-            className="underline"
-            onClick={() => void setParams({ record: null })}
-          >
-            Dismiss
-          </button>
-        </output>
-      ) : null}
       <InventoryAuditSheet
         record={record}
         onClose={() => void setParams({ record: null })}
