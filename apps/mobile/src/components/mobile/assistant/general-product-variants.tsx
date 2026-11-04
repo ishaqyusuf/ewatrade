@@ -203,6 +203,8 @@ export function GeneralProductVariantList({
                     accessibilityLabel={`Remove ${value}`}
                     disabled={disabled}
                     haptic
+                    // 40dp drawn; the slop makes the touch target 52dp.
+                    hitSlop={6}
                     className="h-10 w-10 items-center justify-center rounded-full"
                     onPress={() =>
                       onChange(removeValue(state, group.id, value))
