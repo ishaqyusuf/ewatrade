@@ -355,7 +355,6 @@ export function StaffInviteContent({ onComplete }: StaffInviteProps) {
           onChange={invitation.setDraft}
           onSave={invitation.save}
           onCheckDirectory={invitation.checkDirectory}
-          onClose={invitation.close}
           onDismiss={invitation.onDismiss}
         />
       </View>
