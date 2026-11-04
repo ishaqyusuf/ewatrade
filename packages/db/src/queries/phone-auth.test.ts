@@ -23,6 +23,7 @@ function fixture(verified = true) {
   let sessions: object[] = []
   let closing = false
   let qaRevoked = false
+  let staffInvite: { phone: string; userId: string } | null = null
   let queue = Promise.resolve()
   const user = {
     id: "owner",
@@ -138,6 +139,21 @@ function fixture(verified = true) {
       async findUnique({ where }: { where: { id?: string; phone?: string } }) {
         return where.id === user.id || where.phone === user.phone ? user : null
       },
+      async update({ data }: { data: { phoneVerifiedAt: Date } }) {
+        user.phoneVerifiedAt = data.phoneVerifiedAt
+        return user
+      },
+    },
+    retailOpsStaffInviteToken: {
+      async findFirst({
+        where,
+      }: { where: { phone: string; invitedUserId: string } }) {
+        return staffInvite &&
+          staffInvite.phone === where.phone &&
+          staffInvite.userId === where.invitedUserId
+          ? { id: "invite" }
+          : null
+      },
     },
     membership: {
       async findFirst() {
@@ -196,6 +212,9 @@ function fixture(verified = true) {
     },
     revokeQa() {
       qaRevoked = true
+    },
+    openStaffInvite() {
+      staffInvite = { phone: user.phone, userId: user.id }
     },
     setClosing() {
       closing = true
@@ -478,6 +497,24 @@ describe("phone authentication security", () => {
       ).rejects.toThrow("existing sign-in")
       expect(store.sessions.length).toBe(0)
       expect(store.user.phoneVerifiedAt).toBeNull()
+    }))
+  test("an invited attendant's first WhatsApp sign-in verifies the invited number", () =>
+    local(async () => {
+      const store = fixture(false)
+      store.openStaffInvite()
+      await createPhoneOtp(
+        store.db,
+        { phone: store.user.phone, mode: "login" },
+        "trusted-test-source",
+      )
+      const session = await verifyPhoneOtp(store.db, {
+        phone: store.user.phone,
+        mode: "login",
+        code: "123456",
+      })
+      expect(session.token).toBeTruthy()
+      expect(store.sessions.length).toBe(1)
+      expect(store.user.phoneVerifiedAt).toBeInstanceOf(Date)
     }))
   test("keeps account-deletion access restrictions and expires codes", () =>
     local(async () => {

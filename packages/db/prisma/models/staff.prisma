@@ -35,6 +35,8 @@ model RetailOpsStaffInviteToken {
   membershipId     String?
   invitedUserId    String?
   email            String
+  /// E.164 WhatsApp number the owner invited; null for email-only invites.
+  phone            String?
   role             MembershipRole
   tokenHash        String                          @unique
   status           RetailOpsStaffInviteTokenStatus @default(ACTIVE)
@@ -61,6 +63,7 @@ model RetailOpsStaffInviteToken {
   @@index([membershipId, createdAt])
   @@index([invitedUserId, createdAt])
   @@index([invitedByUserId, createdAt])
+  @@index([phone, status])
 }
 
 model RetailOpsStaffLifecycleEvent {

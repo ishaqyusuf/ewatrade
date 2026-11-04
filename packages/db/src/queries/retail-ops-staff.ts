@@ -12,8 +12,17 @@ import {
   RetailOpsStaffLifecycleEventType as DurableRetailOpsStaffLifecycleEventType,
 } from "../../generated/prisma/enums"
 import { assertQaTenantIdentity } from "./qa-maintenance"
+import { assertQaTenantPhoneIdentity } from "./qa-tenant-phone"
 import { assertRetailOpsEntitlementAvailable } from "./retail-ops-subscriptions"
 import { cancelStaffInvitationNotificationsInTransaction } from "./staff-invitation-notifications"
+import {
+  type StaffInviteWhatsAppStatus,
+  createPhoneAccountEmail,
+  findStaffInviteAccount,
+  normalizeStaffInviteContacts,
+  readStaffInviteWhatsAppStatus,
+  visibleAccountEmail,
+} from "./staff-invite-contacts"
 import {
   type StaffStatusChangeInput,
   assertStaffStatusAuthority,
@@ -46,9 +55,11 @@ export type RetailOpsStaffListStatusFilter =
 export type InviteRetailOpsStaffInput = {
   storeAccess?: StaffStoreAccessInput
   actorUserId: string
-  email: string
+  /** At least one of email and phone (E.164) is required. */
+  email?: string
   externalId?: string
   name?: string
+  phone?: string
   role: RetailOpsStaffInviteRole
   storeId: string
   tenantId: string
@@ -97,6 +108,11 @@ export type InvitedRetailOpsStaff = {
     id: string
     name: string
   }
+  /** Where this invite goes: email is empty for a WhatsApp-only invite. */
+  contacts: {
+    email: string | null
+    phone: string | null
+  }
   notification: {
     shouldSend: boolean
   }
@@ -116,11 +132,21 @@ export type RetailOpsStaffMember = {
   user: {
     avatarUrl: string | null
     displayName: string
+    /** Empty for a WhatsApp-only account. */
     email: string
     id: string
     image: string | null
     name: string
+    phone: string | null
   }
+  /** Open invite contacts and WhatsApp delivery, for pending members only. */
+  invitation?: StaffInvitationDelivery | null
+}
+
+export type StaffInvitationDelivery = {
+  email: string | null
+  phone: string | null
+  whatsapp: StaffInviteWhatsAppStatus | null
 }
 
 export type UpdatedRetailOpsStaffStatus = {
@@ -163,7 +189,9 @@ export type CompletedRetailOpsStaffOnboarding = {
 }
 
 export type ResolvedRetailOpsStaffInvite = {
+  /** Empty for a WhatsApp-only invite. */
   email: string
+  phone: string | null
   expiresAt: Date
   inviteTokenId: string
   membershipId: string | null
@@ -185,6 +213,9 @@ type RetailOpsStaffErrorCode =
   | "STAFF_SELF_UPDATE_FORBIDDEN"
   | "STAFF_STATUS_NOT_ALLOWED"
   | "STAFF_STATUS_UNCHANGED"
+  | "STAFF_CONTACT_REQUIRED"
+  | "STAFF_CONTACT_INVALID"
+  | "STAFF_CONTACT_CONFLICT"
   | "TENANT_NOT_FOUND"
 
 type JsonRecord = Record<string, unknown>
@@ -202,10 +233,6 @@ export class RetailOpsStaffError extends Error {
     this.name = "RetailOpsStaffError"
     this.code = code
   }
-}
-
-function normalizeEmail(email: string) {
-  return email.trim().toLowerCase()
 }
 
 function normalizeExternalId(externalId: string | undefined) {
@@ -306,6 +333,7 @@ function deserializeInvitedStaffResult(
   const staffName = getStringField(staff.name)
   const storeId = getStringField(record.storeId)
   const tenantId = getStringField(record.tenantId)
+  const contacts = asRecord(record.contacts)
 
   if (
     !inviteId ||
@@ -328,6 +356,13 @@ function deserializeInvitedStaffResult(
       invitedByUserId: getNullableStringField(invite.invitedByUserId),
       role,
       status,
+    },
+    contacts: {
+      email:
+        "email" in contacts
+          ? getStringField(contacts.email)
+          : visibleAccountEmail(staffEmail) || null,
+      phone: getStringField(contacts.phone),
     },
     notification: {
       shouldSend: false,
@@ -412,6 +447,7 @@ function matchesStaffSearch(
     displayName: string | null
     email: string
     name: string
+    phone?: string | null
   },
   search?: string,
 ) {
@@ -419,7 +455,12 @@ function matchesStaffSearch(
 
   if (!normalizedSearch) return true
 
-  return [user.displayName, user.name, user.email]
+  return [
+    user.displayName,
+    user.name,
+    visibleAccountEmail(user.email),
+    user.phone,
+  ]
     .filter(Boolean)
     .join(" ")
     .toLowerCase()
@@ -577,6 +618,7 @@ export async function writeDurableRetailOpsStaffInvite(
   input: {
     email: string
     externalId?: string
+    phone?: string | null
     invitedAt: Date
     invitedByUserId: string
     invitedUserId: string
@@ -624,6 +666,7 @@ export async function writeDurableRetailOpsStaffInvite(
           input.invitedAt.getTime() + 1000 * 60 * 60 * 24 * 14,
         ),
         externalId: input.externalId ?? null,
+        phone: input.phone ?? null,
         invitedByUserId: input.invitedByUserId,
         invitedUserId: input.invitedUserId,
         membershipId: input.membershipId,
@@ -808,6 +851,7 @@ function mapMembershipRetailOpsStaffMember(membership: {
     id: string
     image: string | null
     name: string
+    phone: string | null
   }
 }): RetailOpsStaffMember {
   return {
@@ -822,10 +866,11 @@ function mapMembershipRetailOpsStaffMember(membership: {
     user: {
       avatarUrl: membership.user.avatarUrl,
       displayName: getDisplayName(membership.user),
-      email: membership.user.email,
+      email: visibleAccountEmail(membership.user.email),
       id: membership.user.id,
       image: membership.user.image,
       name: membership.user.name,
+      phone: membership.user.phone,
     },
   }
 }
@@ -857,6 +902,7 @@ function mapDurableRetailOpsStaffMember(profile: {
     id: string
     image: string | null
     name: string
+    phone: string | null
   }
 }): RetailOpsStaffMember {
   return {
@@ -871,10 +917,11 @@ function mapDurableRetailOpsStaffMember(profile: {
     user: {
       avatarUrl: profile.user.avatarUrl,
       displayName: profile.displayName || getDisplayName(profile.user),
-      email: profile.user.email,
+      email: visibleAccountEmail(profile.user.email),
       id: profile.user.id,
       image: profile.user.image,
       name: profile.user.name,
+      phone: profile.user.phone,
     },
   }
 }
@@ -971,6 +1018,7 @@ async function listDurableRetailOpsStaff(
             id: true,
             image: true,
             name: true,
+            phone: true,
           },
         },
       },
@@ -983,6 +1031,7 @@ async function listDurableRetailOpsStaff(
             displayName: profile.displayName || profile.user.displayName,
             email: profile.user.email,
             name: profile.user.name,
+            phone: profile.user.phone,
           },
           input.search,
         ),
@@ -1036,6 +1085,7 @@ async function listMembershipRetailOpsStaff(
           id: true,
           image: true,
           name: true,
+          phone: true,
         },
       },
     },
@@ -1060,14 +1110,50 @@ export async function listRetailOpsStaff(
     listMembershipRetailOpsStaff(db, input, lookbackLimit),
   ])
 
-  if (!durableStaff) {
-    return limit === undefined ? fallbackStaff : fallbackStaff.slice(0, limit)
-  }
+  const staff = !durableStaff
+    ? limit === undefined
+      ? fallbackStaff
+      : fallbackStaff.slice(0, limit)
+    : mergeRetailOpsStaffMembers({
+        durableStaff,
+        fallbackStaff,
+        limit,
+      })
 
-  return mergeRetailOpsStaffMembers({
-    durableStaff,
-    fallbackStaff,
-    limit,
+  return attachStaffInvitationDelivery(db, input.tenantId, staff)
+}
+
+async function attachStaffInvitationDelivery(
+  db: PrismaClient,
+  tenantId: string,
+  staff: RetailOpsStaffMember[],
+) {
+  const pending = staff.filter((member) => member.status === "INVITED")
+  if (!pending.length || !db.retailOpsStaffInviteToken) return staff
+  const tokens = await db.retailOpsStaffInviteToken.findMany({
+    where: {
+      tenantId,
+      membershipId: { in: pending.map((member) => member.id) },
+      status: DurableRetailOpsStaffInviteTokenStatus.ACTIVE,
+    },
+    orderBy: { createdAt: "desc" },
+    select: { email: true, membershipId: true, metadata: true, phone: true },
+  })
+  const byMembership = new Map<string, (typeof tokens)[number]>()
+  for (const token of tokens)
+    if (token.membershipId && !byMembership.has(token.membershipId))
+      byMembership.set(token.membershipId, token)
+  return staff.map((member) => {
+    const token = byMembership.get(member.id)
+    if (!token) return member
+    return {
+      ...member,
+      invitation: {
+        email: visibleAccountEmail(token.email) || null,
+        phone: token.phone,
+        whatsapp: readStaffInviteWhatsAppStatus(token.metadata),
+      },
+    }
   })
 }
 
@@ -1085,7 +1171,13 @@ export async function inviteRetailOpsStaffInTransaction(
   tx: Prisma.TransactionClient,
   input: InviteRetailOpsStaffInput,
 ): Promise<InvitedRetailOpsStaff> {
-  const email = normalizeEmail(input.email)
+  const normalized = normalizeStaffInviteContacts(input)
+  if ("problem" in normalized)
+    throw new RetailOpsStaffError(
+      normalized.problem.code,
+      normalized.problem.message,
+    )
+  const { email, phone } = normalized.contacts
   const externalId = normalizeExternalId(input.externalId)
   const name = normalizeName(input.name)
   const role = mapStaffRole(input.role)
@@ -1116,10 +1208,13 @@ export async function inviteRetailOpsStaffInTransaction(
     )
   }
 
-  await assertQaTenantIdentity(tx, {
-    email,
-    tenantId: input.tenantId,
-  })
+  if (email)
+    await assertQaTenantIdentity(tx, {
+      email,
+      tenantId: input.tenantId,
+    })
+  if (phone)
+    await assertQaTenantPhoneIdentity(tx, { phone, tenantId: input.tenantId })
 
   const replayedInvite = externalId
     ? findStaffInviteReplay(tenant.metadata, externalId)
@@ -1129,41 +1224,41 @@ export async function inviteRetailOpsStaffInTransaction(
     return replayedInvite
   }
 
-  const existingUser = await tx.user.findUnique({
-    where: {
-      email,
-    },
-    select: {
-      displayName: true,
-      email: true,
-      id: true,
-      name: true,
-    },
-  })
-
-  const user =
-    existingUser ??
-    (await tx.user.create({
-      data: {
-        email,
-        metadata: {
-          retailOps: {
-            ...(externalId ? { staffInviteExternalId: externalId } : {}),
-            invitedByUserId: input.actorUserId,
-            source: "retail_ops_staff_invite",
-            tenantId: input.tenantId,
+  const found = await findStaffInviteAccount(tx, { email, phone })
+  if ("problem" in found)
+    throw new RetailOpsStaffError(found.problem.code, found.problem.message)
+  const userSelect = {
+    displayName: true,
+    email: true,
+    id: true,
+    name: true,
+  } as const
+  const fallbackName = name ?? (email ? getFallbackName(email) : phone) ?? ""
+  const user = found.account
+    ? found.link.email || found.link.phone
+      ? await tx.user.update({
+          where: { id: found.account.id },
+          data: found.link,
+          select: userSelect,
+        })
+      : found.account
+    : await tx.user.create({
+        data: {
+          email: email ?? createPhoneAccountEmail(),
+          ...(phone ? { phone } : {}),
+          metadata: {
+            retailOps: {
+              ...(externalId ? { staffInviteExternalId: externalId } : {}),
+              invitedByUserId: input.actorUserId,
+              source: "retail_ops_staff_invite",
+              tenantId: input.tenantId,
+            },
           },
+          name: fallbackName,
+          ...(name ? { displayName: name } : {}),
         },
-        name: name ?? getFallbackName(email),
-        ...(name ? { displayName: name } : {}),
-      },
-      select: {
-        displayName: true,
-        email: true,
-        id: true,
-        name: true,
-      },
-    }))
+        select: userSelect,
+      })
 
   await tx.$queryRaw`SELECT "id" FROM "Membership" WHERE "tenantId" = ${input.tenantId} AND "userId" = ${user.id} FOR UPDATE`
 
@@ -1237,8 +1332,9 @@ export async function inviteRetailOpsStaffInTransaction(
       })
 
   const acceptanceToken = await writeDurableRetailOpsStaffInvite(tx, {
-    email,
+    email: user.email,
     externalId,
+    phone: phone ?? null,
     invitedAt: membership.invitedAt ?? invitedAt,
     invitedByUserId: input.actorUserId,
     invitedUserId: user.id,
@@ -1293,6 +1389,10 @@ export async function inviteRetailOpsStaffInTransaction(
       email: user.email,
       id: user.id,
       name: user.name,
+    },
+    contacts: {
+      email: email ?? null,
+      phone: phone ?? null,
     },
     notification: {
       shouldSend: true,
@@ -1699,6 +1799,16 @@ export async function resolveRetailOpsStaffInviteToken(
   db: PrismaClient | Prisma.TransactionClient,
   input: { token: string },
 ): Promise<ResolvedRetailOpsStaffInvite> {
+  const { accountEmail, ...invite } = await readActiveStaffInvite(db, input)
+  return { ...invite, email: visibleAccountEmail(accountEmail) }
+}
+
+async function readActiveStaffInvite(
+  db: PrismaClient | Prisma.TransactionClient,
+  input: { token: string },
+): Promise<
+  Omit<ResolvedRetailOpsStaffInvite, "email"> & { accountEmail: string }
+> {
   const token = input.token.trim()
 
   if (!token) {
@@ -1718,6 +1828,7 @@ export async function resolveRetailOpsStaffInviteToken(
         expiresAt: true,
         id: true,
         membershipId: true,
+        phone: true,
         role: true,
         status: true,
         tenant: {
@@ -1758,9 +1869,10 @@ export async function resolveRetailOpsStaffInviteToken(
     }
 
     return {
-      email: invite.email,
+      accountEmail: invite.email,
       expiresAt: invite.expiresAt,
       inviteTokenId: invite.id,
+      phone: invite.phone ?? null,
       membershipId: invite.membershipId,
       role: invite.role,
       status: invite.status,
@@ -1789,7 +1901,7 @@ export async function completeRetailOpsStaffOnboarding(
 
   return db.$transaction(async (tx) => {
     const invitation = input.inviteToken
-      ? await resolveRetailOpsStaffInviteToken(tx, { token: input.inviteToken })
+      ? await readActiveStaffInvite(tx, { token: input.inviteToken })
       : null
     if (invitation && !invitation.membershipId)
       throw new RetailOpsStaffError(
@@ -1855,7 +1967,8 @@ export async function completeRetailOpsStaffOnboarding(
       membership &&
       (membership.status !== "INVITED" ||
         membership.role !== invitation.role ||
-        membership.user.email.toLowerCase() !== invitation.email.toLowerCase())
+        membership.user.email.toLowerCase() !==
+          invitation.accountEmail.toLowerCase())
     )
       throw new RetailOpsStaffError(
         "STAFF_INVITE_INVALID",

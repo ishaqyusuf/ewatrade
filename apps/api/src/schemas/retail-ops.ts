@@ -50,12 +50,26 @@ export const retailOpsResolveStaffInviteTokenSchema = z.object({
   token: z.string().trim().min(20).max(256),
 })
 
-export const retailOpsInviteStaffSchema = retailOpsStoreScopeSchema.extend({
-  email: emailSchema,
-  externalId: z.string().trim().min(1).max(120).optional(),
-  name: z.string().trim().min(1).max(120).optional(),
-  role: retailOpsStaffRoleSchema.default("cashier"),
-})
+export const retailOpsInviteStaffSchema = retailOpsStoreScopeSchema
+  .extend({
+    email: emailSchema.optional(),
+    externalId: z.string().trim().min(1).max(120).optional(),
+    name: z.string().trim().min(1).max(120).optional(),
+    /** WhatsApp number in E.164, the same form registration saves. */
+    phone: z
+      .string()
+      .trim()
+      .regex(
+        /^\+[1-9]\d{7,14}$/,
+        "Enter the WhatsApp number with its country code.",
+      )
+      .optional(),
+    role: retailOpsStaffRoleSchema.default("cashier"),
+  })
+  .refine((input) => input.email || input.phone, {
+    message: "Add an email address or a WhatsApp number.",
+    path: ["email"],
+  })
 
 export type RetailOpsCreateSubscriptionCheckoutIntentInput = z.infer<
   typeof retailOpsCreateSubscriptionCheckoutIntentSchema

@@ -25,6 +25,7 @@ import {
   authorizeQaPhoneEntry,
   validateQaPhoneAuthorization,
 } from "./qa-access"
+import { hasOpenStaffPhoneInvite } from "./staff-invite-contacts"
 import type { DbClient } from "./types"
 
 export type PhoneOtpRequest = Omit<
@@ -249,7 +250,13 @@ export async function verifyPhoneOtp(
             "This phone belongs to an existing live account. No accounts were merged or converted.",
           )
       }
-      if (draft.mode === "login" && !user?.phoneVerifiedAt)
+      // An invited attendant's first WhatsApp sign-in verifies the owner-added number.
+      const firstStaffSignIn =
+        draft.mode === "login" &&
+        !!user &&
+        !user.phoneVerifiedAt &&
+        (await hasOpenStaffPhoneInvite(tx, { phone, userId: user.id, now }))
+      if (draft.mode === "login" && !user?.phoneVerifiedAt && !firstStaffSignIn)
         return {
           error: "Use your existing sign-in method, or create a phone account.",
         } as const
@@ -298,6 +305,11 @@ export async function verifyPhoneOtp(
       })
       if (consumed.count !== 1)
         throw new Error("This code has already been used.")
+      if (firstStaffSignIn)
+        await tx.user.update({
+          where: { id: user.id },
+          data: { phoneVerifiedAt: now },
+        })
       const session = await createMobileSessionForVerifiedUser(
         tx,
         user.id,

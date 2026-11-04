@@ -7,6 +7,7 @@ import { jobIds } from "./job-ids"
 import { triggerJob } from "./trigger"
 
 export * from "./staff-invitation-dispatch"
+export * from "./staff-invite-whatsapp"
 
 export async function enqueueRetailOpsStaffInviteNotification(
   input: RetailOpsStaffInvitedPayload,

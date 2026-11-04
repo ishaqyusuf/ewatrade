@@ -1,5 +1,6 @@
 export * from "./whatsapp"
 export * from "./whatsapp-flows"
 export * from "./whatsapp-otp"
+export * from "./whatsapp-staff-invite"
 export * from "./service-commerce-action-capability"
 export * from "./whatsapp-platform"

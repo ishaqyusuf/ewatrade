@@ -520,6 +520,43 @@ describe("retail ops staff queries", () => {
     })
   })
 
+  test("invites by WhatsApp number alone with an internal account email", async () => {
+    const db = createMockStaffInviteDb()
+
+    const result = await inviteRetailOpsStaff(db.client, {
+      actorUserId: "user_owner",
+      name: "Ada Obi",
+      phone: " +2348035550142 ",
+      role: "cashier",
+      storeId: "store_123",
+      tenantId: "tenant_123",
+    })
+
+    expect(result.contacts).toEqual({ email: null, phone: "+2348035550142" })
+    expect(getCall(db.calls, "user.create")?.data).toMatchObject({
+      email: expect.stringMatching(/@phone\.ewatrade\.invalid$/),
+      phone: "+2348035550142",
+      name: "Ada Obi",
+    })
+    expect(getCall(db.calls, "retailOpsStaffInviteToken.create")?.data).toMatchObject({
+      phone: "+2348035550142",
+    })
+  })
+
+  test("refuses an invite with neither email nor WhatsApp number", async () => {
+    const db = createMockStaffInviteDb()
+
+    await expect(
+      inviteRetailOpsStaff(db.client, {
+        actorUserId: "user_owner",
+        role: "cashier",
+        storeId: "store_123",
+        tenantId: "tenant_123",
+      }),
+    ).rejects.toMatchObject({ code: "STAFF_CONTACT_REQUIRED" })
+    expect(db.calls.some((call) => call.kind === "user.create")).toBe(false)
+  })
+
   test("resolves active staff invite tokens without exposing the secret token", async () => {
     const db = createMockStaffTokenDb()
 

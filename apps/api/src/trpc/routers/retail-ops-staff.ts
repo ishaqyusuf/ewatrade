@@ -39,6 +39,7 @@ import { getStaffAccessReceipt } from "@ewatrade/db/staff-access-receipt"
 import { reviewStaffAccessUpdate } from "@ewatrade/db/staff-access-update"
 import { getStaffStatusReceipt } from "@ewatrade/db/staff-status-receipt"
 import { enqueueRetailOpsStaffInviteNotification } from "@ewatrade/jobs"
+import { sendStaffInviteWhatsApp } from "@ewatrade/jobs/staff-invitations"
 import { buildStaffInvitationLinks } from "@ewatrade/utils/staff-invitation-links"
 import { TRPCError } from "@trpc/server"
 import {
@@ -112,6 +113,12 @@ function getStaffErrorCode(
   error: RetailOpsStaffError,
 ): "BAD_REQUEST" | "CONFLICT" | "FORBIDDEN" | "NOT_FOUND" {
   if (error.code === "STAFF_ALREADY_ACTIVE") return "CONFLICT"
+  if (error.code === "STAFF_CONTACT_CONFLICT") return "CONFLICT"
+  if (
+    error.code === "STAFF_CONTACT_REQUIRED" ||
+    error.code === "STAFF_CONTACT_INVALID"
+  )
+    return "BAD_REQUEST"
   if (error.code === "STAFF_AGE_REQUIRED") return "BAD_REQUEST"
   if (error.code === "STAFF_SELF_UPDATE_FORBIDDEN") return "FORBIDDEN"
   if (error.code === "STAFF_STATUS_NOT_ALLOWED") return "BAD_REQUEST"
@@ -149,7 +156,8 @@ async function enqueueStaffInviteNotification(input: {
   invitedByName: string
   invitedStaff: InvitedRetailOpsStaff
 }) {
-  if (!input.invitedStaff.notification.shouldSend) return
+  const inviteeEmail = input.invitedStaff.contacts.email
+  if (!input.invitedStaff.notification.shouldSend || !inviteeEmail) return
 
   const links = buildStaffInvitationLinks(
     process.env,
@@ -160,7 +168,7 @@ async function enqueueStaffInviteNotification(input: {
     businessName: input.businessName,
     inviteUrl: links.inviteUrl,
     invitedByName: input.invitedByName,
-    inviteeEmail: input.invitedStaff.staff.email,
+    inviteeEmail,
     inviteeName:
       input.invitedStaff.staff.displayName ||
       input.invitedStaff.staff.name ||
@@ -603,6 +611,7 @@ export const retailOpsStaffRouter = createTRPCRouter({
           email: input.email,
           externalId: input.externalId,
           name: input.name,
+          phone: input.phone,
           role: input.role,
           storeId: store.id,
           tenantId: ctx.tenantContext.tenant.id,
@@ -616,8 +625,22 @@ export const retailOpsStaffRouter = createTRPCRouter({
             ctx.session.user.email,
           invitedStaff,
         })
+        const whatsapp = await sendStaffInviteWhatsApp({
+          db: ctx.db,
+          businessName: ctx.tenantContext.tenant.name,
+          invitedStaff,
+        })
 
-        return hideStaffInviteAcceptanceToken(invitedStaff)
+        return {
+          ...hideStaffInviteAcceptanceToken(invitedStaff),
+          delivery: {
+            email: Boolean(
+              invitedStaff.notification.shouldSend &&
+                invitedStaff.contacts.email,
+            ),
+            whatsapp,
+          },
+        }
       } catch (error) {
         if (error instanceof StaffStoreAccessError)
           throw new TRPCError({
