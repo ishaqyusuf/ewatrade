@@ -1,4 +1,5 @@
 import { FullScreenModal } from "@/components/mobile/full-screen-form"
+import { ScreenKeyboardAwareScrollView } from "@/components/ui/bottom-sheet-keyboard-aware-scroll-view"
 import { useModal } from "@/components/ui/modal"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
@@ -13,7 +14,6 @@ import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
 import { router } from "expo-router"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { FlatList, RefreshControl } from "react-native"
-import { KeyboardAwareScrollView } from "react-native-keyboard-controller"
 import { CustomerConversationAccountTerms } from "./customer-conversation-account-terms"
 import { CustomerConversationAge } from "./customer-conversation-age"
 import { projectCustomerConversationAvailability } from "./customer-conversation-availability-presentation"
@@ -410,7 +410,7 @@ function CustomerConversationDetailLiveScreen({
           {/* Notification sign-up inside takes typing, so Store tools opens
               full screen; its report/block and privacy choices stay sheets. */}
           <FullScreenModal ref={toolsSheet.ref} title="Store tools">
-            <KeyboardAwareScrollView
+            <ScreenKeyboardAwareScrollView
               bottomOffset={24}
               keyboardShouldPersistTaps="handled"
               contentContainerStyle={{
@@ -451,7 +451,7 @@ function CustomerConversationDetailLiveScreen({
                   publicToken={publicToken ?? ""}
                 />
               ) : null}
-            </KeyboardAwareScrollView>
+            </ScreenKeyboardAwareScrollView>
           </FullScreenModal>
           <CustomerConversationComposer
             requestControl={

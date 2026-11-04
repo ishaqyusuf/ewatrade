@@ -7,13 +7,23 @@ import {
 } from "@gorhom/bottom-sheet"
 import {
   type ForwardRefExoticComponent,
+  type ForwardedRef,
   type RefAttributes,
   createContext,
   forwardRef,
   memo,
   useContext,
+  useEffect,
+  useRef,
 } from "react"
-import type { ScrollViewProps } from "react-native"
+import {
+  Keyboard,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
+  type ScrollView,
+  type ScrollViewProps,
+  TextInput,
+} from "react-native"
 import {
   KeyboardAwareScrollView,
   type KeyboardAwareScrollViewProps,
@@ -24,6 +34,56 @@ import { BottomSheetInputProvider } from "./bottom-sheet-input-context"
 /** Height of a full-screen form's docked footer; a focused field scrolls
  * clear of it as well as the keyboard. */
 export const KeyboardFooterHeightContext = createContext(0)
+
+/**
+ * KeyboardAwareScrollView for full-screen forms. keyboard-controller follows
+ * focus only in the activity window, so inside a native Modal a field tapped
+ * low on the screen stayed under the keyboard (and the docked footer) until
+ * the first keystroke. When the keyboard shows, this scrolls the focused
+ * field clear itself; where the library already did, there is no overlap.
+ */
+export const ScreenKeyboardAwareScrollView = forwardRef(
+  function ScreenKeyboardAwareScrollView(
+    { bottomOffset = 96, onScroll, ...props }: KeyboardAwareScrollViewProps,
+    ref: ForwardedRef<ScrollView>,
+  ) {
+    const footerHeight = useContext(KeyboardFooterHeightContext)
+    const offset = Math.max(bottomOffset, footerHeight + 12)
+    const scroll = useRef<ScrollView | null>(null)
+    const scrollY = useRef(0)
+    const latestOffset = useRef(offset)
+    latestOffset.current = offset
+    useEffect(() => {
+      const subscription = Keyboard.addListener("keyboardDidShow", (event) => {
+        const input = TextInput.State.currentlyFocusedInput()
+        if (!input || !scroll.current) return
+        input.measureInWindow((_x, y, _width, height) => {
+          const overlap =
+            y + height + latestOffset.current - event.endCoordinates.screenY
+          if (overlap > 0)
+            scroll.current?.scrollTo({ y: scrollY.current + overlap })
+        })
+      })
+      return () => subscription.remove()
+    }, [])
+    return (
+      <KeyboardAwareScrollView
+        {...props}
+        bottomOffset={offset}
+        ref={(node: ScrollView | null) => {
+          scroll.current = node
+          if (typeof ref === "function") ref(node)
+          else if (ref) ref.current = node
+        }}
+        scrollEventThrottle={props.scrollEventThrottle ?? 16}
+        onScroll={(event: NativeSyntheticEvent<NativeScrollEvent>) => {
+          scrollY.current = event.nativeEvent.contentOffset.y
+          onScroll?.(event)
+        }}
+      />
+    )
+  },
+)
 
 type BottomSheetKeyboardAwareScrollViewProps = ScrollViewProps &
   BottomSheetScrollableProps &
@@ -58,18 +118,17 @@ const BottomSheetKeyboardAwareScrollViewBase = forwardRef<
   // The same editor also opens full screen (forms with typing never use a
   // sheet), where Gorhom's scrollable has no sheet to attach to.
   const sheet = useBottomSheetInternal(true)
-  const footerHeight = useContext(KeyboardFooterHeightContext)
   if (!sheet)
     return (
-      <KeyboardAwareScrollView
-        bottomOffset={Math.max(bottomOffset, footerHeight + 12)}
+      <ScreenKeyboardAwareScrollView
+        bottomOffset={bottomOffset}
         extraKeyboardSpace={extraKeyboardSpace ?? 0}
         keyboardShouldPersistTaps={keyboardShouldPersistTaps}
         ref={ref as never}
         {...(props as KeyboardAwareScrollViewProps)}
       >
         {children}
-      </KeyboardAwareScrollView>
+      </ScreenKeyboardAwareScrollView>
     )
   return (
     <BottomSheetKeyboardAwareScrollViewComponent
