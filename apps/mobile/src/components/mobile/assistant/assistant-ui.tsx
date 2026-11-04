@@ -550,7 +550,8 @@ function ComposerIcon({
 
 export function AssistantThinking() {
   return (
-    <View className="flex-row items-center gap-2 pl-9">
+    // Replies sit open at the thread's edge, so this lines up with them.
+    <View className="flex-row items-center gap-2">
       <ActivityIndicator />
       <Text className="text-base [-rn-line-height:22] text-muted-foreground">
         Thinking…
