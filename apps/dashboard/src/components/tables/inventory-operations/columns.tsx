@@ -68,7 +68,7 @@ export function operationColumns(
       id: "movementCount",
       accessorKey: "movementCount",
       header: "Products changed",
-      size: 160,
+      size: 200,
       meta: { headerLabel: "Products changed", sortField: "movementCount" },
       cell: ({ row }) => productsChangedText(row.original.movementCount),
     },
