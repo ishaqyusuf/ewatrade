@@ -51,13 +51,19 @@ export const useCreateAuthContext = () => {
   const [session, setSessionState] = useState<MobileSession | null>(
     getSession(),
   )
-  const [pendingRedirect, setPendingRedirect] = useState<string | null>(null)
+  const [pendingRedirect, setPendingRedirect] = useState<{
+    href: string
+    signedIn: boolean
+  } | null>(null)
   const router = useRouter()
 
   useEffect(() => {
     if (!session || !pendingRedirect) return
 
-    router.replace(pendingRedirect as never)
+    // A fresh sign-in drops the sign-in screens (login, code, QA businesses)
+    // so Back from Home can't return to them.
+    if (pendingRedirect.signedIn && router.canDismiss()) router.dismissAll()
+    router.replace(pendingRedirect.href as never)
     setPendingRedirect(null)
   }, [pendingRedirect, router, session])
 
@@ -99,7 +105,7 @@ export const useCreateAuthContext = () => {
     }
     setSession(nextSession)
     setSessionState(nextSession)
-    setPendingRedirect(redirectHref)
+    setPendingRedirect({ href: redirectHref, signedIn: !session?.token })
   }
 
   return {
