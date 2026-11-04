@@ -29,7 +29,10 @@ import { useRef } from "react"
 import { Text as NativeText } from "react-native"
 import type { ScrollViewProps } from "react-native"
 import { FlatList } from "react-native-css/components/FlatList"
-import { KeyboardAwareScrollView } from "react-native-keyboard-controller"
+import {
+  KeyboardAwareScrollView,
+  useKeyboardState,
+} from "react-native-keyboard-controller"
 import { ClassicSelectedOrderLine } from "./create-sale"
 
 const money = (minor: number, currency: string) =>
@@ -88,6 +91,10 @@ export function ClassicSaleItems({
   }
   const largeText = useLargeTextLayout()
   const scrollHide = useBottomSearchScroll()
+  // Typing a price, description or quantity: the floating footer would cover
+  // the fields below the focused one, so it steps aside until the keyboard
+  // closes. Searching keeps it (the footer holds the search field).
+  const keyboardVisible = useKeyboardState((state) => state.isVisible)
   const {
     itemKind,
     isOffline,
@@ -332,7 +339,7 @@ export function ClassicSaleItems({
             value={saleLineCount ? money(totalMinor, currencyCode) : undefined}
           />
         }
-        hidden={scrollHide.hidden}
+        hidden={scrollHide.hidden || keyboardVisible}
         layout={largeText ? "stacked" : "inline"}
         localSearch
         maxLength={160}
