@@ -22,6 +22,9 @@ export type CommercialPaymentListFilter = {
   tenantId: string
 }
 
+// Lower-case form of the name lists show for an order without a customer.
+const WALK_IN_LABEL = "walk-in customer"
+
 const METHOD = {
   bank_transfer: CommercialPaymentMethod.BANK_TRANSFER,
   card: CommercialPaymentMethod.CARD,
@@ -34,7 +37,8 @@ const METHOD = {
  * Received payments in the caller's Order scope: money in only (refunds and
  * customer-credit settlements stay with their orders). Search matches the
  * reference, the team member who recorded it, and the order's number and
- * customer.
+ * customer. Orders without a customer show as "Walk-in customer", so a search
+ * for part of that label finds them too.
  */
 export async function commercialPaymentListWhere(
   db: Pick<PrismaClient, "user">,
@@ -97,6 +101,9 @@ export async function commercialPaymentListWhere(
               { customerName: { contains: query, mode: "insensitive" } },
               { customerPhone: { contains: query, mode: "insensitive" } },
               { orderNumber: { contains: query, mode: "insensitive" } },
+              ...(WALK_IN_LABEL.includes(query.toLowerCase())
+                ? [{ customerName: null }, { customerName: "" }]
+                : []),
             ],
           },
         },

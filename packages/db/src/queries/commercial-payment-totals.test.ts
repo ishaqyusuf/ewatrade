@@ -118,3 +118,24 @@ test("without a method filter, customer-credit settlements stay out", async () =
   expect(where).not.toHaveProperty("recordedAt")
   expect(where).not.toHaveProperty("OR")
 })
+
+test("searching part of 'Walk-in customer' finds orders without a customer", async () => {
+  const db = fixture({}).db
+  const orderMatch = (where: Record<string, unknown>) =>
+    (
+      (where.OR as Array<Record<string, unknown>>).find(
+        (part) => "order" in part,
+      )?.order as { is: { OR: unknown[] } }
+    ).is.OR
+  const walk = await commercialPaymentListWhere(db, {
+    query: " Walk ",
+    tenantId: "tenant",
+  })
+  expect(orderMatch(walk)).toContainEqual({ customerName: null })
+  expect(orderMatch(walk)).toContainEqual({ customerName: "" })
+  const other = await commercialPaymentListWhere(db, {
+    query: "Ada",
+    tenantId: "tenant",
+  })
+  expect(orderMatch(other)).not.toContainEqual({ customerName: null })
+})
