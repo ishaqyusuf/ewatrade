@@ -342,7 +342,8 @@ export function ClassicOrdersFilterRow<T extends string>({
             accessibilityLabel={labels?.[value] ?? value}
             accessibilityState={{ selected: on }}
             className={cn(
-              "min-h-10 flex-row items-center gap-1.5 rounded-full px-4",
+              // 44dp: the control minimum (min-h-10 drew 35dp on Android).
+              "min-h-[44px] flex-row items-center gap-1.5 rounded-full px-4",
               on ? "bg-foreground" : "bg-card shadow-sm",
             )}
             haptic

@@ -166,7 +166,8 @@ export function ClassicCustomerBookFilter({
       accessibilityRole="button"
       accessibilityState={{ selected: active }}
       className={cn(
-        "min-h-9 flex-row items-center gap-1.5 rounded-full px-[13px] py-1.5",
+        // 44dp: the control minimum (min-h-9 drew 31dp on Android).
+        "min-h-[44px] flex-row items-center gap-1.5 rounded-full px-[13px] py-1.5",
         active ? "bg-foreground" : "bg-card shadow-sm",
       )}
       haptic
