@@ -352,7 +352,7 @@ function ReportContents({ report }: { report: FinanceReport }) {
   ) => (
     <ReportAmount
       key={id}
-      label={`${label} ›`}
+      label={label}
       amount={value}
       currency={report.currencyCode}
       onPress={() =>
