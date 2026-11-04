@@ -148,8 +148,15 @@ function Accounts({ customerId }: { customerId: string }) {
         />
       ) : (
         <Text className="px-4">
-          No account yet. Start a financial book on the dashboard to open a
-          matching customer account.
+          {book.data
+            ? `${query.data.customer.name} has no ${book.data.currencyCode} account yet. Open one to start their statement.`
+            : book.isPending
+              ? offline
+                ? "Reconnect to open an account for this customer."
+                : "Checking your financial book…"
+              : book.isError
+                ? "Your financial book could not be checked. Try again later."
+                : "No account yet. Start a financial book on the dashboard to open a matching customer account."}
         </Text>
       )}
     </View>
