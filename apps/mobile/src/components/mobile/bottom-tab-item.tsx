@@ -7,11 +7,11 @@ import { MOBILE_OPERATIONAL_BOTTOM_TAB_TOKENS } from "@/lib/design-foundation"
 import { DISPLAY_TEXT_FONT_SCALE_CAP } from "@/lib/mobile-accessibility-layout"
 import { cn } from "@/lib/utils"
 import { Text as RNText, View as RNView } from "react-native"
-import { FilledTabIcon, hasFilledTabIcon } from "./filled-tab-icon"
 import type {
   MobileBottomTab,
   MobileBottomTabsProps,
 } from "./bottom-tabs.types"
+import { FilledTabIcon, hasFilledTabIcon } from "./filled-tab-icon"
 
 const DOCK_LABEL_LARGE_TEXT_SCALE_CAP = 1.15
 
