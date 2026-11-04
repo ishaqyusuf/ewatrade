@@ -7,6 +7,7 @@ import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
 import { useBottomSearchScroll } from "@/hooks/use-bottom-search-scroll"
 import { useColors } from "@/hooks/use-color"
+import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
 import { LIST_PAGE_SIZE, shouldFetchNextListPage } from "@/lib/list-pagination"
 import { cn } from "@/lib/utils"
 import { useOperationalModeStore } from "@/store/operationalModeStore"
@@ -75,6 +76,7 @@ export function PaymentsReceivedScreen() {
   const offline = useOperationalModeStore((s) => s.isOfflineMode)
   const router = useRouter()
   const colors = useColors()
+  const largeText = useLargeTextLayout()
   const trpc = useTRPC()
   // Reports' "Received" rows open this list on their method.
   const params = useLocalSearchParams<{ method?: string }>()
@@ -386,12 +388,17 @@ export function PaymentsReceivedScreen() {
           onChangeText={setQuery}
           onFocusChange={searchFold.onFocusChange}
           onHeightChange={setFooterHeight}
+          // The full hints clip in the one-line field at 200% text.
           placeholder={
             offline
-              ? "Search needs a connection"
-              : methodWord
-                ? `Search ${methodWord} payments`
-                : "Search order, customer, method"
+              ? largeText
+                ? "Needs connection"
+                : "Search needs a connection"
+              : largeText
+                ? `Search ${methodWord ?? "payments"}`
+                : methodWord
+                  ? `Search ${methodWord} payments`
+                  : "Search order, customer, method"
           }
           showDisabledOfflineSearch
           totalCount={totalCount}
