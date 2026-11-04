@@ -8,6 +8,10 @@ import {
 import { OrderReturnBridge } from "@/components/mobile/customer-ledger/order-returns/order-return-bridge"
 import { FormField } from "@/components/mobile/form-field"
 import {
+  DockedFooterLayout,
+  FullScreenModal,
+} from "@/components/mobile/full-screen-form"
+import {
   ListCard,
   RecordRow,
   ToggleRow,
@@ -21,7 +25,6 @@ import {
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { BottomSheetKeyboardAwareScrollView } from "@/components/ui/bottom-sheet-keyboard-aware-scroll-view"
 import { Icon, type IconKeys } from "@/components/ui/icon"
-import { Modal } from "@/components/ui/modal"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
@@ -43,11 +46,6 @@ import {
 } from "./order-change-approval-model"
 import type { OrderChangeSheet, OrderChanges } from "./use-order-changes"
 
-// Stable arrays: a new snap-point array on every render can interrupt the
-// close animation and leave the sheet unable to present again.
-const SNAP_POINTS = ["88%"]
-const SNAP_POINTS_LARGE_TEXT = ["94%"]
-
 const TITLES: Record<OrderChangeSheet, string> = {
   menu: "Change order",
   customer: "Change customer",
@@ -60,7 +58,9 @@ const TITLES: Record<OrderChangeSheet, string> = {
   review: "Review request",
 }
 
-/** One bottom sheet: the Change menu and each change form inside it. */
+/** One full-screen view: the Change menu and each change form inside it.
+ * The forms take typing, so this is never a bottom sheet; a form's back
+ * chevron (and Android Back) returns to the menu. */
 export function OrderChangeSheetModal({
   changes,
   isOffline,
@@ -72,13 +72,15 @@ export function OrderChangeSheetModal({
   onRecordPayment: () => void
   order: CommercialOrder
 }) {
-  const largeText = useLargeTextLayout()
   const sheet = changes.sheet
   return (
-    <Modal
+    <FullScreenModal
       key={changes.instance}
       ref={changes.modalRef}
-      snapPoints={largeText ? SNAP_POINTS_LARGE_TEXT : SNAP_POINTS}
+      bottomInset={sheet === "menu"}
+      closeLabel="Close order changes"
+      onBack={sheet === "menu" ? undefined : () => changes.go("menu")}
+      backLabel="Back to change order"
       title={
         sheet === "menu"
           ? `Change ${order.orderNumber}`
@@ -121,7 +123,7 @@ export function OrderChangeSheetModal({
           <ReturnForm changes={changes} order={order} />
         )}
       </View>
-    </Modal>
+    </FullScreenModal>
   )
 }
 
@@ -451,8 +453,36 @@ function FormShell({
 }) {
   const largeText = useLargeTextLayout()
   return (
-    <View className="flex-1">
-      <SearchFooterScope sheet>
+    <DockedFooterLayout
+      label="Order change actions"
+      footer={
+        <View className={largeText ? "gap-2" : "flex-row gap-3"}>
+          <ActionButton
+            className={largeText ? "w-full" : "w-auto flex-1"}
+            disabled={changes.busy}
+            onPress={secondary?.onPress ?? (() => changes.go("menu"))}
+            testID={secondary?.testID}
+            variant="outline"
+          >
+            {secondary?.label ?? "Back"}
+          </ActionButton>
+          <ActionButton
+            className={largeText ? "w-full" : "w-auto flex-[1.5]"}
+            disabled={confirmDisabled || changes.busy}
+            icon={destructive ? "Ban" : undefined}
+            isLoading={changes.busy}
+            loadingLabel="Saving…"
+            onPress={onConfirm}
+            testID="order-change-confirm"
+            tone={destructive ? undefined : "gold"}
+            variant={destructive ? "destructive" : undefined}
+          >
+            {confirmLabel}
+          </ActionButton>
+        </View>
+      }
+    >
+      <SearchFooterScope>
         <BottomSheetKeyboardAwareScrollView
           bottomOffset={24}
           extraKeyboardSpace={24}
@@ -472,36 +502,7 @@ function FormShell({
           </View>
         </BottomSheetKeyboardAwareScrollView>
       </SearchFooterScope>
-      <View
-        className={cn(
-          "border-t border-border px-5 pb-5 pt-3",
-          largeText ? "gap-2" : "flex-row gap-3",
-        )}
-      >
-        <ActionButton
-          className={largeText ? "w-full" : "w-auto flex-1"}
-          disabled={changes.busy}
-          onPress={secondary?.onPress ?? (() => changes.go("menu"))}
-          testID={secondary?.testID}
-          variant="outline"
-        >
-          {secondary?.label ?? "Back"}
-        </ActionButton>
-        <ActionButton
-          className={largeText ? "w-full" : "w-auto flex-[1.5]"}
-          disabled={confirmDisabled || changes.busy}
-          icon={destructive ? "Ban" : undefined}
-          isLoading={changes.busy}
-          loadingLabel="Saving…"
-          onPress={onConfirm}
-          testID="order-change-confirm"
-          tone={destructive ? undefined : "gold"}
-          variant={destructive ? "destructive" : undefined}
-        >
-          {confirmLabel}
-        </ActionButton>
-      </View>
-    </View>
+    </DockedFooterLayout>
   )
 }
 

@@ -26,7 +26,48 @@ type FullScreenFormProps = {
   /** Actions docked under the body (the action-bar footer); they ride the
    * keyboard, and fields in the body scroll clear of them. */
   footer?: ReactNode
+  /** Shows a back chevron instead of X (a step inside the form); Android
+   * Back follows it too. */
+  onBack?: () => void
+  backLabel?: string
   children: ReactNode
+}
+
+/**
+ * The body of a full-screen form with its actions docked underneath, in the
+ * action-bar footer of the app's workflow views. The footer rides the
+ * keyboard, and fields in the body scroll clear of it.
+ */
+export function DockedFooterLayout({
+  footer,
+  label,
+  children,
+}: {
+  footer: ReactNode
+  label: string
+  children: ReactNode
+}) {
+  const [footerHeight, setFooterHeight] = useState(0)
+  return (
+    <>
+      <KeyboardFooterHeightContext.Provider value={footerHeight}>
+        <View className="min-h-0 flex-1">{children}</View>
+      </KeyboardFooterHeightContext.Provider>
+      <BottomSearchFooter
+        variant="action-bar"
+        position="relative"
+        accessibilityLabel={label}
+        onHeightChange={setFooterHeight}
+        searchVisible={false}
+        onChangeText={() => undefined}
+        placeholder=""
+        totalCount={0}
+        value=""
+      >
+        {footer}
+      </BottomSearchFooter>
+    </>
+  )
 }
 
 /**
@@ -42,6 +83,8 @@ export function FullScreenForm({
   bottomInset = true,
   closeDisabled = false,
   footer,
+  onBack,
+  backLabel,
   onClose,
   children,
 }: FullScreenFormProps & {
@@ -49,7 +92,6 @@ export function FullScreenForm({
   onClose: () => void
 }) {
   const insets = useSafeAreaInsets()
-  const [footerHeight, setFooterHeight] = useState(0)
   const close = () => {
     if (closeDisabled) return
     Keyboard.dismiss()
@@ -62,7 +104,7 @@ export function FullScreenForm({
       statusBarTranslucent
       navigationBarTranslucent
       visible={visible}
-      onRequestClose={close}
+      onRequestClose={onBack ?? close}
     >
       {/* Keyboard-free pickers inside the form still present sheets. */}
       <BottomSheetModalProvider>
@@ -72,6 +114,8 @@ export function FullScreenForm({
           title={title}
           closeLabel={closeLabel}
           onClose={close}
+          onBack={onBack}
+          backLabel={backLabel}
         >
           <View
             className="flex-1"
@@ -79,26 +123,13 @@ export function FullScreenForm({
               paddingBottom: bottomInset && !footer ? insets.bottom : 0,
             }}
           >
-            <KeyboardFooterHeightContext.Provider
-              value={footer ? footerHeight : 0}
-            >
-              <View className="min-h-0 flex-1">{children}</View>
-            </KeyboardFooterHeightContext.Provider>
             {footer ? (
-              <BottomSearchFooter
-                variant="action-bar"
-                position="relative"
-                accessibilityLabel={`${title} actions`}
-                onHeightChange={setFooterHeight}
-                searchVisible={false}
-                onChangeText={() => undefined}
-                placeholder=""
-                totalCount={0}
-                value=""
-              >
-                {footer}
-              </BottomSearchFooter>
-            ) : null}
+              <DockedFooterLayout footer={footer} label={`${title} actions`}>
+                {children}
+              </DockedFooterLayout>
+            ) : (
+              children
+            )}
           </View>
         </MobileWorkflowChrome>
       </BottomSheetModalProvider>
