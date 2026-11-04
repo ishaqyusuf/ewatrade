@@ -7,17 +7,17 @@ import { DOMParser } from "@xmldom/xmldom"
 // The exact mounted cases the isolated child must execute and pass.
 const CASES = [
   "thresholds: five or fewer is compact; search past seven, or six-seven when overflowing",
-  "up to five balances: a small sheet with no search, and a stale query is cleared",
+  "up to five balances: a short list with no search, and a stale query is cleared",
   "six or seven: full, search appears only once the list overflows, then stays while filtering",
-  "the bottom search uses the standard floating pill with standard side spacing",
+  "the bottom search is the shared docked search over the list",
   "more than seven: bottom search from the start, decided by the unfiltered count",
-  "Android full: an edge-to-edge screen with its own header; iOS keeps a full sheet",
+  "it opens full screen with a labelled close, never as a sheet",
   "choosing a balance edits the draft and closes; locked drafts disable rows",
-  "a first server load opens a compact sheet with exactly three skeleton rows, then settles into the full view",
+  "a first server load shows exactly three skeleton rows, then settles into the full view",
   "already loaded balances open directly without skeletons; a load error is distinct from loading",
 ]
 
-test("actual stock balance chooser adapts sheet, screen and bottom search to the eligible count", async () => {
+test("actual stock balance chooser opens full screen and adapts its bottom search to the eligible count", async () => {
   const fixture = new URL(
     "./stock-balance-chooser.fixture.tsx",
     import.meta.url,

@@ -1,30 +1,17 @@
 import { ActionButton } from "@/components/mobile/action-button"
 import { StockRow as Row } from "@/components/mobile/appearances/classic/stock-intake"
-import { BottomSheetInputProvider } from "@/components/ui/bottom-sheet-input-context"
-import { Icon } from "@/components/ui/icon"
-import { Modal, type useModal } from "@/components/ui/modal"
-import { Pressable } from "@/components/ui/pressable"
+import { FullScreenModal } from "@/components/mobile/full-screen-form"
+import {
+  SearchFooterField,
+  SearchFooterScope,
+  SearchFooterSpacer,
+} from "@/components/mobile/search-footer-scope"
+import type { useModal } from "@/components/ui/modal"
 import { Skeleton, SkeletonGroup } from "@/components/ui/skeleton"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
-import { useColors } from "@/hooks/use-color"
-import {
-  BottomSheetFooter,
-  type BottomSheetFooterProps,
-  BottomSheetScrollView,
-} from "@gorhom/bottom-sheet"
-import {
-  type ReactNode,
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useRef,
-  useState,
-} from "react"
-import { Platform, StyleSheet, useWindowDimensions } from "react-native"
-import { useSafeAreaInsets } from "react-native-safe-area-context"
-import { BottomSearchFooter } from "../bottom-search-footer"
+import { useEffect, useState } from "react"
+import { ScrollView } from "react-native"
 import {
   stockCustodyLabel,
   stockFactsLabel,
@@ -32,7 +19,7 @@ import {
 } from "./stock-intake-model"
 import type { StockIntakeModel } from "./use-stock-intake"
 
-/** Up to five balances fit a small sheet; more get the full presentation. */
+/** Up to five balances are a short list; more get the full presentation. */
 export function stockChooserLayout(total: number) {
   return total <= 5 ? "compact" : "full"
 }
@@ -54,10 +41,10 @@ export function stockChooserLoading(
 type Chooser = Pick<ReturnType<typeof useModal>, "ref" | "dismiss">
 
 /**
- * Choose stock balance: one sheet that starts compact (with three skeleton
- * rows while balances first load) and settles into the count-appropriate
- * view. Thresholds use the unfiltered eligible count, so a search narrowing
- * the list never collapses the sheet or hides the search.
+ * Choose stock balance: one full-screen list (three skeleton rows while
+ * balances first load) that adds the bottom search once the list is long.
+ * Thresholds use the unfiltered eligible count, so a search narrowing the
+ * list never hides the search. It can take typing, so it is never a sheet.
  */
 export function StockBalanceChooser({
   modal,
@@ -66,103 +53,25 @@ export function StockBalanceChooser({
   modal: Chooser
   model: StockIntakeModel
 }) {
-  const { height } = useWindowDimensions()
-  const insets = useSafeAreaInsets()
-  const colors = useColors()
   const loading = stockChooserLoading(model)
   const failed = !loading && Boolean(model.loadError) && !model.totalRows
   const total = model.totalRows
   const layout = loading || failed ? "compact" : stockChooserLayout(total)
   const [viewport, setViewport] = useState(0)
   const [content, setContent] = useState(0)
-  // Once the search appears for an open it stays until the sheet closes.
+  // Once the search appears for an open it stays until the list closes.
   const [searchShown, setSearchShown] = useState(false)
-  const [footerHeight, setFooterHeight] = useState(96)
   const overflows = viewport > 0 && content > viewport
   const search =
     layout === "full" && (searchShown || stockChooserSearch(total, overflows))
   useEffect(() => {
     if (search && !searchShown) setSearchShown(true)
   }, [search, searchShown])
-  // The compact sheet has no search: never leave it filtered by a stale query.
+  // A short list has no search: never leave it filtered by a stale query.
   const { query, setQuery } = model
   useEffect(() => {
     if (layout === "compact" && query) setQuery("")
   }, [layout, query, setQuery])
-
-  const footer = useRef({ query, setQuery, onHeight: setFooterHeight })
-  footer.current = { query, setQuery, onHeight: setFooterHeight }
-  // Gorhom renders the sheet at a separate PortalHost; the footer reads its
-  // values through a provider inside that node (stable container type).
-  const Container = useCallback(
-    ({ children }: { children?: ReactNode }) => (
-      <FooterContext.Provider value={footer.current}>
-        {children}
-      </FooterContext.Provider>
-    ),
-    [],
-  )
-  // Android full screen: its own header (close + title) clears the status bar;
-  // no grabber or floating sheet chrome. Gorhom renders handles in their own
-  // layer where NativeWind classes don't apply, so layout and colours are
-  // explicit styles (Icon reads its own size class itself).
-  const screenHeader = useCallback(
-    () => (
-      <View
-        style={{
-          flexDirection: "row",
-          alignItems: "center",
-          gap: 10,
-          paddingHorizontal: 16,
-          paddingBottom: 12,
-          paddingTop: insets.top + 8,
-          backgroundColor: colors.background,
-          borderBottomColor: colors.border,
-          borderBottomWidth: StyleSheet.hairlineWidth,
-        }}
-      >
-        <Pressable
-          accessibilityLabel="Close stock balances"
-          accessibilityRole="button"
-          haptic
-          onPress={modal.dismiss}
-          style={{
-            width: 44,
-            height: 44,
-            borderRadius: 22,
-            alignItems: "center",
-            justifyContent: "center",
-            backgroundColor: colors.card,
-          }}
-        >
-          <Icon className="size-[18px]" color={colors.foreground} name="X" />
-        </Pressable>
-        <Text
-          accessibilityRole="header"
-          numberOfLines={1}
-          style={{
-            flex: 1,
-            minWidth: 0,
-            textAlign: "center",
-            color: colors.foreground,
-            fontSize: 16,
-            fontWeight: "800",
-          }}
-        >
-          Choose stock balance
-        </Text>
-        <View style={{ width: 44, height: 44 }} />
-      </View>
-    ),
-    [
-      insets.top,
-      modal.dismiss,
-      colors.background,
-      colors.border,
-      colors.card,
-      colors.foreground,
-    ],
-  )
 
   const body = loading ? (
     <SkeletonGroup accessibilityLabel="Loading stock balances">
@@ -200,88 +109,44 @@ export function StockBalanceChooser({
     </>
   )
 
-  const android = Platform.OS === "android"
-  const full = layout === "full"
-  // One sheet throughout, so a first load settles in place without reopening.
   return (
-    <Modal
+    <FullScreenModal
       ref={modal.ref}
       title="Choose stock balance"
-      containerComponent={Container}
-      footerComponent={search ? StockChooserSearch : undefined}
+      closeLabel="Close stock balances"
+      bottomInset={!search}
       onDismiss={() => {
         setSearchShown(false)
         setContent(0)
       }}
-      {...(!full
-        ? { enableDynamicSizing: true, maxDynamicContentSize: height * 0.8 }
-        : android
-          ? {
-              // Android: an edge-to-edge full screen.
-              snapPoints: ["100%"],
-              detached: false,
-              // The shared sheet adds a floating bottom inset otherwise.
-              bottomInset: 0,
-              handleComponent: screenHeader,
-              enablePanDownToClose: false,
-              backgroundStyle: { borderRadius: 0 },
-              keyboardBehavior: "fillParent" as const,
-              // Edge-to-edge Android doesn't resize the window for the IME,
-              // so gorhom must subtract the keyboard itself ("adjustPan"
-              // maths); with "adjustResize" it assumes a native resize and
-              // leaves the docked search under the keyboard.
-              android_keyboardInputMode: "adjustPan" as const,
-            }
-          : // iOS: a full sheet.
-            { snapPoints: ["92%"], keyboardBehavior: "fillParent" as const })}
     >
-      <BottomSheetScrollView
-        contentContainerStyle={{
-          padding: 18,
-          paddingTop: 0,
-          gap: 12,
-          paddingBottom: (search ? footerHeight : 0) + 24,
-        }}
-        keyboardShouldPersistTaps="handled"
-        onLayout={(event) => setViewport(event.nativeEvent.layout.height)}
-        onContentSizeChange={(_width, next) => setContent(next)}
-      >
-        {body}
-      </BottomSheetScrollView>
-    </Modal>
-  )
-}
-
-const FooterContext = createContext<{
-  query: string
-  setQuery: (value: string) => void
-  onHeight: (height: number) => void
-} | null>(null)
-
-// Stable component identity keeps the focused search mounted while filtering.
-// The standard floating bottom search (as BottomSearchFooter): the pill floats
-// over the list with standard side and safe-area spacing. Spacing is explicit
-// because the gorhom footer layer doesn't apply layout classes.
-function StockChooserSearch(props: BottomSheetFooterProps) {
-  const context = useContext(FooterContext)
-  if (!context) return null
-  return (
-    <BottomSheetFooter {...props}>
-      <BottomSheetInputProvider>
-        <BottomSearchFooter
-          accessibilityLabel="Find balance"
-          alwaysShowSearch
-          keyboardOwner="sheet"
-          localSearch
-          maxLength={160}
-          onChangeText={context.setQuery}
-          onHeightChange={context.onHeight}
-          placeholder="Item, variant, unit, custody"
-          position="relative"
-          totalCount={0}
-          value={context.query}
-        />
-      </BottomSheetInputProvider>
-    </BottomSheetFooter>
+      <SearchFooterScope>
+        {search ? (
+          <SearchFooterField
+            accessibilityLabel="Find balance"
+            localSearch
+            maxLength={160}
+            onChangeText={setQuery}
+            placeholder="Item, variant, unit, custody"
+            value={query}
+          />
+        ) : null}
+        <ScrollView
+          contentContainerStyle={{
+            padding: 18,
+            paddingTop: 4,
+            gap: 12,
+            paddingBottom: 24,
+          }}
+          keyboardDismissMode="on-drag"
+          keyboardShouldPersistTaps="handled"
+          onLayout={(event) => setViewport(event.nativeEvent.layout.height)}
+          onContentSizeChange={(_width, next) => setContent(next)}
+        >
+          {body}
+          <SearchFooterSpacer />
+        </ScrollView>
+      </SearchFooterScope>
+    </FullScreenModal>
   )
 }
