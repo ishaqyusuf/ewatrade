@@ -12,6 +12,7 @@ import {
   Text as NativeText,
   TextInput,
 } from "react-native"
+import { useKeyboardState } from "react-native-keyboard-controller"
 import { useReducedMotion } from "react-native-reanimated"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { AssistantText } from "./assistant-text"
@@ -204,6 +205,7 @@ export function AssistantComposer({
   voice?: AssistantComposerVoice
 }) {
   const insets = useSafeAreaInsets()
+  const keyboardVisible = useKeyboardState((state) => state.isVisible)
   const colors = useColors()
   const reduceMotion = useReducedMotion()
   const [wrapped, setWrapped] = useState(false)
@@ -422,7 +424,11 @@ export function AssistantComposer({
           </View>
         )}
       </View>
-      <View style={{ height: Math.max(insets.bottom, 10) }} />
+      {/* The keyboard already covers the system bar, so the safe-area gap
+          only applies while it is closed. */}
+      <View
+        style={{ height: keyboardVisible ? 8 : Math.max(insets.bottom, 8) }}
+      />
     </View>
   )
 }
