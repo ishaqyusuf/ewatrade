@@ -14,7 +14,10 @@ import {
   updateRetailOpsStaffStatus,
   updateRetailOpsStaffStoreAccess,
 } from "@ewatrade/db/queries"
-import { enqueueRetailOpsStaffInviteNotification } from "@ewatrade/jobs/staff-invitations"
+import {
+  enqueueRetailOpsStaffInviteNotification,
+  sendStaffInviteWhatsApp,
+} from "@ewatrade/jobs/staff-invitations"
 import { getQaPolicyEnvironment } from "@ewatrade/utils/qa-policy-server"
 import {
   buildStaffInvitationLinks,
@@ -50,10 +53,16 @@ const inviteStaffSchema = z.object({
     .min(1)
     .max(100),
   catalogEditor: z.boolean().default(false),
-  email: z.email().trim().toLowerCase(),
+  email: z.email().trim().toLowerCase().optional(),
   externalId: z.string().trim().min(1).max(120).optional(),
   name: z.string().trim().min(1).max(120).optional(),
   operation: z.literal("invite"),
+  /** WhatsApp number in E.164; at least one of email and phone is required. */
+  phone: z
+    .string()
+    .trim()
+    .regex(/^\+[1-9]\d{7,14}$/)
+    .optional(),
   role: z.enum(["cashier", "manager", "operator"]).default("cashier"),
   storeId: z.string().trim().min(1).optional(),
 })
@@ -94,10 +103,13 @@ const staffOperationSchema = z.discriminatedUnion("operation", [
 
 function getStaffErrorStatus(error: RetailOpsStaffError) {
   if (error.code === "STAFF_ALREADY_ACTIVE") return 409
+  if (error.code === "STAFF_CONTACT_CONFLICT") return 409
   if (error.code === "STAFF_SELF_UPDATE_FORBIDDEN") return 403
   if (
     error.code === "STAFF_STATUS_NOT_ALLOWED" ||
-    error.code === "STAFF_STATUS_UNCHANGED"
+    error.code === "STAFF_STATUS_UNCHANGED" ||
+    error.code === "STAFF_CONTACT_REQUIRED" ||
+    error.code === "STAFF_CONTACT_INVALID"
   ) {
     return 400
   }
@@ -110,7 +122,8 @@ async function enqueueStaffInviteNotification(input: {
   invitedByName: string
   invitedStaff: InvitedRetailOpsStaff
 }) {
-  if (!input.invitedStaff.notification.shouldSend) return
+  const inviteeEmail = input.invitedStaff.contacts.email
+  if (!input.invitedStaff.notification.shouldSend || !inviteeEmail) return
 
   const links = buildStaffInvitationLinks(
     process.env,
@@ -121,7 +134,7 @@ async function enqueueStaffInviteNotification(input: {
     businessName: input.businessName,
     inviteUrl: links.inviteUrl,
     invitedByName: input.invitedByName,
-    inviteeEmail: input.invitedStaff.staff.email,
+    inviteeEmail,
     inviteeName:
       input.invitedStaff.staff.displayName ||
       input.invitedStaff.staff.name ||
@@ -286,6 +299,7 @@ export async function POST(request: NextRequest) {
         externalId:
           parsed.data.externalId ?? createExternalId(parsed.data.operation),
         name: parsed.data.name,
+        phone: parsed.data.phone,
         role: parsed.data.role,
         storeId: store.id,
         tenantId: ctx.tenant.id,
@@ -296,10 +310,22 @@ export async function POST(request: NextRequest) {
         invitedByName: session.user.displayName || session.user.email,
         invitedStaff,
       })
+      const whatsapp = await sendStaffInviteWhatsApp({
+        db: prisma,
+        businessName: ctx.tenant.name,
+        invitedStaff,
+      })
 
       return NextResponse.json(
         {
           result: hideStaffInviteAcceptanceToken(invitedStaff),
+          delivery: {
+            email: Boolean(
+              invitedStaff.notification.shouldSend &&
+                invitedStaff.contacts.email,
+            ),
+            whatsapp,
+          },
           ...(invitedStaff.invite.acceptanceToken &&
           isQaStaffInvitation(
             invitedStaff.staff.email,

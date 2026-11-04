@@ -4,15 +4,26 @@ import { NextRequest } from "next/server"
 let role = "OWNER"
 let staffAccessMode = "LEGACY"
 const store = { id: "store", name: "Fixture" }
-const invite = mock(async (_db: unknown, input: { email: string }) => ({
-  staff: { email: input.email, name: "Staff", displayName: "Staff" },
-  invite: {
-    id: "membership",
-    role: "CASHIER",
-    acceptanceToken: "secret-token",
-  },
-  notification: { shouldSend: true },
-}))
+const invite = mock(
+  async (_db: unknown, input: { email?: string; phone?: string }) => ({
+    staff: {
+      email: input.email ?? "x@phone.ewatrade.invalid",
+      name: "Staff",
+      displayName: "Staff",
+    },
+    contacts: { email: input.email ?? null, phone: input.phone ?? null },
+    invite: {
+      id: "membership",
+      role: "CASHIER",
+      acceptanceToken: "secret-token",
+    },
+    notification: { shouldSend: true },
+  }),
+)
+const sendWhatsApp = mock(
+  async (input: { invitedStaff: { contacts: { phone: string | null } } }) =>
+    input.invitedStaff.contacts.phone ? "LOCAL_ONLY" : null,
+)
 const updateAccess = mock(async (_db: unknown, _input: unknown) => ({}))
 const notify = mock(async (_input: unknown) => {})
 const remove = mock(async (_db: unknown, _input: unknown) => ({
@@ -59,6 +70,7 @@ mock.module("@ewatrade/utils/qa-policy-server", () => ({
 }))
 mock.module("@ewatrade/jobs/staff-invitations", () => ({
   enqueueRetailOpsStaffInviteNotification: notify,
+  sendStaffInviteWhatsApp: sendWhatsApp,
 }))
 const { POST } = await import("./route")
 async function postRequest(request: NextRequest) {
@@ -233,4 +245,25 @@ test("suspend passes the optional reason through", async () => {
     {},
     expect.objectContaining({ status: "suspended", reason: "On leave" }),
   )
+})
+test("a WhatsApp-only invitation sends no email and reports WhatsApp delivery", async () => {
+  local()
+  const result = await postRequest(
+    new NextRequest("https://ewatrade-dashboard.localhost/api/staff", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        operation: "invite",
+        phone: "+2348035550142",
+        role: "cashier",
+        assignments: [{ storeId: "store", role: "cashier" }],
+      }),
+    }),
+  )
+  const body = await result.json()
+  expect(result.status).toBe(200)
+  expect(invite.mock.calls[0]?.[1]).toMatchObject({ phone: "+2348035550142" })
+  expect(notify).not.toHaveBeenCalled()
+  expect(body.delivery).toEqual({ email: false, whatsapp: "LOCAL_ONLY" })
+  expect(body.qaInviteUrl).toBeUndefined()
 })
