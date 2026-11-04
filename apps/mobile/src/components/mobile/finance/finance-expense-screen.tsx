@@ -4,6 +4,8 @@ import { Icon } from "@/components/ui/icon"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Text } from "@/components/ui/text"
 import { useColors } from "@/hooks/use-color"
+import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
+import { cn } from "@/lib/utils"
 import { useOperationalModeStore } from "@/store/operationalModeStore"
 import { useTRPC } from "@/trpc/client"
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
@@ -65,6 +67,8 @@ function ExpenseWorkspace({
 }: FinanceWorkspace & { billId: string; pinnedReceipt: boolean }) {
   const trpc = useTRPC()
   const colors = useColors()
+  // Large text: each expense line stacks its amount under the full name.
+  const largeText = useLargeTextLayout()
   const offline = useOperationalModeStore((s) => s.isOfflineMode)
   const command = useMobileFinanceCommand({
     actorUserId,
@@ -327,11 +331,17 @@ function ExpenseWorkspace({
           {bill.lines.map((line) => (
             <View
               key={line.id}
-              className="min-h-12 flex-row items-center justify-between gap-3 py-3"
+              className={cn(
+                "min-h-12 gap-3 py-3",
+                largeText ? "gap-1" : "flex-row items-center justify-between",
+              )}
             >
               <Text
-                className="min-w-0 flex-1 text-sm text-muted-foreground"
-                numberOfLines={2}
+                className={cn(
+                  "min-w-0 text-sm text-muted-foreground",
+                  !largeText && "flex-1",
+                )}
+                numberOfLines={largeText ? undefined : 2}
               >
                 {line.account.name}
                 {line.description ? ` · ${line.description}` : ""}
