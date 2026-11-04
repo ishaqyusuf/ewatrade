@@ -75,6 +75,11 @@ export function registerGeneralAssistantChatRoutes(
       return createUIMessageStreamResponse({
         stream: turn.stream,
         headers: { "Cache-Control": "no-store" },
+        // The run is finalized when the stream ends; drain a copy so a client
+        // that stops reading (reload, remount) can't leave it RUNNING.
+        consumeSseStream: ({ stream: copy }) => {
+          void copy.pipeTo(new WritableStream()).catch(() => undefined)
+        },
       })
     } catch (error) {
       return routeFailure(c, error)

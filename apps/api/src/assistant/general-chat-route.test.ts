@@ -26,6 +26,7 @@ function fixture(
     context: null as unknown,
     signal: null as AbortSignal | null,
     read: null as unknown,
+    drained: false,
   }
   registerGeneralAssistantChatRoutes(app, {
     admit: async () => {
@@ -53,7 +54,14 @@ function fixture(
           controller.enqueue({ type: "finish" })
           controller.close()
         },
-      })
+      }).pipeThrough(
+        // Stands in for the turn's onFinish, which saves the run.
+        new TransformStream({
+          flush() {
+            calls.drained = true
+          },
+        }),
+      )
       return {
         runId: "run-1",
         stream,
@@ -169,6 +177,14 @@ describe("GENERAL HTTP adapter", () => {
     controller.abort()
     expect(f.calls.signal?.aborted).toBe(true)
     await response.text()
+  })
+  test("finishes the turn even when the client never reads the reply", async () => {
+    const f = fixture()
+    const response = await f.post()
+    expect(response.status).toBe(200)
+    await new Promise((resolve) => setTimeout(resolve, 20))
+    expect(f.calls.drained).toBe(true)
+    await response.body?.cancel()
   })
   test("keeps unexpected infrastructure details out of the response", async () => {
     const f = fixture({ error: new Error("private-infrastructure-detail") })
