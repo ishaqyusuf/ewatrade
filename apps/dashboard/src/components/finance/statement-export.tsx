@@ -4,6 +4,7 @@ import { useTRPC } from "@/trpc/client"
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
 import { useDashboardWorkflow } from "@ewatrade/events/dashboard-client"
 import { Button } from "@ewatrade/ui"
+import { financeCoverageLabel } from "@ewatrade/utils/finance-report-output"
 import { useQueryClient } from "@tanstack/react-query"
 import { useEffect, useRef, useState } from "react"
 import { financeCsvCell } from "./finance-csv"
@@ -46,7 +47,7 @@ export function FinanceStatementExport({
         ["From UTC", new Date(statement.from).toISOString()],
         ["Through UTC", new Date(statement.through).toISOString()],
         ["Snapshot", statement.snapshotSequence],
-        ["Coverage", statement.coverage],
+        ["Coverage", financeCoverageLabel(statement.coverage)],
         [
           "Amounts",
           "Exact integer minor units; 100 minor units = 1 currency unit",

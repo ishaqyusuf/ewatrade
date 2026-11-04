@@ -132,8 +132,10 @@ describe("report output", () => {
   test("CSV preserves huge signed minor units and coverage; formula text is escaped", () => {
     const csv = buildFinanceReportCsv(report)
     expect(csv).toContain(`"Net profit / loss","-${huge}"`)
-    expect(csv).toContain("POSTED_FINANCE_ENTRIES")
-    expect(csv).toContain("OPENING_BALANCE_RECONCILIATION")
+    expect(csv).toContain('"Coverage","Posted finance entries only"')
+    expect(csv).toContain("Starting balances")
+    expect(csv).not.toContain("POSTED_FINANCE_ENTRIES")
+    expect(csv).not.toContain("INCOMPLETE_SOURCE_COVERAGE")
     expect(csv).toContain('"\'=unsafe"')
     expect(csv).toContain(
       '"Order money not counted as sales, period (minor units)","250000"',
@@ -153,7 +155,7 @@ describe("report output", () => {
     for (const text of [
       "Snapshot",
       "snapshot 42",
-      "POSTED_FINANCE_ENTRIES",
+      "Coverage: Posted finance entries only · Incomplete: some business records aren't included",
       "Profit and loss",
       "Cash flow",
       "Balance sheet",
@@ -167,6 +169,7 @@ describe("report output", () => {
     }
     expect(html).toContain("@page{size:A4;margin:18mm}")
     expect(html).toContain("Missing coverage: Order sales; Stock costs")
+    expect(html).not.toContain("POSTED_FINANCE_ENTRIES")
     expect(html).toContain("isn't counted as sales yet: ₦2,500.00 in these")
     expect(
       buildFinanceReportPrintDocument({ ...report, orderCollections: null }),

@@ -107,11 +107,25 @@ const COVERAGE_GAP_LABELS: Record<string, string> = {
   ASSETS_LOANS_ACCRUALS_AND_TAX: "Equipment, loans, unpaid bills and tax",
 }
 
-export function financeCoverageGapLabel(gap: string) {
-  const known = COVERAGE_GAP_LABELS[gap]
-  if (known) return known
-  const words = gap.toLowerCase().split("_").join(" ")
+// Plain words for a report's coverage and completeness ids.
+const COVERAGE_LABELS: Record<string, string> = {
+  POSTED_FINANCE_ENTRIES: "Posted finance entries only",
+  INCOMPLETE_SOURCE_COVERAGE:
+    "Incomplete: some business records aren't included",
+}
+
+function readableId(id: string) {
+  const words = id.toLowerCase().split("_").join(" ")
   return words.charAt(0).toUpperCase() + words.slice(1)
+}
+
+export function financeCoverageGapLabel(gap: string) {
+  return COVERAGE_GAP_LABELS[gap] ?? readableId(gap)
+}
+
+/** Coverage or completeness id in plain words, for print and CSV. */
+export function financeCoverageLabel(id: string) {
+  return COVERAGE_LABELS[id] ?? readableId(id)
 }
 
 function financeCsvCell(value: string) {
@@ -136,9 +150,12 @@ export function buildFinanceReportCsv(report: FinanceReportOutput) {
       new Date(report.bookkeepingStartsAt).toISOString(),
     ],
     ["Journal snapshot", report.snapshotSequence],
-    ["Coverage", report.coverage],
-    ["Completeness", report.completeness],
-    ["Missing coverage", report.coverageGaps.join("; ")],
+    ["Coverage", financeCoverageLabel(report.coverage)],
+    ["Completeness", financeCoverageLabel(report.completeness)],
+    [
+      "Missing coverage",
+      report.coverageGaps.map(financeCoverageGapLabel).join("; "),
+    ],
     ...(report.orderCollections
       ? [
           [
@@ -260,7 +277,7 @@ export function buildFinanceLedgerCsv(
     ["From UTC", ledger.from.toISOString()],
     ["Through UTC", ledger.through.toISOString()],
     ["Snapshot", ledger.snapshotSequence],
-    ["Coverage", ledger.coverage],
+    ["Coverage", financeCoverageLabel(ledger.coverage)],
     ["Balance convention", ledger.balanceConvention],
     ["Normal side", ledger.normalSide],
     [
