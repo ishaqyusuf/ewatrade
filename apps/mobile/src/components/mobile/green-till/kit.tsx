@@ -15,7 +15,7 @@ import { cn } from "@/lib/utils"
 import { Children, Fragment, type ReactNode } from "react"
 import { Text as NativeText, ScrollView } from "react-native"
 
-function useTint(tint: GreenTillTint | "muted") {
+function useTint(tint: GreenTillTint | "muted" | "gold") {
   const { colorScheme } = useColorScheme()
   const palette = GREEN_TILL_THEME[colorScheme]
   const colors = useColors()
@@ -302,7 +302,11 @@ export function RecordRow({
 }: {
   accessibilityLabel?: string
   amount?: string
-  avatar: { icon?: IconKeys; initials?: string; tint: GreenTillTint | "muted" }
+  avatar: {
+    icon?: IconKeys
+    initials?: string
+    tint: GreenTillTint | "muted" | "gold"
+  }
   /** Destructive action, such as "Turn off app lock": the title turns red. */
   danger?: boolean
   /** One line, or several stacked lines (contact, then activity). */

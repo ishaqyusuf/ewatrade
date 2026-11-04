@@ -1,13 +1,12 @@
 import { Icon, type IconKeys } from "@/components/ui/icon"
-import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
-import { useColorScheme } from "@/hooks/use-color"
-import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
-import { GREEN_TILL_THEME, type GreenTillTint } from "@/lib/green-till-theme"
+import type { GreenTillTint } from "@/lib/green-till-theme"
 import { cn } from "@/lib/utils"
+import { ActionButton } from "../action-button"
 import { homeGreeting } from "../appearances/classic/home-counter-parts"
 import { ListCard, RecordRow, SectionHeader } from "../green-till/kit"
+import { StatusBanner } from "../status-banner"
 
 export type AssistantSuggestion = {
   icon: IconKeys
@@ -162,157 +161,122 @@ export function AssistantChatRow({
   )
 }
 
+/** Questions send at once (arrow); record requests fill the box (pencil). */
+function PromptGlyph({ send }: { send: boolean }) {
+  return (
+    <View
+      className={cn(
+        "size-[30px] items-center justify-center rounded-full",
+        send && "bg-muted",
+      )}
+    >
+      <Icon
+        className={cn(
+          "size-4",
+          send ? "text-foreground" : "text-muted-foreground",
+        )}
+        name={send ? "ArrowUp" : "Pencil"}
+      />
+    </View>
+  )
+}
+
+/** Assistant home (Workshop A2a v2.2, Prompt rows): greeting, role prompts, Recent. */
 export function AssistantHome({
   name,
   role,
   chats,
   disabled,
+  state,
   onSuggestion,
   onChat,
   onAllChats,
+  onSearch,
 }: {
   name?: string
   role?: string
   chats: AssistantChat[]
   disabled: boolean
+  /** Offline dims the prompts; setup replaces them until the assistant is on. */
+  state?: "offline" | "setup"
   onSuggestion: (suggestion: AssistantSuggestion) => void
   onChat: (id: string) => void
   onAllChats: () => void
+  onSearch?: () => void
 }) {
-  const large = useLargeTextLayout()
-  const { colorScheme } = useColorScheme()
-  const palette = GREEN_TILL_THEME[colorScheme]
   const firstName = name?.trim().split(/\s+/)[0]
-  const rep = !["OWNER", "ADMIN", "MANAGER"].includes(
-    role?.trim().toUpperCase() ?? "",
-  )
-  const tiles = assistantSuggestions(role)
-  const rows = large
-    ? tiles.map((t) => [t])
-    : [tiles.slice(0, 2), tiles.slice(2)]
   return (
-    <View className="pt-1.5">
-      <View
-        style={{
-          alignItems: "center",
-          backgroundColor: palette.gold,
-          borderRadius: 15,
-          height: 44,
-          justifyContent: "center",
-          width: 44,
-        }}
-      >
-        <Icon
-          className="size-[22px]"
-          color={palette.goldForeground}
-          name="Sparkles"
-        />
-      </View>
+    <View className="pt-0.5">
       <Text
         accessibilityRole="header"
-        className="mb-1 mt-3 text-2xl font-extrabold tracking-tight text-foreground"
+        className="mb-3.5 text-2xl font-extrabold tracking-tight text-foreground"
       >
         {homeGreeting(new Date().getHours())}
-        {firstName ? `, ${firstName}` : ""}. How can I help today?
+        {firstName ? `, ${firstName}` : ""}
       </Text>
-      <Text className="text-base [-rn-line-height:22] text-muted-foreground">
-        {rep
-          ? "Ask about your sales and what’s in stock, or start a sale."
-          : "Ask about sales, stock and customers, or tell me what to record. Nothing changes until you confirm."}
-      </Text>
-      <View className="mt-3.5 gap-2">
-        {rows.map((row) => (
-          <View key={row[0]?.title} className="flex-row gap-2">
-            {row.map((tile) => {
-              const gold = tile.tint === "gold"
-              const ink = gold
-                ? palette.goldForeground
-                : palette[`${tile.tint as GreenTillTint}Foreground`]
-              return (
-                <View
-                  key={tile.title}
-                  className={cn(
-                    "flex-1 rounded-[18px]",
-                    gold ? "bg-gold" : "bg-card shadow-sm",
-                    disabled && "opacity-45",
-                  )}
-                >
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityHint={tile.sub}
-                    accessibilityState={{ disabled }}
-                    className={cn(
-                      "gap-2.5 rounded-[18px] p-3",
-                      large ? "min-h-[84px]" : "min-h-[112px]",
-                    )}
-                    disabled={disabled}
-                    haptic
-                    onPress={() => onSuggestion(tile)}
-                  >
-                    <View
-                      style={{
-                        alignItems: "center",
-                        backgroundColor: gold
-                          ? "rgba(30,30,28,0.1)"
-                          : palette[tile.tint as GreenTillTint],
-                        borderRadius: 11,
-                        height: 34,
-                        justifyContent: "center",
-                        width: 34,
-                      }}
-                    >
-                      <Icon
-                        className="size-[17px]"
-                        color={ink}
-                        name={tile.icon}
-                      />
-                    </View>
-                    <View className="gap-0.5">
-                      <Text
-                        className={cn(
-                          "text-base font-bold",
-                          gold ? "text-gold-foreground" : "text-foreground",
-                        )}
-                      >
-                        {tile.title}
-                      </Text>
-                      <Text
-                        className={cn(
-                          "text-base [-rn-line-height:22]",
-                          gold
-                            ? "text-gold-foreground/70"
-                            : "text-muted-foreground",
-                        )}
-                      >
-                        {tile.sub}
-                      </Text>
-                    </View>
-                  </Pressable>
-                </View>
-              )
-            })}
+      {state === "setup" ? (
+        <View className="mt-10 items-center gap-1.5 px-3">
+          <View className="mb-2 size-[52px] items-center justify-center rounded-full bg-muted">
+            <Icon className="size-6 text-muted-foreground" name="Clock" />
           </View>
-        ))}
-      </View>
-      {chats.length ? (
+          <Text className="text-center text-lg font-extrabold text-foreground">
+            Not ready yet
+          </Text>
+          <Text className="mb-3 text-center text-base [-rn-line-height:22] text-muted-foreground">
+            The assistant is being set up for this business.
+          </Text>
+          {onSearch ? (
+            <ActionButton variant="outline" onPress={onSearch}>
+              Open search
+            </ActionButton>
+          ) : null}
+        </View>
+      ) : (
         <>
-          <SectionHeader
-            title="Recent"
-            actionLabel="All chats"
-            onAction={onAllChats}
-          />
-          <ListCard>
-            {chats.map((chat) => (
-              <AssistantChatRow
-                key={chat.id}
-                chat={chat}
-                disabled={disabled}
-                onPress={() => onChat(chat.id)}
+          {state === "offline" ? (
+            <View className="mb-3.5">
+              <StatusBanner
+                title="You’re offline"
+                tone="warning"
+                message="Reconnect to ask or open a chat."
               />
-            ))}
-          </ListCard>
+            </View>
+          ) : null}
+          <View className={cn(disabled && "opacity-45")}>
+            <ListCard>
+              {assistantSuggestions(role).map((prompt) => (
+                <RecordRow
+                  key={prompt.title}
+                  title={prompt.title}
+                  meta={prompt.sub}
+                  avatar={{ icon: prompt.icon, tint: prompt.tint }}
+                  status={<PromptGlyph send={prompt.send} />}
+                  onPress={disabled ? undefined : () => onSuggestion(prompt)}
+                />
+              ))}
+            </ListCard>
+          </View>
+          {chats.length ? (
+            <>
+              <SectionHeader
+                title="Recent"
+                actionLabel="All chats"
+                onAction={onAllChats}
+              />
+              <ListCard>
+                {chats.map((chat) => (
+                  <AssistantChatRow
+                    key={chat.id}
+                    chat={chat}
+                    disabled={disabled}
+                    onPress={() => onChat(chat.id)}
+                  />
+                ))}
+              </ListCard>
+            </>
+          ) : null}
         </>
-      ) : null}
+      )}
     </View>
   )
 }
