@@ -177,10 +177,12 @@ describe("customerFirstName", () => {
     expect(customerFirstName("Ada Okafor")).toBe("Ada")
     expect(customerFirstName("  Chiamaka  ")).toBe("Chiamaka")
     expect(customerFirstName("O'Neil Brown")).toBe("O'Neil")
+    expect(customerFirstName("ADA OKAFOR")).toBe("ADA")
   })
 
   test("returns nothing for codes, numbers and business names", () => {
     expect(customerFirstName("QA-1103 Ada")).toBeUndefined()
+    expect(customerFirstName("QA Amina Bello")).toBeUndefined()
     expect(customerFirstName("08031234567")).toBeUndefined()
     expect(customerFirstName("Sunrise Ventures Ltd")).toBeUndefined()
     expect(customerFirstName("Mama Put Stores")).toBeUndefined()

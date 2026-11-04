@@ -1,4 +1,5 @@
 "use client"
+import { customerFirstName } from "@ewatrade/customer-messages/client"
 import { useDashboardEmptyState } from "@ewatrade/events/dashboard-client"
 import { Button } from "@ewatrade/ui"
 export function CustomerLedgerEmptyState({
@@ -11,7 +12,7 @@ export function CustomerLedgerEmptyState({
   onStartingBalance?: () => void
 }) {
   useDashboardEmptyState("customer-ledger")
-  const who = customerName?.split(" ")[0] || "they"
+  const who = customerFirstName(customerName) ?? "they"
   return (
     <div className="grid min-h-40 place-items-center border border-border px-4 py-8 text-center">
       <div className="grid justify-items-center gap-1">
