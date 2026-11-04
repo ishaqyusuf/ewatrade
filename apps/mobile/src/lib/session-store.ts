@@ -28,8 +28,14 @@ export type MobileSession = {
   profile: MobileProfile
 }
 
+// Reading the Keystore is slow and getSession runs inside renders, so the
+// stored string is kept in memory. Only this module writes the key; each call
+// still parses a fresh object.
+let storedSession: { value: string | null } | null = null
+
 export const getSession = (): MobileSession | null => {
-  const value = SecureStore.getItem(SESSION_KEY)
+  storedSession ??= { value: SecureStore.getItem(SESSION_KEY) }
+  const value = storedSession.value
   if (!value) return null
 
   try {
@@ -47,12 +53,16 @@ export const getSessionGeneration = () => sessionGeneration
 
 export const setSession = (session: MobileSession) => {
   sessionGeneration++
-  return SecureStore.setItem(SESSION_KEY, JSON.stringify(session))
+  const value = JSON.stringify(session)
+  storedSession = null
+  SecureStore.setItem(SESSION_KEY, value)
+  storedSession = { value }
 }
 
 export const deleteSession = () => {
   // Retire captures synchronously, before the asynchronous native deletion.
   sessionGeneration++
+  storedSession = { value: null }
   return SecureStore.deleteItemAsync(SESSION_KEY)
 }
 

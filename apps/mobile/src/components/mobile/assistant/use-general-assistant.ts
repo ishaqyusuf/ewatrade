@@ -277,6 +277,10 @@ export function useGeneralAssistant() {
   const chat = useChat<Message>({
     id: `${scope}:${conversationId}`,
     transport,
+    // Each streamed chunk would otherwise re-render the whole thread
+    // synchronously; a long reply with answer cards froze the JS thread
+    // for minutes after the server had finished.
+    experimental_throttle: 100,
     onData: (part) => {
       if (!canWork()) return
       if (part.type === "data-general-run") setRunId(part.data.runId)
