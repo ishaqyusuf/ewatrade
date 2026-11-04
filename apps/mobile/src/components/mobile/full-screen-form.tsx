@@ -1,8 +1,33 @@
 import { MobileWorkflowChrome } from "@/components/mobile/appearances/workflow-chrome"
-import { BottomSheetModalProvider } from "@gorhom/bottom-sheet"
-import type { ReactNode } from "react"
+import { BottomSearchFooter } from "@/components/mobile/bottom-search-footer"
+import { KeyboardFooterHeightContext } from "@/components/ui/bottom-sheet-keyboard-aware-scroll-view"
+import {
+  type BottomSheetModal,
+  BottomSheetModalProvider,
+} from "@gorhom/bottom-sheet"
+import {
+  type ReactNode,
+  forwardRef,
+  useCallback,
+  useImperativeHandle,
+  useRef,
+  useState,
+} from "react"
 import { Keyboard, Modal as NativeModal, View } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
+
+type FullScreenFormProps = {
+  title: string
+  closeLabel?: string
+  /** Off when the body docks its own footer (a search) on the safe area. */
+  bottomInset?: boolean
+  /** While saving, X and Android Back leave the form open. */
+  closeDisabled?: boolean
+  /** Actions docked under the body (the action-bar footer); they ride the
+   * keyboard, and fields in the body scroll clear of them. */
+  footer?: ReactNode
+  children: ReactNode
+}
 
 /**
  * A form that takes typing, opened over the current screen. Bottom sheets are
@@ -13,18 +38,20 @@ import { useSafeAreaInsets } from "react-native-safe-area-context"
 export function FullScreenForm({
   visible,
   title,
-  closeLabel,
+  closeLabel = `Close ${title.toLowerCase()}`,
+  bottomInset = true,
+  closeDisabled = false,
+  footer,
   onClose,
   children,
-}: {
+}: FullScreenFormProps & {
   visible: boolean
-  title: string
-  closeLabel: string
   onClose: () => void
-  children: ReactNode
 }) {
   const insets = useSafeAreaInsets()
+  const [footerHeight, setFooterHeight] = useState(0)
   const close = () => {
+    if (closeDisabled) return
     Keyboard.dismiss()
     onClose()
   }
@@ -37,7 +64,7 @@ export function FullScreenForm({
       visible={visible}
       onRequestClose={close}
     >
-      {/* Pickers inside the form (country, options) still present sheets. */}
+      {/* Keyboard-free pickers inside the form still present sheets. */}
       <BottomSheetModalProvider>
         <MobileWorkflowChrome
           hideHeader={false}
@@ -46,11 +73,78 @@ export function FullScreenForm({
           closeLabel={closeLabel}
           onClose={close}
         >
-          <View className="flex-1" style={{ paddingBottom: insets.bottom }}>
-            {children}
+          <View
+            className="flex-1"
+            style={{
+              paddingBottom: bottomInset && !footer ? insets.bottom : 0,
+            }}
+          >
+            <KeyboardFooterHeightContext.Provider
+              value={footer ? footerHeight : 0}
+            >
+              <View className="min-h-0 flex-1">{children}</View>
+            </KeyboardFooterHeightContext.Provider>
+            {footer ? (
+              <BottomSearchFooter
+                variant="action-bar"
+                position="relative"
+                accessibilityLabel={`${title} actions`}
+                onHeightChange={setFooterHeight}
+                searchVisible={false}
+                onChangeText={() => undefined}
+                placeholder=""
+                totalCount={0}
+                value=""
+              >
+                {footer}
+              </BottomSearchFooter>
+            ) : null}
           </View>
         </MobileWorkflowChrome>
       </BottomSheetModalProvider>
     </NativeModal>
   )
 }
+
+/**
+ * `FullScreenForm` driven by a `useModal()` ref, so a sheet that took typing
+ * converts without changing the hooks that present and dismiss it.
+ */
+export const FullScreenModal = forwardRef<
+  BottomSheetModal,
+  FullScreenFormProps & {
+    onChange?: (index: number) => void
+    onDismiss?: () => void
+  }
+>(function FullScreenModal({ onChange, onDismiss, ...props }, ref) {
+  const [open, setOpen] = useState(false)
+  const opened = useRef(false)
+  const callbacks = useRef({ onChange, onDismiss })
+  callbacks.current = { onChange, onDismiss }
+  const present = useCallback(() => {
+    if (opened.current) return
+    opened.current = true
+    setOpen(true)
+    callbacks.current.onChange?.(0)
+  }, [])
+  const dismiss = useCallback(() => {
+    if (!opened.current) return
+    opened.current = false
+    setOpen(false)
+    callbacks.current.onChange?.(-1)
+    callbacks.current.onDismiss?.()
+  }, [])
+  useImperativeHandle(
+    ref,
+    () =>
+      ({
+        present,
+        dismiss,
+        close: dismiss,
+        forceClose: dismiss,
+        expand: present,
+      }) as unknown as BottomSheetModal,
+    [present, dismiss],
+  )
+  return <FullScreenForm {...props} visible={open} onClose={dismiss} />
+})

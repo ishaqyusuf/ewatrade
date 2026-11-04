@@ -8,8 +8,10 @@ import {
 import {
   type ForwardRefExoticComponent,
   type RefAttributes,
+  createContext,
   forwardRef,
   memo,
+  useContext,
 } from "react"
 import type { ScrollViewProps } from "react-native"
 import {
@@ -18,6 +20,10 @@ import {
 } from "react-native-keyboard-controller"
 import Reanimated from "react-native-reanimated"
 import { BottomSheetInputProvider } from "./bottom-sheet-input-context"
+
+/** Height of a full-screen form's docked footer; a focused field scrolls
+ * clear of it as well as the keyboard. */
+export const KeyboardFooterHeightContext = createContext(0)
 
 type BottomSheetKeyboardAwareScrollViewProps = ScrollViewProps &
   BottomSheetScrollableProps &
@@ -52,10 +58,11 @@ const BottomSheetKeyboardAwareScrollViewBase = forwardRef<
   // The same editor also opens full screen (forms with typing never use a
   // sheet), where Gorhom's scrollable has no sheet to attach to.
   const sheet = useBottomSheetInternal(true)
+  const footerHeight = useContext(KeyboardFooterHeightContext)
   if (!sheet)
     return (
       <KeyboardAwareScrollView
-        bottomOffset={bottomOffset}
+        bottomOffset={Math.max(bottomOffset, footerHeight + 12)}
         extraKeyboardSpace={extraKeyboardSpace ?? 0}
         keyboardShouldPersistTaps={keyboardShouldPersistTaps}
         ref={ref as never}

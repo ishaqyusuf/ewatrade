@@ -4,7 +4,7 @@ import {
   SearchFooterSpacer,
 } from "@/components/mobile/search-footer-scope"
 import { Icon } from "@/components/ui/icon"
-import { Modal, useModal } from "@/components/ui/modal"
+import { useModal } from "@/components/ui/modal"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
@@ -17,13 +17,13 @@ import {
   getCountry,
   searchCountries,
 } from "@ewatrade/utils/countries"
-import { BottomSheetFlatList } from "@gorhom/bottom-sheet"
 import { type ReactNode, useMemo, useState } from "react"
-import { useWindowDimensions } from "react-native"
+import { FlatList } from "react-native"
+import { FullScreenModal } from "./full-screen-form"
 
 /**
  * A country field: the flag and name in a field-like control that opens a
- * floating sheet of countries with flags, dialling codes and search.
+ * full-screen list of countries with flags, dialling codes and search.
  */
 export function CountrySelect({
   label = "Country",
@@ -40,7 +40,6 @@ export function CountrySelect({
 }) {
   const colors = useColors()
   const largeText = useLargeTextLayout()
-  const { height } = useWindowDimensions()
   const modal = useModal()
   const [search, setSearch] = useState("")
   const country = getCountry(value)
@@ -104,18 +103,14 @@ export function CountrySelect({
         </>
       )}
 
-      <Modal
-        enableDynamicSizing={false}
-        maxDynamicContentSize={height * 0.85}
+      <FullScreenModal
+        bottomInset={false}
+        closeLabel="Close country list"
         onDismiss={() => setSearch("")}
         ref={modal.ref}
-        snapPoints={["75%"]}
-        // Opened from inside other sheets (Add customer): stack on top so the
-        // parent sheet, and this picker inside it, stay mounted.
-        stackBehavior="push"
         title="Country"
       >
-        <SearchFooterScope sheet>
+        <SearchFooterScope>
           <SearchFooterField
             localSearch
             accessibilityLabel="Search countries"
@@ -124,7 +119,7 @@ export function CountrySelect({
             value={search}
           />
 
-          <BottomSheetFlatList<Country>
+          <FlatList<Country>
             contentContainerStyle={{ paddingBottom: 24 }}
             data={countries}
             ListFooterComponent={<SearchFooterSpacer />}
@@ -175,7 +170,7 @@ export function CountrySelect({
             }}
           />
         </SearchFooterScope>
-      </Modal>
+      </FullScreenModal>
     </View>
   )
 }
