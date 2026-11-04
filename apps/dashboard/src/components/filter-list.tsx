@@ -26,7 +26,7 @@ export function FilterList({
             type="button"
             variant="secondary"
             aria-label={`Remove ${filter.label} filter`}
-            className="group h-9 max-w-full rounded-none bg-secondary px-2 font-normal text-[#878787] hover:bg-secondary"
+            className="group h-9 max-w-full rounded-none bg-secondary px-2 font-normal text-foreground/60 hover:bg-secondary"
             onClick={filter.onRemove}
           >
             <HugeiconsIcon
