@@ -5,6 +5,7 @@ import { Pressable } from "@/components/ui/pressable"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Text } from "@/components/ui/text"
 import { useColors } from "@/hooks/use-color"
+import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
 import type { GreenTillTint } from "@/lib/green-till-theme"
 import { cn } from "@/lib/utils"
 import { useOperationalModeStore } from "@/store/operationalModeStore"
@@ -438,6 +439,8 @@ export function SupplierFinanceDetail({
   const [purchaseId, setPurchaseId] = useState<string | null>(null)
   const [registeringPurchase, setRegisteringPurchase] = useState(false)
   const [recognitionId, setRecognitionId] = useState<string | null>(null)
+  // Large text: the name gets the full width and Record entry sits below it.
+  const largeText = useLargeTextLayout()
   const subView = recognitionId
     ? "Purchase history"
     : registeringPurchase
@@ -531,11 +534,16 @@ export function SupplierFinanceDetail({
   return (
     <View className="flex-1 px-[18px]">
       <View className="gap-3 pb-3">
-        <View className="flex-row items-center gap-3">
-          <View className="min-w-0 flex-1">
+        <View
+          className={cn(
+            "gap-3",
+            largeText ? "items-start" : "flex-row items-center",
+          )}
+        >
+          <View className={cn("min-w-0", !largeText && "flex-1")}>
             <Text
               className="text-lg font-extrabold tracking-tight text-foreground"
-              numberOfLines={2}
+              numberOfLines={largeText ? undefined : 2}
             >
               {supplier.name}
             </Text>
@@ -552,7 +560,7 @@ export function SupplierFinanceDetail({
             Record entry
           </ActionButton>
         </View>
-        <View className="flex-row gap-2">
+        <View className="flex-row flex-wrap gap-2">
           {(
             [
               { value: "statement", label: "Statement" },
