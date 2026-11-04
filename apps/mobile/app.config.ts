@@ -215,6 +215,8 @@ const config: ExpoConfig = {
       "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK",
       // Location is only used while the app is open, to fill an address.
       "android.permission.ACCESS_BACKGROUND_LOCATION",
+      // Contacts are only read, to fill a New sale customer from the picker.
+      "android.permission.WRITE_CONTACTS",
       ...(!isDevelopmentBuild
         ? ["android.permission.SYSTEM_ALERT_WINDOW"]
         : []),
@@ -282,6 +284,13 @@ const config: ExpoConfig = {
           "Allow $(PRODUCT_NAME) to use your location to fill in your business address.",
         isAndroidBackgroundLocationEnabled: false,
         isIosBackgroundLocationEnabled: false,
+      },
+    ],
+    [
+      "expo-contacts",
+      {
+        contactsPermission:
+          "Allow $(PRODUCT_NAME) to fill a customer's name and phone number from the contact you pick.",
       },
     ],
     "expo-font",
