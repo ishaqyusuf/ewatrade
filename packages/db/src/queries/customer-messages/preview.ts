@@ -2,6 +2,7 @@ import { createHash } from "node:crypto"
 import {
   type CustomerMessageEventKey,
   buildWhatsAppMessageUrl,
+  customerFirstName,
   customerMessageEvents,
   isCustomerAccountMessageEvent,
   normalizeWhatsAppPhone,
@@ -234,7 +235,7 @@ export async function previewCustomerMessageInTransaction(
   })()
   const variables: Record<string, string | undefined> = {
     customer_name: order.customerName?.trim() || "there",
-    customer_first_name: order.customerName?.trim().split(/\s+/)[0] || "there",
+    customer_first_name: customerFirstName(order.customerName) ?? "there",
     business_name: scope.store.tenant.name,
     store_name: scope.store.name,
     store_phone: scope.store.supportPhone ?? undefined,

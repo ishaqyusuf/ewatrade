@@ -1,6 +1,7 @@
 "use client"
 import { useTRPC } from "@/trpc/client"
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
+import { customerFirstName } from "@ewatrade/customer-messages/client"
 import { Alert, AlertDescription, Badge, Button, Checkbox } from "@ewatrade/ui"
 import { formatFinanceMoney } from "@ewatrade/utils/finance-money"
 import { UserMultipleIcon } from "@hugeicons/core-free-icons"
@@ -23,8 +24,9 @@ const orderPayment: Record<string, string> = {
   COMPLETED: "Completed",
 }
 
+/** First name when the record has one; otherwise the full name, never a fragment. */
 function firstName(name: string) {
-  return name.trim().split(/\s+/)[0] || name
+  return customerFirstName(name) ?? name.trim()
 }
 
 /** Workshop customers-pages 04: shown only when exact matches exist. */

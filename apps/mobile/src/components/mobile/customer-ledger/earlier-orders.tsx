@@ -6,6 +6,7 @@ import { Text } from "@/components/ui/text"
 import { useOperationalModeStore } from "@/store/operationalModeStore"
 import { useTRPC } from "@/trpc/client"
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
+import { customerFirstName } from "@ewatrade/customer-messages/client"
 import { formatFinanceMoney } from "@ewatrade/utils/finance-money"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import * as Crypto from "expo-crypto"
@@ -19,7 +20,8 @@ const matchTags: Record<Match, string> = {
   EMAIL: "Same email",
   PHONE_AND_EMAIL: "Same phone and email",
 }
-const firstName = (name: string) => name.trim().split(/\s+/)[0] || name
+/** First name when the record has one; otherwise the full name, never a fragment. */
+const firstName = (name: string) => customerFirstName(name) ?? name.trim()
 
 /** Workshop Mobile Quality v19, screen 18 v2 direction 01: the match banner. */
 export function EarlierOrdersBanner({

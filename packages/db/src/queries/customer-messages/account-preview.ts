@@ -3,6 +3,7 @@ import {
   type CustomerAccountMessageEventKey,
   buildWhatsAppMessageUrl,
   customerAccountMessageEventKeys,
+  customerFirstName,
   customerMessageEvents,
   normalizeWhatsAppPhone,
   renderCustomerMessageTemplate,
@@ -62,7 +63,7 @@ export async function previewCustomerAccountMessageInTransaction(
     )
   const variables: Record<string, string | undefined> = {
     customer_name: customer.name.trim() || "there",
-    customer_first_name: customer.name.trim().split(/\s+/)[0] || "there",
+    customer_first_name: customerFirstName(customer.name) ?? "there",
     business_name: scope.store.tenant.name,
     store_name: scope.store.name,
     amount_owed: money(aging.totalOwedMinor),

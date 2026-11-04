@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test"
 import {
   type MessageTemplate,
   buildWhatsAppMessageUrl,
+  customerFirstName,
   customerMessageEvents,
   customerMessageVariableLabels,
   normalizeWhatsAppPhone,
@@ -168,5 +169,22 @@ describe("effective message template resolution", () => {
     expect(
       resolveEffectiveMessageTemplate([], "store-7", "order.recorded"),
     ).toEqual({ state: "missing", template: null, scope: null })
+  })
+})
+
+describe("customerFirstName", () => {
+  test("returns a person's first name", () => {
+    expect(customerFirstName("Ada Okafor")).toBe("Ada")
+    expect(customerFirstName("  Chiamaka  ")).toBe("Chiamaka")
+    expect(customerFirstName("O'Neil Brown")).toBe("O'Neil")
+  })
+
+  test("returns nothing for codes, numbers and business names", () => {
+    expect(customerFirstName("QA-1103 Ada")).toBeUndefined()
+    expect(customerFirstName("08031234567")).toBeUndefined()
+    expect(customerFirstName("Sunrise Ventures Ltd")).toBeUndefined()
+    expect(customerFirstName("Mama Put Stores")).toBeUndefined()
+    expect(customerFirstName("")).toBeUndefined()
+    expect(customerFirstName(null)).toBeUndefined()
   })
 })
