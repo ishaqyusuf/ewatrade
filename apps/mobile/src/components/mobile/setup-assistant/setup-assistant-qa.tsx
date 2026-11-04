@@ -13,6 +13,7 @@ import {
   AssistantComposer,
   AssistantHeader,
 } from "../assistant/assistant-ui"
+import { FullScreenModal } from "../full-screen-form"
 import { HeroCard } from "../green-till/hero-card"
 import { StatusBanner } from "../status-banner"
 import { type SetupEntity, setupCounts } from "./setup-model"
@@ -199,13 +200,9 @@ export function SetupAssistantQa({ state }: { state: string }) {
             </Text>
           </BottomSheetScrollView>
         </Modal>
-        <Modal
-          ref={editor.ref}
-          title="Record details"
-          stackBehavior="push"
-          snapPoints={["90%"]}
-          keyboardBehavior="extend"
-        >
+        {/* The record editor takes typing, so it opens full screen over the
+            setup list (the list itself stays a sheet: no keyboard). */}
+        <FullScreenModal ref={editor.ref} title="Record details">
           {editing ? (
             <SetupRecordEditor
               key={editing.key}
@@ -223,7 +220,7 @@ export function SetupAssistantQa({ state }: { state: string }) {
               }}
             />
           ) : null}
-        </Modal>
+        </FullScreenModal>
       </KeyboardAvoidingView>
     </View>
   )

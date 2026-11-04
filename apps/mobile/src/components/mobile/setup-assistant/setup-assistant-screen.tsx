@@ -18,6 +18,7 @@ import {
   AssistantHeader,
   AssistantThinking,
 } from "../assistant/assistant-ui"
+import { FullScreenModal } from "../full-screen-form"
 import { HeroCard } from "../green-till/hero-card"
 import { StatusBanner } from "../status-banner"
 import { SetupAssistantQa } from "./setup-assistant-qa"
@@ -426,13 +427,12 @@ function SetupAssistantLive({
             </Text>
           </BottomSheetScrollView>
         </Modal>
-        <Modal
+        {/* The record editor takes typing, so it opens full screen over the
+            setup list (the list itself stays a sheet: no keyboard). */}
+        <FullScreenModal
           ref={editor.ref}
           title="Record details"
-          stackBehavior="push"
-          snapPoints={["90%"]}
-          enablePanDownToClose={!vm.pending}
-          keyboardBehavior="extend"
+          closeDisabled={!!vm.pending}
         >
           {editing ? (
             <SetupRecordEditor
@@ -445,7 +445,7 @@ function SetupAssistantLive({
               }}
             />
           ) : null}
-        </Modal>
+        </FullScreenModal>
       </KeyboardAvoidingView>
     </View>
   )
