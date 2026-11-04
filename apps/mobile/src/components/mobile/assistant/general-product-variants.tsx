@@ -203,7 +203,7 @@ export function GeneralProductVariantList({
                     accessibilityLabel={`Remove ${value}`}
                     disabled={disabled}
                     haptic
-                    // 40dp drawn; the slop makes the touch target 52dp.
+                    // 35dp drawn (h-10 at the 14px rem); the slop makes the target ~47dp.
                     hitSlop={6}
                     className="h-10 w-10 items-center justify-center rounded-full"
                     onPress={() =>
