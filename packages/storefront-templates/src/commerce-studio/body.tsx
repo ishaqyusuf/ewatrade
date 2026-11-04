@@ -42,7 +42,7 @@ import {
   catalogRootCurrent,
   catalogSubcategoryLinks,
 } from "../shared/catalog-listing"
-import { SubcategoryNav } from "../shared/subcategory-nav"
+import { CurrentLinkNav, SubcategoryNav } from "../shared/subcategory-nav"
 import { formatMoney, itemSoldOut, stockWording } from "./commerce"
 import {
   CommerceStudioProvider,
@@ -523,7 +523,11 @@ function Catalog({ section }: { section: SectionInstance }) {
           </p>
         </div>
         {catalogCategoryNavVisible(catalog.categories) ? (
-          <nav className="cs-chips" aria-label="Categories">
+          <CurrentLinkNav
+            className="cs-chips"
+            aria-label="Categories"
+            current={catalog.category}
+          >
             <CommerceLink
               className="cs-chip"
               href={href("/shop")}
@@ -548,7 +552,7 @@ function Catalog({ section }: { section: SectionInstance }) {
                 {category.name}
               </CommerceLink>
             ))}
-          </nav>
+          </CurrentLinkNav>
         ) : null}
         {subcategories.length ? (
           <SubcategoryNav className="cs-subnav" current={catalog.subcategory}>
