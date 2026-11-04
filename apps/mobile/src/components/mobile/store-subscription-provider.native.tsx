@@ -10,6 +10,7 @@ import {
 } from "@/lib/store-subscription-disclosure"
 import { useTRPC } from "@/trpc/client"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { requireOptionalNativeModule } from "expo"
 import {
   type ProductSubscription,
   type Purchase,
@@ -297,6 +298,9 @@ function useStoreBillingController() {
   }
 }
 
+// Older development binaries predate expo-iap; skip billing until rebuilt.
+const storeBillingLinked = Boolean(requireOptionalNativeModule("ExpoIap"))
+
 const StoreBillingContext = createContext<ReturnType<
   typeof useStoreBillingController
 > | null>(null)
@@ -317,6 +321,7 @@ export function StoreSubscriptionProvider({
   const role = auth.profile?.role?.trim().toUpperCase()
   const businessId = auth.profile?.businessId
   if (
+    !storeBillingLinked ||
     !auth.isAuthenticated ||
     !businessId ||
     (role !== "OWNER" && role !== "ADMIN")
