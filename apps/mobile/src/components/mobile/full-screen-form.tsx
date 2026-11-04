@@ -51,7 +51,7 @@ export function DockedFooterLayout({
   return (
     <>
       <KeyboardFooterHeightContext.Provider value={footerHeight}>
-        <View className="min-h-0 flex-1">{children}</View>
+        <View style={{ flex: 1, minHeight: 0 }}>{children}</View>
       </KeyboardFooterHeightContext.Provider>
       <BottomSearchFooter
         variant="action-bar"
@@ -117,9 +117,11 @@ export function FullScreenForm({
           onBack={onBack}
           backLabel={backLabel}
         >
+          {/* Explicit flex styles: with classes the body collapsed inside the
+              native modal and the footer was drawn under the header. */}
           <View
-            className="flex-1"
             style={{
+              flex: 1,
               paddingBottom: bottomInset && !footer ? insets.bottom : 0,
             }}
           >
