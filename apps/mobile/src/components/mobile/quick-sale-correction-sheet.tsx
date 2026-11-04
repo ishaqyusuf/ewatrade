@@ -2,7 +2,6 @@ import { ActionButton } from "@/components/mobile/action-button"
 import { FormField } from "@/components/mobile/form-field"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { BottomSheetKeyboardAwareScrollView } from "@/components/ui/bottom-sheet-keyboard-aware-scroll-view"
-import { Modal, useModal } from "@/components/ui/modal"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
 import type { useQuickSaleCorrection } from "@/hooks/use-quick-sale-correction"
@@ -15,6 +14,7 @@ import {
 import type { LocalOfflineCommand } from "@/store/offlineCommandStore"
 import { formatMinorMoney } from "@ewatrade/utils"
 import { useEffect, useMemo, useRef, useState } from "react"
+import { FullScreenForm } from "./full-screen-form"
 
 type Correction = ReturnType<typeof useQuickSaleCorrection>
 
@@ -53,11 +53,6 @@ export function QuickSaleCorrectionSheet({
   view: CorrectionView
   correction: Correction
 }) {
-  const modal = useModal()
-  useEffect(() => {
-    if (open) modal.present()
-    else modal.dismiss()
-  }, [open, modal.present, modal.dismiss])
   const blank = blankQuickSaleLines(command.payload)
   const [values, setValues] = useState<Record<number, string>>({})
   const [touched, setTouched] = useState(false)
@@ -120,10 +115,9 @@ export function QuickSaleCorrectionSheet({
     ? command.payload.lines
     : []
   return (
-    <Modal
-      ref={modal.ref}
-      onDismiss={onClose}
-      snapPoints={["90%"]}
+    <FullScreenForm
+      visible={open}
+      onClose={onClose}
       title={view.editable ? "Add what was sold" : "Quick sale fix"}
     >
       <BottomSheetKeyboardAwareScrollView
@@ -283,6 +277,6 @@ export function QuickSaleCorrectionSheet({
           </ActionButton>
         </View>
       </BottomSheetKeyboardAwareScrollView>
-    </Modal>
+    </FullScreenForm>
   )
 }
