@@ -1,20 +1,15 @@
-import { AppBottomSheetBackdrop } from "@/components/app/bottom-sheet-backdrop"
 import { ServiceChoice as Choice } from "@/components/mobile/appearances/classic/service-jobs"
 import { FormField } from "@/components/mobile/form-field"
+import { FullScreenModal } from "@/components/mobile/full-screen-form"
 import { QaQuickFillButton } from "@/components/mobile/qa-quick-fill-button"
 import { BottomSheetKeyboardAwareScrollView } from "@/components/ui/bottom-sheet-keyboard-aware-scroll-view"
-import { Modal, useModal } from "@/components/ui/modal"
+import { useModal } from "@/components/ui/modal"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
 import { createMessageFixture } from "@/internal-tooling/fixture-recipes"
 import type { QaFixtureContext } from "@ewatrade/utils/qa-fixtures"
-import {
-  BottomSheetFooter,
-  type BottomSheetFooterProps,
-} from "@gorhom/bottom-sheet"
-import { VariableContextProvider } from "nativewind"
-import { useCallback, useEffect, useRef, useState } from "react"
-import { Keyboard, useWindowDimensions } from "react-native"
+import { useEffect, useRef, useState } from "react"
+import { Keyboard } from "react-native"
 import { ServiceAction } from "./service-action"
 import type { WorkJob } from "./service-jobs-model"
 
@@ -37,6 +32,7 @@ export function useServiceTextEditor(
   const [reviewError, setReviewError] = useState(false)
   const [canUndo, setCanUndo] = useState(false)
   const hasDraft = draft !== null
+  // biome-ignore lint/correctness/useExhaustiveDependencies: a new presentation re-presents the same draft after a close.
   useEffect(() => {
     if (hasDraft) modal.present()
   }, [hasDraft, presentation, modal.present])
@@ -139,118 +135,96 @@ export function ServiceTextSheet({
   allowed: boolean
   scopeChanged: boolean
 }) {
-  const { height } = useWindowDimensions()
-  const [footerHeight, setFooterHeight] = useState(120)
   const message = editor.draft?.kind === "message"
   const disabled =
     !allowed || !editor.draft?.body.trim() || (message && !editor.draft.channel)
-  const footer = useCallback(
-    (props: BottomSheetFooterProps) => (
-      <BottomSheetFooter {...props}>
-        <View
-          onLayout={(event) => setFooterHeight(event.nativeEvent.layout.height)}
-          className="gap-2 border-t border-border bg-card px-5 pb-5 pt-3"
-        >
-          <ServiceAction disabled={disabled} onPress={editor.review}>
-            Review {message ? "update" : "note"}
-          </ServiceAction>
-          <ServiceAction variant="outline" onPress={editor.modal.dismiss}>
-            Cancel
-          </ServiceAction>
-        </View>
-      </BottomSheetFooter>
-    ),
-    [disabled, editor, message],
+  const footer = (
+    <View className="gap-2">
+      <ServiceAction disabled={disabled} onPress={editor.review}>
+        Review {message ? "update" : "note"}
+      </ServiceAction>
+      <ServiceAction variant="outline" onPress={editor.modal.dismiss}>
+        Cancel
+      </ServiceAction>
+    </View>
   )
   const ink = "text-foreground"
   return (
-    <Modal
+    <FullScreenModal
       ref={editor.modal.ref}
       title={message ? "Customer update" : "Internal note"}
-      snapPoints={["44%"]}
-      enableDynamicSizing
-      maxDynamicContentSize={height * 0.7}
-      keyboardBehavior="fillParent"
-      keyboardBlurBehavior="restore"
-      android_keyboardInputMode="adjustResize"
       onDismiss={editor.afterDismiss}
-      footerComponent={footer}
-      backdropComponent={AppBottomSheetBackdrop}
+      footer={footer}
     >
-      <VariableContextProvider
-        value={{ "--service-text-footer": footerHeight + 16 }}
+      <BottomSheetKeyboardAwareScrollView
+        extraKeyboardSpace={0}
+        disableScrollOnKeyboardHide
+        keyboardShouldPersistTaps="handled"
       >
-        <BottomSheetKeyboardAwareScrollView
-          bottomOffset={footerHeight + 12}
-          extraKeyboardSpace={0}
-          disableScrollOnKeyboardHide
-          keyboardShouldPersistTaps="handled"
-        >
-          <View className="gap-4 px-5 pt-2 pb-[var(--service-text-footer)]">
-            {editor.reviewError ? (
-              <Text
-                accessibilityRole="alert"
-                className="text-sm text-destructive"
-              >
-                Review could not open. Your draft is retained. Retry when the
-                job is available, or close this sheet to read the error.
+        <View className="gap-4 px-5 pt-2 pb-6">
+          {editor.reviewError ? (
+            <Text
+              accessibilityRole="alert"
+              className="text-sm text-destructive"
+            >
+              Review could not open. Your draft is retained. Retry when the job
+              is available, or close this sheet to read the error.
+            </Text>
+          ) : null}
+          {scopeChanged || !allowed ? (
+            <Text className={ink}>
+              Reconnect with the original account, Store and required permission
+              to edit this action.
+            </Text>
+          ) : (
+            <>
+              <Text className={`${ink} font-bold`}>
+                {editor.draft?.job.orderNumber}
               </Text>
-            ) : null}
-            {scopeChanged || !allowed ? (
-              <Text className={ink}>
-                Reconnect with the original account, Store and required
-                permission to edit this action.
-              </Text>
-            ) : (
-              <>
-                <Text className={ink + " font-bold"}>
-                  {editor.draft?.job.orderNumber}
-                </Text>
-                {message ? (
-                  <View className="gap-2">
-                    {(
-                      [
-                        ["whatsapp", "WhatsApp"],
-                        ["sms", "SMS"],
-                      ] as const
-                    ).map(([channel, title]) => (
-                      <Choice
-                        key={channel}
-                        title={title}
-                        selected={editor.draft?.channel === channel}
-                        onPress={() => editor.edit({ channel })}
-                      />
-                    ))}
-                  </View>
-                ) : null}
-                <FormField
-                  variant="filled"
-                  label={message ? "Message" : "Internal note"}
-                  multiline
-                  maxLength={4000}
-                  value={editor.draft?.body ?? ""}
-                  onChangeText={(body) => editor.edit({ body })}
-                  editable={allowed}
+              {message ? (
+                <View className="gap-2">
+                  {(
+                    [
+                      ["whatsapp", "WhatsApp"],
+                      ["sms", "SMS"],
+                    ] as const
+                  ).map(([channel, title]) => (
+                    <Choice
+                      key={channel}
+                      title={title}
+                      selected={editor.draft?.channel === channel}
+                      onPress={() => editor.edit({ channel })}
+                    />
+                  ))}
+                </View>
+              ) : null}
+              <FormField
+                variant="filled"
+                label={message ? "Message" : "Internal note"}
+                multiline
+                maxLength={4000}
+                value={editor.draft?.body ?? ""}
+                onChangeText={(body) => editor.edit({ body })}
+                editable={allowed}
+              />
+              {message ? (
+                <QaQuickFillButton
+                  formId="mobile.customer.message"
+                  canUndo={editor.canUndo}
+                  isDirty={Boolean(editor.draft?.body)}
+                  onFill={editor.fill}
+                  onUndo={editor.undoFill}
                 />
-                {message ? (
-                  <QaQuickFillButton
-                    formId="mobile.customer.message"
-                    canUndo={editor.canUndo}
-                    isDirty={Boolean(editor.draft?.body)}
-                    onFill={editor.fill}
-                    onUndo={editor.undoFill}
-                  />
-                ) : null}
-                <Text className="text-xs text-muted-foreground">
-                  {message
-                    ? "Review the channel and message before queuing delivery. Queued does not mean delivered."
-                    : "This note stays in the private work record. It is not sent to the customer."}
-                </Text>
-              </>
-            )}
-          </View>
-        </BottomSheetKeyboardAwareScrollView>
-      </VariableContextProvider>
-    </Modal>
+              ) : null}
+              <Text className="text-xs text-muted-foreground">
+                {message
+                  ? "Review the channel and message before queuing delivery. Queued does not mean delivered."
+                  : "This note stays in the private work record. It is not sent to the customer."}
+              </Text>
+            </>
+          )}
+        </View>
+      </BottomSheetKeyboardAwareScrollView>
+    </FullScreenModal>
   )
 }

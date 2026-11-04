@@ -1,20 +1,15 @@
-import { AppBottomSheetBackdrop } from "@/components/app/bottom-sheet-backdrop"
 import { ServiceChoice as Choice } from "@/components/mobile/appearances/classic/service-jobs"
 import { CheckoutMoneyAccountField } from "@/components/mobile/create-sale/checkout-money-account"
 import { FormField } from "@/components/mobile/form-field"
+import { FullScreenModal } from "@/components/mobile/full-screen-form"
 import { BottomSheetKeyboardAwareScrollView } from "@/components/ui/bottom-sheet-keyboard-aware-scroll-view"
-import { Modal, useModal } from "@/components/ui/modal"
+import { useModal } from "@/components/ui/modal"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
 import { useOrderPaymentAccount } from "@/hooks/use-order-payment-account"
 import { formatMinorMoney, getCurrencySymbol } from "@ewatrade/utils"
-import {
-  BottomSheetFooter,
-  type BottomSheetFooterProps,
-} from "@gorhom/bottom-sheet"
-import { VariableContextProvider } from "nativewind"
 import { useCallback, useEffect, useRef, useState } from "react"
-import { Keyboard, useWindowDimensions } from "react-native"
+import { Keyboard } from "react-native"
 import { ServiceAction } from "./service-action"
 import type { WorkJob } from "./service-jobs-model"
 import {
@@ -102,8 +97,6 @@ export function ServicePaymentSheet({
   allowed,
   scopeChanged,
 }: { editor: Editor; allowed: boolean; scopeChanged: boolean }) {
-  const { height } = useWindowDimensions()
-  const [footerHeight, setFooterHeight] = useState(120)
   const draft = editor.draft
   const projection = draft
     ? projectServicePayment(draft.job, draft.kind, draft)
@@ -123,152 +116,132 @@ export function ServicePaymentSheet({
     editor.edit({ moneyAccountId: chosen?.id, moneyAccountName: chosen?.name })
     editor.review()
   }, [chosen?.id, chosen?.name, editor])
-  const footer = useCallback(
-    (props: BottomSheetFooterProps) => (
-      <BottomSheetFooter {...props}>
-        <View
-          onLayout={(event) => setFooterHeight(event.nativeEvent.layout.height)}
-          className="gap-2 border-t border-border bg-card px-5 pb-5 pt-3"
-        >
-          <ServiceAction disabled={disabled} onPress={review}>
-            Review {draft?.kind === "handoff" ? "collection" : "payment"}
-          </ServiceAction>
-          <ServiceAction variant="outline" onPress={editor.modal.dismiss}>
-            Cancel
-          </ServiceAction>
-        </View>
-      </BottomSheetFooter>
-    ),
-    [disabled, draft?.kind, editor, review],
+  const footer = (
+    <View className="gap-2">
+      <ServiceAction disabled={disabled} onPress={review}>
+        Review {draft?.kind === "handoff" ? "collection" : "payment"}
+      </ServiceAction>
+      <ServiceAction variant="outline" onPress={editor.modal.dismiss}>
+        Cancel
+      </ServiceAction>
+    </View>
   )
   const ink = "text-foreground"
   return (
-    <Modal
+    <FullScreenModal
       ref={editor.modal.ref}
       title={
         draft?.kind === "handoff" ? "Collect and hand over" : "Record payment"
       }
-      snapPoints={["48%"]}
-      enableDynamicSizing
-      maxDynamicContentSize={height * 0.72}
-      keyboardBehavior="fillParent"
-      keyboardBlurBehavior="restore"
-      android_keyboardInputMode="adjustResize"
       onDismiss={editor.afterDismiss}
-      footerComponent={footer}
-      backdropComponent={AppBottomSheetBackdrop}
+      footer={footer}
     >
-      <VariableContextProvider
-        value={{ "--service-payment-footer": footerHeight + 16 }}
+      <BottomSheetKeyboardAwareScrollView
+        extraKeyboardSpace={0}
+        disableScrollOnKeyboardHide
+        keyboardShouldPersistTaps="handled"
       >
-        <BottomSheetKeyboardAwareScrollView
-          bottomOffset={footerHeight + 12}
-          extraKeyboardSpace={0}
-          disableScrollOnKeyboardHide
-          keyboardShouldPersistTaps="handled"
-        >
-          <View className="gap-4 px-5 pt-2 pb-[var(--service-payment-footer)]">
-            {editor.reviewError ? (
-              <Text
-                accessibilityRole="alert"
-                className="text-sm text-destructive"
-              >
-                Review could not open. Your draft is retained. Retry when the
-                job is available, or close this sheet to read the error.
+        <View className="gap-4 px-5 pt-2 pb-6">
+          {editor.reviewError ? (
+            <Text
+              accessibilityRole="alert"
+              className="text-sm text-destructive"
+            >
+              Review could not open. Your draft is retained. Retry when the job
+              is available, or close this sheet to read the error.
+            </Text>
+          ) : null}
+          {scopeChanged ? (
+            <Text className={ink}>
+              Return to the original account and Store before continuing.
+            </Text>
+          ) : draft ? (
+            <>
+              <Text className={`${ink} font-bold`}>
+                {draft.job.orderNumber}
               </Text>
-            ) : null}
-            {scopeChanged ? (
-              <Text className={ink}>
-                Return to the original account and Store before continuing.
+              <Text className={`${ink} text-sm`}>
+                {formatMinorMoney(
+                  draft.job.balanceDueMinor,
+                  draft.job.currencyCode,
+                )}{" "}
+                outstanding
               </Text>
-            ) : draft ? (
-              <>
-                <Text className={`${ink} font-bold`}>
-                  {draft.job.orderNumber}
-                </Text>
+              {draft.job.balanceDueMinor > 0 ? (
+                <>
+                  <FormField
+                    variant="filled"
+                    label={`Amount received (${draft.job.currencyCode})`}
+                    leadingText={getCurrencySymbol(draft.job.currencyCode)}
+                    keyboardType="decimal-pad"
+                    value={draft.amount}
+                    onChangeText={(amount) => editor.edit({ amount })}
+                    editable={allowed}
+                  />
+                  <View className="gap-2">
+                    {(
+                      [
+                        ["cash", "Cash"],
+                        ["bank_transfer", "Transfer"],
+                        ["pos", "POS"],
+                        ["card", "Card"],
+                        ["other", "Other"],
+                      ] as const
+                    ).map(([method, title]) => (
+                      <Choice
+                        key={method}
+                        title={title}
+                        selected={draft.method === method}
+                        disabled={!allowed}
+                        onPress={() => editor.edit({ method })}
+                      />
+                    ))}
+                  </View>
+                  <CheckoutMoneyAccountField
+                    accounts={account.list}
+                    disabled={!allowed}
+                    method={draft.method}
+                    methodLabel={METHOD_LABELS[draft.method]}
+                    onChoose={account.choose}
+                    onRetry={account.retry}
+                    receivedLabel={formatMinorMoney(
+                      projection?.amountMinor ?? 0,
+                      draft.job.currencyCode,
+                    )}
+                    state={account.state}
+                  />
+                  <FormField
+                    variant="filled"
+                    label="Payment reference (optional)"
+                    maxLength={160}
+                    value={draft.reference}
+                    onChangeText={(reference) => editor.edit({ reference })}
+                    editable={allowed}
+                  />
+                </>
+              ) : (
                 <Text className={`${ink} text-sm`}>
-                  {formatMinorMoney(
-                    draft.job.balanceDueMinor,
-                    draft.job.currencyCode,
-                  )}{" "}
-                  outstanding
+                  No additional payment is due. Review collection before marking
+                  the order collected.
                 </Text>
-                {draft.job.balanceDueMinor > 0 ? (
-                  <>
-                    <FormField
-                      variant="filled"
-                      label={`Amount received (${draft.job.currencyCode})`}
-                      leadingText={getCurrencySymbol(draft.job.currencyCode)}
-                      keyboardType="decimal-pad"
-                      value={draft.amount}
-                      onChangeText={(amount) => editor.edit({ amount })}
-                      editable={allowed}
-                    />
-                    <View className="gap-2">
-                      {(
-                        [
-                          ["cash", "Cash"],
-                          ["bank_transfer", "Transfer"],
-                          ["pos", "POS"],
-                          ["card", "Card"],
-                          ["other", "Other"],
-                        ] as const
-                      ).map(([method, title]) => (
-                        <Choice
-                          key={method}
-                          title={title}
-                          selected={draft.method === method}
-                          disabled={!allowed}
-                          onPress={() => editor.edit({ method })}
-                        />
-                      ))}
-                    </View>
-                    <CheckoutMoneyAccountField
-                      accounts={account.list}
-                      disabled={!allowed}
-                      method={draft.method}
-                      methodLabel={METHOD_LABELS[draft.method]}
-                      onChoose={account.choose}
-                      onRetry={account.retry}
-                      receivedLabel={formatMinorMoney(
-                        projection?.amountMinor ?? 0,
-                        draft.job.currencyCode,
-                      )}
-                      state={account.state}
-                    />
-                    <FormField
-                      variant="filled"
-                      label="Payment reference (optional)"
-                      maxLength={160}
-                      value={draft.reference}
-                      onChangeText={(reference) => editor.edit({ reference })}
-                      editable={allowed}
-                    />
-                  </>
-                ) : (
-                  <Text className={`${ink} text-sm`}>
-                    No additional payment is due. Review collection before
-                    marking the order collected.
-                  </Text>
-                )}
-                {projection?.error && draft.amount.trim() ? (
-                  <Text
-                    accessibilityRole="alert"
-                    className="text-sm text-destructive"
-                  >
-                    {projection.error}
-                  </Text>
-                ) : null}
-                <Text className="text-xs text-muted-foreground">
-                  {draft.kind === "handoff"
-                    ? "Collection requires the exact remaining balance and all active work ready."
-                    : "Record only money you have actually received. This does not charge the customer."}
+              )}
+              {projection?.error && draft.amount.trim() ? (
+                <Text
+                  accessibilityRole="alert"
+                  className="text-sm text-destructive"
+                >
+                  {projection.error}
                 </Text>
-              </>
-            ) : null}
-          </View>
-        </BottomSheetKeyboardAwareScrollView>
-      </VariableContextProvider>
-    </Modal>
+              ) : null}
+              <Text className="text-xs text-muted-foreground">
+                {draft.kind === "handoff"
+                  ? "Collection requires the exact remaining balance and all active work ready."
+                  : "Record only money you have actually received. This does not charge the customer."}
+              </Text>
+            </>
+          ) : null}
+        </View>
+      </BottomSheetKeyboardAwareScrollView>
+    </FullScreenModal>
   )
 }

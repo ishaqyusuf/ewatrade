@@ -1,16 +1,11 @@
-import { AppBottomSheetBackdrop } from "@/components/app/bottom-sheet-backdrop"
 import { FormField } from "@/components/mobile/form-field"
+import { FullScreenModal } from "@/components/mobile/full-screen-form"
 import { BottomSheetKeyboardAwareScrollView } from "@/components/ui/bottom-sheet-keyboard-aware-scroll-view"
-import { Modal, useModal } from "@/components/ui/modal"
+import { useModal } from "@/components/ui/modal"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
-import {
-  BottomSheetFooter,
-  type BottomSheetFooterProps,
-} from "@gorhom/bottom-sheet"
-import { VariableContextProvider } from "nativewind"
-import { useCallback, useEffect, useRef, useState } from "react"
-import { Keyboard, useWindowDimensions } from "react-native"
+import { useEffect, useRef, useState } from "react"
+import { Keyboard } from "react-native"
 import { ServiceAction } from "./service-action"
 import { type WorkJob, actionLabel, type actions } from "./service-jobs-model"
 
@@ -31,6 +26,7 @@ export function useServiceStatusEditor(
   const draftRef = useRef<StatusDraft | null>(null)
   const pending = useRef<StatusDraft | null>(null)
   const hasDraft = draft !== null
+  // biome-ignore lint/correctness/useExhaustiveDependencies: a new presentation re-presents the same draft after a close.
   useEffect(() => {
     if (hasDraft) modal.present()
   }, [hasDraft, presentation, modal.present])
@@ -92,98 +88,75 @@ export function ServiceStatusSheet({
   allowed,
   scopeChanged,
 }: { editor: ServiceStatusEditor; allowed: boolean; scopeChanged: boolean }) {
-  const { height } = useWindowDimensions()
-  const [footerHeight, setFooterHeight] = useState(120)
   const required =
     editor.draft?.action === "blocked" || editor.draft?.action === "cancelled"
   const disabled = !allowed || (required && !editor.draft?.reason.trim())
-  const footer = useCallback(
-    (props: BottomSheetFooterProps) => (
-      <BottomSheetFooter {...props}>
-        <View
-          onLayout={(event) => setFooterHeight(event.nativeEvent.layout.height)}
-          className="gap-2 border-t border-border bg-card px-5 pb-5 pt-3"
-        >
-          <ServiceAction disabled={disabled} onPress={editor.review}>
-            Review status
-          </ServiceAction>
-          <ServiceAction variant="outline" onPress={editor.modal.dismiss}>
-            Cancel
-          </ServiceAction>
-        </View>
-      </BottomSheetFooter>
-    ),
-    [disabled, editor],
+  const footer = (
+    <View className="gap-2">
+      <ServiceAction disabled={disabled} onPress={editor.review}>
+        Review status
+      </ServiceAction>
+      <ServiceAction variant="outline" onPress={editor.modal.dismiss}>
+        Cancel
+      </ServiceAction>
+    </View>
   )
   const ink = "text-foreground"
   return (
-    <Modal
+    <FullScreenModal
       ref={editor.modal.ref}
       title="Update work status"
-      snapPoints={["44%"]}
-      enableDynamicSizing
-      maxDynamicContentSize={height * 0.64}
-      keyboardBehavior="fillParent"
-      keyboardBlurBehavior="restore"
-      android_keyboardInputMode="adjustResize"
       onDismiss={editor.afterDismiss}
-      footerComponent={footer}
-      backdropComponent={AppBottomSheetBackdrop}
+      footer={footer}
     >
-      <VariableContextProvider
-        value={{ "--service-status-footer": footerHeight + 16 }}
+      <BottomSheetKeyboardAwareScrollView
+        extraKeyboardSpace={0}
+        disableScrollOnKeyboardHide
+        keyboardShouldPersistTaps="handled"
       >
-        <BottomSheetKeyboardAwareScrollView
-          bottomOffset={footerHeight + 12}
-          extraKeyboardSpace={0}
-          disableScrollOnKeyboardHide
-          keyboardShouldPersistTaps="handled"
-        >
-          <View className="gap-4 px-5 pt-2 pb-[var(--service-status-footer)]">
-            {editor.reviewError ? (
-              <Text
-                accessibilityRole="alert"
-                className="text-sm text-destructive"
-              >
-                Review could not open. Your draft is retained. Retry when the
-                job is available, or close this sheet to read the error.
+        <View className="gap-4 px-5 pt-2 pb-6">
+          {editor.reviewError ? (
+            <Text
+              accessibilityRole="alert"
+              className="text-sm text-destructive"
+            >
+              Review could not open. Your draft is retained. Retry when the job
+              is available, or close this sheet to read the error.
+            </Text>
+          ) : null}
+          {scopeChanged ? (
+            <Text className={ink}>
+              Return to the original account and Store before continuing.
+            </Text>
+          ) : (
+            <>
+              <Text className={`${ink} font-bold`}>
+                {editor.draft?.jobLabel} · {editor.draft?.line.catalogItemName}
               </Text>
-            ) : null}
-            {scopeChanged ? (
-              <Text className={ink}>
-                Return to the original account and Store before continuing.
+              <Text className={`${ink} text-sm`}>
+                {editor.draft
+                  ? actionLabel(editor.draft.action)
+                  : "Update status"}{" "}
+                · {editor.draft?.line.allocatedQuantity} units
               </Text>
-            ) : (
-              <>
-                <Text className={ink + " font-bold"}>
-                  {editor.draft?.jobLabel} ·{" "}
-                  {editor.draft?.line.catalogItemName}
-                </Text>
-                <Text className={ink + " text-sm"}>
-                  {editor.draft
-                    ? actionLabel(editor.draft.action)
-                    : "Update status"}{" "}
-                  · {editor.draft?.line.allocatedQuantity} units
-                </Text>
-                <FormField
-                  variant="filled"
-                  label={required ? "Reason" : "Reason (optional)"}
-                  multiline
-                  maxLength={500}
-                  value={editor.draft?.reason ?? ""}
-                  onChangeText={editor.edit}
-                  editable={allowed}
-                  helper={
-                    required
-                      ? "Explain why this work is blocked or cancelled."
-                      : "Add context for your team if helpful."
-                  }
-                />
-              </>
-            )}
-          </View>
-        </BottomSheetKeyboardAwareScrollView>
-      </VariableContextProvider>
-    </Modal>
+              <FormField
+                variant="filled"
+                label={required ? "Reason" : "Reason (optional)"}
+                multiline
+                maxLength={500}
+                value={editor.draft?.reason ?? ""}
+                onChangeText={editor.edit}
+                editable={allowed}
+                helper={
+                  required
+                    ? "Explain why this work is blocked or cancelled."
+                    : "Add context for your team if helpful."
+                }
+              />
+            </>
+          )}
+        </View>
+      </BottomSheetKeyboardAwareScrollView>
+    </FullScreenModal>
   )
 }
