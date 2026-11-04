@@ -154,11 +154,17 @@ export function AskAssistantLive() {
     return null
   }
   const exhausted = !!vm.data && generalTokenBudgetUsed(vm.data.allowance)
+  const settingUp =
+    !vm.sessionUnavailable &&
+    !vm.scopeChanged &&
+    !vm.offline &&
+    !!vm.availability.data &&
+    !vm.availability.data.enabled
   const noAccess = vm.sessionUnavailable
     ? "Active business access is needed to use the assistant."
     : vm.scopeChanged
       ? "Your session or Store changed. Close and reopen the assistant."
-      : !vm.offline && vm.availability.data && !vm.availability.data.enabled
+      : settingUp
         ? "The assistant is being set up for this business."
         : vm.availability.isError
           ? "Availability could not load. Reconnect and try again."
@@ -191,13 +197,13 @@ export function AskAssistantLive() {
   const ids = messages.map((m) => m.id)
   // Chats with no question yet are empty and stay out of the lists.
   const chats = (vm.conversations.data ?? []).filter((chat) => chat.title)
+  // The home also carries the offline (no saved thread) and set-up states.
+  const homeState = vm.offline ? "offline" : settingUp ? "setup" : undefined
   const home =
     !messages.length &&
     !vm.queued &&
     !vm.busy &&
-    !!vm.availability.data?.enabled &&
-    !vm.offline &&
-    !noAccess &&
+    (!!homeState || (!!vm.availability.data?.enabled && !noAccess)) &&
     !(vm.state.isPending && vm.conversationId)
   return (
     <View style={{ flex: 1, paddingTop: insets.top }}>
@@ -266,7 +272,7 @@ export function AskAssistantLive() {
           }}
           ListHeaderComponent={
             <View className="gap-3 pb-3">
-              {vm.offline ? (
+              {vm.offline && !home ? (
                 <StatusBanner
                   title="Saved answers"
                   tone="warning"
@@ -277,7 +283,7 @@ export function AskAssistantLive() {
                   }
                 />
               ) : null}
-              {noAccess ? (
+              {noAccess && !home ? (
                 <>
                   <StatusBanner
                     title="Assistant unavailable"
@@ -313,6 +319,8 @@ export function AskAssistantLive() {
                     .filter((chat) => chat.id !== vm.conversationId)
                     .slice(0, 3)}
                   disabled={disabled || exhausted}
+                  state={homeState}
+                  onSearch={() => router.push("/global-search")}
                   onSuggestion={(suggestion) => {
                     if (suggestion.send) void vm.ask(suggestion.prompt)
                     else {
