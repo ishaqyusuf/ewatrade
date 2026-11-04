@@ -1319,6 +1319,8 @@ export function useCatalogSetup({
 
   const removeUnit = (unitId: string) => {
     if (editsLocked()) return
+    // A save error about this unit (e.g. its missing price) no longer applies.
+    setSubmitError(null)
     setAdditionalUnits((current) =>
       removeSellingUnitPreservingFactors(current, unitId),
     )
@@ -1334,6 +1336,7 @@ export function useCatalogSetup({
 
   const removeAllAdditionalUnits = () => {
     if (editsLocked()) return
+    setSubmitError(null)
     setAdditionalUnits([])
     setVariantDrafts((current) =>
       Object.fromEntries(
