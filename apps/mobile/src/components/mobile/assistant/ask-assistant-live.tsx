@@ -403,7 +403,11 @@ export function AskAssistantLive() {
                     )
                   : null}
                 {text ? (
-                  <AssistantBubble text={text} user={item.role === "user"} />
+                  <AssistantBubble
+                    text={text}
+                    user={item.role === "user"}
+                    streaming={vm.busy && index === messages.length - 1}
+                  />
                 ) : null}
                 {answers.map((answer) => {
                   return (

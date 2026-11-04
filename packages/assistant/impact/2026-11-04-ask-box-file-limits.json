@@ -4,7 +4,7 @@
   "tickets": [
     "H02"
   ],
-  "summary": "Mobile Ask home and composer redesign (Workshop assistant/conversations v4-v6): prompt-row home with offline and set-up states, pill/card composer with photo thumbnails, recording waveform pill and a floating + menu (Camera, Upload photo, Upload file). File limits are now one app constant tied to the server's (4 per message, 60 per chat, photos 10 MB as picked, PDFs 2 MB and 20 pages). Attachment processing refuses a PDF over 20 pages (FILE_TOO_MANY_PAGES) instead of reading only the first 20.",
+  "summary": "Mobile Ask home and composer redesign (Workshop assistant/conversations v4-v6): prompt-row home with offline and set-up states, pill/card composer with photo thumbnails, recording waveform pill and a floating + menu (Camera, Upload photo, Upload file). File limits are now one app constant tied to the server's (4 per message, 60 per chat, photos 10 MB as picked, PDFs 2 MB and 20 pages). Attachment processing refuses a PDF over 20 pages (FILE_TOO_MANY_PAGES) instead of reading only the first 20. Assistant replies on mobile render as structured Markdown (paragraphs, headings, lists, tables as rows, tabular numbers; links stay plain text, no HTML) in an open, dashboard-like layout (Workshop A2d v2.2).",
   "noAssistantImpact": "No capability, tool, prompt, contract or write path changes. The client changes the Ask screen layout and which files it lets through; the server change only turns an over-limit PDF from a truncated read into a refusal with owner-facing copy. The model sees the same delimited extraction for every accepted file.",
   "capabilities": [],
   "procedures": [],
@@ -34,6 +34,12 @@
       "path": "scripts/assistant-impact.ts",
       "executed": true,
       "result": "bun assistant:impact --base b0aacc831: gate passed, 1 record covers client; 0 capability and 0 procedure rows changed."
+    },
+    {
+      "kind": "test",
+      "path": "apps/mobile/src/components/mobile/assistant/assistant-markdown.test.ts",
+      "executed": true,
+      "result": "3 pass, 0 fail: inline marks and link labels only, block types, streaming tails hidden."
     }
   ]
 }

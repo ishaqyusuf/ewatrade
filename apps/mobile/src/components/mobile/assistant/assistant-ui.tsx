@@ -118,32 +118,38 @@ export function AssistantHeader({
   )
 }
 
+/**
+ * One chat turn (Workshop A2d v2.2, Open reply): the owner's words in a muted
+ * bubble on the right; the assistant's reply as open text across the thread,
+ * with any cards under it.
+ */
 export function AssistantBubble({
   text,
   user = false,
+  streaming = false,
   children,
-}: { text: string; user?: boolean; children?: ReactNode }) {
-  return (
-    <View className={user ? "items-end" : "flex-row items-start gap-2"}>
-      {!user ? (
-        <View className="mt-1 size-[28px] items-center justify-center rounded-full bg-gold">
-          <Icon name="Sparkles" className="size-[16px] text-gold-foreground" />
-        </View>
-      ) : null}
-      <View
-        className={user ? "max-w-[82%] gap-2" : "min-w-0 max-w-[88%] gap-2"}
-      >
-        <View
-          className={
-            user
-              ? "rounded-[18px] rounded-br-[6px] bg-primary px-3 py-2.5"
-              : "rounded-[18px] rounded-tl-[6px] bg-card px-3 py-2.5 shadow-sm"
-          }
-        >
-          <AssistantText text={text} user={user} />
+}: {
+  text: string
+  user?: boolean
+  /** The reply is still arriving: loose Markdown at its end stays hidden. */
+  streaming?: boolean
+  children?: ReactNode
+}) {
+  if (user)
+    return (
+      <View className="items-end gap-2">
+        <View className="max-w-[82%] rounded-[18px] rounded-br-[6px] border border-border bg-muted px-3.5 py-2.5">
+          <AssistantText text={text} user />
         </View>
         {children}
       </View>
+    )
+  return (
+    <View className="min-w-0 gap-3">
+      {text ? (
+        <AssistantText text={text} user={false} streaming={streaming} />
+      ) : null}
+      {children}
     </View>
   )
 }
