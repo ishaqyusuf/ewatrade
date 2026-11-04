@@ -329,7 +329,7 @@ export function GeneralProductVariantList({
           </Text>
           <View className="overflow-hidden rounded-[20px] bg-card">
             {state.rows.map((row, index) => {
-              const issue = variantIssue(row, draft, currencyCode)
+              const issue = variantIssue(row, draft, currencyCode, state.rows)
               const summary = rowSummary(row, draft, currencyCode)
               const label = variantLabel(row, draft.name)
               return (

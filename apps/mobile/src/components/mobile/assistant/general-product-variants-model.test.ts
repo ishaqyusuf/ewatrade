@@ -19,6 +19,7 @@ import {
   removeVariant,
   renameGroup,
   updateVariant,
+  variantIssue,
   variantsFromDraft,
   variantsIssue,
   variantsPayload,
@@ -200,4 +201,29 @@ test("invalid prices, quantities and shared codes point at their variant", () =>
       "NGN",
     )?.message,
   ).toBe("Small: Keep inventory codes within 120 characters.")
+})
+
+test("a variant page refuses a SKU or barcode another variant in the draft uses", () => {
+  let state = variantsFromDraft(eggs)
+  const [big, small] = state.rows
+  if (!big || !small) throw Error("rows")
+  state = updateVariant(state, big.id, { sku: "EGG", barcode: "123" })
+  state = updateVariant(state, small.id, { sku: "EGG" })
+  const smallRow = state.rows.find((row) => row.id === small.id)
+  const bigRow = state.rows.find((row) => row.id === big.id)
+  if (!smallRow || !bigRow) throw Error("rows")
+  expect(variantIssue(smallRow, eggs, "NGN", state.rows)).toBe(
+    "Big already uses this SKU. Give each variant a different one.",
+  )
+  expect(variantIssue(bigRow, eggs, "NGN", state.rows)).toBe(
+    "Small already uses this SKU. Give each variant a different one.",
+  )
+  // Exact match only, like the server; without the rows only the row's own checks run.
+  expect(variantIssue(smallRow, eggs, "NGN")).toBeNull()
+  state = updateVariant(state, small.id, { sku: "egg", barcode: "123" })
+  const next = state.rows.find((row) => row.id === small.id)
+  if (!next) throw Error("rows")
+  expect(variantIssue(next, eggs, "NGN", state.rows)).toBe(
+    "Big already uses this barcode. Give each variant a different one.",
+  )
 })

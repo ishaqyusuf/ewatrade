@@ -360,11 +360,13 @@ export function variantUnits(draft: ProductDraft) {
   ]
 }
 
-/** The Catalog option editor's checks for one variant, plus pack counts. */
+/** The Catalog option editor's checks for one variant, plus pack counts.
+ * Pass the draft's rows to also refuse a SKU or barcode another variant uses. */
 export function variantIssue(
   row: VariantRow,
   draft: ProductDraft,
   currencyCode: string,
+  rows?: VariantRow[],
 ): string | null {
   const packs = (draft.sellingUnits ?? []).map((pack) => pack.name)
   const catalogDraft: CatalogVariantDraft = {
@@ -400,6 +402,25 @@ export function variantIssue(
     const count = find(row.stock, name)?.trim()
     if (count && !isCatalogVariantQuantityReady(count, STOCK_SCALE))
       return `Enter a valid opening quantity for ${name}.`
+  }
+  return rows ? sharedCodeIssue(row, rows, draft.name) : null
+}
+
+/** A SKU or barcode another variant in this draft already uses. Exact match,
+ * like the server's check and the database's per-business uniqueness. */
+function sharedCodeIssue(
+  row: VariantRow,
+  rows: VariantRow[],
+  productName: string,
+): string | null {
+  for (const kind of ["sku", "barcode"] as const) {
+    const code = row[kind].trim()
+    if (!code) continue
+    const other = rows.find(
+      (entry) => entry.id !== row.id && entry[kind].trim() === code,
+    )
+    if (other)
+      return `${variantLabel(other, productName)} already uses this ${kind === "sku" ? "SKU" : "barcode"}. Give each variant a different one.`
   }
   return null
 }

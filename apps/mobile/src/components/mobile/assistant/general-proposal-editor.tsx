@@ -376,7 +376,12 @@ function GeneralRecordEditor({
           disabled={disabled}
           onBack={closeVariant}
           onDone={() => {
-            const issue = variantIssue(openVariant, payload, currencyCode)
+            const issue = variantIssue(
+              openVariant,
+              payload,
+              currencyCode,
+              variants.rows,
+            )
             if (issue) setVariantPageError(issue)
             else {
               closeVariant()
