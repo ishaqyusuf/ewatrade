@@ -1,6 +1,6 @@
 import { BottomSheetInputProvider } from "@/components/ui/bottom-sheet-input-context"
 import { BottomSheetKeyboardAwareScrollView } from "@/components/ui/bottom-sheet-keyboard-aware-scroll-view"
-import { Modal, useModal } from "@/components/ui/modal"
+import { useModal } from "@/components/ui/modal"
 import { Pressable } from "@/components/ui/pressable"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Text } from "@/components/ui/text"
@@ -13,6 +13,7 @@ import { KeyboardAvoidingView } from "react-native-keyboard-controller"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { ActionButton } from "../action-button"
 import { FormField } from "../form-field"
+import { FullScreenModal } from "../full-screen-form"
 import { ListCard, RecordRow, SectionHeader } from "../green-till/kit"
 import { QaQuickFillButton } from "../qa-quick-fill-button"
 import { StatusBanner } from "../status-banner"
@@ -283,11 +284,7 @@ export function AskAssistantQa({
           disabled={offline || unavailable || state === "allowance"}
           reason="Typing preview · no voice upload or read-aloud · no live model request."
         />
-        <Modal
-          ref={editor.ref}
-          title="Edit sample proposal"
-          snapPoints={["70%"]}
-        >
+        <FullScreenModal ref={editor.ref} title="Edit sample proposal">
           <BottomSheetInputProvider>
             <BottomSheetKeyboardAwareScrollView
               contentContainerStyle={{
@@ -361,7 +358,7 @@ export function AskAssistantQa({
               </Text>
             </BottomSheetKeyboardAwareScrollView>
           </BottomSheetInputProvider>
-        </Modal>
+        </FullScreenModal>
       </KeyboardAvoidingView>
     </View>
   )
