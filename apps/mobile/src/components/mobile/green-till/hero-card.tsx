@@ -264,6 +264,10 @@ export function HeroCard({
                 {stat.label}
               </NativeText>
               <NativeText
+                // One line in a column: shrink a long amount instead of
+                // cutting its last digits.
+                adjustsFontSizeToFit={!largeText}
+                minimumFontScale={0.7}
                 numberOfLines={largeText ? undefined : 1}
                 style={[
                   styles.statValue,

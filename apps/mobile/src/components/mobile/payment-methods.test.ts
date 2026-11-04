@@ -56,9 +56,9 @@ test("hero split lists up to three methods, largest first", () => {
       ]),
     ]),
   ).toEqual([
-    { label: "Transfer", value: "₦2,311,500" },
-    { label: "Cash", value: "₦1,870,000" },
-    { label: "POS", value: "₦508,000" },
+    { label: "Transfer", value: "₦2,311,500.00" },
+    { label: "Cash", value: "₦1,870,000.00" },
+    { label: "POS", value: "₦508,000.00" },
   ])
 })
 

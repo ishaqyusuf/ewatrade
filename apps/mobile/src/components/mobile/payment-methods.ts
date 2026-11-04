@@ -83,13 +83,12 @@ export function paymentMethodStats(totals: MethodTotals): HeroStat[] {
   if (rows.length < 2) return []
   const shown = rows.length > 3 ? rows.slice(0, 2) : rows
   const folded = rows.slice(shown.length)
-  // Whole amounts drop ".00" so three fit across the hero.
+  // Same decimals as the hero total and the rows; the hero shrinks a long
+  // value to fit its column rather than dropping digits.
   const money = (amountMinor: number) =>
-    (
-      exactPaymentTotals([
-        { currencyCode: only.currencyCode, totalAmountMinor: amountMinor },
-      ])[0] ?? ""
-    ).replace(/\.00$/, "")
+    exactPaymentTotals([
+      { currencyCode: only.currencyCode, totalAmountMinor: amountMinor },
+    ])[0] ?? ""
   return [
     ...shown.map((row) => ({
       label: paymentMethodLabel(row.method),
