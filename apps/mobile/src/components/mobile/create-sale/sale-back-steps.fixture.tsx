@@ -21,6 +21,14 @@ mock.module("@react-navigation/native", () => ({
     onRemove = callback
   },
 }))
+type AlertButton = { text: string; onPress?: () => void }
+const alerts: Array<{ title: string; buttons: AlertButton[] }> = []
+mock.module("react-native", () => ({
+  Alert: {
+    alert: (title: string, _message: string, buttons: AlertButton[]) =>
+      alerts.push({ title, buttons }),
+  },
+}))
 const { useSaleBackSteps } = await import("./use-sale-back-steps")
 
 type Step = "items" | "customer" | "review"
@@ -28,6 +36,7 @@ type Model = {
   step: Step
   completion: unknown
   isSubmitting: boolean
+  hasSaleLines?: boolean
 }
 const changes: Array<{ step?: Step; error?: string | null }> = []
 beforeEach(() => {
@@ -35,6 +44,7 @@ beforeEach(() => {
   onRemove = null
   dispatched.length = 0
   changes.length = 0
+  alerts.length = 0
 })
 
 async function mount(initial: Model) {
@@ -74,6 +84,7 @@ async function mount(initial: Model) {
   let stepBack: (() => void) | undefined
   function Probe() {
     stepBack = useSaleBackSteps({
+      hasSaleLines: false,
       ...model,
       setStep: (step) => {
         changes.push({ step })
@@ -204,6 +215,28 @@ test("a retained visible back does nothing once the sale finished, is submitting
     await ui.set({ step: "review" })
     retained()
     expect(ui.model.step).toBe("customer")
+  } finally {
+    await ui.close()
+  }
+})
+
+test("back on Items with lines asks before discarding; Keep editing stays", async () => {
+  const ui = await mount({ ...open, step: "items", hasSaleLines: true })
+  try {
+    expect(preventing).toBe(true)
+    await ui.remove("GO_BACK")
+    expect(alerts.map((a) => a.title)).toEqual(["Discard this sale?"])
+    alerts[0]?.buttons.find((b) => b.text === "Keep editing")?.onPress?.()
+    expect(dispatched).toEqual([])
+    await ui.remove("POP")
+    alerts[1]?.buttons.find((b) => b.text === "Discard")?.onPress?.()
+    expect(dispatched.map((a) => a.type)).toEqual(["POP"])
+    expect(ui.model.step).toBe("items")
+    // Closing proceeds without asking; an emptied sale leaves as before.
+    await ui.remove("REPLACE")
+    expect(alerts).toHaveLength(2)
+    await ui.set({ hasSaleLines: false })
+    expect(preventing).toBe(false)
   } finally {
     await ui.close()
   }

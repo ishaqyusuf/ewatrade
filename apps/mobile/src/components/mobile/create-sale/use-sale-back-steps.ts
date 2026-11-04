@@ -1,19 +1,22 @@
 import { previousSaleStep, saleRemovalDecision } from "@/lib/sale-step-motion"
 import { useNavigation, usePreventRemove } from "@react-navigation/native"
 import { useEffect, useRef } from "react"
+import { Alert } from "react-native"
 import type { SaleStep } from "./create-sale-model"
 
 type SaleBackModel = {
   step: SaleStep
   completion: unknown
   isSubmitting: boolean
+  hasSaleLines: boolean
   setStep: (step: SaleStep) => void
   setError: (error: string | null) => void
 }
 
 /**
  * System back and swipe follow New sale's steps like the visible back:
- * Checkout → Customer → Items. Only a "back" is redirected; closing, the
+ * Checkout → Customer → Items. On Items with lines added, back asks before
+ * discarding them. Only a "back" is held; closing, the
  * completed sale's reset and any other navigation proceed. Every decision
  * reads the sale's latest state, so a retained callback can't step a sale
  * that has since completed, and nothing changes after unmount.
@@ -34,6 +37,7 @@ export function useSaleBackSteps(model: SaleBackModel) {
       step: latest.current.step,
       completed: latest.current.completion !== null,
       submitting: latest.current.isSubmitting,
+      hasLines: latest.current.hasSaleLines,
       actionType,
     })
   // Shared by the visible back and system back: always the latest state, so
@@ -49,11 +53,28 @@ export function useSaleBackSteps(model: SaleBackModel) {
       step: model.step,
       completed: model.completion !== null,
       submitting: model.isSubmitting,
+      hasLines: model.hasSaleLines,
       actionType: "GO_BACK",
-    }) === "previous-step",
+    }) !== "proceed",
     ({ data }) => {
       if (!mounted.current) return
-      if (decide(data.action.type) === "previous-step") stepBack()
+      const decision = decide(data.action.type)
+      if (decision === "previous-step") stepBack()
+      else if (decision === "confirm-discard")
+        Alert.alert(
+          "Discard this sale?",
+          "The items you added will be removed.",
+          [
+            { style: "cancel", text: "Keep editing" },
+            {
+              onPress: () => {
+                if (mounted.current) navigation.dispatch(data.action)
+              },
+              style: "destructive",
+              text: "Discard",
+            },
+          ],
+        )
       else navigation.dispatch(data.action)
     },
   )

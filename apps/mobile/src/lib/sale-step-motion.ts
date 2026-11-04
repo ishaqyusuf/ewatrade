@@ -27,23 +27,26 @@ export const saleStepEnterOffset = stepEnterOffset
 
 /**
  * What a navigation removal should do while New sale is open. Only a "back"
- * (system back, swipe or header back) is redirected to the previous step, and
- * only before the sale completes or while nothing is submitting; closing,
- * completion resets and any other navigation proceed.
+ * (system back, swipe or header back) is held, and only before the sale
+ * completes or while nothing is submitting: on Customer or Checkout it goes to
+ * the previous step; on Items with lines added it asks before discarding them.
+ * Closing, completion resets and any other navigation proceed.
  */
 export function saleRemovalDecision(input: {
   step: SaleStep
   completed: boolean
   submitting: boolean
+  hasLines?: boolean
   actionType: string
-}): "previous-step" | "proceed" {
+}): "previous-step" | "confirm-discard" | "proceed" {
   if (
-    input.step === "items" ||
     input.completed ||
     input.submitting ||
     (input.actionType !== "GO_BACK" && input.actionType !== "POP")
   )
     return "proceed"
+  if (input.step === "items")
+    return input.hasLines ? "confirm-discard" : "proceed"
   return "previous-step"
 }
 

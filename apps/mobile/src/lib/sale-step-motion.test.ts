@@ -50,8 +50,14 @@ test("system back and swipe step back through an open sale; nothing else is redi
   expect(at("customer", "POP")).toBe("previous-step")
   expect(previousSaleStep("review")).toBe("customer")
   expect(previousSaleStep("customer")).toBe("items")
-  // At Items, back leaves the sale as before.
+  // At Items, back leaves an empty sale and asks before discarding lines.
   expect(at("items", "GO_BACK")).toBe("proceed")
+  expect(at("items", "GO_BACK", { hasLines: true })).toBe("confirm-discard")
+  expect(at("items", "POP", { hasLines: true })).toBe("confirm-discard")
+  expect(at("items", "REPLACE", { hasLines: true })).toBe("proceed")
+  expect(at("items", "GO_BACK", { hasLines: true, completed: true })).toBe(
+    "proceed",
+  )
   // Closing (replace), the completed sale's reset and navigation proceed.
   expect(at("review", "REPLACE")).toBe("proceed")
   expect(at("review", "RESET")).toBe("proceed")
