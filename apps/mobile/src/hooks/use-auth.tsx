@@ -1,3 +1,5 @@
+import { getCustomerConversationSession } from "@/lib/customer-conversation-store"
+import { signInDestinationHref } from "@/lib/mobile-entry-routing"
 import {
   SESSION_ENDED_NOTICE,
   subscribeSessionExpired,
@@ -105,7 +107,17 @@ export const useCreateAuthContext = () => {
     }
     setSession(nextSession)
     setSessionState(nextSession)
-    setPendingRedirect({ href: redirectHref, signedIn: !session?.token })
+    // Sign-in screens send people to the start route, which shows the splash
+    // while it fetches the Access Profile again. The sign-in response already
+    // carries it, so go straight to the screen it decides.
+    const href =
+      redirectHref === "/"
+        ? (signInDestinationHref({
+            accessProfile: nextSession.accessProfile,
+            hasGuestCapability: Boolean(getCustomerConversationSession()),
+          }) ?? redirectHref)
+        : redirectHref
+    setPendingRedirect({ href, signedIn: !session?.token })
   }
 
   return {

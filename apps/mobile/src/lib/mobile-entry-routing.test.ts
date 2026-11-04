@@ -1,6 +1,9 @@
 import { describe, expect, test } from "bun:test"
 
-import { resolveMobileEntryDestination } from "./mobile-entry-routing"
+import {
+  resolveMobileEntryDestination,
+  signInDestinationHref,
+} from "./mobile-entry-routing"
 
 describe("mobile entry routing", () => {
   test("routes the common login and explicit guest capability before any shell profile", () => {
@@ -68,5 +71,55 @@ describe("mobile entry routing", () => {
         lastShell: "business",
       }),
     ).toEqual({ kind: "no-access" })
+  })
+
+  test("sends a fresh sign-in straight to its screen when the profile decides it", () => {
+    const business = { hasBusinessAccess: true, hasCustomerHistory: false }
+    expect(
+      signInDestinationHref({
+        accessProfile: business,
+        hasGuestCapability: false,
+      }),
+    ).toBe("/dashboard")
+    expect(
+      signInDestinationHref({
+        accessProfile: { ...business, setupPending: true },
+        hasGuestCapability: false,
+      }),
+    ).toBe("/owner-setup")
+    expect(
+      signInDestinationHref({
+        accessProfile: { hasBusinessAccess: false, hasCustomerHistory: false },
+        hasGuestCapability: false,
+      }),
+    ).toBe("/no-access")
+  })
+
+  test("leaves guest, both-shell and unknown sign-ins to the start route", () => {
+    const business = { hasBusinessAccess: true, hasCustomerHistory: false }
+    expect(
+      signInDestinationHref({
+        accessProfile: business,
+        hasGuestCapability: true,
+      }),
+    ).toBeNull()
+    expect(
+      signInDestinationHref({
+        accessProfile: { hasBusinessAccess: true, hasCustomerHistory: true },
+        hasGuestCapability: false,
+      }),
+    ).toBeNull()
+    expect(
+      signInDestinationHref({
+        accessProfile: { hasBusinessAccess: false, hasCustomerHistory: true },
+        hasGuestCapability: false,
+      }),
+    ).toBeNull()
+    expect(
+      signInDestinationHref({
+        accessProfile: undefined,
+        hasGuestCapability: false,
+      }),
+    ).toBeNull()
   })
 })
