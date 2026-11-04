@@ -186,6 +186,13 @@ function GalleryPicker({
     stores.find((store) => store.id === id)?.name ?? "Another Store"
   const currentStore = storeName(storeId)
   const entries = gallery.data?.pages.flatMap((page) => page.entries) ?? []
+  // A search or category that hides the open image closes its details panel.
+  const focusedShown =
+    !focused || entries.some((entry) => entry.assetId === focused.assetId)
+  const settled = gallery.isSuccess && !gallery.isPlaceholderData
+  useEffect(() => {
+    if (settled && !focusedShown) setFocused(null)
+  }, [settled, focusedShown])
   const categories = gallery.data?.pages[0]?.categories ?? []
   const filtered = Boolean(query || category)
   const matches =
