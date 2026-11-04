@@ -3,6 +3,7 @@ import {
   type BottomSheetScrollableProps,
   SCROLLABLE_TYPE,
   createBottomSheetScrollableComponent,
+  useBottomSheetInternal,
 } from "@gorhom/bottom-sheet"
 import {
   type ForwardRefExoticComponent,
@@ -40,7 +41,7 @@ const BottomSheetKeyboardAwareScrollViewBase = forwardRef<
   {
     bottomOffset = 96,
     children,
-    extraKeyboardSpace = 220,
+    extraKeyboardSpace,
     // A sheet's Save/Add button must act on the first tap while a field still
     // has focus; React Native's "never" spends that tap closing the keyboard.
     keyboardShouldPersistTaps = "handled",
@@ -48,10 +49,25 @@ const BottomSheetKeyboardAwareScrollViewBase = forwardRef<
   },
   ref,
 ) {
+  // The same editor also opens full screen (forms with typing never use a
+  // sheet), where Gorhom's scrollable has no sheet to attach to.
+  const sheet = useBottomSheetInternal(true)
+  if (!sheet)
+    return (
+      <KeyboardAwareScrollView
+        bottomOffset={bottomOffset}
+        extraKeyboardSpace={extraKeyboardSpace ?? 0}
+        keyboardShouldPersistTaps={keyboardShouldPersistTaps}
+        ref={ref as never}
+        {...(props as KeyboardAwareScrollViewProps)}
+      >
+        {children}
+      </KeyboardAwareScrollView>
+    )
   return (
     <BottomSheetKeyboardAwareScrollViewComponent
       bottomOffset={bottomOffset}
-      extraKeyboardSpace={extraKeyboardSpace}
+      extraKeyboardSpace={extraKeyboardSpace ?? 220}
       keyboardShouldPersistTaps={keyboardShouldPersistTaps}
       ref={ref}
       {...props}

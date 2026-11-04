@@ -30,8 +30,8 @@ import {
 import { KeyboardAvoidingView } from "react-native-keyboard-controller"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { ActionButton } from "../action-button"
+import { FullScreenForm } from "../full-screen-form"
 import { ListCard } from "../green-till/kit"
-import { SearchFooterScope } from "../search-footer-scope"
 import { StatusBanner } from "../status-banner"
 import {
   AssistantAnswerCard,
@@ -73,11 +73,14 @@ export function AskAssistantLive() {
   const router = useRouter()
   const insets = useSafeAreaInsets()
   const saved = useModal()
-  const editor = useModal()
   const [editing, setEditing] = useState<GeneralProposal | null>(null)
   // The thread's notice sits behind the open editor, so a refused save is
-  // repeated inside the sheet instead of looking like a dead Save button.
+  // repeated inside the editor instead of looking like a dead Save button.
   const [saveFailed, setSaveFailed] = useState(false)
+  const closeEditor = () => {
+    setEditing(null)
+    setSaveFailed(false)
+  }
   const list = useRef<FlatList>(null)
   const input = useRef<TextInput>(null)
   const atBottom = useRef(true)
@@ -167,10 +170,10 @@ export function AskAssistantLive() {
   )
   useEffect(() => {
     if (vm.offline || vm.scopeChanged) {
-      editor.dismiss()
       setEditing(null)
+      setSaveFailed(false)
     }
-  }, [vm.offline, vm.scopeChanged, editor.dismiss])
+  }, [vm.offline, vm.scopeChanged])
   // A chat opens at its newest message and follows it as the thread loads.
   useEffect(() => {
     if (vm.conversationId) atBottom.current = true
@@ -552,7 +555,6 @@ export function AskAssistantLive() {
                           onCancel={() => void vm.cancel(proposal)}
                           onEdit={() => {
                             setEditing(proposal)
-                            editor.present()
                           }}
                         />
                       )}
@@ -586,7 +588,6 @@ export function AskAssistantLive() {
                       disabled={disabled || !!noAccess}
                       onPress={() => {
                         setEditing(proposal)
-                        editor.present()
                       }}
                     >
                       Edit and renew draft
@@ -645,43 +646,38 @@ export function AskAssistantLive() {
             ) : null}
           </BottomSheetScrollView>
         </Modal>
-        <Modal
-          ref={editor.ref}
+        <FullScreenForm
+          visible={!!editing}
           title="Edit draft"
-          snapPoints={["90%"]}
-          onDismiss={() => {
-            setEditing(null)
-            setSaveFailed(false)
-          }}
+          closeLabel="Close draft editor"
+          onClose={closeEditor}
         >
-          <SearchFooterScope sheet>
-            {saveFailed && !vm.pending ? (
-              <View className="px-[18px] pb-3">
-                <StatusBanner
-                  title="Draft not saved"
-                  tone="warning"
-                  message={
-                    vm.notice ??
-                    "Your changes are still here. Check the thread, then save again."
-                  }
-                />
-              </View>
-            ) : null}
-            {editing ? (
-              <GeneralProposalEditor
-                key={`${editing.id}:${editing.revision}`}
-                proposal={editing}
-                currencyCode={vm.data?.currencyCode ?? "NGN"}
-                disabled={disabled || !!noAccess}
-                onSave={async (payload) => {
-                  setSaveFailed(false)
-                  if (await vm.save(editing, payload)) editor.dismiss()
-                  else setSaveFailed(true)
-                }}
+          {saveFailed && !vm.pending ? (
+            <View className="px-[18px] pb-3">
+              <StatusBanner
+                title="Draft not saved"
+                tone="warning"
+                message={
+                  vm.notice ??
+                  "Your changes are still here. Check the thread, then save again."
+                }
               />
-            ) : null}
-          </SearchFooterScope>
-        </Modal>
+            </View>
+          ) : null}
+          {editing ? (
+            <GeneralProposalEditor
+              key={`${editing.id}:${editing.revision}`}
+              proposal={editing}
+              currencyCode={vm.data?.currencyCode ?? "NGN"}
+              disabled={disabled || !!noAccess}
+              onSave={async (payload) => {
+                setSaveFailed(false)
+                if (await vm.save(editing, payload)) closeEditor()
+                else setSaveFailed(true)
+              }}
+            />
+          ) : null}
+        </FullScreenForm>
       </KeyboardAvoidingView>
     </View>
   )

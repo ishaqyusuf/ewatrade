@@ -1,3 +1,4 @@
+import { useBottomSheetInternal } from "@gorhom/bottom-sheet"
 import { type ReactNode, createContext, useContext } from "react"
 
 const BottomSheetInputContext = createContext(false)
@@ -16,6 +17,9 @@ export function BottomSheetInputProvider({
   )
 }
 
+/** True only inside a Gorhom sheet, so a form shared by a sheet and a
+ * full-screen view renders plain inputs when it is not in a sheet. */
 export function useBottomSheetInput() {
-  return useContext(BottomSheetInputContext)
+  const sheet = useBottomSheetInternal(true)
+  return useContext(BottomSheetInputContext) && sheet !== null
 }
