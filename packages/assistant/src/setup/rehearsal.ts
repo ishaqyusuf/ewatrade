@@ -108,9 +108,7 @@ export function parseSetupRehearsalLines(text: string) {
       price,
       openingStock: stockMatch?.[1],
       unitName: stockMatch?.[2]
-        ? stockMatch[2]
-            .replace(/s$/i, "")
-            .replace(/^\w/, (c) => c.toUpperCase())
+        ? singularUnitName(stockMatch[2]).replace(/^\w/, (c) => c.toUpperCase())
         : undefined,
       ...(internalUse ? { usage: "use", price: undefined } : {}),
       quote: line.slice(0, 240),
@@ -118,6 +116,25 @@ export function parseSetupRehearsalLines(text: string) {
     })
   }
   return { items, customers, accounts }
+}
+
+const IRREGULAR_UNITS: Record<string, string> = {
+  halves: "half",
+  knives: "knife",
+  leaves: "leaf",
+  loaves: "loaf",
+  shelves: "shelf",
+}
+
+/** "30 boxes" → Box, "30 loaves" → Loaf, "12 batteries" → Battery. */
+export function singularUnitName(word: string) {
+  const lower = word.toLowerCase()
+  const irregular = IRREGULAR_UNITS[lower]
+  if (irregular) return irregular
+  if (lower.length > 3 && lower.endsWith("ies")) return `${word.slice(0, -3)}y`
+  if (/(x|ch|sh|ss|z)es$/i.test(word)) return word.slice(0, -2)
+  if (/[^s]s$/i.test(word) && !/(us|is)$/i.test(word)) return word.slice(0, -1)
+  return word
 }
 
 function lastText(message: PromptMessage | undefined) {
