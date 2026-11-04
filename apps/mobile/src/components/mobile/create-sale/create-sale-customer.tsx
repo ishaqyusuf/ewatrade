@@ -9,6 +9,7 @@ import { useColorScheme } from "@/hooks/use-color"
 import { GREEN_TILL_THEME } from "@/lib/green-till-theme"
 import { shouldFetchNextListPage } from "@/lib/list-pagination"
 import { formatMinorMoney } from "@ewatrade/utils"
+import { useRef } from "react"
 import { View } from "react-native"
 import { Text as NativeText } from "react-native"
 import { FlatList } from "react-native-css/components/FlatList"
@@ -18,6 +19,9 @@ import {
 } from "../appearances/classic/create-sale-buyer"
 import { customerFromSuggestion } from "./create-sale-model"
 import type { SaleStepViewProps } from "./create-sale-presentation"
+import { openContactsSettings } from "./phone-contact-picker"
+import { SaleContactNumberSheet } from "./sale-contact-number-sheet"
+import { useSaleContactPick } from "./use-sale-contact-pick"
 
 export function CreateSaleCustomerStep({
   model,
@@ -35,11 +39,34 @@ export function CreateSaleCustomerStep({
     recentOrders,
     customerDirectory,
   } = model
+  const latest = useRef(model)
+  latest.current = model
+  const contactPick = useSaleContactPick({
+    customers: model.loadedCustomers,
+    isLocked: () => latest.current.actionsLocked,
+    isOffline,
+    onMatch: (customer) => latest.current.selectCustomer(customer, false),
+    onNew: ({ name, phone }) => {
+      latest.current.setCustomerDraft({ email: "", name, phone })
+      latest.current.presentCustomerSheet()
+    },
+  })
+  const contactNotice = contactPick.notice
+  // The match note stays only while that customer is still the buyer.
+  const showContactNotice =
+    contactNotice?.kind === "match"
+      ? model.selectedCustomer?.id === contactNotice.customer.id
+      : Boolean(contactNotice)
   const heroPalette = GREEN_TILL_THEME[useColorScheme().colorScheme]
   const scrollHide = useBottomSearchScroll()
 
   return (
     <View className="flex-1">
+      <SaleContactNumberSheet
+        choice={contactPick.numberChoice}
+        onChoose={(phone) => void contactPick.chooseNumber(phone)}
+        onClose={contactPick.closeNumberChoice}
+      />
       <FlatList
         contentContainerClassName="grow px-2 pb-[var(--sale-customer-bottom)]"
         data={customerSearch ? customers : []}
@@ -123,6 +150,11 @@ export function CreateSaleCustomerStep({
               </Text>
               <ClassicBuyerRail
                 customers={customers}
+                onContacts={
+                  contactPick.available && !model.actionsLocked
+                    ? () => void contactPick.pick()
+                    : undefined
+                }
                 onNew={presentCustomerSheet}
                 onSelect={(customer) => selectCustomer(customer, false)}
                 selectedId={model.selectedCustomer?.id ?? null}
@@ -133,6 +165,35 @@ export function CreateSaleCustomerStep({
                 </Text>
               ) : (
                 <>
+                  {showContactNotice && contactNotice ? (
+                    <View className="pt-2">
+                      {contactNotice.kind === "match" ? (
+                        <StatusBanner
+                          icon="Info"
+                          message={`${contactNotice.contactName || "This contact"} in your contacts is saved as ${contactNotice.customer.name}.`}
+                          title="Already a customer"
+                          tone="success"
+                        />
+                      ) : contactNotice.kind === "denied" ? (
+                        <StatusBanner
+                          icon="Lock"
+                          message="Allow Contacts for this app in Settings to pick a customer from your phone."
+                          title="Contacts access is off"
+                          tone="warning"
+                          actionLabel="Open settings"
+                          onActionPress={openContactsSettings}
+                        />
+                      ) : (
+                        <StatusBanner
+                          icon="AlertCircle"
+                          message="Your contacts could not be opened. Try again, or add the customer with New."
+                          tone="warning"
+                          actionLabel="Try again"
+                          onActionPress={() => void contactPick.pick()}
+                        />
+                      )}
+                    </View>
+                  ) : null}
                   <Text className="pt-2 text-xs font-extrabold tracking-[0.3px] text-muted-foreground">
                     SELECTED
                   </Text>

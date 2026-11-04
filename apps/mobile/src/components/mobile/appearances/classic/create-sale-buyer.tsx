@@ -13,14 +13,17 @@ import { Text as NativeText, ScrollView } from "react-native"
 
 const RAIL_LIMIT = 8
 
-/** Walk-in, recent buyers and New, as the 02 Cart & Sheet rail. */
+/** Walk-in, Contacts, recent buyers and New, as the 02 Cart & Sheet rail. */
 export function ClassicBuyerRail({
   customers,
+  onContacts,
   onNew,
   onSelect,
   selectedId,
 }: {
   customers: CommerceCustomer[]
+  /** Picks from the phone's contacts; hidden when the build can't. */
+  onContacts?: () => void
   onNew: () => void
   onSelect: (customer: SelectedCustomer | null) => void
   selectedId: string | null
@@ -44,6 +47,18 @@ export function ClassicBuyerRail({
         on={selectedId === null}
         onPress={() => onSelect(null)}
       />
+      {onContacts ? (
+        <RailChoice
+          accessibilityLabel="Pick a customer from phone contacts"
+          bg={palette.mint}
+          fg={palette.mintForeground}
+          icon="Contact"
+          label="Contacts"
+          on={false}
+          onPress={onContacts}
+          wide
+        />
+      ) : null}
       {customers.slice(0, RAIL_LIMIT).map((customer) => (
         <RailChoice
           key={customer.id}
@@ -68,6 +83,7 @@ export function ClassicBuyerRail({
 }
 
 function RailChoice({
+  accessibilityLabel,
   bg,
   fg,
   icon,
@@ -75,7 +91,9 @@ function RailChoice({
   label,
   on,
   onPress,
+  wide = false,
 }: {
+  accessibilityLabel?: string
   bg: string
   fg: string
   icon?: IconKeys
@@ -83,16 +101,24 @@ function RailChoice({
   label: string
   on: boolean
   onPress: () => void
+  /** Fits a longer label instead of the 62pt column. */
+  wide?: boolean
 }) {
   const colors = useColors()
   return (
     <Pressable
-      accessibilityLabel={label === "New" ? "Create customer" : label}
+      accessibilityLabel={
+        accessibilityLabel ?? (label === "New" ? "Create customer" : label)
+      }
       accessibilityRole="button"
       accessibilityState={{ selected: on }}
       haptic
       onPress={onPress}
-      style={{ alignItems: "center", gap: 6, width: 62 }}
+      style={{
+        alignItems: "center",
+        gap: 6,
+        ...(wide ? { minWidth: 62 } : { width: 62 }),
+      }}
     >
       <View
         style={{

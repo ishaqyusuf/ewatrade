@@ -129,6 +129,7 @@ const Package = hugeIcon("PackageIcon")
 const Pencil = hugeIcon("Pencil")
 const SquarePen = hugeIcon("PencilEdit02Icon")
 const Star = hugeIcon("StarIcon")
+const Contact = hugeIcon("ContactBookIcon")
 const Phone = hugeIcon("Phone")
 const PieChart = hugeIcon("PieChart")
 const Pin = hugeIcon("Pin")
@@ -389,6 +390,7 @@ const appIcons = {
   UserCog,
   UserPlus,
   Users,
+  Contact,
   User,
   UserX,
   Warehouse,
