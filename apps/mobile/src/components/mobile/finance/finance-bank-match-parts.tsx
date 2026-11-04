@@ -1,9 +1,9 @@
 import { ActionButton } from "@/components/mobile/action-button"
 import { FormField } from "@/components/mobile/form-field"
+import { FullScreenForm } from "@/components/mobile/full-screen-form"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { BottomSheetKeyboardAwareScrollView } from "@/components/ui/bottom-sheet-keyboard-aware-scroll-view"
 import { Icon } from "@/components/ui/icon"
-import { Modal, useModal } from "@/components/ui/modal"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
@@ -342,7 +342,8 @@ export type BankMatchSheetRecord = {
   label: string
 }
 
-/** Reason sheet for both Match and Undo match; the reason is never stored. */
+/** Reason form for both Match and Undo match; the reason is never stored.
+ * It takes typing, so it opens full screen rather than as a sheet. */
 export function BankMatchSheet({
   open,
   title,
@@ -368,22 +369,17 @@ export function BankMatchSheet({
   onSubmit: (reason: string) => void
   onClose: () => void
 }) {
-  const modal = useModal()
   const [reason, setReason] = useState("")
   useEffect(() => {
-    if (open) {
-      setReason("")
-      modal.present()
-    } else modal.dismiss()
-  }, [open, modal.present, modal.dismiss])
+    if (open) setReason("")
+  }, [open])
   const trimmed = reason.trim()
   const match = kind === "MATCH"
   return (
-    <Modal
-      ref={modal.ref}
-      onDismiss={onClose}
-      enablePanDownToClose={!busy}
-      snapPoints={["88%"]}
+    <FullScreenForm
+      visible={open}
+      closeDisabled={busy}
+      onClose={onClose}
       title={title}
     >
       <BottomSheetKeyboardAwareScrollView
@@ -464,6 +460,6 @@ export function BankMatchSheet({
           {match ? "Back to selection" : "Keep match"}
         </ActionButton>
       </BottomSheetKeyboardAwareScrollView>
-    </Modal>
+    </FullScreenForm>
   )
 }
