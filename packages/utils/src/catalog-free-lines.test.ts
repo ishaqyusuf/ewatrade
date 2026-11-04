@@ -6,6 +6,7 @@ import {
   catalogFreeLinesError,
   catalogFreeLinesTotalMinor,
   catalogFreeOrderLines,
+  startedCatalogFreeLines,
 } from "./catalog-free-lines"
 
 const line = (
@@ -91,4 +92,14 @@ test("drafts a Catalog item from a described typed-price line", () => {
   expect(
     catalogFreeLineCatalogDraft({ kind: "additional_cost" }, 100),
   ).toBeNull()
+})
+
+test("an untouched typed-price line is not counted until something is typed", () => {
+  const empty = line("quick_sale", " ", "  ")
+  const priced = line("quick_sale", "500")
+  const named = line("additional_cost", "", "Delivery")
+  expect(startedCatalogFreeLines([empty, priced, named])).toEqual([
+    priced,
+    named,
+  ])
 })

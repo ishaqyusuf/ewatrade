@@ -78,6 +78,11 @@ export function catalogFreeLineAmountMinor(line: CatalogFreeLineDraft) {
     : null
 }
 
+/** Lines with anything typed: an untouched Quick sale is not yet an item. */
+export function startedCatalogFreeLines(lines: CatalogFreeLineDraft[]) {
+  return lines.filter((line) => line.amount.trim() || line.description.trim())
+}
+
 export function catalogFreeLinesTotalMinor(lines: CatalogFreeLineDraft[]) {
   return lines.reduce(
     (total, line) => total + (catalogFreeLineAmountMinor(line) ?? 0),

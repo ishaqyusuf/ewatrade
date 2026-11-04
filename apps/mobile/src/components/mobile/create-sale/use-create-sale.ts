@@ -37,6 +37,7 @@ import {
   catalogFreeLinesError,
   catalogFreeLinesTotalMinor,
   catalogFreeOrderLines,
+  startedCatalogFreeLines,
 } from "@ewatrade/utils/catalog-free-lines"
 import { rankBySearch } from "@ewatrade/utils/search-rank"
 import type { DateTimePickerEvent } from "@react-native-community/datetimepicker"
@@ -366,10 +367,13 @@ export function useCreateSale({
     catalogFreeLinesTotalMinor(catalogFreeLines)
   const currencyCode =
     selectedRows[0]?.offering.currencyCode ?? profile?.currencyCode ?? "NGN"
-  const hasSaleLines = selectedRows.length + catalogFreeLines.length > 0
+  // An untouched Quick sale or Additional cost is not counted as an item yet.
+  const startedFreeLines = startedCatalogFreeLines(catalogFreeLines)
+  const saleLineCount = selectedRows.length + startedFreeLines.length
+  const hasSaleLines = saleLineCount > 0
   const saleUnits = [
     ...selectedRows.map((row) => row.quantity),
-    ...catalogFreeLines
+    ...startedFreeLines
       .filter((line) => line.kind === "quick_sale")
       .map(() => "1"),
   ]
@@ -1127,6 +1131,7 @@ export function useCreateSale({
     selectedRows,
     catalogFreeLines,
     hasSaleLines,
+    saleLineCount,
     saleUnits,
     addCatalogFreeLine,
     updateCatalogFreeLine,

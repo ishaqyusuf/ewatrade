@@ -114,6 +114,7 @@ export function ClassicSaleItems({
     fetchNextChoices,
     catalogFreeLines,
     hasSaleLines,
+    saleLineCount,
     saleUnits,
   } = model
   const search = productSearch.trim()
@@ -172,7 +173,6 @@ export function ClassicSaleItems({
   }
   const canContinue = hasSaleLines && !model.actionsLocked
   const unitCount = saleUnitCount(saleUnits)
-  const saleLineCount = selectedRows.length + catalogFreeLines.length
 
   return (
     <View className="flex-1">
