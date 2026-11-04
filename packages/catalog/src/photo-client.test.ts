@@ -62,4 +62,12 @@ test("scope changes and removed/conflicting receipts cannot become item photo id
   await expect(uploadCatalogPhotoDraft(input)).rejects.toThrow(
     "could not be confirmed",
   )
+  input.upload = async () => ({ assetId: "asset-one", state: "REJECTED" })
+  await expect(uploadCatalogPhotoDraft(input)).rejects.toThrow(
+    "Choose a different photo",
+  )
+  input.createIntent = async () => ({ assetId: "asset-one", state: "REJECTED" })
+  await expect(uploadCatalogPhotoDraft(input)).rejects.toThrow(
+    "didn't pass the image check",
+  )
 })

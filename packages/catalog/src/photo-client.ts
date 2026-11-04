@@ -6,6 +6,9 @@ import {
 
 export type CatalogPhotoClientIntent = { assetId: string; state: string }
 
+const PHOTO_CHECK_FAILED =
+  "This photo didn't pass the image check. Choose a different photo of the item."
+
 /** Shared browser/native orchestration. The caller snapshots its authenticated
  * scope and supplies matching transport headers; no provider details enter UI. */
 export async function uploadCatalogPhotoDraft(input: {
@@ -51,10 +54,14 @@ export async function uploadCatalogPhotoDraft(input: {
     throw new Error("Photo upload could not be confirmed.")
   if (intent.state === "APPROVED" || intent.state === "PENDING_REVIEW")
     return intent.assetId
+  if (intent.state === "REJECTED") throw new Error(PHOTO_CHECK_FAILED)
   if (intent.state !== "UPLOADING")
     throw new Error("This photo is no longer available. Choose it again.")
   const uploaded = await input.upload(intent.assetId, bytes, contentType)
   input.assertCurrent()
+  // The same bytes fail the same check, so retrying them cannot help.
+  if (uploaded.assetId === intent.assetId && uploaded.state === "REJECTED")
+    throw new Error(PHOTO_CHECK_FAILED)
   if (
     uploaded.assetId !== intent.assetId ||
     !["PENDING_REVIEW", "APPROVED"].includes(uploaded.state)
