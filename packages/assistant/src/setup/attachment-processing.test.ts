@@ -10,6 +10,31 @@ import { SETUP_REHEARSAL_TRANSCRIPT, setupRehearsalImageRead } from "./vision"
 
 const utf8 = (text: string) => new TextEncoder().encode(text)
 
+/** A plain PDF with one line of text on each page. */
+function pdfWithPages(count: number) {
+  const objects = [
+    "<< /Type /Catalog /Pages 2 0 R >>",
+    `<< /Type /Pages /Kids [${Array.from({ length: count }, (_, i) => `${4 + i * 2} 0 R`).join(" ")}] /Count ${count} >>`,
+    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+  ]
+  for (let i = 0; i < count; i++) {
+    const text = `BT /F1 12 Tf 20 100 Td (Page ${i + 1} price list) Tj ET`
+    objects.push(
+      `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 200 200] /Resources << /Font << /F1 3 0 R >> >> /Contents ${5 + i * 2} 0 R >>`,
+      `<< /Length ${text.length} >>\nstream\n${text}\nendstream`,
+    )
+  }
+  let out = "%PDF-1.4\n"
+  const offsets: number[] = []
+  objects.forEach((object, i) => {
+    offsets.push(out.length)
+    out += `${i + 1} 0 obj\n${object}\nendobj\n`
+  })
+  const xref = out.length
+  out += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n${offsets.map((o) => `${String(o).padStart(10, "0")} 00000 n \n`).join("")}trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`
+  return utf8(out)
+}
+
 function attachment(
   overrides: Partial<ClaimedSetupAttachment> = {},
 ): ClaimedSetupAttachment {
@@ -147,6 +172,25 @@ describe("setup attachment processing", () => {
       status: "skipped",
     })
     expect(log.completed).toEqual([])
+  })
+
+  test("PDFs up to 20 pages are read; longer ones are refused, not cut short", async () => {
+    const pdf = { kind: "PDF" as const, contentType: "application/pdf" }
+    const short = harness(attachment(pdf), pdfWithPages(20))
+    expect((await processSetupAttachment("att_1", short.deps)).status).toBe(
+      "ready",
+    )
+    const long = harness(attachment(pdf), pdfWithPages(21))
+    await processSetupAttachment("att_1", long.deps)
+    expect(long.log.completed).toEqual([])
+    expect(long.log.failed).toHaveLength(1)
+    expect(long.log.failed[0]).toMatchObject({
+      errorCode: "FILE_TOO_MANY_PAGES",
+      retryable: false,
+    })
+    expect(describeSetupAttachmentError("FILE_TOO_MANY_PAGES")).toBe(
+      "This PDF has more than 20 pages. Send up to 20 pages.",
+    )
   })
 
   test("spreadsheets are parsed without a provider or budget", async () => {

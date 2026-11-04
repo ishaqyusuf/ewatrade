@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "id": "2026-11-04-ask-box-file-limits",
+  "tickets": [
+    "H02"
+  ],
+  "summary": "Mobile Ask home and composer redesign (Workshop assistant/conversations v4-v6): prompt-row home with offline and set-up states, pill/card composer with photo thumbnails, recording waveform pill and a floating + menu (Camera, Upload photo, Upload file). File limits are now one app constant tied to the server's (4 per message, 60 per chat, photos 10 MB as picked, PDFs 2 MB and 20 pages). Attachment processing refuses a PDF over 20 pages (FILE_TOO_MANY_PAGES) instead of reading only the first 20.",
+  "noAssistantImpact": "No capability, tool, prompt, contract or write path changes. The client changes the Ask screen layout and which files it lets through; the server change only turns an over-limit PDF from a truncated read into a refusal with owner-facing copy. The model sees the same delimited extraction for every accepted file.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/ai-setup-assistant.md",
+      "note": "Ask box file limits and PDF page refusal, 4 November 2026."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/assistant/src/setup/attachment-processing.test.ts",
+      "executed": true,
+      "result": "12 pass, 0 fail, including PDFs up to 20 pages are read; longer ones are refused, not cut short."
+    },
+    {
+      "kind": "test",
+      "path": "apps/mobile/src/components/mobile/assistant/assistant-attachment-limits.test.ts",
+      "executed": true,
+      "result": "3 pass, 0 fail: limits match the server constants; photo, PDF and other-type checks; PDF page count."
+    },
+    {
+      "kind": "run",
+      "path": "scripts/assistant-impact.ts",
+      "executed": true,
+      "result": "bun assistant:impact --base b0aacc831: gate passed, 1 record covers client; 0 capability and 0 procedure rows changed."
+    }
+  ]
+}

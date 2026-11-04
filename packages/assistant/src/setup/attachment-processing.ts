@@ -149,10 +149,14 @@ async function extract(
     case "PDF": {
       // Loaded on demand so importing this module never loads PDF.js.
       const { extractPdfText } = await import("../files/pdf-text")
+      const extraction = await extractPdfText(bytes, {
+        maxPages: SETUP_ATTACHMENT_LIMITS.PDF.maxPages,
+      })
+      // A longer PDF is refused rather than read in part (4 Nov 2026).
+      if (extraction.totalPages > SETUP_ATTACHMENT_LIMITS.PDF.maxPages)
+        throw new ProcessingRefusal("FILE_TOO_MANY_PAGES", false)
       return {
-        extraction: await extractPdfText(bytes, {
-          maxPages: SETUP_ATTACHMENT_LIMITS.PDF.maxPages,
-        }),
+        extraction,
         transcript: null,
         durationMs: null,
         call: PARSER,
@@ -315,6 +319,8 @@ export function describeSetupAttachmentError(errorCode: string | null) {
       return "No speech was found in this voice note. Try recording again closer to the phone."
     case "IMAGE_UNREADABLE":
       return "This photo could not be opened. Try a JPEG or PNG photo."
+    case "FILE_TOO_MANY_PAGES":
+      return `This PDF has more than ${SETUP_ATTACHMENT_LIMITS.PDF.maxPages} pages. Send up to ${SETUP_ATTACHMENT_LIMITS.PDF.maxPages} pages.`
     case "FILE_ENCRYPTED":
       return "This file is password protected. Remove the password and try again."
     case "FILE_EMPTY":
