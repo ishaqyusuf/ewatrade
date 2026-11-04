@@ -177,7 +177,9 @@ export function AccountMessage({
       <dl className="grid grid-cols-3 border border-border">
         <div className="grid gap-0.5 p-3">
           <dt className="text-muted-foreground">Owes you</dt>
-          <dd className="font-semibold tabular-nums text-amber-700 dark:text-amber-300">
+          <dd
+            className={`font-semibold tabular-nums ${BigInt(preview.amounts.totalOwedMinor) > BigInt(0) ? "text-amber-700 dark:text-amber-300" : ""}`}
+          >
             {money(preview.amounts.totalOwedMinor)}
           </dd>
         </div>
