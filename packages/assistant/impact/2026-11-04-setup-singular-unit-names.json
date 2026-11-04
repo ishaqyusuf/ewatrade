@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "id": "2026-11-04-setup-singular-unit-names",
+  "tickets": ["H02"],
+  "summary": "Local setup rehearsal parser names stock units in the singular. \"30 loaves\" and \"12 boxes\" became units \"Loave\" and \"Boxe\" because only a trailing s was stripped; singularUnitName now handles -es (box, glass, inch), -ies (battery) and common -ves (loaf, leaf, knife) plurals (9ca06579c).",
+  "noAssistantImpact": "No capability, tool, prompt, contract or write path changes. Only the deterministic local rehearsal model's line parser changes the unitName text it proposes; live model setup and the setup draft schema are unchanged.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/qa/pending-ui-test-ledger.md",
+      "note": "Android pass B low bug 'Boxe'/'Loave' unit names."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/assistant/src/setup/rehearsal.test.ts",
+      "executed": true,
+      "result": "rehearsal + attachments tests 11 pass, 0 fail, including the singular unit names test."
+    }
+  ]
+}
