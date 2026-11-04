@@ -255,17 +255,26 @@ function QaFab({
         onPress={onPress}
         testID="qa-fab"
       >
-        <Text className="text-base font-extrabold [-rn-line-height:22] text-primary">
+        {/* The 56dp button does not grow, so its mark stops scaling at 1.3x. */}
+        <Text
+          maxFontSizeMultiplier={1.3}
+          className="text-base font-extrabold [-rn-line-height:22] text-primary"
+        >
           QA
         </Text>
       </Pressable>
       {count === undefined ? null : (
-        // Outside the button, which clips its children.
+        // Outside the button, which clips its children. The count stops
+        // scaling at 1.3x and the badge grows with it, so large text never
+        // clips the number.
         <View
-          className="absolute -right-1 -top-1 h-[22px] min-w-[22px] items-center justify-center rounded-full border-2 border-background bg-primary px-1"
+          className="absolute -right-1 -top-1 min-h-[22px] min-w-[22px] items-center justify-center rounded-full border-2 border-background bg-primary px-1"
           pointerEvents="none"
         >
-          <Text className="text-xs font-bold [-rn-line-height:22] [-rn-include-font-padding:false] [-rn-text-align-vertical:center] text-primary-foreground">
+          <Text
+            maxFontSizeMultiplier={1.3}
+            className="text-xs font-bold [-rn-line-height:16] [-rn-include-font-padding:false] [-rn-text-align-vertical:center] text-primary-foreground"
+          >
             {count}
           </Text>
         </View>
