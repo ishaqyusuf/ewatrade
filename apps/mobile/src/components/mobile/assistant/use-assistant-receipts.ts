@@ -1,7 +1,6 @@
 import { getBaseUrl } from "@/lib/base-url"
 import {
   ORDER_ATTACHMENT_MAX_BYTES,
-  ORDER_ATTACHMENT_TYPES,
   readOrderAttachmentFile,
 } from "@/lib/order-attachment-upload"
 import { getSession } from "@/lib/session-store"
@@ -13,6 +12,12 @@ import { File } from "expo-file-system"
 import * as ImagePicker from "expo-image-picker"
 import { fetch } from "expo/fetch"
 import { useCallback, useEffect, useRef, useState } from "react"
+import {
+  ASSISTANT_ATTACHMENT_COPY,
+  ASSISTANT_ATTACHMENT_LIMITS,
+  checkAssistantFile,
+  countPdfPages,
+} from "./assistant-attachment-limits"
 
 export type AssistantReceipt = {
   localId: string
@@ -27,34 +32,44 @@ export type AssistantReceipt = {
   error: string | null
 }
 
-const MAX_FILES = 4
+const MAX_FILES = ASSISTANT_ATTACHMENT_LIMITS.perMessage
 
 const refusal: Record<string, string> = {
   ATTACHMENT_LIMIT: "This chat has reached its file limit. Start a new chat.",
   PHOTOS_UNAVAILABLE: "Photos can't be read right now. Send a PDF or type it.",
-  TOO_LARGE: "Choose a file smaller than 10 MB.",
-  UNSUPPORTED_TYPE: "Send a photo (JPG, PNG, WebP, HEIC) or a PDF.",
+  TOO_LARGE: "Choose a smaller file.",
+  UNSUPPORTED_TYPE: ASSISTANT_ATTACHMENT_COPY.unsupported,
   UPLOADS_UNAVAILABLE: "Files can't be sent right now.",
 }
 
 /** Longest edge sent to the assistant; the photo reader downsizes past this. */
-const PHOTO_EDGE = 2048
+const PHOTO_EDGE = ASSISTANT_ATTACHMENT_LIMITS.photo.edge
 
 /**
  * Shrinks a camera photo before it is sent: full-size photos can pass the
  * API's ~4.5 MB request cap on Vercel, and the reader gains nothing from them.
  * Loaded on demand so older dev builds without the module still work.
  */
-async function shrinkPhoto(asset: ImagePicker.ImagePickerAsset) {
+async function shrinkPhoto(asset: {
+  uri: string
+  fileName?: string | null
+  width?: number
+  height?: number
+}) {
   try {
     const { ImageManipulator, SaveFormat } = await import(
       "expo-image-manipulator"
     )
-    const longest = Math.max(asset.width, asset.height)
+    // A photo picked as a file comes without its size; read it first.
+    const size =
+      asset.width && asset.height
+        ? { width: asset.width, height: asset.height }
+        : await ImageManipulator.manipulate(asset.uri).renderAsync()
+    const longest = Math.max(size.width, size.height)
     const context = ImageManipulator.manipulate(asset.uri)
     if (longest > PHOTO_EDGE)
       context.resize(
-        asset.width >= asset.height
+        size.width >= size.height
           ? { width: PHOTO_EDGE }
           : { height: PHOTO_EDGE },
       )
@@ -240,16 +255,29 @@ export function useAssistantReceipts(
         generation,
       },
     ])
+    const check = audio ? null : checkAssistantFile(file)
+    if (check && !check.ok) return failed(check.error)
     if (
-      !audio &&
-      !(ORDER_ATTACHMENT_TYPES as readonly string[]).includes(file.mimeType)
+      audio &&
+      (file.sizeBytes <= 0 || file.sizeBytes > ORDER_ATTACHMENT_MAX_BYTES)
     )
-      return failed(refusal.UNSUPPORTED_TYPE ?? "")
-    if (file.sizeBytes <= 0 || file.sizeBytes > ORDER_ATTACHMENT_MAX_BYTES)
       return failed(refusal.TOO_LARGE ?? "")
+    const tooLarge =
+      check?.ok && check.kind === "pdf"
+        ? ASSISTANT_ATTACHMENT_COPY.pdfTooLarge
+        : ASSISTANT_ATTACHMENT_COPY.photoTooLarge
     try {
       const read = await readOrderAttachmentFile(file.uri)
       if (!current()) return
+      // The server counts every page; this refuses an obviously long PDF
+      // before it uploads.
+      if (
+        check?.ok &&
+        check.kind === "pdf" &&
+        (countPdfPages(new Uint8Array(read.buffer)) ?? 0) >
+          ASSISTANT_ATTACHMENT_LIMITS.pdf.maxPages
+      )
+        return failed(tooLarge)
       const intent = await createIntent.mutateAsync({
         clientRequestId: localId,
         contentDigest: read.contentDigest,
@@ -260,7 +288,11 @@ export function useAssistantReceipts(
       })
       if (!current()) return
       if (!intent.ok)
-        return failed(refusal[intent.reason] ?? "This file can't be sent.")
+        return failed(
+          intent.reason === "TOO_LARGE" && !audio
+            ? tooLarge
+            : (refusal[intent.reason] ?? "This file can't be sent."),
+        )
       update(localId, { attachmentId: intent.attachment.id })
       await uploadBytes(intent.uploadPath, read.buffer, file.mimeType)
       update(localId, { phase: "reading" })
@@ -269,21 +301,43 @@ export function useAssistantReceipts(
     }
   }
 
-  async function pick(source: "camera" | "library" | "pdf") {
+  /** A photo is checked as picked, then sent resized; a refused one shows why. */
+  async function addPhoto(asset: {
+    uri: string
+    mimeType: string
+    fileName?: string | null
+    sizeBytes: number
+    width?: number
+    height?: number
+  }) {
+    const original = {
+      fileName:
+        asset.fileName ?? `receipt.${asset.mimeType.split("/")[1] ?? "jpg"}`,
+      mimeType: asset.mimeType,
+      sizeBytes: asset.sizeBytes,
+      uri: asset.uri,
+    }
+    if (!checkAssistantFile(original).ok) return add(original)
+    await add((await shrinkPhoto(asset)) ?? original)
+  }
+
+  async function pick(source: "camera" | "library" | "file") {
     if (items.length >= MAX_FILES) return
-    if (source === "pdf") {
+    if (source === "file") {
       const result = await DocumentPicker.getDocumentAsync({
         copyToCacheDirectory: true,
-        type: ["application/pdf"],
+        type: ["application/pdf", "image/*"],
       })
       const asset = result.canceled ? undefined : result.assets[0]
-      if (asset)
-        await add({
-          fileName: asset.name,
-          mimeType: asset.mimeType ?? "application/pdf",
-          sizeBytes: asset.size ?? new File(asset.uri).size,
-          uri: asset.uri,
-        })
+      if (!asset) return
+      const file = {
+        fileName: asset.name,
+        mimeType: asset.mimeType ?? "",
+        sizeBytes: asset.size ?? new File(asset.uri).size,
+        uri: asset.uri,
+      }
+      if (file.mimeType.startsWith("image/")) await addPhoto(file)
+      else await add(file)
       return
     }
     if (source === "camera") {
@@ -301,14 +355,14 @@ export function useAssistantReceipts(
         : await ImagePicker.launchImageLibraryAsync(options)
     const asset = result.canceled ? undefined : result.assets[0]
     if (!asset?.mimeType) return
-    await add(
-      (await shrinkPhoto(asset)) ?? {
-        fileName: asset.fileName ?? `receipt.${asset.mimeType.split("/")[1]}`,
-        mimeType: asset.mimeType,
-        sizeBytes: asset.fileSize ?? new File(asset.uri).size,
-        uri: asset.uri,
-      },
-    )
+    await addPhoto({
+      fileName: asset.fileName,
+      height: asset.height,
+      mimeType: asset.mimeType,
+      sizeBytes: asset.fileSize ?? new File(asset.uri).size,
+      uri: asset.uri,
+      width: asset.width,
+    })
   }
 
   function discard(localId: string) {

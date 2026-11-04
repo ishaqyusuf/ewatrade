@@ -10,7 +10,8 @@ import { formatStoreConversationVoiceElapsed } from "@ewatrade/utils"
 import { useQuery } from "@tanstack/react-query"
 import { Image } from "expo-image"
 import { type ComponentProps, useEffect, useRef, useState } from "react"
-import { ActivityIndicator } from "react-native"
+import { ActivityIndicator, BackHandler, StyleSheet } from "react-native"
+import { ASSISTANT_ATTACHMENT_COPY } from "./assistant-attachment-limits"
 import { AssistantComposer } from "./assistant-ui"
 import {
   type AssistantReceipt,
@@ -41,6 +42,7 @@ export function AssistantChatBox({
 }) {
   const trpc = useTRPC()
   const [menuOpen, setMenuOpen] = useState(false)
+  const [boxHeight, setBoxHeight] = useState(0)
   const capabilities = useQuery(
     trpc.setupAssistant.attachments.voiceCapabilities.queryOptions(undefined, {
       enabled: Boolean(conversationId),
@@ -130,98 +132,108 @@ export function AssistantChatBox({
   const canPhoto = media?.photos === true
   const canTalk = Boolean(conversationId) && capabilities.data?.enabled === true
   const state = recorder.state
-  const pick = (source: "camera" | "library" | "pdf") => {
+  const pick = (source: "camera" | "library" | "file") => {
     setMenuOpen(false)
     void receipts.pick(source)
   }
+  useEffect(() => {
+    if (!menuOpen) return
+    const back = BackHandler.addEventListener("hardwareBackPress", () => {
+      setMenuOpen(false)
+      return true
+    })
+    return () => back.remove()
+  }, [menuOpen])
   return (
-    <AssistantComposer
-      {...composer}
-      canSendEmpty={receipts.ready.length > 0}
-      onAttach={canAttach ? () => setMenuOpen((open) => !open) : undefined}
-      attachOpen={menuOpen}
-      voice={
-        canTalk
-          ? {
-              recording: state.kind === "recording",
-              working: receipts.transcribing || state.kind === "requesting",
-              elapsedLabel:
-                state.kind === "recording"
-                  ? formatStoreConversationVoiceElapsed(state.elapsedMs)
-                  : "0:00",
-              status: receipts.transcribing
-                ? "Writing out your voice note…"
-                : state.kind === "requesting"
-                  ? "Allow microphone access to begin."
-                  : null,
-              error:
-                state.kind === "unavailable"
-                  ? state.message
-                  : (receipts.voiceError ?? null),
-              start: () => {
-                setMenuOpen(false)
-                void recorder.start()
-              },
-              stop: () => {
-                sendWhenWritten.current = false
-                recorder.stop()
-              },
-              stopAndSend: () => {
-                sendWhenWritten.current = true
-                recorder.stop()
-              },
-              cancel: () => {
-                sendWhenWritten.current = false
-                recorder.cancel()
-              },
-              dismiss: recorder.dismiss,
-            }
-          : undefined
-      }
-    >
-      {menuOpen && receipts.canAdd ? (
-        <View className="flex-row flex-wrap gap-2 px-1 pt-1">
-          {canPhoto ? (
-            <>
-              <MenuChip
-                icon="Camera"
-                label="Camera"
-                onPress={() => pick("camera")}
-              />
-              <MenuChip
-                icon="Image"
-                label="Photos"
-                onPress={() => pick("library")}
-              />
-            </>
+    <>
+      <View onLayout={(event) => setBoxHeight(event.nativeEvent.layout.height)}>
+        <AssistantComposer
+          {...composer}
+          canSendEmpty={receipts.ready.length > 0}
+          onAttach={canAttach ? () => setMenuOpen((open) => !open) : undefined}
+          attachOpen={menuOpen}
+          voice={
+            canTalk
+              ? {
+                  recording: state.kind === "recording",
+                  levels: state.kind === "recording" ? state.levels : undefined,
+                  working: receipts.transcribing || state.kind === "requesting",
+                  elapsedLabel:
+                    state.kind === "recording"
+                      ? formatStoreConversationVoiceElapsed(state.elapsedMs)
+                      : "0:00",
+                  status: receipts.transcribing
+                    ? "Writing out your voice note…"
+                    : state.kind === "requesting"
+                      ? "Allow microphone access to begin."
+                      : null,
+                  error:
+                    state.kind === "unavailable"
+                      ? state.message
+                      : (receipts.voiceError ?? null),
+                  start: () => {
+                    setMenuOpen(false)
+                    void recorder.start()
+                  },
+                  stop: () => {
+                    sendWhenWritten.current = false
+                    recorder.stop()
+                  },
+                  stopAndSend: () => {
+                    sendWhenWritten.current = true
+                    recorder.stop()
+                  },
+                  cancel: () => {
+                    sendWhenWritten.current = false
+                    recorder.cancel()
+                  },
+                  dismiss: recorder.dismiss,
+                }
+              : undefined
+          }
+        >
+          {receipts.items.length ? (
+            <View className="gap-1.5 px-0.5 pt-0.5">
+              <View className="flex-row flex-wrap gap-2">
+                {receipts.items.map((item) => (
+                  <ReceiptThumb
+                    key={item.localId}
+                    item={item}
+                    onRemove={() => receipts.discard(item.localId)}
+                  />
+                ))}
+              </View>
+              {receipts.items.map((item) =>
+                item.phase === "failed" ? (
+                  <Text
+                    key={item.localId}
+                    className="text-base [-rn-line-height:22] text-destructive"
+                  >
+                    {item.fileName}: {item.error ?? "failed"}
+                  </Text>
+                ) : null,
+              )}
+            </View>
           ) : null}
-          <MenuChip icon="FileText" label="PDF" onPress={() => pick("pdf")} />
-        </View>
+        </AssistantComposer>
+      </View>
+      {menuOpen ? (
+        <>
+          <Pressable
+            accessibilityLabel="Close attach menu"
+            noRipple
+            onPress={() => setMenuOpen(false)}
+            style={StyleSheet.absoluteFill}
+          />
+          <AttachMenu
+            bottom={boxHeight + 4}
+            full={!receipts.canAdd}
+            photos={canPhoto}
+            onPick={pick}
+          />
+        </>
       ) : null}
-      {receipts.items.length ? (
-        <View className="gap-1.5 px-0.5 pt-0.5">
-          <View className="flex-row flex-wrap gap-2">
-            {receipts.items.map((item) => (
-              <ReceiptThumb
-                key={item.localId}
-                item={item}
-                onRemove={() => receipts.discard(item.localId)}
-              />
-            ))}
-          </View>
-          {receipts.items.map((item) =>
-            item.phase === "failed" ? (
-              <Text
-                key={item.localId}
-                className="text-base [-rn-line-height:22] text-destructive"
-              >
-                {item.fileName}: {item.error ?? "failed"}
-              </Text>
-            ) : null,
-          )}
-        </View>
-      ) : null}
-    </AssistantComposer>
+    </>
   )
 }
 
@@ -296,37 +308,85 @@ function ReceiptThumb({
   )
 }
 
-function MenuChip({
-  icon,
-  label,
-  onPress,
+/**
+ * The + menu (owner's reference): a card floating above the box, keyboard
+ * left open behind it. Camera · Upload photo · Upload file.
+ */
+function AttachMenu({
+  bottom,
+  full,
+  photos,
+  onPick,
 }: {
-  icon: IconKeys
-  label: string
-  onPress: () => void
+  bottom: number
+  full: boolean
+  photos: boolean
+  onPick: (source: "camera" | "library" | "file") => void
 }) {
   const colors = useColors()
+  const options: Array<{
+    icon: IconKeys
+    label: string
+    source: "camera" | "library" | "file"
+  }> = [
+    ...(photos
+      ? [
+          {
+            icon: "Camera" as const,
+            label: "Camera",
+            source: "camera" as const,
+          },
+          {
+            icon: "Image" as const,
+            label: "Upload photo",
+            source: "library" as const,
+          },
+        ]
+      : []),
+    { icon: "FileText", label: "Upload file", source: "file" },
+  ]
   return (
-    <Pressable
-      accessibilityLabel={label}
-      accessibilityRole="button"
-      haptic
-      onPress={onPress}
+    <View
+      accessibilityViewIsModal
+      className="overflow-hidden rounded-[20px] border border-border bg-card py-1.5"
       style={{
-        alignItems: "center",
-        backgroundColor: colors.muted,
-        borderRadius: 999,
-        flexDirection: "row",
-        gap: 6,
-        minHeight: 34,
-        paddingVertical: 6,
-        paddingHorizontal: 12,
+        bottom,
+        elevation: 8,
+        left: 12,
+        minWidth: 224,
+        position: "absolute",
+        shadowColor: "#000",
+        shadowOffset: { height: 6, width: 0 },
+        shadowOpacity: 0.16,
+        shadowRadius: 18,
       }}
     >
-      <Icon className="size-[15px]" color={colors.foreground} name={icon} />
-      <Text className="text-base [-rn-line-height:22] font-bold text-foreground">
-        {label}
-      </Text>
-    </Pressable>
+      {options.map((option) => (
+        <Pressable
+          key={option.source}
+          accessibilityRole="button"
+          accessibilityState={{ disabled: full }}
+          className="min-h-[52px] flex-row items-center gap-3.5 px-4"
+          disabled={full}
+          haptic
+          onPress={() => onPick(option.source)}
+          style={{ opacity: full ? 0.45 : 1 }}
+        >
+          <Icon
+            className="size-[22px]"
+            color={colors.foreground}
+            name={option.icon}
+          />
+          <Text className="text-base font-semibold [-rn-line-height:22] text-foreground">
+            {option.label}
+          </Text>
+        </Pressable>
+      ))}
+      {full ? (
+        <Text className="px-4 pb-2 pt-1 text-sm [-rn-line-height:20] text-muted-foreground">
+          {ASSISTANT_ATTACHMENT_COPY.full}
+        </Text>
+      ) : null}
+    </View>
   )
 }

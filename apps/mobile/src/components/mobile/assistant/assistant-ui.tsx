@@ -153,6 +153,8 @@ export type AssistantComposerVoice = {
   /** Uploading or writing out the recording. */
   working: boolean
   elapsedLabel: string
+  /** Microphone levels (0–1, newest last) for the waveform. */
+  levels?: number[]
   status: string | null
   error: string | null
   start: () => void
@@ -165,9 +167,10 @@ export type AssistantComposerVoice = {
 }
 
 /**
- * One rounded box: + (attach) · text · mic · send. It stacks — text on top,
- * buttons underneath — once the message wraps, and stays stacked until the
- * box is cleared. The text field keeps its place so focus survives.
+ * One rounded pill: + (attach) · text · mic · send. Focused or holding text
+ * or files it opens into a card — files, then text, then the buttons — and
+ * while recording it holds × · waveform · stop · send. The text field keeps
+ * its place so focus survives.
  */
 export function AssistantComposer({
   value,
@@ -212,7 +215,8 @@ export function AssistantComposer({
   // Idle, the box is one pill row. Focused, or holding text, files or the
   // attach menu, it opens into a card: the text on top, its buttons below.
   const stacked =
-    focused || !!value || attachOpen || Children.toArray(children).length > 0
+    !voice?.recording &&
+    (focused || !!value || Children.toArray(children).length > 0)
   const working = voice?.working === true
   const sendDisabled =
     !busy || !onStop
@@ -299,23 +303,41 @@ export function AssistantComposer({
       >
         {children}
         {voice?.recording ? (
-          <View className="min-h-[38px] flex-row items-center gap-2 px-1">
+          <View className="min-h-[40px] flex-row items-center gap-2">
             <ComposerIcon
               icon="X"
               label="Cancel recording"
               disabled={false}
               onPress={voice.cancel}
             />
-            <View className="size-2 rounded-full bg-destructive" />
-            <Text className="flex-1 text-sm tabular-nums text-foreground">
-              Recording {voice.elapsedLabel}
-            </Text>
-            <ComposerIcon
-              icon="Square"
-              label="Stop and put the words in the box"
-              disabled={false}
-              onPress={voice.stop}
+            <VoiceWave
+              levels={voice.levels ?? []}
+              label={`Recording ${voice.elapsedLabel}`}
             />
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`Stop at ${voice.elapsedLabel} and put the words in the box`}
+              haptic
+              hitSlop={2}
+              onPress={voice.stop}
+              style={{
+                alignItems: "center",
+                backgroundColor: colors.muted,
+                borderRadius: 999,
+                height: 40,
+                justifyContent: "center",
+                width: 40,
+              }}
+            >
+              <View
+                style={{
+                  backgroundColor: colors.foreground,
+                  borderRadius: 3,
+                  height: 13,
+                  width: 13,
+                }}
+              />
+            </Pressable>
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Stop and send"
@@ -420,6 +442,54 @@ export function AssistantComposer({
       <View
         style={{ height: keyboardVisible ? 8 : Math.max(insets.bottom, 8) }}
       />
+    </View>
+  )
+}
+
+/**
+ * The recording's live level: rounded bars filling from the left after a
+ * small start mark, driven by the microphone meter.
+ */
+function VoiceWave({ levels, label }: { levels: number[]; label: string }) {
+  const colors = useColors()
+  const start = levels.findIndex((level) => level > 0)
+  const bars = start < 0 ? [] : levels.slice(start)
+  return (
+    <View
+      accessible
+      accessibilityLabel={label}
+      className="h-8 min-w-0 flex-1 flex-row items-center gap-[3px] overflow-hidden px-1"
+    >
+      <View
+        style={{
+          backgroundColor: colors.mutedForeground,
+          borderRadius: 1,
+          height: 2,
+          marginRight: 2,
+          width: 6,
+        }}
+      />
+      <View
+        style={{
+          backgroundColor: colors.mutedForeground,
+          borderRadius: 2,
+          height: 4,
+          marginRight: 2,
+          width: 4,
+        }}
+      />
+      {bars.map((level, index) => (
+        <View
+          // biome-ignore lint/suspicious/noArrayIndexKey: bars keep their order
+          key={index}
+          style={{
+            backgroundColor: colors.foreground,
+            borderRadius: 2,
+            height: 4 + Math.round(level * 24),
+            width: 3,
+          }}
+        />
+      ))}
     </View>
   )
 }
