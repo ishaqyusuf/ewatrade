@@ -51,9 +51,9 @@ export type BottomSearchFooterProps = {
   searchVisible?: boolean
   totalCount: number
   value: string
-  /** action-bar: Green Till card bar with a rounded top for step actions.
-   * Applies only when the footer shows no search; a visible search always
-   * floats as a pill with no bar behind it. */
+  /** action-bar: step actions floating on the page background, with a little
+   * more room above them. Applies only when the footer shows no search; a
+   * visible search always floats as a pill with no bar behind it. */
   variant?: "default" | "action-bar"
 }
 
@@ -208,14 +208,9 @@ export function BottomSearchFooter({
           pointerEvents={shouldHide ? "none" : "auto"}
           onLayout={onLayout}
           style={[
-            variant === "action-bar"
-              ? {
-                  backgroundColor: colors.card,
-                  borderTopLeftRadius: 24,
-                  borderTopRightRadius: 24,
-                  boxShadow: "0 -10px 30px rgba(24, 36, 32, 0.10)",
-                }
-              : { backgroundColor: colors.background },
+            // Owner rule (4 Nov 2026): a bottom action is a plain floating
+            // button on the page, never wrapped in a sheet-like card bar.
+            { backgroundColor: colors.background },
             slideStyle,
           ]}
         >
