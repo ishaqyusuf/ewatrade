@@ -1,4 +1,5 @@
-import { Modal, useModal } from "@/components/ui/modal"
+import { FullScreenModal } from "@/components/mobile/full-screen-form"
+import { useModal } from "@/components/ui/modal"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
@@ -9,10 +10,10 @@ import {
   resolveCustomerConversationRetryTarget,
 } from "@/lib/customer-conversation-state"
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
-import { BottomSheetScrollView } from "@gorhom/bottom-sheet"
 import { router } from "expo-router"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { FlatList, RefreshControl } from "react-native"
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller"
 import { CustomerConversationAccountTerms } from "./customer-conversation-account-terms"
 import { CustomerConversationAge } from "./customer-conversation-age"
 import { projectCustomerConversationAvailability } from "./customer-conversation-availability-presentation"
@@ -406,15 +407,18 @@ function CustomerConversationDetailLiveScreen({
               onAllowedChange={setGuestTermsAllowed}
             />
           )}
-          <Modal ref={toolsSheet.ref} title="Store tools" snapPoints={["85%"]}>
-            <BottomSheetScrollView
+          {/* Notification sign-up inside takes typing, so Store tools opens
+              full screen; its report/block and privacy choices stay sheets. */}
+          <FullScreenModal ref={toolsSheet.ref} title="Store tools">
+            <KeyboardAwareScrollView
+              bottomOffset={24}
+              keyboardShouldPersistTaps="handled"
               contentContainerStyle={{
                 gap: 16,
                 paddingHorizontal: 18,
                 paddingBottom: 32,
               }}
             >
-              {" "}
               {!customerBlocked ? (
                 <CustomerConversationChannelMode
                   channelMode={timeline.channelMode}
@@ -447,8 +451,8 @@ function CustomerConversationDetailLiveScreen({
                   publicToken={publicToken ?? ""}
                 />
               ) : null}
-            </BottomSheetScrollView>
-          </Modal>
+            </KeyboardAwareScrollView>
+          </FullScreenModal>
           <CustomerConversationComposer
             requestControl={
               !accountAccess && unassignedMessage ? (
