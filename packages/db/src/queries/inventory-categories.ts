@@ -176,6 +176,13 @@ export async function resolvePurchaseStockCategoryGroups(
   })
 }
 
+/** Separators that start a new word inside a category name. */
+const CATEGORY_WORD_STARTS = [" ", "-", "/", "("]
+
+/**
+ * Category names where any word starts with the query ("egg" finds
+ * "Egg collection" and "Broken eggs"). Names that start with it come first.
+ */
 export async function listStockOperationCategoryNames(
   db: PrismaClient,
   input: { tenantId: string; query?: string; ids?: number[]; limit?: number },
@@ -185,14 +192,33 @@ export async function listStockOperationCategoryNames(
     .trim()
     .replace(/\s+/gu, " ")
     .toLowerCase()
-  return db.stockOperationCategoryName.findMany({
+  const take = Math.min(Math.max(input.limit ?? 20, 1), 50)
+  const read = (normalizedName?: Prisma.StringFilter) =>
+    db.stockOperationCategoryName.findMany({
+      where: {
+        tenantId: input.tenantId,
+        normalizedName,
+        id: input.ids ? { in: input.ids } : undefined,
+      },
+      orderBy: [{ normalizedName: "asc" }, { id: "asc" }],
+      take,
+      select: { id: true, name: true },
+    })
+  if (!prefix) return read()
+  const starts = await read({ startsWith: prefix })
+  if (starts.length >= take) return starts
+  const inside = await db.stockOperationCategoryName.findMany({
     where: {
       tenantId: input.tenantId,
-      normalizedName: prefix ? { startsWith: prefix } : undefined,
       id: input.ids ? { in: input.ids } : undefined,
+      NOT: { normalizedName: { startsWith: prefix } },
+      OR: CATEGORY_WORD_STARTS.map((separator) => ({
+        normalizedName: { contains: `${separator}${prefix}` },
+      })),
     },
     orderBy: [{ normalizedName: "asc" }, { id: "asc" }],
-    take: Math.min(Math.max(input.limit ?? 20, 1), 50),
+    take: take - starts.length,
     select: { id: true, name: true },
   })
+  return [...starts, ...inside]
 }

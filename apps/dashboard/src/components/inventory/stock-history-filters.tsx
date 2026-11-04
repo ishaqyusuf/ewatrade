@@ -121,7 +121,7 @@ function CategoryChoices({
   ) : !names.length ? (
     <p className="px-2 py-2 text-sm text-muted-foreground">
       {query.trim()
-        ? `No categories start with “${query.trim()}”`
+        ? `No categories match “${query.trim()}”`
         : "No saved categories yet."}
     </p>
   ) : null
