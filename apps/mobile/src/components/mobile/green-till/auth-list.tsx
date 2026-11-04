@@ -243,6 +243,35 @@ export function InviteCard({
   const largeText = useLargeTextLayout()
   const lines = largeText ? undefined : 1
   const initial = Array.from(businessName.trim())[0]?.toUpperCase() ?? "?"
+  // At large text the role goes under the email so neither is squeezed.
+  const roleChip = (
+    <View
+      style={{
+        alignSelf: "flex-start",
+        backgroundColor: palette.lilacChip,
+        borderRadius: 999,
+        marginTop: largeText ? 6 : 0,
+        // Grows with the role text so it is never clipped at large text.
+        minHeight: 22,
+        justifyContent: "center",
+        paddingHorizontal: 9,
+        paddingVertical: 1,
+      }}
+    >
+      <NativeText
+        style={{
+          color: palette.lilacForeground,
+          fontSize: 16,
+          fontWeight: "700",
+          includeFontPadding: false,
+          lineHeight: 22,
+          textAlignVertical: "center",
+        }}
+      >
+        {role}
+      </NativeText>
+    </View>
+  )
   return (
     <View
       accessible
@@ -301,29 +330,9 @@ export function InviteCard({
         >
           {email}
         </NativeText>
+        {largeText ? roleChip : null}
       </View>
-      <View
-        style={{
-          backgroundColor: palette.lilacChip,
-          borderRadius: 999,
-          height: 22,
-          justifyContent: "center",
-          paddingHorizontal: 9,
-        }}
-      >
-        <NativeText
-          style={{
-            color: palette.lilacForeground,
-            fontSize: 16,
-            fontWeight: "700",
-            includeFontPadding: false,
-            lineHeight: 22,
-            textAlignVertical: "center",
-          }}
-        >
-          {role}
-        </NativeText>
-      </View>
+      {largeText ? null : roleChip}
     </View>
   )
 }
