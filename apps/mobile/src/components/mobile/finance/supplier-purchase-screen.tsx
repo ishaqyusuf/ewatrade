@@ -1,4 +1,5 @@
 import { ActionButton } from "@/components/mobile/action-button"
+import { DetailSkeleton } from "@/components/mobile/loading-skeletons"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
@@ -532,8 +533,10 @@ function SupplierPurchaseDetail({
           tone="warning"
         />
       ) : null}
-      {query.isPending && !offline ? (
-        <Text>Loading purchase detail…</Text>
+      {/* The detail stays hidden through every fresh read (including the
+          refetch after a payment), so show loading until it can be shown. */}
+      {!data && !mode && !offline && !query.isError ? (
+        <DetailSkeleton label="Loading purchase detail" rows={4} />
       ) : null}
       {query.isError ? (
         <StatusBanner

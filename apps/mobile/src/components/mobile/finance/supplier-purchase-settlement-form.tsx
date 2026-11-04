@@ -805,6 +805,14 @@ export function SupplierPurchaseSettlementForm({
   }[mode]
   const inputLabel =
     mode === "reverse-payment" || mode === "release" ? "Reason" : "Description"
+  const formOpen = !currentReview && (mode !== "allocate" || !!currentAdvances)
+  const errorBanner = error ? (
+    <StatusBanner
+      title="Settlement needs attention"
+      message={error}
+      tone="destructive"
+    />
+  ) : null
 
   return (
     <View className="gap-4 rounded-2xl border border-border bg-card p-4">
@@ -818,13 +826,9 @@ export function SupplierPurchaseSettlementForm({
         onRecorded={onRecorded}
         onRejected={() => setReview(null)}
       />
-      {error ? (
-        <StatusBanner
-          title="Settlement needs attention"
-          message={error}
-          tone="destructive"
-        />
-      ) : null}
+      {/* With the form open, the error shows by its Review button instead,
+          where it can't be scrolled out of view. */}
+      {error && !formOpen ? errorBanner : null}
 
       {mode === "allocate" && !currentReview ? (
         <>
@@ -1139,6 +1143,7 @@ export function SupplierPurchaseSettlementForm({
             Dates must be on or after the original supplier source and its
             latest related settlement, and cannot be in the future.
           </Text>
+          {errorBanner}
           <ActionButton
             disabled={
               disabled ||
