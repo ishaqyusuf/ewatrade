@@ -6,14 +6,13 @@ import { QaQuickFillButton } from "@/components/mobile/qa-quick-fill-button"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import type { WorkflowModalChromeProps } from "@/components/mobile/workflow-modal-screen"
 import { Icon } from "@/components/ui/icon"
-import { Modal, useModal } from "@/components/ui/modal"
+import { useModal } from "@/components/ui/modal"
 import { Pressable } from "@/components/ui/pressable"
 import { Skeleton, SkeletonGroup } from "@/components/ui/skeleton"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
 import { useColorScheme } from "@/hooks/use-color"
 import { GREEN_TILL_THEME } from "@/lib/green-till-theme"
-import { BottomSheetScrollView } from "@gorhom/bottom-sheet"
 import { VariableContextProvider } from "nativewind"
 import { useEffect, useRef, useState } from "react"
 import {
@@ -26,7 +25,7 @@ import { HeroCard } from "../green-till/hero-card"
 import { RowDivider, SectionHeader, StatusPill } from "../green-till/kit"
 import { ExactQuantityStepper } from "../stock-intake/exact-quantity-stepper"
 import { suggestedTargetQuantity } from "../stock-intake/stock-preview"
-import { ConversionBalanceChoices } from "./conversion-balance-choices"
+import { ConversionBalanceChooser } from "./conversion-balance-choices"
 import {
   type ConversionBalance,
   type ConversionProps,
@@ -444,43 +443,35 @@ function ClassicConversionBody({ model }: { model: ConversionModel }) {
           {balanceRow(target, "to", () => targetPicker.present())}
         </View>
       </View>
-      <Modal
-        ref={sourcePicker.ref}
+      <ConversionBalanceChooser
+        chooser={sourcePicker}
         title="Packaged stock to open"
-        snapPoints={["75%"]}
-      >
-        <BottomSheetScrollView contentContainerStyle={{ gap: 12, padding: 18 }}>
-          <ConversionBalanceChoices
-            rows={model.rows}
-            selectedId={draft.sourceId}
-            disabled={model.locked}
-            label="Source balances"
-            onSelect={(id) => {
-              model.selectSource(id)
-              sourcePicker.dismiss()
-            }}
-            onPageChange={() => {}}
-            emptyMessage="No packaged balances in this Store."
-          />
-        </BottomSheetScrollView>
-      </Modal>
-      <Modal ref={targetPicker.ref} title="Convert into" snapPoints={["75%"]}>
-        <BottomSheetScrollView contentContainerStyle={{ gap: 12, padding: 18 }}>
-          <ConversionBalanceChoices
-            key={source?.balanceSourceId ?? "no-source"}
-            rows={model.targetRows}
-            selectedId={draft.targetId}
-            disabled={model.locked}
-            label="Target balances"
-            onSelect={(id) => {
-              model.selectTarget(id)
-              targetPicker.dismiss()
-            }}
-            onPageChange={() => {}}
-            emptyMessage="No compatible unit for this item. Configure another packaged unit first."
-          />
-        </BottomSheetScrollView>
-      </Modal>
+        rows={model.rows}
+        selectedId={draft.sourceId}
+        disabled={model.locked}
+        label="Source balances"
+        onSelect={(id) => {
+          model.selectSource(id)
+          sourcePicker.dismiss()
+        }}
+        onPageChange={() => {}}
+        emptyMessage="No packaged balances in this Store."
+      />
+      <ConversionBalanceChooser
+        key={source?.balanceSourceId ?? "no-source"}
+        chooser={targetPicker}
+        title="Convert into"
+        rows={model.targetRows}
+        selectedId={draft.targetId}
+        disabled={model.locked}
+        label="Target balances"
+        onSelect={(id) => {
+          model.selectTarget(id)
+          targetPicker.dismiss()
+        }}
+        onPageChange={() => {}}
+        emptyMessage="No compatible unit for this item. Configure another packaged unit first."
+      />
     </View>
   )
 }

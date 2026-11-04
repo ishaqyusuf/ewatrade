@@ -1,21 +1,25 @@
 import { ActionButton } from "@/components/mobile/action-button"
 import { ConversionRow } from "@/components/mobile/appearances/classic/unit-conversion"
+import { FullScreenModal } from "@/components/mobile/full-screen-form"
 import {
   SearchFooterField,
   SearchFooterScope,
   SearchFooterSpacer,
 } from "@/components/mobile/search-footer-scope"
-import { Modal, useModal } from "@/components/ui/modal"
+import type { useModal } from "@/components/ui/modal"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
-import { BottomSheetScrollView } from "@gorhom/bottom-sheet"
 import { useState } from "react"
+import { ScrollView } from "react-native"
 import {
   type ConversionBalance,
   conversionCustody,
 } from "./unit-conversion-model"
 
-export function ConversionBalanceChoices({
+/** The From / To balance list: full screen, since it has a search. */
+export function ConversionBalanceChooser({
+  chooser,
+  title,
   rows,
   selectedId,
   disabled,
@@ -24,6 +28,8 @@ export function ConversionBalanceChoices({
   onSelect,
   onPageChange,
 }: {
+  chooser: Pick<ReturnType<typeof useModal>, "ref" | "dismiss">
+  title: string
   rows: ConversionBalance[]
   selectedId: string
   disabled: boolean
@@ -32,7 +38,6 @@ export function ConversionBalanceChoices({
   onSelect: (id: string) => void
   onPageChange: () => void
 }) {
-  const chooser = useModal()
   const [query, setQuery] = useState("")
   const [page, setPage] = useState(0)
   const filtered = rows.filter((row) =>
@@ -42,7 +47,6 @@ export function ConversionBalanceChoices({
   )
   const pageCount = Math.max(1, Math.ceil(filtered.length / 12))
   const currentPage = Math.min(page, pageCount - 1)
-  const selected = rows.find((row) => row.balanceSourceId === selectedId)
   const content = (
     <View className="gap-3">
       <View accessibilityRole="radiogroup" accessibilityLabel={label}>
@@ -105,41 +109,28 @@ export function ConversionBalanceChoices({
           </ActionButton>
         </View>
       ) : null}
-      {selected ? (
-        <Text className="text-xs text-muted-foreground">
-          Selected: {selected.productName} · {selected.variantName} ·{" "}
-          {selected.inventoryUnitName} · {conversionCustody(selected)}
-        </Text>
-      ) : null}
     </View>
   )
   return (
-    <>
-      <ActionButton
-        variant="outline"
-        disabled={disabled}
-        onPress={() => chooser.present()}
-      >
-        {selected
-          ? `${selected.productName} · ${selected.inventoryUnitName} · ${selected.onHandQuantity} available`
-          : `Choose ${label.toLowerCase()}`}
-      </ActionButton>
-      <Modal
-        ref={chooser.ref}
-        title={label}
-        snapPoints={["80%"]}
-        enableDynamicSizing={false}
-      >
-        <SearchFooterScope sheet>
-          <BottomSheetScrollView
-            keyboardShouldPersistTaps="handled"
-            contentContainerStyle={{ padding: 18, paddingBottom: 32 }}
-          >
-            {content}
-            <SearchFooterSpacer />
-          </BottomSheetScrollView>
-        </SearchFooterScope>
-      </Modal>
-    </>
+    <FullScreenModal
+      ref={chooser.ref}
+      title={title}
+      bottomInset={false}
+      onDismiss={() => {
+        setQuery("")
+        setPage(0)
+      }}
+    >
+      <SearchFooterScope>
+        <ScrollView
+          keyboardDismissMode="on-drag"
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={{ padding: 18, paddingBottom: 32 }}
+        >
+          {content}
+          <SearchFooterSpacer />
+        </ScrollView>
+      </SearchFooterScope>
+    </FullScreenModal>
   )
 }
