@@ -64,7 +64,21 @@ export function deliveryDateLabel(value: Date) {
   }).format(value)
 }
 
+/** Offerings that can be added to a sale now. */
 export function flattenSaleOfferings(
+  items: CatalogItem[],
+  storeId: string | undefined,
+  kind?: "service",
+): SaleOfferingChoice[] {
+  return getSelectableSaleItemChoices(saleOfferingChoices(items, storeId, kind))
+}
+
+/**
+ * Every fixed-price offering in this store, including ones that can't be sold
+ * now (no stock counted, out of stock) with their `disabledReason`, so New
+ * sale can show why an item in the Catalog can't be added.
+ */
+export function saleOfferingChoices(
   items: CatalogItem[],
   storeId: string | undefined,
   kind?: "service",
@@ -154,7 +168,7 @@ export function flattenSaleOfferings(
       ),
     )
 
-  return getSelectableSaleItemChoices(choices)
+  return choices
 }
 
 export type OfferingRow = SaleOfferingChoice

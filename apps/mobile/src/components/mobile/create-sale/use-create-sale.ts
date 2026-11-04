@@ -71,7 +71,7 @@ import {
   type PaymentMethod,
   type SaleStep,
   type SelectedCustomer,
-  flattenSaleOfferings,
+  saleOfferingChoices,
 } from "./create-sale-model"
 import { buildSaleCustomerSuggestions } from "./sale-customer-suggestions"
 import { saleUnitCount } from "./sale-unit-count"
@@ -280,7 +280,7 @@ export function useCreateSale({
     const initialItem = deferredProductSearch.trim()
       ? undefined
       : initialCatalogItem.data
-    return flattenSaleOfferings(
+    return saleOfferingChoices(
       initialItem
         ? [initialItem, ...items.filter((item) => item.id !== initialItem.id)]
         : items,
