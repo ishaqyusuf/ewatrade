@@ -1,4 +1,3 @@
-import { AppBottomSheetBackdrop } from "@/components/app/bottom-sheet-backdrop"
 import { ActionButton } from "@/components/mobile/action-button"
 import {
   type SaleCustomerDraft,
@@ -6,12 +5,12 @@ import {
   isCreateCustomerSaveDisabled,
 } from "@/components/mobile/create-sale-customer-sheet-model"
 import { FormField } from "@/components/mobile/form-field"
+import { FullScreenModal } from "@/components/mobile/full-screen-form"
 import { PhoneField, phoneCountryOf } from "@/components/mobile/phone-field"
 import { QaQuickFillButton } from "@/components/mobile/qa-quick-fill-button"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { BottomSheetKeyboardAwareScrollView } from "@/components/ui/bottom-sheet-keyboard-aware-scroll-view"
 import { Icon } from "@/components/ui/icon"
-import { Modal } from "@/components/ui/modal"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { createCustomerFixture } from "@/internal-tooling/fixture-recipes"
@@ -20,24 +19,9 @@ import {
   toInternationalPhone,
   toLocalPhone,
 } from "@ewatrade/utils/countries"
-import type {
-  BottomSheetBackdropProps,
-  BottomSheetFooterProps,
-  BottomSheetModal,
-} from "@gorhom/bottom-sheet"
-import { BottomSheetFooter, useBottomSheetModal } from "@gorhom/bottom-sheet"
-import { VariableContextProvider } from "nativewind"
-import {
-  type ReactNode,
-  forwardRef,
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-} from "react"
-import { View, useWindowDimensions } from "react-native"
-import { KeyboardStickyView } from "react-native-keyboard-controller"
-import { useSafeAreaInsets } from "react-native-safe-area-context"
+import type { BottomSheetModal } from "@gorhom/bottom-sheet"
+import { type ReactNode, forwardRef, useEffect, useRef, useState } from "react"
+import { View } from "react-native"
 
 export type { SaleCustomerDraft } from "@/components/mobile/create-sale-customer-sheet-model"
 
@@ -95,15 +79,11 @@ export const CreateSaleCustomerSheet = forwardRef<
       if (detected && detected !== country.code) setSelectedCountry(detected)
       setLocalPhone(toLocalPhone(next.dialCode, draft.phone))
     }, [draft.phone, country.code, country.dialCode, localPhone])
-    const { height } = useWindowDimensions()
-    const [footerHeight, setFooterHeight] = useState(88)
     const hasDraft = hasCreateCustomerDraft(draft)
     // Green Till: a full-screen form that asks for name and phone first;
     // Show more reveals the secondary fields (phone country, email).
     const [moreOpen, setMoreOpen] = useState(false)
     const showMore = moreOpen || Boolean(draft.email.trim())
-    const insets = useSafeAreaInsets()
-    const expandedHeight = height - insets.top
     const saveDisabled = isCreateCustomerSaveDisabled({
       disabled: disabled || isLoading,
       name: draft.name,
@@ -113,197 +93,152 @@ export const CreateSaleCustomerSheet = forwardRef<
       : saveDisabled
     const [canUndoQuickFill, setCanUndoQuickFill] = useState(false)
     const quickFillSnapshot = useRef<SaleCustomerDraft | null>(null)
-    const renderBackdrop = useCallback(
-      (props: BottomSheetBackdropProps) => (
-        <AppBottomSheetBackdrop
-          {...props}
-          dismissible={!hasDraft && !isLoading}
-        />
-      ),
-      [hasDraft, isLoading],
-    )
-    const renderFooter = useCallback(
-      (props: BottomSheetFooterProps) => (
-        <BottomSheetFooter {...props}>
-          {/* Full screen: the sheet cannot rise, so Save rides the keyboard. */}
-          <KeyboardStickyView enabled>
-            <View
-              onLayout={(event) =>
-                setFooterHeight(event.nativeEvent.layout.height)
-              }
-              className="bg-card px-5 pb-5 pt-3"
-            >
-              <ActionButton
-                icon={recoveryAction ? "Search" : "UserPlus"}
-                disabled={actionDisabled}
-                isLoading={isLoading}
-                loadingLabel="Saving customer"
-                onPress={recoveryAction?.onPress ?? onSave}
-              >
-                {recoveryAction?.label ?? saveLabel}
-              </ActionButton>
-            </View>
-          </KeyboardStickyView>
-        </BottomSheetFooter>
-      ),
-      [actionDisabled, isLoading, onSave, saveLabel, recoveryAction],
-    )
-
     return (
-      <VariableContextProvider
-        value={{
-          "--sale-customer-footer": footerHeight,
-        }}
-      >
-        <Modal
-          backdropComponent={renderBackdrop}
-          enablePanDownToClose={!hasDraft && !isLoading}
-          keyboardBehavior="fillParent"
-          footerComponent={renderFooter}
-          maxDynamicContentSize={expandedHeight}
-          ref={ref}
-          onDismiss={() => {
-            setMoreOpen(false)
-            onDismiss?.()
-          }}
-          snapPoints={["100%"]}
-          detached={false}
-          handleComponent={null}
-          bottomInset={0}
-          topInset={insets.top}
-          accessibilityLabel="Add customer"
-          hideHeader
-        >
-          <BottomSheetKeyboardAwareScrollView
-            bottomOffset={footerHeight + 12}
-            disableScrollOnKeyboardHide
-            extraKeyboardSpace={0}
-            keyboardShouldPersistTaps="handled"
+      <FullScreenModal
+        closeDisabled={isLoading}
+        closeLabel="Close add customer"
+        footer={
+          <ActionButton
+            icon={recoveryAction ? "Search" : "UserPlus"}
+            disabled={actionDisabled}
+            isLoading={isLoading}
+            loadingLabel="Saving customer"
+            onPress={recoveryAction?.onPress ?? onSave}
           >
-            <View className="gap-4 px-5 pb-5">
-              <ClassicSheetHeader
-                description={description}
-                dismissible={!isLoading}
+            {recoveryAction?.label ?? saveLabel}
+          </ActionButton>
+        }
+        ref={ref}
+        onDismiss={() => {
+          setMoreOpen(false)
+          onDismiss?.()
+        }}
+        title="Add customer"
+      >
+        <BottomSheetKeyboardAwareScrollView
+          disableScrollOnKeyboardHide
+          extraKeyboardSpace={0}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View className="gap-4 px-5 pb-5">
+            <Text className="text-xs text-muted-foreground">{description}</Text>
+            {error ? (
+              <StatusBanner
+                icon="AlertCircle"
+                message={error}
+                title="Check customer details"
+                tone="destructive"
               />
-              {error ? (
-                <StatusBanner
-                  icon="AlertCircle"
-                  message={error}
-                  title="Check customer details"
-                  tone="destructive"
-                />
-              ) : null}
-              <QaQuickFillButton
-                canUndo={canUndoQuickFill}
-                formId="mobile.customer.create"
-                isDirty={hasDraft}
-                onFill={(context, sequence) => {
-                  if (isLoading || disabled) return
-                  quickFillSnapshot.current = draft
-                  const fixture = createCustomerFixture(context, sequence)
+            ) : null}
+            <QaQuickFillButton
+              canUndo={canUndoQuickFill}
+              formId="mobile.customer.create"
+              isDirty={hasDraft}
+              onFill={(context, sequence) => {
+                if (isLoading || disabled) return
+                quickFillSnapshot.current = draft
+                const fixture = createCustomerFixture(context, sequence)
+                onChange({
+                  email: fixture.email,
+                  name: fixture.name,
+                  phone: fixture.phone,
+                })
+                setCanUndoQuickFill(true)
+              }}
+              onUndo={() => {
+                if (isLoading || disabled) return
+                if (!quickFillSnapshot.current) return
+                onChange(quickFillSnapshot.current)
+                quickFillSnapshot.current = null
+                setCanUndoQuickFill(false)
+              }}
+            />
+            <FormField
+              variant="green-gate"
+              maxLength={160}
+              editable={!isLoading && !disabled}
+              autoCapitalize="words"
+              label="Name · required"
+              leadingIcon="User"
+              onChangeText={(name) => onChange({ ...draft, name })}
+              placeholder="Enter customer name"
+              value={draft.name}
+            />
+            {useCountryPhone ? (
+              <PhoneField
+                countryCode={country.code}
+                editable={!isLoading && !disabled}
+                label="Phone"
+                onChangeText={(digits) => {
+                  setLocalPhone(digits)
                   onChange({
-                    email: fixture.email,
-                    name: fixture.name,
-                    phone: fixture.phone,
+                    ...draft,
+                    phone: toInternationalPhone(country.dialCode, digits),
                   })
-                  setCanUndoQuickFill(true)
                 }}
-                onUndo={() => {
-                  if (isLoading || disabled) return
-                  if (!quickFillSnapshot.current) return
-                  onChange(quickFillSnapshot.current)
-                  quickFillSnapshot.current = null
-                  setCanUndoQuickFill(false)
+                onCountryChange={(code) => {
+                  setSelectedCountry(code)
+                  onChange({
+                    ...draft,
+                    phone: toInternationalPhone(
+                      getCountry(code).dialCode,
+                      localPhone,
+                    ),
+                  })
                 }}
+                value={localPhone}
+                variant="green-gate"
               />
+            ) : (
               <FormField
                 variant="green-gate"
-                maxLength={160}
+                maxLength={40}
                 editable={!isLoading && !disabled}
-                autoCapitalize="words"
-                label="Name · required"
-                leadingIcon="User"
-                onChangeText={(name) => onChange({ ...draft, name })}
-                placeholder="Enter customer name"
-                value={draft.name}
+                keyboardType="phone-pad"
+                label={
+                  useCountryPhone ? `Phone · +${country.dialCode}` : "Phone"
+                }
+                leadingIcon="Phone"
+                onChangeText={(phone) =>
+                  onChange({
+                    ...draft,
+                    phone: useCountryPhone
+                      ? toInternationalPhone(country.dialCode, phone)
+                      : phone,
+                  })
+                }
+                placeholder="Phone number"
+                value={
+                  useCountryPhone
+                    ? toLocalPhone(country.dialCode, draft.phone)
+                    : draft.phone
+                }
               />
-              {useCountryPhone ? (
-                <PhoneField
-                  countryCode={country.code}
-                  editable={!isLoading && !disabled}
-                  label="Phone"
-                  onChangeText={(digits) => {
-                    setLocalPhone(digits)
-                    onChange({
-                      ...draft,
-                      phone: toInternationalPhone(country.dialCode, digits),
-                    })
-                  }}
-                  onCountryChange={(code) => {
-                    setSelectedCountry(code)
-                    onChange({
-                      ...draft,
-                      phone: toInternationalPhone(
-                        getCountry(code).dialCode,
-                        localPhone,
-                      ),
-                    })
-                  }}
-                  value={localPhone}
-                  variant="green-gate"
-                />
-              ) : (
-                <FormField
-                  variant="green-gate"
-                  maxLength={40}
-                  editable={!isLoading && !disabled}
-                  keyboardType="phone-pad"
-                  label={
-                    useCountryPhone ? `Phone · +${country.dialCode}` : "Phone"
-                  }
-                  leadingIcon="Phone"
-                  onChangeText={(phone) =>
-                    onChange({
-                      ...draft,
-                      phone: useCountryPhone
-                        ? toInternationalPhone(country.dialCode, phone)
-                        : phone,
-                    })
-                  }
-                  placeholder="Phone number"
-                  value={
-                    useCountryPhone
-                      ? toLocalPhone(country.dialCode, draft.phone)
-                      : draft.phone
-                  }
-                />
-              )}
-              {showMore ? (
-                <FormField
-                  variant="green-gate"
-                  maxLength={320}
-                  editable={!isLoading && !disabled}
-                  autoCapitalize="none"
-                  keyboardType="email-address"
-                  label="Email"
-                  leadingIcon="Mail"
-                  onChangeText={(email) => onChange({ ...draft, email })}
-                  placeholder="Email address"
-                  value={draft.email}
-                />
-              ) : null}
-              {children}
-              <ShowMoreToggle
-                hint={useCountryPhone ? "Email" : "Country, email"}
-                open={showMore}
-                locked={Boolean(draft.email.trim())}
-                onToggle={() => setMoreOpen((open) => !open)}
+            )}
+            {showMore ? (
+              <FormField
+                variant="green-gate"
+                maxLength={320}
+                editable={!isLoading && !disabled}
+                autoCapitalize="none"
+                keyboardType="email-address"
+                label="Email"
+                leadingIcon="Mail"
+                onChangeText={(email) => onChange({ ...draft, email })}
+                placeholder="Email address"
+                value={draft.email}
               />
-              <View className="h-[var(--sale-customer-footer)]" />
-            </View>
-          </BottomSheetKeyboardAwareScrollView>
-        </Modal>
-      </VariableContextProvider>
+            ) : null}
+            {children}
+            <ShowMoreToggle
+              hint={useCountryPhone ? "Email" : "Country, email"}
+              open={showMore}
+              locked={Boolean(draft.email.trim())}
+              onToggle={() => setMoreOpen((open) => !open)}
+            />
+          </View>
+        </BottomSheetKeyboardAwareScrollView>
+      </FullScreenModal>
     )
   },
 )
@@ -346,41 +281,5 @@ function ShowMoreToggle({
         name={open ? "ChevronUp" : "ChevronDown"}
       />
     </Pressable>
-  )
-}
-
-/** Green Till full-screen form bar: X on the left, centred title, line below. */
-function ClassicSheetHeader({
-  description,
-  dismissible,
-}: {
-  description: string
-  dismissible: boolean
-}) {
-  const { dismiss } = useBottomSheetModal()
-  return (
-    <View className="gap-3 pt-2">
-      <View className="flex-row items-center gap-2.5">
-        <Pressable
-          accessibilityLabel="Close add customer"
-          accessibilityRole="button"
-          className="size-11 items-center justify-center rounded-full bg-muted active:bg-accent"
-          disabled={!dismissible}
-          haptic
-          onPress={() => dismiss()}
-        >
-          <Icon className="size-[18px] text-foreground" name="X" />
-        </Pressable>
-        <Text
-          accessibilityRole="header"
-          numberOfLines={1}
-          className="min-w-0 flex-1 text-center text-base font-extrabold tracking-tight text-foreground"
-        >
-          Add customer
-        </Text>
-        <View className="size-11" />
-      </View>
-      <Text className="text-xs text-muted-foreground">{description}</Text>
-    </View>
   )
 }
