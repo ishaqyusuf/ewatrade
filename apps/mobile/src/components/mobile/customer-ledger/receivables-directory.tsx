@@ -109,18 +109,20 @@ export function ReceivablesDirectory({ onBrowse }: { onBrowse: () => void }) {
                   .join(" · ") || whole(0n, heroCurrency)
         }
         sub={
-          !unique.length
-            ? "Open an account to start recording customer balances."
-            : !owing.length
-              ? "Nobody owes you right now."
-              : [
-                  `${owing.length} ${owing.length === 1 ? "customer" : "customers"}`,
-                  creditHeld > 0n
-                    ? `${whole(creditHeld, heroCurrency)} credit held for ${withCredit.length}`
-                    : null,
-                ]
-                  .filter(Boolean)
-                  .join(" · ")
+          result.isPending && !offline
+            ? "Loading customer balances…"
+            : !unique.length
+              ? "Open an account to start recording customer balances."
+              : !owing.length
+                ? "Nobody owes you right now."
+                : [
+                    `${owing.length} ${owing.length === 1 ? "customer" : "customers"}`,
+                    creditHeld > 0n
+                      ? `${whole(creditHeld, heroCurrency)} credit held for ${withCredit.length}`
+                      : null,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")
         }
         pill={{
           label: offline ? "Saved copy" : "Up to date",
