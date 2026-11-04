@@ -28,8 +28,12 @@ export function ClassicWorkspaceRow({
 }: WorkspaceRowProps) {
   const row = getBusinessSwitchRowPresentation(business, currentBusinessId)
   return (
-    <View className="rounded-[20px] bg-card px-4">
+    // Unpadded clipped card: the row owns its padding, so the selected tint
+    // fills the card to its rounded edges; each row is its own card, so no
+    // divider line on top.
+    <View className="overflow-hidden rounded-[20px] bg-card">
       <SecondaryOperationalRow
+        className="border-t-0 px-4"
         title={business.name}
         detail={row.detail}
         metadata={row.metadata}
