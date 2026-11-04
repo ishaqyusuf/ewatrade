@@ -171,16 +171,19 @@ export function GeneralProductPictureField({
             // scaling at 1.3x instead of breaking mid-word at large text.
             <Text
               maxFontSizeMultiplier={1.3}
-              className="px-1 text-center text-xs text-muted-foreground"
+              className="w-full px-1 text-center text-xs text-muted-foreground"
             >
               Photo added
             </Text>
           ) : illustration ? (
             <CatalogIllustrationPreview id={illustration.id} size={56} />
           ) : (
+            // Full width and centred text: at large text Android measured the
+            // shrink-wrapped label oddly and drew it at the thumb's top-left.
             <Text
               maxFontSizeMultiplier={1.3}
-              className="text-xs text-muted-foreground"
+              numberOfLines={1}
+              className="w-full px-1 text-center text-xs text-muted-foreground"
             >
               None
             </Text>
