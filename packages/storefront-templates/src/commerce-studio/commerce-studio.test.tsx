@@ -252,6 +252,29 @@ test("Shop shows the active root's subcategories as a subordinate row on /shop",
   expect(html).toContain('href="/shop?category=cat-a&amp;subcategory=sub-1"')
 })
 
+test("Shop heading counts what is listed, not the whole store, when scoped", () => {
+  const categories = [
+    { id: "cat-a", name: "Lace" },
+    { id: "cat-b", name: "Ankara" },
+  ]
+  const shop = (catalog: Partial<StorefrontResources["catalog"]>) =>
+    render(
+      snapshot({
+        items: [item("a", "PRODUCT"), item("b", "PRODUCT")],
+        categories,
+        offeringCounts: { products: 9, services: 0 },
+        ...catalog,
+      }),
+      "shop",
+    )
+  expect(shop({ category: null })).toContain(">9 items<")
+  expect(shop({ category: "cat-a" })).toContain(">2 items<")
+  expect(shop({ category: null, query: { q: "lace" } })).toContain(">2 items<")
+  // More of this list is unloaded: no total to show rather than a wrong one.
+  const paged = shop({ category: "cat-a", nextCursor: "next" })
+  expect(paged).not.toMatch(/>\d+ items</)
+})
+
 test("stock wording never presents unknown stock as available", () => {
   expect(stockWording("unknown").label).toBe("Shop confirms stock")
   expect(stockWording(undefined).tone).toBe("unknown")

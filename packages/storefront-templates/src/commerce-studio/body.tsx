@@ -511,6 +511,14 @@ function Catalog({ section }: { section: SectionInstance }) {
   const subcategories = catalogSubcategoryLinks(catalog)
   const showSearch =
     section.settings["show-search"] !== false && facts.products > 6
+  // The count matches what is listed: the whole shop unscoped, this list when a
+  // category or search narrows it, and none while more of that list is unloaded.
+  const scoped = Boolean(catalog.category) || filtered
+  const count = !scoped
+    ? facts.products
+    : catalog.nextCursor || !products.length
+      ? null
+      : products.length
   return (
     <section className="cs-section">
       <div className="cs-wrap">
@@ -518,9 +526,11 @@ function Catalog({ section }: { section: SectionInstance }) {
           <h1 className="cs-title cs-title--page">
             {sectionText(section, "heading", "Shop")}
           </h1>
-          <p className="cs-muted">
-            {facts.products} {facts.products === 1 ? "item" : "items"}
-          </p>
+          {count === null ? null : (
+            <p className="cs-muted">
+              {count} {count === 1 ? "item" : "items"}
+            </p>
+          )}
         </div>
         {catalogCategoryNavVisible(catalog.categories) ? (
           <CurrentLinkNav
