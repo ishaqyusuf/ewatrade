@@ -4,12 +4,18 @@ import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
 import { useColors } from "@/hooks/use-color"
+import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
 import { useTRPC } from "@/trpc/client"
 import { formatStoreConversationVoiceElapsed } from "@ewatrade/utils"
 import { useQuery } from "@tanstack/react-query"
+import { Image } from "expo-image"
 import { type ComponentProps, useEffect, useRef, useState } from "react"
+import { ActivityIndicator } from "react-native"
 import { AssistantComposer } from "./assistant-ui"
-import { useAssistantReceipts } from "./use-assistant-receipts"
+import {
+  type AssistantReceipt,
+  useAssistantReceipts,
+} from "./use-assistant-receipts"
 
 export type AssistantReadyFile = { attachmentId: string; fileName: string }
 
@@ -193,51 +199,100 @@ export function AssistantChatBox({
         </View>
       ) : null}
       {receipts.items.length ? (
-        <View className="flex-row flex-wrap gap-2 px-1 pt-1">
-          {receipts.items.map((item) => (
-            <View
-              key={item.localId}
-              className="max-w-full flex-row items-center gap-1.5 rounded-full bg-muted px-3 py-1.5"
-            >
-              <Icon
-                className="size-[13px] text-muted-foreground"
-                name="ReceiptText"
+        <View className="gap-1.5 px-0.5 pt-0.5">
+          <View className="flex-row flex-wrap gap-2">
+            {receipts.items.map((item) => (
+              <ReceiptThumb
+                key={item.localId}
+                item={item}
+                onRemove={() => receipts.discard(item.localId)}
               />
+            ))}
+          </View>
+          {receipts.items.map((item) =>
+            item.phase === "failed" ? (
               <Text
-                className="max-w-[150px] text-base [-rn-line-height:22] text-foreground"
-                numberOfLines={1}
+                key={item.localId}
+                className="text-base [-rn-line-height:22] text-destructive"
               >
-                {item.fileName}
+                {item.fileName}: {item.error ?? "failed"}
               </Text>
-              <Text
-                className={
-                  item.phase === "failed"
-                    ? "text-base [-rn-line-height:22] text-destructive"
-                    : "text-base [-rn-line-height:22] text-muted-foreground"
-                }
-                numberOfLines={1}
-              >
-                {item.phase === "ready"
-                  ? "ready"
-                  : item.phase === "failed"
-                    ? (item.error ?? "failed")
-                    : item.phase === "reading"
-                      ? "reading…"
-                      : "uploading…"}
-              </Text>
-              <Pressable
-                accessibilityLabel={`Remove ${item.fileName}`}
-                accessibilityRole="button"
-                hitSlop={8}
-                onPress={() => receipts.discard(item.localId)}
-              >
-                <Icon className="size-[12px] text-muted-foreground" name="X" />
-              </Pressable>
-            </View>
-          ))}
+            ) : null,
+          )}
         </View>
       ) : null}
     </AssistantComposer>
+  )
+}
+
+/** A photo or PDF in the box: a large rounded tile with a round × (owner's reference). */
+function ReceiptThumb({
+  item,
+  onRemove,
+}: {
+  item: AssistantReceipt
+  onRemove: () => void
+}) {
+  const colors = useColors()
+  const large = useLargeTextLayout()
+  const size = large ? 112 : 88
+  const busy = item.phase === "uploading" || item.phase === "reading"
+  return (
+    <View
+      accessible
+      accessibilityLabel={`${item.fileName}, ${item.phase === "ready" ? "ready" : item.phase === "failed" ? "failed" : item.phase === "reading" ? "reading" : "uploading"}`}
+      className="overflow-hidden rounded-[18px] bg-muted"
+      style={{
+        borderColor:
+          item.phase === "failed" ? colors.destructive : "transparent",
+        borderWidth: 2,
+        height: size,
+        width: size,
+      }}
+    >
+      {item.image ? (
+        <Image
+          contentFit="cover"
+          source={{ uri: item.uri }}
+          style={{ height: "100%", width: "100%" }}
+        />
+      ) : (
+        <View className="flex-1 justify-end gap-1 p-2">
+          <Icon className="size-6 text-muted-foreground" name="FileText" />
+          <Text
+            className="text-xs font-bold [-rn-line-height:16] text-foreground"
+            numberOfLines={2}
+          >
+            {item.fileName}
+          </Text>
+        </View>
+      )}
+      {busy ? (
+        <View className="absolute inset-0 items-center justify-center bg-black/30">
+          <ActivityIndicator color="#FFFFFF" />
+        </View>
+      ) : null}
+      <Pressable
+        accessibilityLabel={`Remove ${item.fileName}`}
+        accessibilityRole="button"
+        haptic
+        hitSlop={8}
+        onPress={onRemove}
+        style={{
+          alignItems: "center",
+          backgroundColor: "rgba(255,255,255,0.94)",
+          borderRadius: 14,
+          height: 28,
+          justifyContent: "center",
+          position: "absolute",
+          right: 5,
+          top: 5,
+          width: 28,
+        }}
+      >
+        <Icon className="size-[15px]" color="#1E1E1C" name="X" />
+      </Pressable>
+    </View>
   )
 }
 

@@ -19,6 +19,9 @@ export type AssistantReceipt = {
   /** Voice notes are written out into the box, never sent as files. */
   audio: boolean
   fileName: string
+  /** Local file, so a photo can show as a thumbnail in the box. */
+  uri: string
+  image: boolean
   phase: "uploading" | "reading" | "ready" | "failed"
   attachmentId: string | null
   error: string | null
@@ -230,8 +233,10 @@ export function useAssistantReceipts(
         audio,
         error: null,
         fileName: file.fileName,
+        image: file.mimeType.startsWith("image/"),
         localId,
         phase: "uploading",
+        uri: file.uri,
         generation,
       },
     ])

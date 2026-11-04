@@ -5,7 +5,7 @@ import { View } from "@/components/ui/view"
 import { useColors } from "@/hooks/use-color"
 import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
 import { useRouter } from "expo-router"
-import { type ReactNode, useEffect, useRef, useState } from "react"
+import { Children, type ReactNode, useState } from "react"
 import {
   ActivityIndicator,
   LayoutAnimation,
@@ -208,17 +208,11 @@ export function AssistantComposer({
   const keyboardVisible = useKeyboardState((state) => state.isVisible)
   const colors = useColors()
   const reduceMotion = useReducedMotion()
-  const [wrapped, setWrapped] = useState(false)
-  // The newest text. A paste reports its new height in the same batch as its
-  // text, before `value` has caught up.
-  const text = useRef(value)
-  useEffect(() => {
-    text.current = value
-    if (value || !wrapped) return
-    easeStack(reduceMotion)
-    setWrapped(false)
-  }, [value, wrapped, reduceMotion])
-  const stacked = wrapped || value.includes("\n")
+  const [focused, setFocused] = useState(false)
+  // Idle, the box is one pill row. Focused, or holding text, files or the
+  // attach menu, it opens into a card: the text on top, its buttons below.
+  const stacked =
+    focused || !!value || attachOpen || Children.toArray(children).length > 0
   const working = voice?.working === true
   const sendDisabled =
     !busy || !onStop
@@ -250,26 +244,23 @@ export function AssistantComposer({
       onPress={busy ? onStop : onSend}
       style={{
         alignItems: "center",
-        backgroundColor: !busy && sendDisabled ? colors.muted : colors.primary,
+        backgroundColor: busy ? colors.foreground : colors.primary,
         borderRadius: 999,
-        height: 38,
+        height: 40,
         justifyContent: "center",
-        width: 38,
+        opacity: !busy && sendDisabled ? 0.4 : 1,
+        width: 40,
       }}
     >
       <Icon
         name={busy ? "Square" : "ArrowUp"}
         className="size-[19px]"
-        color={
-          !busy && sendDisabled
-            ? colors.mutedForeground
-            : colors.primaryForeground
-        }
+        color={busy ? colors.background : colors.primaryForeground}
       />
     </Pressable>
   )
   return (
-    <View className="gap-2 border-t border-border bg-background px-3 pt-2">
+    <View className="gap-2 bg-background px-3 pt-1.5">
       {reason ? (
         <Text
           accessibilityLiveRegion="polite"
@@ -300,11 +291,10 @@ export function AssistantComposer({
         style={{
           backgroundColor: colors.card,
           borderColor: colors.border,
-          borderRadius: 26,
+          borderRadius: stacked ? 24 : 28,
           borderWidth: 1,
           gap: 6,
-          paddingHorizontal: 6,
-          paddingVertical: 6,
+          padding: stacked ? 6 : 5,
         }}
       >
         {children}
@@ -335,9 +325,9 @@ export function AssistantComposer({
                 alignItems: "center",
                 backgroundColor: colors.primary,
                 borderRadius: 999,
-                height: 38,
+                height: 40,
                 justifyContent: "center",
-                width: 38,
+                width: 40,
               }}
             >
               <Icon
@@ -366,25 +356,26 @@ export function AssistantComposer({
                 accessibilityHint={value ? undefined : placeholder}
                 value={value}
                 onChangeText={(next) => {
-                  text.current = next
-                  if (!stacked && next.includes("\n")) easeStack(reduceMotion)
+                  if (!!next !== !!value) easeStack(reduceMotion)
                   onChange(next)
                 }}
-                onContentSizeChange={(event) => {
-                  // Taller than one line: stack (and stay stacked until cleared).
-                  if (wrapped || !text.current) return
-                  if (event.nativeEvent.contentSize.height <= 30) return
-                  if (!stacked) easeStack(reduceMotion)
-                  setWrapped(true)
+                onFocus={() => {
+                  easeStack(reduceMotion)
+                  setFocused(true)
+                }}
+                onBlur={() => {
+                  easeStack(reduceMotion)
+                  setFocused(false)
                 }}
                 selectionColor={colors.primary}
                 style={{
                   color: colors.foreground,
                   fontSize: 16,
                   maxHeight: 160,
-                  minHeight: 38,
+                  minHeight: stacked ? 44 : 40,
                   paddingHorizontal: stacked ? 10 : 6,
-                  paddingVertical: 8,
+                  paddingBottom: stacked ? 6 : 9,
+                  paddingTop: stacked ? 10 : 9,
                 }}
               />
               {value ? null : (
@@ -401,7 +392,7 @@ export function AssistantComposer({
                     left: stacked ? 10 : 6,
                     position: "absolute",
                     right: stacked ? 10 : 6,
-                    top: 8,
+                    top: stacked ? 10 : 9,
                   }}
                 >
                   {placeholder}
@@ -409,7 +400,7 @@ export function AssistantComposer({
               )}
             </View>
             {stacked ? (
-              <View className="flex-row items-center gap-1">
+              <View className="flex-row items-center gap-1.5">
                 {plus}
                 <View className="flex-1" />
                 {mic}
@@ -452,15 +443,16 @@ function ComposerIcon({
       accessibilityState={{ disabled }}
       disabled={disabled}
       haptic
-      hitSlop={4}
+      hitSlop={2}
       onPress={onPress}
       style={{
         alignItems: "center",
+        backgroundColor: colors.muted,
         borderRadius: 999,
-        height: 38,
+        height: 40,
         justifyContent: "center",
         opacity: disabled ? 0.45 : 1,
-        width: 38,
+        width: 40,
       }}
     >
       <Icon className="size-[21px]" color={colors.foreground} name={icon} />
