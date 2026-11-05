@@ -31,6 +31,7 @@ import {
   ledgerOrderPayment,
   ledgerWhen,
 } from "@/components/mobile/orders/orders-ledger-model"
+import { ScrollUnderBlur } from "@/components/mobile/scroll-under-blur"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { Icon } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
@@ -427,38 +428,37 @@ export function ClassicOrderDetailPrimaryAction({
     >
       <NativeView
         // Owner rule: the bottom action sits on the page itself, never in a
-        // sheet-like card. Opaque so the scrolled content never shows through.
+        // sheet-like card. The order scrolls under it, blurred (owner, 5 Nov).
         style={{
-          backgroundColor: colors.background,
           bottom: 0,
           left: 0,
-          paddingHorizontal: 16,
-          paddingTop: 12,
           position: "absolute",
           right: 0,
           zIndex: 20,
         }}
       >
-        <View className="flex-row items-center gap-3 pb-[var(--order-action-bottom)]">
-          <View className="min-w-0 shrink">
-            <Text className="text-xs font-bold text-muted-foreground">
-              Balance due
-            </Text>
-            <Text className="text-[22px] font-extrabold tabular-nums tracking-tight text-foreground">
-              {formatMinorMoney(order.balanceDueMinor, order.currencyCode)}
-            </Text>
+        <ScrollUnderBlur color={colors.background}>
+          <View className="flex-row items-center gap-3 px-4 pt-3 pb-[var(--order-action-bottom)]">
+            <View className="min-w-0 shrink">
+              <Text className="text-xs font-bold text-muted-foreground">
+                Balance due
+              </Text>
+              <Text className="text-[22px] font-extrabold tabular-nums tracking-tight text-foreground">
+                {formatMinorMoney(order.balanceDueMinor, order.currencyCode)}
+              </Text>
+            </View>
+            <View className="min-w-0 flex-1">
+              <ActionButton
+                disabled={disabled}
+                icon="CreditCard"
+                onPress={onPress}
+                testID="order-record-payment-action"
+              >
+                Record payment
+              </ActionButton>
+            </View>
           </View>
-          <View className="min-w-0 flex-1">
-            <ActionButton
-              disabled={disabled}
-              icon="CreditCard"
-              onPress={onPress}
-              testID="order-record-payment-action"
-            >
-              Record payment
-            </ActionButton>
-          </View>
-        </View>
+        </ScrollUnderBlur>
       </NativeView>
     </VariableContextProvider>
   )

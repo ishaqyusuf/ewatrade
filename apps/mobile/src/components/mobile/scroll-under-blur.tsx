@@ -1,0 +1,52 @@
+import { useColorScheme } from "@/hooks/use-color"
+import { BlurView } from "expo-blur"
+import { LinearGradient } from "expo-linear-gradient"
+import type { ReactNode } from "react"
+import { StyleSheet, View } from "react-native"
+
+/**
+ * A bar that floats over a scrolling list (owner, 5 Nov 2026): what scrolls
+ * under it is blurred, and a short fade above it lets the content melt in
+ * instead of stopping at a hard edge. The bar's content goes inside: Android's
+ * blur captures every view drawn over it, so content placed outside would be
+ * blurred into a halo around itself.
+ */
+export function ScrollUnderBlur({
+  color,
+  fadeAbove = 24,
+  children,
+}: {
+  /** The screen colour the bar settles into (`#RRGGBB`). */
+  color: string
+  /** How far the fade reaches above the bar, in points. */
+  fadeAbove?: number
+  children: ReactNode
+}) {
+  const { colorScheme } = useColorScheme()
+  return (
+    <View>
+      <LinearGradient
+        pointerEvents="none"
+        colors={[`${color}00`, `${color}99`]}
+        style={{
+          position: "absolute",
+          top: -fadeAbove,
+          right: 0,
+          left: 0,
+          height: fadeAbove,
+        }}
+      />
+      <BlurView
+        intensity={30}
+        tint={colorScheme === "dark" ? "dark" : "light"}
+        experimentalBlurMethod="dimezisBlurView"
+      >
+        <View
+          pointerEvents="none"
+          style={[StyleSheet.absoluteFill, { backgroundColor: `${color}99` }]}
+        />
+        {children}
+      </BlurView>
+    </View>
+  )
+}

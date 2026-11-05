@@ -4,7 +4,6 @@ import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
 import { useColors } from "@/hooks/use-color"
 import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
-import { LinearGradient } from "expo-linear-gradient"
 import { useRouter } from "expo-router"
 import { Children, type ReactNode, useState } from "react"
 import {
@@ -17,6 +16,7 @@ import {
 import { useKeyboardState } from "react-native-keyboard-controller"
 import { useReducedMotion } from "react-native-reanimated"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
+import { ScrollUnderBlur } from "../scroll-under-blur"
 import { AssistantText } from "./assistant-text"
 
 // The composer eases between one row and stacked instead of jumping.
@@ -285,203 +285,192 @@ export function AssistantComposer({
       />
     </Pressable>
   )
-  // Messages scroll under the composer and fade into the page (as ChatGPT):
-  // clear above the pill, solid by its lower half and the system bar.
-  const fade = (
-    <LinearGradient
-      pointerEvents="none"
-      colors={[
-        `${surface ?? colors.background}00`,
-        `${surface ?? colors.background}E6`,
-        surface ?? colors.background,
-      ]}
-      locations={[0, 0.4, 0.75]}
-      style={{ position: "absolute", top: -28, right: 0, bottom: 0, left: 0 }}
-    />
-  )
+  // Messages scroll under the composer, blurred and fading into the page
+  // (as ChatGPT).
   return (
-    <View className="gap-2 px-3 pt-1.5">
-      {fade}
-      {reason ? (
-        <Text
-          accessibilityLiveRegion="polite"
-          className="text-base [-rn-line-height:22] text-muted-foreground"
-        >
-          {reason}
-        </Text>
-      ) : null}
-      {voice?.error ? (
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Dismiss voice note error"
-          onPress={voice.dismiss}
-        >
-          <Text className="text-base [-rn-line-height:22] text-destructive">
-            {voice.error}
-          </Text>
-        </Pressable>
-      ) : voice?.status ? (
-        <Text
-          accessibilityLiveRegion="polite"
-          className="text-base [-rn-line-height:22] text-muted-foreground"
-        >
-          {voice.status}
-        </Text>
-      ) : null}
-      <View
-        style={{
-          backgroundColor: colors.card,
-          borderColor: colors.border,
-          borderRadius: stacked ? 24 : 28,
-          borderWidth: 1,
-          gap: 6,
-          padding: stacked ? 6 : 5,
-        }}
-      >
-        {children}
-        {voice?.recording ? (
-          <View className="min-h-[40px] flex-row items-center gap-2">
-            <ComposerIcon
-              icon="X"
-              label="Cancel recording"
-              disabled={false}
-              onPress={voice.cancel}
-            />
-            <VoiceWave
-              levels={voice.levels ?? []}
-              label={`Recording ${voice.elapsedLabel}`}
-            />
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={`Stop at ${voice.elapsedLabel} and put the words in the box`}
-              haptic
-              hitSlop={2}
-              onPress={voice.stop}
-              style={{
-                alignItems: "center",
-                backgroundColor: colors.muted,
-                borderRadius: 999,
-                height: 40,
-                justifyContent: "center",
-                width: 40,
-              }}
-            >
-              <View
-                style={{
-                  backgroundColor: colors.foreground,
-                  borderRadius: 3,
-                  height: 13,
-                  width: 13,
-                }}
-              />
-            </Pressable>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Stop and send"
-              haptic
-              onPress={voice.stopAndSend}
-              style={{
-                alignItems: "center",
-                backgroundColor: colors.primary,
-                borderRadius: 999,
-                height: 40,
-                justifyContent: "center",
-                width: 40,
-              }}
-            >
-              <Icon
-                name="ArrowUp"
-                className="size-[19px]"
-                color={colors.primaryForeground}
-              />
-            </Pressable>
-          </View>
-        ) : (
-          <View
-            style={{
-              alignItems: stacked ? "stretch" : "center",
-              flexDirection: stacked ? "column" : "row",
-              gap: stacked ? 2 : 4,
-            }}
+    <ScrollUnderBlur color={surface ?? colors.background} fadeAbove={28}>
+      <View className="gap-2 px-3 pt-1.5">
+        {reason ? (
+          <Text
+            accessibilityLiveRegion="polite"
+            className="text-base [-rn-line-height:22] text-muted-foreground"
           >
-            {stacked ? null : plus}
-            <View style={{ flex: stacked ? undefined : 1 }}>
-              <TextInput
-                ref={inputRef}
-                accessibilityLabel="Message the assistant"
-                editable={!disabled && !busy && !working}
-                maxLength={8000}
-                multiline
-                accessibilityHint={value ? undefined : placeholder}
-                value={value}
-                onChangeText={(next) => {
-                  if (!!next !== !!value) easeStack(reduceMotion)
-                  onChange(next)
-                }}
-                onFocus={() => {
-                  easeStack(reduceMotion)
-                  setFocused(true)
-                }}
-                onBlur={() => {
-                  easeStack(reduceMotion)
-                  setFocused(false)
-                }}
-                selectionColor={colors.primary}
-                style={{
-                  color: colors.foreground,
-                  fontSize: 16,
-                  lineHeight: 22,
-                  maxHeight: 160,
-                  minHeight: Math.max(stacked ? 44 : 40, lineHeight + 18),
-                  paddingHorizontal: stacked ? 10 : 6,
-                  paddingBottom: stacked ? 6 : 9,
-                  paddingTop: stacked ? 10 : 9,
-                }}
+            {reason}
+          </Text>
+        ) : null}
+        {voice?.error ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Dismiss voice note error"
+            onPress={voice.dismiss}
+          >
+            <Text className="text-base [-rn-line-height:22] text-destructive">
+              {voice.error}
+            </Text>
+          </Pressable>
+        ) : voice?.status ? (
+          <Text
+            accessibilityLiveRegion="polite"
+            className="text-base [-rn-line-height:22] text-muted-foreground"
+          >
+            {voice.status}
+          </Text>
+        ) : null}
+        <View
+          style={{
+            backgroundColor: colors.card,
+            borderColor: colors.border,
+            borderRadius: stacked ? 24 : 28,
+            borderWidth: 1,
+            gap: 6,
+            padding: stacked ? 6 : 5,
+          }}
+        >
+          {children}
+          {voice?.recording ? (
+            <View className="min-h-[40px] flex-row items-center gap-2">
+              <ComposerIcon
+                icon="X"
+                label="Cancel recording"
+                disabled={false}
+                onPress={voice.cancel}
               />
-              {value ? null : (
-                // The field's own placeholder wraps on a multiline input;
-                // this one stays on one line and ends with "…".
-                <NativeText
-                  accessibilityElementsHidden
-                  importantForAccessibility="no-hide-descendants"
-                  numberOfLines={1}
-                  pointerEvents="none"
+              <VoiceWave
+                levels={voice.levels ?? []}
+                label={`Recording ${voice.elapsedLabel}`}
+              />
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`Stop at ${voice.elapsedLabel} and put the words in the box`}
+                haptic
+                hitSlop={2}
+                onPress={voice.stop}
+                style={{
+                  alignItems: "center",
+                  backgroundColor: colors.muted,
+                  borderRadius: 999,
+                  height: 40,
+                  justifyContent: "center",
+                  width: 40,
+                }}
+              >
+                <View
                   style={{
-                    color: colors.mutedForeground,
+                    backgroundColor: colors.foreground,
+                    borderRadius: 3,
+                    height: 13,
+                    width: 13,
+                  }}
+                />
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Stop and send"
+                haptic
+                onPress={voice.stopAndSend}
+                style={{
+                  alignItems: "center",
+                  backgroundColor: colors.primary,
+                  borderRadius: 999,
+                  height: 40,
+                  justifyContent: "center",
+                  width: 40,
+                }}
+              >
+                <Icon
+                  name="ArrowUp"
+                  className="size-[19px]"
+                  color={colors.primaryForeground}
+                />
+              </Pressable>
+            </View>
+          ) : (
+            <View
+              style={{
+                alignItems: stacked ? "stretch" : "center",
+                flexDirection: stacked ? "column" : "row",
+                gap: stacked ? 2 : 4,
+              }}
+            >
+              {stacked ? null : plus}
+              <View style={{ flex: stacked ? undefined : 1 }}>
+                <TextInput
+                  ref={inputRef}
+                  accessibilityLabel="Message the assistant"
+                  editable={!disabled && !busy && !working}
+                  maxLength={8000}
+                  multiline
+                  accessibilityHint={value ? undefined : placeholder}
+                  value={value}
+                  onChangeText={(next) => {
+                    if (!!next !== !!value) easeStack(reduceMotion)
+                    onChange(next)
+                  }}
+                  onFocus={() => {
+                    easeStack(reduceMotion)
+                    setFocused(true)
+                  }}
+                  onBlur={() => {
+                    easeStack(reduceMotion)
+                    setFocused(false)
+                  }}
+                  selectionColor={colors.primary}
+                  style={{
+                    color: colors.foreground,
                     fontSize: 16,
                     lineHeight: 22,
-                    left: stacked ? 10 : 6,
-                    position: "absolute",
-                    right: stacked ? 10 : 6,
-                    top: stacked ? 10 : 9,
+                    maxHeight: 160,
+                    minHeight: Math.max(stacked ? 44 : 40, lineHeight + 18),
+                    paddingHorizontal: stacked ? 10 : 6,
+                    paddingBottom: stacked ? 6 : 9,
+                    paddingTop: stacked ? 10 : 9,
                   }}
-                >
-                  {placeholder}
-                </NativeText>
+                />
+                {value ? null : (
+                  // The field's own placeholder wraps on a multiline input;
+                  // this one stays on one line and ends with "…".
+                  <NativeText
+                    accessibilityElementsHidden
+                    importantForAccessibility="no-hide-descendants"
+                    numberOfLines={1}
+                    pointerEvents="none"
+                    style={{
+                      color: colors.mutedForeground,
+                      fontSize: 16,
+                      lineHeight: 22,
+                      left: stacked ? 10 : 6,
+                      position: "absolute",
+                      right: stacked ? 10 : 6,
+                      top: stacked ? 10 : 9,
+                    }}
+                  >
+                    {placeholder}
+                  </NativeText>
+                )}
+              </View>
+              {stacked ? (
+                <View className="flex-row items-center gap-1.5">
+                  {plus}
+                  <View className="flex-1" />
+                  {mic}
+                  {send}
+                </View>
+              ) : (
+                <>
+                  {mic}
+                  {send}
+                </>
               )}
             </View>
-            {stacked ? (
-              <View className="flex-row items-center gap-1.5">
-                {plus}
-                <View className="flex-1" />
-                {mic}
-                {send}
-              </View>
-            ) : (
-              <>
-                {mic}
-                {send}
-              </>
-            )}
-          </View>
-        )}
-      </View>
-      {/* The keyboard already covers the system bar, so the safe-area gap
+          )}
+        </View>
+        {/* The keyboard already covers the system bar, so the safe-area gap
           only applies while it is closed. */}
-      <View
-        style={{ height: keyboardVisible ? 8 : Math.max(insets.bottom, 8) }}
-      />
-    </View>
+        <View
+          style={{ height: keyboardVisible ? 8 : Math.max(insets.bottom, 8) }}
+        />
+      </View>
+    </ScrollUnderBlur>
   )
 }
 
