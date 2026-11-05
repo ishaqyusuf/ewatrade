@@ -414,18 +414,32 @@ export function AskAssistantLive() {
                     streaming={vm.busy && index === messages.length - 1}
                   />
                 ) : null}
-                {answers.map((answer) => {
+                {answers.map((answer, answerIndex) => {
+                  // Cards from one read share where/when; say it once.
+                  const meta = `${answer.scope} · ${assistantAsOf(answer.asOf)}`
+                  const previous = answers[answerIndex - 1]
+                  const repeated =
+                    previous &&
+                    `${previous.scope} · ${assistantAsOf(previous.asOf)}` ===
+                      meta
                   return (
                     <AssistantAnswerCard
                       key={answer.id}
                       title={answer.title}
                       value={answer.value}
-                      scope={answer.scope}
-                      asOf={assistantAsOf(answer.asOf)}
+                      summary={answer.summary}
+                      meta={repeated ? undefined : meta}
                     >
-                      <Text className="text-sm text-muted-foreground">
-                        {answer.detail}
-                      </Text>
+                      {/* `detail` is written for the model; older cards with no
+                          summary show it briefly. */}
+                      {answer.summary === undefined ? (
+                        <Text
+                          numberOfLines={2}
+                          className="text-sm text-muted-foreground"
+                        >
+                          {answer.detail}
+                        </Text>
+                      ) : null}
                       {answer.records?.rows.slice(0, 6).map((row, index) => (
                         <View
                           key={`${answer.id}:record:${index}`}

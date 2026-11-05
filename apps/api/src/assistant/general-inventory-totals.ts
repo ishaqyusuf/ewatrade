@@ -15,10 +15,11 @@ export function generalInventoryTotalsAnswers(
   return [
     {
       id: `stock_totals_${crypto.randomUUID()}`,
-      title: "Compatible inventory totals",
-      value: `${page.items.length} groups on this page`,
+      title: "Stock",
+      value: `${page.items.length} ${page.items.length === 1 ? "item" : "items"}`,
       scope: input.storeName.slice(0, 500),
       asOf,
+      summary: page.nextCursor ? "More stock on the next page" : "",
       detail: `Item filter: ${input.catalogItemId ?? "all"}. ${input.cursor ? "Continuation page" : "First page"}. ${page.nextCursor ? "More groups available." : "End of this list."} Each group includes all matching sources, separated by variant, unit configuration and custody. This page is not a business total. Missing sources are not zero stock.`,
     },
     ...page.items.map((group) => {
@@ -36,6 +37,7 @@ export function generalInventoryTotalsAnswers(
             500,
           ),
         asOf,
+        summary: `On hand ${group.onHandCanonicalQuantity} · reserved ${group.reservedCanonicalQuantity}`,
         detail:
           `${quantity.shortened ? "Unit label shortened; open the original inventory record for the full name. " : ""}On hand ${group.onHandCanonicalQuantity}; reserved ${group.reservedCanonicalQuantity}. ${group.sourceCount} source(s). Informational total only; use offering availability before selling. Transit stock is not available to sell. Custody ${group.custodyType}${group.custodyReferenceId ? ` (${group.custodyReferenceId})` : ""}. Converted to ${group.canonicalUnitName ?? "canonical units (unit name unavailable)"}.`.slice(
             0,

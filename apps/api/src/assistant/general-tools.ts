@@ -302,6 +302,13 @@ import {
 } from "./whatsapp-reads/inventory-operation-answers"
 import { generalServiceQueueAnswers } from "./whatsapp-reads/service-queue-answers"
 const id = z.string().min(1).max(128)
+/** "Owing" as the Orders tab's Unpaid and Part-paid filters. */
+const OWING_PAYMENT_STATUSES = [
+  "PENDING",
+  "AUTHORIZED",
+  "FAILED",
+  "PARTIALLY_PAID",
+] as const
 const query = z.string().trim().min(2).max(160)
 /** Model-visible registry: read/draft only; no decision or command capability. */
 
@@ -692,9 +699,10 @@ export function createGeneralTools(
           onAnswer({
             id: `payment_link_orders_${crypto.randomUUID()}`,
             title: "Unpaid orders for payment links",
-            value: `${page.items.length} in this page`,
+            value: `${page.items.length} ${page.items.length === 1 ? "order" : "orders"}`,
             scope: fresh.tenantContext.activeStore?.name ?? "Store",
             asOf: new Date().toISOString(),
+            summary: page.nextCursor ? "More orders on the next page" : "",
             detail: `${page.period === "today" ? `Orders created today in ${page.timezone}. ` : "Matching unpaid orders. "}${page.accounts.length} configured receiving account(s). ${page.nextCursor ? "More orders are available; continue with the same filters." : "End of this lookup."} No links created or payments recorded.`,
           })
           return page
@@ -1448,10 +1456,11 @@ export function createGeneralTools(
                 input,
                 nextCursor: page.nextCursor ?? null,
               }),
-              title: "Catalog page",
-              value: `${page.items.length} on this page`,
+              title: "Catalog",
+              value: `${page.items.length} ${page.items.length === 1 ? "item" : "items"}`,
               scope: "Current business · catalog",
               asOf: new Date().toISOString(),
+              summary: page.nextCursor ? "More items on the next page" : "",
               detail: `Kind: ${input.kind ?? "all"}; status: ${input.status ?? "all"}; keywords: ${input.query ?? "none"}. Any search word may match a catalog field. Sorted by name; ${input.cursor ? "continuation page" : "first page"}. ${page.nextCursor ? "More results are available." : "End of this list."} Page length is not a catalog total.`,
             })
           const items = page.items.map((item) => ({
@@ -1472,6 +1481,7 @@ export function createGeneralTools(
               value: `${item.kind} · ${item.status}`,
               scope: "Catalog",
               asOf: new Date().toISOString(),
+              summary: "",
               detail:
                 "Read this saved item to resolve its current variant, unit, price and offering identifiers. Ask which item when names are ambiguous.",
             })
@@ -1881,12 +1891,14 @@ export function createGeneralTools(
     }),
     readOrders: tool({
       description:
-        "Read a bounded page of authorized orders with dates, statuses and customer-text filtering. Follow nextCursor with the same filters to continue. Never infer totals from this page.",
+        "Read a bounded page of authorized orders with dates, statuses and customer-text filtering. For unpaid orders, who owes or money still owing set owing:true (unpaid or part paid only); never list paid orders as unpaid. Follow nextCursor with the same filters to continue. Never infer totals from this page.",
       inputSchema: generalOrderPageInput,
       execute: (input) =>
         wrap("readOrders", async (fresh) => {
+          const { owing, ...filters } = input
           const page = await createGeneralDomainCaller(fresh).orders.listPage({
-            ...input,
+            ...filters,
+            ...(owing ? { paymentStatuses: [...OWING_PAYMENT_STATUSES] } : {}),
             storeId: scope.storeId,
             limit: 10,
           })
@@ -2003,10 +2015,11 @@ export function createGeneralTools(
               input,
               nextCursor: page.nextCursor ?? null,
             }),
-            title: "Order lookup",
-            value: `${page.items.length} on this page`,
+            title: "Orders",
+            value: `${page.items.length} ${page.items.length === 1 ? "order" : "orders"}`,
             scope: fresh.tenantContext.activeStore?.name ?? "Store",
             asOf: new Date().toISOString(),
+            summary: page.nextCursor ? "More orders on the next page" : "",
             detail: `${input.orderNumber ? `Exact number: ${input.orderNumber}` : input.customerId ? `Customer: ${input.customerId}` : `Phone: ${input.phone}`}. ${page.nextCursor ? "More results are available." : "End of this lookup."} Customer/phone results are unpaid or unfinished orders under your normal sales visibility, not a debt total.`,
           })
           for (const order of page.items)
@@ -2323,10 +2336,11 @@ export function createGeneralTools(
               input,
               nextCursor: page.nextCursor ?? null,
             }),
-            title: "Customer directory page",
-            value: `${page.items.length} on this page`,
+            title: "Customers",
+            value: `${page.items.length} ${page.items.length === 1 ? "customer" : "customers"}`,
             scope: "Current business · customer directory",
             asOf: new Date().toISOString(),
+            summary: page.nextCursor ? "More customers on the next page" : "",
             detail: `Name, phone or email contains: ${input.query ?? "no filter"}. ${input.cursor ? "Continuation page." : "First page."} ${page.nextCursor ? "More results are available; continue with the returned cursor." : "End of this list."} This page is not a directory total or a count of buyers.`,
           })
           for (const customer of page.items)
@@ -2341,6 +2355,9 @@ export function createGeneralTools(
               value: "Saved customer",
               scope: "Customer directory",
               asOf: new Date().toISOString(),
+              summary: [customer.phone, customer.email]
+                .filter(Boolean)
+                .join(" · "),
               detail: `Phone: ${customer.phone ?? "not recorded"}. Email: ${customer.email ?? "not recorded"}. Read this saved customer before drafting changes; do not choose between similar names without clarification.`,
             })
           return { items: page.items, nextCursor: page.nextCursor ?? null }

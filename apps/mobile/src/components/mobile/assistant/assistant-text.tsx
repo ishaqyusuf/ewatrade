@@ -42,8 +42,9 @@ function Table({
   block: Extract<MarkdownBlock, { type: "table" }>
   large: boolean
 }) {
-  // At large text each row becomes a small stack: name, then "Column · value".
-  if (large)
+  // Columns do not fit a phone: past two columns (and at large text) each row
+  // becomes a small stack: name, then "Column · value".
+  if (large || block.head.length > 2)
     return (
       <View>
         {block.rows.map((row, rowIndex) => (

@@ -11,10 +11,11 @@ export function generalLowStockAnswers(
   return [
     {
       id: `low_stock_page_${crypto.randomUUID()}`,
-      title: "Low-stock scan",
-      value: `${page.lowStock.length} matches on this page`,
+      title: "Low stock",
+      value: `${page.lowStock.length} ${page.lowStock.length === 1 ? "item" : "items"} at ${page.threshold} or less`,
       scope,
       asOf,
+      summary: page.hasMore ? "More items still to check" : "",
       detail: `Scanned ${page.scannedCount} offerings; ${page.unavailable.length} unavailable. Threshold: at most ${page.threshold} in EACH offering's named unit. ${page.hasMore ? "More offerings remain; continue the scan." : "End of this live scan."} This page is not a business total or reorder policy. Shared offerings may use the same balance; never add their quantities together.`,
     },
     ...page.lowStock.map(
@@ -27,6 +28,7 @@ export function generalLowStockAnswers(
             : "Unavailable",
         scope: `${scope} · ${row.offeringName}`.slice(0, 500),
         asOf,
+        summary: `${row.variantName} · ${row.offeringName}`.slice(0, 200),
         detail: `${row.variantName.slice(0, 160)} · ${row.offeringName.slice(0, 160)}. Available selling units after reservations; at most ${page.threshold} ${row.unitName.slice(0, 80)}. Shared-unit quantities are rounded down to the permitted selling precision.`,
       }),
     ),
@@ -37,6 +39,7 @@ export function generalLowStockAnswers(
         value: "Unavailable",
         scope: `${scope} · ${row.offeringName}`.slice(0, 500),
         asOf,
+        summary: row.reason.slice(0, 200),
         detail: `${row.variantName.slice(0, 160)} · ${row.unitName.slice(0, 80)}. ${row.reason} No zero stock has been inferred.`,
       }),
     ),

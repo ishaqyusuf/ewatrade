@@ -16,6 +16,8 @@ export const generalOrderPageInput = z
     createdAfter: z.string().datetime().optional(),
     createdBefore: z.string().datetime().optional(),
     statuses: z.array(commercialOrderStatusSchema).min(1).max(9).optional(),
+    /** Only orders that still owe money (unpaid or part paid), as the Orders tab's Unpaid filter. */
+    owing: z.boolean().optional(),
   })
   .strict()
   .refine(

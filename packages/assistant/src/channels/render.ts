@@ -82,6 +82,10 @@ type ReadLinkOptions = {
   conversation?: GeneralConversationTarget
   includeContext?: boolean
 }
+/** The owner's line: the short summary when the read wrote one, else its detail. */
+function ownerLine(answer: GeneralAnswer) {
+  return answer.summary ?? answer.detail
+}
 function answerText(answer: GeneralAnswer, options: ReadLinkOptions) {
   const lines = [
     whatsAppHeading(whatsAppDataText(answer.title)),
@@ -94,7 +98,7 @@ function answerText(answer: GeneralAnswer, options: ReadLinkOptions) {
           `${i + 1}. ${whatsAppLiteralText(whatsAppDataText(row.title))} (${row.type.replace(/_/g, " ")})${row.subtitle ? ` — ${whatsAppLiteralText(whatsAppDataText(row.subtitle))}` : ""}`,
       ),
     )
-    lines.push(answer.detail)
+    if (ownerLine(answer)) lines.push(ownerLine(answer))
     if (answer.records.rows.length) lines.push("Limited page, not a total.")
     if (answer.records.labelsShortened)
       lines.push(
@@ -107,12 +111,12 @@ function answerText(answer: GeneralAnswer, options: ReadLinkOptions) {
           `${i + 1}. ${row.name} — ${row.balanceMinor !== undefined && answer.accounts?.currencyCode ? formatFinanceMoney(row.balanceMinor, answer.accounts.currencyCode) : row.kind}${row.paused ? " · paused" : ""}${row.defaultMethods ? "" : ` · ${row.methods.map((method) => ORDER_PAYMENT_METHOD_LABELS[method]).join(", ")}`}`,
       ),
     )
-    lines.push(answer.detail)
+    if (ownerLine(answer)) lines.push(ownerLine(answer))
     if (answer.accounts.more)
       lines.push(
         "More accounts are not shown; this page is not a complete list.",
       )
-  } else lines.push(answer.detail)
+  } else if (ownerLine(answer)) lines.push(ownerLine(answer))
   if (options.includeContext !== false)
     lines.push(
       whatsAppField("Scope", whatsAppDataText(answer.scope)),

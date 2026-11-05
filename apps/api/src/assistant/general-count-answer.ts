@@ -14,6 +14,7 @@ export function generalCountAnswer(input: {
     value: String(input.count),
     scope: input.scope.slice(0, 500),
     detail: input.detail,
+    summary: "",
     asOf: new Date().toISOString(),
   }
 }

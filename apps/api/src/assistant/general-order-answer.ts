@@ -58,6 +58,20 @@ function time(value: Date | string) {
     ? date.toISOString()
     : "time unavailable"
 }
+/** The owner's one-line card text: what is owed, then who. */
+function orderSummary(order: GeneralOrderFact, unpaid: Money) {
+  const paid =
+    order.status === "CANCELLED"
+      ? "Cancelled"
+      : order.status === "REFUNDED"
+        ? "Refunded"
+        : BigInt(unpaid) > BigInt(0)
+          ? `Owes ${money(unpaid, order.currencyCode)}`
+          : "Paid"
+  return [paid, order.customerName ? label(order.customerName, 80) : null]
+    .filter(Boolean)
+    .join(" · ")
+}
 export function generalOrderAnswer(
   order: GeneralOrderFact,
   storeName: string,
@@ -71,6 +85,7 @@ export function generalOrderAnswer(
     value: money(order.totalMinor, order.currencyCode),
     scope: label(storeName, 300),
     asOf,
+    summary: orderSummary(order, unpaid),
     detail: `${order.status} · ${order.paymentStatus} · unpaid ${money(unpaid, order.currencyCode)}. ${excluded ? "Cancelled/refunded orders contribute no unpaid amount. " : ""}${order.customerName ? `Customer ${label(order.customerName, 120)}. ` : ""}${order.createdAt ? `Created ${time(order.createdAt)}. ` : ""}Individual order only; use the summary read for totals.`,
   }
 }
@@ -85,6 +100,7 @@ export function generalOrderPageAnswers(
     query?: string
     queryMode?: "all" | "customer"
     statuses?: readonly string[]
+    owing?: boolean
     cursor?: string
     ownOrders?: boolean
     asOf?: string
@@ -101,10 +117,11 @@ export function generalOrderPageAnswers(
     {
       id: `orders_${crypto.randomUUID()}`,
       title: "Orders",
-      value: `${page.items.length} on this page`,
+      value: `${page.items.length} ${page.items.length === 1 ? "order" : "orders"}`,
       scope,
       asOf,
-      detail: `${page.nextCursor ? "More results are available. " : "End of this live result page. "}${input.cursor ? "Continuation page" : "First page"}; not a business total. Created from ${input.createdAfter ?? "any start"} (inclusive) to ${input.createdBefore ?? "any end"} (exclusive); explicit instants, display dates in UTC. Search: ${label(input.query ?? "none", 160)} (${input.queryMode ?? "all"}); statuses: ${input.statuses?.join(", ") ?? "all"}. Matching orders are listed separately; choose the exact order when names match more than one record.`,
+      summary: page.nextCursor ? "More orders on the next page" : "",
+      detail: `${page.nextCursor ? "More results are available. " : "End of this live result page. "}${input.cursor ? "Continuation page" : "First page"}; not a business total. Created from ${input.createdAfter ?? "any start"} (inclusive) to ${input.createdBefore ?? "any end"} (exclusive); explicit instants, display dates in UTC. Search: ${label(input.query ?? "none", 160)} (${input.queryMode ?? "all"}); statuses: ${input.statuses?.join(", ") ?? "all"}${input.owing ? "; only orders still owing money (unpaid or part paid)" : ""}. Matching orders are listed separately; choose the exact order when names match more than one record.`,
     },
     ...page.items.map((order) => ({
       ...generalOrderAnswer(order, input.storeName, asOf),
@@ -128,6 +145,10 @@ export function generalOrderReadAnswers(
       value: `${shown.length} of ${order.lines.length} lines shown`,
       scope: label(storeName, 500),
       asOf,
+      summary:
+        order.lines.length > shown.length
+          ? "Open the order for every line"
+          : "",
       detail: `${order.lines.length > shown.length ? "More original lines are not shown; open the order for the complete list. " : "All original lines on this order are shown. "}Original booked quantities, units and line values; not fulfilled quantities, stock availability, net returns or a sales total.`,
     })
     for (const [index, line] of shown.entries()) {
@@ -146,6 +167,7 @@ export function generalOrderReadAnswers(
         value: `${prefix}${label(unit, 160 - prefix.length)}`,
         scope: label(`${storeName} · ${order.orderNumber}`, 500),
         asOf,
+        summary: money(line.totalMinor, order.currencyCode),
         detail: `${shortened ? "Unit label shortened; open the original order for its full name. " : ""}Original line value ${money(line.totalMinor, order.currencyCode)}. ${line.snapshot?.variantName ? `Variant ${label(line.snapshot.variantName, 120)}. ` : ""}${line.snapshot?.offeringName ? `Offering ${label(line.snapshot.offeringName, 160)}. ` : ""}Quantity and unit are original saved facts; no conversion or available stock inferred.`,
       })
     }
@@ -158,6 +180,10 @@ export function generalOrderReadAnswers(
       value: `${shown.length} of ${order.payments.length} records shown`,
       scope: label(storeName, 500),
       asOf,
+      summary:
+        order.payments.length > shown.length
+          ? "Open the order for older records"
+          : "",
       detail: `${order.payments.length > shown.length ? "Only the last ten saved payment/refund records are shown; earlier records remain in the order. " : "All saved payment/refund records on this order are shown. "}These are recorded facts, not bank settlement or cash-count verification. Customer credit is separate from money received; this list is not a collections total.`,
     })
     for (const payment of shown) {
@@ -175,6 +201,9 @@ export function generalOrderReadAnswers(
         value: money(payment.amountMinor, order.currencyCode),
         scope: label(`${storeName} · ${order.orderNumber}`, 500),
         asOf,
+        summary: credit
+          ? "Customer credit"
+          : label(payment.method.replaceAll("_", " ").toLowerCase(), 80),
         detail: `Recorded at ${time(payment.recordedAt)} · ${credit ? "customer credit (not new money received)" : label(payment.method.replaceAll("_", " ").toLowerCase(), 80)}.${payment.reference ? ` Reference ${label(payment.reference, 160)}.` : ""} ${refund ? "Refund record; this amount is not added to receipts." : "Recorded against this order only."} No provider settlement or physical cash verification is implied.`,
       })
     }

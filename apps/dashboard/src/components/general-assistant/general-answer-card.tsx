@@ -60,7 +60,14 @@ export function GeneralAnswerCard({
         <p className="text-xl leading-tight font-semibold tabular-nums">
           {answer.value}
         </p>
-        <p className="mt-1 text-sm">{answer.detail}</p>
+        {/* `detail` is written for the model; cards with no summary show it briefly. */}
+        {answer.summary === undefined ? (
+          <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
+            {answer.detail}
+          </p>
+        ) : answer.summary ? (
+          <p className="mt-1 text-sm">{answer.summary}</p>
+        ) : null}
         {answer.records?.rows.length ? (
           <ol className="mt-3 grid gap-3">
             {answer.records.rows.slice(0, 6).map((row, index) => (

@@ -352,7 +352,7 @@ suite("WhatsApp persisted customer directory pagination", () => {
       const rendered = renderWhatsAppFinalReply(page.parts)
       expect(rendered.kind).toBe("reply")
       expect(rendered.chunks.join("\n")).toContain(
-        more ? "10 on this page" : "1 on this page",
+        more ? "10 customers" : "1 customer",
       )
     }
     expect(

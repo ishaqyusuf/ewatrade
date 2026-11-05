@@ -7,34 +7,41 @@ import { ListCard, StatusPill } from "../green-till/kit"
 export function AssistantAnswerCard({
   title,
   value,
-  scope,
-  asOf,
+  summary,
+  meta,
   children,
 }: {
   title: string
   value: string
-  scope: string
-  asOf: string
+  /** One short owner-facing line; empty or missing shows nothing. */
+  summary?: string
+  /** Where and when, in one small line; omitted when the card above says the same. */
+  meta?: string
   children?: ReactNode
 }) {
   return (
     <ListCard>
-      <View className="gap-2 py-3">
-        <View className="gap-0.5">
-          <Text className="text-base [-rn-line-height:22] font-bold text-foreground">
-            {title}
-          </Text>
-          <Text className="text-base [-rn-line-height:22] text-muted-foreground">
-            {scope}
-          </Text>
-        </View>
-        <Text className="text-2xl font-extrabold tracking-tight text-foreground">
+      <View className="gap-1.5 py-3">
+        <Text className="text-sm [-rn-line-height:20] font-semibold text-muted-foreground">
+          {title}
+        </Text>
+        <Text className="text-xl font-extrabold tracking-tight text-foreground">
           {value}
         </Text>
+        {summary ? (
+          <Text className="text-base [-rn-line-height:22] text-foreground">
+            {summary}
+          </Text>
+        ) : null}
         {children}
-        <Text className="text-base [-rn-line-height:22] text-muted-foreground">
-          {asOf}
-        </Text>
+        {meta ? (
+          <Text
+            numberOfLines={1}
+            className="text-xs [-rn-line-height:18] text-muted-foreground"
+          >
+            {meta}
+          </Text>
+        ) : null}
       </View>
     </ListCard>
   )

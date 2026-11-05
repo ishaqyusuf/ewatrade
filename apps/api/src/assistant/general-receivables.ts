@@ -15,10 +15,11 @@ export function generalReceivablesAnswers(
   return [
     {
       id: `receivables_page_${crypto.randomUUID()}`,
-      title: "Customer ledger accounts",
-      value: `${page.items.length} on this page`,
+      title: "Customer accounts",
+      value: `${page.items.length} ${page.items.length === 1 ? "account" : "accounts"}`,
       scope: "Current business · all Stores · posted customer ledger entries",
       asOf,
+      summary: page.nextCursor ? "More accounts on the next page" : "",
       detail: `Name, phone or email contains: ${input.query || "no filter"}. ${input.cursor ? "Continuation page" : "First page"}. ${page.nextCursor ? "More accounts available; continue with the same filter." : "End of this list."} Each account includes its complete posted ledger, but this page is not a business total. Unintegrated orders are excluded; no accounts does not mean no unpaid orders.`,
     },
     ...page.items.map((item) => ({
@@ -27,6 +28,10 @@ export function generalReceivablesAnswers(
       value: `Debt ${generalMoney(item.totals.outstandingDebtMinor, item.currencyCode)}`,
       scope: "Customer account · all Stores",
       asOf,
+      summary:
+        BigInt(item.totals.availableCreditMinor) > BigInt(0)
+          ? `Credit ${generalMoney(item.totals.availableCreditMinor, item.currencyCode)}`
+          : "",
       detail: `Available credit ${generalMoney(item.totals.availableCreditMinor, item.currencyCode)}; net ledger balance ${generalMoney(item.totals.netBalanceMinor, item.currencyCode)}. Debt and credit are separate; neither is cash collected or an unpaid-order total. Posted entries only, all Stores.`,
     })),
   ]

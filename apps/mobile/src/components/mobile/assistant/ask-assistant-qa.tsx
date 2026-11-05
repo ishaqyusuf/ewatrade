@@ -192,14 +192,14 @@ export function AskAssistantQa({
                 <AssistantAnswerCard
                   title="Mama Tunde"
                   value={rep ? "₦9,000" : manager ? "₦4,500" : "₦9,000"}
-                  scope={
+                  summary={
                     rep
                       ? "Your own sales · 1 paid order"
                       : manager
                         ? "Unpaid orders · 2 orders"
                         : "Customer account · opening balance + ORD-1041"
                   }
-                  asOf="Sample · 10:42"
+                  meta="Sample · 10:42"
                 >
                   {!rep ? (
                     <ActionButton

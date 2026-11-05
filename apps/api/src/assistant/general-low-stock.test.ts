@@ -50,7 +50,7 @@ test("low-stock answers identify incomplete pages and never turn unavailable int
     "Store",
   )
   expect(answers[0]?.detail).toContain("More offerings remain")
-  expect(answers[0]?.value).toBe("0 matches on this page")
+  expect(answers[0]?.value).toBe("0 items at 2 or less")
   expect(answers[1]?.value).toBe("Unavailable")
   for (const answer of answers)
     expect(generalAnswerSchema.safeParse(answer).success).toBe(true)

@@ -680,7 +680,10 @@ export const generalAnswerSchema = z
     value: z.string().max(160),
     scope: z.string().max(500),
     asOf: z.string().datetime(),
+    /** Read for the model (paging, scope, caveats); cards never show it when `summary` is set. */
     detail: z.string().max(1000),
+    /** One short plain line for the owner's card, e.g. "Owes ₦600 · Walk-in customer". Empty hides it. */
+    summary: z.string().max(200).optional(),
     /** Plain suggested user replies only; never authority, targets or confirmations. */
     chatChoices: whatsAppChatChoicesSchema.optional().catch(undefined),
     target: generalAnswerTargetSchema.optional(),
