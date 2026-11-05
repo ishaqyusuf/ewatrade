@@ -426,12 +426,11 @@ export function ClassicOrderDetailPrimaryAction({
       value={{ "--order-action-bottom": Math.max(insets.bottom, 16) }}
     >
       <NativeView
+        // Owner rule: the bottom action sits on the page itself, never in a
+        // sheet-like card. Opaque so the scrolled content never shows through.
         style={{
-          backgroundColor: colors.card,
-          borderTopLeftRadius: 24,
-          borderTopRightRadius: 24,
+          backgroundColor: colors.background,
           bottom: 0,
-          boxShadow: "0 -10px 30px rgba(24, 36, 32, 0.10)",
           left: 0,
           paddingHorizontal: 16,
           paddingTop: 12,
