@@ -2,6 +2,7 @@ import { Modal, useModal } from "@/components/ui/modal"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
+import { useColors } from "@/hooks/use-color"
 import { getSession } from "@/lib/session-store"
 import { useOperationalModeStore } from "@/store/operationalModeStore"
 import { getDataCacheGeneration } from "@/trpc/client"
@@ -76,6 +77,7 @@ export function AskAssistantLive() {
   const [answerCacheGeneration] = useState(getDataCacheGeneration)
   const router = useRouter()
   const insets = useSafeAreaInsets()
+  const colors = useColors()
   const saved = useModal()
   const [editing, setEditing] = useState<GeneralProposal | null>(null)
   // The thread's notice sits behind the open editor, so a refused save is
@@ -86,6 +88,7 @@ export function AskAssistantLive() {
     setSaveFailed(false)
   }
   const list = useRef<FlatList>(null)
+  const [composerHeight, setComposerHeight] = useState(0)
   const input = useRef<TextInput>(null)
   const atBottom = useRef(true)
   const disabled =
@@ -242,7 +245,10 @@ export function AskAssistantLive() {
     (!!homeState || (!!vm.availability.data?.enabled && !noAccess)) &&
     !(vm.state.isPending && vm.conversationId)
   return (
-    <View style={{ flex: 1, paddingTop: insets.top }}>
+    // The chat is white (card colour), like the reply surface in ChatGPT.
+    <View
+      style={{ flex: 1, paddingTop: insets.top, backgroundColor: colors.card }}
+    >
       <KeyboardAvoidingView behavior="padding" style={{ flex: 1 }}>
         <AssistantHeader
           title="Assistant"
@@ -284,7 +290,11 @@ export function AskAssistantLive() {
           data={messages}
           keyExtractor={(item) => item.id}
           keyboardShouldPersistTaps="handled"
-          contentContainerStyle={{ padding: 18, gap: 14, paddingBottom: 30 }}
+          contentContainerStyle={{
+            padding: 18,
+            gap: 14,
+            paddingBottom: 30 + composerHeight,
+          }}
           // Only the owner's own scrolling decides whether the thread follows
           // new content; scroll events from the list re-laying out while a
           // chat loads do not.
@@ -671,24 +681,34 @@ export function AskAssistantLive() {
             </View>
           }
         />
-        <AssistantChatBox
-          conversationId={vm.composerConversationId}
-          resetKey={vm.trayKey}
-          onReadyChange={vm.setReadyFiles}
-          value={vm.draft}
-          onChange={vm.setDraft}
-          onSend={() => void vm.send()}
-          onStop={() => void vm.chat.stop()}
-          busy={vm.busy}
-          disabled={disabled || exhausted || !!vm.queued || !!noAccess}
-          inputRef={input}
-          placeholder="Ask anything"
-          reason={
-            vm.offline
-              ? "Saved answers are available offline. Reconnect to make changes."
-              : undefined
+        {/* The composer floats over the list's last pixels so messages
+            scroll under its fade; the list pads by the same height. */}
+        <View
+          style={{ marginTop: -composerHeight }}
+          onLayout={(event) =>
+            setComposerHeight(Math.round(event.nativeEvent.layout.height))
           }
-        />
+        >
+          <AssistantChatBox
+            conversationId={vm.composerConversationId}
+            resetKey={vm.trayKey}
+            onReadyChange={vm.setReadyFiles}
+            value={vm.draft}
+            onChange={vm.setDraft}
+            onSend={() => void vm.send()}
+            onStop={() => void vm.chat.stop()}
+            busy={vm.busy}
+            disabled={disabled || exhausted || !!vm.queued || !!noAccess}
+            inputRef={input}
+            placeholder="Ask anything"
+            surface={colors.card}
+            reason={
+              vm.offline
+                ? "Saved answers are available offline. Reconnect to make changes."
+                : undefined
+            }
+          />
+        </View>
         <Modal ref={saved.ref} title="All chats" snapPoints={["90%"]}>
           <BottomSheetScrollView
             contentContainerStyle={{ padding: 18, gap: 12, paddingBottom: 32 }}

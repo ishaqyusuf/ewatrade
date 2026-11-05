@@ -4,6 +4,7 @@ import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
 import { useColors } from "@/hooks/use-color"
 import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
+import { LinearGradient } from "expo-linear-gradient"
 import { useRouter } from "expo-router"
 import { Children, type ReactNode, useState } from "react"
 import {
@@ -51,7 +52,7 @@ export function AssistantHeader({
   const router = useRouter()
   const large = useLargeTextLayout()
   return (
-    <View className="border-b border-border bg-background px-[18px] pb-3 pt-2">
+    <View className="border-b border-border bg-card px-[18px] pb-3 pt-2">
       <View className="flex-row items-center gap-3">
         <Pressable
           accessibilityRole="button"
@@ -199,6 +200,7 @@ export function AssistantComposer({
   onAttach,
   attachOpen = false,
   voice,
+  surface,
 }: {
   /** Files are ready, so an empty message may be sent. */
   canSendEmpty?: boolean
@@ -218,6 +220,8 @@ export function AssistantComposer({
   attachOpen?: boolean
   /** Shows the mic. */
   voice?: AssistantComposerVoice
+  /** The screen colour messages fade into under the composer. */
+  surface?: string
 }) {
   const insets = useSafeAreaInsets()
   const keyboardVisible = useKeyboardState((state) => state.isVisible)
@@ -281,8 +285,23 @@ export function AssistantComposer({
       />
     </Pressable>
   )
+  // Messages scroll under the composer and fade into the page (as ChatGPT):
+  // clear above the pill, solid by its lower half and the system bar.
+  const fade = (
+    <LinearGradient
+      pointerEvents="none"
+      colors={[
+        `${surface ?? colors.background}00`,
+        `${surface ?? colors.background}E6`,
+        surface ?? colors.background,
+      ]}
+      locations={[0, 0.4, 0.75]}
+      style={{ position: "absolute", top: -28, right: 0, bottom: 0, left: 0 }}
+    />
+  )
   return (
-    <View className="gap-2 bg-background px-3 pt-1.5">
+    <View className="gap-2 px-3 pt-1.5">
+      {fade}
       {reason ? (
         <Text
           accessibilityLiveRegion="polite"
