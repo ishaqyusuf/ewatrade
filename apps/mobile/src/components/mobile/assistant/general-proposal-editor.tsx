@@ -21,6 +21,7 @@ import { useRef, useState } from "react"
 import { ActionButton } from "../action-button"
 import { CountrySelect } from "../country-select"
 import { FormField } from "../form-field"
+import { phoneCountryOf } from "../phone-field"
 import { QaQuickFillButton } from "../qa-quick-fill-button"
 import { SearchFooterSpacer } from "../search-footer-scope"
 import { GeneralCashCountEditor } from "./general-cash-count-editor"
@@ -254,10 +255,16 @@ function GeneralRecordEditor({
         ? minorToMajorInput(initial.amountMinor)
         : "",
   )
-  const [country, setCountry] = useState("NG")
+  // A saved number starts the field at its own country (+254 → Kenya), not
+  // at Nigeria with the whole international number in the phone box.
+  const [country, setCountry] = useState(() =>
+    initial.action === "customer_create"
+      ? getCountry(phoneCountryOf(initial.phone)).code
+      : "NG",
+  )
   const [phone, setPhone] = useState(
     initial.action === "customer_create"
-      ? toLocalPhone(getCountry("NG").dialCode, initial.phone)
+      ? toLocalPhone(getCountry(country).dialCode, initial.phone)
       : "",
   )
   const [undo, setUndo] = useState<{
