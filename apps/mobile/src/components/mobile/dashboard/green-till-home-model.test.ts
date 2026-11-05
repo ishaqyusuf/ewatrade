@@ -3,6 +3,7 @@ import {
   countLabel,
   firstOrderCatalogStepSub,
   greenTillHomeStage,
+  homeAskQuestions,
   homeMoney,
   orderPaymentPill,
   recordAvatar,
@@ -119,5 +120,16 @@ describe("first-order catalog step", () => {
     expect(firstOrderCatalogStepSub(1)).toBe("1 item ready to sell")
     expect(firstOrderCatalogStepSub(0)).toBe("Ready to sell")
     expect(firstOrderCatalogStepSub(undefined)).toBe("Ready to sell")
+  })
+
+  test("Ask chips only use figures Home already has", () => {
+    expect(homeAskQuestions({})).toEqual([])
+    expect(homeAskQuestions({ unpaidOrders: 26, soldToday: 6 })).toEqual([
+      "Which orders are unpaid?",
+      "What sold today?",
+    ])
+    expect(
+      homeAskQuestions({ unpaidOrders: 0, soldToday: 2, mine: true }),
+    ).toEqual(["What did I sell today?"])
   })
 })

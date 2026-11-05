@@ -131,3 +131,23 @@ export function homeMoney(valueMinor: number, currencyCode: string) {
     ? formatted.replace(/\.00$/, "")
     : formatted
 }
+
+/**
+ * Home's Ask bar chips (Workshop 01 Home v2): only questions Home's own
+ * figures already back, so a chip never needs a query of its own. Unpaid asks
+ * about orders, not "who owes me": the assistant answers that from customer
+ * ledgers, which leave unpaid orders out. No low-stock chip: the assistant
+ * asks for a threshold first instead of using saved low-stock levels.
+ */
+export function homeAskQuestions(input: {
+  unpaidOrders?: number
+  soldToday?: number
+  mine?: boolean
+}) {
+  const questions: string[] = []
+  if (input.unpaidOrders && input.unpaidOrders > 0)
+    questions.push("Which orders are unpaid?")
+  if (input.soldToday && input.soldToday > 0)
+    questions.push(input.mine ? "What did I sell today?" : "What sold today?")
+  return questions
+}

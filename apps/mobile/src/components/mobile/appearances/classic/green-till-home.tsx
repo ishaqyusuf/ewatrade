@@ -1,3 +1,4 @@
+import { HomeAskBar } from "@/components/mobile/assistant/home-ask-bar"
 import {
   CATALOG_AVATAR_TINT,
   CatalogAvatar,
@@ -72,6 +73,8 @@ export type HomeSales =
     }
 
 export type GreenTillOwnerHomeProps = {
+  /** Questions from Home's own figures for the Ask bar's chips. */
+  askQuestions: string[]
   attention: AttentionItem[]
   blocked?: {
     icon: IconKeys
@@ -202,6 +205,8 @@ function EverydayHome(props: GreenTillOwnerHomeProps) {
           testID="home-sales-hero"
         />
       )}
+
+      <HomeAskBar questions={props.askQuestions} />
 
       {props.isOffline || props.pendingCommandCount > 0 ? (
         <StatusBanner
@@ -526,6 +531,7 @@ function HomeSkeleton() {
 }
 
 export type GreenTillRepHomeProps = {
+  askQuestions: string[]
   isOffline: boolean
   onCloseout: () => void
   onCustomers?: () => void
@@ -597,6 +603,7 @@ export function GreenTillRepHome(props: GreenTillRepHomeProps) {
           testID="rep-sales-hero"
         />
       )}
+      <HomeAskBar questions={props.askQuestions} />
       {props.isOffline || props.pendingCommandCount > 0 ? (
         <StatusBanner
           className="mt-3"

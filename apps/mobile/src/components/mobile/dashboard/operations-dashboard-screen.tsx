@@ -56,6 +56,7 @@ import { mapCatalogItem } from "../catalog/catalog-row-model"
 import {
   SALE_STATUSES,
   greenTillHomeStage,
+  homeAskQuestions,
   homeMoney,
   orderPaymentPill,
   recordAvatar,
@@ -569,6 +570,10 @@ export function OperationsDashboardSurface({
 
       {isClassicOwner ? (
         <GreenTillOwnerHome
+          askQuestions={homeAskQuestions({
+            soldToday: todaySales.data?.orderCount,
+            unpaidOrders: unpaidSummary?.outstandingCount,
+          })}
           paymentNotifications={<PaymentNotificationsSection />}
           attention={[
             ...((changeApprovals.data?.length ?? 0) > 0
@@ -737,6 +742,10 @@ export function OperationsDashboardSurface({
         />
       ) : isAttendant ? (
         <GreenTillRepHome
+          askQuestions={homeAskQuestions({
+            mine: true,
+            soldToday: repTodaySales.data?.orderCount,
+          })}
           paymentNotifications={<PaymentNotificationsSection />}
           isOffline={isOffline}
           onCloseout={() => router.push("/closeout-modal" as never)}

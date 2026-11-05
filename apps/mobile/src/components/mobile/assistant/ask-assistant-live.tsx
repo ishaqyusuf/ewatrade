@@ -61,7 +61,10 @@ import { PaymentLinksResult } from "./general-payment-links"
 import { GeneralProductThumb } from "./general-product-picture"
 import { GeneralProposalEditor } from "./general-proposal-editor"
 import { paymentLinksReviewLine } from "./native-payment-links-values"
-import { useAssistantPrefillFocus } from "./use-assistant-prefill"
+import {
+  useAssistantPrefillFocus,
+  useAssistantStarterQuestion,
+} from "./use-assistant-prefill"
 import { useGeneralAssistant } from "./use-general-assistant"
 const nearEnd = (n: NativeScrollEvent) =>
   n.contentSize.height - n.layoutMeasurement.height - n.contentOffset.y < 100
@@ -169,10 +172,11 @@ export function AskAssistantLive() {
         : vm.availability.isError
           ? "Availability could not load. Reconnect and try again."
           : null
-  useAssistantPrefillFocus(
-    input,
-    vm.draft,
-    !(disabled || exhausted || vm.queued || noAccess),
+  const canType = !(disabled || exhausted || vm.queued || noAccess)
+  useAssistantPrefillFocus(input, vm.draft, canType)
+  useAssistantStarterQuestion(
+    vm.ask,
+    canType && vm.availability.data?.enabled === true,
   )
   useEffect(() => {
     if (vm.offline || vm.scopeChanged) {

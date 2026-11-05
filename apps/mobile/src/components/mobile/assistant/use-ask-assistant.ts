@@ -8,7 +8,8 @@ import { useState } from "react"
 import { isAssistantSessionCurrent } from "./assistant-scope"
 
 /**
- * Opens the assistant screen with a starter line the owner keeps typing after.
+ * Opens the assistant screen with a starter line the owner keeps typing after,
+ * focused and empty, or with a question already sent.
  * `enabled` follows the server's launch flag; `canOpen` is false offline.
  */
 export function useAskAssistant() {
@@ -29,20 +30,27 @@ export function useAskAssistant() {
       retry: false,
     }),
   )
+  const open = (
+    params: { draft: string } | { focus: "1" } | { send: string },
+  ) => {
+    if (
+      isAssistantSessionCurrent(
+        origin,
+        getSession(),
+        useOperationalModeStore.getState().isOfflineMode,
+        false,
+      )
+    )
+      router.push({ pathname: "/ask-assistant", params })
+  }
   return {
     enabled: availability.data?.enabled === true,
     canOpen: permitted,
-    ask: (draft: string) => {
-      if (
-        isAssistantSessionCurrent(
-          origin,
-          getSession(),
-          useOperationalModeStore.getState().isOfflineMode,
-          false,
-        )
-      )
-        router.push({ pathname: "/ask-assistant", params: { draft } })
-    },
+    ask: (draft: string) => open({ draft }),
+    /** Opens with the empty composer focused and the keyboard up. */
+    openFocused: () => open({ focus: "1" }),
+    /** Opens and asks `question` straight away. */
+    send: (question: string) => open({ send: question.slice(0, 160) }),
   }
 }
 
