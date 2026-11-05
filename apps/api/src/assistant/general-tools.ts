@@ -1418,6 +1418,7 @@ export function createGeneralTools(
                     currency: result.draft.currencyCode,
                   }).format(result.draft.totalMinor / 100),
             detail: "Review and edit the job before saving.",
+            summary: "Review and edit the job before saving.",
             scope: fresh.tenantContext.activeStore?.name ?? "Current Store",
             asOf: new Date().toISOString(),
             serviceDraft: result.draft,
@@ -2874,6 +2875,7 @@ export function createGeneralTools(
             scope: fresh.tenantContext.activeStore?.name ?? "Store",
             asOf: new Date().toISOString(),
             detail: question,
+            summary: question,
             chatChoices: choices,
           })
           return {
@@ -2996,6 +2998,7 @@ export function createGeneralTools(
             scope: fresh.tenantContext.activeStore?.name ?? "Store",
             asOf: new Date().toISOString(),
             detail: capabilityActionHandoffInstruction,
+            summary: capabilityActionHandoffInstruction,
             handoff,
           })
           return {
@@ -3053,6 +3056,7 @@ export function createGeneralTools(
             scope: fresh.tenantContext.activeStore?.name ?? "Store",
             asOf: new Date().toISOString(),
             detail: plannedReportAppInstruction,
+            summary: plannedReportAppInstruction,
             handoff,
           })
           return {

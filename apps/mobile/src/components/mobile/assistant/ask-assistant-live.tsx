@@ -463,16 +463,6 @@ export function AskAssistantLive() {
                         summary={answer.summary}
                         meta={repeated ? undefined : meta}
                       >
-                        {/* `detail` is written for the model; older cards with no
-                          summary show it briefly. */}
-                        {answer.summary === undefined ? (
-                          <Text
-                            numberOfLines={2}
-                            className="text-sm text-muted-foreground"
-                          >
-                            {answer.detail}
-                          </Text>
-                        ) : null}
                         {rows.map((row) => (
                           <View key={row.id}>
                             <View className="h-px bg-border" />

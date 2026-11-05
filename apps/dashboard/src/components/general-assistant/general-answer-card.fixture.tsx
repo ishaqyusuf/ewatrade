@@ -11,7 +11,8 @@ const answer = {
   id: "a1",
   title: "Sales today",
   value: "₦12,450.00",
-  detail: "6 paid orders. 2 orders still owe ₦1,250.00.",
+  detail: "Model notes: exact count, not a page.",
+  summary: "6 paid orders. 2 orders still owe ₦1,250.00.",
   scope: "Jawdah Poultry QA · Main store",
   asOf: "2026-10-12T09:21:00.000Z",
 } as GeneralAnswer
@@ -21,6 +22,8 @@ test("an answer reads value, meaning, then where it came from", () => {
   const at = (text: string) => html.indexOf(text)
   expect(at("Sales today")).toBeLessThan(at("₦12,450.00"))
   expect(at("₦12,450.00")).toBeLessThan(at("6 paid orders"))
+  // The read's notes for the model never reach the card.
+  expect(at("Model notes")).toBe(-1)
   expect(at("6 paid orders")).toBeLessThan(at("Jawdah Poultry QA · Main store"))
   expect(html).not.toContain("Open report")
 })

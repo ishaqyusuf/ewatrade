@@ -60,12 +60,8 @@ export function GeneralAnswerCard({
         <p className="text-xl leading-tight font-semibold tabular-nums">
           {answer.value}
         </p>
-        {/* `detail` is written for the model; cards with no summary show it briefly. */}
-        {answer.summary === undefined ? (
-          <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
-            {answer.detail}
-          </p>
-        ) : answer.summary ? (
+        {/* `detail` is written for the model and never shown here. */}
+        {answer.summary ? (
           <p className="mt-1 text-sm">{answer.summary}</p>
         ) : null}
         {answer.records?.rows.length ? (
