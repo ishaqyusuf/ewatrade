@@ -85,4 +85,7 @@ and `.brain/BRAIN.md`. They are ignored project memory and are not force-added.
 API/database/permission/release documentation is unchanged because their behavior
 is unchanged. Unrelated staged explainers and mixed Agent Chat history are preserved.
 
-Commit and Workshop implementation linkage are recorded after the scoped commit.
+Implementation commit: `40761833d3d41948f299aec65e986f311e7c076b`. Workshop implementation receipt: `0306d64e-32d8-4f78-aec8-d6b3a4e1a276`.
+Catalog read-back confirms status `implemented`, selected revision unchanged,
+implementation count 1, and the exact commit above. Earlier directions/history
+are retained. The subsequent documentation-only commit closes this record.

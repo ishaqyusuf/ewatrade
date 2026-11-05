@@ -12,7 +12,7 @@ does not authorize deployment. Work remains in the current `main` checkout.
 - [x] Record the exact approved revision and handoff.
 - [x] Implement the approved page in the current marketing application.
 - [x] Review source, desktop/mobile rendering and working interactions.
-- [ ] Commit owned changes and record verified implementation in Workshop.
+- [x] Commit owned changes and record verified implementation in Workshop.
 
 The four checkpoints describe delivery progress, not measured test coverage.
 
@@ -88,3 +88,6 @@ No model substitution or effort downgrade occurred. This is mixed authorship;
 the final acceptance review is coordinator review, not an independent Opus review.
 
 See [verification](../verification/2026-11-05-marketing-v15-implementation.md).
+
+Implementation commit: `40761833d3d41948f299aec65e986f311e7c076b`. Workshop implementation receipt: `0306d64e-32d8-4f78-aec8-d6b3a4e1a276`.
+All four delivery checkpoints are complete; no deployment was performed.
