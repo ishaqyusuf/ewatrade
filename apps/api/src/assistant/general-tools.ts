@@ -183,7 +183,10 @@ import {
   generalOpenOrderInput,
   generalOrderPageInput,
 } from "./general-lookup-inputs"
-import { generalLowStockAnswers } from "./general-low-stock-answers"
+import {
+  generalLowStockAnswers,
+  generalRunningLowAnswers,
+} from "./general-low-stock-answers"
 import { generalOfferingStockAnswer } from "./general-offering-stock-answer"
 import { generalOperationalAnswers } from "./general-operational-answers"
 import {
@@ -1869,20 +1872,31 @@ export function createGeneralTools(
     }),
     readLowStock: tool({
       description:
-        "Scan a bounded page of active offerings in the current Store at or below an explicit threshold in EACH offering's named unit. Ask for the threshold; never invent a reorder policy. Unconfigured stock is unavailable, not zero. Follow nextCursor even if lowStock is empty; never sum units or claim a total from a page.",
-      inputSchema: inventoryLowStockPageSchema.omit({ storeId: true }),
-      execute: (input) =>
+        "What is running low in the current Store. Without a threshold (\"what's running low?\") it uses each product's saved low-stock level, as the Inventory page, and names out-of-stock products; never ask for a threshold first. With a threshold the owner gives, scan a bounded page of active offerings at or below it in EACH offering's named unit; follow nextCursor even if lowStock is empty. Never invent a reorder policy, call unconfigured stock zero, sum units or claim a total from a page.",
+      inputSchema: inventoryLowStockPageSchema
+        .omit({ storeId: true })
+        .partial({ threshold: true }),
+      execute: ({ threshold, ...input }) =>
         wrap("readLowStock", async (fresh) => {
-          const page = await createGeneralDomainCaller(
-            fresh,
-          ).inventory.lowStockPage({ ...input, storeId: scope.storeId })
+          const caller = createGeneralDomainCaller(fresh)
+          const storeName = fresh.tenantContext.activeStore?.name ?? "Store"
+          if (threshold === undefined) {
+            const result = await caller.inventory.runningLow({
+              storeId: scope.storeId,
+            })
+            for (const answer of generalRunningLowAnswers(result, storeName))
+              onAnswer(answer)
+            return result
+          }
+          const page = await caller.inventory.lowStockPage({
+            ...input,
+            threshold,
+            storeId: scope.storeId,
+          })
           for (const answer of readAnswersWithContinuation(
-            generalLowStockAnswers(
-              page,
-              fresh.tenantContext.activeStore?.name ?? "Store",
-            ),
+            generalLowStockAnswers(page, storeName),
             "readLowStock",
-            input,
+            { ...input, threshold },
             page.nextCursor,
           ))
             onAnswer(answer)

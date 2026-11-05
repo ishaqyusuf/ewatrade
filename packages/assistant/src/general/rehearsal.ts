@@ -602,6 +602,9 @@ function rehearsalTurn(prompt: readonly PromptMessage[]): RehearsalTurn {
         ...(lowStock[3] ? { catalogItemId: lowStock[3] } : {}),
       },
     }
+  // No number: the products' saved low-stock levels.
+  if (/^(?:what'?s )?running low\??$/i.test(command))
+    return { kind: "tool", toolName: "readLowStock", input: {} }
   const orderSummary = /^order summary(?: customer (\S{1,128}))?$/i.exec(
     command,
   )
