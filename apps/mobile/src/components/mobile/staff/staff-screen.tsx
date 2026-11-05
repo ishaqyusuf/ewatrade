@@ -5,17 +5,15 @@ import { ListCreateFab } from "@/components/mobile/list-create-fab"
 import { ListSkeleton } from "@/components/mobile/loading-skeletons"
 import { SearchFold, useSearchFold } from "@/components/mobile/search-fold"
 import { StatusBanner } from "@/components/mobile/status-banner"
-import { Modal } from "@/components/ui/modal"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
 import { useBottomSearchScroll } from "@/hooks/use-bottom-search-scroll"
 import { useColors } from "@/hooks/use-color"
 import { shouldShowListSearch } from "@/lib/list-pagination"
-import type { BottomSheetModal } from "@gorhom/bottom-sheet"
 import { useRouter } from "expo-router"
 import { VariableContextProvider } from "nativewind"
-import { forwardRef, useRef, useState } from "react"
-import { Alert, RefreshControl, useWindowDimensions } from "react-native"
+import { useRef, useState } from "react"
+import { Alert, RefreshControl } from "react-native"
 import { FlatList } from "react-native-css/components/FlatList"
 import { ScrollView } from "react-native-css/components/ScrollView"
 import {
@@ -346,6 +344,9 @@ export function StaffInviteContent({ onComplete }: StaffInviteProps) {
           ref={invitation.modalRef}
           draft={invitation.draft}
           error={invitation.error}
+          fieldErrors={invitation.fieldErrors}
+          duplicate={invitation.duplicate}
+          whatsappEnabled={invitation.whatsappEnabled}
           quotaMessage={vm.quotaMessage}
           locked={invitation.locked}
           isPending={invitation.isPending}
@@ -361,21 +362,3 @@ export function StaffInviteContent({ onComplete }: StaffInviteProps) {
     </VariableContextProvider>
   )
 }
-
-// Retained for existing imports; route-based Staff uses one full-screen host.
-export const StaffInviteSheet = forwardRef<BottomSheetModal, StaffInviteProps>(
-  function StaffInviteSheet({ onComplete }, ref) {
-    const { height } = useWindowDimensions()
-    return (
-      <Modal ref={ref} snapPoints={["82%"]} title="Staff">
-        <VariableContextProvider
-          value={{ "--staff-legacy-height": Math.round(height * 0.7) }}
-        >
-          <View className="h-[var(--staff-legacy-height)]">
-            <StaffInviteContent onComplete={onComplete} />
-          </View>
-        </VariableContextProvider>
-      </Modal>
-    )
-  },
-)

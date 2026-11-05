@@ -8,7 +8,7 @@ const SOURCE_DIR = join(MOBILE_DIR, "src")
 const contracts = [
   {
     file: "components/mobile/staff-invite-sheet.tsx",
-    markers: ["StaffInviteContent", "StaffInviteSheet", "./staff/staff-screen"],
+    markers: ["StaffInviteContent", "./staff/staff-screen"],
   },
   {
     file: "components/mobile/staff/staff-screen.tsx",
@@ -34,30 +34,22 @@ const contracts = [
   },
   {
     file: "components/mobile/staff/staff-invitation-sheet.tsx",
-    markers: [
-      "hasStaffInviteDraft",
-      "getStaffInviteSheetMaxHeight",
-      "STAFF_INVITE_SHEET_SNAP_POINTS",
-      "dismissible={!hasDraft && !isPending}",
-      "Send invite",
-    ],
+    markers: ["hasStaffInviteDraft", "Send invite"],
+    // Invite attendant takes typing, so it opens full screen, never as a
+    // bottom sheet (owner rule, 4 Nov 2026).
     scopedContracts: [
       {
-        end: "</Modal>",
+        end: "</FullScreenModal>",
         forbiddenMarkers: [
           "Staff details",
           "bottomOffset={280}",
           "paddingBottom: 220",
+          "snapPoints",
         ],
         markers: [
-          'keyboardBehavior="fillParent"',
-          "bottomOffset={footerHeight + 12}",
-          "backdropComponent={renderBackdrop}",
-          "footerComponent={renderFooter}",
-          "enablePanDownToClose={!hasDraft && !isPending}",
-          "maxDynamicContentSize={getStaffInviteSheetMaxHeight(height)}",
-          "snapPoints={[...STAFF_INVITE_SHEET_SNAP_POINTS]}",
-          'title="Invite attendant"',
+          'title={uncertain ? "Result not confirmed" : "Invite attendant"}',
+          "closeDisabled={isPending}",
+          "footer={",
           'label="Email address · Required"',
           'label="Attendant name · Optional"',
         ],
@@ -65,7 +57,7 @@ const contracts = [
           'label="Email address · Required"',
           'label="Attendant name · Optional"',
         ],
-        start: "    <Modal\n      ref={ref}",
+        start: "    <FullScreenModal\n      ref={ref}",
       },
     ],
   },

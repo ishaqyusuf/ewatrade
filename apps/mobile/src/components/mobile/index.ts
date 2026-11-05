@@ -12,10 +12,7 @@ export {
   AuthHeader,
   AuthMethodButton,
 } from "./auth-header"
-export {
-  BusinessSwitchContent,
-  BusinessSwitchSheet,
-} from "./business-switch-sheet"
+export { BusinessSwitchContent } from "./business-switch-sheet"
 export { BottomSearchFooter } from "./bottom-search-footer"
 export { CatalogItemsContent } from "./catalog-items-sheet"
 export { CatalogItemOverview } from "./catalog-item-overview"
@@ -99,7 +96,7 @@ export {
   ShareLinkPanel,
   ShareLinkRecordRow,
 } from "./share-link-flow"
-export { StaffInviteContent, StaffInviteSheet } from "./staff-invite-sheet"
+export { StaffInviteContent } from "./staff-invite-sheet"
 export {
   SetupFlowHeader,
   SetupInlineNotice,

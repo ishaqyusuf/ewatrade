@@ -28,22 +28,22 @@ const checks = [
     file: "components/mobile/business-switch-sheet.tsx",
     markers: [
       'from "./business-switch/business-switch-screen"',
-      "BusinessSwitchSheet",
+      "BusinessSwitchContent",
     ],
   },
   {
     file: "components/mobile/business-switch/business-switch-screen.tsx",
     markers: [
-      "BUSINESS_SWITCH_COPY",
-      "useBusinessSwitch",
+      "useBusinessSwitch({ onComplete })",
       "ListCreateFab",
       'accessibilityLabel="Add a new business"',
       'testID="business-add-fab"',
-      "onComplete?.()",
       "onActionPress={() => void vm.refresh()}",
       "disabled={!vm.canCreate}",
     ],
+    // Workspaces is a full-screen route; its search never sits in a sheet.
     forbiddenMarkers: [
+      "BottomSheetFlatList",
       "Current workspace",
       ">\n        Done\n      </ActionButton>",
     ],

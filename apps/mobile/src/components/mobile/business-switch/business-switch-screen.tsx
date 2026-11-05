@@ -1,4 +1,3 @@
-import { AppBottomSheetBackdrop } from "@/components/app/bottom-sheet-backdrop"
 import { BottomSearchFooter } from "@/components/mobile/bottom-search-footer"
 import { EmptyState } from "@/components/mobile/empty-state"
 import { ListCreateFab } from "@/components/mobile/list-create-fab"
@@ -6,33 +5,17 @@ import { getListCreateFabFooterOffset } from "@/components/mobile/list-create-fa
 import { ListSkeleton } from "@/components/mobile/loading-skeletons"
 import { SearchFold, useSearchFold } from "@/components/mobile/search-fold"
 import { StatusBanner } from "@/components/mobile/status-banner"
-import { Icon } from "@/components/ui/icon"
-import { Modal, useModal } from "@/components/ui/modal"
-import { Pressable } from "@/components/ui/pressable"
-import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
 import { useBottomSearchScroll } from "@/hooks/use-bottom-search-scroll"
 import { useColors } from "@/hooks/use-color"
 import { shouldShowListSearch } from "@/lib/list-pagination"
 import type { RetailOpsBusiness } from "@/store/businessStore"
-import {
-  type BottomSheetBackdropProps,
-  BottomSheetFlatList,
-  type BottomSheetModal,
-} from "@gorhom/bottom-sheet"
 import { VariableContextProvider } from "nativewind"
-import {
-  type ReactNode,
-  forwardRef,
-  useCallback,
-  useRef,
-  useState,
-} from "react"
+import { useRef, useState } from "react"
 import {
   type NativeScrollEvent,
   type NativeSyntheticEvent,
   RefreshControl,
-  useWindowDimensions,
 } from "react-native"
 import { FlatList } from "react-native-css/components/FlatList"
 import { ScrollView } from "react-native-css/components/ScrollView"
@@ -42,12 +25,7 @@ import {
   ClassicWorkspaceRow,
 } from "../appearances/classic/business-switch-screen"
 import { MobileWorkflowChrome } from "../appearances/workflow-chrome"
-import { BUSINESS_SWITCH_COPY } from "../business-switch-presentation"
 import type { WorkflowModalChromeProps } from "../workflow-modal-screen"
-import {
-  BusinessSwitchSheetFooter,
-  WorkspaceFooterContext,
-} from "./business-switch-sheet-footer"
 import { BUSINESS_SEARCH_LIMIT, useBusinessSwitch } from "./use-business-switch"
 
 type WorkspaceController = ReturnType<typeof useBusinessSwitch>
@@ -61,14 +39,12 @@ function WorkspaceBody({
   footerSpace,
   heroFolded = false,
   onScroll,
-  sheet = false,
 }: {
   vm: WorkspaceController
   footerSpace: number
   /** Folds the current-business card while the bottom search is in use. */
   heroFolded?: boolean
   onScroll?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void
-  sheet?: boolean
 }) {
   const colors = useColors()
   const header = (
@@ -179,17 +155,6 @@ function WorkspaceBody({
         />
       ) : undefined,
   }
-  if (sheet)
-    return (
-      <BottomSheetFlatList
-        {...listProps}
-        contentContainerStyle={{
-          flexGrow: 1,
-          paddingHorizontal: 18,
-          paddingBottom: footerSpace,
-        }}
-      />
-    )
   return (
     <VariableContextProvider value={{ "--workspace-list-bottom": footerSpace }}>
       <FlatList
@@ -280,119 +245,3 @@ export function BusinessSwitchContent({ onComplete }: SwitchProps) {
     </View>
   )
 }
-
-export const BusinessSwitchSheet = forwardRef<BottomSheetModal, SwitchProps>(
-  function BusinessSwitchSheet({ onComplete }, ref) {
-    const modal = useModal()
-    const afterDismiss = useRef<(() => void) | null>(null)
-    const vm = useBusinessSwitch({
-      onComplete: () => {
-        modal.dismiss()
-        onComplete?.()
-      },
-      beforeCreate: (navigate) => {
-        afterDismiss.current = navigate
-        modal.dismiss()
-      },
-    })
-    const { height } = useWindowDimensions()
-    const [footerHeight, setFooterHeight] = useState(150)
-    const portalValues = useRef({
-      vm,
-      onHeight: setFooterHeight,
-      height,
-    })
-    portalValues.current = { vm, onHeight: setFooterHeight, height }
-    // Gorhom renders its node at a separate PortalHost. Put local providers
-    // inside that node, not outside Modal; keep the container type stable.
-    const PortalContainer = useCallback(
-      ({ children }: { children?: ReactNode }) => {
-        const value = portalValues.current
-        return (
-          <WorkspaceFooterContext.Provider value={value}>
-            <VariableContextProvider
-              value={{
-                "--workspace-sheet-height": Math.round(value.height * 0.72),
-              }}
-            >
-              {children}
-            </VariableContextProvider>
-          </WorkspaceFooterContext.Provider>
-        )
-      },
-      [],
-    )
-    const bindRef = useCallback(
-      (instance: BottomSheetModal | null) => {
-        modal.ref.current = instance
-        if (typeof ref === "function") ref(instance)
-        else if (ref) ref.current = instance
-      },
-      [modal.ref, ref],
-    )
-    const backdrop = useCallback(
-      (props: BottomSheetBackdropProps) => (
-        <AppBottomSheetBackdrop {...props} dismissible={!vm.selectingId} />
-      ),
-      [vm.selectingId],
-    )
-    const handle = useCallback(
-      () => (
-        <View className="flex-row items-center justify-between gap-3 px-5 pb-3 pt-4">
-          <Text
-            accessibilityRole="header"
-            className="min-w-0 flex-1 text-xl font-bold text-foreground"
-          >
-            {BUSINESS_SWITCH_COPY.title}
-          </Text>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={
-              vm.selectingId
-                ? "Cancel workspace check and close"
-                : "Close workspaces"
-            }
-            onPress={() => {
-              vm.cancelActivation()
-              modal.dismiss()
-            }}
-            className="size-11 items-center justify-center rounded-full bg-muted"
-          >
-            <Icon name="X" className="size-sm text-foreground" />
-          </Pressable>
-        </View>
-      ),
-      [modal.dismiss, vm.cancelActivation, vm.selectingId],
-    )
-    return (
-      <Modal
-        containerComponent={PortalContainer}
-        ref={bindRef}
-        title={BUSINESS_SWITCH_COPY.title}
-        snapPoints={["90%"]}
-        keyboardBehavior="fillParent"
-        footerComponent={BusinessSwitchSheetFooter}
-        backdropComponent={backdrop}
-        handleComponent={handle}
-        enablePanDownToClose={!vm.selectingId}
-        onAnimate={(_fromIndex, toIndex) => {
-          if (toIndex === -1) vm.cancelActivation()
-        }}
-        onDismiss={() => {
-          vm.cancelActivation()
-          const navigate = afterDismiss.current
-          afterDismiss.current = null
-          navigate?.()
-        }}
-      >
-        <View className="h-[var(--workspace-sheet-height)]">
-          {vm.blocked || vm.accepted ? (
-            <WorkspaceAccessState vm={vm} />
-          ) : (
-            <WorkspaceBody vm={vm} sheet footerSpace={footerHeight + 24} />
-          )}
-        </View>
-      </Modal>
-    )
-  },
-)
