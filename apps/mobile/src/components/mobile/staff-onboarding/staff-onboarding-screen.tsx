@@ -7,6 +7,7 @@ import {
 import { ClassicStaffOnboardingScreen } from "@/components/mobile/appearances/classic/staff-onboarding-screen"
 import { AuthFlowScreen } from "@/components/mobile/green-till/auth-screen"
 import { SalesRepExampleStage } from "@/components/mobile/green-till/auth-stage"
+import { formatInternationalPhone } from "@/components/mobile/phone-field"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { useAuthContext } from "@/hooks/use-auth"
@@ -47,7 +48,9 @@ type CompletedStaffOnboarding = {
 }
 
 type ResolvedStaffInvite = {
+  /** Empty for a WhatsApp-only invite. */
   email: string
+  phone: string | null
   expiresAt: Date
   membershipId: string | null
   role: string
@@ -98,6 +101,18 @@ export function StaffOnboardingScreen() {
     ),
   )
   const resolvedInvite = inviteQuery.data as ResolvedStaffInvite | undefined
+  const invitedPhone = resolvedInvite?.phone ?? null
+  const invitedEmail = resolvedInvite?.email || null
+  const signInToAccept = (by: "email" | "phone") =>
+    router.push({
+      pathname: "/login",
+      params:
+        by === "phone" && invitedPhone
+          ? { phone: invitedPhone }
+          : invitedEmail
+            ? { email: invitedEmail }
+            : undefined,
+    })
   const trimmedName = name.trim()
   const trimmedDisplayName = displayName.trim()
   const canSubmit = useMemo(
@@ -148,7 +163,13 @@ export function StaffOnboardingScreen() {
         stage={<SalesRepExampleStage />}
         eyebrow="Staff invitation"
         title="Staff invitation"
-        subtitle="Sign in with your invited email address to accept this staff access."
+        subtitle={
+          invitedPhone && !invitedEmail
+            ? "Sign in with your invited WhatsApp number to accept this staff access."
+            : invitedPhone
+              ? "Sign in with your invited WhatsApp number or email to accept this staff access."
+              : "Sign in with your invited email address to accept this staff access."
+        }
       >
         {inviteQuery.isPending ? (
           <View className="border-y border-border py-5">
@@ -168,8 +189,13 @@ export function StaffOnboardingScreen() {
         ) : resolvedInvite ? (
           <SecondaryOperationalRow
             className="border-y"
-            detail={resolvedInvite.email}
-            icon="Mail"
+            detail={[
+              invitedPhone ? formatInternationalPhone(invitedPhone) : null,
+              invitedEmail,
+            ]
+              .filter(Boolean)
+              .join(" · ")}
+            icon={invitedPhone ? "Phone" : "Mail"}
             title={resolvedInvite.tenant.name}
             trailing={
               <StatusBadge
@@ -185,17 +211,19 @@ export function StaffOnboardingScreen() {
           disabled={inviteQuery.isPending}
           isLoading={inviteQuery.isPending}
           loadingLabel="Checking invitation"
-          onPress={() =>
-            router.push({
-              pathname: "/login",
-              params: resolvedInvite?.email
-                ? { email: resolvedInvite.email }
-                : undefined,
-            })
-          }
+          onPress={() => signInToAccept(invitedPhone ? "phone" : "email")}
         >
-          Sign in to accept invite
+          {invitedPhone ? "Continue with WhatsApp" : "Sign in to accept invite"}
         </ActionButton>
+        {invitedPhone && invitedEmail ? (
+          <ActionButton
+            variant="outline"
+            disabled={inviteQuery.isPending}
+            onPress={() => signInToAccept("email")}
+          >
+            Use email instead
+          </ActionButton>
+        ) : null}
       </AuthFlowScreen>
     )
   }
@@ -211,14 +239,14 @@ export function StaffOnboardingScreen() {
           stage={<SalesRepExampleStage />}
           eyebrow="Staff invitation"
           title="Wrong account"
-          subtitle="This invite must be accepted with the email address that was added by the business owner."
+          subtitle="This invite must be accepted with the email address or WhatsApp number the business owner added."
         >
           <ActionButton onPress={() => router.replace("/login")}>
-            Sign in with invited email
+            Sign in with the invited account
           </ActionButton>
           <StatusBanner
             icon="TriangleAlert"
-            message="This invite must be accepted with the email address that was added by the business owner."
+            message="This invite must be accepted with the email address or WhatsApp number the business owner added."
             title="Wrong account"
             tone="warning"
           />
@@ -314,7 +342,7 @@ export function StaffOnboardingScreen() {
       businessName={profile?.businessName ?? "Invited workspace"}
       canSubmit={canSubmit}
       displayName={displayName}
-      email={profile?.email ?? "Invited email account"}
+      email={profile?.email || "Invited WhatsApp account"}
       isSubmitting={completeStaffOnboardingMutation.isPending}
       name={name}
       onChangeDisplayName={setDisplayName}

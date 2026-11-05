@@ -7,7 +7,10 @@ import {
   AuthMethodButton,
 } from "@/components/mobile/auth-header"
 import { FormField } from "@/components/mobile/form-field"
-import { PhoneField } from "@/components/mobile/phone-field"
+import {
+  PhoneField,
+  splitInternationalPhone,
+} from "@/components/mobile/phone-field"
 import {
   QaPhoneEntryPicker,
   type SelectedQaPhone,
@@ -31,8 +34,13 @@ export function LoginScreen() {
   const params = useLocalSearchParams<{
     email?: string
     notice?: string
+    /** +E.164 WhatsApp number from a staff invite: opens WhatsApp sign-in. */
+    phone?: string
     returnTo?: string
   }>()
+  const invitedPhone = splitInternationalPhone(
+    typeof params.phone === "string" ? params.phone : null,
+  )
   const trpc = useTRPC()
   const auth = useAuthContext()
   const largeTextLayout = useLargeTextLayout()
@@ -45,10 +53,12 @@ export function LoginScreen() {
   const [error, setError] = useState<string | null>(null)
   const [password, setPassword] = useState("")
   const [usePassword, setUsePassword] = useState(false)
-  const [useWhatsApp, setUseWhatsApp] = useState(false)
-  const [phone, setPhone] = useState("")
+  const [useWhatsApp, setUseWhatsApp] = useState(Boolean(invitedPhone))
+  const [phone, setPhone] = useState(invitedPhone?.digits ?? "")
   const [qaPhone, setQaPhone] = useState<SelectedQaPhone | null>(null)
-  const [phoneCountry, setPhoneCountry] = useState("NG")
+  const [phoneCountry, setPhoneCountry] = useState(
+    invitedPhone?.countryCode ?? "NG",
+  )
   const fullPhone =
     qaPhone?.phone ??
     toInternationalPhone(getCountry(phoneCountry).dialCode, phone)

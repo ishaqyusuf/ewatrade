@@ -43,6 +43,25 @@ export function phoneCountryOf(value?: string | null) {
   return parsePhoneNumberFromString(phone)?.country
 }
 
+/** A stored +E.164 number for reading, such as +234 803 555 0142. */
+export function formatInternationalPhone(value?: string | null) {
+  const phone = value?.trim() ?? ""
+  return parsePhoneNumberFromString(phone)?.formatInternational() ?? phone
+}
+
+/** A stored +E.164 number as the field's country and national digits. */
+export function splitInternationalPhone(value?: string | null) {
+  const parsed = value?.trim().startsWith("+")
+    ? parsePhoneNumberFromString(value.trim())
+    : undefined
+  return parsed?.country
+    ? {
+        countryCode: parsed.country as string,
+        digits: `${parsed.nationalNumber}`,
+      }
+    : null
+}
+
 /** The country's own example mobile number, without its trunk 0. */
 export function phonePlaceholder(countryCode: string) {
   if (!isSupportedCountry(countryCode)) return "Phone number"
