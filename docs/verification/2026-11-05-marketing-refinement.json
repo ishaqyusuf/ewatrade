@@ -1,0 +1,243 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-11-05",
+  "scope": "Marketing Workshop review only; no product implementation, selection, push or deployment",
+  "revision": {
+    "direction": "01",
+    "version": 15,
+    "id": "de2f9a33-56be-4bc5-a5f4-c18539494012",
+    "url": "https://workshop.localhost/ewatrade/marketing/complete-business-2026-10-29/directions/01?rev=de2f9a33-56be-4bc5-a5f4-c18539494012"
+  },
+  "sourceRoot": "/Users/M1PRO/Documents/code/workshop/work/ewatrade/marketing/complete-business-2026-10-29/refinement-2026-11-05",
+  "authors": {
+    "requestedModel": "claude-opus-5-5",
+    "effort": "high",
+    "actualAuthor": "Codex coordinator under standing fallback",
+    "attempts": [
+      {
+        "session": "8aea0b3e-905b-45d9-83db-b61a8fdacdc8",
+        "client": "2.1.161",
+        "result": "API400 compatibility rejection; no authored output"
+      },
+      {
+        "session": "48f6a5ad-b597-4be5-826d-70416f879115",
+        "client": "2.1.318 after official update",
+        "result": "API400 compatibility rejection persisted; no authored output"
+      }
+    ]
+  },
+  "catalog": {
+    "selectedRevisionId": null,
+    "implementationCount": 0,
+    "directions": {
+      "01": {
+        "version": 15,
+        "id": "de2f9a33-56be-4bc5-a5f4-c18539494012",
+        "revisionCount": 15
+      },
+      "02": {
+        "version": 1,
+        "id": "e9b696fd-5d43-47ac-abb5-a51e5a37cd1e",
+        "revisionCount": 1
+      },
+      "03": {
+        "version": 2,
+        "id": "273746bd-85a3-49f3-a899-77e9314c1c51",
+        "revisionCount": 2
+      },
+      "04": {
+        "version": 1,
+        "id": "91c9662b-a1de-4a3e-a35a-ba6aad74db66",
+        "revisionCount": 1
+      },
+      "05": {
+        "version": 3,
+        "id": "35cacf7c-88a6-4342-9860-166b33e5e925",
+        "revisionCount": 3
+      }
+    }
+  },
+  "static": {
+    "duplicateIds": [],
+    "missingRefs": [],
+    "brokenAnchors": [],
+    "imgElements": 0,
+    "jsSyntax": {
+      "story.js": true,
+      "product-preview.js": true,
+      "walkthrough.js": true
+    },
+    "sha256": {
+      "index.html": "55fc6caf88d956efbe39eacfde5c80ac0d43283dab83a4886b2605f77b15754d",
+      "styles.css": "28261040c5000becca95c2ca815605ac8ce54e7941245d14faa8c0a7a1385048",
+      "implemented-ui.css": "3a0b3b9278efc16f0fa54efcb159212d023857d01b59830e05f6f8d7fd2b4420",
+      "announcement.css": "117a312c4d9d948f2430b94f1149e061f3463cde6b1888b2c317e03759faca3f",
+      "midday-inspired.css": "d8d61c34b3885c0dbb4e29295af006aeba55483907eae287dac309f1d2efd660",
+      "story.js": "e9ea54d7f922042d87e201ad4cd7c64d5a97a713bc284fde0343ac089d21310b",
+      "product-preview.js": "b9f1e545fe45fa447a64a35b637b392682a136ef45d07dcb629b783043c15092",
+      "walkthrough.js": "173e9154b93302180aaa6236be29e5c8d2b0f444055c55813d77c0070beddc7e",
+      "implemented-source-map.json": "995fe75b5a1c8c408f1996d375cff693a44903cfa2a1890a683b1cac86ea7682",
+      "assets/figtree-latin.woff2": "8330490a01c60c196eae00b823de8102275aaa5862e7b76a7af21b8745338928",
+      "assets/hedvig-letters-serif.ttf": "bf229aec1d70b27a78a01cde143ef69fa244f853a429b8c8a6f2d638d08af26a"
+    }
+  },
+  "sourceEvidence": {
+    "date": "2026-11-05",
+    "kind": "Faithful HTML reproduction of implemented components, with bounded representative records; no product code modified",
+    "runtime": "Orders and ORD-061 inspected in existing local QA session; source mappings for native and other surfaces. No transactions submitted.",
+    "sources": {
+      "apps/dashboard/src/components/orders/orders-header.tsx": "744804d38e1f4c857ade4d086abaf7ad5eb9924543be89ccf40a43f1130b87c8",
+      "apps/dashboard/src/components/tables/orders/collection.tsx": "2f42331b56ec39cef904094035135f46147ae5e1fd5143c5d5984b786409ebba",
+      "apps/dashboard/src/components/dashboard/sidebar.tsx": "72a89a8b24481763b0fbf31a09342184cf7e3d6b1805d468f703ee051fc28405",
+      "apps/dashboard/src/styles/dashboard.css": "2405e9f88be985605f74e3f1d4013aa58aa83527920db24897e47dfd449106d6",
+      "apps/dashboard/src/components/service-work/service-quote-form.tsx": "c8233e3da1d4390320df1ffbe07741aee835a2e297b1a084351c3f81c1ea64dd",
+      "apps/dashboard/src/components/orders/overview/order-overview-model.ts": "fc884e7e6096d9825a1619ca9100de4d3a6dee92636a50a4ba6ce70f89f91cab",
+      "apps/dashboard/src/components/finance/finance-overview.tsx": "7eec0696f5276a9e7447a87a385775d23f1836d2b3986ebd940fe147c15b19e5",
+      "apps/dashboard/src/components/dashboard/operations-reports.tsx": "5c99238189e043fe57f87e8aec9cdcc573a4fa4721eef09175956d38c9d7be31",
+      "apps/dashboard/src/components/inventory/inventory-summary.tsx": "38a7592394b450d07294ff67e9bc3491a24102ba4d57b3e8f0895b620eada230",
+      "apps/dashboard/src/components/tables/inventory/columns.tsx": "f863045fb3e5a34add89e5bfecc91f49ed7f7a9c9b623b605101d7a629349c7b",
+      "apps/mobile/src/components/mobile/appearances/classic/create-sale.tsx": "f06d05afa15ef2f5f3be16b8edd9d1d6b9e15ac45f2f5782921f138afe833625",
+      "apps/mobile/src/components/mobile/appearances/classic/create-sale-items.tsx": "8858a48dab484c803d4906f8f6f4207051286a629149dc98b27ab46a68ebf131",
+      "apps/mobile/src/components/mobile/appearances/classic/catalog-item-screen.tsx": "32ba64e80a4172bc978dd88f4651eddd0a4cc3ef2826b0fdf9230b621f3faa4f",
+      "apps/mobile/src/components/mobile/bottom-search-footer.tsx": "01f0795ead1f400e587d032613cf70336e1a0f373468868c34d9b63454153f67",
+      "apps/mobile/src/components/mobile/floating-search-field.tsx": "ee8e5b9f199bd9275e1c279b35f46b83fbd63a6b27c5847813b0a88ad200221e",
+      "apps/mobile/src/lib/brand-theme.ts": "c96e603446628ae8418d35c0c92931cae107d71911da748a86ee195c42475afe",
+      "packages/assistant/src/channels/review-links.ts": "8c5dce5659b4f4d4fd0e5f06b93c5515231833dcd65eea39a3dfa8fd975ef74b",
+      "packages/assistant/src/channels/review-links.test.ts": "a91466d79f320df857b076f9f6498fe1f2562e81d31035eb954190f94aacf744",
+      "apps/dashboard/src/components/tables/inventory/collection.tsx": "f4b8a0a5a5d41903cf7d564e9f78b474f76b20c97d86fa96b88ff5bd66430820",
+      "packages/onboarding/src/components/signup/whatsapp-mark.tsx": "c4fa2875b423d37698a07be3ab2c3eed4eb0082c40f71cf58c3ff24897d1ab13",
+      "apps/marketing/src/components/marketing/experiences/launch-v4/business-illustrations.tsx": "f85bc6ff557bb8f8090a031f8f3271b40c3b595cc2d8441e86b3ea59ac992605",
+      "apps/marketing/src/components/marketing/experiences/launch-v4/business-ribbon.tsx": "b63565607fd8629fbce4fb660b6a0ea44fa310116dcf4b2ec7d255ff24db69b8",
+      "apps/marketing/src/components/marketing/experiences/launch-v4/static-sections.tsx": "554c23b5ee35893345a0bd528e40d988ae7636db0b36a9a56e0df15b80a595c0"
+    },
+    "reference": "Midday homepage inspected live5November2026; composition and motion adapted, no competitor media copied."
+  },
+  "runtimeEvidence": {
+    "offlineDoctor": "pass earlier in this delivery",
+    "localApiDashboardMetroDoctor": "pass with existing trusted Portless CA and require-qa",
+    "orders": "existing QA Orders and ORD061 inspected, no mutation",
+    "native": "source fidelity only; no native device acceptance"
+  },
+  "renderedChecks": [
+    {
+      "revision": 9,
+      "viewports": ["1280x800", "390x844", "320x800"],
+      "checks": [
+        "zero page horizontal overflow",
+        "WhatsApp350x758desktop and288x785small layout; no inner overflow",
+        "chat replay/pause/resume and actual typing-dot pause",
+        "local inert review/cancel",
+        "native screen switching and variant filtering",
+        "quantity3→4 updates13500→18000",
+        "mobile search finds third Orders card"
+      ]
+    },
+    {
+      "revision": 11,
+      "checks": [
+        "announcement discovery/navigation",
+        "Watch conversation restarts local demonstration",
+        "Play/Replay moved outside main into collapsed preview tool",
+        "desktop phone/no-inner-overflow preserved"
+      ]
+    },
+    {
+      "revision": 12,
+      "checks": [
+        "centered serif hero inspected at1280 and390",
+        "walkthrough auto-advances to fifth state",
+        "manual step selection and keyboardArrowRight update selected/focusedpanel",
+        "moving categories and final footer reviewed; defects corrected subsequently"
+      ]
+    },
+    {
+      "revision": 13,
+      "checks": [
+        "business rows running transform observed",
+        "pause then resume toggles computed animation state",
+        "footer links now nonzero130pxwidth",
+        "footer theme toggle and layout inspected",
+        "390x844walkthrough selectsReports and horizontaltaborientation",
+        "390/320pagewidthmatchesviewport"
+      ]
+    },
+    {
+      "revision": 14,
+      "checks": [
+        "320x800Reports metrics client234 equals scroll234 after fix",
+        "mobile footer two columns inspected",
+        "zero image elements",
+        "final v15 adds only whitespace and delivery metadata; valid geometry reused"
+      ]
+    },
+    {
+      "revision": 15,
+      "checks": [
+        "final hero Hedvig font loaded",
+        "1280pagewidth equals viewport",
+        "no browser warning/error logs returned",
+        "final canonical v15 visibly open and marked deliverable",
+        "screenshots saved: hero, How it works, footer"
+      ]
+    }
+  ],
+  "motion": {
+    "whatsapp": "one pass on entry; ends before approval; review Play/Replay tools excluded from production",
+    "walkthrough": "five source-backed scenes, pause/manual/keyboard controls; one auto pass",
+    "businessTypes": "two opposing rows, fourteen source-backed categories, pause/resume/hover/offscreen/documenthidden handling",
+    "reducedMotion": "source-reviewed static fallbacks; OS setting not toggled"
+  },
+  "review": {
+    "independentEarlier": "source and design reviews identified corrections retained in final revision",
+    "final": "coordinator rendered review; final reviewer follow-ups failed capacity, no independent final signoff claimed",
+    "detector": {
+      "run": "Midday adaptation v12",
+      "findings": 40,
+      "warnings": 26,
+      "advisories": 14,
+      "triage": "Four contrast advisories corrected. Font/layout/size warnings distinguish real product UI from marketing; side-tab and marquee are owner-directed with motion controls. Two findings in unused ui.css do not apply. Not a clean detector certification."
+    }
+  },
+  "referenceCount": 8,
+  "references": [
+    "https://midday.ai/",
+    "https://www.copilot.money/",
+    "https://www.shopify.com/mobile",
+    "https://monzo.com/",
+    "https://linear.app/mobile",
+    "https://culturedcode.com/things/",
+    "https://www.ynab.com/",
+    "https://www.revolut.com/"
+  ],
+  "limitations": [
+    "Design preview not live product implementation",
+    "Native app/offline remains Coming soon",
+    "Representative aggregates are not a single continuous real transaction",
+    "Legal/footer links are current-source links, not newly live-verified destinations",
+    "Reduced-motion source-reviewed rather than OS-toggled",
+    "Full product build/type/release acceptance not in design-only scope"
+  ],
+  "sourceSmoke": {
+    "status": "passed",
+    "scope": "three owned documentation paths only",
+    "tests": 48,
+    "failures": 0,
+    "assertions": 211,
+    "groups": ["core"],
+    "checks": [
+      "QA tooling types",
+      "changed-file Biome",
+      "four source-smoke test files"
+    ],
+    "firstAttempt": "receipt JSON formatting failure; corrected, scoped rerun passed"
+  },
+  "brainFiles": [
+    ".brain/features/marketing-launch-v4.md",
+    ".brain/tasks/2026-11-05-marketing-refinement.md"
+  ],
+  "screenshots": [
+    "/Users/M1PRO/.codex/visualizations/2026/11/05/01a1abb7-6541-7eb2-ae56-8b7e43e74579/marketing-hero-v15.jpg",
+    "/Users/M1PRO/.codex/visualizations/2026/11/05/01a1abb7-6541-7eb2-ae56-8b7e43e74579/marketing-how-it-works-v15.jpg",
+    "/Users/M1PRO/.codex/visualizations/2026/11/05/01a1abb7-6541-7eb2-ae56-8b7e43e74579/marketing-footer-v15.jpg"
+  ]
+}
