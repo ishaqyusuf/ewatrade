@@ -62,12 +62,14 @@ const completeSource = [
 const contracts = [
   {
     markers: [
-      'keyboardBehavior="fillParent"',
+      // Add customer takes typing: it opens full screen, and closing is
+      // blocked while it saves (owner rule, 4 Nov 2026).
+      "<FullScreenModal",
+      'title="Add customer"',
+      "closeDisabled={isLoading}",
       "isCreateCustomerSaveDisabled",
       "hasCreateCustomerDraft",
-      "enablePanDownToClose={!hasDraft && !isLoading}",
       "<AppBottomSheetBackdrop",
-      "dismissible={!hasDraft && !isLoading}",
       'leadingIcon="User"',
       'leadingIcon="Phone"',
       'leadingIcon="Mail"',

@@ -521,7 +521,7 @@ const contracts = [
       "useSafeAreaInsets",
       "Math.max(insets.bottom, 8)",
       'testID="bottom-search-footer"',
-      ": { backgroundColor: colors.background }",
+      "{ backgroundColor: colors.background }",
       ': "gap-3 px-4 pb-2 pt-2"',
     ],
     reason:
