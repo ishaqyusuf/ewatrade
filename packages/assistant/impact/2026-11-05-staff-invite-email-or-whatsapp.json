@@ -1,0 +1,64 @@
+{
+  "version": 1,
+  "id": "2026-11-05-staff-invite-email-or-whatsapp",
+  "tickets": ["H02"],
+  "summary": "Owners invite an attendant by email, WhatsApp number or both (Workshop ewatrade/mobile/staff-invite-channels pick 01). retailOps.inviteStaff and the dashboard /api/staff invite take an optional email and an optional E.164 phone, at least one; RetailOpsStaffInviteToken gains a nullable phone. A WhatsApp-only attendant gets the internal phone-account email like phone sign-up. Contacts on two accounts, or a contact added to an account someone already uses, are refused; QA and live identities never mix. The WhatsApp invite is sent inline after commit from the platform sign-in number through an approved template (off until STAFF_INVITE_WHATSAPP_TEMPLATE_NAME/_LANGUAGE are set with WhatsApp sign-in on); its outcome is kept on the open invite and shown in the staff list. The attendant's first WhatsApp sign-in is allowed for the number on their open invite and verifies it. Email invites are unchanged. No Trigger runs added.",
+  "noAssistantImpact": "No capability, tool, prompt or write path changes. The assistant's staff_invitation proposal and the staff invitation command path (resend/revoke, email outbox) are untouched and stay email-only; inviting by WhatsApp number is form-only on mobile and dashboard for now. The shared communications package only gains a separate staff-invite template sender; assistant WhatsApp channel code is not touched.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/staff-invite-email-or-whatsapp.md"
+    },
+    {
+      "topic": "api",
+      "status": "local_only",
+      "path": ".brain/features/staff-invite-email-or-whatsapp.md"
+    },
+    {
+      "topic": "schema",
+      "status": "local_only",
+      "path": ".brain/features/staff-invite-email-or-whatsapp.md"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/staff-invite-contacts.test.ts",
+      "executed": true,
+      "result": "Contact normalisation, two-account conflict, linking only to never-claimed accounts, reuse of a verified phone account and WhatsApp outcome storage: pass (8)."
+    },
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/retail-ops-staff.test.ts",
+      "executed": true,
+      "result": "Existing email invite tests plus WhatsApp-only invite and no-contact refusal: pass (18)."
+    },
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/phone-auth.test.ts",
+      "executed": true,
+      "result": "Existing phone auth tests plus an invited attendant's first WhatsApp sign-in verifying the invited number: pass (11)."
+    },
+    {
+      "kind": "test",
+      "path": "packages/jobs/src/staff-invite-whatsapp.test.ts",
+      "executed": true,
+      "result": "No send for email-only or replayed invites; SENT/FAILED/NOT_CONFIGURED recorded; local profile logs the link and never calls Meta: pass (3)."
+    },
+    {
+      "kind": "test",
+      "path": "apps/dashboard/src/app/api/staff/route.test.ts",
+      "executed": true,
+      "result": "Existing route tests plus a WhatsApp-only invite with no email and reported delivery: pass (11)."
+    },
+    {
+      "kind": "run",
+      "path": ".brain/qa/pending-ui-test-ledger.md",
+      "executed": true,
+      "result": "emulator-5554 at 100% and 200%: chips, inline errors, duplicate banner, email invite, resend and cancel pass; WhatsApp invite refused on the QA business (no managed QA phone) with a clear message; WhatsApp delivery not exercised end to end."
+    }
+  ]
+}
