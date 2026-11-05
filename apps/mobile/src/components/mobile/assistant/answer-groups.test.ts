@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test"
 import type { GeneralAnswer } from "@ewatrade/assistant/general/contracts"
-import { answerScopeLine, groupAnswerRows } from "./answer-groups"
+import { answerListLink, groupAnswerRows } from "./answer-groups"
 
 const asOf = "2026-11-05T13:25:00.000Z"
 const origin = { tenantId: "t", storeId: "s" }
@@ -54,12 +54,16 @@ test("a record with its own choices or handoff is never folded into a row", () =
   expect(groups).toHaveLength(2)
 })
 
-test("the where line drops the business and Store names the header shows", () => {
-  const names = ["Jawdah Poultry QA", "Main store"]
-  expect(
-    answerScopeLine("Jawdah Poultry QA · All orders · Tue 6 Oct", names),
-  ).toBe("All orders · Tue 6 Oct")
-  expect(answerScopeLine("Main store · Running low", names)).toBe("Running low")
-  expect(answerScopeLine("Current business · catalog", names)).toBe("catalog")
-  expect(answerScopeLine("Jawdah Poultry QA", names)).toBe("")
+test("a list with more results links to its screen; a complete one does not", () => {
+  const head = (continuation: unknown) =>
+    answer("Orders", { continuation } as Partial<GeneralAnswer>)
+  const orders = (input: Record<string, unknown>, nextCursor: string | null) =>
+    head({ version: 1, tool: "readOrders", input, nextCursor })
+  expect(answerListLink(orders({ owing: true }, "c1"))).toEqual({
+    label: "See all orders",
+    href: "/(admin-tabs)/orders?payment=owing",
+  })
+  expect(answerListLink(orders({}, "c1"))?.href).toBe("/(admin-tabs)/orders")
+  expect(answerListLink(orders({ owing: true }, null))).toBeNull()
+  expect(answerListLink(answer("Sales today"))).toBeNull()
 })

@@ -287,6 +287,7 @@ export const generalReadContinuationSchema = z.discriminatedUnion("tool", [
           createdAfter: z.string().datetime().optional(),
           createdBefore: z.string().datetime().optional(),
           statuses: orderStatuses.optional(),
+          owing: z.boolean().optional(),
         })
         .strict()
         .refine(

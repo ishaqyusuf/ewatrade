@@ -31,7 +31,7 @@ import { ActionButton } from "../action-button"
 import { FullScreenForm } from "../full-screen-form"
 import { ListCard, RecordRow } from "../green-till/kit"
 import { StatusBanner } from "../status-banner"
-import { answerScopeLine, groupAnswerRows } from "./answer-groups"
+import { answerListLink, groupAnswerRows } from "./answer-groups"
 import {
   AssistantAnswerCard,
   ProposalCard,
@@ -449,73 +449,62 @@ export function AskAssistantLive() {
                 ) : null}
                 {answers.length ? (
                   <View className="gap-6 pt-1">
-                    {groupAnswerRows(answers).map(
-                      ({ head: answer, rows }, groupIndex, groups) => {
-                        // Cards from one read share where/when; say it once.
-                        // The header names the business, so the line never does.
-                        const metaFor = (head: GeneralAnswer) =>
-                          [
-                            answerScopeLine(head.scope, [
-                              vm.data?.businessName,
-                              vm.profile?.businessName,
-                              vm.profile?.storeName,
-                            ]),
-                            assistantAsOf(head.asOf),
-                          ]
-                            .filter(Boolean)
-                            .join(" · ")
-                        const meta = metaFor(answer)
-                        const previous = groups[groupIndex - 1]?.head
-                        const repeated = previous && metaFor(previous) === meta
-                        return (
-                          <AssistantAnswerCard
-                            key={answer.id}
-                            title={answer.title}
-                            value={answer.value}
-                            summary={answer.summary}
-                            meta={repeated ? undefined : meta}
-                          >
-                            {rows.length ? (
-                              <View className="pt-1">
-                                {rows.map((row) => (
-                                  <View key={row.id}>
-                                    {renderAnswerRow(row)}
-                                  </View>
-                                ))}
-                              </View>
-                            ) : null}
-                            {answer.records?.rows
-                              .slice(0, 6)
-                              .map((row, index) => (
-                                <View
-                                  key={`${answer.id}:record:${index}`}
-                                  className="gap-2 rounded-xl bg-muted/40 p-3"
-                                >
-                                  <Text className="font-semibold">
-                                    {index + 1}. {row.title} · {row.type}
-                                  </Text>
-                                  {row.subtitle ? (
-                                    <Text className="text-sm text-muted-foreground">
-                                      {row.subtitle}
-                                    </Text>
-                                  ) : null}
-                                  {renderAnswerTargetAction(
-                                    row.target,
-                                    row.title,
-                                  )}
-                                </View>
+                    {groupAnswerRows(answers).map(({ head: answer, rows }) => {
+                      const more = answerListLink(answer)
+                      return (
+                        <AssistantAnswerCard
+                          key={answer.id}
+                          title={answer.title}
+                          value={answer.value}
+                          summary={answer.summary}
+                        >
+                          {rows.length ? (
+                            <View className="pt-1">
+                              {rows.map((row) => (
+                                <View key={row.id}>{renderAnswerRow(row)}</View>
                               ))}
-                            {answer.records?.labelsShortened ? (
-                              <Text className="text-sm text-muted-foreground">
-                                Some names are shortened. Open the saved record
-                                for full names.
-                              </Text>
-                            ) : null}
-                            {renderAnswerTargetAction(answer.target)}
-                          </AssistantAnswerCard>
-                        )
-                      },
-                    )}
+                            </View>
+                          ) : null}
+                          {more ? (
+                            <ActionButton
+                              variant="outline"
+                              disabled={vm.offline || vm.scopeChanged}
+                              onPress={() => router.push(more.href as never)}
+                            >
+                              {more.label}
+                            </ActionButton>
+                          ) : null}
+                          {answer.records?.rows
+                            .slice(0, 6)
+                            .map((row, index) => (
+                              <View
+                                key={`${answer.id}:record:${index}`}
+                                className="gap-2 rounded-xl bg-muted/40 p-3"
+                              >
+                                <Text className="font-semibold">
+                                  {index + 1}. {row.title} · {row.type}
+                                </Text>
+                                {row.subtitle ? (
+                                  <Text className="text-sm text-muted-foreground">
+                                    {row.subtitle}
+                                  </Text>
+                                ) : null}
+                                {renderAnswerTargetAction(
+                                  row.target,
+                                  row.title,
+                                )}
+                              </View>
+                            ))}
+                          {answer.records?.labelsShortened ? (
+                            <Text className="text-sm text-muted-foreground">
+                              Some names are shortened. Open the saved record
+                              for full names.
+                            </Text>
+                          ) : null}
+                          {renderAnswerTargetAction(answer.target)}
+                        </AssistantAnswerCard>
+                      )
+                    })}
                   </View>
                 ) : null}
               </View>

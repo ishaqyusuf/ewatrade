@@ -18,7 +18,7 @@ export function generalLowStockAnswers(
       value: `${page.lowStock.length} ${page.lowStock.length === 1 ? "item" : "items"} at ${page.threshold} or less`,
       scope,
       asOf,
-      summary: page.hasMore ? "More items still to check" : "",
+      summary: "",
       detail: `Scanned ${page.scannedCount} offerings; ${page.unavailable.length} unavailable. Threshold: at most ${page.threshold} in EACH offering's named unit. ${page.hasMore ? "More offerings remain; continue the scan." : "End of this live scan."} This page is not a business total or reorder policy. Shared offerings may use the same balance; never add their quantities together.`,
     },
     ...page.lowStock.map(

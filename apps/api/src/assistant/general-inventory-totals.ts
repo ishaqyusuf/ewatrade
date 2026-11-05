@@ -19,7 +19,7 @@ export function generalInventoryTotalsAnswers(
       value: `${page.items.length} ${page.items.length === 1 ? "item" : "items"}`,
       scope: input.storeName.slice(0, 500),
       asOf,
-      summary: page.nextCursor ? "More stock on the next page" : "",
+      summary: "",
       detail: `Item filter: ${input.catalogItemId ?? "all"}. ${input.cursor ? "Continuation page" : "First page"}. ${page.nextCursor ? "More groups available." : "End of this list."} Each group includes all matching sources, separated by variant, unit configuration and custody. This page is not a business total. Missing sources are not zero stock.`,
     },
     ...page.items.map((group) => {

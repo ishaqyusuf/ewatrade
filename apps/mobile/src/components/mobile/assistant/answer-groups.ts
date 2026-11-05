@@ -38,20 +38,37 @@ export function groupAnswerRows(answers: GeneralAnswer[]): AnswerGroup[] {
 }
 
 /**
- * A card's small "where" line without the business or Store name: the
- * screen header already says which business this is.
+ * Where a long list continues: the read had more than it showed, so the
+ * owner gets one "See all" button to the matching screen instead of
+ * "next page" text.
  */
-export function answerScopeLine(
-  scope: string,
-  names: Array<string | null | undefined>,
-) {
-  const known = new Set(
-    [...names, "Current business"]
-      .filter((name): name is string => Boolean(name?.trim()))
-      .map((name) => name.trim().toLowerCase()),
-  )
-  return scope
-    .split(" · ")
-    .filter((part) => !known.has(part.trim().toLowerCase()))
-    .join(" · ")
+export function answerListLink(
+  answer: GeneralAnswer,
+): { label: string; href: string } | null {
+  const read = answer.continuation
+  if (!read?.nextCursor) return null
+  switch (read.tool) {
+    case "readOrders":
+      return {
+        label: "See all orders",
+        href:
+          "owing" in read.input && read.input.owing
+            ? "/(admin-tabs)/orders?payment=owing"
+            : "/(admin-tabs)/orders",
+      }
+    case "lookupOpenOrders":
+      return { label: "See all orders", href: "/(admin-tabs)/orders" }
+    case "readCatalogPage":
+    case "readLowStock":
+    case "readInventoryTotals":
+    case "readInventoryBalances":
+      return { label: "See all items", href: "/(admin-tabs)/catalog" }
+    case "readCustomers":
+      return { label: "See all customers", href: "/customer-book-modal" }
+    case "readReceivables":
+    case "readCustomerAccounts":
+      return { label: "See all accounts", href: "/customer-ledger-modal" }
+    default:
+      return null
+  }
 }

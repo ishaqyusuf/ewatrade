@@ -38,7 +38,7 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query"
-import { useRouter } from "expo-router"
+import { useLocalSearchParams, useRouter } from "expo-router"
 import {
   useCallback,
   useDeferredValue,
@@ -124,9 +124,21 @@ export function OrdersScreen() {
   const edgeFeedback = useScrollEdgeFeedback()
   const handleDockScroll = useAdminDockScroll()
   const scrollToTop = useScrollToTop()
-  const [dateFilter, setDateFilter] = useState<DateFilter>("30_days")
+  // The assistant's "See all" opens the list it summarised (all dates, still owing).
+  const opened = useLocalSearchParams<{ payment?: string }>()
+  const fromAssistant = opened.payment === "owing"
+  const [dateFilter, setDateFilter] = useState<DateFilter>(
+    fromAssistant ? "all" : "30_days",
+  )
   const [filter, setFilter] = useState<OrderFilter>("all")
-  const [paymentFilter, setPaymentFilter] = useState<OrderPaymentFilter>("any")
+  const [paymentFilter, setPaymentFilter] = useState<OrderPaymentFilter>(
+    fromAssistant ? "owing" : "any",
+  )
+  useEffect(() => {
+    if (opened.payment !== "owing") return
+    setDateFilter("all")
+    setPaymentFilter("owing")
+  }, [opened.payment])
   const [mastheadHeight, setMastheadHeight] = useState(0)
   const [query, setQuery] = useState("")
   const searchFold = useSearchFold(query)
@@ -531,9 +543,14 @@ export function OrdersScreen() {
                       paid: `Paid${paymentCount("paid")}`,
                       part_paid: `Part paid${paymentCount("part_paid")}`,
                       unpaid: `Unpaid${paymentCount("unpaid")}`,
+                      owing: `Owing${paymentCount("owing")}`,
                     }}
                     onChange={setPaymentFilter}
-                    values={["any", "unpaid", "part_paid", "paid"]}
+                    values={
+                      paymentFilter === "owing"
+                        ? ["any", "owing", "unpaid", "part_paid", "paid"]
+                        : ["any", "unpaid", "part_paid", "paid"]
+                    }
                   />
                 </>
               )}

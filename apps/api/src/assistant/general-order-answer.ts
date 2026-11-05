@@ -123,7 +123,7 @@ export function generalOrderPageAnswers(
       value: `${page.items.length} ${page.items.length === 1 ? "order" : "orders"}`,
       scope,
       asOf,
-      summary: page.nextCursor ? "More orders on the next page" : "",
+      summary: "",
       detail: `${page.nextCursor ? "More results are available. " : "End of this live result page. "}${input.cursor ? "Continuation page" : "First page"}; not a business total. Created from ${input.createdAfter ?? "any start"} (inclusive) to ${input.createdBefore ?? "any end"} (exclusive); explicit instants, display dates in UTC. Search: ${label(input.query ?? "none", 160)} (${input.queryMode ?? "all"}); statuses: ${input.statuses?.join(", ") ?? "all"}${input.owing ? "; only orders still owing money (unpaid or part paid)" : ""}. Matching orders are listed separately; choose the exact order when names match more than one record.`,
     },
     ...page.items.map((order) => ({

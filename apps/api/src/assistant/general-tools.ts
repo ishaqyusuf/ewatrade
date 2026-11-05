@@ -705,7 +705,7 @@ export function createGeneralTools(
             value: `${page.items.length} ${page.items.length === 1 ? "order" : "orders"}`,
             scope: fresh.tenantContext.activeStore?.name ?? "Store",
             asOf: new Date().toISOString(),
-            summary: page.nextCursor ? "More orders on the next page" : "",
+            summary: "",
             detail: `${page.period === "today" ? `Orders created today in ${page.timezone}. ` : "Matching unpaid orders. "}${page.accounts.length} configured receiving account(s). ${page.nextCursor ? "More orders are available; continue with the same filters." : "End of this lookup."} No links created or payments recorded.`,
           })
           return page
@@ -1464,7 +1464,7 @@ export function createGeneralTools(
               value: `${page.items.length} ${page.items.length === 1 ? "item" : "items"}`,
               scope: "Current business · catalog",
               asOf: new Date().toISOString(),
-              summary: page.nextCursor ? "More items on the next page" : "",
+              summary: "",
               detail: `Kind: ${input.kind ?? "all"}; status: ${input.status ?? "all"}; keywords: ${input.query ?? "none"}. Any search word may match a catalog field. Sorted by name; ${input.cursor ? "continuation page" : "first page"}. ${page.nextCursor ? "More results are available." : "End of this list."} Page length is not a catalog total.`,
             })
           const items = page.items.map((item) => ({
@@ -2034,7 +2034,7 @@ export function createGeneralTools(
             value: `${page.items.length} ${page.items.length === 1 ? "order" : "orders"}`,
             scope: fresh.tenantContext.activeStore?.name ?? "Store",
             asOf: new Date().toISOString(),
-            summary: page.nextCursor ? "More orders on the next page" : "",
+            summary: "",
             detail: `${input.orderNumber ? `Exact number: ${input.orderNumber}` : input.customerId ? `Customer: ${input.customerId}` : `Phone: ${input.phone}`}. ${page.nextCursor ? "More results are available." : "End of this lookup."} Customer/phone results are unpaid or unfinished orders under your normal sales visibility, not a debt total.`,
           })
           for (const order of page.items)
@@ -2355,7 +2355,7 @@ export function createGeneralTools(
             value: `${page.items.length} ${page.items.length === 1 ? "customer" : "customers"}`,
             scope: "Current business · customer directory",
             asOf: new Date().toISOString(),
-            summary: page.nextCursor ? "More customers on the next page" : "",
+            summary: "",
             detail: `Name, phone or email contains: ${input.query ?? "no filter"}. ${input.cursor ? "Continuation page." : "First page."} ${page.nextCursor ? "More results are available; continue with the returned cursor." : "End of this list."} This page is not a directory total or a count of buyers.`,
           })
           for (const customer of page.items)

@@ -165,6 +165,8 @@ export const ORDER_PAYMENT_FILTERS = {
   unpaid: ["PENDING", "AUTHORIZED", "FAILED"],
   part_paid: ["PARTIALLY_PAID"],
   paid: ["PAID"],
+  /** Unpaid or part paid; reached from the assistant's "See all", not a chip. */
+  owing: ["PENDING", "AUTHORIZED", "FAILED", "PARTIALLY_PAID"],
 } as const satisfies Record<string, readonly string[] | undefined>
 export type OrderPaymentFilter = keyof typeof ORDER_PAYMENT_FILTERS
 
