@@ -21,6 +21,7 @@ import {
   useOwnerSectionScroll,
   useOwnerSignupColors,
 } from "./owner-signup-frame"
+import { ownerTypePickPresentation } from "./owner-type-pick"
 
 export function OwnerTypePicker({
   selected,
@@ -298,28 +299,22 @@ export function OwnerTypeFooter({
   const largeText = useLargeTextLayout()
   const sheet = useModal()
   const presentedPick = useRef(0)
-  // "Other" needs a typed description, so it never opens the sheet (sheets
-  // take no typing): the field shows on the page and Continue joins the
-  // search footer instead.
-  const otherOnPage = !multi && selected.includes("other")
+  const {
+    otherOnPage,
+    sheet: showSheet,
+    continueInFooter,
+  } = ownerTypePickPresentation({ multi, selected })
   useEffect(() => {
     if (pickRequest === 0) {
       presentedPick.current = 0
       sheet.dismiss()
       return
     }
-    if (multi || !selected.length || otherOnPage) sheet.dismiss()
+    if (!showSheet) sheet.dismiss()
     if (pickRequest <= presentedPick.current) return
     presentedPick.current = pickRequest
-    if (!multi && selected.length && !otherOnPage) sheet.present()
-  }, [
-    pickRequest,
-    multi,
-    selected.length,
-    otherOnPage,
-    sheet.dismiss,
-    sheet.present,
-  ])
+    if (showSheet) sheet.present()
+  }, [pickRequest, showSheet, sheet.dismiss, sheet.present])
   function proceed() {
     if (!valid) return
     sheet.dismiss()
@@ -377,7 +372,7 @@ export function OwnerTypeFooter({
         actionsAboveSearch
         localSearch
       >
-        {(multi && selected.length > 0) || otherOnPage ? primary : null}
+        {continueInFooter ? primary : null}
       </BottomSearchFooter>
       <Modal
         ref={sheet.ref}
