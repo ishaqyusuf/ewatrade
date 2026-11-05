@@ -44,6 +44,9 @@ export function OwnerTypePicker({
   const largeText = useLargeTextLayout()
   const jump = useOwnerSectionScroll()
   const sections = useRef(new Map<string, NativeView>())
+  // Picking "Something else" adds its field under the footer; bring it up.
+  const revealOther = useRef(false)
+  const otherField = useRef<NativeView>(null)
   const types = useMemo(
     () =>
       rankBySearch(BUSINESS_TYPES, query, (type) => [
@@ -61,6 +64,7 @@ export function OwnerTypePicker({
   })).filter((group) => group.types.length > 0)
   const otherType = BUSINESS_TYPES.find((type) => type.key === "other")
   function pick(key: string) {
+    if (key === "other" && !selected.includes(key)) revealOther.current = true
     onSelected(
       multi
         ? selected.includes(key)
@@ -248,6 +252,12 @@ export function OwnerTypePicker({
       </View>
       {selected.includes("other") ? (
         <View
+          ref={otherField}
+          onLayout={() => {
+            if (!revealOther.current || !otherField.current) return
+            revealOther.current = false
+            jump(otherField.current)
+          }}
           style={{
             marginTop: 12,
             padding: 12,
