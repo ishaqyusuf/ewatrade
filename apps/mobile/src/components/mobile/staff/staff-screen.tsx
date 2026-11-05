@@ -25,6 +25,10 @@ import { MobileWorkflowChrome } from "../appearances/workflow-chrome"
 import { NudgeCard, SectionHeader } from "../green-till/kit"
 import type { WorkflowModalChromeProps } from "../workflow-modal-screen"
 import { OrderVisibilityCard } from "./order-visibility-card"
+import {
+  PendingInviteSheet,
+  usePendingInviteActions,
+} from "./pending-invite-sheet"
 import { StaffInvitationSheet } from "./staff-invitation-sheet"
 import { STAFF_SEARCH_LIMIT } from "./staff-model"
 import { useStaffDirectory } from "./use-staff-directory"
@@ -39,6 +43,7 @@ export function StaffInviteContent({ onComplete }: StaffInviteProps) {
   const colors = useColors()
   const vm = useStaffDirectory(onComplete)
   const { invitation, rows } = vm
+  const pendingInvite = usePendingInviteActions(vm.storeId)
   const ordered = [...rows].sort(
     (a, b) =>
       (a.statusLabel === "Pending" ? 0 : a.statusLabel === "Active" ? 1 : 2) -
@@ -76,7 +81,7 @@ export function StaffInviteContent({ onComplete }: StaffInviteProps) {
         ? "Try again to load the shared directory."
         : vm.search
           ? "Change or clear your search. No match here does not prove that an uncertain invitation was not saved."
-          : "Invite a sales rep using their own email address."
+          : "Invite a sales rep by their email or WhatsApp number."
 
   if (
     vm.blocked &&
@@ -186,11 +191,14 @@ export function StaffInviteContent({ onComplete }: StaffInviteProps) {
                   {invitation.notice ? (
                     <StatusBanner icon="Check" message={invitation.notice} />
                   ) : null}
+                  {pendingInvite.notice ? (
+                    <StatusBanner icon="Check" message={pendingInvite.notice} />
+                  ) : null}
                   {recovery ? (
                     <StatusBanner
                       icon="TriangleAlert"
                       title="Invitation not confirmed"
-                      message={`Check the loaded directory for ${invitation.recoveryEmail}. A matching record does not confirm this request or email delivery. No second invite will be sent from this workflow. Recovery is memory-only.`}
+                      message={`Check the loaded directory for ${invitation.recoveryEmail}. A matching record does not confirm this request or its delivery. No second invite will be sent from this workflow. Recovery is memory-only.`}
                       actionLabel="Review invitation"
                       onActionPress={invitation.present}
                       tone="warning"
@@ -292,10 +300,19 @@ export function StaffInviteContent({ onComplete }: StaffInviteProps) {
                     last={last}
                     staff={item}
                     onPress={() =>
-                      Alert.alert(
-                        item.name,
-                        `${item.email}\n${item.statusLabel}\n${item.detail}`,
-                      )
+                      item.statusLabel === "Pending" && !vm.isOffline
+                        ? pendingInvite.open(item)
+                        : Alert.alert(
+                            item.name,
+                            [
+                              item.email,
+                              item.phone,
+                              item.statusLabel,
+                              item.detail,
+                            ]
+                              .filter(Boolean)
+                              .join("\n"),
+                          )
                     }
                   />
                 </View>
@@ -313,7 +330,7 @@ export function StaffInviteContent({ onComplete }: StaffInviteProps) {
               onChangeText={vm.setSearch}
               value={vm.search}
               totalCount={rows.length}
-              placeholder="Name or email"
+              placeholder="Name, email or number"
             >
               {recovery ? (
                 <ActionButton
@@ -358,6 +375,7 @@ export function StaffInviteContent({ onComplete }: StaffInviteProps) {
           onCheckDirectory={invitation.checkDirectory}
           onDismiss={invitation.onDismiss}
         />
+        <PendingInviteSheet actions={pendingInvite} />
       </View>
     </VariableContextProvider>
   )

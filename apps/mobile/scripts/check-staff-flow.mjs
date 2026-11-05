@@ -50,11 +50,16 @@ const contracts = [
           'title={uncertain ? "Result not confirmed" : "Invite attendant"}',
           "closeDisabled={isPending}",
           "footer={",
-          'label="Email address · Required"',
+          // Invite by email, WhatsApp or both (Workshop staff-invite-channels 01).
+          'accessibilityLabel="Invite by"',
+          'label="Email address"',
+          'label="WhatsApp number"',
           'label="Attendant name · Optional"',
         ],
         orderedMarkers: [
-          'label="Email address · Required"',
+          'accessibilityLabel="Invite by"',
+          'label="Email address"',
+          'label="WhatsApp number"',
           'label="Attendant name · Optional"',
         ],
         start: "    <FullScreenModal\n      ref={ref}",

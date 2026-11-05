@@ -79,6 +79,7 @@ export function phonePlaceholder(countryCode: string) {
 export function PhoneField({
   countryCode,
   editable = true,
+  error,
   label = "Phone",
   onChangeText,
   onCountryChange,
@@ -87,6 +88,7 @@ export function PhoneField({
 }: {
   countryCode: string
   editable?: boolean
+  error?: string
   label?: string
   onChangeText: (digits: string) => void
   onCountryChange: (code: string) => void
@@ -106,6 +108,7 @@ export function PhoneField({
             accessibilityLabel={`${label}, plus ${country.dialCode}`}
             autoComplete="tel-national"
             editable={editable}
+            error={error}
             keyboardType="phone-pad"
             label={label}
             leadingContent={

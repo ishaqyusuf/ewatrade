@@ -1,20 +1,62 @@
 import { ActionButton } from "@/components/mobile/action-button"
 import { FormField } from "@/components/mobile/form-field"
 import { FullScreenModal } from "@/components/mobile/full-screen-form"
+import { PhoneField } from "@/components/mobile/phone-field"
 import { QaQuickFillButton } from "@/components/mobile/qa-quick-fill-button"
 import { StatusBanner } from "@/components/mobile/status-banner"
+import { WhatsAppMark } from "@/components/mobile/whatsapp-mark"
 import { BottomSheetKeyboardAwareScrollView } from "@/components/ui/bottom-sheet-keyboard-aware-scroll-view"
+import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
+import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
 import { createStaffFixture } from "@/internal-tooling/fixture-recipes"
 import type { BottomSheetModal } from "@gorhom/bottom-sheet"
 import { forwardRef, useEffect, useRef, useState } from "react"
 import { hasStaffInviteDraft } from "../staff-invite-sheet-model"
-import type { StaffDraft } from "./staff-model"
+import {
+  type StaffDraft,
+  type StaffDraftErrors,
+  type StaffInviteChannel,
+  type StaffRow,
+  staffDraftShows,
+} from "./staff-model"
+
+const channels: Array<{ value: StaffInviteChannel; label: string }> = [
+  { value: "email", label: "Email" },
+  { value: "whatsapp", label: "WhatsApp" },
+  { value: "both", label: "Both" },
+]
+
+function DuplicateBanner({
+  duplicate,
+}: {
+  duplicate: { row: StaffRow; via: "email" | "phone" }
+}) {
+  const contact =
+    duplicate.via === "phone" ? "This WhatsApp number" : "This email"
+  return duplicate.row.statusLabel === "Active" ? (
+    <StatusBanner
+      icon="Users"
+      title={`${duplicate.row.name} is already on your staff`}
+      message={`${contact} belongs to an active sales rep.`}
+    />
+  ) : (
+    <StatusBanner
+      icon="Clock"
+      tone="warning"
+      title={`${duplicate.row.name} is already invited`}
+      message="They haven’t accepted yet. Resend the invite instead of sending a new one."
+    />
+  )
+}
 
 type StaffInvitationSheetProps = {
   draft: StaffDraft
   error: string | null
+  fieldErrors: StaffDraftErrors
+  duplicate: { row: StaffRow; via: "email" | "phone" } | null
+  whatsappEnabled: boolean
   quotaMessage: string
   locked: boolean
   isPending: boolean
@@ -34,6 +76,9 @@ export const StaffInvitationSheet = forwardRef<
   {
     draft,
     error,
+    fieldErrors,
+    duplicate,
+    whatsappEnabled,
     quotaMessage,
     locked,
     isPending,
@@ -48,6 +93,9 @@ export const StaffInvitationSheet = forwardRef<
   ref,
 ) {
   const hasDraft = hasStaffInviteDraft(draft)
+  const largeText = useLargeTextLayout()
+  const shows = staffDraftShows(draft)
+  const resend = duplicate?.row.statusLabel === "Pending"
   const quickFillSnapshot = useRef<StaffDraft | null>(null)
   const [canUndo, setCanUndo] = useState(false)
   useEffect(() => {
@@ -65,13 +113,17 @@ export const StaffInvitationSheet = forwardRef<
       onDismiss={onDismiss}
       footer={
         <ActionButton
-          icon={uncertain ? "Search" : "UserPlus"}
+          icon={uncertain ? "Search" : resend ? "RefreshCw" : "UserPlus"}
           disabled={uncertain ? recoveryDisabled : !canSubmit}
           isLoading={isPending}
           loadingLabel="Sending invitation"
           onPress={uncertain ? onCheckDirectory : onSave}
         >
-          {uncertain ? "Check directory" : "Send invite"}
+          {uncertain
+            ? "Check directory"
+            : resend
+              ? "Resend invite"
+              : "Send invite"}
         </ActionButton>
       }
     >
@@ -105,7 +157,12 @@ export const StaffInvitationSheet = forwardRef<
               if (locked) return
               quickFillSnapshot.current = draft
               const fixture = createStaffFixture(context, sequence)
-              onChange({ email: fixture.email, name: fixture.name })
+              onChange({
+                ...draft,
+                channel: draft.channel === "whatsapp" ? "email" : draft.channel,
+                email: fixture.email,
+                name: fixture.name,
+              })
               setCanUndo(true)
             }}
             onUndo={() => {
@@ -115,20 +172,75 @@ export const StaffInvitationSheet = forwardRef<
               setCanUndo(false)
             }}
           />
-          <FormField
-            variant="filled"
-            editable={!locked}
-            maxLength={320}
-            autoCapitalize="none"
-            autoCorrect={false}
-            inputMode="email"
-            keyboardType="email-address"
-            label="Email address · Required"
-            leadingIcon="Mail"
-            placeholder="attendant@example.com"
-            value={draft.email}
-            onChangeText={(email) => onChange({ ...draft, email })}
-          />
+          {whatsappEnabled ? (
+            <View className="gap-2">
+              <Text className="text-xs font-bold text-foreground">
+                Invite by
+              </Text>
+              <View
+                accessibilityRole="radiogroup"
+                accessibilityLabel="Invite by"
+                className={largeText ? "gap-2" : "flex-row flex-wrap gap-2"}
+              >
+                {channels.map((item) => (
+                  <Pressable
+                    key={item.value}
+                    accessibilityRole="radio"
+                    accessibilityState={{
+                      checked: draft.channel === item.value,
+                    }}
+                    disabled={locked}
+                    onPress={() => onChange({ ...draft, channel: item.value })}
+                    className={`min-h-11 flex-row items-center justify-center gap-1.5 rounded-full border px-3.5 ${draft.channel === item.value ? "border-primary bg-primary/10" : "border-border bg-card"}`}
+                  >
+                    {item.value === "whatsapp" ? (
+                      <WhatsAppMark size={16} />
+                    ) : null}
+                    <Text className="text-xs font-semibold text-foreground">
+                      {item.label}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            </View>
+          ) : null}
+          {shows.email ? (
+            <FormField
+              variant="filled"
+              editable={!locked}
+              maxLength={320}
+              autoCapitalize="none"
+              autoCorrect={false}
+              inputMode="email"
+              keyboardType="email-address"
+              label="Email address"
+              leadingIcon="Mail"
+              placeholder="attendant@example.com"
+              value={draft.email}
+              error={fieldErrors.email}
+              onChangeText={(email) => onChange({ ...draft, email })}
+            />
+          ) : null}
+          {shows.email && duplicate?.via === "email" ? (
+            <DuplicateBanner duplicate={duplicate} />
+          ) : null}
+          {shows.phone ? (
+            <PhoneField
+              label="WhatsApp number"
+              countryCode={draft.phoneCountry}
+              onCountryChange={(phoneCountry) =>
+                onChange({ ...draft, phoneCountry })
+              }
+              value={draft.phone}
+              onChangeText={(phone) => onChange({ ...draft, phone })}
+              error={fieldErrors.phone}
+              variant="filled"
+              editable={!locked}
+            />
+          ) : null}
+          {shows.phone && duplicate?.via === "phone" ? (
+            <DuplicateBanner duplicate={duplicate} />
+          ) : null}
           <FormField
             variant="filled"
             editable={!locked}

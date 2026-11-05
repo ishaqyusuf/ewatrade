@@ -15,6 +15,7 @@ import {
 import {
   STAFF_RESULT_LIMIT,
   STAFF_SEARCH_LIMIT,
+  type StaffRow,
   mapStaffMember,
 } from "./staff-model"
 import { useStaffInvitation } from "./use-staff-invitation"
@@ -72,7 +73,17 @@ export function useStaffDirectory(onComplete?: () => void) {
         (active.status?.toUpperCase() ?? "ACTIVE") === "ACTIVE",
     )
   }, [profile?.id, profile?.businessId, storeId])
+  const whatsapp = useQuery(
+    trpc.auth.phoneOtpAvailability.queryOptions(undefined, {
+      enabled: canManage && !isOffline,
+      retry: false,
+    }),
+  )
+  // Rows from the latest render: the directory query itself waits on the invitation scope.
+  const loadedRows = useRef<StaffRow[]>([])
   const invitation = useStaffInvitation({
+    whatsappEnabled: whatsapp.data?.enabled === true,
+    rows: loadedRows.current,
     scope,
     storeId,
     canOperate: canManage && !identityChanged && !knownStoreChanged,
@@ -105,6 +116,7 @@ export function useStaffDirectory(onComplete?: () => void) {
     () => (blocked ? [] : (directory.data ?? []).map(mapStaffMember)),
     [blocked, directory.data],
   )
+  loadedRows.current = rows
   const snapshot =
     !blocked &&
     canReadBilling &&

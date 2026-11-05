@@ -8,11 +8,15 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import { Keyboard } from "react-native"
 import {
   type StaffDraft,
+  type StaffRow,
   emptyStaffDraft,
+  findStaffDuplicate,
   prepareStaffInvite,
+  staffDraftErrors,
 } from "./staff-model"
 
 type InvitationInput = RouterInputs["retailOps"]["inviteStaff"]
+type InvitationDelivery = { email: boolean; whatsapp: string | null }
 type InvitationPhase = "editing" | "posting" | "uncertain" | "accepted"
 type InvitationContext = {
   scope: string | null
@@ -21,8 +25,36 @@ type InvitationContext = {
   canReadBilling: boolean
   isOffline: boolean
   isCurrentScope: () => boolean
-  onCheckDirectory: (email: string) => void
+  /** WhatsApp sign-in is on, so a WhatsApp invite can be accepted. */
+  whatsappEnabled: boolean
+  /** Loaded directory rows, to offer Resend instead of a duplicate invite. */
+  rows: StaffRow[]
+  onCheckDirectory: (contact: string) => void
   onComplete?: () => void
+}
+
+/** What the owner is told after Send: the channels used, never a delivery promise. */
+export function sentNotice(delivery?: InvitationDelivery) {
+  const whatsapp =
+    delivery?.whatsapp === "SENT" || delivery?.whatsapp === "LOCAL_ONLY"
+      ? "sent"
+      : delivery?.whatsapp === "UNCONFIRMED"
+        ? "unconfirmed"
+        : delivery?.whatsapp
+          ? "failed"
+          : null
+  if (delivery?.email && whatsapp === "sent")
+    return "Invite sent by email and on WhatsApp."
+  if (whatsapp === "sent") return "Invite sent on WhatsApp."
+  if (whatsapp === "unconfirmed")
+    return delivery?.email
+      ? "Invite emailed. WhatsApp delivery is not confirmed yet."
+      : "Invite saved. WhatsApp delivery is not confirmed yet."
+  if (whatsapp === "failed")
+    return delivery?.email
+      ? "Invite emailed, but WhatsApp couldn’t send it. Resend from Staff."
+      : "Invite saved, but WhatsApp couldn’t send it. Resend from Staff."
+  return "Invite sent by email."
 }
 
 // One command owner for the invitation. The bounded server replay cache is
@@ -46,8 +78,17 @@ export function useStaffInvitation(context: InvitationContext) {
     scope: string
     input: InvitationInput
     accepted: boolean
+    delivery?: InvitationDelivery
   } | null>(null)
-  const [draft, updateDraft] = useState<StaffDraft>(emptyStaffDraft)
+  const [rawDraft, updateDraft] = useState<StaffDraft>(() => ({
+    ...emptyStaffDraft(),
+    channel: "whatsapp",
+  }))
+  // Without WhatsApp sign-in the invite goes by email only.
+  const draft: StaffDraft = context.whatsappEnabled
+    ? rawDraft
+    : { ...rawDraft, channel: "email" }
+  const [attempted, setAttempted] = useState(false)
   const [phase, setPhase] = useState<InvitationPhase>("editing")
   const [open, setOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -91,9 +132,8 @@ export function useStaffInvitation(context: InvitationContext) {
     modal.dismiss()
     setOpen(false)
     setError(null)
-    setNotice(
-      "Invitation recorded. This screen does not confirm email delivery.",
-    )
+    const sent = sentNotice(request.current.delivery)
+    setNotice(sent)
     let refreshed = false
     if (!current.current.isOffline) {
       try {
@@ -123,11 +163,12 @@ export function useStaffInvitation(context: InvitationContext) {
     if (!canFollowUp()) return
     setNotice(
       refreshed
-        ? "Invitation recorded. This screen does not confirm email delivery."
-        : "Invitation recorded, but the directory could not refresh. Reconnect and refresh; do not send again. Email delivery is not confirmed.",
+        ? sent
+        : `${sent} The directory could not refresh. Reconnect and refresh; do not send again.`,
     )
     request.current = null
-    updateDraft(emptyStaffDraft())
+    updateDraft({ ...emptyStaffDraft(), channel: "whatsapp" })
+    setAttempted(false)
     setPhase("editing")
     current.current.onComplete?.()
   }, [canFollowUp, modal.dismiss, queryClient, trpc])
@@ -177,9 +218,14 @@ export function useStaffInvitation(context: InvitationContext) {
       Crypto.randomUUID(),
     )
     if ("error" in prepared) {
-      setError(prepared.error)
+      // Field errors show beside the chosen contacts; only other problems use the banner.
+      setAttempted(true)
+      const fields = staffDraftErrors(draft)
+      setError(fields.email || fields.phone ? null : prepared.error)
       return
     }
+    if (findStaffDuplicate(draft, active.rows)?.row.statusLabel === "Active")
+      return
     const attempt = {
       scope: active.scope,
       input: prepared.input,
@@ -191,8 +237,9 @@ export function useStaffInvitation(context: InvitationContext) {
     setNotice(null)
     setPhase("posting")
     try {
-      await mutation.mutateAsync(attempt.input)
+      const result = await mutation.mutateAsync(attempt.input)
       attempt.accepted = true
+      attempt.delivery = result.delivery
       busy.current = false
       if (mounted.current) setPhase("accepted")
       // If identity changed, the accepted result waits for its original scope.
@@ -238,7 +285,8 @@ export function useStaffInvitation(context: InvitationContext) {
       return
     modal.dismiss()
     setOpen(false)
-    current.current.onCheckDirectory(request.current.input.email)
+    const { email, phone } = request.current.input
+    current.current.onCheckDirectory(email ?? phone ?? "")
   }
 
   return {
@@ -262,12 +310,17 @@ export function useStaffInvitation(context: InvitationContext) {
     isPending: phase === "posting" || phase === "accepted",
     locked: blocked || phase !== "editing",
     recoveryEmail:
-      phase === "uncertain" ? request.current?.input.email : undefined,
+      phase === "uncertain"
+        ? (request.current?.input.email ?? request.current?.input.phone)
+        : undefined,
+    fieldErrors: attempted ? staffDraftErrors(draft) : {},
+    duplicate: findStaffDuplicate(draft, context.rows),
+    whatsappEnabled: context.whatsappEnabled,
+    // Send stays available so an incomplete form explains itself inline.
     canSubmit:
       !blocked &&
       !context.isOffline &&
       phase === "editing" &&
-      "input" in
-        prepareStaffInvite(draft, context.storeId ?? "", "validation-only"),
+      findStaffDuplicate(draft, context.rows)?.row.statusLabel !== "Active",
   }
 }

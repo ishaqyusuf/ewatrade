@@ -1,4 +1,6 @@
+import { Icon } from "@/components/ui/icon"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
 import { cn } from "@/lib/utils"
 import { ActionButton } from "../../action-button"
@@ -119,11 +121,12 @@ export function ClassicStaffRow({
         stackDetails
         onPress={onPress}
         title={staff.name}
-        meta={
-          staff.email && staff.email !== staff.name
-            ? [staff.email, staff.detail]
-            : staff.detail
-        }
+        meta={[
+          ...[staff.email, staff.phone].filter(
+            (contact) => contact && contact !== staff.name,
+          ),
+          staff.detail,
+        ]}
         avatar={{
           initials: staff.initials,
           tint: staff.statusLabel === "Pending" ? "amber" : "lilac",
@@ -141,7 +144,45 @@ export function ClassicStaffRow({
           />
         }
       />
+      {staff.whatsapp ? <WhatsAppDeliveryChip state={staff.whatsapp} /> : null}
       {last ? null : <RowDivider />}
+    </View>
+  )
+}
+
+/** Workshop staff-invite-channels 01: WhatsApp state of a pending invite. */
+function WhatsAppDeliveryChip({
+  state,
+}: { state: NonNullable<StaffRow["whatsapp"]> }) {
+  const failed = state === "failed"
+  return (
+    <View className="flex-row pb-3 pl-14">
+      <View
+        className={cn(
+          "flex-row items-center gap-1.5 rounded-full px-2.5 py-1",
+          failed ? "bg-destructive/10" : "bg-primary/10",
+        )}
+      >
+        <Icon
+          className={cn(
+            "size-[13px]",
+            failed ? "text-destructive" : "text-primary",
+          )}
+          name={failed ? "TriangleAlert" : state === "sent" ? "Check" : "Clock"}
+        />
+        <Text
+          className={cn(
+            "text-xs font-semibold",
+            failed ? "text-destructive" : "text-foreground",
+          )}
+        >
+          {failed
+            ? "WhatsApp not delivered"
+            : state === "sent"
+              ? "WhatsApp sent"
+              : "WhatsApp not confirmed"}
+        </Text>
+      </View>
     </View>
   )
 }
