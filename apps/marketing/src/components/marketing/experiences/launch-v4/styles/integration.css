@@ -1,0 +1,171 @@
+@font-face {
+  font-family: EwmCal;
+  src: url("/shop-v3/cal-sans.woff2") format("woff2");
+  font-weight: 400 700;
+  font-display: swap;
+}
+@font-face {
+  font-family: EwmInter;
+  src: url("/shop-v3/inter-latin.woff2") format("woff2");
+  font-weight: 100 900;
+  font-display: swap;
+}
+@font-face {
+  font-family: EwmFigtree;
+  src: url("/marketing-fonts/figtree-latin.woff2") format("woff2");
+  font-weight: 300 900;
+  font-display: swap;
+}
+@font-face {
+  font-family: EwmHedvig;
+  src: url("/marketing-fonts/hedvig-letters-serif.ttf") format("truetype");
+  font-weight: 400;
+  font-display: swap;
+}
+.ewm {
+  --ew-green: var(--ink);
+  --ew-green-hi: #25d366;
+  --ew-paper: var(--paper);
+  --ew-card: var(--paper);
+  --ew-ink: var(--ink);
+  --ew-muted: var(--muted);
+  --ew-line: var(--line);
+  --ew-mint: #e3f4e9;
+  --ew-mint-fg: #195f3c;
+  --ew-on-green: var(--paper);
+  --ew-on-green-muted: #ccd1da;
+  --ew-display: EwmCal, EwmInter, sans-serif;
+  --ew-sans: EwmInter, system-ui, sans-serif;
+  --ew-gold: #25d366;
+  --ew-on-gold: #151b28;
+}
+.ewm .ew-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+.ewm .site-footer > .wrap {
+  display: block;
+}
+.ewm .header-signin {
+  font-size: 14px;
+  white-space: nowrap;
+  text-decoration: none;
+}
+.ewm .mobile-signin {
+  display: none;
+}
+.ewm .illustration-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  margin: 15px 0 6px;
+}
+.ewm .plan-comparison {
+  border-top: 1px solid var(--line);
+  margin-top: 32px;
+  padding-top: 20px;
+}
+.ewm .plan-comparison > summary {
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: 600;
+  padding: 12px 0;
+}
+.ewm .plan-comparison-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 28px;
+  padding: 28px 0;
+}
+.ewm .plan-comparison-grid h3 {
+  font-size: 22px;
+  margin-bottom: 8px;
+}
+.ewm .plan-comparison-grid p,
+.ewm .plan-comparison-grid li {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+.ewm .plan-comparison-grid ul {
+  padding-left: 18px;
+  margin-top: 14px;
+  list-style: disc;
+}
+.ewm .plan-comparison-grid li {
+  margin-bottom: 8px;
+}
+.ewm .button {
+  text-decoration: none;
+}
+.ewm .walk-progress > span {
+  transition: transform .3s ease;
+}
+.ewm .w-guide-fab {
+  z-index: 90;
+  color: var(--ew-on-green);
+  --ew-text: EwmInter, system-ui, sans-serif;
+  --ew-on-green-line: #434954;
+  --ew-shadow-lg: 0 12px 32px -12px #0005;
+}
+.ewm .w-guide-mark svg {
+  fill: none;
+  stroke: currentColor;
+}
+.w-guide-panel {
+  --ew-paper: #fff;
+  --ew-paper-2: #f5f6f8;
+  --ew-card: #fff;
+  --ew-fg: #151b28;
+  --ew-muted: #59616e;
+  --ew-line: #dfe3e8;
+  --ew-green: #151b28;
+  --ew-on-green: #fff;
+  --ew-green-hi: #2747b4;
+  --ew-mint: #e3f4e9;
+  --ew-mint-fg: #195f3c;
+  --ew-display: EwmCal, EwmInter, sans-serif;
+  --ew-text: EwmInter, system-ui, sans-serif;
+  --ew-shadow-lg: 0 18px 48px -18px #0004;
+}
+.w-guide-panel[data-theme="dark"] {
+  --ew-paper: #10141c;
+  --ew-paper-2: #181d27;
+  --ew-card: #181d27;
+  --ew-fg: #eff1f5;
+  --ew-muted: #b0b8c7;
+  --ew-line: #303641;
+  --ew-green: #eff1f5;
+  --ew-on-green: #151b28;
+}
+.ewm .wa-review-note {
+  display: block;
+}
+@media (max-width: 900px) {
+  .ewm .header-signin {
+    display: none;
+  }
+  .ewm .main-nav .mobile-signin {
+    display: flex;
+  }
+  .ewm .plan-comparison-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 600px) {
+  .ewm .plan-comparison-grid {
+    grid-template-columns: 1fr;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ewm .walk-progress > span {
+    transition: none;
+  }
+}

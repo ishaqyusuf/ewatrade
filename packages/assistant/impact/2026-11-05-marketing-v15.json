@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "id": "2026-11-05-marketing-v15",
+  "tickets": ["H02"],
+  "summary": "Implement the owner-selected marketing Workshop 01 v15 with source-grounded HTML screen illustrations and accessible motion.",
+  "noAssistantImpact": "Public marketing presentation only. The WhatsApp sequence is an inert illustration; it creates no signed review link and performs no merchant action. Existing public AssistantFab, signup policy and destinations, marketing offers and plan actions are reused. No assistant capability, command, permission, confirmation, API, domain, entitlement or release authority changes. Native availability remains Coming soon; this implementation is local source only.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/marketing-launch-v4.md"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "review",
+      "path": "docs/verification/2026-11-05-marketing-v15-implementation.md",
+      "executed": true,
+      "result": "Codex reviewed the selected v15 implementation, signup/plan/assistant boundaries and desktop/390px/320px behavior. Scoped source smoke 259 tests, focused marketing 18 tests, marketing types, H01 coverage and H02 impact passed. Local source only; no release, native acceptance or provider action."
+    }
+  ]
+}

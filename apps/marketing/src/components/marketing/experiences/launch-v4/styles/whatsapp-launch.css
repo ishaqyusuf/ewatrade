@@ -1,0 +1,387 @@
+/* Announcement bar and the ink WhatsApp launch section (v15 announcement.css).
+   Scoped to .ewm so legal, auth and signup routes keep their own styles. */
+.ewm .launch-announcement {
+  display: block;
+  background: #151b28;
+  color: #fff;
+  text-decoration: none;
+}
+.ewm .launch-announcement>.wrap {
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 14px;
+}
+.ewm .whatsapp-mark {
+  fill: #25d366;
+  stroke: none;
+  width: 23px;
+  height: 23px;
+}
+.ewm .launch-announcement strong {
+  font-weight: 550;
+}
+.ewm .launch-announcement span>span {
+  margin-left: auto;
+  color: #ccd1da;
+  font-size: 13px;
+}
+.ewm .launch-announcement>.wrap>svg:last-child {
+  width: 18px;
+  height: 18px;
+  margin-left: 10px;
+}
+.ewm .launch-announcement:hover strong {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.ewm .hero {
+  padding-top: 55px;
+}
+.ewm .whatsapp-launch {
+  margin-top: 72px;
+  background: #151b28;
+  color: white;
+  scroll-margin-top: 0;
+}
+.ewm .launch-layout {
+  display: grid;
+  grid-template-columns: minmax(0,1.4fr) minmax(350px,1fr);
+  gap: 58px 64px;
+  padding-block: 88px 55px;
+  align-items: center;
+}
+.ewm .launch-copy h2 {
+  font-size: clamp(66px,7.2vw,96px);
+  line-height: 1.02;
+  letter-spacing: -.035em;
+  text-wrap: balance;
+  max-width: 700px;
+}
+.ewm .launch-copy h2 span {
+  color: #25d366;
+}
+.ewm .launch-argument {
+  margin-top: 48px;
+  max-width: 410px;
+}
+.ewm .launch-argument h3 {
+  font-size: 30px;
+  line-height: 1.16;
+  color: #fff;
+  letter-spacing: -.02em;
+}
+.ewm .launch-argument p {
+  font-size: 17px;
+  line-height: 1.65;
+  color: #ccd1da;
+  margin-top: 18px;
+}
+.ewm .launch-actions {
+  margin-top: 29px;
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  flex-wrap: wrap;
+}
+.ewm .launch-primary {
+  background: #25d366;
+  color: #0d2519;
+  border: 0;
+  font-size: 15px;
+  min-height: 52px;
+  padding-inline: 22px;
+}
+.ewm .launch-primary .whatsapp-mark {
+  fill: currentColor;
+  width: 20px;
+  height: 20px;
+}
+.ewm .launch-primary:hover {
+  background: #5ce38b;
+  color: #0d2519;
+}
+.ewm .launch-watch {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  font-size: 14px;
+  text-decoration: none;
+  color: white;
+}
+.ewm .launch-watch:hover {
+  text-decoration: underline;
+}
+.ewm .launch-watch svg {
+  width: 18px;
+  height: 18px;
+}
+.ewm .launch-copy .launch-approval {
+  color: #c1c8d2;
+  margin-top: 18px;
+  max-width: 42ch;
+  font-size: 13px;
+}
+.ewm .whatsapp-launch .chat-proof {
+  width: min(100%,350px);
+  margin: 0;
+  justify-self: end;
+  scroll-margin-top: 95px;
+  min-width: 0;
+}
+.ewm .whatsapp-launch .whatsapp-window {
+  border-color: #050b0a;
+  box-shadow: 0 24px 48px -24px #0008;
+  color: #182420;
+}
+.ewm .whatsapp-launch .wa-message p {
+  color: #182420;
+}
+.ewm .whatsapp-launch .wa-title small {
+  color: #626d69;
+}
+.ewm .whatsapp-launch .wa-status {
+  color: #182420;
+}
+.ewm .whatsapp-launch .wa-compose {
+  color: #626d69;
+}
+.ewm .whatsapp-launch .wa-day {
+  color: #626d69;
+}
+.ewm .whatsapp-launch .wa-review-note {
+  background: #222b3a;
+  color: #e2e7ef;
+  border-color: #485362;
+}
+.ewm .launch-sequence {
+  grid-column: 1/-1;
+  list-style: none;
+  margin: 0;
+  padding: 32px 0 0;
+  border-top: 1px solid #485362;
+  display: grid;
+  grid-template-columns: repeat(3,minmax(0,1fr));
+  gap: 44px;
+}
+.ewm .launch-sequence li {
+  display: flex;
+  gap: 17px;
+}
+.ewm .launch-sequence li>span {
+  font-family: EwmCal,EwmInter,sans-serif;
+  font-size: 28px;
+  line-height: 1.15;
+  color: #25d366;
+}
+.ewm .launch-sequence strong {
+  font-size: 16px;
+  font-weight: 550;
+  color: #fff;
+}
+.ewm .launch-sequence p {
+  font-size: 14px;
+  line-height: 1.55;
+  color: #c1c8d2;
+  margin-top: 7px;
+  max-width: 29ch;
+}
+.ewm .whatsapp-launch :focus-visible {
+  outline-color: #25d366;
+}
+.ewm .mobile-copy h2 {
+  font-size: clamp(48px,5vw,66px);
+  line-height: 1.03;
+  letter-spacing: -.03em;
+}
+.ewm .closing h2 {
+  font-size: clamp(48px,5.6vw,76px);
+  line-height: 1.04;
+  letter-spacing: -.03em;
+}
+.ewm .closing {
+  padding-block: 78px;
+}
+@media (max-width:1080px) {
+  .ewm .launch-layout {
+    grid-template-columns: minmax(0,1fr) 350px;
+    gap: 45px;
+  }
+  .ewm .launch-copy h2 {
+    font-size: 70px;
+  }
+  .ewm .launch-argument {
+    margin-top: 33px;
+  }
+  .ewm .launch-actions {
+    gap: 15px;
+  }
+  .ewm .launch-sequence {
+    gap: 28px;
+  }
+  .ewm .launch-announcement span>span {
+    font-size: 12px;
+  }
+}
+@media (max-width:900px) {
+  .ewm .launch-layout {
+    grid-template-columns: minmax(0,1fr) 320px;
+    gap: 40px 28px;
+    padding-block: 65px 40px;
+  }
+  .ewm .launch-copy h2 {
+    font-size: 56px;
+  }
+  .ewm .launch-copy h2 span {
+    white-space: nowrap;
+  }
+  .ewm .launch-argument h3 {
+    font-size: 26px;
+  }
+  .ewm .launch-argument p {
+    font-size: 16px;
+  }
+  .ewm .launch-actions {
+    margin-top: 24px;
+  }
+  .ewm .launch-primary {
+    font-size: 14px;
+    padding-inline: 17px;
+  }
+  .ewm .launch-copy .launch-approval {
+    font-size: 12px;
+  }
+  .ewm .whatsapp-launch .chat-proof {
+    width: 320px;
+  }
+  .ewm .launch-sequence {
+    gap: 22px;
+  }
+  .ewm .launch-sequence li {
+    gap: 12px;
+  }
+  .ewm .launch-sequence strong {
+    font-size: 14px;
+  }
+  .ewm .launch-sequence p {
+    font-size: 13px;
+  }
+  .ewm .launch-announcement span>span {
+    display: none;
+  }
+  .ewm .launch-announcement>.wrap>svg:last-child {
+    margin-left: auto;
+  }
+  .ewm .whatsapp-launch {
+    margin-top: 55px;
+  }
+}
+@media (max-width:700px) {
+  .ewm .launch-layout {
+    grid-template-columns: 1fr;
+    gap: 40px;
+    padding-block: 55px 38px;
+  }
+  .ewm .launch-copy h2 {
+    font-size: clamp(47px,8.8vw,66px);
+    max-width: 570px;
+  }
+  .ewm .launch-argument {
+    margin-top: 30px;
+    max-width: 470px;
+  }
+  .ewm .launch-argument h3 {
+    font-size: 27px;
+  }
+  .ewm .launch-argument h3 br {
+    display: none;
+  }
+  .ewm .launch-argument p {
+    font-size: 16px;
+    margin-top: 13px;
+  }
+  .ewm .launch-actions {
+    gap: 15px;
+    margin-top: 24px;
+  }
+  .ewm .whatsapp-launch .chat-proof {
+    justify-self: center;
+    width: min(100%,350px);
+  }
+  .ewm .launch-sequence {
+    grid-template-columns: 1fr;
+    padding-top: 26px;
+    gap: 23px;
+  }
+  .ewm .launch-sequence li {
+    gap: 17px;
+  }
+  .ewm .launch-sequence li>span {
+    font-size: 25px;
+    min-width: 18px;
+  }
+  .ewm .launch-sequence strong {
+    font-size: 16px;
+  }
+  .ewm .launch-sequence p {
+    max-width: 42ch;
+    font-size: 14px;
+    margin-top: 4px;
+  }
+  .ewm .mobile-copy h2 {
+    font-size: 48px;
+  }
+  .ewm .closing h2 {
+    font-size: 50px;
+  }
+}
+@media (max-width:350px) {
+  .ewm .launch-announcement>.wrap {
+    gap: 9px;
+    min-height: 55px;
+    font-size: 12px;
+  }
+  .ewm .launch-announcement .whatsapp-mark {
+    width: 20px;
+    height: 20px;
+  }
+  .ewm .launch-announcement>.wrap>svg:last-child {
+    width: 16px;
+    height: 16px;
+    margin-left: auto;
+  }
+  .ewm .launch-copy h2 {
+    font-size: 43px;
+  }
+  .ewm .launch-argument h3 {
+    font-size: 25px;
+  }
+  .ewm .launch-actions {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 11px;
+  }
+  .ewm .launch-copy .launch-approval {
+    font-size: 12px;
+  }
+  .ewm .launch-copy h2 span {
+    white-space: normal;
+  }
+  .ewm .mobile-copy h2 {
+    font-size: 43px;
+  }
+  .ewm .closing h2 {
+    font-size: 43px;
+  }
+}
+.ewm .launch-copy {
+  align-self: start;
+  padding-top: 18px;
+}
+@media (max-width:700px) {
+  .ewm .launch-copy {
+    padding-top: 0;
+  }
+}
