@@ -6,8 +6,15 @@ import { GREEN_TILL_THEME, OWNER_SIGNUP_ART } from "@/lib/green-till-theme"
 import { nativeStackStatusBarStyle } from "@/lib/native-stack-status-bar"
 import { Stack } from "expo-router"
 import { StatusBar } from "expo-status-bar"
-import { type ReactNode, createContext, useContext, useId, useRef } from "react"
-import { Text } from "react-native"
+import {
+  type ReactNode,
+  createContext,
+  useContext,
+  useEffect,
+  useId,
+  useRef,
+} from "react"
+import { BackHandler, Text } from "react-native"
 import { type ScrollView, StyleSheet, View } from "react-native"
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
@@ -58,6 +65,22 @@ export function OwnerSignupFrame({
   const scroll = useRef<ScrollView>(null)
   const offset = useRef(0)
   const gradientId = useId()
+  // Android Back goes to the previous step, like the on-screen arrow, instead
+  // of closing the app. An open sheet registers later, so it still closes first.
+  const back = useRef(onBack)
+  back.current = onBack
+  const hasBack = Boolean(onBack)
+  useEffect(() => {
+    if (!hasBack) return
+    const subscription = BackHandler.addEventListener(
+      "hardwareBackPress",
+      () => {
+        back.current?.()
+        return true
+      },
+    )
+    return () => subscription.remove()
+  }, [hasBack])
   function jump(target: View) {
     target.measureInWindow((_x, y) =>
       scroll.current?.scrollTo({
