@@ -446,56 +446,68 @@ export function AskAssistantLive() {
                     streaming={vm.busy && index === messages.length - 1}
                   />
                 ) : null}
-                {groupAnswerRows(answers).map(
-                  ({ head: answer, rows }, groupIndex, groups) => {
-                    // Cards from one read share where/when; say it once.
-                    const meta = `${answer.scope} · ${assistantAsOf(answer.asOf)}`
-                    const previous = groups[groupIndex - 1]?.head
-                    const repeated =
-                      previous &&
-                      `${previous.scope} · ${assistantAsOf(previous.asOf)}` ===
-                        meta
-                    return (
-                      <AssistantAnswerCard
-                        key={answer.id}
-                        title={answer.title}
-                        value={answer.value}
-                        summary={answer.summary}
-                        meta={repeated ? undefined : meta}
-                      >
-                        {rows.map((row) => (
-                          <View key={row.id}>
-                            <View className="h-px bg-border" />
-                            {renderAnswerRow(row)}
-                          </View>
-                        ))}
-                        {answer.records?.rows.slice(0, 6).map((row, index) => (
-                          <View
-                            key={`${answer.id}:record:${index}`}
-                            className="gap-2 rounded-xl bg-muted/40 p-3"
+                {answers.length ? (
+                  <View className="gap-6 pt-1">
+                    {groupAnswerRows(answers).map(
+                      ({ head: answer, rows }, groupIndex, groups) => {
+                        // Cards from one read share where/when; say it once.
+                        const meta = `${answer.scope} · ${assistantAsOf(answer.asOf)}`
+                        const previous = groups[groupIndex - 1]?.head
+                        const repeated =
+                          previous &&
+                          `${previous.scope} · ${assistantAsOf(previous.asOf)}` ===
+                            meta
+                        return (
+                          <AssistantAnswerCard
+                            key={answer.id}
+                            title={answer.title}
+                            value={answer.value}
+                            summary={answer.summary}
+                            meta={repeated ? undefined : meta}
                           >
-                            <Text className="font-semibold">
-                              {index + 1}. {row.title} · {row.type}
-                            </Text>
-                            {row.subtitle ? (
+                            {rows.length ? (
+                              <View className="pt-1">
+                                {rows.map((row) => (
+                                  <View key={row.id}>
+                                    {renderAnswerRow(row)}
+                                  </View>
+                                ))}
+                              </View>
+                            ) : null}
+                            {answer.records?.rows
+                              .slice(0, 6)
+                              .map((row, index) => (
+                                <View
+                                  key={`${answer.id}:record:${index}`}
+                                  className="gap-2 rounded-xl bg-muted/40 p-3"
+                                >
+                                  <Text className="font-semibold">
+                                    {index + 1}. {row.title} · {row.type}
+                                  </Text>
+                                  {row.subtitle ? (
+                                    <Text className="text-sm text-muted-foreground">
+                                      {row.subtitle}
+                                    </Text>
+                                  ) : null}
+                                  {renderAnswerTargetAction(
+                                    row.target,
+                                    row.title,
+                                  )}
+                                </View>
+                              ))}
+                            {answer.records?.labelsShortened ? (
                               <Text className="text-sm text-muted-foreground">
-                                {row.subtitle}
+                                Some names are shortened. Open the saved record
+                                for full names.
                               </Text>
                             ) : null}
-                            {renderAnswerTargetAction(row.target, row.title)}
-                          </View>
-                        ))}
-                        {answer.records?.labelsShortened ? (
-                          <Text className="text-sm text-muted-foreground">
-                            Some names are shortened. Open the saved record for
-                            full names.
-                          </Text>
-                        ) : null}
-                        {renderAnswerTargetAction(answer.target)}
-                      </AssistantAnswerCard>
-                    )
-                  },
-                )}
+                            {renderAnswerTargetAction(answer.target)}
+                          </AssistantAnswerCard>
+                        )
+                      },
+                    )}
+                  </View>
+                ) : null}
               </View>
             )
           }}

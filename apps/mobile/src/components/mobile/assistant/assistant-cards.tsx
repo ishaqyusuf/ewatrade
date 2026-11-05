@@ -3,7 +3,7 @@ import { View } from "@/components/ui/view"
 import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
 import type { ReactNode } from "react"
 import { ActionButton } from "../action-button"
-import { ListCard, StatusPill } from "../green-till/kit"
+import { StatusPill } from "../green-till/kit"
 export function AssistantAnswerCard({
   title,
   value,
@@ -19,31 +19,31 @@ export function AssistantAnswerCard({
   meta?: string
   children?: ReactNode
 }) {
+  // No card: an answer sits on the page like the reply text, set apart by
+  // space alone (owner, 5 Nov 2026).
   return (
-    <ListCard>
-      <View className="gap-1.5 py-3">
-        <Text className="text-sm [-rn-line-height:20] font-semibold text-muted-foreground">
-          {title}
+    <View className="gap-1">
+      <Text className="text-sm [-rn-line-height:20] font-semibold text-muted-foreground">
+        {title}
+      </Text>
+      <Text className="text-xl font-extrabold tracking-tight text-foreground">
+        {value}
+      </Text>
+      {summary ? (
+        <Text className="text-base [-rn-line-height:22] text-foreground">
+          {summary}
         </Text>
-        <Text className="text-xl font-extrabold tracking-tight text-foreground">
-          {value}
+      ) : null}
+      {children}
+      {meta ? (
+        <Text
+          numberOfLines={1}
+          className="text-xs [-rn-line-height:18] text-muted-foreground"
+        >
+          {meta}
         </Text>
-        {summary ? (
-          <Text className="text-base [-rn-line-height:22] text-foreground">
-            {summary}
-          </Text>
-        ) : null}
-        {children}
-        {meta ? (
-          <Text
-            numberOfLines={1}
-            className="text-xs [-rn-line-height:18] text-muted-foreground"
-          >
-            {meta}
-          </Text>
-        ) : null}
-      </View>
-    </ListCard>
+      ) : null}
+    </View>
   )
 }
 /** Presentation only. A live caller must supply a server-authorized decision command. */
