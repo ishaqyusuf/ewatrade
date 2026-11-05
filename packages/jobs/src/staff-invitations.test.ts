@@ -2,25 +2,19 @@ import { beforeEach, expect, mock, test } from "bun:test"
 import { fileURLToPath } from "node:url"
 import type { RetailOpsStaffInvitedPayload } from "@ewatrade/notifications"
 
-const handler = async () => {}
+const handler = mock(async (_payload: unknown, _attempt: number) => {})
 const trigger = mock(
   async (_id: string, _handler: unknown, _payload: unknown) => {},
 )
 mock.module("./handlers/notification-dispatch", () => ({
   notificationDispatchHandler: handler,
 }))
-const triggerOnce = mock(
-  async (_id: string, _payload: unknown, _options: unknown) => true,
-)
 mock.module("./trigger", () => ({
   triggerJob: trigger,
-  triggerTaskOnce: triggerOnce,
 }))
-const {
-  enqueueRetailOpsStaffInviteNotification,
-  enqueueStaffInvitationNotificationDispatch,
-  staffInvitationDispatchKey,
-} = await import("@ewatrade/jobs/staff-invitations")
+const { enqueueRetailOpsStaffInviteNotification } = await import(
+  "@ewatrade/jobs/staff-invitations"
+)
 const input: RetailOpsStaffInvitedPayload = {
   appUrl: "https://example.invalid",
   businessName: "Inert business",
@@ -33,76 +27,26 @@ const input: RetailOpsStaffInvitedPayload = {
 }
 beforeEach(() => {
   trigger.mockClear()
-  triggerOnce.mockClear()
+  handler.mockClear()
 })
 
-test("a saved invitation starts one ID-only dispatch run keyed per notification attempt", async () => {
-  expect(
-    await enqueueStaffInvitationNotificationDispatch({
-      tenantId: "tenant",
-      notificationId: "notification",
-    }),
-  ).toBe(true)
-  expect(triggerOnce.mock.calls).toEqual([
-    [
-      "staff.invitation.notification-dispatch",
-      { tenantId: "tenant", notificationId: "notification" },
-      {
-        delay: undefined,
-        idempotencyKey: "staff-invitation:notification:attempt:1",
-        idempotencyKeyTTL: "10m",
-      },
-    ],
-  ])
-  const runAt = new Date("2026-11-02T10:01:05Z")
-  await enqueueStaffInvitationNotificationDispatch({
-    tenantId: "tenant",
-    notificationId: "notification",
-    attempt: 2,
-    runAt,
-  })
-  expect(triggerOnce.mock.calls[1]?.[2]).toEqual({
-    delay: runAt,
-    idempotencyKey: "staff-invitation:notification:attempt:2",
-    idempotencyKeyTTL: "10m",
-  })
-  expect(
-    staffInvitationDispatchKey({ notificationId: "n", attempt: 3 }),
-  ).not.toBe(staffInvitationDispatchKey({ notificationId: "n", attempt: 2 }))
-})
-
-test("without Trigger the dispatch reports not queued and the outbox stays pending", async () => {
-  triggerOnce.mockImplementationOnce(async () => false)
-  expect(
-    await enqueueStaffInvitationNotificationDispatch({
-      tenantId: "tenant",
-      notificationId: "notification",
-    }),
-  ).toBe(false)
-})
-
-test("public invitation producer preserves the canonical job, handler and unchanged payload", async () => {
+test("an invite email is sent in the request with no Trigger run", async () => {
   await enqueueRetailOpsStaffInviteNotification(input)
-  expect(trigger).toHaveBeenCalledTimes(1)
-  expect(trigger.mock.calls[0]).toEqual([
-    "notifications.dispatch",
-    handler,
+  expect(trigger).not.toHaveBeenCalled()
+  expect(handler).toHaveBeenCalledTimes(1)
+  expect(handler.mock.calls[0]).toEqual([
     { type: "retail_ops_staff_invited", payload: input },
+    1,
   ])
-  expect((trigger.mock.calls[0]?.[2] as { payload: unknown }).payload).toBe(
-    input,
-  )
 })
 
-test("enqueue rejection propagates instead of reporting a successful invitation notification", async () => {
-  const source = new Error("inert enqueue failure")
-  trigger.mockImplementationOnce(async () => {
-    throw source
+test("a failed invite email never fails the saved invite", async () => {
+  handler.mockImplementationOnce(async () => {
+    throw new Error("inert send failure")
   })
-  await expect(enqueueRetailOpsStaffInviteNotification(input)).rejects.toBe(
-    source,
-  )
-  expect(trigger).toHaveBeenCalledTimes(1)
+  await expect(
+    enqueueRetailOpsStaffInviteNotification(input),
+  ).resolves.toBeUndefined()
 })
 
 test("public producer build graph excludes the worker registry and unrelated media/domain handlers", async () => {

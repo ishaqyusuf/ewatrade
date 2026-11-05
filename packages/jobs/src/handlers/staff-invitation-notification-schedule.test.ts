@@ -33,7 +33,7 @@ describe("staff invitation outbox discovery", () => {
       await runStaffInvitationNotificationSchedule(config, deps, now),
     ).toEqual({ notificationsQueued: 2 })
     expect(calls).toEqual([
-      { limit: 100, now, overdueMs: 15 * 60_000 },
+      { limit: 100, now, overdueMs: 2 * 60_000 },
       { tenantId: "tenant-a", notificationId: "one", attempt: 1 },
       { tenantId: "tenant-b", notificationId: "two", attempt: 3 },
     ])

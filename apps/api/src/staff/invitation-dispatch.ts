@@ -3,16 +3,18 @@ import {
   type StaffInvitationNotificationIdentifier,
   findUnattemptedStaffInvitationNotification,
 } from "@ewatrade/db/queries"
-import { enqueueStaffInvitationNotificationDispatch } from "@ewatrade/jobs/staff-invitations"
+import { sendStaffInvitationNotificationNow } from "@ewatrade/jobs/staff-invitations"
 
 /**
- * Call only after the invitation command committed. The saved outbox row is
- * the source of truth, so a failed enqueue never fails the command: the
- * safety-net sweeper dispatches it later.
+ * Call only after the invitation command committed. Sends in this request (no
+ * Trigger run per invite). The saved outbox row is the source of truth, so a
+ * failed send never fails the command: the cadence sweep retries it.
  */
 export async function dispatchStaffInvitationNotification(
   input: StaffInvitationNotificationIdentifier,
-  enqueue = enqueueStaffInvitationNotificationDispatch,
+  enqueue: (
+    input: StaffInvitationNotificationIdentifier,
+  ) => Promise<unknown> = sendStaffInvitationNotificationNow,
 ) {
   try {
     await enqueue(input)
@@ -31,7 +33,9 @@ export async function dispatchStaffInvitationProposalEmail(
       receipt: { kind: string; recordId: string } | null
     }
   },
-  enqueue = enqueueStaffInvitationNotificationDispatch,
+  enqueue: (
+    input: StaffInvitationNotificationIdentifier,
+  ) => Promise<unknown> = sendStaffInvitationNotificationNow,
 ) {
   const { proposal } = input
   if (

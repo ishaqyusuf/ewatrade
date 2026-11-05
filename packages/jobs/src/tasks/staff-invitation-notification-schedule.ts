@@ -2,18 +2,17 @@ import { prisma } from "@ewatrade/db/client"
 import { listDueStaffInvitationNotifications } from "@ewatrade/db/queries"
 import { task } from "@trigger.dev/sdk/v3"
 import { runStaffInvitationNotificationSchedule } from "../handlers/staff-invitation-notification-schedule"
-import { staffInvitationDispatchOptions } from "../staff-invitation-dispatch"
-import { staffInvitationNotificationDispatch } from "./staff-invitation-notification-dispatch"
+import { sendStaffInvitationNotificationNow } from "../staff-invitation-send"
 
-/** Safety net only: invitation events and self-scheduled retries dispatch first. */
+/**
+ * Runs inside the cadence: retries and rows a request never sent go out here,
+ * in this run, instead of one Trigger run each.
+ */
 export function runStaffInvitationNotificationSweep() {
   return runStaffInvitationNotificationSchedule(process.env, {
     listDue: (input) => listDueStaffInvitationNotifications(prisma, input),
-    enqueue: async ({ attempt, ...identity }) =>
-      staffInvitationNotificationDispatch.trigger(
-        identity,
-        await staffInvitationDispatchOptions({ ...identity, attempt }),
-      ),
+    enqueue: ({ attempt: _attempt, ...identity }) =>
+      sendStaffInvitationNotificationNow(identity),
   })
 }
 

@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto"
 import {
   type CommercialOrderFulfillmentReminderEmailInput,
   type CommercialOrderReminderDigestEmailInput,
@@ -188,9 +189,8 @@ function planEmailMessagesForDispatch(
     case "retail_ops_staff_invited": {
       const payload = dispatch.payload as RetailOpsStaffInviteEmailInput
 
-      return emailRecipients.map((recipient) => ({
-        deliveryRole: recipient.deliveryRole === "admin" ? "admin" : "customer",
-        message: createRetailOpsStaffInviteEmail({
+      return emailRecipients.map((recipient) => {
+        const message = createRetailOpsStaffInviteEmail({
           from,
           input: payload,
           replyTo,
@@ -198,9 +198,25 @@ function planEmailMessagesForDispatch(
             businessName: payload.businessName,
           }),
           to: recipient.email,
-        }),
-        recipientEmail: recipient.email,
-      }))
+        })
+        // One invite link (its token) is one email, even if the send is
+        // repeated; a resent invite has a new link and so its own key.
+        if (payload.inviteUrl)
+          message.idempotencyKey = [
+            "retail-ops-staff-invite",
+            createHash("sha256")
+              .update(payload.inviteUrl)
+              .digest("hex")
+              .slice(0, 32),
+            recipient.email.trim().toLowerCase(),
+          ].join(":")
+        return {
+          deliveryRole:
+            recipient.deliveryRole === "admin" ? "admin" : "customer",
+          message,
+          recipientEmail: recipient.email,
+        }
+      })
     }
     default:
       throw new Error(

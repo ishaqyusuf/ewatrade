@@ -6,18 +6,16 @@ import {
   startStaffInvitationNotification,
 } from "@ewatrade/db/queries"
 import { resendEmailTransport } from "@ewatrade/email"
-import { task, tasks } from "@trigger.dev/sdk/v3"
+import { task } from "@trigger.dev/sdk/v3"
 import {
   createStaffInvitationEmailAdapter,
   staffInvitationDeliveryConfigured,
 } from "../handlers/staff-invitation-email"
 import { runStaffInvitationNotificationDispatch } from "../handlers/staff-invitation-notification-dispatch"
 import { assertQaJobProviderAllowed } from "../qa-provider-guard"
-import {
-  STAFF_INVITATION_DISPATCH_TASK_ID,
-  staffInvitationDispatchOptions,
-} from "../staff-invitation-dispatch"
+import { STAFF_INVITATION_DISPATCH_TASK_ID } from "../staff-invitation-dispatch"
 
+/** Kept only to drain runs queued before invitations were sent in the request. */
 export const staffInvitationNotificationDispatch = task({
   id: STAFF_INVITATION_DISPATCH_TASK_ID,
   maxDuration: 120,
@@ -43,12 +41,8 @@ export const staffInvitationNotificationDispatch = task({
       claim: (input) => claimStaffInvitationNotification(prisma, input),
       start: (input) => startStaffInvitationNotification(prisma, input),
       finish: (input) => finishStaffInvitationNotification(prisma, input),
-      scheduleRetry: async ({ attempt, runAt, ...identity }) =>
-        tasks.trigger(
-          STAFF_INVITATION_DISPATCH_TASK_ID,
-          identity,
-          await staffInvitationDispatchOptions({ ...identity, attempt, runAt }),
-        ),
+      // No new run per retry: the row stays PENDING for the cadence sweep.
+      scheduleRetry: async () => undefined,
       ...createStaffInvitationEmailAdapter(
         process.env,
         resendEmailTransport,

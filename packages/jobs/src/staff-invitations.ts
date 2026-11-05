@@ -3,10 +3,9 @@ import {
   type NotificationDispatchPayload,
   notificationDispatchHandler,
 } from "./handlers/notification-dispatch"
-import { jobIds } from "./job-ids"
-import { triggerJob } from "./trigger"
 
 export * from "./staff-invitation-dispatch"
+export * from "./staff-invitation-send"
 export * from "./staff-invite-whatsapp"
 
 export async function enqueueRetailOpsStaffInviteNotification(
@@ -17,9 +16,12 @@ export async function enqueueRetailOpsStaffInviteNotification(
     type: "retail_ops_staff_invited",
   }
 
-  await triggerJob(
-    jobIds.notificationDispatch,
-    notificationDispatchHandler,
-    payload,
-  )
+  // Sent in the request: the infra budget allows no Trigger run per invite.
+  // The invite is already saved, so a failed email never fails it; the owner
+  // can resend the invite.
+  try {
+    await notificationDispatchHandler(payload, 1)
+  } catch {
+    console.error("[staff] invitation email could not be sent")
+  }
 }
