@@ -10,6 +10,7 @@ import {
   SetupSteps,
   StatusPill,
 } from "@/components/mobile/green-till/kit"
+import { SELECTION_LONG_PRESS_MS } from "@/components/mobile/list-selection/use-list-selection"
 import {
   ledgerFulfillmentLine,
   ledgerItemsLabel,
@@ -66,8 +67,8 @@ export function ClassicOrdersScreen({ children }: OrdersScreenProps) {
 export function ClassicOrdersMasthead({
   title = "Orders",
   onCustomersPress,
-  onSelectReceipts,
-  selectingReceipts,
+  onSelect,
+  selecting,
   selectionDisabled,
   onLayout,
 }: OrdersMastheadProps) {
@@ -80,12 +81,10 @@ export function ClassicOrdersMasthead({
             <Pressable
               accessibilityRole="button"
               accessibilityLabel={
-                selectingReceipts
-                  ? "Cancel receipt selection"
-                  : "Select receipts"
+                selecting ? "Cancel selection" : "Select orders"
               }
               disabled={selectionDisabled}
-              onPress={onSelectReceipts}
+              onPress={onSelect}
               className={cn(
                 "min-h-11 flex-row items-center gap-1.5 rounded-full bg-card px-4 shadow-sm active:bg-accent",
                 selectionDisabled && "opacity-50",
@@ -93,10 +92,10 @@ export function ClassicOrdersMasthead({
             >
               <Icon
                 className="size-[16px] text-foreground"
-                name={selectingReceipts ? "X" : "CheckSquare"}
+                name={selecting ? "X" : "CheckSquare"}
               />
               <Text className="text-sm font-bold text-foreground">
-                {selectingReceipts ? "Cancel" : "Select"}
+                {selecting ? "Cancel" : "Select"}
               </Text>
             </Pressable>
             <Pressable
@@ -377,6 +376,7 @@ export function ClassicOrdersFilterRow<T extends string>({
 export function ClassicOrdersRow({
   order,
   onPress,
+  onLongPress,
   selecting,
   selected,
   disabled,
@@ -410,7 +410,17 @@ export function ClassicOrdersRow({
           disabled,
           ...(selecting ? { checked: !!selected } : {}),
         }}
+        accessibilityActions={
+          onLongPress && !selecting
+            ? [{ label: "Select", name: "longpress" }]
+            : undefined
+        }
+        onAccessibilityAction={(event) => {
+          if (event.nativeEvent.actionName === "longpress") onLongPress?.()
+        }}
+        delayLongPress={SELECTION_LONG_PRESS_MS}
         disabled={disabled}
+        onLongPress={onLongPress}
         onPress={onPress}
         className="-mx-3.5 min-h-[66px] flex-row items-center gap-3 px-3.5 py-3 active:opacity-80"
       >

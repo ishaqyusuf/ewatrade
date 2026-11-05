@@ -12,8 +12,9 @@ export type OrdersMastheadProps = {
   title?: string
   businessName: string
   onCustomersPress: () => void
-  onSelectReceipts?: () => void
-  selectingReceipts?: boolean
+  /** Starts or cancels Order selection (the non-gesture way in). */
+  onSelect?: () => void
+  selecting?: boolean
   selectionDisabled?: boolean
   onLayout?: (event: LayoutChangeEvent) => void
 }
@@ -45,6 +46,8 @@ export type OrdersRowProps = {
   index: number
   order: CommercialOrder
   onPress: () => void
+  /** Press and hold starts selection with this row ticked. */
+  onLongPress?: () => void
   /** Rows of one day share a card. */
   position?: { first: boolean; last: boolean }
 }
