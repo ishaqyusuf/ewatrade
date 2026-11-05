@@ -42,6 +42,7 @@ import {
   View,
   useWindowDimensions,
 } from "react-native"
+import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { Path, Svg } from "react-native-svg"
 
 import {
@@ -59,6 +60,12 @@ const FLOATING_SHEET_SIDE_INSET = 8
 function getFloatingBottomInset() {
   return Platform.OS === "android" ? 20 : 28
 }
+
+// A floating sheet clears the system navigation area too; otherwise on a
+// gesture-nav phone it sits on the home bar and reads as a docked sheet.
+const FLOATING_SHEET_NAV_GAP = 12
+const DEFAULT_SNAP_POINTS = ["60%"]
+const NO_SNAP_POINTS: string[] = []
 
 type ModalProps = BottomSheetModalProps & {
   title?: string
@@ -87,7 +94,7 @@ export const useModal = () => {
 export const Modal = React.forwardRef(
   (
     {
-      snapPoints: _snapPoints = ["60%"],
+      snapPoints: _snapPoints,
       title,
       hideHeader = false,
       detached = true,
@@ -99,7 +106,10 @@ export const Modal = React.forwardRef(
   ) => {
     const colors = useColors()
     const { height } = useWindowDimensions()
-    const resolvedBottomInset = bottomInset ?? getFloatingBottomInset()
+    const insets = useSafeAreaInsets()
+    const resolvedBottomInset =
+      bottomInset ??
+      Math.max(getFloatingBottomInset(), insets.bottom + FLOATING_SHEET_NAV_GAP)
     const maxDynamicContentSize = React.useMemo(
       () =>
         props.maxDynamicContentSize ??
@@ -126,7 +136,15 @@ export const Modal = React.forwardRef(
       ],
     )
     const modal = useModal()
-    const snapPoints = React.useMemo(() => _snapPoints, [_snapPoints])
+    // A content-sized sheet takes no fixed snap point: with "60%" also in the
+    // list, gorhom sizes the body to 60% while it rests at the content height,
+    // so the background runs past the content to the bottom of the screen.
+    const snapPoints = React.useMemo(
+      () =>
+        _snapPoints ??
+        (enableDynamicSizing ? NO_SNAP_POINTS : DEFAULT_SNAP_POINTS),
+      [_snapPoints, enableDynamicSizing],
+    )
     // Android Back closes the top open sheet before it leaves the screen.
     // Without this, Back pops the route and a sheet presented from it (for
     // example the country list) stays on screen with no owner to close it.
