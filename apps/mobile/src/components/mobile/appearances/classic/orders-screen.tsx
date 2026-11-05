@@ -77,7 +77,14 @@ export function ClassicOrdersMasthead({
       <CommercePageHeader
         title={title}
         action={
-          <View className="flex-row items-center gap-2">
+          // The selection top bar covers the header; keep these out of its way.
+          <View
+            className={cn(
+              "flex-row items-center gap-2",
+              selecting && "opacity-0",
+            )}
+            pointerEvents={selecting ? "none" : "auto"}
+          >
             <Pressable
               accessibilityRole="button"
               accessibilityLabel={

@@ -107,18 +107,25 @@ export function SelectionActionBar({
 }) {
   const insets = useSafeAreaInsets()
   const largeText = useLargeTextLayout()
+  // Buttons fill their slot (w-full), so the slots set the widths: the main
+  // button gets the wider share.
   const button = (action: SelectionAction, main: boolean) => (
-    <ActionButton
-      className={main && !largeText ? "flex-1" : undefined}
-      disabled={action.disabled}
-      icon={action.icon}
-      isLoading={action.isLoading}
-      onPress={action.onPress}
-      testID={action.testID}
-      variant={main ? undefined : "outline"}
+    <View
+      className={
+        largeText ? undefined : main ? "min-w-0 flex-[3]" : "min-w-0 flex-[2]"
+      }
     >
-      {action.label}
-    </ActionButton>
+      <ActionButton
+        disabled={action.disabled}
+        icon={action.icon}
+        isLoading={action.isLoading}
+        onPress={action.onPress}
+        testID={action.testID}
+        variant={main ? undefined : "outline"}
+      >
+        {action.label}
+      </ActionButton>
+    </View>
   )
   return (
     <VariableContextProvider

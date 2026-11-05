@@ -28,19 +28,16 @@ type Options = {
 export function useListSelection({ max, noun }: Options) {
   const [selecting, setSelecting] = useState(false)
   const [ids, setIds] = useState<string[]>([])
-  const [notice, setNotice] = useState<string | null>(null)
   const tabs = useOptionalAdminTabs()
   const setDockHidden = tabs?.setDockHidden
 
   const clear = useCallback(() => {
     setSelecting(false)
     setIds([])
-    setNotice(null)
   }, [])
 
   const start = useCallback((id?: string) => {
     setSelecting(true)
-    setNotice(null)
     setIds(id ? [id] : [])
     if (id) void selectionStartHaptic()
   }, [])
@@ -48,20 +45,17 @@ export function useListSelection({ max, noun }: Options) {
   const toggle = useCallback(
     (id: string) => {
       const next = toggleSelectionId(ids, id, max)
-      setNotice(next.capped ? selectionCapNotice(max, noun) : null)
       if (next.ids.length === 0) clear()
       else setIds(next.ids)
     },
-    [clear, ids, max, noun],
+    [clear, ids, max],
   )
 
   const selectAll = useCallback(
     (selectable: readonly string[]) => {
-      const next = selectAllIds(ids, selectable, max)
-      setNotice(next.capped ? selectionCapNotice(max, noun) : null)
-      setIds(next.ids)
+      setIds(selectAllIds(ids, selectable, max).ids)
     },
-    [ids, max, noun],
+    [ids, max],
   )
 
   const prune = useCallback((selectable: ReadonlySet<string>) => {
@@ -101,7 +95,8 @@ export function useListSelection({ max, noun }: Options) {
     ids,
     isSelected: (id: string) => ids.includes(id),
     max,
-    notice,
+    /** Shown while the selection is at the cap, so a full bar explains itself. */
+    notice: ids.length >= max ? selectionCapNotice(max, noun) : null,
     prune,
     selectAll,
     selecting,

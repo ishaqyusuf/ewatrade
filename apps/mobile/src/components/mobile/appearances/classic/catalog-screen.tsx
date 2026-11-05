@@ -98,6 +98,8 @@ export function ClassicCatalogMasthead({
           className={cn(
             "min-h-11 flex-row items-center gap-1.5 rounded-full bg-card px-4 shadow-sm",
             selectionDisabled && "opacity-50",
+            // The selection top bar covers the header while selecting.
+            selecting && "opacity-0",
           )}
           disabled={selectionDisabled}
           haptic="selection"
