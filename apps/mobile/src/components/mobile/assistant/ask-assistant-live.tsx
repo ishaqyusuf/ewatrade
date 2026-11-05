@@ -31,8 +31,9 @@ import { KeyboardAvoidingView } from "react-native-keyboard-controller"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { ActionButton } from "../action-button"
 import { FullScreenForm } from "../full-screen-form"
-import { ListCard } from "../green-till/kit"
+import { ListCard, RecordRow } from "../green-till/kit"
 import { StatusBanner } from "../status-banner"
+import { groupAnswerRows } from "./answer-groups"
 import {
   AssistantAnswerCard,
   ProposalCard,
@@ -155,6 +156,37 @@ export function AskAssistantLive() {
         </Text>
       )
     return null
+  }
+  /** One record of a read as a short tappable row inside its page card. */
+  const renderAnswerRow = (row: GeneralAnswer) => {
+    const route = generalAnswerRoute(row.target, {
+      tenantId: vm.profile?.businessId ?? "",
+      storeId: vm.profile?.storeId ?? "",
+    })
+    const blocked = vm.offline || vm.scopeChanged || vm.sessionUnavailable
+    const order = row.target?.kind === "order"
+    return (
+      <RecordRow
+        accessibilityLabel={route ? `Open ${row.title}` : undefined}
+        avatar={{
+          icon: order
+            ? "ReceiptText"
+            : row.target?.kind === "catalog_item"
+              ? "Package"
+              : row.target?.kind === "customer"
+                ? "User"
+                : "FileText",
+          tint: "muted",
+        }}
+        title={row.title}
+        meta={(order ? row.summary : row.summary || row.value) || undefined}
+        amount={order ? row.value : undefined}
+        stackDetails
+        onPress={
+          route && !blocked ? () => openAnswerTarget(row.target) : undefined
+        }
+      />
+    )
   }
   const exhausted = !!vm.data && generalTokenBudgetUsed(vm.data.allowance)
   const settingUp =
@@ -414,58 +446,66 @@ export function AskAssistantLive() {
                     streaming={vm.busy && index === messages.length - 1}
                   />
                 ) : null}
-                {answers.map((answer, answerIndex) => {
-                  // Cards from one read share where/when; say it once.
-                  const meta = `${answer.scope} · ${assistantAsOf(answer.asOf)}`
-                  const previous = answers[answerIndex - 1]
-                  const repeated =
-                    previous &&
-                    `${previous.scope} · ${assistantAsOf(previous.asOf)}` ===
-                      meta
-                  return (
-                    <AssistantAnswerCard
-                      key={answer.id}
-                      title={answer.title}
-                      value={answer.value}
-                      summary={answer.summary}
-                      meta={repeated ? undefined : meta}
-                    >
-                      {/* `detail` is written for the model; older cards with no
+                {groupAnswerRows(answers).map(
+                  ({ head: answer, rows }, groupIndex, groups) => {
+                    // Cards from one read share where/when; say it once.
+                    const meta = `${answer.scope} · ${assistantAsOf(answer.asOf)}`
+                    const previous = groups[groupIndex - 1]?.head
+                    const repeated =
+                      previous &&
+                      `${previous.scope} · ${assistantAsOf(previous.asOf)}` ===
+                        meta
+                    return (
+                      <AssistantAnswerCard
+                        key={answer.id}
+                        title={answer.title}
+                        value={answer.value}
+                        summary={answer.summary}
+                        meta={repeated ? undefined : meta}
+                      >
+                        {/* `detail` is written for the model; older cards with no
                           summary show it briefly. */}
-                      {answer.summary === undefined ? (
-                        <Text
-                          numberOfLines={2}
-                          className="text-sm text-muted-foreground"
-                        >
-                          {answer.detail}
-                        </Text>
-                      ) : null}
-                      {answer.records?.rows.slice(0, 6).map((row, index) => (
-                        <View
-                          key={`${answer.id}:record:${index}`}
-                          className="gap-2 rounded-xl bg-muted/40 p-3"
-                        >
-                          <Text className="font-semibold">
-                            {index + 1}. {row.title} · {row.type}
+                        {answer.summary === undefined ? (
+                          <Text
+                            numberOfLines={2}
+                            className="text-sm text-muted-foreground"
+                          >
+                            {answer.detail}
                           </Text>
-                          {row.subtitle ? (
-                            <Text className="text-sm text-muted-foreground">
-                              {row.subtitle}
+                        ) : null}
+                        {rows.map((row) => (
+                          <View key={row.id}>
+                            <View className="h-px bg-border" />
+                            {renderAnswerRow(row)}
+                          </View>
+                        ))}
+                        {answer.records?.rows.slice(0, 6).map((row, index) => (
+                          <View
+                            key={`${answer.id}:record:${index}`}
+                            className="gap-2 rounded-xl bg-muted/40 p-3"
+                          >
+                            <Text className="font-semibold">
+                              {index + 1}. {row.title} · {row.type}
                             </Text>
-                          ) : null}
-                          {renderAnswerTargetAction(row.target, row.title)}
-                        </View>
-                      ))}
-                      {answer.records?.labelsShortened ? (
-                        <Text className="text-sm text-muted-foreground">
-                          Some names are shortened. Open the saved record for
-                          full names.
-                        </Text>
-                      ) : null}
-                      {renderAnswerTargetAction(answer.target)}
-                    </AssistantAnswerCard>
-                  )
-                })}
+                            {row.subtitle ? (
+                              <Text className="text-sm text-muted-foreground">
+                                {row.subtitle}
+                              </Text>
+                            ) : null}
+                            {renderAnswerTargetAction(row.target, row.title)}
+                          </View>
+                        ))}
+                        {answer.records?.labelsShortened ? (
+                          <Text className="text-sm text-muted-foreground">
+                            Some names are shortened. Open the saved record for
+                            full names.
+                          </Text>
+                        ) : null}
+                        {renderAnswerTargetAction(answer.target)}
+                      </AssistantAnswerCard>
+                    )
+                  },
+                )}
               </View>
             )
           }}

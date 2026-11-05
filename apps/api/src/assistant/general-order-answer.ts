@@ -65,9 +65,12 @@ function orderSummary(order: GeneralOrderFact, unpaid: Money) {
       ? "Cancelled"
       : order.status === "REFUNDED"
         ? "Refunded"
-        : BigInt(unpaid) > BigInt(0)
-          ? `Owes ${money(unpaid, order.currencyCode)}`
-          : "Paid"
+        : BigInt(unpaid) <= BigInt(0)
+          ? "Paid"
+          : // The card already shows the total; repeat it only when part was paid.
+            BigInt(unpaid) === BigInt(order.totalMinor)
+            ? "Unpaid"
+            : `Owes ${money(unpaid, order.currencyCode)}`
   return [paid, order.customerName ? label(order.customerName, 80) : null]
     .filter(Boolean)
     .join(" · ")
