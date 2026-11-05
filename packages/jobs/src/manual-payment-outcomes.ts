@@ -16,7 +16,6 @@ import {
   runPaymentReportOutcomeDispatch,
 } from "./handlers/manual-payment-outcome-dispatch"
 import { assertQaJobProviderAllowed } from "./qa-provider-guard"
-import { triggerJob } from "./trigger"
 
 export { paymentReportOutcomesEnabled }
 
@@ -98,38 +97,39 @@ export async function manualPaymentOutcomeDispatchHandler(
   })
 }
 
-export async function enqueueManualPaymentOutcomes(input: {
+/**
+ * Sends each merchant's result message in the calling process: the infra
+ * budget allows no Trigger run per decision. The start fence keeps a racing
+ * sweep from sending twice; a send that fails stays for the cadence sweep.
+ */
+export async function sendManualPaymentOutcomes(input: {
   tenantId: string
   notificationIds: string[]
 }) {
   if (!paymentReportOutcomesEnabled() || !input.notificationIds.length)
-    return { queued: 0 }
+    return { sent: 0 }
   const results = await Promise.allSettled(
     input.notificationIds.map((notificationId) =>
-      triggerJob(
-        "manual-payment.outcome-dispatch",
-        async (payload) => {
-          await manualPaymentOutcomeDispatchHandler(payload)
-        },
-        { tenantId: input.tenantId, notificationId },
-        { maxAttempts: 1 },
-      ),
+      manualPaymentOutcomeDispatchHandler({
+        tenantId: input.tenantId,
+        notificationId,
+      }),
     ),
   )
-  return { queued: results.filter((r) => r.status === "fulfilled").length }
+  return { sent: results.filter((r) => r.status === "fulfilled").length }
 }
 
-/** Recovers lost enqueues; never resends a started or finished notification. */
+/** Sends what a request left unsent, in this cadence run; never resends a started or finished notification. */
 export async function runManualPaymentOutcomeSweep() {
-  if (!paymentReportOutcomesEnabled()) return { enabled: false, queued: 0 }
+  if (!paymentReportOutcomesEnabled()) return { enabled: false, sent: 0 }
   const due = await duePaymentReportOutcomeNotifications(prisma, { limit: 20 })
-  let queued = 0
+  let sent = 0
   for (const row of due)
-    queued += (
-      await enqueueManualPaymentOutcomes({
+    sent += (
+      await sendManualPaymentOutcomes({
         tenantId: row.tenantId,
         notificationIds: [row.id],
       })
-    ).queued
-  return { queued }
+    ).sent
+  return { sent }
 }

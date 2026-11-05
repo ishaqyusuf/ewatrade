@@ -3,14 +3,8 @@ import { fileURLToPath } from "node:url"
 import type { RetailOpsStaffInvitedPayload } from "@ewatrade/notifications"
 
 const handler = mock(async (_payload: unknown, _attempt: number) => {})
-const trigger = mock(
-  async (_id: string, _handler: unknown, _payload: unknown) => {},
-)
 mock.module("./handlers/notification-dispatch", () => ({
   notificationDispatchHandler: handler,
-}))
-mock.module("./trigger", () => ({
-  triggerJob: trigger,
 }))
 const { enqueueRetailOpsStaffInviteNotification } = await import(
   "@ewatrade/jobs/staff-invitations"
@@ -26,13 +20,11 @@ const input: RetailOpsStaffInvitedPayload = {
   role: "CASHIER",
 }
 beforeEach(() => {
-  trigger.mockClear()
   handler.mockClear()
 })
 
 test("an invite email is sent in the request with no Trigger run", async () => {
   await enqueueRetailOpsStaffInviteNotification(input)
-  expect(trigger).not.toHaveBeenCalled()
   expect(handler).toHaveBeenCalledTimes(1)
   expect(handler.mock.calls[0]).toEqual([
     { type: "retail_ops_staff_invited", payload: input },

@@ -143,24 +143,23 @@ export async function manualPaymentAlertDispatchHandler(
   })
 }
 
-export async function enqueueManualPaymentAlerts(input: {
+/**
+ * Sends each payment alert in the calling process: the infra budget allows no
+ * Trigger run per report. The start fence keeps a racing sweep from sending
+ * twice; anything left RESERVED goes out with the cadence sweep.
+ */
+export async function sendManualPaymentAlerts(input: {
   tenantId: string
   intentIds: string[]
 }) {
-  if (!manualPaymentAlertsEnabled()) return { queued: 0 }
+  if (!manualPaymentAlertsEnabled() || !input.intentIds.length)
+    return { sent: 0 }
   const results = await Promise.allSettled(
     input.intentIds.map((intentId) =>
-      triggerJob(
-        "manual-payment.alert-dispatch",
-        async (payload) => {
-          await manualPaymentAlertDispatchHandler(payload)
-        },
-        { tenantId: input.tenantId, intentId },
-        { maxAttempts: 1 },
-      ),
+      manualPaymentAlertDispatchHandler({ tenantId: input.tenantId, intentId }),
     ),
   )
-  return { queued: results.filter((r) => r.status === "fulfilled").length }
+  return { sent: results.filter((r) => r.status === "fulfilled").length }
 }
 
 /** Existing cadence safety net, no scan/resend of old reports or completed intents. */
@@ -191,14 +190,19 @@ export async function runManualPaymentAlertSweep() {
         limit: 20,
       })
       const due = await prisma.paymentNotificationIntent.findMany({
-        where: { status: "RESERVED", tenant: { isActive: true } },
+        where: {
+          status: "RESERVED",
+          tenant: { isActive: true },
+          // Fresh intents are still being sent by their request.
+          createdAt: { lt: new Date(Date.now() - 2 * 60_000) },
+        },
         select: { id: true, tenantId: true },
         orderBy: { createdAt: "asc" },
         take: 50,
       })
       const results = await Promise.allSettled(
         due.map((row) =>
-          enqueueManualPaymentAlerts({
+          sendManualPaymentAlerts({
             tenantId: row.tenantId,
             intentIds: [row.id],
           }),
@@ -206,7 +210,7 @@ export async function runManualPaymentAlertSweep() {
       )
       return results.reduce(
         (count, result) =>
-          count + (result.status === "fulfilled" ? result.value.queued : 0),
+          count + (result.status === "fulfilled" ? result.value.sent : 0),
         0,
       )
     },

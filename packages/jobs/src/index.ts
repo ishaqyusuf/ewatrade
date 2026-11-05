@@ -420,10 +420,10 @@ export async function enqueueDomainConnectionVerification(
 }
 
 export { runInBackground, runWithRetry } from "./queue"
-export { enqueueManualPaymentAlerts } from "./manual-payment-alerts"
+export { sendManualPaymentAlerts } from "./manual-payment-alerts"
 export {
-  enqueueManualPaymentOutcomes,
   paymentReportOutcomesEnabled,
+  sendManualPaymentOutcomes,
 } from "./manual-payment-outcomes"
 export { isTriggerConfigured, triggerJob, triggerJobAt } from "./trigger"
 export { notificationDispatchHandler }

@@ -35,9 +35,9 @@ import {
   readManualPaymentAlertSettings,
 } from "@ewatrade/db/queries"
 import {
-  enqueueManualPaymentAlerts,
-  enqueueManualPaymentOutcomes,
   paymentReportOutcomesEnabled,
+  sendManualPaymentAlerts,
+  sendManualPaymentOutcomes,
 } from "@ewatrade/jobs"
 import {
   createPaymentLinkToken,
@@ -218,7 +218,7 @@ export const businessBankingRouter = createTRPCRouter({
           actorUserId: ctx.session.user.id,
           intentId: intent.id,
         })
-        await enqueueManualPaymentAlerts({
+        await sendManualPaymentAlerts({
           tenantId: ctx.tenantContext.tenant.id,
           intentIds: [retried.id],
         })
@@ -478,7 +478,7 @@ export const businessBankingRouter = createTRPCRouter({
             process.env.PAYMENT_REPORT_ALERTS_ENABLED === "true",
         }),
       )
-      await enqueueManualPaymentAlerts({
+      await sendManualPaymentAlerts({
         tenantId: submission.notificationTenantId,
         intentIds: submission.notificationIntentIds,
       })
@@ -615,8 +615,8 @@ export const businessBankingRouter = createTRPCRouter({
           outcomeNotificationEnabled: paymentReportOutcomesEnabled(),
         }),
       )
-      // Merchant-only WhatsApp result; queued after commit, never to the payer.
-      await enqueueManualPaymentOutcomes({
+      // Merchant-only WhatsApp result; sent after commit, never to the payer.
+      await sendManualPaymentOutcomes({
         tenantId: ctx.tenantContext.tenant.id,
         notificationIds: result.outcomeNotificationIds,
       }).catch(() => undefined)

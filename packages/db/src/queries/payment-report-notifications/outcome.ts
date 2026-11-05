@@ -384,7 +384,12 @@ export async function duePaymentReportOutcomeNotifications(
     data: { status: "CANCELLED" },
   })
   return db.paymentReportOutcomeNotification.findMany({
-    where: { status: "PENDING", tenant: { isActive: true } },
+    where: {
+      status: "PENDING",
+      tenant: { isActive: true },
+      // Fresh rows are still being sent by their request.
+      createdAt: { lt: new Date(now.getTime() - 2 * 60_000) },
+    },
     select: { id: true, tenantId: true },
     orderBy: { createdAt: "asc" },
     take: limit,
