@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test"
 import type { GeneralAnswer } from "@ewatrade/assistant/general/contracts"
-import { groupAnswerRows } from "./answer-groups"
+import { answerScopeLine, groupAnswerRows } from "./answer-groups"
 
 const asOf = "2026-11-05T13:25:00.000Z"
 const origin = { tenantId: "t", storeId: "s" }
@@ -52,4 +52,14 @@ test("a record with its own choices or handoff is never folded into a row", () =
     { ...order("ORD-058"), chatChoices: [{ title: "Yes", text: "Yes" }] },
   ])
   expect(groups).toHaveLength(2)
+})
+
+test("the where line drops the business and Store names the header shows", () => {
+  const names = ["Jawdah Poultry QA", "Main store"]
+  expect(
+    answerScopeLine("Jawdah Poultry QA · All orders · Tue 6 Oct", names),
+  ).toBe("All orders · Tue 6 Oct")
+  expect(answerScopeLine("Main store · Running low", names)).toBe("Running low")
+  expect(answerScopeLine("Current business · catalog", names)).toBe("catalog")
+  expect(answerScopeLine("Jawdah Poultry QA", names)).toBe("")
 })

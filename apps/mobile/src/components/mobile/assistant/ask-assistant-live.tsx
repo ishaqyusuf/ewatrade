@@ -7,10 +7,7 @@ import { getSession } from "@/lib/session-store"
 import { useOperationalModeStore } from "@/store/operationalModeStore"
 import { getDataCacheGeneration } from "@/trpc/client"
 import { capabilityForAction } from "@ewatrade/assistant/capabilities/manifest"
-import {
-  generalTokenBudgetLine,
-  generalTokenBudgetUsed,
-} from "@ewatrade/assistant/general/allowance"
+import { generalTokenBudgetUsed } from "@ewatrade/assistant/general/allowance"
 import {
   type GeneralAnswer,
   type GeneralProposal,
@@ -34,7 +31,7 @@ import { ActionButton } from "../action-button"
 import { FullScreenForm } from "../full-screen-form"
 import { ListCard, RecordRow } from "../green-till/kit"
 import { StatusBanner } from "../status-banner"
-import { groupAnswerRows } from "./answer-groups"
+import { answerScopeLine, groupAnswerRows } from "./answer-groups"
 import {
   AssistantAnswerCard,
   ProposalCard,
@@ -385,12 +382,6 @@ export function AskAssistantLive() {
                   <AssistantThinking />
                 </>
               ) : null}
-              {vm.data && !vm.offline ? (
-                <Text className="text-xs text-muted-foreground">
-                  {generalTokenBudgetLine(vm.data.allowance)}
-                  {"\n"}Shared by this business across Assistant and WhatsApp.
-                </Text>
-              ) : null}
               {exhausted && !vm.offline ? (
                 <StatusBanner
                   title="Monthly token allowance used"
@@ -461,12 +452,21 @@ export function AskAssistantLive() {
                     {groupAnswerRows(answers).map(
                       ({ head: answer, rows }, groupIndex, groups) => {
                         // Cards from one read share where/when; say it once.
-                        const meta = `${answer.scope} · ${assistantAsOf(answer.asOf)}`
+                        // The header names the business, so the line never does.
+                        const metaFor = (head: GeneralAnswer) =>
+                          [
+                            answerScopeLine(head.scope, [
+                              vm.data?.businessName,
+                              vm.profile?.businessName,
+                              vm.profile?.storeName,
+                            ]),
+                            assistantAsOf(head.asOf),
+                          ]
+                            .filter(Boolean)
+                            .join(" · ")
+                        const meta = metaFor(answer)
                         const previous = groups[groupIndex - 1]?.head
-                        const repeated =
-                          previous &&
-                          `${previous.scope} · ${assistantAsOf(previous.asOf)}` ===
-                            meta
+                        const repeated = previous && metaFor(previous) === meta
                         return (
                           <AssistantAnswerCard
                             key={answer.id}

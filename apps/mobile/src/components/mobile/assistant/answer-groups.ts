@@ -36,3 +36,22 @@ export function groupAnswerRows(answers: GeneralAnswer[]): AnswerGroup[] {
   }
   return groups
 }
+
+/**
+ * A card's small "where" line without the business or Store name: the
+ * screen header already says which business this is.
+ */
+export function answerScopeLine(
+  scope: string,
+  names: Array<string | null | undefined>,
+) {
+  const known = new Set(
+    [...names, "Current business"]
+      .filter((name): name is string => Boolean(name?.trim()))
+      .map((name) => name.trim().toLowerCase()),
+  )
+  return scope
+    .split(" · ")
+    .filter((part) => !known.has(part.trim().toLowerCase()))
+    .join(" · ")
+}
