@@ -12,6 +12,8 @@ export type CatalogRow = {
   problem?: "out_of_stock" | "no_price" | "not_counted"
   detail: string
   availabilityLabel: string
+  /** Has active prices but none on sale in this store. */
+  hiddenFromSale?: boolean
   id: string
   kind: "product" | "service"
   name: string
@@ -40,6 +42,10 @@ export type CatalogMastheadProps = {
   onLayout: (event: LayoutChangeEvent) => void
   onAdd: () => void
   disabled: boolean
+  /** Starts or cancels item selection (the non-gesture way in). */
+  onSelect?: () => void
+  selecting?: boolean
+  selectionDisabled?: boolean
 }
 export type CatalogChoiceProps = {
   disabled?: boolean

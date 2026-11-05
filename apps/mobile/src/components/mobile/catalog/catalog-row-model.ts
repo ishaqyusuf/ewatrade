@@ -5,6 +5,7 @@ import {
   catalogItemStockBalance,
 } from "@ewatrade/utils/catalog-attention"
 import { selectCatalogAvatar } from "./catalog-avatar-model"
+import { isHiddenFromSale } from "./catalog-bulk-availability-model"
 import type { CatalogRow } from "./catalog-presentation"
 type CatalogItem = RouterOutputs["catalog"]["listItems"][number]
 
@@ -21,6 +22,7 @@ export function mapCatalogItem(
     storeId,
     defaultVariant?.imageUrl ?? item.imageUrl,
   )
+  const hiddenFromSale = storeId ? isHiddenFromSale(item, storeId) : false
   const priceLabel =
     offering?.pricingPolicy === "fixed" && offering.fixedPriceMinor !== null
       ? formatMinorMoney(offering.fixedPriceMinor, currencyCode).replace(
@@ -37,6 +39,7 @@ export function mapCatalogItem(
       problem: catalogItemAttention(item, storeId),
       detail: `${priceLabel} · Service`,
       availabilityLabel: "Service",
+      hiddenFromSale,
       id: item.id,
       kind: item.kind,
       name: item.name,
@@ -65,6 +68,7 @@ export function mapCatalogItem(
     problem: catalogItemAttention(item, storeId),
     detail: `${availabilityLabel} · ${priceLabel}`,
     availabilityLabel,
+    hiddenFromSale,
     id: item.id,
     kind: item.kind,
     name: item.name,

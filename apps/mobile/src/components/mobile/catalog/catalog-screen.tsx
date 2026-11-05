@@ -12,6 +12,12 @@ import { BottomSearchFooter } from "@/components/mobile/bottom-search-footer"
 import { EmptyState } from "@/components/mobile/empty-state"
 import { ListCreateFab } from "@/components/mobile/list-create-fab"
 import { getListCreateFabFooterOffset } from "@/components/mobile/list-create-fab-model"
+import { isAllSelected } from "@/components/mobile/list-selection/list-selection-model"
+import {
+  SelectionActionBar,
+  SelectionTopBar,
+} from "@/components/mobile/list-selection/selection-bars"
+import { useListSelection } from "@/components/mobile/list-selection/use-list-selection"
 import { ListSkeleton } from "@/components/mobile/loading-skeletons"
 import { QueryRefreshControl } from "@/components/mobile/query-refresh-control"
 import { ScrollToTopButton } from "@/components/mobile/scroll-to-top-button"
@@ -53,6 +59,11 @@ import { FlatList } from "react-native-css/components/FlatList"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { CatalogPhotoGalleryPicker } from "../catalog-item/catalog-photo-gallery-picker"
 import { shouldShowCatalogFirstItemGate } from "../catalog-items-model"
+import { bulkAvailabilityHides } from "./catalog-bulk-availability-model"
+import {
+  BulkAvailabilitySheet,
+  useBulkAvailability,
+} from "./catalog-bulk-availability-sheet"
 import type {
   CatalogItemsContentProps,
   CatalogKindFilter,
@@ -155,6 +166,16 @@ export function CatalogItemsContent({
     ),
   )
   const visibleQuery = isOffline ? savedItemsQuery : itemsQuery
+  const storeId = availabilityQuery.data?.storeId
+  // Press and hold an item (or tap Select) to hide or show several for sale.
+  // Only editors on the Catalog tab, online, with a current store.
+  const canSelect = presentation === "tab" && canEdit && !isOffline && !!storeId
+  const selection = useListSelection({ max: 50, noun: "items" })
+  const clearSelection = selection.clear
+  const bulkAvailability = useBulkAvailability({
+    onFinished: clearSelection,
+    storeId,
+  })
   // Server search results arrive ranked best first; keep that order.
   const rankedOnline = !isOffline && Boolean(deferredQuery.trim())
   const loadedRows = useMemo(() => {
@@ -168,6 +189,25 @@ export function CatalogItemsContent({
     kind: isOffline ? kindFilter : "all",
     attention: isOffline ? attention : null,
   })
+  const rowIds = useMemo(() => rows.map((row) => row.id), [rows])
+  // biome-ignore lint/correctness/useExhaustiveDependencies: These values define the selection scope.
+  useEffect(() => {
+    clearSelection()
+  }, [attention, canSelect, clearSelection, deferredQuery, kindFilter, storeId])
+  const pruneSelection = selection.prune
+  useEffect(() => {
+    pruneSelection(new Set(rowIds))
+  }, [pruneSelection, rowIds])
+  const selectedItems = useMemo(
+    () =>
+      (visibleQuery.data?.pages.flatMap((page) => page.items) ?? []).filter(
+        (item) => selection.ids.includes(item.id),
+      ),
+    [selection.ids, visibleQuery.data?.pages],
+  )
+  const hidesSelection = storeId
+    ? bulkAvailabilityHides(selectedItems, storeId)
+    : true
   const totalCount = visibleQuery.data?.pages[0]?.totalCount ?? 0
   // Online, the type switch and search filter on the server, so counts are kept
   // from the last unfiltered, fully loaded page set.
@@ -238,7 +278,8 @@ export function CatalogItemsContent({
   }
   const edgeFeedback = useScrollEdgeFeedback()
   const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-    onScroll?.(event)
+    // The bulk action bar owns the bottom edge: keep the dock away.
+    if (!selection.selecting) onScroll?.(event)
     scrollHide.onScroll(event)
     scrollToTop.onScroll(event)
     const canvas =
@@ -283,6 +324,16 @@ export function CatalogItemsContent({
               onLayout={(event) =>
                 setMastheadHeight(event.nativeEvent.layout.height)
               }
+              onSelect={
+                canSelect
+                  ? () =>
+                      selection.selecting
+                        ? selection.clear()
+                        : selection.start()
+                  : undefined
+              }
+              selecting={selection.selecting}
+              selectionDisabled={!rows.length}
             />
             <View className="gap-4 px-[18px]">
               {isOffline ? (
@@ -514,12 +565,24 @@ export function CatalogItemsContent({
               item={item}
               index={index}
               last={index === rows.length - 1}
-              onPress={() =>
-                router.push({
-                  params: { catalogItemId: item.id },
-                  pathname: "/catalog-item/[catalogItemId]",
-                })
+              onLongPress={
+                canSelect
+                  ? () =>
+                      selection.selecting
+                        ? selection.toggle(item.id)
+                        : selection.start(item.id)
+                  : undefined
               }
+              onPress={() => {
+                if (selection.selecting) selection.toggle(item.id)
+                else
+                  router.push({
+                    params: { catalogItemId: item.id },
+                    pathname: "/catalog-item/[catalogItemId]",
+                  })
+              }}
+              selected={selection.isSelected(item.id)}
+              selecting={selection.selecting}
             />
           </RevealItem>
         )}
@@ -549,7 +612,10 @@ export function CatalogItemsContent({
           value={query}
         />
       ) : null}
-      {presentation === "tab" && showSearch && !showFirstItemGate ? (
+      {presentation === "tab" &&
+      showSearch &&
+      !showFirstItemGate &&
+      !selection.selecting ? (
         <TabSearchBubble
           accessibilityLabel="Search catalog"
           dockHidden={dockHidden}
@@ -566,7 +632,12 @@ export function CatalogItemsContent({
       {presentation === "tab" ? (
         <ScrollToTopButton
           dockHidden={dockHidden}
-          hidden={searchFocused || query.length > 0 || showFirstItemGate}
+          hidden={
+            searchFocused ||
+            query.length > 0 ||
+            showFirstItemGate ||
+            selection.selecting
+          }
           onPress={scrollToTop.scrollToTop}
           testID="catalog-scroll-to-top"
           visible={scrollToTop.visible}
@@ -591,6 +662,28 @@ export function CatalogItemsContent({
           testID="catalog-add-fab"
         />
       ) : null}
+      {selection.selecting ? (
+        <>
+          <SelectionTopBar
+            allSelected={isAllSelected(selection.ids, rowIds, selection.max)}
+            count={selection.count}
+            onCancel={selection.clear}
+            onSelectAll={() => selection.selectAll(rowIds)}
+            selectAllDisabled={!rowIds.length}
+          />
+          <SelectionActionBar
+            notice={selection.notice}
+            primary={{
+              disabled: !selection.count || bulkAvailability.running,
+              icon: hidesSelection ? "EyeOff" : "Eye",
+              label: hidesSelection ? "Hide from sale" : "Show for sale",
+              onPress: () => bulkAvailability.open(selectedItems),
+              testID: "catalog-bulk-availability",
+            }}
+          />
+        </>
+      ) : null}
+      <BulkAvailabilitySheet availability={bulkAvailability} />
       <Modal
         ref={addSheet.ref}
         snapPoints={[]}

@@ -17,6 +17,8 @@ import {
   RowDivider,
   StatusPill,
 } from "@/components/mobile/green-till/kit"
+import { SELECTION_LONG_PRESS_MS } from "@/components/mobile/list-selection/use-list-selection"
+import { Icon } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Text } from "@/components/ui/text"
@@ -67,19 +69,49 @@ export function ClassicCatalogMasthead({
   onLayout,
   title = "Catalog",
   countLabel,
+  onSelect,
+  selecting,
+  selectionDisabled,
 }: CatalogMastheadProps) {
   return (
-    <View className="gap-1 px-[18px]" onLayout={onLayout}>
-      <Text
-        accessibilityRole="header"
-        className="text-[23px] font-extrabold tracking-tight text-foreground"
-      >
-        {firstItem ? "Catalog" : title}
-      </Text>
-      {countLabel && !firstItem ? (
-        <Text className="text-xs tabular-nums text-muted-foreground">
-          {countLabel}
+    <View
+      className="flex-row flex-wrap items-center gap-3 px-[18px]"
+      onLayout={onLayout}
+    >
+      <View className="min-w-0 flex-1 gap-1">
+        <Text
+          accessibilityRole="header"
+          className="text-[23px] font-extrabold tracking-tight text-foreground"
+        >
+          {firstItem ? "Catalog" : title}
         </Text>
+        {countLabel && !firstItem ? (
+          <Text className="text-xs tabular-nums text-muted-foreground">
+            {countLabel}
+          </Text>
+        ) : null}
+      </View>
+      {onSelect && !firstItem ? (
+        <Pressable
+          accessibilityLabel={selecting ? "Cancel selection" : "Select items"}
+          accessibilityRole="button"
+          className={cn(
+            "min-h-11 flex-row items-center gap-1.5 rounded-full bg-card px-4 shadow-sm",
+            selectionDisabled && "opacity-50",
+          )}
+          disabled={selectionDisabled}
+          haptic="selection"
+          onPress={onSelect}
+          testID="catalog-select"
+        >
+          <Icon
+            className="size-[16px] text-foreground"
+            name={selecting ? "X" : "CheckSquare"}
+          />
+          <Text className="text-sm font-bold text-foreground">
+            {selecting ? "Cancel" : "Select"}
+          </Text>
+        </Pressable>
       ) : null}
     </View>
   )
@@ -163,9 +195,21 @@ const problemLabels = {
 export function ClassicCatalogRow({
   item,
   onPress,
+  onLongPress,
+  selecting,
+  selected,
   index = 0,
   last = false,
-}: { item: CatalogRow; onPress: () => void; index?: number; last?: boolean }) {
+}: {
+  item: CatalogRow
+  onPress: () => void
+  /** Press and hold starts selection with this row ticked. */
+  onLongPress?: () => void
+  selecting?: boolean
+  selected?: boolean
+  index?: number
+  last?: boolean
+}) {
   const largeText = useLargeTextLayout()
   const tint = catalogAvatarTint(item.name, item.kind)
   return (
@@ -177,8 +221,19 @@ export function ClassicCatalogRow({
       )}
     >
       <Pressable
-        accessibilityLabel={`Open ${item.name}, ${item.priceLabel}, ${item.availabilityLabel}`}
-        accessibilityRole="button"
+        accessibilityLabel={`${selecting ? "Select" : "Open"} ${item.name}, ${item.priceLabel}, ${item.hiddenFromSale ? "hidden from sale" : item.availabilityLabel}`}
+        accessibilityRole={selecting ? "checkbox" : "button"}
+        accessibilityState={selecting ? { checked: !!selected } : undefined}
+        accessibilityActions={
+          onLongPress && !selecting
+            ? [{ label: "Select", name: "longpress" }]
+            : undefined
+        }
+        onAccessibilityAction={(event) => {
+          if (event.nativeEvent.actionName === "longpress") onLongPress?.()
+        }}
+        delayLongPress={SELECTION_LONG_PRESS_MS}
+        onLongPress={onLongPress}
         className={cn(
           "-mx-3.5 min-h-[62px] flex-row gap-3 px-3.5 py-3 active:opacity-80",
           // Stacked name, price and pill run tall at large text; the avatar
@@ -195,12 +250,21 @@ export function ClassicCatalogRow({
             CATALOG_AVATAR_TINT[tint].bg,
           )}
         >
-          <CatalogAvatar
-            media={item.avatar ?? selectCatalogAvatar(item)}
-            name={item.name}
-            service={item.kind === "service"}
-            tint={tint}
-          />
+          {selecting && selected ? (
+            <View className="size-full items-center justify-center bg-primary">
+              <Icon
+                className="size-[20px] text-primary-foreground"
+                name="Check"
+              />
+            </View>
+          ) : (
+            <CatalogAvatar
+              media={item.avatar ?? selectCatalogAvatar(item)}
+              name={item.name}
+              service={item.kind === "service"}
+              tint={tint}
+            />
+          )}
         </View>
         <View
           className={cn(
@@ -230,7 +294,9 @@ export function ClassicCatalogRow({
             <Text className="text-sm font-bold tabular-nums text-foreground">
               {item.problem === "no_price" ? "—" : item.priceLabel}
             </Text>
-            {item.problem ? (
+            {item.hiddenFromSale ? (
+              <StatusPill label="Hidden" tone="muted" />
+            ) : item.problem ? (
               <StatusPill
                 label={problemLabels[item.problem]}
                 tone={
