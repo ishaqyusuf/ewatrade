@@ -122,11 +122,12 @@ describe("first-order catalog step", () => {
     expect(firstOrderCatalogStepSub(undefined)).toBe("Ready to sell")
   })
 
-  test("Ask chips only use figures Home already has", () => {
-    expect(homeAskQuestions({})).toEqual([])
+  test("Ask chips follow Home's figures; running low is for owners only", () => {
+    expect(homeAskQuestions({})).toEqual(["What’s running low?"])
     expect(homeAskQuestions({ unpaidOrders: 26, soldToday: 6 })).toEqual([
       "Which orders are unpaid?",
       "What sold today?",
+      "What’s running low?",
     ])
     expect(
       homeAskQuestions({ unpaidOrders: 0, soldToday: 2, mine: true }),

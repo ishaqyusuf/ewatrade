@@ -26,6 +26,7 @@ export function generalOperationalAnswers(input: {
       value: input.summary.orderCount,
       scope,
       asOf,
+      summary: `${input.summary.outstandingCount} unpaid`,
       detail: `Exact count across all matching orders, not a result page. ${input.summary.outstandingCount} have an unpaid amount. Cancelled/refunded orders do not contribute unpaid amounts.${statuses}`,
     },
     ...input.summary.currencies.map((currency) => ({
@@ -34,6 +35,7 @@ export function generalOperationalAnswers(input: {
       value: `${generalMoney(currency.outstandingMinor, currency.currencyCode)}`,
       scope,
       asOf,
+      summary: `To collect on ${currency.outstandingCount} ${currency.outstandingCount === "1" ? "order" : "orders"}`,
       detail: `${currency.outstandingCount} unpaid of ${currency.orderCount} matching orders. Order value ${generalMoney(currency.orderValueMinor, currency.currencyCode)}. This is unpaid order value, not customer ledger debt or cash collected; currencies are never combined.${statuses}`,
     })),
   ]

@@ -34,6 +34,11 @@ test("exact counts and each currency are presented without rounding or ledger cl
     "₦90,071,992,547,409,931.23",
     "US$0.01",
   ])
+  expect(cards.map((card) => card.summary)).toEqual([
+    "2 unpaid",
+    "To collect on 1 order",
+    "To collect on 1 order",
+  ])
   expect(cards[1]?.detail).toContain("not customer ledger debt")
   expect(cards[0]?.detail).toContain("Statuses: CONFIRMED")
   expect(cards[0]?.scope).toContain("Your orders")

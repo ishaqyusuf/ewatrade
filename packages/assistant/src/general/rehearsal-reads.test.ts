@@ -48,7 +48,11 @@ test("operational rehearsals preserve explicit thresholds, continuation and cust
       catalogItemId: "product",
     },
   })
-  for (const question of ["running low", "What's running low?"])
+  for (const question of [
+    "running low",
+    "What's running low?",
+    "What’s running low?",
+  ])
     expect(run(question)).toMatchObject({
       kind: "tool",
       toolName: "readLowStock",

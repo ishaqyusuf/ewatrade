@@ -114,7 +114,7 @@ export function generalRunningLowAnswers(
         : result.partial
           ? "Some stock lines were not checked"
           : "",
-      detail: `Uses each Product's saved low-stock level (the Inventory page's Running low): loose stock kept in this Store, free to sell after reservations, at or below the level. ${result.levelsSet} products have a level; ${result.levelsMissing} have none and are never called low. ${result.withoutLevel.out.length} products without a level are out of stock.${noLevels ? ` No level is set, so the ${fewestLeft.length} products with the least left are listed instead; say so and that levels are set per product in Inventory.` : ""} ${result.partial ? "The scan stopped at its bound; more stock lines exist." : "Every stock line was checked."} Do not ask for a threshold; one given by the owner uses the threshold scan instead.`,
+      detail: `Uses each Product's saved low-stock level (the Inventory page's Running low): loose stock kept in this Store, free to sell after reservations, at or below the level. ${result.levelsSet} products have a level; ${result.levelsMissing} have none and are never called low. ${result.withoutLevel.out.length} products without a level are out of stock.${noLevels ? ` No level is set, so the ${fewestLeft.length} products with the least left are listed instead; say only that levels are set per product in Inventory, without naming the products these answers show.` : ""} ${result.partial ? "The scan stopped at its bound; more stock lines exist." : "Every stock line was checked."} Do not ask for a threshold; one given by the owner uses the threshold scan instead.`,
     },
     ...result.items.map((item) =>
       row(

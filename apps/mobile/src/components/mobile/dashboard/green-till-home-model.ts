@@ -133,11 +133,11 @@ export function homeMoney(valueMinor: number, currencyCode: string) {
 }
 
 /**
- * Home's Ask bar chips (Workshop 01 Home v2): only questions Home's own
- * figures already back, so a chip never needs a query of its own. Unpaid asks
- * about orders, not "who owes me": the assistant answers that from customer
- * ledgers, which leave unpaid orders out. No low-stock chip: the assistant
- * asks for a threshold first instead of using saved low-stock levels.
+ * Home's Ask bar chips (Workshop 01 Home v2): questions the assistant answers
+ * directly, without a query of their own on Home. Unpaid and sold-today show
+ * only when Home's figures have them. Running low is for the owner's Home
+ * (reps can't read stock); the assistant uses each product's saved
+ * low-stock level, or says none is set.
  */
 export function homeAskQuestions(input: {
   unpaidOrders?: number
@@ -149,5 +149,6 @@ export function homeAskQuestions(input: {
     questions.push("Which orders are unpaid?")
   if (input.soldToday && input.soldToday > 0)
     questions.push(input.mine ? "What did I sell today?" : "What sold today?")
+  if (!input.mine) questions.push("What’s running low?")
   return questions
 }
