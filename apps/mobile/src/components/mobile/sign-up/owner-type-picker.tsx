@@ -281,8 +281,6 @@ export function OwnerTypeFooter({
   onClear,
   onContinue,
   pickRequest,
-  other,
-  onOther,
 }: {
   query: string
   onQuery: (value: string) => void
@@ -295,24 +293,33 @@ export function OwnerTypeFooter({
   onClear: () => void
   onContinue: () => void
   pickRequest: number
-  other: string
-  onOther: (value: string) => void
 }) {
   const colors = useOwnerSignupColors()
   const largeText = useLargeTextLayout()
   const sheet = useModal()
   const presentedPick = useRef(0)
+  // "Other" needs a typed description, so it never opens the sheet (sheets
+  // take no typing): the field shows on the page and Continue joins the
+  // search footer instead.
+  const otherOnPage = !multi && selected.includes("other")
   useEffect(() => {
     if (pickRequest === 0) {
       presentedPick.current = 0
       sheet.dismiss()
       return
     }
-    if (multi || !selected.length) sheet.dismiss()
+    if (multi || !selected.length || otherOnPage) sheet.dismiss()
     if (pickRequest <= presentedPick.current) return
     presentedPick.current = pickRequest
-    if (!multi && selected.length) sheet.present()
-  }, [pickRequest, multi, selected.length, sheet.dismiss, sheet.present])
+    if (!multi && selected.length && !otherOnPage) sheet.present()
+  }, [
+    pickRequest,
+    multi,
+    selected.length,
+    otherOnPage,
+    sheet.dismiss,
+    sheet.present,
+  ])
   function proceed() {
     if (!valid) return
     sheet.dismiss()
@@ -324,7 +331,7 @@ export function OwnerTypeFooter({
       disabled={!valid}
       onPress={proceed}
       style={{
-        flex: multi || largeText ? undefined : 1,
+        flex: multi || largeText || otherOnPage ? undefined : 1,
         minHeight: 48,
         paddingHorizontal: 14,
         paddingVertical: 12,
@@ -370,7 +377,7 @@ export function OwnerTypeFooter({
         actionsAboveSearch
         localSearch
       >
-        {multi && selected.length > 0 ? primary : null}
+        {(multi && selected.length > 0) || otherOnPage ? primary : null}
       </BottomSearchFooter>
       <Modal
         ref={sheet.ref}
@@ -428,16 +435,6 @@ export function OwnerTypeFooter({
               <Icon name="X" size={18} color={colors.foreground} />
             </Pressable>
           </View>
-          {selected.includes("other") ? (
-            <FormField
-              label="What kind of business is it?"
-              value={other}
-              onChangeText={onOther}
-              maxLength={60}
-              variant="green-gate"
-              placeholder="e.g. Event rentals, car wash, POS agent"
-            />
-          ) : null}
           <View style={{ flexDirection: largeText ? "column" : "row", gap: 8 }}>
             <Pressable
               accessibilityRole="button"

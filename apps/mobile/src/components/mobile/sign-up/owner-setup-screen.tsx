@@ -385,8 +385,6 @@ export function OwnerSetupScreen() {
         onHeight={setFooterHeight}
         multi={multi}
         pickRequest={pickRequest}
-        other={other}
-        onOther={updateOther}
         selected={types}
         valid={validTypes}
         onMore={() => setMulti(true)}
