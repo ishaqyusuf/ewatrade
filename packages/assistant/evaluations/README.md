@@ -46,6 +46,7 @@ it is not an executed result, enabled capability, or deployment claim.
 
 | Capability | Fixture version | Scenarios | Recorded model runs |
 |---|---|---|---|
+| Home Ask-bar questions (unpaid orders, who owes, running low) | [1](fixtures/home-ask-questions.v1.md) | Answers match Home's unpaid figure, owing-only order rows, who-owes from orders not ledgers, Running low from saved levels or out-of-stock fallback, explicit threshold, rep scope | None yet |
 | Original quotation approve/reject and pure decision review | [1](fixtures/quote-decisions.v1.json) |12definitions/3capabilities; common seven-category matrix, exact original receipts, commercial/clinical and Terms boundaries | None yet |
 | Service work actions, context/review and original records | [1](fixtures/service-work.v1.json) | Natural intentions and exact targets; common seven-category matrix; private text, clinical/refusal, ready/reminder boundary, original receipts and global continuity | None yet |
 | Original quotation and booking reads | [1](fixtures/quote-booking-reads.v1.json) | Original tuples, bounded page totals, native authority, stored/current separation, pure replay, injection, outage and global continuity | None yet |

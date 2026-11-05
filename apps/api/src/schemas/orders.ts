@@ -219,6 +219,8 @@ export const commercialOrderListPageSchema = z
     limit: z.number().int().min(1).max(50).default(20),
     query: z.string().trim().max(160).optional(),
     queryMode: z.enum(["all", "customer"]).default("all"),
+    /** Only orders with money still due, the same rule as Home's unpaid count. */
+    owing: z.boolean().optional(),
     sort: z
       .object({
         field: z.enum(["orderNumber", "status", "createdAt", "total"]),

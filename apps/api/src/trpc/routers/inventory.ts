@@ -29,6 +29,7 @@ import {
   getStockOperationAudit,
   getStockTransferReview,
   listCatalogLowStockPage,
+  listCatalogRunningLow,
   listDraftStockCounts,
   listInventoryBalancePage,
   listInventoryBalanceReport,
@@ -82,6 +83,7 @@ import {
   inventoryReleaseReservationSchema,
   inventoryReserveOfferingSchema,
   inventoryReverseTransformationSchema,
+  inventoryRunningLowSchema,
   inventorySetLowStockLevelSchema,
   inventorySingleBalanceOperationSchema,
   inventoryStockCountReviewSchema,
@@ -332,6 +334,20 @@ export const inventoryRouter = createTRPCRouter({
       return listCatalogLowStockPage(ctx.db, {
         ...input,
         storeId,
+        tenantId: ctx.tenantContext.tenant.id,
+      })
+    }),
+
+  runningLow: protectedProcedure
+    .input(inventoryRunningLowSchema)
+    .query(async ({ ctx, input }) => {
+      assertCanManageInventory(ctx.tenantContext)
+      return listCatalogRunningLow(ctx.db, {
+        storeId: resolveStoreId(
+          ctx.tenantContext.stores,
+          ctx.tenantContext.activeStore,
+          input.storeId,
+        ),
         tenantId: ctx.tenantContext.tenant.id,
       })
     }),

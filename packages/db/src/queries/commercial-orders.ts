@@ -59,6 +59,7 @@ import {
 import {
   type CommercialOrderListFilter,
   commercialOrderListWhere,
+  commercialOrderOwingWhere,
 } from "./commercial-order-list-where"
 import { allocateCommercialOrderNumber } from "./commercial-order-number"
 import { commercialOrderOfferingResolver } from "./commercial-order-offering-resolution"
@@ -1580,6 +1581,8 @@ export async function listCommercialOrdersPage(
   input: CommercialOrderListFilter & {
     cursor?: string
     limit?: number
+    /** Only orders with money still due (Home's unpaid rule). */
+    owing?: boolean
     sort?: {
       direction: "asc" | "desc"
       field: "orderNumber" | "status" | "createdAt" | "total"
@@ -1587,7 +1590,12 @@ export async function listCommercialOrdersPage(
   },
 ) {
   const limit = Math.min(Math.max(input.limit ?? 20, 1), 50)
-  const { baseWhere, where } = commercialOrderListWhere(input)
+  const listed = commercialOrderListWhere(input)
+  const owing = input.owing ? commercialOrderOwingWhere(db) : undefined
+  const baseWhere = owing
+    ? { AND: [listed.baseWhere, owing] }
+    : listed.baseWhere
+  const where = owing ? { AND: [listed.where, owing] } : listed.where
   const sortFields: Array<{
     direction: "asc" | "desc"
     field: "orderNumber" | "status" | "createdAt" | "totalMinor"

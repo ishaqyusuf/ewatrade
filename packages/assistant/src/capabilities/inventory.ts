@@ -258,7 +258,7 @@ formOnly(
 planned("inventory", "C03", ["inventory.recordInternalUse"])
 formOnly(
   "inventory",
-  "Display setting for Running low on the Inventory page; it never changes stock or blocks a sale. The assistant reads low stock with lowStockPage and its own threshold.",
+  "Display setting for Running low on the Inventory page; it never changes stock or blocks a sale. The assistant reads Running low from these saved levels (runningLow), or lowStockPage with a threshold the owner gives.",
   ["inventory.setLowStockLevel"],
 )
 formOnly(

@@ -1,5 +1,5 @@
-import type { Prisma } from "../../generated/prisma/client"
-import type { OrderStatus, PaymentStatus } from "../../generated/prisma/enums"
+import type { Prisma, PrismaClient } from "../../generated/prisma/client"
+import { OrderStatus, PaymentStatus } from "../../generated/prisma/enums"
 
 /** Filters shared by the Orders list and its totals. */
 export type CommercialOrderListFilter = {
@@ -12,6 +12,32 @@ export type CommercialOrderListFilter = {
   statuses?: OrderStatus[]
   storeId?: string
   tenantId: string
+}
+
+/**
+ * Older orders marked paid without payment rows count as fully paid, the same
+ * rule as `effectiveCommercialAmountPaid`.
+ */
+export const legacyPaidWhere = {
+  amountPaidMinor: 0,
+  paymentStatus: PaymentStatus.PAID,
+  payments: { none: {} },
+} satisfies Prisma.CommercialOrderWhereInput
+
+/**
+ * Orders with money still due, Home's "unpaid" rule: paid below total, not
+ * legacy-paid, and not cancelled or refunded.
+ */
+export function commercialOrderOwingWhere(
+  db: Pick<PrismaClient, "commercialOrder">,
+): Prisma.CommercialOrderWhereInput {
+  return {
+    AND: [
+      { amountPaidMinor: { lt: db.commercialOrder.fields.totalMinor } },
+      { NOT: legacyPaidWhere },
+      { status: { notIn: [OrderStatus.CANCELLED, OrderStatus.REFUNDED] } },
+    ],
+  }
 }
 
 /**

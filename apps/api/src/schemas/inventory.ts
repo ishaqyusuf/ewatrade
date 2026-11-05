@@ -505,6 +505,11 @@ export const inventoryLowStockPageSchema = z
   })
   .strict()
 
+/** Stock at or below each Product's saved low-stock level in one Store. */
+export const inventoryRunningLowSchema = z
+  .object({ storeId: z.string().trim().min(1).max(128) })
+  .strict()
+
 export const inventoryBalancePageSchema = z
   .object({
     storeId: z.string().min(1).max(128),

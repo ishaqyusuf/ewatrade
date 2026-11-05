@@ -3030,12 +3030,16 @@ export const capabilityManifest = [
     clients: ["dashboard", "mobile", "whatsapp"],
     rollout: "source",
     whatsapp: { mode: "native", rollout: "source" },
-    procedures: ["inventory.lowStockPage"],
-    examples: ["Which offerings have at most two available units?"],
+    procedures: ["inventory.lowStockPage", "inventory.runningLow"],
+    examples: [
+      "What's running low?",
+      "Which offerings have at most two available units?",
+    ],
     tests: [
       "apps/api/src/assistant/channel-principal.integration.test.ts",
       "apps/api/src/assistant/channel-principal.test.ts",
       "packages/db/src/queries/catalog-low-stock.test.ts",
+      "packages/db/src/queries/catalog-running-low.test.ts",
       "apps/api/src/assistant/general-low-stock.test.ts",
       ...proposalTests,
     ],

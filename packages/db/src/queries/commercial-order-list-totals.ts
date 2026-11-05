@@ -1,19 +1,9 @@
-import type { Prisma, PrismaClient } from "../../generated/prisma/client"
-import { PaymentStatus } from "../../generated/prisma/enums"
+import type { PrismaClient } from "../../generated/prisma/client"
 import {
   type CommercialOrderListFilter,
   commercialOrderListWhere,
+  legacyPaidWhere,
 } from "./commercial-order-list-where"
-
-/**
- * Older orders marked paid without payment rows count as fully paid, the same
- * rule as `effectiveCommercialAmountPaid`.
- */
-const legacyPaidWhere = {
-  amountPaidMinor: 0,
-  paymentStatus: PaymentStatus.PAID,
-  payments: { none: {} },
-} satisfies Prisma.CommercialOrderWhereInput
 
 /**
  * Exact totals for every Order matching the list's scope, dates and search,
