@@ -35,9 +35,9 @@ test("exact counts and each currency are presented without rounding or ledger cl
     "US$0.01",
   ])
   expect(cards.map((card) => card.summary)).toEqual([
-    "2 unpaid",
-    "To collect on 1 order",
-    "To collect on 1 order",
+    "",
+    "1 still owing",
+    "1 still owing",
   ])
   expect(cards[1]?.detail).toContain("not customer ledger debt")
   expect(cards[0]?.detail).toContain("Statuses: CONFIRMED")
