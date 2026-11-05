@@ -38,6 +38,7 @@ import type { InvitedRetailOpsStaff } from "@ewatrade/db/queries"
 import { getStaffAccessReceipt } from "@ewatrade/db/staff-access-receipt"
 import { reviewStaffAccessUpdate } from "@ewatrade/db/staff-access-update"
 import { getStaffStatusReceipt } from "@ewatrade/db/staff-status-receipt"
+import { ruleRejectedError } from "@ewatrade/errors"
 import { enqueueRetailOpsStaffInviteNotification } from "@ewatrade/jobs"
 import { sendStaffInviteWhatsApp } from "@ewatrade/jobs/staff-invitations"
 import { buildStaffInvitationLinks } from "@ewatrade/utils/staff-invitation-links"
@@ -648,9 +649,11 @@ export const retailOpsStaffRouter = createTRPCRouter({
             message: error.message,
           })
         if (error instanceof RetailOpsStaffError) {
+          // Contact problems are the owner's to fix, so keep their message public.
           throw new TRPCError({
             code: getStaffErrorCode(error),
             message: error.message,
+            cause: ruleRejectedError(error),
           })
         }
 

@@ -1208,13 +1208,29 @@ export async function inviteRetailOpsStaffInTransaction(
     )
   }
 
-  if (email)
-    await assertQaTenantIdentity(tx, {
-      email,
-      tenantId: input.tenantId,
-    })
-  if (phone)
-    await assertQaTenantPhoneIdentity(tx, { phone, tenantId: input.tenantId })
+  try {
+    if (email)
+      await assertQaTenantIdentity(tx, {
+        email,
+        tenantId: input.tenantId,
+      })
+    if (phone)
+      await assertQaTenantPhoneIdentity(tx, {
+        phone,
+        tenantId: input.tenantId,
+      })
+  } catch (error) {
+    // QA and live identities never mix; say so instead of failing as unknown.
+    const message = error instanceof Error ? error.message : ""
+    throw new RetailOpsStaffError(
+      "STAFF_CONTACT_INVALID",
+      message.startsWith("Normal identities")
+        ? "This is a QA business. Invite a QA test email or WhatsApp number."
+        : message.startsWith("QA identities")
+          ? "QA test emails and numbers can’t join a live business."
+          : "Couldn’t check this contact right now. Try again.",
+    )
+  }
 
   const replayedInvite = externalId
     ? findStaffInviteReplay(tenant.metadata, externalId)
