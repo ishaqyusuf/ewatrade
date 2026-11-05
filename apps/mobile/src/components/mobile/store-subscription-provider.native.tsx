@@ -26,7 +26,12 @@ import {
   useRef,
   useState,
 } from "react"
-import { AppState, Platform } from "react-native"
+import { AppState, LogBox, Platform } from "react-native"
+
+// Devices without Play Billing (an emulator with no Google account) fail to
+// connect. useIAP reports that through onError, but expo-iap also
+// console.errors it, which would raise a dev error banner on every launch.
+LogBox.ignoreLogs(["initConnection failed"])
 
 function useStoreBillingController() {
   const trpc = useTRPC()
