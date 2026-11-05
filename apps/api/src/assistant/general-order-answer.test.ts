@@ -50,7 +50,8 @@ test("order pages save matching order identities with exact per-currency amounts
   expect(answers[0]?.detail).toContain("not a business total")
   expect(answers[0]?.detail).toContain("2026-10-16T00:00:00Z (exclusive)")
   expect(answers[0]?.scope).toContain("Your orders")
-  expect(answers[1]?.title).toBe("ORD-1042")
+  expect(answers[1]?.title).toBe("Amina")
+  expect(answers[1]?.summary).toMatch(/^ORD-1042 · /)
   expect(answers[1]?.value).toBe("₦90,071,992,547,409,931.23")
   expect(answers[2]?.value).toContain("1.99")
   expect(

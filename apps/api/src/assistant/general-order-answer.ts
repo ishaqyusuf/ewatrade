@@ -58,7 +58,7 @@ function time(value: Date | string) {
     ? date.toISOString()
     : "time unavailable"
 }
-/** The owner's one-line card text: what is owed, then who. */
+/** The owner's second line: the order number, then what is owed. */
 function orderSummary(order: GeneralOrderFact, unpaid: Money) {
   const paid =
     order.status === "CANCELLED"
@@ -71,9 +71,7 @@ function orderSummary(order: GeneralOrderFact, unpaid: Money) {
             BigInt(unpaid) === BigInt(order.totalMinor)
             ? "Unpaid"
             : `Owes ${money(unpaid, order.currencyCode)}`
-  return [paid, order.customerName ? label(order.customerName, 80) : null]
-    .filter(Boolean)
-    .join(" · ")
+  return `${label(order.orderNumber, 80)} · ${paid}`
 }
 export function generalOrderAnswer(
   order: GeneralOrderFact,
@@ -84,12 +82,13 @@ export function generalOrderAnswer(
   const unpaid = excluded ? 0 : order.balanceDueMinor
   return {
     id: `order_${crypto.randomUUID()}`,
-    title: label(order.orderNumber, 160),
+    // Who first, like the Orders screen rows (owner, 5 Nov 2026).
+    title: label(order.customerName?.trim() || "Walk-in customer", 160),
     value: money(order.totalMinor, order.currencyCode),
     scope: label(storeName, 300),
     asOf,
     summary: orderSummary(order, unpaid),
-    detail: `${order.status} · ${order.paymentStatus} · unpaid ${money(unpaid, order.currencyCode)}. ${excluded ? "Cancelled/refunded orders contribute no unpaid amount. " : ""}${order.customerName ? `Customer ${label(order.customerName, 120)}. ` : ""}${order.createdAt ? `Created ${time(order.createdAt)}. ` : ""}Individual order only; use the summary read for totals.`,
+    detail: `${order.status} · ${order.paymentStatus} · unpaid ${money(unpaid, order.currencyCode)}. ${excluded ? "Cancelled/refunded orders contribute no unpaid amount. " : ""}Order ${label(order.orderNumber, 120)}. ${order.createdAt ? `Created ${time(order.createdAt)}. ` : ""}Individual order only; use the summary read for totals.`,
   }
 }
 
