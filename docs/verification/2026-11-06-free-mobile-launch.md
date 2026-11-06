@@ -89,10 +89,29 @@ uses its existing normal sign-out/runtime check. No fixture or business write.
   are required before final declarations; free pricing does not remove them.
 - New Google trader-status declaration due 1 February 2027, observed in Console.
   Not mistaken for the incomplete merchant payments profile.
-- Apple App Store Connect now explicitly reports the Apple Account locked for
-  security reasons. The retained tab offers Unlock Account. The owner was asked
-  to complete Apple's recovery directly; no credential/reset action was performed.
-  Current metadata cannot be certified from the historical October view.
+- Apple initially reported the account locked. After the owner completed recovery,
+  authenticated access to EwaTrade under ZEROES AND ONE TECH HUB NIG LIMITED was
+  verified on 6 November. No password was entered/retried by this agent, and no
+  credential reset was performed. The cause of recurring locks is not established.
+  [Apple's guidance](https://support.apple.com/en-us/102640) says repeated incorrect
+  password/account-information attempts by the owner or another person can cause
+  this message; an outdated saved credential is only a possibility, not a diagnosis.
+- Fresh iOS Console inspection: version1.0.0 remains Prepare for Submission;
+  no build selected. Add Build offers only build6/version1.0.0. TestFlight lists
+  that same build in EwaTrade Preview Internal, Ready to Submit, expiring in63days.
+  That status is not acceptance of the current free-launch Production candidate.
+- Reviewer sign-in is required, but username/password, review contact fields and
+  notes are empty. The inspected default iPhone Dynamic Island medium and iPad13
+  screenshot sets each show0/10. Other size sets were not certified. Release mode
+  remains Manual. Existing description, support/marketing URLs and copyright are
+  populated. No build selected, metadata saved, asset uploaded or review submitted.
+- App Privacy has its existing privacy-policy URL but still shows Get Started;
+  Publish is disabled. It is not a completed privacy declaration.
+- The actual current download-price table shows zero across175territories,
+  including Nigeria NGN0, US USD0 and UK GBP0.
+  Availability is configured for175territories; Mac and Vision Pro distribution
+  are unchecked. This is free download configuration, not a live release or future
+  subscription-product pricing. No payment/profile/availability changes were made.
 - Current native source includes Expo Contacts and its selected-contact New sale
   flow (`phone-contact-picker.ts`, `use-sale-contact-pick.ts`). Android asks for
   read permission on use; source blocks WRITE_CONTACTS. iOS uses the native picker.
