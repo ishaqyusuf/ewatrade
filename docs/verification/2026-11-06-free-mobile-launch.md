@@ -69,6 +69,15 @@ uses its existing normal sign-out/runtime check. No fixture or business write.
   `Close QA businesses`. The smoke now accepts either observed close control and
   requires return to signed-out login. The failed receipt remains failed; the flow
   must be rerun before calling the whole smoke passed.
+- Final canonical local Android smoke **passes 1/1** on `a1924396`, including
+  all free-plan assertions and the corrected cleanup, with no sale/payment
+  submitted. Receipt `036aa54d-8ba0-42d3-b1cf-f501e48f91ca`, completed
+  2026-11-06T16:28:32Z; private artifact directory
+  `.scratch/qa-release/artifacts/52ecf4fd-1589-4e06-a69b-ae408879d4fe`.
+  It explicitly records `target: local`, `clean: false` (preserved unrelated
+  changes), `runtimeVerified: false` and no signed runtime IDs. This is local
+  development acceptance only, not a qualifying Preview/Production receipt.
+  Further edits after this run are documentation/coordination only.
 - ADB inventory: EwaTrade GreenTill_API34 on emulator-5556; emulator-5560 belongs
   to Halalvest and is out of scope. Configured physical R5CX153J81W is disconnected.
   No iOS simulator booted; no physical signed acceptance claimed.
