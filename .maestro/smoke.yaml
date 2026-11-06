@@ -79,4 +79,8 @@ name: QA catalog and sale draft
 - tapOn: Build details
 - assertVisible: ${EXPECTED_RUNTIME}
 - tapOn: Back to QA businesses
-- tapOn: Close QA businesses
+# The chooser can open as a compact sheet before its refreshed profile count
+# switches later openings to the full-screen list. Both have a normal close.
+- tapOn: Close QA businesses|close modal
+- assertNotVisible: QA businesses
+- assertVisible: Sign in to your business

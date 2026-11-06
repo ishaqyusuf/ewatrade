@@ -55,6 +55,20 @@ uses its existing normal sign-out/runtime check. No fixture or business write.
   the failure screenshot shows the selected business heading at the bottom.
   Allow that existing profile scroll 60 seconds, then repeat the same smoke.
   Neither failed run reached the new plan assertions or produced passing evidence.
+- Subsequent runs identified stale catalog/accessibility and variant selectors in
+  the private config. The accepted catalog selector is the observed full Eggs
+  button label; the draft uses the observed unambiguous Crate of eggs offering
+  (NGN4,500). These are separate existing records, not new fixtures. The outer
+  runner allows six minutes for the expanded flow; its eight tests/48 assertions
+  pass. No assertion was weakened or skipped.
+- At source `5458bea2`, the run completed populated catalog, draft total, Cancel,
+  Current plan, no Plan unavailable, free-launch message, no Restore purchases,
+  no Manage store subscriptions, ordinary sign-out and final development-runtime
+  checks. Final cleanup failed because the chooser opened in its existing compact
+  sheet mode, whose actual close label is `close modal`, rather than the full-screen
+  `Close QA businesses`. The smoke now accepts either observed close control and
+  requires return to signed-out login. The failed receipt remains failed; the flow
+  must be rerun before calling the whole smoke passed.
 - ADB inventory: EwaTrade GreenTill_API34 on emulator-5556; emulator-5560 belongs
   to Halalvest and is out of scope. Configured physical R5CX153J81W is disconnected.
   No iOS simulator booted; no physical signed acceptance claimed.
