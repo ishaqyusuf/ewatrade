@@ -5,6 +5,11 @@ The owner confirmed Claude Opus 5.5 (`claude-opus-5-5`) at explicit high effort
 as the intended Workshop author. Codex coordinates the baseline, handoff and
 acceptance. This checkpoint prepares the plan only.
 
+**Approval update, 6 November:** the owner approved the plan and explicitly
+requested Opus5.5/high to start the five-flow pilot. The pilot is now assigned;
+owner review still precedes whole-library adoption and product implementation.
+The original planning checkpoint below is retained as history.
+
 ## Intended result
 
 Make the assistant easier to read and use less vertical space by presenting
