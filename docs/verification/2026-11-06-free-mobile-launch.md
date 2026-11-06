@@ -1,6 +1,6 @@
 # Free mobile launch preparation — 6 November 2026
 
-Source base `6b549b56c`, current main checkout. Existing staged explainers and
+Source base `6b549b56c`; implementation committed as `6097c1c1` in the current main checkout. Existing staged explainers and
 AGENT_CHAT history are not part of this change. No worktree/branch switch.
 
 ## Changes and policy
@@ -46,7 +46,15 @@ uses its existing normal sign-out/runtime check. No fixture or business write.
 
 - Existing local API/Metro liveness pass using the installed Portless CA. Initial
   default-CA probe failed; no service restart or TLS bypass. No DB query from this
-  liveness check. Native smoke remains to execute on the explicit EwaTrade device.
+  liveness check. Native smoke runs on the explicit EwaTrade device.
+- Initial Maestro initialization was blocked by sandbox access to its installed
+  dependencies; the authorized retry initialized successfully. Its catalog scroll
+  exhausted the old 20-second window before reaching the old Snail fixture. The
+  private config now selects existing visible Eggs at NGN150, without seeding.
+  A second run timed out while scrolling the larger existing QA business list;
+  the failure screenshot shows the selected business heading at the bottom.
+  Allow that existing profile scroll 60 seconds, then repeat the same smoke.
+  Neither failed run reached the new plan assertions or produced passing evidence.
 - ADB inventory: EwaTrade GreenTill_API34 on emulator-5556; emulator-5560 belongs
   to Halalvest and is out of scope. Configured physical R5CX153J81W is disconnected.
   No iOS simulator booted; no physical signed acceptance claimed.
@@ -58,8 +66,17 @@ uses its existing normal sign-out/runtime check. No fixture or business write.
   are required before final declarations; free pricing does not remove them.
 - New Google trader-status declaration due 1 February 2027, observed in Console.
   Not mistaken for the incomplete merchant payments profile.
-- Apple App Store Connect requires normal sign-in; the owner was asked to sign in
-  directly. Current metadata cannot be certified from the historical October view.
+- Apple App Store Connect now explicitly reports the Apple Account locked for
+  security reasons. The retained tab offers Unlock Account. The owner was asked
+  to complete Apple's recovery directly; no credential/reset action was performed.
+  Current metadata cannot be certified from the historical October view.
+- Current native source includes Expo Contacts and its selected-contact New sale
+  flow (`phone-contact-picker.ts`, `use-sale-contact-pick.ts`). Android asks for
+  read permission on use; source blocks WRITE_CONTACTS. iOS uses the native picker.
+  Selected name/number can populate a customer draft; the helper does not bulk
+  enumerate contacts. The October privacy packet predates this SDK/permission.
+  Reconcile the actual signed candidate's contact categories and privacy report
+  before filing; existing name/phone manifest entries alone are not that review.
 
 `bun run release status` refreshed read-only status after permitted Git metadata
 access: Production database10, Dashboard236, marketing219, API218 and jobs206

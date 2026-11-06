@@ -29,7 +29,8 @@ name: QA catalog and sale draft
 - scrollUntilVisible:
     element: ${PROFILE_LABEL}
     direction: DOWN
-    timeout: 20000
+    # The existing QA directory now spans several screens on the emulator.
+    timeout: 60000
     centerElement: true
 - tapOn: ${PROFILE_LABEL}
 - assertNotVisible: QA businesses
