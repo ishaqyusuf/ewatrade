@@ -6,7 +6,6 @@ import { Modal } from "@/components/ui/modal"
 import { Text } from "@/components/ui/text"
 import { useColorScheme, useColors } from "@/hooks/use-color"
 import { GREEN_TILL_THEME } from "@/lib/green-till-theme"
-import { publicLegalUrl } from "@/lib/public-legal-url"
 import { useOperationalModeStore } from "@/store/operationalModeStore"
 import type {
   RetailOpsPlan,
@@ -15,13 +14,12 @@ import type {
 } from "@/store/subscriptionStore"
 import { useTRPC } from "@/trpc/client"
 import type { BottomSheetModal } from "@gorhom/bottom-sheet"
+import releaseScope from "@root/mobile-release-scope.json"
 import { useQuery } from "@tanstack/react-query"
 import { forwardRef } from "react"
-import { Linking, Platform } from "react-native"
+import { Platform } from "react-native"
 import { View } from "react-native"
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller"
-import { useSafeAreaInsets } from "react-native-safe-area-context"
-import { ActionButton } from "./action-button"
 import {
   ListCard,
   RecordRow,
@@ -30,10 +28,7 @@ import {
 } from "./green-till/kit"
 import { SettingsScreen } from "./settings-screen"
 import { StoreSubscriptionPanel } from "./store-subscription-panel"
-import {
-  SUBSCRIPTION_SCREEN_COPY,
-  getSubscriptionUsagePresentation,
-} from "./subscription-plan-presentation"
+import { SUBSCRIPTION_SCREEN_COPY } from "./subscription-plan-presentation"
 
 type SubscriptionPlanSheetProps = {
   usage?: {
@@ -171,7 +166,6 @@ export function SubscriptionPlanContent({
   presentation = "sheet",
 }: SubscriptionPlanContentProps) {
   const trpc = useTRPC()
-  const insets = useSafeAreaInsets()
   const isOfflineMode = useOperationalModeStore((state) => state.isOfflineMode)
   const subscriptionQuery = useQuery(
     trpc.retailOps.subscription.queryOptions(undefined, {
@@ -183,20 +177,15 @@ export function SubscriptionPlanContent({
     | ProductionSubscriptionSnapshot
     | undefined
   const verified = productionSnapshot
-  const supportUrl = publicLegalUrl("support")
-  const usesPlayBilling = Platform.OS === "android"
+  const usesPlayBilling =
+    releaseScope.softwarePlanPurchases && Platform.OS === "android"
   const plans = verified?.plans.filter((plan) => plan.id !== "free") ?? []
-  const currentIndex = plans.findIndex((plan) => plan.id === verified?.plan.id)
-  const nextPlan = currentIndex >= 0 ? plans[currentIndex + 1] : undefined
   const order: readonly string[] = USAGE_ORDER
   const limits = verified ? verified.entitlements.map((e) => e) : []
   const usage = limits
     .filter((entitlement) => order.includes(entitlement.key))
     .sort((a, b) => order.indexOf(a.key) - order.indexOf(b.key))
   const historyDays = verified?.plan.limits.reportsHistoryDays
-  const request = () => {
-    if (supportUrl) void Linking.openURL(supportUrl)
-  }
   const content = (
     <View className="gap-4 px-[18px] pb-6">
       <SettingsScreen
@@ -292,34 +281,21 @@ export function SubscriptionPlanContent({
                     status={
                       current ? (
                         <StatusPill label="Current" tone="ok" />
-                      ) : supportUrl ? (
-                        <StatusPill label="Request" tone="muted" />
                       ) : undefined
                     }
-                    onPress={!current && supportUrl ? request : undefined}
                   />
                 )
               })}
             </ListCard>
             <Text className="mt-2.5 px-0.5 text-xs text-muted-foreground">
-              Paid plans are free during launch.
-              {supportUrl ? "" : " Contact support to change plan."}
+              EwaTrade is free during launch. No subscription or payment is
+              required.
             </Text>
           </View>
         ) : null}
       </SettingsScreen>
     </View>
   )
-  const pinned =
-    !usesPlayBilling && nextPlan && supportUrl && !isOfflineMode ? (
-      <View className="border-t border-border bg-background px-[18px] pt-3">
-        <ActionButton icon="ArrowUp" onPress={request}>
-          {`Request ${nextPlan.name}`}
-        </ActionButton>
-        <View style={{ height: Math.max(insets.bottom, 12) }} />
-      </View>
-    ) : null
-
   if (presentation === "screen") {
     return (
       <View className="flex-1">
@@ -335,7 +311,6 @@ export function SubscriptionPlanContent({
         >
           {content}
         </KeyboardAwareScrollView>
-        {pinned}
       </View>
     )
   }
@@ -347,7 +322,6 @@ export function SubscriptionPlanContent({
       keyboardShouldPersistTaps="handled"
     >
       {content}
-      {pinned}
     </BottomSheetKeyboardAwareScrollView>
   )
 }

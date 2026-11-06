@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "id": "2026-11-06-free-mobile-launch",
+  "tickets": ["A05"],
+  "summary": "Restore an explicit free mobile launch scope, keep native billing inactive and make submission billing checks require closed checkout. Fix the existing invitation attempt typing without changing behavior.",
+  "noAssistantImpact": "Billing remains form-only and deferred. No assistant tool, server entitlement, API, schema, provider action or permission is introduced. Merchant payment recording is unchanged; the invitation correction is type-only.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/native-store-billing.md"
+    },
+    {
+      "topic": "decision",
+      "status": "local_only",
+      "path": ".brain/decisions/2026-11-06-free-mobile-launch.md"
+    },
+    {
+      "topic": "feature",
+      "status": "updated",
+      "path": "docs/billing/mobile-free-launch-2026-11-06.md"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "scripts/check-store-billing-readiness.test.mjs",
+      "executed": true,
+      "result": "11 tests pass: explicit free scope needs no payment credentials, rejects enabled or ambiguous flags; paid scope preserves original requirements."
+    },
+    {
+      "kind": "test",
+      "path": "apps/mobile/src/components/mobile/store-subscription-provider.test.ts",
+      "executed": true,
+      "result": "Actual provider rendered in isolated native-module fixture: authenticated owner with linked IAP module does not initialize billing or call its API; child context stays null."
+    },
+    {
+      "kind": "run",
+      "path": "scripts/test-quick.ts",
+      "executed": true,
+      "result": "Owned-path smoke passes 177 tests/922 assertions plus QA types and Biome; mobile types pass after the existing invitation attempt annotation was corrected. No device or store acceptance inferred."
+    }
+  ]
+}

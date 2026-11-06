@@ -1,7 +1,79 @@
 import assert from "node:assert/strict"
 import { generateKeyPairSync } from "node:crypto"
 import { test } from "node:test"
-import { storeBillingReadinessFailures } from "./check-store-billing-readiness.mjs"
+import {
+  storeBillingReadinessFailures,
+  storeReleaseBillingReadinessFailures,
+} from "./check-store-billing-readiness.mjs"
+
+const freeProfile = { APP_ENV: "production", DEV_PROFILE: "prod" }
+const freeScope = { softwarePlanPurchases: false }
+
+test("free launch needs no payment credentials but requires closed checkout", () => {
+  for (const store of [undefined, "play_store", "app_store"])
+    assert.deepEqual(
+      storeReleaseBillingReadinessFailures(
+        freeProfile,
+        freeScope,
+        () => {
+          throw Error("Free launch must not inspect payment credentials")
+        },
+        store,
+      ),
+      [],
+    )
+  for (const flag of [
+    "STORE_BILLING_ENABLED",
+    "STORE_BILLING_PRODUCTION_CHECKOUT_ENABLED",
+    "OWNER_BILLING_ENABLED",
+  ])
+    for (const value of ["true", "TRUE", "1", " false "])
+      assert.ok(
+        storeReleaseBillingReadinessFailures(
+          { ...freeProfile, [flag]: value },
+          freeScope,
+        ).some((failure) => failure.includes(flag)),
+      )
+})
+
+test("missing or ambiguous release scope cannot bypass paid readiness", () => {
+  for (const scope of [
+    undefined,
+    null,
+    {},
+    [],
+    { softwarePlanPurchases: "false" },
+    { softwarePlanPurchases: false, extra: true },
+  ])
+    assert.ok(storeReleaseBillingReadinessFailures(freeProfile, scope).length)
+  assert.ok(
+    storeReleaseBillingReadinessFailures(
+      { APP_ENV: "preview", DEV_PROFILE: "preview" },
+      freeScope,
+    ).length,
+  )
+  assert.ok(
+    storeReleaseBillingReadinessFailures(
+      freeProfile,
+      freeScope,
+      () => false,
+      "unknown",
+    ).length,
+  )
+})
+
+test("paid release scope preserves every original billing requirement", () => {
+  for (const store of [undefined, "play_store", "app_store"])
+    assert.deepEqual(
+      storeReleaseBillingReadinessFailures(
+        freeProfile,
+        { softwarePlanPurchases: true },
+        () => false,
+        store,
+      ),
+      storeBillingReadinessFailures(freeProfile, () => false, store),
+    )
+})
 
 const { privateKey } = generateKeyPairSync("ec", { namedCurve: "prime256v1" })
 const { privateKey: playPrivateKey } = generateKeyPairSync("rsa", {

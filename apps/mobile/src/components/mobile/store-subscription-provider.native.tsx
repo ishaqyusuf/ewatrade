@@ -9,6 +9,7 @@ import {
   playSubscriptionOffer,
 } from "@/lib/store-subscription-disclosure"
 import { useTRPC } from "@/trpc/client"
+import releaseScope from "@root/mobile-release-scope.json"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { requireOptionalNativeModule } from "expo"
 import {
@@ -326,10 +327,11 @@ export function StoreSubscriptionProvider({
   const role = auth.profile?.role?.trim().toUpperCase()
   const businessId = auth.profile?.businessId
   if (
+    !releaseScope.softwarePlanPurchases ||
     !storeBillingLinked ||
     !auth.isAuthenticated ||
     !businessId ||
-    (role !== "OWNER" && role !== "ADMIN")
+    role !== "OWNER"
   )
     return children
   return (

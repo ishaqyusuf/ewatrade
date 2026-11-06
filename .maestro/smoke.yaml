@@ -60,6 +60,18 @@ name: QA catalog and sale draft
 - assertVisible: ${EXPECTED_TOTAL}
 - tapOn: Close create sale
 - assertNotVisible: Checkout
+# The current release is free. Paid activation must replace this acceptance
+# with its reviewed signed purchase/restore coverage, not silently skip it.
+- openLink: ${APP_SCHEME}://subscription-modal
+- assertVisible: Current plan
+- assertNotVisible: Plan unavailable
+- scrollUntilVisible:
+    element: EwaTrade is free during launch.*
+    direction: DOWN
+    timeout: 20000
+    centerElement: true
+- assertNotVisible: Restore purchases
+- assertNotVisible: Manage store subscriptions
 - runFlow: sign-out.yaml
 - tapOn: Open [0-9]+ QA businesses
 - tapOn: QA domain options

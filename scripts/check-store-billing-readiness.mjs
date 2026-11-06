@@ -1,5 +1,5 @@
 import { createPrivateKey } from "node:crypto"
-import { statSync } from "node:fs"
+import { readFileSync, statSync } from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 import { verifyBundledAppleRoots } from "./verify-apple-roots.mjs"
@@ -198,6 +198,46 @@ export function storeBillingReadinessFailures(
   return failures
 }
 
+// The same committed scope is bundled into the client. Free launch is an
+// explicit scope, never inferred from missing merchant credentials.
+export function storeReleaseBillingReadinessFailures(
+  config,
+  scope,
+  hasFile = fileExists,
+  store = undefined,
+) {
+  if (
+    !scope ||
+    typeof scope !== "object" ||
+    Array.isArray(scope) ||
+    Object.keys(scope).join(",") !== "softwarePlanPurchases" ||
+    typeof scope.softwarePlanPurchases !== "boolean"
+  )
+    return [
+      "Mobile release scope must declare softwarePlanPurchases as a boolean.",
+    ]
+  if (scope.softwarePlanPurchases)
+    return storeBillingReadinessFailures(config, hasFile, store)
+  const failures = []
+  if (store !== undefined && store !== "app_store" && store !== "play_store")
+    failures.push("Unknown billing store.")
+  if (config.APP_ENV !== "production" || config.DEV_PROFILE !== "prod")
+    failures.push("Run with the production environment profile.")
+  for (const flag of [
+    "STORE_BILLING_ENABLED",
+    "STORE_BILLING_PRODUCTION_CHECKOUT_ENABLED",
+    "OWNER_BILLING_ENABLED",
+  ]) {
+    if (
+      config[flag] !== undefined &&
+      config[flag] !== "" &&
+      config[flag] !== "false"
+    )
+      failures.push(`${flag} must remain disabled for the free mobile launch.`)
+  }
+  return failures
+}
+
 if (
   process.argv[1] &&
   path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)
@@ -213,16 +253,29 @@ if (
       : platform === "ios"
         ? "app_store"
         : undefined
+  const scope = JSON.parse(
+    readFileSync(
+      new URL("../apps/mobile/mobile-release-scope.json", import.meta.url),
+      "utf8",
+    ),
+  )
   const failures = invalidArguments
     ? ["Use --platform android, ios or all."]
-    : storeBillingReadinessFailures(process.env, fileExists, store)
+    : storeReleaseBillingReadinessFailures(
+        process.env,
+        scope,
+        fileExists,
+        store,
+      )
   if (failures.length) {
     console.error("Store billing configuration is not ready:")
     for (const failure of failures) console.error(`- ${failure}`)
     process.exitCode = 1
   } else {
     console.log(
-      "Store billing configuration preflight passed; provider sandbox and signed-device verification are still required.",
+      scope.softwarePlanPurchases
+        ? "Store billing configuration preflight passed; provider sandbox and signed-device verification are still required."
+        : "Free-launch billing scope passed locally: paid checkout is disabled. Hosted configuration, signed-client, privacy and store release acceptance remain required.",
     )
   }
 }

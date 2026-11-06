@@ -17,6 +17,12 @@ import {
 
 type InvitationInput = RouterInputs["retailOps"]["inviteStaff"]
 type InvitationDelivery = { email: boolean; whatsapp: string | null }
+type InvitationAttempt = {
+  scope: string
+  input: InvitationInput
+  accepted: boolean
+  delivery?: InvitationDelivery
+}
 type InvitationPhase = "editing" | "posting" | "uncertain" | "accepted"
 type InvitationContext = {
   scope: string | null
@@ -74,12 +80,7 @@ export function useStaffInvitation(context: InvitationContext) {
   current.current = { ...context, blocked }
   const mounted = useRef(false)
   const busy = useRef(false)
-  const request = useRef<{
-    scope: string
-    input: InvitationInput
-    accepted: boolean
-    delivery?: InvitationDelivery
-  } | null>(null)
+  const request = useRef<InvitationAttempt | null>(null)
   const [rawDraft, updateDraft] = useState<StaffDraft>(() => ({
     ...emptyStaffDraft(),
     channel: "whatsapp",
@@ -226,7 +227,7 @@ export function useStaffInvitation(context: InvitationContext) {
     }
     if (findStaffDuplicate(draft, active.rows)?.row.statusLabel === "Active")
       return
-    const attempt = {
+    const attempt: InvitationAttempt = {
       scope: active.scope,
       input: prepared.input,
       accepted: false,

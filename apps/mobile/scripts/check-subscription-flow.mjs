@@ -93,14 +93,20 @@ const CONTRACTS = [
       "SUBSCRIPTION_SCREEN_COPY",
       "Current plan",
       "StoreSubscriptionPanel",
-      'usesPlayBilling = Platform.OS === "android"',
+      'releaseScope.softwarePlanPurchases && Platform.OS === "android"',
+      "EwaTrade is free during launch. No subscription or payment is",
       "() => void subscriptionQuery.refetch()",
       'testID="subscription-scroll"',
       "contentContainerStyle={{ paddingBottom: 40 }}",
     ],
-    forbiddenMarkers: ["createSubscriptionCheckoutIntent", "PlanCard"],
+    forbiddenMarkers: [
+      "createSubscriptionCheckoutIntent",
+      "PlanCard",
+      "Linking.openURL",
+      "Request ${nextPlan.name}",
+    ],
     reason:
-      "mobile plans retain snapshot/usage state; Android purchases use the native panel while other platforms retain their informational support route",
+      "mobile plans retain snapshot/usage state; free launch shows informational plans without purchase or external upgrade actions",
   },
   {
     file: join(
@@ -141,6 +147,8 @@ const CONTRACTS = [
       'AppState.addEventListener("change"',
       "reconcileRef.current",
       "key={`${auth.profile?.id}:${businessId}`}",
+      "!releaseScope.softwarePlanPurchases",
+      'role !== "OWNER"',
     ],
     reason:
       "purchase verification and foreground recovery must outlive the billing screen and remain business scoped",
