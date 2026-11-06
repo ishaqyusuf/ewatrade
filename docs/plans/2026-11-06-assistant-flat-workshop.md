@@ -1,14 +1,23 @@
 # Assistant flat conversation Workshop plan
 
-6 November 2026. **Proposed plan; awaiting owner review before delegation.**
+6 November 2026. **Approved plan; five-flow pilot ready for owner review.**
 The owner confirmed Claude Opus 5.5 (`claude-opus-5-5`) at explicit high effort
 as the intended Workshop author. Codex coordinates the baseline, handoff and
-acceptance. This checkpoint prepares the plan only.
+acceptance. The initial planning checkpoint below is retained as history.
 
 **Approval update, 6 November:** the owner approved the plan and explicitly
-requested Opus5.5/high to start the five-flow pilot. The pilot is now assigned;
+requested Opus 5.5/high to start the five-flow pilot. Opus authored all five flows;
 owner review still precedes whole-library adoption and product implementation.
 The original planning checkpoint below is retained as history.
+
+**Pilot delivery:** direction `01` / Library v9,
+`abda4641-8bd1-4b68-ac28-1b86f3d6aac2`, is archived and browser-checked.
+[Exact revision](https://workshop.localhost/ewatrade/assistant/conversations/directions/01?rev=abda4641-8bd1-4b68-ac28-1b86f3d6aac2)
+and [verification receipt](../verification/2026-11-06-assistant-flat-pilot.md).
+Five flows / 47 preview states; 96 Current/Flat comparisons pass. The original
+435 entries / 1,689 steps are unchanged. Pilot ledger: 16/428 core scenes;
+412 and seven retained alternatives await the later audit. No new selection or
+implementation. Sequence phases 1–2 delivered; phases 3–4 await owner feedback.
 
 ## Intended result
 
@@ -174,7 +183,7 @@ Product anchors for fidelity and later implementation planning:
 - Keep selection, implementation, human approval and release records separate.
   Final owner approval must identify the exact revision before any product work.
 
-## Current checkpoint
+## Initial planning checkpoint (superseded by delivery above)
 
 - [x] Recording inspected; current selected/implemented baseline reconciled.
 - [x] Proposed approach and Opus brief prepared for owner review.
