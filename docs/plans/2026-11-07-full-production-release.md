@@ -1,8 +1,9 @@
 # Full Production release preflight — 7 November 2026
 
-Status: resumed after the owner explicitly authorized committing all current
-changes and deploying all to Production without a worktree. Source review and
-candidate verification are in progress. The narrow
+Status: all checkout changes committed at `0bd862763`; clean candidate checks
+passed. Full Preview release stopped at Prisma warnings before any component
+was released. Database-warning exception is pending; native Production also has
+an existing release-readiness block. No worktree was created. The narrow
 marketing-only proposal is superseded by the owner's “deploy all” instruction.
 
 ## Owner decisions
@@ -79,3 +80,38 @@ The first Marketing type run overlapped Prisma generation and failed on missing
 generated types; its rerun after generation passed. No source bypass was used.
 Preview smoke config now names the approved Samsung and existing QA business/item;
 its actual candidate build identity must be added after the Preview build.
+
+## Executed candidate and blocked rollout
+
+- Candidate `0bd862763`: all 26 changed files committed, including billing,
+  coordination history, documentation and the banking explainer. Clean candidate
+  smoke passed 259 tests/1,679 assertions; fast receipt is private/ignored.
+- `bun run release --preview --yes` used the current clean checkout. Database
+  push stopped on two new unique indexes on ManualPaymentReport:
+  `customerReceiptId` and `customerFundsRefundRequestId`. No override was passed.
+  Executor reported “Released so far: nothing”; no application Git push, jobs
+  deployment or native build/install followed. Production was not deployed.
+- Read-only profile-guarded inspection confirms both columns are absent in both
+  Preview and Production, so there can be no existing values to duplicate.
+  Prisma read-only schema diffs match exactly (SHA-256
+  `0d09846e09abe4cf111cba28e863921370142eef912ec371325b13ecdf6f694c`):
+  14 new tables, 8 new enum types, 19 unique indexes, 20 other indexes and
+  28 additive ALTER TABLE statements; no DROP, DELETE, UPDATE or TRUNCATE.
+  Private review files: `/tmp/full-release-preview-schema.sql` and
+  `/tmp/full-release-production-schema.sql`. No DDL was executed by these reads.
+- Specific owner approval was requested for accepting only those two warnings
+  on the reviewed targets. Project coding standards prohibit automatic
+  data-loss/reset flags and require preserving Prisma warnings. This exception
+  is not inferred from the general deployment request; new warnings still stop.
+- Existing Production API and public legal live preflights pass. The independent
+  `scripts/check-teen-release-readiness.mjs` exits 1 and explicitly blocks native
+  Production release pending verified adult-chat server safeguards, legal/media
+  handling, classifications and exact signed-path acceptance. Passing the public
+  legal probe does not clear that broader native gate. Do not edit away the gate
+  or claim that a private validation artifact is a Production rollout.
+
+Next: resolve the narrow database exception, pin the then-clean candidate,
+continue the existing Preview executor, install its exact Android build on the
+approved Samsung, and obtain matching Preview receipts. Resume Production only
+with its existing checks. Native release requires its separate acceptance work;
+store publishing/merchant setup has not been completed by this release task.
