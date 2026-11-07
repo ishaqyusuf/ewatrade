@@ -17,7 +17,11 @@ appId: ${APP_ID}
       - scroll
       - tapOn: Sign out
       - assertVisible: Sign out\?
+      # The menu remains in the accessibility tree behind the sheet.
+      # Match the confirmation action alongside Cancel, not its screen position.
       - tapOn:
           text: Sign out
-          below: Sign out\?
+          childOf:
+            containsChild:
+              text: Cancel
       - assertVisible: Sign in to your business
