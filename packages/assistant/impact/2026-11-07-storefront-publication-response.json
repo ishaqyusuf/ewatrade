@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "id": "2026-11-07-storefront-publication-response",
+  "tickets": [
+    "H02"
+  ],
+  "summary": "Resolve the existing Storefront publication lookup before streaming so unavailable shops return HTTP 404.",
+  "noAssistantImpact": "Response rendering order only. The same publication loader, domain authority, permissions, assistant commands and storefront shell remain unchanged.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/storefront-template-factory.md"
+    },
+    {
+      "topic": "feature",
+      "status": "updated",
+      "path": "docs/plans/2026-11-07-full-production-release.md"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "scripts/storefront-preview-guards.test.mjs",
+      "executed": true,
+      "result": "6 tests/51 assertions pass; unavailable-host HTTP 200 remains rejected. Focused source smoke: 265 tests/1730 assertions. Candidate runtime acceptance still pending."
+    }
+  ]
+}
