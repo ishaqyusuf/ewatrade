@@ -177,6 +177,7 @@ export const storeSubscriptionsRouter = createTRPCRouter({
           process.env,
           undefined,
           input?.store,
+          ctx.session.user.id,
         )
       const { purchaseAvailable, legalAcceptanceRequired } =
         await getStoreCheckoutLegalGate(

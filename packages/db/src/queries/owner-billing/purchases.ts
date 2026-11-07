@@ -19,6 +19,10 @@ import {
   runOwnerBillingTransaction,
   toDurableBillingProvider,
 } from "./prisma-repository"
+import {
+  type AppStoreReviewConfig,
+  resolveOwnerBillingEnvironment,
+} from "./review-environment"
 
 function payloadRecord(payload: Prisma.JsonValue | null | undefined) {
   return payload && typeof payload === "object" && !Array.isArray(payload)
@@ -65,6 +69,7 @@ export async function applyVerifiedOwnerSubscription(
     status: "active" | "cancelled"
     cancelAtPeriodEnd: boolean
   },
+  reviewConfig?: AppStoreReviewConfig,
 ) {
   if ((input.planId as string) === "free")
     throw new Error("Free is not a store subscription plan.")
@@ -87,6 +92,12 @@ export async function applyVerifiedOwnerSubscription(
   return runOwnerBillingTransaction(db, input.accountToken, async (tx) => {
     const account = await readOwnerAccount(tx, input.accountToken)
     if (input.actorUserId) assertBillingOwner(account, input.actorUserId)
+    const expectedEnvironment = resolveOwnerBillingEnvironment(
+      input.expectedEnvironment,
+      account.ownerUserId,
+      input.provider,
+      reviewConfig,
+    )
     const existing = await tx.ownerBillingPurchase.findUnique({
       where: { provider_purchaseDigest: { provider, purchaseDigest } },
       select: { accountId: true, environment: true, verifiedAt: true },
@@ -151,13 +162,13 @@ export async function applyVerifiedOwnerSubscription(
         legacy ||
         (existing && existing.accountId !== account.id) ||
         (existing && existing.environment !== input.environment) ||
-        input.environment !== input.expectedEnvironment
+        input.environment !== expectedEnvironment
       )
         throw new OwnerBillingPolicyError("PURCHASE_BINDING_MISMATCH")
     } else {
       assertOwnerPurchaseBinding({
         account,
-        environment: input.expectedEnvironment,
+        environment: expectedEnvironment,
         verifiedAccountToken: input.accountToken,
         verifiedEnvironment: input.environment,
         provider: input.provider,

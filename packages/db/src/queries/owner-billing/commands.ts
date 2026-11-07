@@ -8,6 +8,10 @@ import {
   decideOwnerBusinessEnrollment,
   projectOwnerBusinessAccess,
 } from "./policy"
+import {
+  type AppStoreReviewConfig,
+  resolveOwnerBillingEnvironment,
+} from "./review-environment"
 
 export interface OwnerBillingTransaction {
   getAccount(accountId: string): Promise<OwnerBillingAccount | null>
@@ -56,7 +60,12 @@ async function requireAccount(
 export function enrollOwnerBusiness(
   repository: OwnerBillingRepository,
   input: OwnerCoverageCommand,
-  context: { environment: OwnerBillingEnvironment; now: () => Date },
+  context: {
+    environment: OwnerBillingEnvironment
+    now: () => Date
+    /** Trusted server config; absent uses the current process configuration. */
+    reviewConfig?: AppStoreReviewConfig
+  },
 ) {
   return repository.transaction(
     { accountId: input.accountId, tenantId: input.tenantId },
@@ -67,12 +76,18 @@ export function enrollOwnerBusiness(
       const ownedTenantIds = await tx.getOwnedTenantIds(account.ownerUserId, [
         ...new Set([...coverage.map((row) => row.tenantId), input.tenantId]),
       ])
+      const subscription = await tx.getSubscription(account.id)
       const snapshot = {
         account,
         coverage,
         ownedTenantIds,
-        subscription: await tx.getSubscription(account.id),
-        environment: context.environment,
+        subscription,
+        environment: resolveOwnerBillingEnvironment(
+          context.environment,
+          account.ownerUserId,
+          subscription?.provider,
+          context.reviewConfig,
+        ),
         now: context.now(),
       }
       const action = decideOwnerBusinessEnrollment(snapshot, {

@@ -1,10 +1,12 @@
 import { prisma } from "@ewatrade/db"
+import { isAppStoreReviewOwner } from "@ewatrade/db/owner-billing"
 import { recordPlayRefundReviewCase } from "@ewatrade/db/queries"
 import type { OpenAPIHono } from "@hono/zod-openapi"
 import { OAuth2Client } from "google-auth-library"
 import { bodyLimit } from "hono/body-limit"
 import { z } from "zod"
-import { appleBillingClient } from "./apple-subscriptions"
+import { forwardAppleSandboxNotification } from "./apple-notification-delivery"
+import { verifyAppleNotification } from "./apple-subscriptions"
 import { parsePlayRefundReviewNotification } from "./play-refund-review-notification"
 import {
   encryptPlayPendingRefundToken,
@@ -21,6 +23,9 @@ import {
 const googleIdentity = new OAuth2Client()
 
 type StoreNotificationDependencies = {
+  verifyAppleNotification?: typeof verifyAppleNotification
+  findAppleNotificationOwner?: (accountToken: string) => Promise<string | null>
+  forwardAppleSandboxNotification?: typeof forwardAppleSandboxNotification
   verifyGoogleIdentity?: (
     token: string,
     audience: string,
@@ -45,10 +50,9 @@ export function registerStoreNotificationRoutes(
       const body = z
         .object({ signedPayload: z.string().min(1).max(250_000) })
         .parse(await c.req.json())
-      const { verifier } = appleBillingClient()
-      const notification = await verifier.verifyAndDecodeNotification(
-        body.signedPayload,
-      )
+      const { environment, notification, transaction } = await (
+        dependencies.verifyAppleNotification ?? verifyAppleNotification
+      )(body.signedPayload)
       const signedTransaction = notification.data?.signedTransactionInfo
       const kind = classifyAppleStoreNotification({
         notificationType: notification.notificationType,
@@ -58,12 +62,37 @@ export function registerStoreNotificationRoutes(
       if (kind === "test") return c.json({ received: true })
       if (!signedTransaction)
         throw new Error("Apple notification has no signed transaction.")
-      const transaction =
-        await verifier.verifyAndDecodeTransaction(signedTransaction)
-      if (!transaction.transactionId) return c.json({ received: false }, 400)
+      if (!transaction?.transactionId || !transaction.appAccountToken)
+        return c.json({ received: false }, 400)
+      if (
+        environment === "sandbox" &&
+        process.env.STORE_BILLING_ENVIRONMENT === "production"
+      ) {
+        const ownerUserId = dependencies.findAppleNotificationOwner
+          ? await dependencies.findAppleNotificationOwner(
+              transaction.appAccountToken,
+            )
+          : (
+              await prisma.ownerBillingAccount.findUnique({
+                where: { id: transaction.appAccountToken },
+                select: { ownerUserId: true },
+              })
+            )?.ownerUserId
+        if (!isAppStoreReviewOwner(ownerUserId ?? undefined)) {
+          await (
+            dependencies.forwardAppleSandboxNotification ??
+            forwardAppleSandboxNotification
+          )(body.signedPayload)
+          return c.json({ received: true })
+        }
+      }
       await reconcileSubscription(prisma, {
         store: "app_store",
         purchaseId: transaction.transactionId,
+        appleNotification: {
+          environment,
+          accountToken: transaction.appAccountToken,
+        },
       })
       return c.json({ received: true })
     } catch {

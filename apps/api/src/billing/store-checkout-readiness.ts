@@ -1,5 +1,6 @@
 import { createPrivateKey } from "node:crypto"
 import { statSync } from "node:fs"
+import { isAppStoreReviewOwner } from "@ewatrade/db/owner-billing"
 import { isPlayRefundReviewSubmissionEnabled } from "@ewatrade/db/queries"
 import { isValidEmailSender } from "@ewatrade/email"
 import { appleRootCertificates } from "./apple-root-certificates"
@@ -58,6 +59,8 @@ export function isNewStoreCheckoutConfigured(
   config: NodeJS.ProcessEnv = process.env,
   fileExists: (file: string) => boolean = hasFile,
   store?: "app_store" | "play_store",
+  /** Authenticated server-derived User ID, never a catalog input. */
+  reviewOwnerUserId?: string,
 ) {
   const environment = config.STORE_BILLING_ENVIRONMENT
   const profile = config.DEV_PROFILE
@@ -70,7 +73,9 @@ export function isNewStoreCheckoutConfigured(
     config.APP_ENV === "production" &&
     profile === "prod" &&
     config.STORE_BILLING_ENABLED === "true" &&
-    config.STORE_BILLING_PRODUCTION_CHECKOUT_ENABLED === "true" &&
+    (config.STORE_BILLING_PRODUCTION_CHECKOUT_ENABLED === "true" ||
+      (store === "app_store" &&
+        isAppStoreReviewOwner(reviewOwnerUserId, config))) &&
     // Play refund-response custody is platform-specific. Apple-only clients
     // still require their verifier below and all common activation gates.
     (store === "app_store" || productionOperationsConfigured(config))

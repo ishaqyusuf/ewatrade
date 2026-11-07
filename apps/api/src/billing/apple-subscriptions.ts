@@ -1,4 +1,6 @@
 import {
+  APIError,
+  APIException,
   AppStoreServerAPIClient,
   Environment,
   ExpirationIntent,
@@ -6,7 +8,10 @@ import {
   type JWSTransactionDecodedPayload,
   SignedDataVerifier,
   Status,
+  VerificationException,
+  VerificationStatus,
 } from "@apple/app-store-server-library"
+import { appStoreReviewOwnerIds } from "@ewatrade/db/owner-billing"
 import { appleRootCertificates } from "./apple-root-certificates"
 import { requireAppleStoreIdentity } from "./store-app-identity"
 import type { VerifiedStoreEntitlement } from "./store-entitlement"
@@ -26,9 +31,9 @@ export function resolveAppleBillingEnvironment(value: string | undefined) {
   throw new Error("Apple subscription verifier environment is not configured.")
 }
 
-export function appleBillingClient() {
+export function appleBillingClient(override?: "production" | "sandbox") {
   const environment = resolveAppleBillingEnvironment(
-    process.env.STORE_BILLING_ENVIRONMENT,
+    override ?? process.env.STORE_BILLING_ENVIRONMENT,
   )
   const bundleId = required("APPLE_BUNDLE_ID")
   const appId =
@@ -57,6 +62,85 @@ export function appleBillingClient() {
   }
 }
 
+export type AppleBillingRuntime = {
+  environment: "production" | "sandbox"
+  client: Pick<
+    AppStoreServerAPIClient,
+    "getTransactionInfo" | "getAllSubscriptionStatuses"
+  >
+  verifier: Pick<
+    SignedDataVerifier,
+    | "verifyAndDecodeTransaction"
+    | "verifyAndDecodeRenewalInfo"
+    | "verifyAndDecodeNotification"
+  >
+}
+
+/** Apple documents this one error as the production-to-sandbox lookup signal. */
+export async function lookupAppleTransaction(
+  transactionId: string,
+  allowReviewSandbox: boolean,
+  createRuntime: (
+    environment?: "production" | "sandbox",
+  ) => AppleBillingRuntime = appleBillingClient,
+) {
+  let runtime = createRuntime()
+  try {
+    return {
+      runtime,
+      transaction: await runtime.client.getTransactionInfo(transactionId),
+    }
+  } catch (error) {
+    if (
+      !allowReviewSandbox ||
+      runtime.environment !== "production" ||
+      !(error instanceof APIException) ||
+      error.httpStatusCode !== 404 ||
+      error.apiError !== APIError.TRANSACTION_ID_NOT_FOUND
+    )
+      throw error
+    runtime = createRuntime("sandbox")
+    return {
+      runtime,
+      transaction: await runtime.client.getTransactionInfo(transactionId),
+    }
+  }
+}
+
+/** A second, full signature/bundle/environment verification is mandatory. */
+export async function verifyAppleNotification(
+  signedPayload: string,
+  createRuntime: (
+    environment?: "production" | "sandbox",
+  ) => AppleBillingRuntime = appleBillingClient,
+  config: Record<string, string | undefined> = process.env,
+) {
+  let runtime = createRuntime()
+  let notification: Awaited<
+    ReturnType<SignedDataVerifier["verifyAndDecodeNotification"]>
+  >
+  try {
+    notification =
+      await runtime.verifier.verifyAndDecodeNotification(signedPayload)
+  } catch (error) {
+    if (
+      runtime.environment !== "production" ||
+      appStoreReviewOwnerIds(config).length === 0 ||
+      !(error instanceof VerificationException) ||
+      error.status !== VerificationStatus.INVALID_ENVIRONMENT
+    )
+      throw error
+    runtime = createRuntime("sandbox")
+    notification =
+      await runtime.verifier.verifyAndDecodeNotification(signedPayload)
+  }
+  const signedTransaction = notification.data?.signedTransactionInfo
+  const transaction = signedTransaction
+    ? await runtime.verifier.verifyAndDecodeTransaction(signedTransaction)
+    : undefined
+  return { environment: runtime.environment, notification, transaction }
+}
+
 export function selectAppleSubscriptionStatus<
   T extends { originalTransactionId?: string | null },
 >(
@@ -78,9 +162,19 @@ export function selectAppleSubscriptionStatus<
 
 export async function verifyAppleSubscription(
   transactionId: string,
+  allowReviewSandbox = false,
+  createRuntime: (
+    environment?: "production" | "sandbox",
+  ) => AppleBillingRuntime = appleBillingClient,
 ): Promise<VerifiedStoreEntitlement> {
-  const { client, environment, verifier } = appleBillingClient()
-  const transaction = await client.getTransactionInfo(transactionId)
+  const {
+    runtime: { client, environment, verifier },
+    transaction,
+  } = await lookupAppleTransaction(
+    transactionId,
+    allowReviewSandbox,
+    createRuntime,
+  )
   if (!transaction.signedTransactionInfo)
     throw new Error("Apple transaction was not found.")
   const initial = await verifier.verifyAndDecodeTransaction(

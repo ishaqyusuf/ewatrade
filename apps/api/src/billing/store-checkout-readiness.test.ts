@@ -354,3 +354,71 @@ test("Android checkout does not require Apple products or Apple private credenti
     isNewStoreCheckoutConfigured([], playConfig, hasFixtureFile, "play_store"),
   ).toBe(false)
 })
+
+test("review-only Apple checkout uses authenticated allowlisted owner without opening public or Google checkout", () => {
+  const ownerId = "review-owner-123"
+  const review = {
+    ...productionConfig,
+    OWNER_BILLING_ENABLED: "true",
+    STORE_BILLING_PRODUCTION_CHECKOUT_ENABLED: "false",
+    APP_STORE_REVIEW_SANDBOX_ENABLED: "true",
+    APP_STORE_REVIEW_OWNER_IDS: JSON.stringify([ownerId]),
+  }
+  expect(
+    isNewStoreCheckoutConfigured(
+      products,
+      review,
+      hasFixtureFile,
+      "app_store",
+      ownerId,
+    ),
+  ).toBe(true)
+  expect(
+    isNewStoreCheckoutConfigured(
+      products,
+      review,
+      hasFixtureFile,
+      "app_store",
+      "other-owner-123",
+    ),
+  ).toBe(false)
+  expect(
+    isNewStoreCheckoutConfigured(products, review, hasFixtureFile, "app_store"),
+  ).toBe(false)
+  expect(
+    isNewStoreCheckoutConfigured(
+      products,
+      review,
+      hasFixtureFile,
+      "play_store",
+      ownerId,
+    ),
+  ).toBe(false)
+  expect(
+    isNewStoreCheckoutConfigured(
+      products,
+      review,
+      hasFixtureFile,
+      undefined,
+      ownerId,
+    ),
+  ).toBe(false)
+  for (const changed of [
+    { OWNER_BILLING_ENABLED: "false" },
+    { STORE_BILLING_ENABLED: "false" },
+    { APP_STORE_REVIEW_SANDBOX_ENABLED: "false" },
+    { APPLE_APP_ID: "wrong" },
+    { APPLE_IAP_PRIVATE_KEY: "invalid" },
+    { DEV_PROFILE: "preview" },
+  ]) {
+    expect(
+      isNewStoreCheckoutConfigured(
+        products,
+        { ...review, ...changed },
+        hasFixtureFile,
+        "app_store",
+        ownerId,
+      ),
+    ).toBe(false)
+  }
+})

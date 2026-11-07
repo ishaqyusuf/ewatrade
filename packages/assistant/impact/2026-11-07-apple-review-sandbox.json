@@ -1,0 +1,56 @@
+{
+  "version": 1,
+  "id": "2026-11-07-apple-review-sandbox",
+  "tickets": ["A05"],
+  "summary": "Prepare a default-off Apple App Review Sandbox path restricted to exact server-owned reviewer User IDs, retaining true receipt environment and current business authority.",
+  "noAssistantImpact": "Billing remains form-only through existing canonical store subscription commands. No assistant tool or public input is added. Reviewer policy is server-owned; current owner/member locks, legal acceptance, store signature verification and business entitlement limits remain mandatory. Google and ordinary Production environment rejection are unchanged.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/native-store-billing.md"
+    },
+    {
+      "topic": "api",
+      "status": "local_only",
+      "path": ".brain/api/contracts.md"
+    },
+    {
+      "topic": "api",
+      "status": "local_only",
+      "path": ".brain/api/permissions.md"
+    },
+    {
+      "topic": "decision",
+      "status": "local_only",
+      "path": ".brain/decisions/2026-11-07-apple-review-sandbox.md"
+    },
+    {
+      "topic": "feature",
+      "status": "updated",
+      "path": "docs/billing/apple-paid-launch-2026-11-07.md"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "apps/api/src/billing/apple-review-verification.test.ts",
+      "executed": true,
+      "result": "Only transaction4040010/environment mismatch trigger the separately verified Sandbox fallback; signature, bundle and outage failures refuse. These are injected-runtime source tests, not signed StoreKit evidence."
+    },
+    {
+      "kind": "test",
+      "path": "apps/api/src/billing/apple-notification-delivery.test.ts",
+      "executed": true,
+      "result": "Approved reviewer routes locally; other signed Sandbox routes one way to fixed Preview, with bounded no-redirect peer acknowledgement; failures remain retryable and Preview does not relay back."
+    },
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/owner-billing/review-environment.integration.test.ts",
+      "executed": true,
+      "result": "Guarded Development1/20 passes with cleanup: ordinary/Google/foreign actor rejection, durable Sandbox facts, current owner coverage/enrollment and disabled-policy or ownership-loss fallback. No Production database or Apple provider operation."
+    }
+  ]
+}

@@ -1,5 +1,11 @@
 # Apple paid-at-launch preparation — 7 November 2026
 
+Current checkpoint: Apple acceptance remains **2/6**. The common Production
+database/web/API/jobs release completed at `bf9bc356` (receipt `5d961377e`);
+the earlier configuration-only/no-deployment entries below are historical.
+Checkout remains closed. Controlled App Review Sandbox source is prepared after
+that release and requires its own coordinated deployment and signed acceptance.
+
 The owner requires paid business-owner software subscriptions at launch. Staff
 do not subscribe individually. The app download price is a separate setting.
 Monthly Nigeria reference: Starter NGN5,000, Growth NGN15,000, Pro NGN30,000;
@@ -42,8 +48,8 @@ references, while Starter US is3.99USD versus baseline2.99 and Pro US22.99 versu
 The actual saved prices are in [the525row export](apple-regional-prices-2026-11-07.csv).
 The [exact server mapping](apple-subscription-products.json) parses through the
 existing catalog schema and is now installed in API Preview/Production settings.
-Those settings take effect with the next coordinated deployment; live verification
-remains I03, rather than an assumed consequence of configuration.
+Those settings were included in the common `bf9bc356` deployment. Live billing
+verification remains I03, rather than an assumed consequence of deployment.
 
 The owner resumed Apple work after prioritizing dashboard password recovery.
 That separate chat completed source df9dbb798; reuse its evidence. Shared launch,
@@ -192,8 +198,8 @@ now have these eight settings, with successful add receipts and name-only readba
 - STORE_BILLING_PRODUCTION_CHECKOUT_ENABLED is explicitly false for both.
 
 Existing STORE_BILLING_ENABLED was not changed, nor were its values retrieved.
-No deployment occurred; the running deployment does not inherit new settings until
-redeployed. Android must merge actual future Play entries into the shared mapping,
+At configuration time no deployment occurred; the subsequent common `bf9bc356`
+release deployed the API. Android must merge actual future Play entries into the shared mapping,
 not replace it with a Play-only array. Hosted write success/name readback is not a
 successful transaction, notification canary or private-key verification at runtime.
 
@@ -220,3 +226,63 @@ current code through the existing release coordinator before delivery is accepte
 Fresh App Information also retains incomplete age/content-rights and China ICP
 fields; subscription availability in175storefronts is not acceptance of every
 country's app-distribution requirements. Do not invent a filing or declaration.
+
+## Controlled App Review Sandbox — source prepared after common deployment
+
+Apple [reviews In-App Purchases in Sandbox](https://developer.apple.com/help/app-review/before-submitting-for-review/configure-in-app-purchases/),
+including a release build pointed at Production. Production-only verification
+and the ordinary environment mismatch guard therefore need a narrowly scoped
+review path. No client-selected environment or email-based entitlement is added.
+
+- `APP_STORE_REVIEW_SANDBOX_ENABLED` defaults false. It requires the Production
+  profile, both store/owner billing enabled and `APP_STORE_REVIEW_OWNER_IDS` as a
+  JSON array of one to five distinct immutable User IDs. The dedicated reviewer
+  workspace must first be created by the owner, then resolved by its approved
+  inbox to an exact current User ID. No reviewer ID is configured yet.
+- Only the authenticated allowlisted owner can see review-only Apple checkout
+  while public checkout is false. Existing legal acceptance and OWNER-role gates
+  still apply. Google and the legacy combined catalog retain their prior gates.
+- Apple Production transaction lookup retries Sandbox only for HTTP404 with
+  `TRANSACTION_ID_NOT_FOUND` (4040010), as [Apple documents](https://developer.apple.com/documentation/appstoreserverapi).
+  Authorization/outage/other errors never trigger fallback. Sandbox transaction,
+  renewal and notification signatures are verified using the Sandbox verifier;
+  bundle validation and account binding remain mandatory.
+- Verified facts remain `environment=sandbox` in durable purchase/subscription
+  rows. Purchase application and enrollment resolve the approved owner's Apple
+  environment under existing account/member locks; central coverage readers use
+  the same policy. Ordinary owners, Google, wrong actors and legacy business
+  receipts cannot receive this exception. Disabling it removes projected Sandbox
+  access without deleting purchase history, business records or coverage.
+- Apple has only one Sandbox notification destination per app. After coordinated
+  deployment/configuration and signed checks, set that destination to the same
+  Production webhook as Production notifications. The gateway fully verifies
+  both Sandbox signatures before using the signed account token to route an
+  approved reviewer locally. Other genuine Sandbox envelopes relay one way to
+  the fixed Preview webhook only with `APP_STORE_SANDBOX_FORWARD_ENABLED=true`.
+  Redirects, arbitrary destinations and credentials are excluded; delivery is
+  bounded to5seconds/1KB acknowledgement. The peer must return HTTP200 with
+  `received:true` before Apple is acknowledged. Preview never relays back.
+
+The saved Sandbox URL is **still Preview**; no live review flags, URL or deployment
+changed in this source phase. The genuine earlier Apple TEST canary was signature-
+verified but Apple reported an unsuccessful HTTP response; replay returned503
+because the receiver is gated off. This is a negative delivery result, not I03
+or I05 acceptance. A TEST acknowledgement alone will not prove paid lifecycle flow.
+
+Before signed review testing, ensure the dedicated workspace has versioned Free
+owner-billing metadata and no legacy signup launch grant masking the purchase.
+Signup before billing cutover can follow the legacy grant path; inspect only the
+approved account and prepare it through a reviewed bounded account-specific step.
+Do not rewrite ordinary customers or manufacture a paid receipt/grant. The owner
+must finish email verification, agreement review and any new credentials directly.
+The approved reviewer inbox is retained in private setup context, not this packet.
+
+Source evidence: focused billing57tests/345assertions, guarded Development
+Prisma integration1test/20assertions with all owned fixtures removed, and full
+API/DB TypeScript pass. The integration injects trusted policy configuration;
+the connected database profile remains canonical Local/Development throughout.
+It verifies ordinary/Google/wrong-owner refusal, unchanged Sandbox persistence,
+retry uniqueness, covered-plan projection, disabled-policy Free fallback and
+membership-loss refusal. No Apple charge or signed StoreKit test occurred.
+Final source smoke, assistant gates and commit are recorded in the handoff receipt.
+Apple acceptance remains **2/6**.

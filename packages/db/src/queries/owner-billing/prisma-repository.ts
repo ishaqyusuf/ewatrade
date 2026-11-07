@@ -16,6 +16,10 @@ import {
   currentOwnerSubscription,
   projectOwnerBusinessAccess,
 } from "./policy"
+import {
+  type AppStoreReviewConfig,
+  resolveOwnerBillingEnvironment,
+} from "./review-environment"
 
 /**
  * Owner-wide billing stays off until the reviewed cutover. Both the explicit
@@ -307,14 +311,16 @@ export async function readOwnerCoverageSnapshot(
     environment: OwnerBillingEnvironment
     now?: Date
   },
+  reviewConfig?: AppStoreReviewConfig,
 ) {
   const account = await readAccount(db, input.accountId, false)
   if (!account) return null
   const coverage = await readCoverage(db, account.id)
+  const subscription = await readSubscription(db, account.id)
   return {
     account,
     coverage,
-    subscription: await readSubscription(db, account.id),
+    subscription,
     ownedTenantIds: await readOwnedTenantIds(
       db,
       account.ownerUserId,
@@ -326,7 +332,12 @@ export async function readOwnerCoverageSnapshot(
       ],
       false,
     ),
-    environment: input.environment,
+    environment: resolveOwnerBillingEnvironment(
+      input.environment,
+      account.ownerUserId,
+      subscription?.provider,
+      reviewConfig,
+    ),
     now: input.now ?? new Date(),
   }
 }

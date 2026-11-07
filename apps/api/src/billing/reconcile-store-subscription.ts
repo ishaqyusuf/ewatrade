@@ -1,6 +1,7 @@
 import type { PrismaClient } from "@ewatrade/db"
 import {
   applyVerifiedOwnerSubscription,
+  isAppStoreReviewOwner,
   ownerBillingRuntime,
   recordOwnerPlayVoidedOrder,
 } from "@ewatrade/db/owner-billing"
@@ -25,19 +26,49 @@ export async function reconcileStoreSubscription(
     /** The authenticated purchaser; notifications have none. */
     actorUserId?: string
     voidedOrderId?: string
+    /** Server-only context from an already verified Apple notification. */
+    appleNotification?: {
+      environment: "production" | "sandbox"
+      accountToken: string
+    }
   },
 ) {
   const observedAt = new Date()
+  const notifiedOwner =
+    input.store === "app_store" &&
+    input.appleNotification?.environment === "sandbox"
+      ? await db.ownerBillingAccount.findUnique({
+          where: { id: input.appleNotification.accountToken },
+          select: { ownerUserId: true },
+        })
+      : null
   const purchase =
     input.store === "app_store"
-      ? await verifyAppleSubscription(input.purchaseId)
+      ? await verifyAppleSubscription(
+          input.purchaseId,
+          isAppStoreReviewOwner(input.actorUserId) ||
+            isAppStoreReviewOwner(notifiedOwner?.ownerUserId),
+        )
       : await verifyGoogleSubscription(input.purchaseId)
+  if (
+    input.appleNotification &&
+    (input.store !== "app_store" ||
+      purchase.environment !== input.appleNotification.environment ||
+      purchase.accountToken !== input.appleNotification.accountToken)
+  )
+    throw new Error(
+      "Apple notification binding does not match the verified purchase.",
+    )
   const binding = await db.storeBillingAccount.findUnique({
     where: { id: purchase.accountToken },
     select: { tenantId: true },
   })
   if (!binding)
     return reconcileOwnerStoreSubscription(db, input, purchase, observedAt)
+  // Legacy business receipts have no reviewer exception. Never grant sandbox
+  // coverage to an ordinary Production Tenant through this older path.
+  if (purchase.environment !== process.env.STORE_BILLING_ENVIRONMENT)
+    throw new Error("Purchase environment does not match.")
   if (input.tenantId && binding.tenantId !== input.tenantId)
     throw new Error("Purchase workspace binding does not match.")
   const planId = resolveStorePlan(purchase.provider, purchase.productId)

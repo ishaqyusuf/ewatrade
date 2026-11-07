@@ -42,7 +42,7 @@ user to repeat it.
 | Phase | Current state | Next action |
 | --- | --- | --- |
 | 1. Shared contract and core source | Owner limits, coverage, versioned signup and retained-record downgrade implemented (0bd862763; verification daf00b5f0). Manual native addresses implemented cf831c187. | Reuse valid checks. Apple courtesy source and platform-specific runtime readiness are implemented with23billing tests/136assertions, scoped259/1679, API types and H01/H02 passing; signed acceptance remains open. Completed Play policy is unchanged. |
-| 2. Store products and configuration | Apple reports all three monthly products created: Pro6832031107, Growth6832035627, Starter6832036267 in group22556222. All three monthly price schedules saved across175storefronts, ranked Pro/Growth/Starter with English metadata and owner-only purchase options. Exact Apple mapping/verifier settings are installed in API Preview/Production; deployment/notification wiring remain open. Play subscription page freshly refuses access until a Google Payments merchant account is set up. | Deploy the installed Apple target settings/current source through the existing coordinator; notification URLs and native linkage are configured, unsigned compile passed, signed delivery/money acceptance remains open; owner completes Play profile, then create/map actual Play monthly products. Play has a broad177-country draft saved, not submitted or paid-territory accepted. |
+| 2. Store products and configuration | Apple three ranked monthly products and175price schedules each are saved. Exact mapping/verifier settings were included in the common bf9bc356 API deployment; billing activation and signed delivery remain open. Play subscription page requires a Google Payments merchant account. | Finish the dedicated Apple reviewer workspace and controlled Sandbox source/configuration through the existing coordinator; native linkage/unsigned compile are proven, signed money acceptance remains open. Owner completes Play profile, then create/map actual Play monthly products. Play177-country draft remains unsubmitted and is not paid-territory acceptance. |
 | 3. Shared runtime, legal and operations | Billing activation closed. Shared owner contract/source exists; common privacy/safety and operational acceptance remain open. | Verify API/jobs/notifications and operator delivery, paid legal publication, SDK/provider destinations and preserved-record deletion cases without repeating completed empty-data tests. Reuse password-recovery work. |
 | 4. Signed acceptance | Android A01–A08:1/8; Apple I01–I06:2/6 after catalog/target-configuration acceptance. Source/config tests do not close these gates. | Freeze exact candidates, inspect permissions/native linkage and run licensed purchase/restore/renewal/grace/refund/switching tests. Reuse platform-valid evidence only. |
 | 5. Submission and publication | Public release after approval/checks is authorized. Neither platform has paid-release acceptance yet. | Complete truthful store declarations/reviewer access, submit accepted candidates, follow review and publish through existing release authority. |
@@ -72,6 +72,23 @@ decisions. Its three products use IDs `com.ewatrade.owner.pro.monthly`,
 Its regional tables can round the20% reference increase to the same local price
 point; report actual store prices rather than claiming an exact local increase.
 Apple completed those tables; [525actual country prices](apple-regional-prices-2026-11-07.csv) and [exact mappings](apple-subscription-products.json) are retained. Target Apple configuration is installed (Preview sandbox/Production production, checkout false in both), with no deployment. Existing STORE_BILLING_ENABLED is untouched. Android must merge Play mappings without replacing Apple entries. Apple courtesy source is committed aea81ba0; signed lifecycle proof remains Apple-owned. Both Apple server-notification URLs are saved for the existing Production/Preview API origins; live canary waits for deployment. Owner-created Nigeria sandbox tester is verified. ExpoIap/OpenIAP link into a successful unsigned Preview simulator build; this does not establish signed store acceptance.
+
+Subsequent common release `bf9bc356` deployed database, Dashboard, Marketing, API
+and jobs; receipt `5d961377e` supersedes the earlier no-deployment statement.
+Checkout is still closed. The Apple TEST notification received503 with the current
+receiver gate, so signed delivery is not accepted. Controlled App Review Sandbox
+source is now prepared after that release: exact server-owned reviewer User-ID
+allowlist, real Sandbox facts retained, existing locks/role/binding checks, and a
+bounded one-way signed notification relay to Preview. Google and ordinary
+Production mismatch rejection remain. New flags default false; no live flag,
+notification URL or deployment changed in this phase. Dedicated reviewer signup
+is a human handoff; source/Development tests do not raise Apple beyond2/6.
+See the [Apple packet](apple-paid-launch-2026-11-07.md#controlled-app-review-sandbox--source-prepared-after-common-deployment).
+
+Android navigation/readiness diagnostics are owned by the Android chat. Its
+[receipt](../verification/2026-11-07-android-navigation-readiness.md) distinguishes
+transient accessibility timing, sign-out harness issues and an observed ANR;
+do not assume a persistent dock regression or count diagnostics as release smoke.
 
 Android changed the pending Nigeria-only selection to all177named Play countries/
 regions, leaving **Rest of World unselected** so unspecified territories are not
