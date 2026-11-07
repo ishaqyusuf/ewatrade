@@ -1,4 +1,3 @@
-import { StorefrontLoading } from "@/components/storefront/storefront-loading"
 import { StorefrontShell } from "@/components/storefront/storefront-shell"
 import { commerceAdapter } from "@/lib/storefront-commerce-adapter"
 import {
@@ -9,9 +8,12 @@ import {
 import { storefrontPresentation } from "@/lib/storefront-presentation"
 import "@ewatrade/storefront-templates/styles.css"
 import { notFound } from "next/navigation"
-import { type ReactNode, Suspense } from "react"
+import type { ReactNode } from "react"
 
-async function PublishedStorefront({ children }: { children: ReactNode }) {
+export default async function StorefrontLayout({
+  children,
+}: { children: ReactNode }) {
+  // Resolve publication before the route's loading boundary can stream HTTP 200.
   const { load } = await loadStorefrontFrame("shell")
   if (load.status !== "ready") notFound()
   const customer = load.snapshot.resources.commerce
@@ -24,15 +26,5 @@ async function PublishedStorefront({ children }: { children: ReactNode }) {
     >
       {children}
     </StorefrontShell>
-  )
-}
-
-export default function StorefrontLayout({
-  children,
-}: { children: ReactNode }) {
-  return (
-    <Suspense fallback={<StorefrontLoading label="storefront" />}>
-      <PublishedStorefront>{children}</PublishedStorefront>
-    </Suspense>
   )
 }

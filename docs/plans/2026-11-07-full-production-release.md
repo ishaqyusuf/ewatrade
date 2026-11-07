@@ -1,8 +1,10 @@
 # Full Production release preflight — 7 November 2026
 
-Status: database warning exception approved and applied to Preview. Candidate
-`daf00b5f0` deployed database, Dashboard, Marketing and API to Preview. Storefront
-stopped on new concurrent dirty mobile changes; jobs and Android did not run.
+Status: database warning exception approved and applied to Preview. Frozen candidate
+`cb36b5689` deployed Dashboard, Marketing and API to Preview. Storefront built but
+its unregistered-host verification rejected a streamed HTTP 200 instead of 404;
+jobs and Android did not run. The publication check now precedes the route loading
+boundary, preserving the storefront UI and the strict runtime check.
 Production remains untouched and native release has a separate readiness block.
 No worktree was created. The narrow
 marketing-only proposal is superseded by the owner's “deploy all” instruction.
@@ -11,6 +13,8 @@ marketing-only proposal is superseded by the owner's “deploy all” instructio
 
 - Deploy all committed changes through the normal production release path.
 - Keep worktree use prohibited (explicit response during this preflight).
+- The Samsung disconnected; the owner explicitly authorized `emulator-5554`
+  instead, including installation of the candidate Preview build.
 - Use Samsung SM-S928U1, serial R5CX153J81W, for required Android Preview testing;
   installation of the Preview build is authorized if needed. Existing QA data,
   draft cancellation, no submitted sale/payment. This authorization is retained;
