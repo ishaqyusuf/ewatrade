@@ -21,8 +21,21 @@ retained operation access after lapse, and verified Play grace projection.
 - Earlier source runs correctly failed old 2-product/30-order/free-launch-label
   expectations. They were updated to the owner's approved contract; substantive
   expiry/admission/grant regressions were added. No failing check was suppressed.
-- Final types, owned-path fast smoke and H01/H02 results are recorded below after
-  execution. Mobile types already passed after the core integration.
+- Final focused rerun passed: 67 tests / 270 assertions across the same six files.
+- API, Dashboard, Marketing and Mobile TypeScript checks passed. The final
+  API/Dashboard/Marketing closeout batch exited 0; the earlier completed Mobile
+  check remains valid because its source did not change afterward.
+- Owned-path fast smoke passed: 259 tests / 1,679 assertions, QA tooling types
+  and changed-file Biome checks. Scope was this task's code, impact record and
+  documentation; unrelated coordination/explainer edits were excluded. No
+  unsupported changed-path mappings remained. This is not native UI acceptance.
+- H01 assistant coverage and H02 assistant impact checks passed. H02 saw both
+  concurrent billing impact records; capability/procedure coverage was unchanged.
+
+Implementation was included by the shared checkout release coordinator in
+`0bd862763`. This closeout adds evidence only and does not modify that frozen
+runtime candidate. The release coordinator's separate rollout status is recorded
+in `docs/plans/2026-11-07-full-production-release.md`.
 
 No schema changed, so no Prisma migration/push was required. Existing record
 update and staff membership paths were reviewed: quota guards remain on new
