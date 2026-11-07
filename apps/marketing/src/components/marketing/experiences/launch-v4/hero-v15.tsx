@@ -9,8 +9,8 @@ export function HeroV15({ signupEnabled }: { signupEnabled: boolean }) {
     <section className="hero wrap">
       <div className="hero-copy">
         <h1>
-          Your whole business, <br />
-          from request to paid.
+          <span className="hero-line">Your whole business,</span>
+          <span className="hero-line">from request to paid.</span>
         </h1>
         <div className="hero-side">
           <p className="lead">

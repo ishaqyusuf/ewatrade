@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "id": "2026-11-07-marketing-v18",
+  "tickets": ["H02"],
+  "summary": "Implement approved marketing Workshop 01 v18 and complete fixed-label Logly coverage of landing controls.",
+  "noAssistantImpact": "Public marketing styling, illustrative records and optional analytics only. Existing public assistant and registration commands, permissions, confirmations and domain operations are unchanged. Preview controls create no sale, payment or signed review link. Logly provider, consent/privacy, QA denial, fixed project and server credential boundaries remain unchanged. No new merchant capability or deployment.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/marketing-launch-v4.md"
+    },
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/logly-analytics.md"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "review",
+      "path": "apps/marketing/src/components/marketing/experiences/launch-v4/marketing-tracking.test.tsx",
+      "executed": true,
+      "result": "Rendered controls carry fixed labels accepted by real sanitizer; isolated Logly proxy delivery, malformed-label rejection and form outcome semantics pass. Local desktop/390px/320px and marketing types pass. Hosted persistence and release not claimed."
+    }
+  ]
+}

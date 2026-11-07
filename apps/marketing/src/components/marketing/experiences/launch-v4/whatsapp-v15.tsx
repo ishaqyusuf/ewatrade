@@ -33,13 +33,10 @@ export function WhatsAppV15() {
             On <span>WhatsApp.</span>
           </h2>
           <div className="launch-argument">
-            <h3>
-              Turn a message <br />
-              into an order draft.
-            </h3>
+            <h3>Tell EwaTrade what you sold.</h3>
             <p>
-              Tell EwaTrade what you sold. It prepares the order with the
-              customer, items and amount, ready for you to review.
+              Send the customer, items and amount. EwaTrade prepares a draft for
+              you to check.
             </p>
           </div>
           <div className="launch-actions">
@@ -63,9 +60,7 @@ export function WhatsAppV15() {
               Watch the conversation <Icon name="arrowRight" />
             </a>
           </div>
-          <p className="launch-approval">
-            You check the details. You decide what gets saved.
-          </p>
+          <p className="launch-approval">Nothing is saved until you approve.</p>
         </div>
         <figure className="chat-proof" id="whatsapp-demo">
           <div
@@ -102,8 +97,8 @@ export function WhatsAppV15() {
                 hidden={phase < 1}
               >
                 <p>
-                  Draft 4 Small crates of eggs for Jawdah QA Customer, ₦4,500
-                  each + ₦1,500 service charge.
+                  Draft 4 small crates of eggs for Amina Bello, ₦4,500 each +
+                  ₦1,500 service charge.
                 </p>
                 <small>
                   10:12 <span>✓✓</span>
@@ -123,8 +118,8 @@ export function WhatsAppV15() {
                 data-chat-step="1"
                 hidden={phase < 3}
               >
-                <p>🧾 Draft ready for Jawdah Poultry QA · Jawdah Poultry QA.</p>
-                <p>Order draft: ₦19,500.00 Jawdah QA Customer</p>
+                <p>🧾 Draft ready for Jawdah Poultry · Main store.</p>
+                <p>Order draft: ₦19,500.00 Amina Bello</p>
                 <p>
                   Review draft: <br />
                   <button
@@ -179,22 +174,22 @@ export function WhatsAppV15() {
           <li>
             <span>1</span>
             <div>
-              <strong>Say what you need.</strong>
-              <p>Use your own words, in a chat you already know.</p>
+              <strong>Send the details.</strong>
+              <p>A name, the items and your price.</p>
             </div>
           </li>
           <li>
             <span>2</span>
             <div>
-              <strong>Get a draft to review.</strong>
-              <p>Check the customer, quantities and amount.</p>
+              <strong>Check the draft.</strong>
+              <p>Correct anything before it is saved.</p>
             </div>
           </li>
           <li>
             <span>3</span>
             <div>
-              <strong>Make it official.</strong>
-              <p>Open EwaTrade and approve when it looks right.</p>
+              <strong>Approve in EwaTrade.</strong>
+              <p>You stay in control of the final record.</p>
             </div>
           </li>
         </ol>

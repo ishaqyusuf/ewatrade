@@ -12,7 +12,7 @@ export function WalkScene0() {
     >
       <div className="product-screen ui-scene storefront-real">
         <div className="public-store-head">
-          <strong>Jawdah Poultry QA</strong>
+          <strong>Jawdah Poultry</strong>
           <Icon name="cart" />
         </div>
         <div className="public-store-tabs">
@@ -64,9 +64,9 @@ export function WalkScene1() {
           <Icon name="chevronLeft" /> Back
         </div>
         <div className="sheet-title">Prepare quote</div>
-        <p className="product-muted">Jawdah QA Customer · Inspection visit</p>
+        <p className="product-muted">Amina Bello · Flock health visit</p>
         <div className="quote-service">
-          <strong>Inspection visit</strong>
+          <strong>Flock health visit</strong>
           <p>How many: 1 visit</p>
           <div className="illustration-label ">Price each</div>
           <div className="real-input">
@@ -75,7 +75,7 @@ export function WalkScene1() {
         </div>
         <div className="illustration-label ">What the price covers</div>
         <div className="real-textarea">
-          One inspection visit and a written summary.
+          One flock health visit and a written summary.
         </div>
         <div className="illustration-label ">
           Price is good until <span className="product-muted">(optional)</span>
@@ -100,7 +100,7 @@ export function WalkScene2() {
       <div className="product-screen ui-scene real-sheet">
         <div className="sheet-title">ORD–061</div>
         <p className="product-muted">
-          Jawdah QA Customer · created 28 Oct 2026, 21:05
+          Amina Bello · created 28 Oct 2026, 21:05
         </p>
         <div className="order-badges">
           <span className="product-pill ok">Paid</span>
@@ -206,10 +206,10 @@ export function WalkScene4() {
       aria-labelledby="walk-tab-4"
     >
       <div className="product-screen ui-scene real-sheet report-real">
-        <p className="product-eyebrow">Jawdah Poultry QA · Jawdah Poultry QA</p>
+        <p className="product-eyebrow">Jawdah Poultry · Main store</p>
         <div className="product-title">Reports</div>
         <p className="product-description">
-          How sales, stock and service jobs are going at Jawdah Poultry QA.
+          How sales, stock and service jobs are going at Jawdah Poultry.
         </p>
         <div className="report-date-controls">
           <span className="product-button">

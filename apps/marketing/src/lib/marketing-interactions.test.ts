@@ -9,6 +9,37 @@ import {
 
 const cases: [string, string, string, string][] = [
   ...[
+    "quantity_increase",
+    "quantity_decrease",
+    "quantity_edit",
+    "search",
+    "add_sample",
+    "next_step",
+    "previous_step",
+    "filter",
+  ].map((action): [string, string, string, string] => [
+    action,
+    "availability",
+    "sales",
+    "marketing_demo_interacted",
+  ]),
+  ...[
+    "storefront",
+    "orders",
+    "quotes",
+    "stock",
+    "customers",
+    "finance",
+    "team",
+    "reports",
+  ].map((category): [string, string, string, string] => [
+    "navigation",
+    "features",
+    category,
+    "marketing_demo_interacted",
+  ]),
+
+  ...[
     "assistant_message",
     "assistant_answer",
     "assistant_error",

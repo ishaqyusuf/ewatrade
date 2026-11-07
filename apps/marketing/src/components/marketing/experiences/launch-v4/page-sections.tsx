@@ -12,65 +12,102 @@ export function FeatureSuite() {
         to run your business.
       </h2>
       <p>
-        Products, services, orders, stock and money. <br />
-        All connected to the work you do every day.
+        From the first customer request to the last payment, <br />
+        keep the work and its records together.
       </p>
       <div className="suite-grid">
-        <a className="suite-feature" href="#journey" data-jump-step="0">
+        <a
+          {...marketingAttrs("navigation", "features", "storefront")}
+          className="suite-feature"
+          href="#journey"
+          data-jump-step="0"
+        >
           <span className="suite-icon">
             <Icon name="store" />
           </span>
           <strong>Storefront</strong>
-          <span>Your products and services</span>
+          <span>Let customers browse and request</span>
         </a>
-        <a className="suite-feature" href="#journey" data-jump-step="2">
+        <a
+          {...marketingAttrs("navigation", "features", "orders")}
+          className="suite-feature"
+          href="#journey"
+          data-jump-step="2"
+        >
           <span className="suite-icon">
             <Icon name="cart" />
           </span>
           <strong>Orders</strong>
-          <span>From request to fulfilment</span>
+          <span>Know what needs fulfilling</span>
         </a>
-        <a className="suite-feature" href="#journey" data-jump-step="1">
+        <a
+          {...marketingAttrs("navigation", "features", "quotes")}
+          className="suite-feature"
+          href="#journey"
+          data-jump-step="1"
+        >
           <span className="suite-icon">
             <Icon name="book" />
           </span>
           <strong>Quotes &amp; services</strong>
-          <span>Scope, price and service work</span>
+          <span>Agree the work and its price</span>
         </a>
-        <a className="suite-feature" href="#workspace">
+        <a
+          {...marketingAttrs("navigation", "features", "stock")}
+          className="suite-feature"
+          href="#stock-detail"
+        >
           <span className="suite-icon">
             <Icon name="package" />
           </span>
           <strong>Stock</strong>
-          <span>Units, availability and history</span>
+          <span>Know what is free to sell</span>
         </a>
-        <a className="suite-feature" href="#workspace">
+        <a
+          {...marketingAttrs("navigation", "features", "customers")}
+          className="suite-feature"
+          href="#customers-detail"
+        >
           <span className="suite-icon">
             <Icon name="users" />
           </span>
           <strong>Customers</strong>
-          <span>Balances and statements</span>
+          <span>See who owes you what</span>
         </a>
-        <a className="suite-feature" href="#journey" data-jump-step="3">
+        <a
+          {...marketingAttrs("navigation", "features", "finance")}
+          className="suite-feature"
+          href="#journey"
+          data-jump-step="3"
+        >
           <span className="suite-icon">
             <Icon name="wallet" />
           </span>
           <strong>Finance</strong>
-          <span>Accounts, expenses and payments</span>
+          <span>Follow money in and out</span>
         </a>
-        <a className="suite-feature" href="#workspace">
+        <a
+          {...marketingAttrs("navigation", "features", "team")}
+          className="suite-feature"
+          href="#team-detail"
+        >
           <span className="suite-icon">
             <Icon name="building" />
           </span>
           <strong>Team</strong>
-          <span>Roles and store access</span>
+          <span>Give staff the right access</span>
         </a>
-        <a className="suite-feature" href="#journey" data-jump-step="4">
+        <a
+          {...marketingAttrs("navigation", "features", "reports")}
+          className="suite-feature"
+          href="#journey"
+          data-jump-step="4"
+        >
           <span className="suite-icon">
             <Icon name="chart" />
           </span>
           <strong>Reports</strong>
-          <span>Sales and business performance</span>
+          <span>See what sells and when</span>
         </a>
       </div>
     </section>
@@ -86,39 +123,37 @@ export function WorkspaceSection() {
             with the business.
           </h2>
           <p>
-            The small things matter: the unit you sell in, who has access, and
-            the balance that is still outstanding.
+            Know what you can sell, what your team can do and what each customer
+            owes.
           </p>
         </div>
         <div className="workspace-grid">
           <div className="workspace-copy">
-            <div>
+            <div id="stock-detail">
               <h3>Count it the way you sell it.</h3>
               <p>
-                Pieces, trays, bags and cartons. Track stock in its own unit,
-                see what is held for orders and check an item's history when a
-                number needs explaining.
+                Count pieces, trays, bags or cartons. See what is available,
+                what is held for orders and how the balance changed.
               </p>
             </div>
-            <div>
+            <div id="team-detail">
               <h3>Give everyone their part.</h3>
               <p>
-                Assign staff to stores and give them the access they need. Sales
-                reps can see their own sales while you keep the whole business
-                in view.
+                Give staff access to the stores and tasks they need. Sales reps
+                see their own sales; you keep the whole business in view.
               </p>
             </div>
-            <div>
+            <div id="customers-detail">
               <h3>Keep every customer's account.</h3>
               <p>
-                See debts, payments and paid-ahead balances together. Share a
+                Keep debts, payments and customer credit together. Share a
                 statement when it is time to settle up.
               </p>
             </div>
           </div>
           <figure className="workspace-proof">
             <div className="product-screen inventory-real">
-              <p className="product-eyebrow">Jawdah Poultry QA</p>
+              <p className="product-eyebrow">Jawdah Poultry</p>
               <div className="product-title">Inventory</div>
               <p className="product-description">
                 What you have in each store and what you can sell.
@@ -201,7 +236,7 @@ export function WorkspaceSection() {
                         <strong>Eggs</strong>
                         <small>Small · Crate</small>
                       </td>
-                      <td>Jawdah Poultry QA</td>
+                      <td>Jawdah Poultry</td>
                       <td>120 crates</td>
                       <td>12 crates</td>
                       <td>
@@ -222,7 +257,7 @@ export function WorkspaceSection() {
                         <strong>Layer feed</strong>
                         <small>Bag</small>
                       </td>
-                      <td>Jawdah Poultry QA</td>
+                      <td>Jawdah Poultry</td>
                       <td>40 bags</td>
                       <td>—</td>
                       <td>
@@ -302,7 +337,7 @@ export function FaqV15() {
       </h2>
       <div className="faq">
         <details>
-          <summary data-marketing-action="faq" data-marketing-channel="faq">
+          <summary {...marketingAttrs("faq", "faq", "catalog")}>
             Can I sell products and services?<span aria-hidden="true">+</span>
           </summary>
           <p>
@@ -311,7 +346,7 @@ export function FaqV15() {
           </p>
         </details>
         <details>
-          <summary data-marketing-action="faq" data-marketing-channel="faq">
+          <summary {...marketingAttrs("faq", "faq", "fulfilment")}>
             Is a paid order marked as delivered?
             <span aria-hidden="true">+</span>
           </summary>
@@ -321,7 +356,7 @@ export function FaqV15() {
           </p>
         </details>
         <details>
-          <summary data-marketing-action="faq" data-marketing-channel="faq">
+          <summary {...marketingAttrs("faq", "faq", "approval")}>
             Can the assistant change my records on its own?
             <span aria-hidden="true">+</span>
           </summary>
@@ -332,7 +367,7 @@ export function FaqV15() {
           </p>
         </details>
         <details>
-          <summary data-marketing-action="faq" data-marketing-channel="faq">
+          <summary {...marketingAttrs("faq", "faq", "mobile")}>
             Is the mobile app available?<span aria-hidden="true">+</span>
           </summary>
           <p>
@@ -342,13 +377,14 @@ export function FaqV15() {
           </p>
         </details>
         <details>
-          <summary data-marketing-action="faq" data-marketing-channel="faq">
+          <summary {...marketingAttrs("faq", "faq", "plans")}>
             How do paid plans work?<span aria-hidden="true">+</span>
           </summary>
           <p>
-            Paid plans are monthly. Contact us to activate one. Every plan
-            includes a monthly assistant allowance. Customer messaging is a
-            separate feature on Growth and Pro.
+            Choose a plan, then contact us to activate it. Prices are monthly.
+            Each plan includes assistant use for questions and drafts; confirm
+            the allowance with us before upgrading. Customer messaging is a
+            separate Growth and Pro feature.
           </p>
         </details>
       </div>
@@ -369,7 +405,7 @@ export function ClosingV15({ signupEnabled }: { signupEnabled: boolean }) {
         </p>
         <WebSignupCta
           signupEnabled={signupEnabled}
-          channel="hero"
+          channel="closing"
           className="button primary"
         />
       </div>
@@ -390,31 +426,34 @@ export function FooterV15({
           <div className="foot-column">
             <h3>Features</h3>
             <a
-              {...marketingAttrs("navigation", "footer")}
+              {...marketingAttrs("navigation", "footer", "storefront")}
               href="#journey"
               data-jump-step="0"
             >
               Storefront
             </a>
             <a
-              {...marketingAttrs("navigation", "footer")}
+              {...marketingAttrs("navigation", "footer", "orders")}
               href="#journey"
               data-jump-step="2"
             >
               Orders
             </a>
             <a
-              {...marketingAttrs("navigation", "footer")}
+              {...marketingAttrs("navigation", "footer", "quotes")}
               href="#journey"
               data-jump-step="1"
             >
               Quotes &amp; services
             </a>
-            <a {...marketingAttrs("navigation", "footer")} href="#workspace">
+            <a
+              {...marketingAttrs("navigation", "footer", "stock")}
+              href="#workspace"
+            >
               Stock &amp; customers
             </a>
             <a
-              {...marketingAttrs("navigation", "footer")}
+              {...marketingAttrs("navigation", "footer", "reports")}
               href="#journey"
               data-jump-step="4"
             >
@@ -423,53 +462,80 @@ export function FooterV15({
           </div>
           <div className="foot-column">
             <h3>Product</h3>
-            <a {...marketingAttrs("navigation", "footer")} href="#journey">
+            <a
+              {...marketingAttrs("navigation", "footer", "journey")}
+              href="#journey"
+            >
               How it works
             </a>
-            <a {...marketingAttrs("navigation", "footer")} href="#assistant">
+            <a
+              {...marketingAttrs("navigation", "footer", "whatsapp")}
+              href="#assistant"
+            >
               WhatsApp
             </a>
             <a
-              {...marketingAttrs("navigation", "footer")}
+              {...marketingAttrs("navigation", "footer", "mobile")}
               href="#mobile-preview"
             >
               Mobile app
             </a>
-            <a {...marketingAttrs("navigation", "footer")} href="#businesses">
+            <a
+              {...marketingAttrs("navigation", "footer", "businesses")}
+              href="#businesses"
+            >
               Businesses
             </a>
-            <a {...marketingAttrs("navigation", "footer")} href="#pricing">
+            <a
+              {...marketingAttrs("navigation", "footer", "pricing")}
+              href="#pricing"
+            >
               Pricing
             </a>
           </div>
           <div className="foot-column">
             <h3>Company</h3>
-            <a {...marketingAttrs("navigation", "footer")} href="/contact">
+            <a
+              {...marketingAttrs("navigation", "footer", "contact")}
+              href="/contact"
+            >
               Contact
             </a>
-            <a {...marketingAttrs("navigation", "footer")} href="/support">
+            <a
+              {...marketingAttrs("navigation", "footer", "support")}
+              href="/support"
+            >
               Support
             </a>
-            <a {...marketingAttrs("navigation", "footer")} href="#questions">
+            <a
+              {...marketingAttrs("navigation", "footer", "faq")}
+              href="#questions"
+            >
               Questions
             </a>
           </div>
           <div className="foot-column">
             <h3>Legal</h3>
-            <a {...marketingAttrs("navigation", "footer")} href="/terms">
+            <a
+              {...marketingAttrs("navigation", "footer", "terms")}
+              href="/terms"
+            >
               Terms
             </a>
-            <a {...marketingAttrs("navigation", "footer")} href="/privacy">
+            <a
+              {...marketingAttrs("navigation", "footer", "privacy")}
+              href="/privacy"
+            >
               Privacy
             </a>
             <a
-              {...marketingAttrs("navigation", "footer")}
+              {...marketingAttrs("navigation", "footer", "billing_policy")}
               href="/billing-policy"
             >
               Billing policy
             </a>
             <a
-              {...marketingAttrs("navigation", "footer")}
+              {...marketingAttrs("navigation", "footer", "delete_account")}
               href="/delete-account"
             >
               Delete account
@@ -497,8 +563,11 @@ export function FooterV15({
         </div>
         <div className="foot-base">
           <span>© 2026 EwaTrade</span>
-          <span>Product previews use example records.</span>
-          <a {...marketingAttrs("navigation", "footer")} href="#top">
+          <span>
+            Jawdah Poultry is an example business. All records shown are
+            illustrative.
+          </span>
+          <a {...marketingAttrs("navigation", "footer", "home")} href="#top">
             Back to top ↑
           </a>
         </div>

@@ -56,8 +56,9 @@ export function PricingV15({ signupEnabled }: { signupEnabled: boolean }) {
         })}
       </div>
       <p className="pricing-note">
-        Every plan includes a monthly assistant allowance. Contact us to
-        activate a paid plan. No payment is taken from this page.
+        Each plan includes monthly assistant use for questions and drafts.
+        Contact us to confirm the allowance and activate a paid plan. No payment
+        is taken here.
       </p>
       <details className="plan-comparison">
         <summary {...marketingAttrs("compare", "pricing")}>

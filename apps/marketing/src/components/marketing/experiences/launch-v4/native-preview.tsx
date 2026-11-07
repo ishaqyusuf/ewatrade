@@ -12,7 +12,7 @@ const money = new Intl.NumberFormat("en-NG", {
 export function NativePreview() {
   const [phone, setPhone] = useState("sale")
   const [step, setStep] = useState("items")
-  const [quantity, setQuantity] = useState(3)
+  const [quantity, setQuantity] = useState(4)
   const [query, setQuery] = useState("")
   const [variant, setVariant] = useState("all")
   const proceedRef = useRef<HTMLButtonElement>(null)
@@ -45,7 +45,7 @@ export function NativePreview() {
           <button
             aria-pressed={phone === "sale"}
             data-phone="sale"
-            {...marketingAttrs("navigation", "availability", "mobile")}
+            {...marketingAttrs("navigation", "availability", "sales")}
             onClick={() => setPhone("sale")}
             type="button"
           >
@@ -54,14 +54,14 @@ export function NativePreview() {
           <button
             aria-pressed={phone === "item"}
             data-phone="item"
-            {...marketingAttrs("navigation", "availability", "mobile")}
+            {...marketingAttrs("navigation", "availability", "product")}
             onClick={() => setPhone("item")}
             type="button"
           >
             Item details
           </button>
         </fieldset>
-        <p className="fine">Mobile app coming soon · preview data</p>
+        <p className="fine">Mobile app coming soon · example counter sale</p>
       </div>
       <figure className="mobile-proof">
         <div className="handset real-native">
@@ -118,6 +118,11 @@ export function NativePreview() {
                   <div className="native-quantity">
                     <button
                       data-quantity="-1"
+                      {...marketingAttrs(
+                        "quantity_decrease",
+                        "availability",
+                        "sales",
+                      )}
                       aria-label="Decrease egg quantity"
                       onClick={() =>
                         setQuantity((current) => Math.max(0, current + -1))
@@ -134,6 +139,11 @@ export function NativePreview() {
                       max="108"
                       step="any"
                       aria-label="Crates of eggs"
+                      {...marketingAttrs(
+                        "quantity_edit",
+                        "availability",
+                        "sales",
+                      )}
                       onChange={(event) => {
                         const value = Number(event.target.value)
                         if (Number.isFinite(value))
@@ -142,6 +152,11 @@ export function NativePreview() {
                     />
                     <button
                       data-quantity="1"
+                      {...marketingAttrs(
+                        "quantity_increase",
+                        "availability",
+                        "sales",
+                      )}
                       aria-label="Increase egg quantity"
                       onClick={() =>
                         setQuantity((current) => Math.min(108, current + 1))
@@ -160,6 +175,7 @@ export function NativePreview() {
               >
                 <button
                   id="restore-eggs"
+                  {...marketingAttrs("add_sample", "availability", "sales")}
                   className="native-primary"
                   onClick={() => setQuantity(1)}
                   type="button"
@@ -220,12 +236,18 @@ export function NativePreview() {
                     <input
                       placeholder="Search items"
                       aria-label="Search preview items"
+                      {...marketingAttrs("search", "availability", "items")}
                       value={query}
                       onChange={(event) => setQuery(event.target.value)}
                     />
                   </label>
                   <button
                     id="sale-proceed"
+                    {...marketingAttrs(
+                      "next_step",
+                      "availability",
+                      "customers",
+                    )}
                     ref={proceedRef}
                     disabled={quantity === 0}
                     onClick={() => setStep("customer")}
@@ -241,6 +263,7 @@ export function NativePreview() {
                 <button
                   className="native-circle"
                   data-native-back=""
+                  {...marketingAttrs("previous_step", "availability", "items")}
                   aria-label="Back to sale items"
                   ref={backRef}
                   onClick={() => setStep("items")}
@@ -264,7 +287,7 @@ export function NativePreview() {
                   Walk-in
                 </span>
                 <span>
-                  <i>JQ</i>Jawdah
+                  <i>AB</i>Amina
                 </span>
                 <span>
                   <i>
@@ -284,6 +307,7 @@ export function NativePreview() {
                 <button
                   className="native-primary"
                   data-native-back=""
+                  {...marketingAttrs("previous_step", "availability", "items")}
                   onClick={() => setStep("items")}
                   type="button"
                 >
@@ -301,6 +325,7 @@ export function NativePreview() {
               <button
                 className="native-circle"
                 data-show-sale=""
+                {...marketingAttrs("navigation", "availability", "sales")}
                 aria-label="Back to sale preview"
                 onClick={() => {
                   setPhone("sale")
@@ -330,6 +355,7 @@ export function NativePreview() {
             <div className="native-quick-actions">
               <button
                 data-show-sale=""
+                {...marketingAttrs("navigation", "availability", "sales")}
                 onClick={() => {
                   setPhone("sale")
                   setStep("items")
@@ -366,6 +392,7 @@ export function NativePreview() {
             >
               <button
                 data-variant="all"
+                {...marketingAttrs("filter", "availability", "all")}
                 aria-pressed={variant === "all"}
                 onClick={() => setVariant("all")}
                 type="button"
@@ -374,6 +401,7 @@ export function NativePreview() {
               </button>
               <button
                 data-variant="small"
+                {...marketingAttrs("filter", "availability", "small")}
                 aria-pressed={variant === "small"}
                 onClick={() => setVariant("small")}
                 type="button"
@@ -382,6 +410,7 @@ export function NativePreview() {
               </button>
               <button
                 data-variant="large"
+                {...marketingAttrs("filter", "availability", "large")}
                 aria-pressed={variant === "large"}
                 onClick={() => setVariant("large")}
                 type="button"

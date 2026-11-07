@@ -1,5 +1,9 @@
 "use client"
-import { marketingAttrs } from "@/lib/marketing-interactions"
+import {
+  captureMarketingInteraction,
+  marketingAttrs,
+} from "@/lib/marketing-interactions"
+import { useEvents } from "@ewatrade/events/client"
 import { useEffect, useRef, useState } from "react"
 import {
   useMarketingMotion,
@@ -45,10 +49,18 @@ const steps = [
   },
 ] as const
 const scenes = [WalkScene0, WalkScene1, WalkScene2, WalkScene3, WalkScene4]
+const categories = [
+  "storefront",
+  "quotes",
+  "orders",
+  "finance",
+  "reports",
+] as const
 const durations = [6500, 6500, 6500, 6500, 6500] as const
 export function Walkthrough({
   request,
 }: { request: { index: number } | null }) {
+  const { track } = useEvents()
   const motion = useMarketingMotion()
   const { index, playing, choose, toggle } = useMarketingSequence(
     durations,
@@ -120,7 +132,7 @@ export function Walkthrough({
               aria-selected={i === index}
               tabIndex={i === index ? 0 : -1}
               data-short={step.short}
-              {...marketingAttrs("navigation", "timeline")}
+              {...marketingAttrs("navigation", "timeline", categories[i])}
               onClick={() => choose(i)}
               onKeyDown={(event) => {
                 const next =
@@ -136,6 +148,11 @@ export function Walkthrough({
                 if (next === null) return
                 event.preventDefault()
                 choose(next)
+                captureMarketingInteraction(track, {
+                  action: "navigation",
+                  channel: "timeline",
+                  category: categories[next],
+                })
                 tabs.current[next]?.focus()
               }}
             >

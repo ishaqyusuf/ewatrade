@@ -34,7 +34,12 @@ export function HeaderV15({
         }}
       >
         <div className="header-inner">
-          <a className="brand" href="#top" aria-label="EwaTrade home">
+          <a
+            className="brand"
+            {...marketingAttrs("navigation", "header", "home")}
+            href="#top"
+            aria-label="EwaTrade home"
+          >
             <BrandMark />
             <span>ẸwáTrade</span>
           </a>
@@ -43,17 +48,23 @@ export function HeaderV15({
             id="main-nav"
             aria-label="Main"
           >
-            {[
-              ["WhatsApp", "assistant"],
-              ["How it works", "journey"],
-              ["Features", "features"],
-              ["Pricing", "pricing"],
-            ].map(([label, id]) => (
+            {(
+              [
+                ["WhatsApp", "assistant", "whatsapp"],
+                ["How it works", "journey", "journey"],
+                ["Features", "features", "features"],
+                ["Pricing", "pricing", "pricing"],
+              ] as const
+            ).map(([label, id, category]) => (
               <a
                 key={id}
                 href={`#${id}`}
                 onClick={() => setOpen(false)}
-                {...marketingAttrs("navigation", "header")}
+                {...marketingAttrs(
+                  "navigation",
+                  open ? "menu" : "header",
+                  category,
+                )}
               >
                 {label}
               </a>
@@ -86,6 +97,7 @@ export function HeaderV15({
               aria-label={open ? "Close menu" : "Open menu"}
               aria-expanded={open}
               aria-controls="main-nav"
+              {...marketingAttrs(open ? "menu_close" : "menu_open", "header")}
               onClick={() => setOpen(!open)}
             >
               <svg viewBox="0 0 24 24" aria-hidden="true">

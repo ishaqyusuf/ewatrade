@@ -79,6 +79,6 @@ export function getMarketingPlanCta(
   return {
     href: "/contact",
     kind: "contact" as const,
-    label: `Choose ${MARKETING_OFFERS.find((p) => p.id === id)?.name ?? id}`,
+    label: `Contact us for ${MARKETING_OFFERS.find((p) => p.id === id)?.name ?? id}`,
   }
 }

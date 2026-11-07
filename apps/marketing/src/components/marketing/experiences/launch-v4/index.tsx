@@ -1,7 +1,10 @@
 "use client"
-import { captureMarketingClick } from "@/lib/marketing-interactions"
+import {
+  captureMarketingClick,
+  captureMarketingInteraction,
+} from "@/lib/marketing-interactions"
 import { useEvents } from "@ewatrade/events/client"
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { preload } from "react-dom"
 import type { MarketingExperienceProps } from "../../marketing-experience-contract"
 import { AssistantFab } from "./assistant-fab"
@@ -24,8 +27,10 @@ import "./styles/product-ui.css"
 import "./styles/whatsapp-launch.css"
 import "./styles/sections.css"
 import "./styles/integration.css"
+import "./styles/refinements.css"
 export function LaunchV4Landing({ signupEnabled }: MarketingExperienceProps) {
   const { track } = useEvents()
+  const engagedInputs = useRef(new WeakSet<Element>())
   const [theme, setTheme] = useState<"light" | "dark">()
   const [systemDark, setSystemDark] = useState(false)
   const [walkRequest, setWalkRequest] = useState<{ index: number } | null>(null)
@@ -70,6 +75,20 @@ export function LaunchV4Landing({ signupEnabled }: MarketingExperienceProps) {
       className="launch-v4 ewm"
       data-theme={dark ? "dark" : "light"}
       id="top"
+      onChangeCapture={(event) => {
+        const input = event.target
+        if (
+          !(input instanceof HTMLInputElement) ||
+          engagedInputs.current.has(input)
+        )
+          return
+        engagedInputs.current.add(input)
+        captureMarketingInteraction(track, {
+          action: input.dataset.marketingAction,
+          channel: input.dataset.marketingChannel,
+          category: input.dataset.marketingCategory,
+        })
+      }}
       onClickCapture={(event) => {
         captureMarketingClick(track, event.target)
         if (event.target instanceof Element) {

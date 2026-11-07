@@ -1,14 +1,15 @@
 "use client"
 
+import { marketingAttrs } from "@/lib/marketing-interactions"
 import { useState } from "react"
 
 import { BrandMark, Icon } from "./icons"
 
 const searchable = [
-  "ord–06128 oct, 21:05jawdah qa customereggscompletedpaidtotal₦19,500.00",
-  "ord–06026 oct, 18:20walk-inmanual payment qa 26 octcompletedpaidtotal₦1,000.00",
-  "ord–05926 oct, 14:41walk-infca-20261026 inspection visitconfirmedpaidtotal₦2,000.00",
-  "ord–05826 oct, 14:34walk-infca-20261026 notebookcompletedunpaid · ₦600.00 duetotal₦600.00",
+  "ord–06128 oct, 21:05amina belloeggscompletedpaidtotal₦19,500.00",
+  "ord–06026 oct, 18:20walk-inlayer feedcompletedpaidtotal₦18,500.00",
+  "ord–05926 oct, 14:41amina belloflock health visitconfirmedpaidtotal₦2,000.00",
+  "ord–05826 oct, 14:34walk-inbroiler chickencompletedunpaid · ₦9,000.00 duetotal₦9,000.00",
 ]
 export function OrdersPreview() {
   const [query, setQuery] = useState("")
@@ -61,14 +62,14 @@ export function OrdersPreview() {
             </span>
             <div>
               <Icon name="bell" />
-              <span className="real-avatar">JQ</span>
+              <span className="real-avatar">JP</span>
             </div>
           </div>
           <div className="real-page">
-            <p className="product-eyebrow">Jawdah Poultry QA</p>
+            <p className="product-eyebrow">Jawdah Poultry</p>
             <div className="product-title">Orders</div>
             <p className="product-description">
-              Products and Services share one immutable order record.
+              Track every order, payment and delivery in one place.
             </p>
             <div className="real-toolbar">
               <label className="real-search">
@@ -77,6 +78,7 @@ export function OrdersPreview() {
                   id="order-search"
                   placeholder="Search orders..."
                   aria-label="Search preview orders"
+                  {...marketingAttrs("search", "hero", "orders")}
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
                 />
@@ -99,13 +101,13 @@ export function OrdersPreview() {
             <div className="select-row">
               <span className="square-check" />
               <span>Select all</span>
-              <span className="product-muted">25 orders loaded</span>
+              <span className="product-muted">4 orders shown</span>
             </div>
             <div className="real-order-grid">
               <article
                 className="real-order-card"
                 hidden={
-                  !"ord–06128 oct, 21:05jawdah qa customereggscompletedpaidtotal₦19,500.00".includes(
+                  !"ord–06128 oct, 21:05amina belloeggscompletedpaidtotal₦19,500.00".includes(
                     query.trim().toLocaleLowerCase(),
                   )
                 }
@@ -117,7 +119,7 @@ export function OrdersPreview() {
                   <Icon name="more" />
                 </div>
                 <div className="order-card-body">
-                  <strong>Jawdah QA Customer</strong>
+                  <strong>Amina Bello</strong>
                   <p>Eggs</p>
                   <div>
                     <span className="product-pill ok">Completed</span>
@@ -132,7 +134,7 @@ export function OrdersPreview() {
               <article
                 className="real-order-card"
                 hidden={
-                  !"ord–06026 oct, 18:20walk-inmanual payment qa 26 octcompletedpaidtotal₦1,000.00".includes(
+                  !"ord–06026 oct, 18:20walk-inlayer feedcompletedpaidtotal₦18,500.00".includes(
                     query.trim().toLocaleLowerCase(),
                   )
                 }
@@ -145,7 +147,7 @@ export function OrdersPreview() {
                 </div>
                 <div className="order-card-body">
                   <strong>Walk-in</strong>
-                  <p>Manual payment QA 26 Oct</p>
+                  <p>Layer feed</p>
                   <div>
                     <span className="product-pill ok">Completed</span>
                     <span className="product-pill ok">Paid</span>
@@ -153,13 +155,13 @@ export function OrdersPreview() {
                 </div>
                 <div className="order-card-total">
                   <span>Total</span>
-                  <strong>₦1,000.00</strong>
+                  <strong>₦18,500.00</strong>
                 </div>
               </article>
               <article
                 className="real-order-card"
                 hidden={
-                  !"ord–05926 oct, 14:41walk-infca-20261026 inspection visitconfirmedpaidtotal₦2,000.00".includes(
+                  !"ord–05926 oct, 14:41amina belloflock health visitconfirmedpaidtotal₦2,000.00".includes(
                     query.trim().toLocaleLowerCase(),
                   )
                 }
@@ -171,8 +173,8 @@ export function OrdersPreview() {
                   <Icon name="more" />
                 </div>
                 <div className="order-card-body">
-                  <strong>Walk-in</strong>
-                  <p>FCA-20261026 Inspection visit</p>
+                  <strong>Amina Bello</strong>
+                  <p>Flock health visit</p>
                   <div>
                     <span className="product-pill info">Confirmed</span>
                     <span className="product-pill ok">Paid</span>
@@ -186,7 +188,7 @@ export function OrdersPreview() {
               <article
                 className="real-order-card"
                 hidden={
-                  !"ord–05826 oct, 14:34walk-infca-20261026 notebookcompletedunpaid · ₦600.00 duetotal₦600.00".includes(
+                  !"ord–05826 oct, 14:34walk-inbroiler chickencompletedunpaid · ₦9,000.00 duetotal₦9,000.00".includes(
                     query.trim().toLocaleLowerCase(),
                   )
                 }
@@ -199,17 +201,17 @@ export function OrdersPreview() {
                 </div>
                 <div className="order-card-body">
                   <strong>Walk-in</strong>
-                  <p>FCA-20261026 Notebook</p>
+                  <p>Broiler chicken</p>
                   <div>
                     <span className="product-pill ok">Completed</span>
                     <span className="product-pill warn">
-                      Unpaid · ₦600.00 due
+                      Unpaid · ₦9,000.00 due
                     </span>
                   </div>
                 </div>
                 <div className="order-card-total">
                   <span>Total</span>
-                  <strong>₦600.00</strong>
+                  <strong>₦9,000.00</strong>
                 </div>
               </article>
             </div>
@@ -224,7 +226,7 @@ export function OrdersPreview() {
           </div>
         </div>
       </div>
-      <figcaption>Product preview · existing QA records</figcaption>
+      <figcaption>Example business · illustrative records</figcaption>
     </figure>
   )
 }
