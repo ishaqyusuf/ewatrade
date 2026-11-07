@@ -1,10 +1,15 @@
 import { beforeEach, expect, mock, test } from "bun:test"
-import type { ProductSubscriptionAndroid, Purchase } from "expo-iap"
+import type {
+  ProductSubscriptionAndroid,
+  ProductSubscriptionIOS,
+  Purchase,
+} from "expo-iap"
 import { createElement } from "react"
 import { renderToStaticMarkup } from "react-dom/server"
 
 let generation = 0
 let cacheGeneration = 0
+let platform = "android"
 const profile = { id: "owner", businessId: "business", role: "OWNER" }
 const products = [
   { store: "play_store", productId: "growth", planId: "growth" },
@@ -22,7 +27,7 @@ const catalogData = () => ({
   products,
   purchaseAvailable: true,
   accountToken: "owner-account",
-  activeProvider: null as "PLAY_STORE" | null,
+  activeProvider: null as "PLAY_STORE" | "APP_STORE" | null,
   activePlayProductId: null as string | null,
 })
 let data = catalogData()
@@ -93,7 +98,11 @@ mock.module("expo-iap", () => ({
   },
 }))
 mock.module("react-native", () => ({
-  Platform: { OS: "android" },
+  Platform: {
+    get OS() {
+      return platform
+    },
+  },
   LogBox: { ignoreLogs: () => {} },
   AppState: { addEventListener: () => ({ remove: () => {} }) },
 }))
@@ -160,6 +169,7 @@ const receipt: Purchase = {
   transactionDate: 1,
 }
 beforeEach(() => {
+  platform = "android"
   generation++
   cacheGeneration++
   calls.length = 0
@@ -168,6 +178,105 @@ beforeEach(() => {
   listPurchases = async () => [receipt]
   verify = async () => {}
   mutateCoverage = async () => {}
+})
+
+const appleProduct: ProductSubscriptionIOS = {
+  id: "growth.ios",
+  title: "Growth",
+  description: "Monthly",
+  displayNameIOS: "Growth",
+  currency: "NGN",
+  displayPrice: "₦15,000",
+  platform: "ios",
+  type: "subs",
+  typeIOS: "auto-renewable-subscription",
+  introductoryPricePaymentModeIOS: "empty",
+  isFamilyShareableIOS: false,
+  jsonRepresentationIOS: "{}",
+  subscriptionPeriodNumberIOS: "1",
+  subscriptionPeriodUnitIOS: "month",
+}
+const appleReceipt: Purchase = {
+  id: "apple-transaction",
+  transactionId: "apple-transaction",
+  productId: "growth.ios",
+  purchaseToken: "not-the-apple-verification-reference",
+  platform: "ios",
+  store: "apple",
+  purchaseState: "purchased",
+  isAutoRenewing: true,
+  quantity: 1,
+  transactionDate: 1,
+}
+function useAppleCatalog() {
+  platform = "ios"
+  data.products = [
+    { store: "app_store", productId: "growth.ios", planId: "growth" },
+  ]
+}
+
+test("Apple checkout binds the fresh owner account and the localized monthly offer", async () => {
+  useAppleCatalog()
+  const controller = renderController()
+  refetch = async () => ({
+    isSuccess: true,
+    data: { ...data, accountToken: "fresh-apple-owner" },
+  })
+  expect(controller.priceDescription(appleProduct)).toBe(
+    "₦15,000 every 1 month",
+  )
+  await controller.purchase(appleProduct)
+  expect(calls).toEqual([
+    {
+      operation: "checkout",
+      input: {
+        type: "subs",
+        request: {
+          apple: { sku: "growth.ios", appAccountToken: "fresh-apple-owner" },
+        },
+      },
+    },
+  ])
+})
+
+test("Apple checkout refuses missing renewal terms and an active Play subscription", async () => {
+  useAppleCatalog()
+  const controller = renderController()
+  await controller.purchase({
+    ...appleProduct,
+    subscriptionPeriodUnitIOS: null,
+  })
+  data.activeProvider = "PLAY_STORE"
+  await controller.purchase(appleProduct)
+  expect(calls).toEqual([])
+})
+
+test("Apple restore verifies its transaction ID before finishing and refreshing", async () => {
+  useAppleCatalog()
+  const controller = renderController()
+  listPurchases = async () => [appleReceipt]
+  await controller.restore()
+  expect(calls.map((call) => call.operation)).toEqual([
+    "verify",
+    "finish",
+    "refresh",
+    "refresh",
+  ])
+  expect(calls[0]?.input).toEqual({
+    store: "app_store",
+    purchaseId: "apple-transaction",
+  })
+})
+
+test("Apple restore leaves an unverified transaction unfinished for recovery", async () => {
+  useAppleCatalog()
+  const controller = renderController()
+  listPurchases = async () => [appleReceipt]
+  verify = async () => {
+    throw new Error("verifier unavailable")
+  }
+  await controller.restore()
+  expect(calls.map((call) => call.operation)).toEqual(["verify"])
 })
 
 test("native checkout uses the refreshed owner binding and the disclosed offer", async () => {

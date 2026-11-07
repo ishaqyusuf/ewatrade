@@ -38,7 +38,7 @@ test("native billing session lifetime in an isolated controller fixture", () => 
   )
   if (result.exitCode !== 0)
     throw new Error(new TextDecoder().decode(result.stderr))
-  expect(new TextDecoder().decode(result.stderr)).toContain("14 pass")
+  expect(new TextDecoder().decode(result.stderr)).toContain("18 pass")
   expect(result.exitCode).toBe(0)
 })
 

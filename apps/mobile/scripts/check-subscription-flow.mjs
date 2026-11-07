@@ -93,7 +93,9 @@ const CONTRACTS = [
       "SUBSCRIPTION_SCREEN_COPY",
       "Current plan",
       "StoreSubscriptionPanel",
-      'releaseScope.softwarePlanPurchases && Platform.OS === "android"',
+      "releaseScope.softwarePlanPurchases &&",
+      '(Platform.OS === "android" || Platform.OS === "ios")',
+      "usesNativeBilling ?",
       "EwaTrade is free during launch. No subscription or payment is",
       "() => void subscriptionQuery.refetch()",
       'testID="subscription-scroll"',
@@ -106,7 +108,7 @@ const CONTRACTS = [
       "Request ${nextPlan.name}",
     ],
     reason:
-      "mobile plans retain snapshot/usage state; free launch shows informational plans without purchase or external upgrade actions",
+      "mobile plans retain snapshot/usage state; paid scope routes both native platforms to store billing and closed scope remains informational",
   },
   {
     file: join(

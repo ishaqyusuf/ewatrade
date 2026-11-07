@@ -154,6 +154,9 @@ export function storeBillingReadinessFailures(
         "Play Publisher needs an inline service account or local ADC file.",
       )
   }
+  // These operations handle Google Play's refund-review workflow. Apple's
+  // platform preflight must not depend on activating another store's service.
+  if (store === "app_store") return failures
   if (config.PLAY_REFUND_REVIEW_ALERTS_ENABLED !== "true")
     failures.push("PLAY_REFUND_REVIEW_ALERTS_ENABLED is not enabled.")
   if (config.PLAY_REFUND_REVIEW_INTAKE_ENABLED !== "true")

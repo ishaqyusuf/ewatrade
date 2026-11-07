@@ -177,8 +177,9 @@ export function SubscriptionPlanContent({
     | ProductionSubscriptionSnapshot
     | undefined
   const verified = productionSnapshot
-  const usesPlayBilling =
-    releaseScope.softwarePlanPurchases && Platform.OS === "android"
+  const usesNativeBilling =
+    releaseScope.softwarePlanPurchases &&
+    (Platform.OS === "android" || Platform.OS === "ios")
   const plans = verified?.plans.filter((plan) => plan.id !== "free") ?? []
   const order: readonly string[] = USAGE_ORDER
   const limits = verified ? verified.entitlements.map((e) => e) : []
@@ -263,7 +264,7 @@ export function SubscriptionPlanContent({
             </View>
           </View>
         ) : null}
-        {usesPlayBilling ? (
+        {usesNativeBilling ? (
           <StoreSubscriptionPanel />
         ) : plans.length ? (
           <View>

@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "id": "2026-11-07-ios-paid-billing-preparation",
+  "tickets": ["A05"],
+  "summary": "Route the gated native subscription panel on iOS, exercise Apple checkout/restore controller behavior, and scope billing preflight refund operations to Play.",
+  "noAssistantImpact": "Existing billing commands remain form-only with unchanged owner, session and server authority. No assistant capability, procedure, permission, schema, entitlement or live activation changes.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/native-store-billing.md"
+    },
+    {
+      "topic": "feature",
+      "status": "updated",
+      "path": "docs/billing/apple-paid-launch-2026-11-07.md"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "apps/mobile/src/components/mobile/store-subscription-provider.test.ts",
+      "executed": true,
+      "result": "Three isolated wrappers pass; actual controller fixture has18 cases including four Apple checkout/restore cases. No native provider traffic."
+    },
+    {
+      "kind": "test",
+      "path": "scripts/check-store-billing-readiness.test.mjs",
+      "executed": true,
+      "result": "12 pass; iOS needs Apple/common settings, Android/all-store retain Play refund requirements."
+    }
+  ]
+}

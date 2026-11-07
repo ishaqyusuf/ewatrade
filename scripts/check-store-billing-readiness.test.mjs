@@ -124,6 +124,53 @@ test("complete release billing settings pass the local shape preflight", () => {
   assert.deepEqual(storeBillingReadinessFailures(ready, fixtureFileExists), [])
 })
 
+test("iOS readiness requires Apple setup without activating Play refund operations", () => {
+  const appleOnly = Object.fromEntries(
+    Object.entries(ready).filter(
+      ([name]) =>
+        !name.startsWith("PLAY_") &&
+        !name.startsWith("GOOGLE_") &&
+        !name.startsWith("EMAIL_") &&
+        name !== "RESEND_API_KEY",
+    ),
+  )
+  appleOnly.STORE_SUBSCRIPTION_PRODUCTS = JSON.stringify([
+    { store: "app_store", productId: "growth.ios", planId: "growth" },
+  ])
+  const noPlayFiles = () => {
+    throw new Error("iOS must not inspect Play credentials")
+  }
+  assert.deepEqual(
+    storeBillingReadinessFailures(appleOnly, noPlayFiles, "app_store"),
+    [],
+  )
+  for (const [name, value] of [
+    ["APPLE_BUNDLE_ID", "com.other.app"],
+    ["APPLE_IAP_PRIVATE_KEY", ""],
+    ["APPLE_IAP_ISSUER_ID", ""],
+    ["STORE_SUBSCRIPTION_PRODUCTS", "[]"],
+    ["STORE_BILLING_PRODUCTION_CHECKOUT_ENABLED", "false"],
+  ])
+    assert.ok(
+      storeBillingReadinessFailures(
+        { ...appleOnly, [name]: value },
+        noPlayFiles,
+        "app_store",
+      ).length,
+      `${name} remains required for iOS`,
+    )
+  assert.ok(
+    storeBillingReadinessFailures(appleOnly, () => false, "play_store").some(
+      (failure) => failure.includes("PLAY_REFUND_REVIEW"),
+    ),
+  )
+  assert.ok(
+    storeBillingReadinessFailures(appleOnly, () => false).some((failure) =>
+      failure.includes("PLAY_REFUND_REVIEW"),
+    ),
+  )
+})
+
 test("Android readiness requires Play products and credentials without Apple setup", () => {
   const androidOnly = {
     ...ready,
