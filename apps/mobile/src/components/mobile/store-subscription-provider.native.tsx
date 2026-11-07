@@ -84,6 +84,66 @@ function useStoreBillingController() {
   const verification = useMutation(
     trpc.storeSubscriptions.verifyPurchase.mutationOptions(),
   )
+  const enrollment = useMutation(
+    trpc.storeSubscriptions.enrollBusiness.mutationOptions(),
+  )
+  const release = useMutation(
+    trpc.storeSubscriptions.releaseBusiness.mutationOptions(),
+  )
+  const coverageBusy = useRef(false)
+  const [coveragePending, setCoveragePending] = useState(false)
+  const changeCoverage = async (action: "enroll" | "release") => {
+    if (!isCurrent() || coverageBusy.current || processing.current.size > 0)
+      return
+    coverageBusy.current = true
+    setCoveragePending(true)
+    try {
+      const latest = await catalog.refetch()
+      if (!isCurrent() || processing.current.size > 0) return
+      const current = latest.isSuccess ? latest.data : null
+      const coverage = current?.ownerCoverage
+      if (
+        current?.billingScope !== "owner" ||
+        !current.coverageAvailable ||
+        !coverage ||
+        !lifetime.businessId
+      ) {
+        setMessage("Business coverage is unavailable. Refresh and try again.")
+        return
+      }
+      if (action === "release") {
+        if (!coverage.enrolled) return
+        await release.mutateAsync({ tenantId: lifetime.businessId })
+      } else {
+        if (
+          coverage.enrolled ||
+          coverage.reason !== "uncovered" ||
+          coverage.coveredBusinessCount >= coverage.businessLimit
+        ) {
+          setMessage(
+            "Your current plan cannot cover this business. Review its available business slots.",
+          )
+          return
+        }
+        await enrollment.mutateAsync()
+      }
+      if (!isCurrent()) return
+      // Coverage changes affect subscription and workspace feature projections.
+      await queryClient.invalidateQueries()
+      setMessage(
+        action === "release"
+          ? "This business has been released from your owner plan. Its data is kept; store renewal is unchanged."
+          : "Business coverage has been updated. Review its current status.",
+      )
+    } catch {
+      setMessage(
+        "Business coverage could not be confirmed. Refresh its status before trying again.",
+      )
+    } finally {
+      coverageBusy.current = false
+      if (active.current) setCoveragePending(false)
+    }
+  }
   const reconcile = async (
     purchase: Purchase,
     products = catalog.data?.products,
@@ -123,15 +183,15 @@ function useStoreBillingController() {
       })
       if (!result.storeFinished) {
         setMessage(
-          "Your subscription was verified for this business, but the store could not finish processing it. Use Restore purchases to retry.",
+          "Your subscription was verified, but the store could not finish processing it. Use Restore purchases to retry.",
         )
       } else if (!result.refreshed) {
         setMessage(
-          "Your subscription was verified for this business. Reopen Plan & billing to refresh its current status.",
+          "Your subscription was verified. Reopen Plan & billing to refresh its current status and business coverage.",
         )
       } else {
         setMessage(
-          "Your store subscription has been verified for this business.",
+          "Your store subscription has been verified. Review this business's current plan and coverage below.",
         )
       }
     } catch (error) {
@@ -177,11 +237,11 @@ function useStoreBillingController() {
     return playSubscriptionOffer(product.subscriptionOffers)?.label ?? null
   }
   const purchase = async (product: ProductSubscription) => {
-    if (!isCurrent() || verification.isPending) return
+    if (!isCurrent() || verification.isPending || coverageBusy.current) return
     // Purchase authority must be fresh; a previously rendered button is not a
     // current account binding, checkout gate or product mapping.
     const latest = await catalog.refetch()
-    if (!isCurrent()) return
+    if (!isCurrent() || coverageBusy.current) return
     const currentCatalog = latest.isSuccess ? latest.data : null
     const accountToken = currentCatalog?.accountToken
     if (
@@ -202,7 +262,7 @@ function useStoreBillingController() {
       currentCatalog.activeProvider !== currentProvider
     ) {
       setMessage(
-        "This business already has an active plan through another billing provider. Manage that plan before starting a new store subscription.",
+        "An active plan already exists through another billing provider. Manage that plan before starting a new store subscription.",
       )
       return
     }
@@ -211,7 +271,7 @@ function useStoreBillingController() {
       currentCatalog.activePlayProductId === product.id
     ) {
       setMessage(
-        "This Play plan is already active for the business. Use Manage store subscriptions to change or cancel it.",
+        "This Play plan is already active. Use Manage store subscriptions to change or cancel it.",
       )
       return
     }
@@ -285,6 +345,7 @@ function useStoreBillingController() {
     }
   }
   const restore = async () => {
+    if (!isCurrent() || coverageBusy.current) return
     try {
       const result = await restoreMappedStorePurchases({
         isCurrent,
@@ -358,6 +419,8 @@ function useStoreBillingController() {
     priceDescription,
     purchase,
     restore,
+    coveragePending,
+    changeCoverage,
     store,
   }
 }

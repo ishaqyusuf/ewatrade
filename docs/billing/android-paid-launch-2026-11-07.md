@@ -24,7 +24,7 @@ within each row must be reused only where source/platform/target still match.
 | A02 API/access availability | Open | October quota outage was subsequently restored; don't repeat the obsolete outage diagnosis. Fresh target/candidate access proof is still required. Legal/deletion preflight passed 7 November. |
 | A03 Offers and Play merchant readiness | Open | Owner prices/territory rule known. Merchant/tax/bank requirements and actual subscription/base-plan IDs, localized totals and eligible offers need Console evidence and owner action where binding. |
 | A04 Server/provider/terms | Open | Verification, owner purchase reconciliation, RTDN/void/refund and privacy guards exist. Need authenticated target outcomes and paid legal publication; current public copy still says no software subscriptions. |
-| A05 Paid entitlements/native integration | Open | Durable owner adapter/coverage/readers and local migration exist since 2 November; old “no adapter” notes are historical. Native lifetime source safeguards pass focused checks; signed acceptance remains open. Coverage UI, offer/cap parity, grant/signup cutover and downgrade behavior remain. |
+| A05 Paid entitlements/native integration | Open | Durable owner adapter/coverage/readers and local migration exist since 2 November; old “no adapter” notes are historical. Native lifetime safeguards and explicit owner coverage controls are wired and pass focused source checks. Native visual/signed acceptance, offer/cap parity, grant/signup cutover and downgrade behavior remain. |
 | A06 Signed candidate/money acceptance | Open | Prior free/local and Play33/35 evidence is insufficient for paid purchase, restore, replacement, renewal, failed renewal, cancellation, refund and account/business switching. |
 | A07 Data safety | Open | Current source inventory/disclosure draft prepared. Active SDK/provider/transport, location decision, signed permissions and positive deletion evidence remain. |
 | A08 Review and release | Open | Reviewer access/material, separately authorized internal distribution/submission/rollout and existing gates remain. |
@@ -35,7 +35,8 @@ within each row must be reused only where source/platform/target still match.
    require a fresh mapped catalog and verified purchase before acknowledgement.
 2. Complete the native owner-account and explicit business coverage experience,
    preserving server ownership and per-business permissions. Do not claim one
-   business receipt covers an owner's separate businesses.
+   business receipt covers an owner's separate businesses. Source controls and
+   confirmation are now wired; native visual and signed acceptance remain.
 3. Reconcile approved Free 10/50, Starter 100/2 staff, Growth 1000/10 staff and Pro
    unlimited-products/50 staff with the actual shared catalog, nullable limits,
    admissions and mobile mirror. Business coverage remains 1/3/10. Keep existing

@@ -5,6 +5,7 @@ import { publicLegalUrl } from "@/lib/public-legal-url"
 import { deepLinkToSubscriptions } from "expo-iap"
 import { useRouter } from "expo-router"
 import { Linking } from "react-native"
+import { StoreOwnerCoverage } from "./store-owner-coverage"
 import { useStoreSubscription } from "./store-subscription-provider"
 
 export function StoreSubscriptionPanel() {
@@ -27,6 +28,7 @@ export function StoreSubscriptionPanel() {
     purchase,
     restore,
     store,
+    coveragePending,
   } = billing
   const hasLegalPages = Boolean(
     publicLegalUrl("terms") && publicLegalUrl("privacy"),
@@ -34,8 +36,11 @@ export function StoreSubscriptionPanel() {
   return (
     <View className="gap-4">
       <Text className="text-lg font-bold text-foreground">
-        App subscriptions
+        {catalog.data?.billingScope === "owner"
+          ? "Owner subscriptions"
+          : "App subscriptions"}
       </Text>
+      <StoreOwnerCoverage />
       <Text className="text-sm [-rn-line-height:22] text-muted-foreground">
         Software plans renew through your store account. Review the price,
         billing period and renewal terms in the store confirmation before
@@ -84,6 +89,7 @@ export function StoreSubscriptionPanel() {
               !catalog.data?.purchaseAvailable ||
               !hasLegalPages ||
               verification.isPending ||
+              coveragePending ||
               !iap.connected ||
               !priceDescription(product)
             }
@@ -140,7 +146,7 @@ export function StoreSubscriptionPanel() {
       ) : null}
       <Pressable
         accessibilityRole="button"
-        disabled={verification.isPending || !iap.connected}
+        disabled={verification.isPending || coveragePending || !iap.connected}
         className="min-h-11 justify-center"
         onPress={() => void restore()}
       >

@@ -10,6 +10,15 @@ const products = [
   { store: "play_store", productId: "growth", planId: "growth" },
 ]
 const catalogData = () => ({
+  billingScope: "owner" as "owner" | "business",
+  coverageAvailable: true,
+  ownerCoverage: {
+    enrolled: false,
+    reason: "uncovered" as "uncovered" | "covered" | "inactive_subscription",
+    planId: "free",
+    businessLimit: 3,
+    coveredBusinessCount: 1,
+  },
   products,
   purchaseAvailable: true,
   accountToken: "owner-account",
@@ -20,6 +29,7 @@ let data = catalogData()
 let refetch = async () => ({ isSuccess: true, data })
 let listPurchases: () => Promise<Purchase[]> = async () => []
 let verify: () => Promise<void> = async () => {}
+let mutateCoverage: () => Promise<void> = async () => {}
 let onSuccess: (purchase: Purchase) => void = () => {}
 const calls: Array<{ operation: string; input?: unknown }> = []
 
@@ -42,17 +52,20 @@ mock.module("@/trpc/client", () => ({
     storeSubscriptions: {
       catalog: { queryOptions: () => ({}), queryFilter: () => ({}) },
       verifyPurchase: { mutationOptions: () => ({}) },
+      enrollBusiness: { mutationOptions: () => ({ operation: "enroll" }) },
+      releaseBusiness: { mutationOptions: () => ({ operation: "release" }) },
     },
     retailOps: { subscription: { queryFilter: () => ({}) } },
   }),
 }))
 mock.module("@tanstack/react-query", () => ({
   useQuery: () => ({ data, refetch: () => refetch() }),
-  useMutation: () => ({
+  useMutation: (options: { operation?: string }) => ({
     isPending: false,
     mutateAsync: async (input: unknown) => {
-      calls.push({ operation: "verify", input })
-      await verify()
+      calls.push({ operation: options.operation ?? "verify", input })
+      if (!options.operation) await verify()
+      else await mutateCoverage()
     },
   }),
   useQueryClient: () => ({
@@ -154,6 +167,7 @@ beforeEach(() => {
   refetch = async () => ({ isSuccess: true, data })
   listPurchases = async () => [receipt]
   verify = async () => {}
+  mutateCoverage = async () => {}
 })
 
 test("native checkout uses the refreshed owner binding and the disclosed offer", async () => {
@@ -233,4 +247,81 @@ test("native restore stops when the business changes during store history", asyn
   }
   await controller.restore()
   expect(calls).toEqual([])
+})
+
+test("coverage enrollment uses the existing server command and refreshes projections", async () => {
+  const controller = renderController()
+  await controller.changeCoverage("enroll")
+  expect(calls).toEqual([
+    { operation: "enroll", input: undefined },
+    { operation: "refresh" },
+  ])
+})
+
+test("coverage release remains available for saved enrollment after paid expiry", async () => {
+  data.ownerCoverage = {
+    ...data.ownerCoverage,
+    enrolled: true,
+    reason: "inactive_subscription",
+    businessLimit: 0,
+    coveredBusinessCount: 0,
+  }
+  const controller = renderController()
+  await controller.changeCoverage("release")
+  expect(calls).toEqual([
+    { operation: "release", input: { tenantId: "business" } },
+    { operation: "refresh" },
+  ])
+})
+
+test("coverage commands require fresh owner scope, runtime and available capacity", async () => {
+  const controller = renderController()
+  for (const changed of [
+    { ...data, billingScope: "business" as const },
+    { ...data, coverageAvailable: false },
+    {
+      ...data,
+      ownerCoverage: { ...data.ownerCoverage, coveredBusinessCount: 3 },
+    },
+  ]) {
+    refetch = async () => ({ isSuccess: true, data: changed })
+    await controller.changeCoverage("enroll")
+  }
+  expect(calls).toEqual([])
+})
+
+test("coverage release cannot target an old business after session retirement", async () => {
+  data.ownerCoverage.enrolled = true
+  const controller = renderController()
+  refetch = async () => {
+    cacheGeneration++
+    return { isSuccess: true, data }
+  }
+  await controller.changeCoverage("release")
+  expect(calls).toEqual([])
+})
+
+test("duplicate coverage taps serialize before the first catalog request completes", async () => {
+  const controller = renderController()
+  const first = controller.changeCoverage("enroll")
+  await controller.changeCoverage("enroll")
+  await first
+  expect(calls.filter((call) => call.operation === "enroll")).toHaveLength(1)
+})
+
+test("a coverage command completing after session retirement cannot refresh the next account", async () => {
+  const controller = renderController()
+  mutateCoverage = async () => {
+    generation++
+  }
+  await controller.changeCoverage("enroll")
+  expect(calls).toEqual([{ operation: "enroll", input: undefined }])
+})
+
+test("coverage started during checkout refresh prevents a competing store launch", async () => {
+  const controller = renderController()
+  const checkout = controller.purchase(product)
+  const coverage = controller.changeCoverage("enroll")
+  await Promise.all([checkout, coverage])
+  expect(calls.map((call) => call.operation)).toEqual(["enroll", "refresh"])
 })

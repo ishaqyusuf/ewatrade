@@ -205,6 +205,8 @@ export const storeSubscriptionsRouter = createTRPCRouter({
             })
           : null
         return {
+          billingScope: "owner" as const,
+          coverageAvailable: billingEnabled && isOwner,
           products,
           purchaseAvailable: purchaseAvailable && isOwner,
           legalAcceptanceRequired,
@@ -219,6 +221,7 @@ export const storeSubscriptionsRouter = createTRPCRouter({
             : billingState.activePlayProductId,
           ownerCoverage: ownerState
             ? {
+                enrolled: ownerState.enrolled,
                 planId: ownerState.access.planId,
                 reason: ownerState.access.reason,
                 businessLimit: ownerState.access.businessLimit,
@@ -234,6 +237,8 @@ export const storeSubscriptionsRouter = createTRPCRouter({
           ? await getStoreBillingAccount(ctx.db, ctx.tenantContext.tenant.id)
           : null
       return {
+        billingScope: "business" as const,
+        coverageAvailable: false,
         products,
         purchaseAvailable,
         legalAcceptanceRequired,

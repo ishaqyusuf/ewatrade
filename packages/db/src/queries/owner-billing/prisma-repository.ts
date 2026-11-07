@@ -436,6 +436,11 @@ export async function getOwnerBillingCatalogState(
       : null
   return {
     activeProvider: current ? toDurableBillingProvider(current.provider) : null,
+    enrolled: snapshot.coverage.some(
+      (row) =>
+        row.accountId === snapshot.account.id &&
+        row.tenantId === input.tenantId,
+    ),
     activePlayProductId:
       purchase?.accountId === snapshot.account.id ? purchase.productId : null,
     access: projectOwnerBusinessAccess(snapshot, input.tenantId),

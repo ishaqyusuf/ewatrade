@@ -312,6 +312,11 @@ test("owner-wide catalog binds only the paying owner and stays off by default", 
   )
   const upserts: unknown[] = []
   let ownerAccount: { id: string; ownerUserId: string } | null = null
+  let coverage: Array<{
+    accountId: string
+    tenantId: string
+    enrolledAt: Date
+  }> = []
   const db = {
     storeBillingAccount: {
       upsert: async () => ({ id: "legacy-business-binding" }),
@@ -329,7 +334,7 @@ test("owner-wide catalog binds only the paying owner and stays off by default", 
       findUnique: async () => ownerAccount,
     },
     user: { findMany: async () => [{ id: "owner-1" }] },
-    ownerBusinessCoverage: { findMany: async () => [] },
+    ownerBusinessCoverage: { findMany: async () => coverage },
     ownerBillingSubscription: { findUnique: async () => null },
     membership: { findMany: async () => [{ tenantId: "tenant-1" }] },
   }
@@ -355,6 +360,7 @@ test("owner-wide catalog binds only the paying owner and stays off by default", 
     Reflect.deleteProperty(process.env, "OWNER_BILLING_ENABLED")
     expect(await caller("owner-1", "OWNER").catalog()).toMatchObject({
       accountToken: "legacy-business-binding",
+      billingScope: "business",
       ownerCoverage: null,
     })
     await expect(
@@ -375,8 +381,10 @@ test("owner-wide catalog binds only the paying owner and stays off by default", 
 
     expect(await caller("owner-1", "OWNER").catalog()).toMatchObject({
       accountToken: "owner-account",
+      billingScope: "owner",
       activeProvider: null,
       ownerCoverage: {
+        enrolled: false,
         planId: "free",
         reason: "inactive_subscription",
         businessLimit: 0,
@@ -391,6 +399,24 @@ test("owner-wide catalog binds only the paying owner and stays off by default", 
         select: { id: true },
       },
     ])
+    // Expired paid access must not hide saved enrollment or make release cancel
+    // a subscription. The native owner can explicitly release this business.
+    coverage = [
+      {
+        accountId: "owner-account",
+        tenantId: "tenant-1",
+        enrolledAt: new Date("2026-10-01T00:00:00Z"),
+      },
+    ]
+    expect(await caller("owner-1", "OWNER").catalog()).toMatchObject({
+      billingScope: "owner",
+      ownerCoverage: {
+        enrolled: true,
+        reason: "inactive_subscription",
+        businessLimit: 0,
+        coveredBusinessCount: 0,
+      },
+    })
   } finally {
     for (const key of keys) {
       const value = previous[key]

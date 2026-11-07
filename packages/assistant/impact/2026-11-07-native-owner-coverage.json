@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "id": "2026-11-07-native-owner-coverage",
+  "tickets": ["A05"],
+  "summary": "Expose explicit native owner business coverage through existing form-only commands and extend the catalog with server-derived scope, command availability and saved enrollment.",
+  "noAssistantImpact": "Existing storeSubscriptions procedures remain form-only. No assistant tool, capability or permission is added. Enrollment/release keep existing owner/account and transactional checks. No billing activation, schema, price, entitlement or provider configuration change.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "api",
+      "status": "local_only",
+      "path": ".brain/api/contracts.md"
+    },
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/native-store-billing.md"
+    },
+    {
+      "topic": "feature",
+      "status": "updated",
+      "path": "docs/billing/owner-wide-subscriptions.md"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "apps/api/src/trpc/routers/store-subscriptions.test.ts",
+      "executed": true,
+      "result": "Catalog distinguishes business/owner binding and preserves saved enrollment visibility after expiry; existing owner binding gates pass."
+    },
+    {
+      "kind": "test",
+      "path": "apps/mobile/src/components/mobile/store-subscription-provider.test.ts",
+      "executed": true,
+      "result": "Three wrappers pass: 14 actual-controller cases, 4 coverage control/confirmation render cases and disabled-provider fixture. Includes duplicate taps and session/checkout races. No device or signed Play acceptance."
+    }
+  ]
+}

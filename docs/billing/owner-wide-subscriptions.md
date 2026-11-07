@@ -7,6 +7,16 @@ See the [current Android checklist](android-paid-launch-2026-11-07.md) and the
 [recorded pricing direction/correction](mobile-free-launch-2026-11-06.md).
 Checkout stays disabled until the reviewed paid candidate is ready.
 
+7 November native follow-up: the dormant Plan & billing screen now distinguishes
+owner subscriptions and shows coverage for the open business, business slots,
+explicit enrollment and confirmed release through the existing server commands.
+Saved enrollment remains visible after expiry; release preserves data and does
+not cancel store renewal. Actions refresh server authority and stop on session
+retirement. The catalog adds `billingScope`, `coverageAvailable` and
+`ownerCoverage.enrolled`; no ownership authority comes from these display fields.
+See [source verification](../verification/2026-11-07-native-owner-coverage.md).
+Native visual/device and signed acceptance remain open while activation is gated.
+
 `@ewatrade/db/owner-billing` has pure policy functions, transactional commands and,
 since 2 November 2026, a durable Prisma adapter wired to the catalog, purchase,
 restore, notification, signup and canonical entitlement readers. All of that
