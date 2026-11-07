@@ -1,8 +1,7 @@
 import { View } from "@/components/ui/view"
-import { useAuthContext } from "@/hooks/use-auth"
 import { useQaAccelerator } from "@/hooks/use-qa-accelerator"
 import { groupQaProfiles } from "@ewatrade/utils/qa-profiles"
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { FlatList } from "react-native"
 import { BottomSearchFooter } from "./bottom-search-footer"
 import {
@@ -20,21 +19,15 @@ import {
  */
 export function QaBusinessesScreen({ onClose }: { onClose: () => void }) {
   const qa = useQaAccelerator()
-  const { token } = useAuthContext()
   const [search, setSearch] = useState("")
   const [footerHeight, setFooterHeight] = useState(140)
-  const lastToken = useRef(token)
   const profiles = useMemo(
     () => groupQaProfiles(filterQaProfiles(qa.profiles, search)),
     [qa.profiles, search],
   )
 
-  // A selected business (new session) or a cleared domain ends the list.
-  useEffect(() => {
-    if (lastToken.current === token) return
-    lastToken.current = token
-    onClose()
-  }, [token, onClose])
+  // Auth owns navigation after selection (dismiss sign-in screens, then Home).
+  // Popping this route on token change races that redirect and can blank the stack.
   const authorized = qa.capabilityAvailable && !!qa.authorization
   useEffect(() => {
     if (!authorized) onClose()

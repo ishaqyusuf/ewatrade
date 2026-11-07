@@ -9,7 +9,7 @@ appId: ${APP_ID}
       - scrollUntilVisible:
           element: Sign out
           direction: DOWN
-          timeout: 20000
+          timeout: 60000
           centerElement: true
       - tapOn: Sign out
       - assertVisible: Sign out\?

@@ -247,3 +247,16 @@ Nine focused tests/64 assertions pass, including foreign project, wrong update,
 wrong runtime/commit/branch/group, rollback and malformed/duplicate manifest
 rejection. The real c422a93f manifest passed the same verifier. Fresh candidate
 receipts are still required; no Production rollout has occurred.
+
+## QA sign-in race found during actual Android acceptance
+
+The 8c1a82b4 OTA passed provider identity verification; web smoke passed. Android
+exposed slow first-run startup/long-menu deadlines and then a persistent blank
+screen after choosing the QA business. Full-screen QaBusinessesScreen reacted to
+the changed token with Back while use-auth concurrently dismissed sign-in routes
+and replaced Home. Removed that competing token-change navigation; the auth
+provider remains the sole sign-in navigation owner. Manual/revoked-domain closing,
+compact-sheet dismissal and all authority checks are unchanged. Startup now waits
+for either sign-in or the navigation tabs; the long-menu sign-out scroll keeps a
+bounded60second deadline. These changes require a new compatible OTA and fresh
+acceptance. Diagnostic runs are not release receipts; Production is untouched.

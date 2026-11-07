@@ -5,6 +5,9 @@ name: QA catalog and sale draft
 # The QA picker intentionally lives on signed-out login only. Use ordinary
 # sign-out when reusing a client that already completed an earlier journey.
 - launchApp
+- extendedWaitUntil:
+    visible: Sign in to your business|More
+    timeout: 60000
 - runFlow: sign-out.yaml
 - assertVisible: Sign in to your business
 - runFlow:
