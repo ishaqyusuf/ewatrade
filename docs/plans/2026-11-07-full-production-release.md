@@ -1,13 +1,12 @@
 # Full Production release preflight — 7 November 2026
 
-Status: database warning exception approved and applied to Preview. Frozen candidate
-`cb36b5689` deployed Dashboard, Marketing and API to Preview. Storefront built but
-its unregistered-host verification rejected a streamed HTTP 200 instead of 404;
-jobs and Android did not run. The publication check now precedes the route loading
-boundary, preserving the storefront UI and the strict runtime check.
-Production remains untouched and native release has a separate readiness block.
-No worktree was created. The narrow
-marketing-only proposal is superseded by the owner's “deploy all” instruction.
+Status: Production database, Dashboard, Marketing, API and jobs are deployed at
+`bf9bc35685c04f11e10281db2c0d59f2a1e83a32`; the normal release executor exited 0
+and Production API health passed. Five of six configured Production components
+are complete (83.3%). Native remains blocked by failed exact-candidate Android
+Preview acceptance and the existing store-release readiness gate. Storefront is
+configured Preview-only. No worktree was created. Historical entries below retain
+the earlier states; the final receipt at the end is authoritative.
 
 ## Owner decisions
 
@@ -260,3 +259,85 @@ compact-sheet dismissal and all authority checks are unchanged. Startup now wait
 for either sign-in or the navigation tabs; the long-menu sign-out scroll keeps a
 bounded60second deadline. These changes require a new compatible OTA and fresh
 acceptance. Diagnostic runs are not release receipts; Production is untouched.
+
+## Production outcome and remaining native blocker — 7 November 2026
+
+The owner-approved additive Production schema diff was rechecked and matched
+SHA256 `0d09846e09abe4cf111cba28e863921370142eef912ec371325b13ecdf6f694c`.
+The specifically approved `db:push --prod -- --accept-data-loss` succeeded with
+only the two new nullable ManualPaymentReport unique-constraint warnings on
+customerReceiptId/customerFundsRefundRequestId. The ordinary release database
+step then confirmed in sync. No reset, dropped data or additional warning.
+
+The clean current main checkout ran the normal root executor:
+`bun run release --production --only database,dashboard,marketing,api,jobs --yes`.
+It reused valid source/web acceptance, pushed the exact candidate to origin/main,
+and completed successfully. No worktree, dirty-source override, gate bypass,
+second concurrent executor or native Production publication was used.
+
+| Production component | Verified result |
+| --- | --- |
+| Database | Schema synchronized; ordinary release push in sync |
+| Dashboard | Ready, dpl_HZJFBYLL4FBEnURG38xCSy2MjA2M; https://dash.ewatrade.com |
+| Marketing | Ready, dpl_5NUte5E4BDmTNFbLRLb1NEQSy3Jx; https://www.ewatrade.com |
+| API | Ready, dpl_APSyGG3fueoMiAKR8NrHvHwCKkHy; https://api.ewatrade.com; health passed |
+| Jobs | Trigger Production version 20261107.1, deployment xt1te9ji; deploy exited 0 |
+| Native | Not released; exact Android acceptance and store readiness remain blocked |
+
+All five Production release tags resolve to bf9bc356. The final documentation
+commit records this result; it is not a new deployed application candidate.
+
+Source checks passed 283 tests / 1,796 assertions, focused QA route guards 4/4 and H02.
+Exact bf9 Preview web smoke passed with clean source and verified runtime
+(receipt 63ac047f-6f4e-4566-b67e-fa334584116c). Preview Storefront real 404/no-store,
+refusal content/assets/legal/app-link checks and alias passed; Preview jobs
+version 20261107.2 and compatible Android OTA were published.
+
+Android build 35 is 91735df8-e7c9-4a80-b4bf-36019a7b4ccc, runtime
+0a1cc8debc0d42e5b32ff0455e3b5368ff6fed7e. Exact bf9 Preview OTA group is
+3f4aaa20-4ce8-4fd5-b4db-4858b104a1b7; Android update is
+01a1b7ac-21e8-784a-8d43-95e8b7db8470. Owner-approved emulator-5554 lost Android
+package services and was restarted on the same AVD without clearing user data.
+After recovery, same-candidate qa:smoke passed the running-update identity check,
+normal sign-out and QA selection, then failed because Goods was absent. The
+screenshot shows populated QA Home with a blank bottom navigation bar. It does
+not establish a passing runtime receipt or prove the remaining root cause. No
+sale draft/payment was submitted. Private failure artifact:
+`.scratch/qa-release/artifacts/20fd40f2-dc8a-49b1-a016-bf351c0ca305`.
+
+The unchanged `check-teen-release-readiness.mjs` independently exits 1 for missing
+verified server rollout, effective legal notices, media safeguards, platform
+classifications and signed-path acceptance. Billing stays closed; Apple Sandbox
+TEST closed-gate 503 is negative evidence, not paid acceptance. Native work must
+close these specific failures and obtain a fresh matching Preview receipt before
+normal Production release. The deployment authorization and no-worktree rule
+persist; this partial release does not claim the entire requested rollout done.
+
+Private execution evidence: `/tmp/full-release-production-web.log`,
+`/tmp/full-release-vercel-production-final.json`, and
+`/tmp/full-release-android-smoke-bf9-ready.log`. No secrets or generated test
+artifacts are committed.
+
+### Live marketing and Logly verification
+
+Production https://ewatrade.com redirects to https://www.ewatrade.com and returns
+HTTP 200 with the approved warm design, existing layout and heading “Your whole
+business, from request to paid.” Browser page errors were empty; FAQ opens.
+Normal anonymous site_visit, page_view and marketing_demo_interacted were sent
+through /api/analytics. The FAQ event retained only fixed labels:
+surface=marketing, channel=faq, action=faq, category=catalog, status=opened.
+Collector responses were 202 with accepted 1 then accepted 2, duplicate 0,
+mode=database. Read-only queue inspection confirmed empty after delivery.
+The first shorter observation saw only site_visit; allowing the next scheduled
+batch resolved the uncertainty without changing product code or analytics policy.
+This proves live visit/page/FAQ delivery, not every funnel's runtime outcome;
+remaining important-event coverage has the focused source/sanitizer/proxy checks.
+No form, customer record, sale, payment or paid activation was submitted.
+Private evidence: /tmp/full-release-production-marketing-timing.json and
+/tmp/full-release-production-marketing.png.
+
+Brain impact: updated local marketing-launch-v4, marketing-full-polish task,
+tasks/in-progress and database/migrations with the Production result. Earlier
+source corrections also updated storefront-template-factory, engineering/ai-rules
+and mobile-dev-preview-qa-accelerator. Brain stays intentionally local/ignored;
+this tracked receipt preserves release evidence without force-adding Brain.
