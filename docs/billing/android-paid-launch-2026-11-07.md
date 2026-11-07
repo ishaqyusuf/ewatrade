@@ -8,9 +8,36 @@ No paid app download, trial, annual offer or automatic customer charge is implie
 
 The 6 November free-first plan is superseded. Its purchase-disabled implementation
 remains closed until the paid candidate is ready; simply flipping its flag would
-expose unfinished integration. The native IAP plugin/autolinking and Android
-Billing permission also remain disabled; restore them deliberately for the paid
-candidate after integration, then verify its exact signed manifest. No activation or release is authorized by this file.
+expose unfinished integration. Current config includes the IAP plugin and does
+not exclude Android IAP autolinking or block its Billing permission. Verify actual
+linkage and permissions in the exact signed paid candidate. Runtime purchase scope
+remains disabled. No activation or release is authorized by this file alone.
+
+## Approved launch choices — 7 November continuation
+
+Owner approved manual address entry, Nigeria-first availability and the existing
+support/founders contact setup. Publish publicly after Google approval and all
+release checks; do not ask for that same publication decision again. This does
+not authorize invented declarations, unmet gates or binding account agreements.
+
+- Native signup and new-business forms use manual address fields. Android blocks
+  coarse/fine/background location permissions, and the mobile API refuses old
+  lookup requests without contacting Nominatim. Shared web signup uses a separate
+  lookup path and is not changed by this Android slice.
+- Play Production targeting was changed from 178 countries/regions to Nigeria
+  only. Publishing overview confirms **Add 1 country / region: Nigeria** under
+  changes not yet submitted. Production is inactive; review submission is disabled
+  until required dashboard steps are complete. Existing listing/declaration drafts
+  were not edited or submitted. Subscription territory configuration remains open.
+- Keep `support@ewatrade.com` public and `founders@ewatrade.com` for the operational
+  alert recipient plan. Existing aliases need no new mailbox. Actual alert
+  transport/receipt, backup coverage and acknowledgement target remain unaccepted.
+- Payments profile remains owner-handled. Regional price rules remain approved
+  for later expansion; Nigeria launch does not restrict saved business countries
+  or remove existing account access.
+
+[Decision implementation and evidence](../verification/2026-11-07-android-launch-decisions.md).
+Paid-release acceptance remains **1/8**, not increased by these preparations.
 
 ## Retained Android release checklist
 

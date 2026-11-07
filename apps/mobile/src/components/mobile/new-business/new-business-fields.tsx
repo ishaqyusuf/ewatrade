@@ -6,7 +6,6 @@ import { CurrencySelector } from "@/components/mobile/currency-selector"
 import { FormField } from "@/components/mobile/form-field"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
-import { useCurrentAddress } from "@/hooks/use-current-address"
 import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
 import { mobileOperatingModelLabel } from "@/lib/catalog-wording"
 import {
@@ -21,7 +20,6 @@ import {
 } from "@ewatrade/utils/countries"
 import { View } from "react-native"
 import { CountrySelect } from "../country-select"
-import { CurrentLocationCard } from "../current-location-card"
 import { ListCard } from "../green-till/kit"
 import { PhoneField } from "../phone-field"
 import { newBusinessPhoneDialCode } from "./new-business-model"
@@ -103,7 +101,6 @@ export function NewBusinessProfile({ model }: FieldsProps) {
   )
 }
 export function NewBusinessDetails({ model }: FieldsProps) {
-  const location = useCurrentAddress()
   const { draft, updateDraft, locked } = model
   const large = useLargeTextLayout()
   return (
@@ -121,24 +118,6 @@ export function NewBusinessDetails({ model }: FieldsProps) {
           })
         }
       />
-      {!locked ? (
-        <CurrentLocationCard
-          address={location.address}
-          error={location.error}
-          status={location.status}
-          onClear={location.clear}
-          onLocate={() => {
-            void location.locate().then((address) => {
-              if (address)
-                updateDraft({
-                  addressLine1: address.addressLine1,
-                  city: address.city,
-                  countryCode: address.countryCode,
-                })
-            })
-          }}
-        />
-      ) : null}
       <FormField
         variant="auth"
         label="Business name"

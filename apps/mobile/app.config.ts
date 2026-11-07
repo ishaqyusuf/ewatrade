@@ -213,7 +213,9 @@ const config: ExpoConfig = {
     blockedPermissions: [
       "android.permission.FOREGROUND_SERVICE",
       "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK",
-      // Location is only used while the app is open, to fill an address.
+      // Launch uses manual address entry; no device-location permission.
+      "android.permission.ACCESS_COARSE_LOCATION",
+      "android.permission.ACCESS_FINE_LOCATION",
       "android.permission.ACCESS_BACKGROUND_LOCATION",
       // Contacts are only read, to fill a New sale customer from the picker.
       "android.permission.WRITE_CONTACTS",

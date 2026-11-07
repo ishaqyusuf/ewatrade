@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "id": "2026-11-07-android-manual-address",
+  "tickets": ["A07"],
+  "summary": "Apply approved native manual address entry and block Android device location; retire the native geocoding endpoint without forwarding coordinates.",
+  "noAssistantImpact": "Address entry remains form-only. No assistant tool or capability is added; no model can invoke the retired public native geocoding route. Existing business ownership, address persistence and country validation remain unchanged. The separate web lookup is outside this Android slice.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "updated",
+      "path": "docs/billing/android-paid-launch-2026-11-07.md"
+    },
+    {
+      "topic": "api",
+      "status": "local_only",
+      "path": ".brain/api/contracts.md"
+    },
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/account-privacy.md"
+    },
+    {
+      "topic": "permissions",
+      "status": "local_only",
+      "path": ".brain/api/permissions.md"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "apps/api/src/trpc/routers/location.test.ts",
+      "executed": true,
+      "result": "Valid legacy coordinates fail FORBIDDEN without provider/DB access; malformed coordinates fail BAD_REQUEST. Focused router/business-country suite passes 3 tests/11 assertions."
+    }
+  ]
+}

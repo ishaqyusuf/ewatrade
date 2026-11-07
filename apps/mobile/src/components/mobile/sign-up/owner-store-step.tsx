@@ -1,12 +1,10 @@
 import { CountrySelect } from "@/components/mobile/country-select"
 import { CurrencySelector } from "@/components/mobile/currency-selector"
-import { CurrentLocationCard } from "@/components/mobile/current-location-card"
 import { Icon, type IconKeys } from "@/components/ui/icon"
 import { Modal, useModal } from "@/components/ui/modal"
 import { Pressable } from "@/components/ui/pressable"
 import { View } from "@/components/ui/view"
 import { useColorScheme } from "@/hooks/use-color"
-import { useCurrentAddress } from "@/hooks/use-current-address"
 import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
 import { GREEN_TILL_THEME } from "@/lib/green-till-theme"
 import { OPERATING_CURRENCIES } from "@ewatrade/utils"
@@ -19,7 +17,7 @@ import type {
 } from "@ewatrade/utils/owner-signup"
 import { BottomSheetScrollView } from "@gorhom/bottom-sheet"
 import { Text } from "react-native"
-import { ActivityIndicator, TextInput } from "react-native"
+import { TextInput } from "react-native"
 import { BusinessTypeAvatar } from "./business-type-avatar"
 import { useOwnerSignupColors } from "./owner-signup-frame"
 
@@ -64,7 +62,6 @@ export function OwnerStoreStep({
   const { colorScheme } = useColorScheme()
   const palette = GREEN_TILL_THEME[colorScheme]
   const largeText = useLargeTextLayout()
-  const location = useCurrentAddress()
   const currency = useModal()
   const selectedCurrency = OPERATING_CURRENCIES.find(
     (item) => item.code === business.currencyCode,
@@ -88,20 +85,6 @@ export function OwnerStoreStep({
     fontWeight: "700" as const,
     color: colors.mutedForeground,
     marginBottom: 6,
-  }
-  function locate() {
-    void location.locate().then((address) => {
-      if (address)
-        onChange({
-          addressLine1: address.addressLine1,
-          city: address.city,
-          region: address.region,
-          countryCode: address.countryCode ?? business.countryCode,
-          currencyCode:
-            currencyForCountry(address.countryCode ?? business.countryCode) ??
-            business.currencyCode,
-        })
-    })
   }
   return (
     <View>
@@ -261,75 +244,6 @@ export function OwnerStoreStep({
       <Text style={{ ...label, marginTop: 18, marginBottom: 8 }}>
         Where you trade
       </Text>
-      {location.address ? (
-        <CurrentLocationCard
-          address={location.address}
-          status={location.status}
-          error={location.error}
-          onClear={() => {
-            location.clear()
-            onChange({ addressLine1: "", city: "", region: "" })
-          }}
-          onLocate={locate}
-        />
-      ) : (
-        <>
-          <Pressable
-            accessibilityRole="button"
-            disabled={location.status === "busy"}
-            onPress={locate}
-            style={{
-              minHeight: 46,
-              paddingHorizontal: 12,
-              paddingVertical: 10,
-              borderRadius: 14,
-              borderWidth: 1.5,
-              borderStyle: "dashed",
-              borderColor: colors.primary,
-              backgroundColor: colors.accent,
-              flexDirection: "row",
-              justifyContent: "center",
-              alignItems: "center",
-              gap: 8,
-            }}
-          >
-            {location.status === "busy" ? (
-              <ActivityIndicator color={colors.primary} />
-            ) : (
-              <Icon name="MapPin" size={18} color={colors.primary} />
-            )}
-            <Text
-              style={{
-                fontSize: 16,
-                lineHeight: 22,
-                fontWeight: "800",
-                color: colors.primary,
-              }}
-            >
-              {location.status === "busy"
-                ? "Finding you…"
-                : "Use my current location"}
-            </Text>
-          </Pressable>
-          <Text
-            style={{
-              marginTop: 6,
-              fontSize: 16,
-              lineHeight: 22,
-              color: location.error
-                ? colors.destructive
-                : colors.mutedForeground,
-            }}
-          >
-            {location.error ||
-              (business.addressLine1
-                ? [business.addressLine1, business.city, business.region]
-                    .filter(Boolean)
-                    .join(", ")
-                : "Optional. Helps customers find you.")}
-          </Text>
-        </>
-      )}
       <View
         style={{
           marginTop: 12,
@@ -412,6 +326,46 @@ export function OwnerStoreStep({
           </Pressable>
         </View>
       </View>
+      {(
+        [
+          {
+            key: "addressLine1",
+            label: "Street address",
+            placeholder: "Enter the street address",
+            maxLength: 200,
+          },
+          {
+            key: "city",
+            label: "City",
+            placeholder: "Enter the city",
+            maxLength: 120,
+          },
+          {
+            key: "region",
+            label: "State or region",
+            placeholder: "Enter the state or region",
+            maxLength: 120,
+          },
+        ] as const
+      ).map(({ key, label: fieldLabel, placeholder, maxLength }) => (
+        <View key={key} style={{ marginTop: 18 }}>
+          <Text style={label}>{fieldLabel} · optional</Text>
+          <TextInput
+            accessibilityLabel={fieldLabel}
+            maxLength={maxLength}
+            value={business[key] ?? ""}
+            onChangeText={(value) => onChange({ [key]: value })}
+            placeholder={placeholder}
+            placeholderTextColor={colors.mutedForeground}
+            style={{
+              ...input,
+              fontSize: 16,
+              lineHeight: 22,
+              color: colors.foreground,
+            }}
+          />
+        </View>
+      ))}
       <View style={{ marginTop: 18 }}>
         <Text style={label}>About this store · optional</Text>
         <TextInput

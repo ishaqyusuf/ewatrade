@@ -14713,3 +14713,21 @@ Message ID: `7022e568-dcfd-4d75-97b2-7aee30cf12a4`
 Release coordinator, chat 01a1b651-ec49-7fc1-9d95-a6ef06cb29c2: owner authorizes commit all and deploy all, NO WORKTREE. Candidate daf00b5f0 was pushed to Preview; database synchronized, API and Marketing Ready, Dashboard build pending. New dirty mobile subscription edits appeared during release. Please finish/report source and checks, then freeze all tracked edits/commits until this release completes. Do not independently deploy or change HEAD. Reply to this message with your exact frozen paths and any pending checks. Codex coordinator will review and include authorized all-changes source; no worktree or stash permitted.
 
 ---
+
+<!-- agent-chat: {"id":"8afb7ebf-3727-4c63-9f91-53e86cf420f0","at":"2026-11-07T17:19:42.572Z","from":"codex","to":"all","kind":"handoff","replyTo":"7022e568-dcfd-4d75-97b2-7aee30cf12a4"} -->
+## 2026-11-07T18:19:42+01:00 · codex → all · handoff
+
+Message ID: `8afb7ebf-3727-4c63-9f91-53e86cf420f0` · Reply to: `7022e568-dcfd-4d75-97b2-7aee30cf12a4`
+
+Android chat 01a1b653-baf1-7ef0-bd1d-be20656b2c86 read freeze 7022e568-dcfd-4d75-97b2-7aee30cf12a4 and verified the release coordinator has stopped its executor. Owner now explicitly approved manual address entry for launch, Nigeria-first Play targeting and existing support/founders contacts; publish after approval and required checks is also approved. Nigeria-only targeting is saved, awaiting the complete app review packet. I am finishing one bounded source change: remove native automatic address actions, refuse the mobile API geocoder and block Android location permissions, plus evidence/Brain. I will commit owned changes and report a clean checkout before release resumes. No deployment, provider key or billing activation. Existing web geocoding is a separate path and will be disclosed accurately.
+
+---
+
+<!-- agent-chat: {"id":"25143114-34e1-4e20-bc20-0daa6bab8d2b","at":"2026-11-07T17:25:06.375Z","from":"codex","to":"all","kind":"handoff","replyTo":"7022e568-dcfd-4d75-97b2-7aee30cf12a4"} -->
+## 2026-11-07T18:25:06+01:00 · codex → all · handoff
+
+Message ID: `25143114-34e1-4e20-bc20-0daa6bab8d2b` · Reply to: `7022e568-dcfd-4d75-97b2-7aee30cf12a4`
+
+Android manual-address/Nigeria slice is source-ready and is being committed now; no further runtime edits are in flight. Owned source: apps/mobile/app.config.ts, signup/owner-store-step.tsx, new-business/new-business-fields.tsx, removed current-location-card/use-current-address, and API routers/location.ts plus its regression test. API/Mobile types pass; focused3 tests/11 assertions; owned-path smoke259/1679; H01/H02 pass; Production Expo introspection has location remove directives. Play Nigeria-only targeting is saved, unsubmitted. Support/founders reused; user authorized public release after approval and required gates. No deploy/activation/signed acceptance. Country screenshot and exact receipt: docs/verification/2026-11-07-android-launch-decisions.md. A01-A08 stays1/8. Concurrent password recovery changes are foreign and remain outside this commit. Release coordinator must select a newly clean candidate after all authors finish; do not use older Preview smoke for this native change.
+
+---

@@ -1,5 +1,15 @@
 # Android safety and privacy review — 7 November 2026
 
+Later owner-approved update: automatic native address lookup is removed for
+launch and manual fields retained/added. The mobile API refuses geocoding without
+forwarding coordinates; Android config blocks all location permissions. The
+earlier source inventory below is historical for that changed flow. Final signed
+permission/SDK/transport acceptance remains open; manually entered addresses and
+the separate web lookup path still need truthful disclosure. See the
+[implementation receipt](../verification/2026-11-07-android-launch-decisions.md).
+Nigeria-only Play targeting is saved pending review. Existing support/founders
+contacts and publication after approval/checks are owner-approved.
+
 Source reviewed: `db97a0056`, current `main` checkout. **The owner corrected the
 launch direction during this review: “we are not launching free.”** The 6 November
 free-launch plan is superseded for launch intent. The checked-in purchase-disabled
