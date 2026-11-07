@@ -56,3 +56,20 @@ No new provider service, credentials, financial profile, mail delivery, billing
 activation, signed build, deployment, declaration submission or public release.
 Current password-recovery edits and Apple-owned packet changes are foreign and
 excluded from this commit. No worktree, branch switch, stash or discarded work.
+
+## Automatic progression into shared policy preparation
+
+After committing the shared index as8628d5a5, advanced to the independent shared
+[paid/privacy draft](../releases/mobile-permissions-disclosure-draft-2026-11-07.md).
+It now proposes replacements for free-first billing/deletion claims, owner-paid
+coverage and cancellation, retained-record fallback, billing-information handling,
+selected contacts and manual native versus separate web addresses. Apple was
+notified of ownership so it can reuse this single draft. Existing approved legal
+source and acceptance history are unchanged. Five-day Apple implementation,
+signed/provider/SDK and operating evidence remain explicit authoring holds; no
+promise of completed privacy/deletion or global legal acceptance is invented.
+
+Draft-only fast smoke passes48tests/211assertions. No runtime test, new assistant
+impact record or duplicate billing verification is needed for this prose change.
+The existing exact-snapshot approval rule in packages/utils/src/legal-approval.ts
+remains authoritative; product-direction approval does not set approval metadata.

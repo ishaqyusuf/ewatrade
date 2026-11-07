@@ -94,6 +94,7 @@ privacy/operations and Apple work continue. [Receipt](../verification/2026-11-07
 - [Apple checklist and provider evidence](apple-paid-launch-2026-11-07.md)
 - [Android manual-address and historical Nigeria draft receipt](../verification/2026-11-07-android-launch-decisions.md)
 - [Shared safety/privacy review](../releases/android-safety-privacy-review-2026-11-07.md)
+- [One shared paid billing/privacy draft](../releases/mobile-permissions-disclosure-draft-2026-11-07.md) — advanced after Play merchant setup blocked product creation; exact publication remains gated by the listed evidence and approval holds.
 - [Deployment coordinator checkpoint](../plans/2026-11-07-full-production-release.md)
 
 Territory checks use each provider's actual current availability and prices.
