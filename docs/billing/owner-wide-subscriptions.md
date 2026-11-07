@@ -1,4 +1,10 @@
-# Owner-wide subscriptions: durable adapter, cutover pending
+# Owner-wide subscriptions: versioned signup and downgrade integration
+
+7 November continuation: [plan limits and downgrade integration](owner-plan-limits-and-downgrade.md)
+now implements a versioned baseline for new owner-runtime businesses, canonical
+nullable quotas, creation guards and retained operational access after lapse.
+Existing grants are preserved. Historical adapter/cutover notes below describe
+the earlier state; provider activation and signed/target acceptance remain open.
 
 7 November 2026: owner correction restores **paid owner subscriptions at launch**.
 The 6 November free-first decision is historical. Native integration, paid cutover,
@@ -213,3 +219,23 @@ types and H01/H02 gates. Use a minimal environment with an unusable DB sentinel;
 never copy Production credentials to make an offline check pass. Preserve existing
 unchanged Android configuration/source evidence and reserve actual signed-device
 purchase tests for the later candidate.
+
+## Versioned admission preparation — 7 November 2026
+
+New signups made while the existing owner billing runtime is enabled receive
+`owner-subscriptions-v1` metadata and Free capacity until verified coverage exists.
+Explicit earlier grants remain independent. Shared/mobile plan catalogs now use
+Free 10 products/50 monthly orders, Starter 100 products, Growth 1,000 and Pro
+unlimited products. Owner business creation serializes by owner, then billing
+account; Catalog creation locks before reading allowance and counting items.
+Existing records and operational access survive a verified subscription lapse;
+new admissions use current capacity. Provider-authoritative grace does not invent
+extensions during outages. No feature flag or provider setting is activated here.
+
+Release review: focused subscription checks 20/100 and Google projection checks
+4/13 pass independently; full bounded source smoke 259/1679 passes. The implementation receipt reports a bounded guarded local-Neon business
+admission integration pass (one test/two assertions, exact fixture cleanup);
+see docs/verification/2026-11-07-owner-plan-limits.md. Database and marketing
+types, H01 and H02 pass. Paid Android launch acceptance remains 1/8, including
+outstanding merchant setup, signed purchase and legal/review gates. Assistant
+billing stays form-only; shared command admission applies across clients.

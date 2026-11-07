@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "id": "2026-11-07-owner-plan-limits",
+  "tickets": ["A05"],
+  "summary": "Integrate owner offer limits, versioned paid signup and non-destructive expiry: current capacity gates new admissions while verified historical operational access preserves existing records.",
+  "noAssistantImpact": "No assistant tool, capability or procedure is added. Existing catalog, order and staff tools retain their canonical domain admission checks, current tenant permissions and structured quota errors. A retained navigation/access tier never authorizes new capacity. Billing and owner signup remain form-only; no prompt can grant a paid tier or bypass verification.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "updated",
+      "path": "docs/billing/owner-plan-limits-and-downgrade.md"
+    },
+    {
+      "topic": "api",
+      "status": "local_only",
+      "path": ".brain/api/contracts.md"
+    },
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/owner-wide-billing.md"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/retail-ops-subscriptions.test.ts",
+      "executed": true,
+      "result": "Focused six-file run passes 67 tests/270 assertions: current quota enforcement, retained operations, expiry/renewal, explicit grant preservation and separate-business capacity."
+    },
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/owner-billing/business-admission.integration.test.ts",
+      "executed": true,
+      "result": "Guarded local Neon: concurrent first-business admissions yield one created and one at-limit; exact empty QA fixture cleanup completed. No provider/payment acceptance claimed."
+    }
+  ]
+}

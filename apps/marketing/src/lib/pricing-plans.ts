@@ -56,9 +56,9 @@ export function getPlanLimitLabels(
     {
       key: "products",
       label:
-        plan.id === "free"
-          ? count(limits.products, "catalog item", "catalog items")
-          : "No product cap during launch",
+        limits.products === null
+          ? "Unlimited catalog items"
+          : count(limits.products, "catalog item", "catalog items"),
     },
     {
       key: "staff",

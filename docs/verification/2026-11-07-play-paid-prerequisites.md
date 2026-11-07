@@ -1,5 +1,9 @@
 # Play paid-launch prerequisites — 7 November 2026
 
+Later source follow-up: [plan limits and downgrade integration](../billing/owner-plan-limits-and-downgrade.md)
+addresses the numeric Pro cap, new-cohort signup and admission gaps recorded
+below. The Console observations and external setup requirements remain valid.
+
 Read-only authenticated Console inspection after the owner reconfirmed paid
 owner subscriptions from day one. No financial account, product, declaration,
 release, payment or provider configuration was created or changed.

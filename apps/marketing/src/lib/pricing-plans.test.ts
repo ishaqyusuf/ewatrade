@@ -53,7 +53,7 @@ test("limits read as plain labels", () => {
     }).map((limit) => limit.label),
   ).toEqual([
     "3 businesses",
-    "No product cap during launch",
+    "150 catalog items",
     "You + 10 staff",
     "Unlimited orders",
   ])
@@ -94,12 +94,17 @@ test("plan CTAs: Free and Starter sign up, Growth and Pro talk to us", () => {
   ])
 })
 
-test("pricing copy comes from the shared plan catalogue, without amounts", () => {
+test("pricing copy uses the approved monthly baseline from the shared catalogue", () => {
   const plans = getPricingPlans(true)
   expect(plans.map((plan) => plan.priceLabel)).toEqual(
     RETAIL_OPS_SUBSCRIPTION_PLANS.map((plan) => plan.priceLabel),
   )
-  for (const plan of plans) expect(plan.priceLabel).not.toMatch(/[₦$£€]|\d/)
+  expect(plans.map((plan) => plan.priceLabel)).toEqual([
+    "Free forever",
+    "₦5,000/month",
+    "₦15,000/month",
+    "₦30,000/month",
+  ])
   expect(plans.find((plan) => plan.id === "free")?.notIncluded).toContain(
     "Invoices",
   )

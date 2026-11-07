@@ -9,6 +9,10 @@ import {
   OfflineDeviceStatus as DurableOfflineDeviceStatus,
 } from "../../generated/prisma/enums"
 import {
+  OWNER_BILLING_POLICY_VERSION,
+  isOwnerBillingCohort,
+} from "./owner-billing/cohort"
+import {
   getOwnerBusinessAccess,
   getOwnerCoveredPlanIds,
   ownerBillingRuntime,
@@ -79,6 +83,7 @@ export type RetailOpsTenantSubscription = {
     | "owner_signup_launch"
     /** Owner-wide store subscription covering this business. */
     | "owner_subscription"
+    | "owner_billing_free"
   grantedAt?: string
   revokedAt?: string | null
   status: RetailOpsSubscriptionStatus
@@ -703,7 +708,7 @@ function normalizePlanLimits(
       limits.ordersPerMonth,
       fallback.ordersPerMonth,
     ),
-    products: normalizePlanLimit(limits.products, fallback.products),
+    products: normalizeNullablePlanLimit(limits.products, fallback.products),
     reportsHistoryDays: normalizePlanLimit(
       limits.reportsHistoryDays,
       fallback.reportsHistoryDays,
@@ -1049,6 +1054,38 @@ function metadataSubscriptionPlanId(metadata: unknown) {
   return normalizePlanId(subscription.planId)
 }
 
+/** New paid-cohort signups get no unearned paid tier. Old explicit grants stay. */
+export function withOwnerSignupSubscription(
+  metadata: unknown,
+  requestedPlan: RetailOpsPaidPlanId,
+  now = new Date(),
+) {
+  if (
+    metadataSubscriptionPlanId(metadata) &&
+    asRecord(getRetailOpsMetadata(metadata).subscription).source !==
+      "owner_billing_free"
+  )
+    return asRecord(metadata)
+  if (!ownerBillingRuntime() && !isOwnerBillingCohort(metadata))
+    return withOwnerSignupLaunchGrant(metadata, requestedPlan, now)
+  const root = asRecord(metadata)
+  const retailOps = getRetailOpsMetadata(metadata)
+  return {
+    ...root,
+    retailOps: {
+      ...retailOps,
+      billingPolicy: OWNER_BILLING_POLICY_VERSION,
+      subscription: {
+        planId: "free",
+        source: "owner_billing_free",
+        status: "active",
+        requestedPlanId: requestedPlan,
+        updatedAt: now.toISOString(),
+      },
+    },
+  }
+}
+
 function getTenantSubscription(input: {
   createdAt: Date
   metadata: unknown
@@ -1063,9 +1100,12 @@ function getTenantSubscription(input: {
       currentPeriodEndsAt: normalizeIsoDate(subscription.currentPeriodEndsAt),
       planId,
       source:
-        subscription.source === "owner_signup_launch"
-          ? "owner_signup_launch"
-          : "tenant_metadata",
+        isOwnerBillingCohort(input.metadata) &&
+        subscription.source === "owner_billing_free"
+          ? "owner_billing_free"
+          : subscription.source === "owner_signup_launch"
+            ? "owner_signup_launch"
+            : "tenant_metadata",
       ...(subscription.source === "owner_signup_launch"
         ? {
             grantedAt: normalizeIsoDate(subscription.grantedAt) ?? undefined,
@@ -1084,8 +1124,12 @@ function getTenantSubscription(input: {
   // is off. It is not a trial; nothing ends it.
   return {
     currentPeriodEndsAt: null,
-    planId: RETAIL_OPS_LAUNCH_DEFAULT_PLAN_ID,
-    source: "launch_default",
+    planId: isOwnerBillingCohort(input.metadata)
+      ? "free"
+      : RETAIL_OPS_LAUNCH_DEFAULT_PLAN_ID,
+    source: isOwnerBillingCohort(input.metadata)
+      ? "owner_billing_free"
+      : "launch_default",
     status: "active",
     trialEndsAt: null,
     updatedAt: input.updatedAt.toISOString(),
@@ -1106,9 +1150,9 @@ const RETAIL_OPS_PLAN_RANK: Record<RetailOpsPlanId, number> = {
 }
 
 /**
- * Owner-wide coverage (behind OWNER_BILLING_ENABLED) can raise a business to
- * the owner's paid plan with that offer's per-business allowances. It never
- * lowers a legacy, manual or launch grant; that needs the versioned cutover.
+ * Owner-wide coverage supplies current admission limits. Versioned signups
+ * fall back to Free after lapse, retaining operational features for existing
+ * records. Legacy/manual/launch grants remain independent and are never lowered.
  */
 async function withOwnerBusinessCoverage(
   db: DbClient,
@@ -1123,27 +1167,41 @@ async function withOwnerBusinessCoverage(
   })
   if (
     !access ||
-    access.reason !== "covered" ||
-    RETAIL_OPS_PLAN_RANK[access.planId] <= RETAIL_OPS_PLAN_RANK[state.plan.id]
+    (state.subscription.source !== "owner_billing_free" &&
+      (access.reason !== "covered" ||
+        RETAIL_OPS_PLAN_RANK[access.planId] <=
+          RETAIL_OPS_PLAN_RANK[state.plan.id]))
   )
     return state
-  const plan = getPlanFromList(state.plans, access.planId)
+  const plan = getPlan(access.planId)
+  const retainedPlan =
+    state.subscription.source === "owner_billing_free" && access.retainedPlanId
+      ? getPlan(access.retainedPlanId)
+      : null
   return {
-    plans: state.plans,
+    plans: RETAIL_OPS_SUBSCRIPTION_PLANS,
     plan: {
       ...plan,
+      features: retainedPlan
+        ? [...new Set([...plan.features, ...retainedPlan.features])]
+        : plan.features,
       limits: {
         ...plan.limits,
-        // The plan type has no unlimited products; keep the plan's own cap.
-        products: access.limits.products ?? plan.limits.products,
+        products: access.limits.products,
         ordersPerMonth: access.limits.ordersPerMonth,
         staff: access.limits.staff,
+        reportsHistoryDays:
+          retainedPlan?.limits.reportsHistoryDays ??
+          plan.limits.reportsHistoryDays,
       },
     },
     subscription: {
       currentPeriodEndsAt: access.currentPeriodEndsAt?.toISOString() ?? null,
       planId: access.planId,
-      source: "owner_subscription",
+      source:
+        access.reason === "covered"
+          ? "owner_subscription"
+          : "owner_billing_free",
       status: "active",
       trialEndsAt: null,
       updatedAt: (access.currentPeriodEndsAt ?? new Date()).toISOString(),
@@ -1232,8 +1290,14 @@ async function getTenantBoundRetailOpsSubscriptionState(
     const metadataSubscription = getTenantSubscription(input.tenant)
 
     return {
-      plan: getPlanFromList(plans, metadataSubscription.planId),
-      plans,
+      plan:
+        metadataSubscription.source === "owner_billing_free"
+          ? getPlan("free")
+          : getPlanFromList(plans, metadataSubscription.planId),
+      plans:
+        metadataSubscription.source === "owner_billing_free"
+          ? RETAIL_OPS_SUBSCRIPTION_PLANS
+          : plans,
       subscription: metadataSubscription,
     }
   } catch (error) {
@@ -1263,7 +1327,9 @@ function getEntitlementUsage(input: {
       used: input.usage.businesses,
     },
     {
-      isAtLimit: input.usage.products >= input.plan.limits.products,
+      isAtLimit:
+        input.plan.limits.products !== null &&
+        input.usage.products >= input.plan.limits.products,
       key: "products",
       limit: input.plan.limits.products,
       used: input.usage.products,
@@ -1616,7 +1682,7 @@ export async function createRetailOpsSubscriptionCheckoutIntent(
     message:
       status === "active_plan"
         ? `${targetPlan.name} is already your plan.`
-        : "Paid plans aren't available yet. Everything is free during launch.",
+        : "Subscription checkout is not available here. Open Plan & billing in the app to review store availability.",
     provider: "none",
     subscription: snapshot.subscription,
     targetPlan,
@@ -2375,7 +2441,8 @@ export function resolveRetailOpsPlanId(input: {
     billingSubscriptionId?: string | null
     currentPeriodEndsAt?: Date | null
   } | null
-  /** From getRetailOpsOwnerPlanId(s); raises the Tenant-bound plan, never lowers it. */
+  /** Access tier from getRetailOpsOwnerPlanId(s), including cohort retention.
+   * Never use this navigation/operation tier as an admission allowance. */
   ownerPlanId?: RetailOpsPlanId | null
 }): RetailOpsPlanId {
   const planId = resolveTenantBoundRetailOpsPlanId(input)
@@ -2386,7 +2453,9 @@ export function resolveRetailOpsPlanId(input: {
 }
 
 /**
- * Owner-wide plans for synchronous readers that project preloaded tenant rows.
+ * Owner-wide access tiers for synchronous readers of preloaded tenant rows.
+ * Versioned cohorts retain operational access after lapse; actual capacity is
+ * always read through getRetailOpsTenantPlan / the admission commands.
  * Empty, with no query, while OWNER_BILLING_ENABLED is off.
  */
 export async function getRetailOpsOwnerPlanIds(
@@ -2395,9 +2464,17 @@ export async function getRetailOpsOwnerPlanIds(
 ): Promise<ReadonlyMap<string, RetailOpsPlanId>> {
   const runtime = ownerBillingRuntime()
   if (!runtime) return new Map()
+  if (!tenantIds.length) return new Map()
+  const tenants = await db.tenant.findMany({
+    where: { id: { in: [...new Set(tenantIds)] } },
+    select: { id: true, metadata: true },
+  })
   return getOwnerCoveredPlanIds(db, {
     tenantIds,
     environment: runtime.environment,
+    retainedTenantIds: tenants
+      .filter((tenant) => isOwnerBillingCohort(tenant.metadata))
+      .map((tenant) => tenant.id),
   })
 }
 
@@ -2426,7 +2503,9 @@ function resolveTenantBoundRetailOpsPlanId(
   return (
     normalizePlanId(input.subscription?.plan.key) ??
     metadataSubscriptionPlanId(input.metadata) ??
-    RETAIL_OPS_LAUNCH_DEFAULT_PLAN_ID
+    (isOwnerBillingCohort(input.metadata)
+      ? "free"
+      : RETAIL_OPS_LAUNCH_DEFAULT_PLAN_ID)
   )
 }
 
@@ -2450,7 +2529,7 @@ export function assertRetailOpsPlanIdFeature(
 }
 
 /**
- * Monthly Commercial Order cap (Free: 30). Run inside the order transaction
+ * Monthly Commercial Order cap (Free: 50). Run inside the order transaction
  * after the tenant order-number row is locked, so concurrent orders are
  * counted serially. Plans without a cap return after the plan read.
  */
@@ -2475,21 +2554,26 @@ export async function assertRetailOpsOrderAllowance(
 }
 
 /**
- * Free and explicit zero-access caps are enforced. Paid-tier product caps were
- * never re-wired after the catalog rebuild, and enforcing them now could
- * block launch tenants already past 25 items (see the Free plan decision).
+ * Enforce Free, zero-access and current owner-paid product caps for new items.
+ * Existing legacy/manual/launch grants keep their prior admission behavior.
+ * Updating an existing item does not pass through this creation-only guard.
  */
 export async function assertRetailOpsProductAllowance(
   db: DbClient,
   input: { tenantId: string },
 ) {
-  const { plan } = await getRetailOpsTenantPlan(db, input)
-
-  if (plan.id !== "free" && plan.limits.products !== 0) return
-
   // All Catalog creation paths call this inside their write transaction.
   // Per-command locks alone cannot serialize different product creations.
   await db.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`retail-ops-products:${input.tenantId}`}, 0))`
+  const { plan, subscription } = await getRetailOpsTenantPlan(db, input)
+  const limit = plan.limits.products
+  if (
+    limit === null ||
+    (plan.id !== "free" &&
+      limit !== 0 &&
+      subscription.source !== "owner_subscription")
+  )
+    return
   const used = await db.catalogItem.count({
     where: {
       tenantId: input.tenantId,
@@ -2498,9 +2582,9 @@ export async function assertRetailOpsProductAllowance(
     },
   })
   const entitlement = {
-    isAtLimit: used >= plan.limits.products,
+    isAtLimit: used >= limit,
     key: "products" as const,
-    limit: plan.limits.products,
+    limit,
     used,
   }
   if (entitlement.isAtLimit)

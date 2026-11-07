@@ -1,7 +1,8 @@
 # Full Production release preflight — 7 November 2026
 
-Status: requested for all changed components, blocked before deployment by the
-explicit no-worktree instruction and a dirty active checkout. The narrow
+Status: resumed after the owner explicitly authorized committing all current
+changes and deploying all to Production without a worktree. Source review and
+candidate verification are in progress. The narrow
 marketing-only proposal is superseded by the owner's “deploy all” instruction.
 
 ## Owner decisions
@@ -33,10 +34,9 @@ Private output: /tmp/ewatrade-all-production-plan.txt.
 
 ## Remaining prerequisites
 
-1. Active main must become clean through the owning authors' normal commits.
-   Existing uncommitted billing/API/mobile changes, AGENT_CHAT and staged explainers
-   belong to other work; this release does not stage, commit, stash or discard them.
-   No alternate clone/source-upload path is created to evade the checkout rule.
+1. Review and commit all current changes in active main, as explicitly authorized
+   by the owner on resumption. This includes billing/API/mobile changes, AGENT_CHAT
+   and staged explainers. Do not create a worktree, stash or discard work.
 2. Freeze the actual committed candidate and run the existing clean-source gates.
    Earlier marketing-specific verification does not cover the full 423-commit
    release scope observed before this receipt.
@@ -49,7 +49,7 @@ Private output: /tmp/ewatrade-all-production-plan.txt.
 5. Run the normal Production executor only after acceptance, then verify runtime
    health and record actual deployment/build/job identifiers and limits.
 
-## Why deployment stopped
+## Earlier preflight stop (superseded commit authorization)
 
 The existing release executor calls git worktree add automatically when the active
 checkout is dirty. The owner explicitly disallowed that action. Direct candidate
@@ -66,3 +66,16 @@ No product source changed, so source/UI tests are not repeated for this record.
 Updated local .brain/features/marketing-launch-v4.md and
 .brain/tasks/2026-11-07-marketing-full-polish.md to preserve the new all-components
 scope, no-worktree decision, Samsung authorization and blocked release state.
+
+## Resumed source checks
+
+Owner authorized committing all changes in the current checkout, including the
+billing source and staged banking guide. Offline doctor, full changed-path fast
+smoke (259 tests/1,679 assertions), DB and Marketing types, H01 and H02 pass.
+Focused subscription and Google verification files independently pass 20/100
+and 4/13. The implementation receipt records guarded local-Neon concurrent
+admission acceptance; paid-store activation is still disabled and separate.
+The first Marketing type run overlapped Prisma generation and failed on missing
+generated types; its rerun after generation passed. No source bypass was used.
+Preview smoke config now names the approved Samsung and existing QA business/item;
+its actual candidate build identity must be added after the Preview build.

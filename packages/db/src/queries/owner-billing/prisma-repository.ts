@@ -40,7 +40,7 @@ const OWNER_BILLING_TRANSACTION_OPTIONS = {
 } as const
 
 export async function lockOwnerBillingAccount(
-  tx: Prisma.TransactionClient,
+  tx: Pick<DbClient, "$executeRaw">,
   accountId: string,
 ) {
   await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`owner-billing-account:${accountId}`}, 0))`
@@ -373,6 +373,8 @@ export async function getOwnerCoveredPlanIds(
     tenantIds: readonly string[]
     environment: OwnerBillingEnvironment
     now?: Date
+    /** Historical access is allowed only for these server-read cohort Tenants. */
+    retainedTenantIds?: readonly string[]
   },
 ) {
   const plans = new Map<string, RetailOpsPaidPlanId>()
@@ -399,6 +401,11 @@ export async function getOwnerCoveredPlanIds(
       const access = projectOwnerBusinessAccess(snapshot, tenantId)
       if (access.reason === "covered" && access.planId !== "free")
         plans.set(tenantId, access.planId)
+      else if (
+        input.retainedTenantIds?.includes(tenantId) &&
+        access.retainedPlanId
+      )
+        plans.set(tenantId, access.retainedPlanId)
     }
   }
   return plans

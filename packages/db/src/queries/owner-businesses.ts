@@ -8,6 +8,20 @@ import { isClaimableStoreLink } from "@ewatrade/utils/store-link"
 import { Prisma } from "../../generated/prisma/client"
 import { AccountAgeBand } from "../../generated/prisma/enums"
 import { canonicalBusinessCountryCode } from "./business-country"
+import { OWNER_BILLING_POLICY_VERSION } from "./owner-billing/cohort"
+import { OWNER_BILLING_OFFERS } from "./owner-billing/offers"
+import { currentOwnerSubscription } from "./owner-billing/policy"
+import {
+  findOwnerBillingAccount,
+  lockOwnerBillingAccount,
+  ownerBillingRuntime,
+  readOwnerCoverageSnapshot,
+} from "./owner-billing/prisma-repository"
+import {
+  RetailOpsSubscriptionError,
+  resolveRetailOpsPlanId,
+  retailOpsPlanFeaturesSelect,
+} from "./retail-ops-subscriptions"
 import {
   StoreLinkConflictError,
   storeLinkHostnames,
@@ -70,6 +84,52 @@ export async function requireEligibleOwnerAge(db: DbClient, userId: string) {
   return owner
 }
 
+/** Caller owns the creation transaction. Serializes every owner signup/create path. */
+export async function getOwnerBusinessCreationAllowance(
+  db: DbClient,
+  userId: string,
+) {
+  const runtime = ownerBillingRuntime()
+  if (!runtime) return null
+  await db.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`owner-business-create:${userId}`}, 0))`
+  const account = await findOwnerBillingAccount(db, userId)
+  if (account) await lockOwnerBillingAccount(db, account.id)
+  const snapshot = account
+    ? await readOwnerCoverageSnapshot(db, {
+        accountId: account.id,
+        environment: runtime.environment,
+      })
+    : null
+  const subscription = snapshot ? currentOwnerSubscription(snapshot) : null
+  const memberships = await db.membership.findMany({
+    where: {
+      userId,
+      role: "OWNER",
+      status: "ACTIVE",
+      tenant: { isActive: true },
+    },
+    select: { tenantId: true, tenant: { select: retailOpsPlanFeaturesSelect } },
+  })
+  // Preserve explicit pre-cutover grants. Store counts/limitsSnapshot are not
+  // repurposed as counts of separate businesses.
+  const legacyLimit = memberships.reduce(
+    (limit, membership) =>
+      Math.max(
+        limit,
+        OWNER_BILLING_OFFERS[resolveRetailOpsPlanId(membership.tenant)]
+          .businesses,
+      ),
+    1,
+  )
+  return {
+    used: new Set(memberships.map((membership) => membership.tenantId)).size,
+    limit: Math.max(
+      legacyLimit,
+      OWNER_BILLING_OFFERS[subscription?.planId ?? "free"].businesses,
+    ),
+  }
+}
+
 function toSlug(name: string) {
   return name
     .toLowerCase()
@@ -118,6 +178,13 @@ async function createUniqueTenant(
           name: input.businessName,
           slug: requestedSlug,
           currencyCode: input.currencyCode,
+          ...(ownerBillingRuntime()
+            ? {
+                metadata: {
+                  retailOps: { billingPolicy: OWNER_BILLING_POLICY_VERSION },
+                },
+              }
+            : {}),
           enabledModes: ["STORE", "MERCHANT"],
           type: "MERCHANT",
           dataClassification: input.qaSourceDomain ? "QA" : "LIVE",
@@ -165,6 +232,13 @@ async function createUniqueTenant(
       return await db.tenant.create({
         data: {
           currencyCode: input.currencyCode,
+          ...(ownerBillingRuntime()
+            ? {
+                metadata: {
+                  retailOps: { billingPolicy: OWNER_BILLING_POLICY_VERSION },
+                },
+              }
+            : {}),
           dataClassification: input.qaSourceDomain ? "QA" : "LIVE",
           enabledModes: ["STORE", "MERCHANT"],
           name: input.businessName,
@@ -201,6 +275,13 @@ async function createOwnerBusinessWithSource(
   source: "mobile_owner_business_create" | "mobile_owner_signup",
 ): Promise<OwnerBusinessSummary> {
   const owner = await requireEligibleOwnerAge(db, input.userId)
+  const allowance = await getOwnerBusinessCreationAllowance(db, input.userId)
+  if (allowance && allowance.used >= allowance.limit)
+    throw new RetailOpsSubscriptionError(
+      "ENTITLEMENT_LIMIT_REACHED",
+      `Your plan allows ${allowance.limit} separate businesses. Existing businesses remain available; upgrade to add another.`,
+      null,
+    )
   const qaSourceDomain =
     (
       await managedQaIdentity({

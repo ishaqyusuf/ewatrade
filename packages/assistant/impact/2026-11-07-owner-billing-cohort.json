@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "id": "2026-11-07-owner-billing-cohort",
+  "tickets": [
+    "A05"
+  ],
+  "summary": "Version new owner signups, align shared plan limits and serialize new business/product admissions while preserving existing records and explicit legacy grants.",
+  "noAssistantImpact": "Subscription purchase and coverage remain form-only. No assistant tool or permission is added. Existing business and Catalog commands continue through server-derived entitlement guards; assistant callers receive the same admission limits. No provider activation or paid-native acceptance is implied.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/owner-wide-billing.md"
+    },
+    {
+      "topic": "feature",
+      "status": "updated",
+      "path": "docs/billing/owner-wide-subscriptions.md"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/retail-ops-subscriptions.test.ts",
+      "executed": true,
+      "result": "20 tests and 100 assertions pass independently, including versioned signup, legacy preservation, capacity and existing-operation retention."
+    },
+    {
+      "kind": "test",
+      "path": "apps/api/src/billing/google-subscriptions.test.ts",
+      "executed": true,
+      "result": "4 tests and 13 assertions pass: verified grace boundaries and provider environment isolation. No live purchase proof."
+    }
+  ]
+}

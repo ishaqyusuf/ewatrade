@@ -30,23 +30,21 @@ describe("retail ops subscription helpers", () => {
     ])
     expect(getPlan("free")).toMatchObject({
       features: [],
-      limits: { ordersPerMonth: 30, products: 2, staff: 0 },
+      limits: { ordersPerMonth: 50, products: 10, staff: 0 },
       priceLabel: "Free forever",
     })
     expect(getPlan("starter").limits.ordersPerMonth).toBeNull()
-    expect(getPlan("starter").priceLabel).toBe("Free during launch")
+    expect(getPlan("starter").priceLabel).toBe("₦5,000/month")
     expect(getPlan("starter").limits).toMatchObject({
       businesses: 1,
       offlineDevices: 1,
-      products: 25,
+      products: 100,
       staff: 2,
     })
     expect(getPlan("growth").limits.staff).toBeGreaterThan(
       getPlan("starter").limits.staff,
     )
-    expect(getPlan("pro").limits.products).toBeGreaterThan(
-      getPlan("growth").limits.products,
-    )
+    expect(getPlan("pro").limits.products).toBeNull()
   })
 
   test("defaults to the launch Starter plan without a trial end", () => {

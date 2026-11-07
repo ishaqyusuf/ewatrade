@@ -3,6 +3,7 @@ import {
   projectGoogleSubscription,
   verifyGoogleSubscription,
 } from "./google-subscriptions"
+import { projectStoreEntitlement } from "./store-entitlement"
 
 const purchase = {
   subscriptionState: "SUBSCRIPTION_STATE_ACTIVE",
@@ -17,6 +18,45 @@ const purchase = {
     },
   ],
 }
+
+test("verified five-day Play grace keeps capacity until its boundary; hold and revocation do not gain courtesy time", () => {
+  const response = {
+    ...purchase,
+    subscriptionState: "SUBSCRIPTION_STATE_IN_GRACE_PERIOD",
+    lineItems: [
+      { ...purchase.lineItems[0], expiryTime: "2026-10-06T00:00:00Z" },
+    ],
+  }
+  const grace = projectGoogleSubscription(response, "receipt", "production")
+  expect(
+    projectStoreEntitlement(grace, new Date("2026-10-05T23:59:59.999Z")).status,
+  ).toBe("active")
+  expect(
+    projectStoreEntitlement(grace, new Date("2026-10-06T00:00:00Z")).status,
+  ).toBe("cancelled")
+  for (const state of [
+    "SUBSCRIPTION_STATE_ON_HOLD",
+    "SUBSCRIPTION_STATE_EXPIRED",
+    "SUBSCRIPTION_STATE_REVOKED",
+  ]) {
+    const held = projectGoogleSubscription(
+      { ...response, subscriptionState: state },
+      "receipt",
+      "production",
+    )
+    expect(
+      projectStoreEntitlement(held, new Date("2026-10-02T00:00:00Z")).status,
+    ).toBe("cancelled")
+  }
+  const cancelled = projectGoogleSubscription(
+    { ...response, subscriptionState: "SUBSCRIPTION_STATE_CANCELED" },
+    "receipt",
+    "production",
+  )
+  expect(
+    projectStoreEntitlement(cancelled, new Date("2026-10-05T00:00:00Z")).status,
+  ).toBe("active")
+})
 
 test("projects only a Play purchase matching the configured verifier environment", () => {
   expect(

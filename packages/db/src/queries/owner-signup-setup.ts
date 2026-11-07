@@ -15,9 +15,10 @@ import {
   createOwnerSignupBusiness,
   requireEligibleOwnerAge,
 } from "./owner-businesses"
+import { getOwnerBusinessCreationAllowance } from "./owner-businesses"
 import { managedQaDomainForEmail } from "./qa-maintenance"
 import { findRetailOpsPlan } from "./retail-ops-subscription-plans"
-import { withOwnerSignupLaunchGrant } from "./retail-ops-subscriptions"
+import { withOwnerSignupSubscription } from "./retail-ops-subscriptions"
 import { StoreLinkConflictError } from "./store-link-availability"
 import { createTenantStore } from "./stores"
 import type { DbClient } from "./types"
@@ -240,7 +241,13 @@ export async function completeOwnerSignupSetup(
       tenant: { isActive: true },
     },
   })
-  const available = Math.max(1, plan.limits.businesses - owned + 1)
+  const ownerAllowance = await getOwnerBusinessCreationAllowance(db, userId)
+  const available = Math.max(
+    1,
+    (ownerAllowance?.limit ?? plan.limits.businesses) -
+      (ownerAllowance?.used ?? owned) +
+      1,
+  )
   const setupNow = businesses.slice(0, available)
   const waiting = businesses.slice(available)
   const grantedPlan =
@@ -311,7 +318,7 @@ export async function completeOwnerSignupSetup(
         ...(tenant.subscription
           ? {}
           : {
-              metadata: withOwnerSignupLaunchGrant(
+              metadata: withOwnerSignupSubscription(
                 tenantMetadata,
                 grantedPlan,
               ) as Prisma.InputJsonObject,

@@ -13,7 +13,7 @@ export type RetailOpsPlanLimits = {
   offlineDevices: number
   /** Commercial orders created per calendar month; null means unlimited. */
   ordersPerMonth: number | null
-  products: number
+  products: number | null
   reportsHistoryDays: number
   staff: number
 }
@@ -60,8 +60,8 @@ export const RETAIL_OPS_SUBSCRIPTION_PLANS: RetailOpsSubscriptionPlan[] = [
       storefrontItems: 3,
       businesses: 1,
       offlineDevices: 1,
-      ordersPerMonth: 30,
-      products: 2,
+      ordersPerMonth: 50,
+      products: 10,
       reportsHistoryDays: 30,
       staff: 0,
     },
@@ -78,12 +78,12 @@ export const RETAIL_OPS_SUBSCRIPTION_PLANS: RetailOpsSubscriptionPlan[] = [
       businesses: 1,
       offlineDevices: 1,
       ordersPerMonth: null,
-      products: 25,
+      products: 100,
       reportsHistoryDays: 30,
       staff: 2,
     },
     name: "Starter",
-    priceLabel: "Free during launch",
+    priceLabel: "₦5,000/month",
     supportLabel: "Standard support",
   },
   {
@@ -95,12 +95,12 @@ export const RETAIL_OPS_SUBSCRIPTION_PLANS: RetailOpsSubscriptionPlan[] = [
       businesses: 3,
       offlineDevices: 5,
       ordersPerMonth: null,
-      products: 150,
+      products: 1000,
       reportsHistoryDays: 180,
       staff: 10,
     },
     name: "Growth",
-    priceLabel: "Free during launch",
+    priceLabel: "₦15,000/month",
     supportLabel: "Priority support",
   },
   {
@@ -112,12 +112,12 @@ export const RETAIL_OPS_SUBSCRIPTION_PLANS: RetailOpsSubscriptionPlan[] = [
       businesses: 10,
       offlineDevices: 20,
       ordersPerMonth: null,
-      products: 500,
+      products: null,
       reportsHistoryDays: 730,
       staff: 50,
     },
     name: "Pro",
-    priceLabel: "Free during launch",
+    priceLabel: "₦30,000/month",
     supportLabel: "Dedicated support",
   },
 ]

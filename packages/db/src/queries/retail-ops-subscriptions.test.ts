@@ -1,7 +1,9 @@
 import { describe, expect, test } from "bun:test"
+import { getOwnerBusinessCreationAllowance } from "./owner-businesses"
 import { getRetailOpsOrderPeriodStart } from "./retail-ops-subscription-plans"
 import {
   RetailOpsSubscriptionError,
+  assertRetailOpsEntitlementAvailable,
   assertRetailOpsOrderAllowance,
   assertRetailOpsPlanIdFeature,
   assertRetailOpsProductAllowance,
@@ -9,10 +11,204 @@ import {
   getRetailOpsOwnerPlanId,
   getRetailOpsOwnerPlanIds,
   getRetailOpsSubscriptionSnapshot,
+  getRetailOpsTenantPlan,
   registerRetailOpsOfflineDevice,
   resolveRetailOpsPlanId,
+  withOwnerSignupSubscription,
 } from "./retail-ops-subscriptions"
 import type { DbClient } from "./types"
+
+async function withPaidRuntime(work: () => Promise<void>) {
+  const keys = ["OWNER_BILLING_ENABLED", "STORE_BILLING_ENVIRONMENT"] as const
+  const saved = keys.map((key) => process.env[key])
+  process.env.OWNER_BILLING_ENABLED = "true"
+  process.env.STORE_BILLING_ENVIRONMENT = "sandbox"
+  try {
+    await work()
+  } finally {
+    keys.forEach((key, i) => {
+      const value = saved[i]
+      if (value === undefined) Reflect.deleteProperty(process.env, key)
+      else process.env[key] = value
+    })
+  }
+}
+
+function ownerPlanFixture() {
+  const metadata = withOwnerSignupSubscription({}, "growth")
+  const base = createPlanDb({ metadata, products: 1000, orders: 50 })
+  const state = {
+    planId: "growth",
+    status: "ACTIVE",
+    expires: new Date(Date.now() + 5 * 86400000),
+    owned: true,
+    enrolled: true,
+    activeOwner: true,
+    businessCount: 1,
+    legacyGrant: false,
+  }
+  const calls: string[] = []
+  const db = {
+    ...base.client,
+    $executeRaw: async () => {
+      calls.push("lock")
+      return 1
+    },
+    catalogItem: {
+      count: async () => {
+        calls.push("count")
+        return 1000
+      },
+    },
+    tenant: {
+      ...base.client.tenant,
+      findMany: async () => [{ id: "tenant_123", metadata }],
+    },
+    membership: {
+      count: async () => 3,
+      findMany: async () =>
+        state.owned
+          ? Array.from({ length: state.businessCount }, (_, index) => ({
+              tenantId: index ? `extra_${index}` : "tenant_123",
+              tenant: {
+                metadata: state.legacyGrant
+                  ? { retailOps: { subscription: { planId: "pro" } } }
+                  : metadata,
+                subscription: null,
+              },
+            }))
+          : [],
+    },
+    ownerBillingAccount: {
+      findUnique: async () => ({ id: "account", ownerUserId: "owner" }),
+    },
+    user: {
+      findMany: async () => (state.activeOwner ? [{ id: "owner" }] : []),
+    },
+    ownerBusinessCoverage: {
+      findUnique: async () =>
+        state.enrolled ? { accountId: "account" } : null,
+      findMany: async () =>
+        state.enrolled
+          ? [
+              {
+                accountId: "account",
+                tenantId: "tenant_123",
+                enrolledAt: new Date("2026-01-01"),
+              },
+            ]
+          : [],
+    },
+    ownerBillingSubscription: {
+      findUnique: async () => ({
+        accountId: "account",
+        provider: "PLAY_STORE",
+        environment: "sandbox",
+        purchaseDigest: "verified",
+        planId: state.planId,
+        status: state.status,
+        currentPeriodEndsAt: state.expires,
+      }),
+    },
+  }
+  return { db: db as unknown as DbClient, state, calls, metadata }
+}
+
+test("separate business creation uses verified capacity, retains old grants and leaves surplus businesses intact", async () =>
+  withPaidRuntime(async () => {
+    const { db, state, calls } = ownerPlanFixture()
+    state.businessCount = 3
+    expect(await getOwnerBusinessCreationAllowance(db, "owner")).toEqual({
+      used: 3,
+      limit: 3,
+    })
+    expect(calls).toEqual(["lock", "lock"])
+    state.expires = new Date(Date.now() - 1)
+    expect(await getOwnerBusinessCreationAllowance(db, "owner")).toEqual({
+      used: 3,
+      limit: 1,
+    })
+    expect(state.businessCount).toBe(3)
+    state.legacyGrant = true
+    expect(await getOwnerBusinessCreationAllowance(db, "owner")).toEqual({
+      used: 3,
+      limit: 10,
+    })
+  }))
+
+test("paid-cohort expiry reduces new-admission quotas without hiding retained operations or mutating records", async () =>
+  withPaidRuntime(async () => {
+    const { db, state } = ownerPlanFixture()
+    const input = { tenantId: "tenant_123" }
+    expect((await getRetailOpsTenantPlan(db, input)).plan).toMatchObject({
+      id: "growth",
+      limits: { products: 1000, ordersPerMonth: null, staff: 10 },
+    })
+    await assertRetailOpsOrderAllowance(db, input)
+    state.expires = new Date(Date.now() - 1)
+    const expired = await getRetailOpsTenantPlan(db, input)
+    expect(expired.plan).toMatchObject({
+      id: "free",
+      limits: {
+        products: 10,
+        ordersPerMonth: 50,
+        staff: 0,
+        reportsHistoryDays: 180,
+      },
+    })
+    expect(expired.plan.features).toContain("finance")
+    expect(expired.subscription.source).toBe("owner_billing_free")
+    expect(await getRetailOpsOwnerPlanId(db, input.tenantId)).toBe("growth")
+    await expect(
+      assertRetailOpsProductAllowance(db, input),
+    ).rejects.toMatchObject({ entitlement: { limit: 10, used: 1000 } })
+    await expect(
+      assertRetailOpsOrderAllowance(db, input),
+    ).rejects.toMatchObject({ entitlement: { limit: 50, used: 50 } })
+    await expect(
+      assertRetailOpsEntitlementAvailable(db, { ...input, key: "staff" }),
+    ).rejects.toMatchObject({ entitlement: { limit: 0, used: 3 } })
+    state.expires = new Date(Date.now() + 86400000)
+    expect((await getRetailOpsTenantPlan(db, input)).plan.id).toBe("growth")
+  }))
+
+test("paid product caps serialize before reading the current allowance; Pro is unlimited", async () =>
+  withPaidRuntime(async () => {
+    const { db, state, calls } = ownerPlanFixture()
+    await expect(
+      assertRetailOpsProductAllowance(db, { tenantId: "tenant_123" }),
+    ).rejects.toMatchObject({ entitlement: { limit: 1000, used: 1000 } })
+    expect(calls).toEqual(["lock", "count"])
+    state.planId = "pro"
+    calls.length = 0
+    await assertRetailOpsProductAllowance(db, { tenantId: "tenant_123" })
+    expect(calls).toEqual(["lock"])
+    expect(
+      (await getRetailOpsTenantPlan(db, { tenantId: "tenant_123" })).plan.limits
+        .products,
+    ).toBeNull()
+  }))
+
+test("provider suspension downgrades capacity immediately; retention never bypasses lost ownership or release", async () =>
+  withPaidRuntime(async () => {
+    const { db, state } = ownerPlanFixture()
+    state.status = "SUSPENDED"
+    expect(
+      (await getRetailOpsTenantPlan(db, { tenantId: "tenant_123" })).plan.id,
+    ).toBe("free")
+    state.owned = false
+    expect(await getRetailOpsOwnerPlanId(db, "tenant_123")).toBeNull()
+    expect(
+      (await getRetailOpsTenantPlan(db, { tenantId: "tenant_123" })).plan
+        .features,
+    ).toEqual([])
+    state.owned = true
+    state.enrolled = false
+    expect(
+      (await getRetailOpsTenantPlan(db, { tenantId: "tenant_123" })).plan.id,
+    ).toBe("free")
+    expect(await getRetailOpsOwnerPlanId(db, "tenant_123")).toBeNull()
+  }))
 
 type SubscriptionCall = {
   data?: unknown
@@ -427,7 +623,7 @@ describe("retail ops subscription queries", () => {
     // Durable rows predating ordersPerMonth stay unlimited; the catalogue
     // label replaces the row's legacy "Most popular".
     expect(snapshot.plan.limits.ordersPerMonth).toBeNull()
-    expect(snapshot.plan.priceLabel).toBe("Free during launch")
+    expect(snapshot.plan.priceLabel).toBe("₦15,000/month")
     expect(snapshot.entitlements).toContainEqual({
       isAtLimit: false,
       key: "ordersPerMonth",
@@ -515,7 +711,9 @@ describe("retail ops subscription queries", () => {
         id: "tenant_123",
       },
     })
-    expect(intent.message).toContain("Paid plans aren't available yet")
+    expect(intent.message).toContain(
+      "Subscription checkout is not available here",
+    )
 
     const planUpsert = getCall(db.calls, "subscriptionPlan.upsert")
     expect(planUpsert.where).toEqual({ key: "pro" })
@@ -657,7 +855,7 @@ describe("Free plan and launch default", () => {
     )
 
     expect(snapshot.plan.id).toBe("starter")
-    expect(snapshot.plan.priceLabel).toBe("Free during launch")
+    expect(snapshot.plan.priceLabel).toBe("₦5,000/month")
     expect(snapshot.subscription).toMatchObject({
       source: "launch_default",
       status: "active",
@@ -674,7 +872,7 @@ describe("Free plan and launch default", () => {
     expect(snapshot.plan).toMatchObject({
       features: [],
       id: "free",
-      limits: { ordersPerMonth: 30, products: 2, staff: 0 },
+      limits: { ordersPerMonth: 50, products: 10, staff: 0 },
     })
     expect(snapshot.entitlements).toContainEqual({
       isAtLimit: true,
@@ -685,7 +883,7 @@ describe("Free plan and launch default", () => {
     expect(snapshot.entitlements).toContainEqual({
       isAtLimit: false,
       key: "ordersPerMonth",
-      limit: 30,
+      limit: 50,
       used: 12,
     })
   })
@@ -779,7 +977,7 @@ describe("Free plan and launch default", () => {
       { tenantId: "tenant_123" },
     )
     expect(capped.plan.limits.ordersPerMonth).toBe(500)
-    expect(capped.plan.priceLabel).toBe("Free during launch")
+    expect(capped.plan.priceLabel).toBe("₦5,000/month")
 
     const unlimited = await getRetailOpsSubscriptionSnapshot(
       createPlanDb({
@@ -790,9 +988,9 @@ describe("Free plan and launch default", () => {
     expect(unlimited.plan.limits.ordersPerMonth).toBeNull()
   })
 
-  test("blocks the 31st Free order in a UTC calendar month", async () => {
+  test("blocks the 51st Free order in a UTC calendar month", async () => {
     const now = new Date("2026-10-31T23:30:00.000-05:00")
-    const atCap = createPlanDb({ metadata: FREE_METADATA, orders: 30 })
+    const atCap = createPlanDb({ metadata: FREE_METADATA, orders: 50 })
     const error = await assertRetailOpsOrderAllowance(atCap.client, {
       now,
       tenantId: "tenant_123",
@@ -801,9 +999,9 @@ describe("Free plan and launch default", () => {
     expect(error).toBeInstanceOf(RetailOpsSubscriptionError)
     expect(error).toMatchObject({
       code: "ENTITLEMENT_LIMIT_REACHED",
-      entitlement: { key: "ordersPerMonth", limit: 30, used: 30 },
+      entitlement: { key: "ordersPerMonth", limit: 50, used: 50 },
       message:
-        "Free includes 30 orders a month. Upgrade your plan to record more orders this month.",
+        "Free includes 50 orders a month. Upgrade your plan to record more orders this month.",
     })
     // 23:30 in UTC-5 is already 1 November in UTC.
     expect(atCap.calls[0]?.where).toEqual({
@@ -812,7 +1010,7 @@ describe("Free plan and launch default", () => {
     })
 
     await assertRetailOpsOrderAllowance(
-      createPlanDb({ metadata: FREE_METADATA, orders: 29 }).client,
+      createPlanDb({ metadata: FREE_METADATA, orders: 49 }).client,
       { now, tenantId: "tenant_123" },
     )
   })
@@ -826,17 +1024,17 @@ describe("Free plan and launch default", () => {
     expect(starter.calls).toEqual([])
   })
 
-  test("enforces the two-product cap only on Free", async () => {
+  test("enforces the ten-product Free cap while retaining legacy grants", async () => {
     await expect(
       assertRetailOpsProductAllowance(
-        createPlanDb({ metadata: FREE_METADATA, products: 2 }).client,
+        createPlanDb({ metadata: FREE_METADATA, products: 10 }).client,
         { tenantId: "tenant_123" },
       ),
     ).rejects.toMatchObject({
-      message: "Free includes 2 products. Upgrade your plan to add more.",
+      message: "Free includes 10 products. Upgrade your plan to add more.",
     })
     await assertRetailOpsProductAllowance(
-      createPlanDb({ metadata: FREE_METADATA, products: 1 }).client,
+      createPlanDb({ metadata: FREE_METADATA, products: 9 }).client,
       { tenantId: "tenant_123" },
     )
     await assertRetailOpsProductAllowance(

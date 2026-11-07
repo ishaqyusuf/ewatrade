@@ -156,6 +156,23 @@ export function projectOwnerBusinessAccess(
     overLimitTenantIds,
     quotaScope: OWNER_BILLING_QUOTA_SCOPE,
     limits: OWNER_BILLING_OFFERS[planId],
+    // Keep operational access to existing records after a verified period
+    // lapses. This does not grant capacity or permission to enroll businesses.
+    // Only versioned paid-cohort readers may use this historical access tier.
+    retainedPlanId:
+      snapshot.account.ownerIsActive &&
+      owned.some((row) => row.tenantId === tenantId) &&
+      snapshot.subscription?.accountId === snapshot.account.id &&
+      snapshot.subscription.environment === snapshot.environment &&
+      ["app_store", "play_store"].includes(snapshot.subscription.provider) &&
+      ["starter", "growth", "pro"].includes(snapshot.subscription.planId) &&
+      ["ACTIVE", "SUSPENDED", "CANCELLED"].includes(
+        snapshot.subscription.status,
+      ) &&
+      Boolean(snapshot.subscription.purchaseDigest) &&
+      Number.isFinite(snapshot.subscription.currentPeriodEndsAt.getTime())
+        ? snapshot.subscription.planId
+        : null,
   }
 }
 

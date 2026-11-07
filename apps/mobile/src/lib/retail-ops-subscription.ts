@@ -11,7 +11,7 @@ export type RetailOpsPlanLimits = {
   offlineDevices: number
   /** Commercial orders created per calendar month (UTC); null means unlimited. */
   ordersPerMonth: number | null
-  products: number
+  products: number | null
   reportsHistoryDays: number
   staff: number
 }
@@ -59,15 +59,15 @@ const PAID_FEATURES: RetailOpsPlanFeature[] = [
 
 export const RETAIL_OPS_PLANS: RetailOpsPlan[] = [
   {
-    description: "For one owner selling a couple of products, free forever.",
+    description: "For one owner selling a few products.",
     features: [],
     id: "free",
     limits: {
       storefrontItems: 3,
       businesses: 1,
       offlineDevices: 1,
-      ordersPerMonth: 30,
-      products: 2,
+      ordersPerMonth: 50,
+      products: 10,
       reportsHistoryDays: 30,
       staff: 0,
     },
@@ -84,16 +84,16 @@ export const RETAIL_OPS_PLANS: RetailOpsPlan[] = [
       businesses: 1,
       offlineDevices: 1,
       ordersPerMonth: null,
-      products: 25,
+      products: 100,
       reportsHistoryDays: 30,
       staff: 2,
     },
     name: "Starter",
-    priceLabel: "Free during launch",
+    priceLabel: "₦5,000/month",
     supportLabel: "Standard support",
   },
   {
-    description: "For growing teams that need more attendants and history.",
+    description: "For growing teams that need more staff and history.",
     features: [...PAID_FEATURES, "customerMessages"],
     id: "growth",
     limits: {
@@ -101,16 +101,16 @@ export const RETAIL_OPS_PLANS: RetailOpsPlan[] = [
       businesses: 3,
       offlineDevices: 5,
       ordersPerMonth: null,
-      products: 150,
+      products: 1000,
       reportsHistoryDays: 180,
       staff: 10,
     },
     name: "Growth",
-    priceLabel: "Free during launch",
+    priceLabel: "₦15,000/month",
     supportLabel: "Priority support",
   },
   {
-    description: "For multi-branch businesses with heavier operations.",
+    description: "For businesses with many stores and lots of orders.",
     features: [...PAID_FEATURES, "customerMessages"],
     id: "pro",
     limits: {
@@ -118,12 +118,12 @@ export const RETAIL_OPS_PLANS: RetailOpsPlan[] = [
       businesses: 10,
       offlineDevices: 20,
       ordersPerMonth: null,
-      products: 500,
+      products: null,
       reportsHistoryDays: 730,
       staff: 50,
     },
     name: "Pro",
-    priceLabel: "Free during launch",
+    priceLabel: "₦30,000/month",
     supportLabel: "Dedicated support",
   },
 ]
