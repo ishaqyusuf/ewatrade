@@ -41,7 +41,16 @@ activated by this inspection. Previous iOS6 remains historical Preview evidence.
 - Local Production-profile paid preflight reports closed billing flags, absent
   product mapping and absent Apple IAP key/issuer/private-key configuration. No
   credential values were printed. Hosted settings were not inspected and cannot
-  be inferred from local absence. No secret was generated, exported or installed.
+  be inferred from local absence. No credential contents were printed; later
+  approved local key custody is recorded below. Hosted configuration is unchanged.
+- Live Users and Access inspection subsequently confirms In-App Purchase has
+  **Active (0)** keys. Existing App Store Connect upload keys are a separate
+  category and were left untouched. The owner then explicitly approved creation
+  and secure storage of **EwaTrade Subscription Server**. Apple now shows Active(1)
+  and a7November download date. The one-time .p8 download was recovered after the
+  browser event listener timed out, validated as P-256 and moved from Downloads
+  into Git-ignored local credential custody (directory0700/file0600). Contents
+  were never printed or committed. No hosted secret or billing flag was changed.
 
 ## Paid Apple checklist
 
@@ -76,5 +85,6 @@ preflight12tests pass and subscription source guard passes. Initial filter-style
 test invocation did not run the child fixtures correctly; explicit `./` paths
 execute and pass. These are source checks, not signed/store acceptance.
 
-No device or whole-release acceptance, live charge, provider activation, product
-publication, database operation, push or deployment is claimed.
+Apple key creation/download occurred under explicit owner approval. No device
+or whole-release acceptance, live charge, billing activation, product publication,
+database operation, push or deployment is claimed.
