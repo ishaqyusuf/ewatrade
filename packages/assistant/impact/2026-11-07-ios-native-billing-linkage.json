@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "id": "2026-11-07-ios-native-billing-linkage",
+  "tickets": ["A05"],
+  "summary": "Restore Expo IAP iOS autolinking for the paid candidate and remove obsolete iOS location permission descriptions after manual-address selection.",
+  "noAssistantImpact": "Native package/linker and permission descriptions only. Existing canonical domain commands, assistant tools, membership authority and billing activation flags are unchanged. No location callers are reintroduced.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/native-store-billing.md"
+    },
+    {
+      "topic": "api",
+      "status": "local_only",
+      "path": ".brain/api/permissions.md"
+    },
+    {
+      "topic": "feature",
+      "status": "updated",
+      "path": "docs/billing/apple-paid-launch-2026-11-07.md"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "apps/mobile/package.json",
+      "executed": true,
+      "result": "Expo Apple autolinker before/after: ExpoIapModule absent then present. CocoaPods resolves ExpoIap3.4.13/openiap1.3.15; unsigned Preview simulator build passes with ExpoIap/OpenIAP symbols verified in its debug dylib."
+    },
+    {
+      "kind": "test",
+      "path": "apps/mobile/app.config.ts",
+      "executed": true,
+      "result": "Production Expo introspection verifies com.ewatrade.app, IAP plugin, absent three iOS location usage keys and unchanged Android location blocks. Purchase scope remains false."
+    }
+  ]
+}

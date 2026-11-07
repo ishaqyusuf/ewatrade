@@ -180,11 +180,6 @@
     "typescript": "~5.9.2"
   },
   "expo": {
-    "autolinking": {
-      "ios": {
-        "exclude": ["expo-iap"]
-      }
-    },
     "install": {
       "exclude": ["@sentry/react-native"]
     }

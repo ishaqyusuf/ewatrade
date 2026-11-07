@@ -41,7 +41,9 @@ an exact20%increase in every local price: Growth US is9.99USD from both15k and18
 references, while Starter US is3.99USD versus baseline2.99 and Pro US22.99 versus19.99.
 The actual saved prices are in [the525row export](apple-regional-prices-2026-11-07.csv).
 The [exact server mapping](apple-subscription-products.json) parses through the
-existing catalog schema; target environment/hosted installation is still pending.
+existing catalog schema and is now installed in API Preview/Production settings.
+Those settings take effect with the next coordinated deployment; live verification
+remains I03, rather than an assumed consequence of configuration.
 
 The owner resumed Apple work after prioritizing dashboard password recovery.
 That separate chat completed source df9dbb798; reuse its evidence. Shared launch,
@@ -83,12 +85,12 @@ no duplicate Apple policy or unreviewed effective legal publication is introduce
 ## Paid Apple checklist
 
 This is a new Apple-specific paid-release denominator, not the historical free
-3/6 or Android A01–A08 count. **1/6 accepted**; source progress is within open rows.
+3/6 or Android A01–A08 count. **2/6 accepted**; source progress is within open rows.
 
 | ID | State | Required completion |
 | --- | --- | --- |
 | I01 Commercial prerequisites | Accepted | Live agreement/bank/tax status and owner-accepted updated program license verified. |
-| I02 Products and prices | Open | One subscription group, three ranked monthly products, reviewed localized prices/territories, no unapproved trials; returned IDs mapped on server. |
+| I02 Products and prices | Accepted | Group22556222; three ranked monthly products,175current storefront prices each, no trials; exact IDs installed in API target settings. Deployment/verification remains I03. |
 | I03 Native/server configuration | In progress | Routing correction and fixture checks pass; secure API-key custody, exact environment, notification delivery, owner coverage/cutover and native linkage require target proof. |
 | I04 Policy and privacy | Open | Effective paid terms/privacy, SDK/provider/deletion facts, operational refund response and five-day policy compatibility. |
 | I05 Signed money acceptance | Open | Current signed candidate: purchase, restore, renewal, failure/grace, cancellation, refund/revocation, account/business switching; existing records usable while new admissions obey limits. |
@@ -144,3 +146,59 @@ owned-path fast smoke259/1679 plus QA tooling types/Biome pass. These do not pro
 StoreKit transactions or hosted configuration. Full API types pass with an8GBheap; H01 and H02 pass. The initial4GBtypecheck
 ran out of memory, and the first full run caught an optional fixture-value
 assertion corrected before the passing run. No release readiness is inferred.
+
+## Native paid-candidate preparation
+
+iOS still excluded expo-iap from autolinking after the free-first reversal. That
+iOS-only exclusion is removed; Expo autolinking now resolves ExpoIapModule3.4.13
+where the baseline did not. The config plugin remains present. Purchase scope and
+server activation flags are unchanged. CocoaPods succeeds from apps/mobile/ios,
+resolving ExpoIap3.4.13 and openiap1.3.15 (126dependencies/142pods). The initial
+root --project-directory invocation resolved the wrong command context; the project
+directory is the required working directory. Normal cache access was needed.
+
+All three obsolete iOS location usage descriptions are explicitly disabled using
+the installed expo-location plugin's supported false options. Production Expo
+introspection verifies the registered bundle, IAP plugin, absent iOS location usage
+keys and preserved Android location blocks. Native location callers remain absent;
+separate web geocoding is unchanged. No redundant native UI pass is introduced.
+
+Owned-path fast smoke259/1679 and QA types/Biome pass. An unsigned generic simulator
+build succeeds in the existing ignored Preview native project (wTradePreview).
+This cannot establish Production identity, StoreKit transaction or signed submission
+acceptance. Build log: /private/tmp/ewatrade-apple-native-build.log; local derived
+data: .scratch/apple-paid-native-build. Binary inspection of its debug dylib finds
+92ExpoIap and3,936OpenIAP exported symbols; the generated module provider includes
+ExpoIapModule. The main executable is a debug stub, so checking it alone is not
+valid linkage evidence. Its bundle is com.ewatrade.preview, an unsigned local
+Preview artifact. The generated Preview project is existing
+local build state; Production permission truth is the separate fresh introspection,
+not an assumed property of that Preview binary. Native changes require a new signed
+binary; OTA cannot add this module to the historical installed build.
+
+## Hosted Apple configuration — 7 November 2026
+
+The existing linked Vercel API project ewatrade-api was read first: Apple IAP
+verifier fields, product mapping and verifier environment were absent in Preview
+and Production. The approved existing key was transmitted directly from its private
+local file to the API project's sensitive settings through stdin, never arguments,
+logs or Git. No replacement key or broader Apple access was created. Both targets
+now have these eight settings, with successful add receipts and name-only readback:
+
+- APPLE_BUNDLE_ID and APPLE_APP_ID match the registered release app.
+- APPLE_IAP_KEY_ID, APPLE_IAP_ISSUER_ID and APPLE_IAP_PRIVATE_KEY use the approved key.
+- STORE_SUBSCRIPTION_PRODUCTS contains the exact three Apple mappings above.
+- STORE_BILLING_ENVIRONMENT is sandbox for Preview, production for Production.
+- STORE_BILLING_PRODUCTION_CHECKOUT_ENABLED is explicitly false for both.
+
+Existing STORE_BILLING_ENABLED was not changed, nor were its values retrieved.
+No deployment occurred; the running deployment does not inherit new settings until
+redeployed. Android must merge actual future Play entries into the shared mapping,
+not replace it with a Play-only array. Hosted write success/name readback is not a
+successful transaction, notification canary or private-key verification at runtime.
+
+Fresh Apple Sandbox UI initially had no testers. The owner completed the prepared
+New Tester form and submitted credentials directly. Readback now confirms Test
+Accounts(1), Nigeria. The password was never entered/read/stored by the agent; the
+account email remains in App Store Connect rather than copied into Git. Reviewer
+workspace/credentials and signed StoreKit exercise remain pending.

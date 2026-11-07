@@ -282,8 +282,9 @@ const config: ExpoConfig = {
     [
       "expo-location",
       {
-        locationWhenInUsePermission:
-          "Allow $(PRODUCT_NAME) to use your location to fill in your business address.",
+        locationWhenInUsePermission: false,
+        locationAlwaysPermission: false,
+        locationAlwaysAndWhenInUsePermission: false,
         isAndroidBackgroundLocationEnabled: false,
         isIosBackgroundLocationEnabled: false,
       },
