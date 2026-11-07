@@ -64,7 +64,7 @@ command and starts at the already-open failure state. It performs ordinary
 sign-out only; no fixture, sale/payment submission, app-data reset or permission
 change. It is not a full release receipt.
 
-The coordinator's candidate uses build 35, Preview OTA group
+The earlier `6a4948c8` candidate used build 35, Preview OTA group
 `2d7fb5f3-cf65-424d-9a6b-61bd0831f005`, Android update
 `01a1b7f9-1b58-73b0-a16b-281b4aac3746`. The release coordinator retains authority
 for exact candidate/config matching and the complete `qa:smoke` retry. Existing
@@ -75,3 +75,48 @@ full journey. Android paid acceptance remains 1/8; Apple remains separate at 2/6
 
 Brain impact: local-only `.brain/features/mobile-dev-preview-qa-accelerator.md`
 and `.brain/tasks/in-progress.md`; no schema/API/permission behavior changed.
+
+
+## Coordinated Preview retry — latest handback
+
+The sole coordinator's final handback is clean documentation commit `45969d111`.
+It records the normal Preview-only release of source
+`3ac9a21759fb428f0e83f5ec8e6d6ae851d96bb1`, after 283 source tests / 1,796 assertions
+passed. No new application change was introduced by this reconciliation.
+
+| Candidate fact | Value |
+| --- | --- |
+| Preview OTA group | `5b0fdf2d-129e-46f2-9b35-90f53ff74f8a` |
+| Android update | `01a1b815-655b-7ef1-9762-6c0e526a3182` |
+| Existing build/runtime | Build 35 / `0a1cc8debc0d42e5b32ff0455e3b5368ff6fed7e` |
+| Config hash | `704ff8bfe528034502901ca4a51b5d82e35a97f6c8dfd10559fbbdee4c403db0` |
+| Failed runtime-unverified receipt | `35aa5085-6fc5-4e49-be65-406df9ca8069` |
+
+Coordinator cold-restarted only the approved emulator-5554's same
+AlGhurobaa_API34 AVD, preserving user data. Package and ActivityManager services
+initially recovered; emulator-5560 remained untouched. The normal release plan
+selected only a compatible Preview OTA; Production web/API/jobs `6a4948c8` and
+synchronized DB `bf9bc356` remain unchanged.
+
+The full smoke stalled in view-hierarchy transport. Its flushed log shows launch
+completed and the initial Sign in/More condition begun; it never reached the
+repaired confirmation selector. The coordinator stopped its own test process,
+and the executor exited 1 with the failed receipt above. Final package lookup
+responded, but ActivityManager and screenshot capture each exceeded 10 seconds.
+This does not prove either a passing or failing confirmation selector.
+
+No owned release/test executor remains. Further testing requires concretely
+responsive approved Android services, then `qa:smoke` with this exact candidate
+and config. Do not redeploy merely to retry, erase data, relax assertions or
+substitute an unapproved device. No additional device action was performed in
+this documentation reconciliation. Android stays 1/8; Apple's 2/6 and genuine
+Preview TEST receiver-only acceptance are unchanged.
+
+The canonical [release receipt](../plans/2026-11-07-full-production-release.md#android-selector-candidate-emulator-acceptance-blocked--7-november-2026)
+retains coordinator actions, evidence and limits. This update reconciles existing
+evidence; the earlier focused checks and later coordinator source checks are
+reused, not claimed as newly executed tests.
+
+Documentation reconciliation checks: offline doctor, owned-path plan (core, zero
+unknown paths), local file/anchor links and whitespace pass. No additional device
+check or source-suite rerun was performed for this evidence-only update.

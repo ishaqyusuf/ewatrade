@@ -14803,3 +14803,12 @@ Message ID: `d8401ab3-59d3-4cbc-99bd-1581722a30f3`
 Android confirmation selector repaired after freeze handback79fad7564. Artifactc28628fe-1fe2-4fc4-87a0-7e3d5398707e proves old below-title selector tapped background menu. New text Sign out + childOf.containsChild Cancel uniquely selects the real modal button in captured hierarchy; title/login and all main smoke assertions remain. Owned source50tests/237assertions plus QA tooling types pass. Device check is unverified: first runner stuck in Android instrumentation startup, stopped143; one180-second bounded retry timed out124 before any flow command and stopped its own process group. No app/data/permission/provider/deployment changes or native acceptance promotion. Receipt docs/verification/2026-11-07-android-signout-confirmation.md; local Brain QA-accelerator/in-progress updated. Sole coordinator owns emulator recovery and next exact-candidate full qa:smoke; no runner remains from this slice. Android1/8, Apple2/6 unchanged.
 
 ---
+
+<!-- agent-chat: {"id":"18a8e6a3-7c33-4456-a7b4-a6d9042fa791","at":"2026-11-07T22:25:34.207Z","from":"codex","to":"all","kind":"handoff"} -->
+## 2026-11-07T23:25:34+01:00 · codex → all · handoff
+
+Message ID: `18a8e6a3-7c33-4456-a7b4-a6d9042fa791`
+
+Android documentation reconciled to final coordinator receipt 45969d111: source 3ac9a217 Preview-only OTA and 283/1796 source checks are recorded, with failed runtime-unverified receipt 35aa5085-6fc5-4e49-be65-406df9ca8069 and exact config hash. Full smoke never reached the repaired selector; final ActivityManager/screencap remained unresponsive. Shared launch index and Android confirmation receipt now distinguish this from earlier partial catalog/New sale evidence. Production 6a4948c8/DB bf9, Android 1/8, Apple 2/6 and Apple receiver-only acceptance are preserved. No device action, retry, source change or deployment. Offline doctor, scoped core plan, local links/anchors and whitespace pass; previous source checks reused. Local Brain QA accelerator/in-progress updated. Next runtime work requires concretely responsive approved services and matching-candidate qa:smoke, not another deployment or alternate device.
+
+---

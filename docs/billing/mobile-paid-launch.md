@@ -98,11 +98,24 @@ dpl_BY9LBysYJSevcEgbrA4VniDv9ZyT. Only Preview STORE_BILLING_ENABLED changed
 false→true; owner/reviewer/forward flags remain absent, Production billing settings,
 public checkout/native purchase scope and both saved URLs unchanged. This accepts
 receiver delivery only, never paid lifecycle or Production relay; Apple stays2/6.
-Final matched-config web smoke passes. Android verified new OTA/build/catalog/New
-sale but final retry failed a sign-out confirmation selector; its owner has the
-narrow repair handoff. Android stays1/8 and native publication remains excluded.
+Final matched-config web smoke passes. On that candidate, Android verified
+OTA/build/catalog/New sale but the final retry failed a sign-out confirmation
+selector. The repair is committed in `3ac9a217`; its device acceptance remains open.
+Android stays1/8 and native publication remains excluded.
 Reviewer signup can be completed from the owner's phone; no new duplicate input
 request. [Exact release evidence](../plans/2026-11-07-full-production-release.md#corrected-appleandroid-handoff-released--7-november-2026).
+
+Latest Android handback is receipt `45969d111`: source `3ac9a217` passed the
+normal candidate source checks (283 tests / 1,796 assertions) and published only
+compatible Preview OTA group `5b0fdf2d-129e-46f2-9b35-90f53ff74f8a` on build 35.
+Approved emulator-5554 recovery preserved user data; emulator-5560 was untouched.
+Full smoke failed view-hierarchy transport before reaching the repaired selector;
+receipt `35aa5085-6fc5-4e49-be65-406df9ca8069` is failed/runtime-unverified. Package
+lookup works, but final ActivityManager and screenshot checks timed out. No runner
+remains. Obtain concretely responsive approved Android services, then retry the
+matching candidate/config with `qa:smoke`; do not redeploy merely to retry or
+substitute another device. Production `6a4948c8` / DB `bf9bc356` and both platform denominators
+are unchanged. [Android confirmation evidence](../verification/2026-11-07-android-signout-confirmation.md#coordinated-preview-retry--latest-handback).
 
 Android changed the pending Nigeria-only selection to all177named Play countries/
 regions, leaving **Rest of World unselected** so unspecified territories are not
