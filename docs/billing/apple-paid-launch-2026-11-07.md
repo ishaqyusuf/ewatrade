@@ -113,7 +113,7 @@ Actual production Apple checkout readiness now checks common activation and Appl
 verifier/product facts independently of Play refund operations. Android and combined
 catalogs still require Play refund custody/monitoring. This completes the earlier
 CLI preflight correction at the runtime boundary, without opening activation flags.
-Reviewer workspace/contact and sandbox email remain unconfirmed. Manual native
+Reviewer workspace/contact remain unconfirmed; the owner-created Nigeria sandbox tester is verified. Manual native
 addresses and support@ewatrade.com with founders@ewatrade.com operational routing
 are settled in the shared index; backup/delivery acceptance remains open.
 
@@ -202,3 +202,21 @@ New Tester form and submitted credentials directly. Readback now confirms Test
 Accounts(1), Nigeria. The password was never entered/read/stored by the agent; the
 account email remains in App Store Connect rather than copied into Git. Reviewer
 workspace/credentials and signed StoreKit exercise remain pending.
+
+## App Store notification destinations
+
+App Information initially had neither server URL configured. Both were saved and
+read back in App Store Connect for app6815837585:
+
+| Apple destination | Saved HTTPS URL | Acceptance |
+| --- | --- | --- |
+| Production | https://api.ewatrade.com/webhooks/store/apple | Configuration saved; deployment and signed TEST/lifecycle canary pending. |
+| Sandbox | https://preview-api.ewatrade.com/webhooks/store/apple | Configuration saved; deployment and signed TEST/lifecycle canary pending. |
+
+These origins match the existing selected Production/Preview profile URLs. No
+shared secret was generated, no transaction was submitted and no billing-enable
+flag was changed. The running deployment must receive the new configuration and
+current code through the existing release coordinator before delivery is accepted.
+Fresh App Information also retains incomplete age/content-rights and China ICP
+fields; subscription availability in175storefronts is not acceptance of every
+country's app-distribution requirements. Do not invent a filing or declaration.
