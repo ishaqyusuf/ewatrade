@@ -176,3 +176,35 @@ commit its complete source, then pin a final candidate and resume the existing
 executor. A specific user coordination question is pending; general deployment
 permission and the approved Samsung are retained and need not be asked again.
 Native Production acceptance remains a separate gate.
+
+## Coordinated freeze resumed after Apple setup
+
+The owner explicitly authorized Apple/deployment chat coordination; the human
+reply was verified in the Apple chat. Apple and Android confirm all tracked edits
+and commits frozen at `d6de088f8`, including AGENT_CHAT. New evidence stays outside
+the checkout until the release coordinator hands back ownership. Source includes
+password recovery df9dbb798, Apple five-day courtesy aea81ba02 and native linkage
+d01fae2c8, saved notification URLs510cd0bfc and shared privacy auditd6de088f8.
+Existing source/type/domain receipts are reused; no paid activation is implied.
+
+The owner authorized already-running emulator-5554 for Preview Android smoke
+because the earlier approved Samsung is disconnected. Ignored smoke config now
+names that emulator; exact build ID will be added once the candidate is built.
+Existing QA data/draft cancellation remain mandatory, no fixture or sale/payment.
+
+Release-wide source plan found ten unmapped files in customer-messages,
+order-receipts and private-media across1750changed paths since origin/main.
+Reviewed three existing suites: template/phone helpers, embedded-font PDF output
+and memory/local-test-object erasure, no provider/DB calls. Isolated smoke env
+passed22tests/91assertions. Added explicit package mappings and these suites to
+bounded shared smoke; regression preserves unknown-package rejection. Full plan
+now reports zero unknown paths (57selected test files including the standalone
+experiment); workspace smoke passed282tests/1780assertions across56files, plus
+QA types/Biome. H02 reports no gated change; product behavior is unchanged.
+This is source verification, not whole-feature or signed-native acceptance.
+
+No duplicate release/build process was active at resumption. Database exception
+remains approved for the exact reviewed Production diff. Apple settings installed
+by its owner remain unchanged here: production-checkout false and native purchase
+scope false. A closed STORE_BILLING_ENABLED gate may return503 even for Apple TEST;
+the Apple owner will inspect/canary only after the exact candidate API is Ready.

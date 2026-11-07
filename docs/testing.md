@@ -87,6 +87,13 @@ domains, order-receipts, prescriptions, customer-messages, tenant-url,
 notifications-react, observability and tsconfig packages; `tools/`, `tmp/`,
 `patches/` and a few root files. Map each after reviewing its offline tests.
 
+On 7 November, the full Production candidate comparison exposed ten unmapped
+changes in customer-messages, order-receipts and private-media. These packages now
+select the bounded shared smoke groups, including their reviewed customer template/
+phone helpers, embedded-font statement PDF and fake/local-object erasure suites.
+The three suites pass 22 tests/91 assertions in the minimal smoke environment;
+they make no provider/DB calls. Other unmapped packages still fail visibly.
+
 Every run also typechecks only the QA tooling and runs Biome on existing changed
 JS/TS/JSON files. It does **not** typecheck application graphs. A TypeScript feature
 still needs relevant scoped types; changed DB/payment/permission/concurrency

@@ -73,6 +73,30 @@ describe("fast workflow scope", () => {
       selectQuickPlan(["apps/mobile/src/lib/quantity.test.ts"]).tests,
     ).toContain("apps/mobile/src/lib/quantity.test.ts")
   })
+  test("messaging, statement and erasure changes select reviewed offline coverage", () => {
+    for (const [source, suite] of [
+      [
+        "packages/customer-messages/src/customer-first-name.ts",
+        "packages/customer-messages/test/customer-messages.test.ts",
+      ],
+      [
+        "packages/order-receipts/src/statement-pdf.tsx",
+        "packages/order-receipts/src/statement.test.ts",
+      ],
+      [
+        "packages/private-media/src/tenant-object-erasure.ts",
+        "packages/private-media/src/tenant-object-erasure.test.ts",
+      ],
+    ]) {
+      const plan = selectQuickPlan([source])
+      expect(plan.unknown).toEqual([])
+      expect(plan.groups).toEqual(["core", "domain", "web", "mobile"])
+      expect(plan.tests).toContain(suite)
+    }
+    expect(
+      selectQuickPlan(["packages/private-media-other/src/a.ts"]).unknown,
+    ).toEqual(["packages/private-media-other/src/a.ts"])
+  })
   test("communications changes include reviewed fake-network typing coverage", () => {
     const plan = selectQuickPlan(["packages/communications/src/whatsapp.ts"])
     expect(plan.unknown).toEqual([])
