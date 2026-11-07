@@ -1,9 +1,10 @@
 # Full Production release preflight — 7 November 2026
 
-Status: all checkout changes committed at `0bd862763`; clean candidate checks
-passed. Full Preview release stopped at Prisma warnings before any component
-was released. Database-warning exception is pending; native Production also has
-an existing release-readiness block. No worktree was created. The narrow
+Status: database warning exception approved and applied to Preview. Candidate
+`daf00b5f0` deployed database, Dashboard, Marketing and API to Preview. Storefront
+stopped on new concurrent dirty mobile changes; jobs and Android did not run.
+Production remains untouched and native release has a separate readiness block.
+No worktree was created. The narrow
 marketing-only proposal is superseded by the owner's “deploy all” instruction.
 
 ## Owner decisions
@@ -115,3 +116,41 @@ continue the existing Preview executor, install its exact Android build on the
 approved Samsung, and obtain matching Preview receipts. Resume Production only
 with its existing checks. Native release requires its separate acceptance work;
 store publishing/merchant setup has not been completed by this release task.
+
+## Approved warning exception and partial Preview rollout
+
+Owner explicitly approved the two warnings for Preview and Production. Fresh
+Preview diff matched the reviewed SHA-256 exactly. The normal guarded command
+`bun run db:push --preview -- --accept-data-loss` succeeded with only those two
+warnings. The subsequent unmodified release database step reported in sync.
+The approval persists for the same reviewed Production changes, subject to a
+fresh diff and stopping on any new warning; it is not a general reset authority.
+
+`daf00b5f0c24b9e5fe0997fe90995c65c077d56e` adds the other author's final verification
+documentation to the reviewed source. Clean candidate smoke passed259/1679.
+Normal full Preview executor pushed origin/preview and recorded:
+
+| Component | Outcome | Provider identity |
+| --- | --- | --- |
+| Database | Synchronized | Preview ewatrade_qa_v1, fingerprint6f198191 |
+| Dashboard | Ready | dpl_Gk6Qn6Yt1BbuBbesAZiuyK62aQF4 |
+| Marketing | Ready | dpl_AwV1WcUXouxLBX71cziq6o41EfEM |
+| API | Ready | dpl_ByuzW9xbFBRD2cHHsxAZ3n66SFbo |
+| Storefront | Stopped before upload | STOREFRONT_PREVIEW_SOURCE_NOT_CLEAN |
+| Jobs / Android | Not executed | Executor stopped at Storefront |
+
+Marketing Preview alias: https://preview.ewatrade.com. Provider Ready is not a
+passed candidate-bound web/Android smoke receipt. New concurrent iOS billing
+preparation edits appeared while Vercel built the candidate. The clean-source
+guard prevented upload of mixed source. By the time a targeted local executor
+interrupt was attempted, it had already exited1 on that guard; no other process
+was stopped. Root Agent Chat freeze request7022e568-dcfd-4d75-97b2-7aee30cf12a4
+and user coordination question request a stable checkout. No files were stashed
+or discarded and no worktree was created.
+
+Coordinator reviewed the new native routing/preflight changes: controller
+wrappers3/6assertions (18 child cases), billing readiness12tests, subscription
+flow source guard and Mobile types pass. Author added the Apple preparation
+receipt and H02 record; H02 passes. These remain source preparation with billing
+flags closed, not signed Apple/Android acceptance. Freeze/commit the final source
+before resuming the standard executor with a new exact candidate.
