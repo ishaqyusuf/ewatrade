@@ -1,12 +1,13 @@
 # Full Production release preflight — 7 November 2026
 
-Status: Production database, Dashboard, Marketing, API and jobs are deployed at
-`bf9bc35685c04f11e10281db2c0d59f2a1e83a32`; the normal release executor exited 0
-and Production API health passed. Five of six configured Production components
-are complete (83.3%). Native remains blocked by failed exact-candidate Android
-Preview acceptance and the existing store-release readiness gate. Storefront is
-configured Preview-only. No worktree was created. Historical entries below retain
-the earlier states; the final receipt at the end is authoritative.
+Status: Production Dashboard, Marketing, API and jobs are now at
+`6a4948c809ea3a83d3aed9ae4ca2d3f6a96f40d3`; the existing Production schema remains
+synchronized at database release `bf9bc356`. The normal executor exited 0 and API
+health passed. Five of six Production components are complete (83.3%). Native
+remains blocked by incomplete Android Preview acceptance and the existing store
+readiness gate. Genuine Apple Sandbox TEST delivery succeeded on the exact new
+Preview API; it does not establish purchase/lifecycle acceptance. No worktree.
+Historical entries retain earlier states; the latest receipt below is authoritative.
 
 ## Owner decisions
 
@@ -341,3 +342,111 @@ tasks/in-progress and database/migrations with the Production result. Earlier
 source corrections also updated storefront-template-factory, engineering/ai-rules
 and mobile-dev-preview-qa-accelerator. Brain stays intentionally local/ignored;
 this tracked receipt preserves release evidence without force-adding Brain.
+
+## Corrected Apple/Android handoff released — 7 November 2026
+
+Resumed under the existing deploy-all authorization, in clean current main without
+worktrees. Included Android harness commit f5d5806e, Apple review-Sandbox source
+630f19b8 and canonical Production-profile correction 6a4948c8. The source fixes
+retain default-off reviewer policy, immutable owner-ID allowlist, exact signed
+Sandbox identity and ordinary/Google environment refusals. Both established
+Production profile spellings are accepted with APP_ENV=production and every other
+gate retained. Production settings were not overwritten to resolve the spelling.
+
+Reviewed both handoffs; offline doctor and root candidate checks passed 283 tests /
+1,796 assertions. Reused author receipts for focused Apple checks, full API/DB
+types, guarded Development persistence/cleanup and H01/H02 where unchanged;
+profile correction has focused 11 tests / 134 assertions. No schema change.
+
+### Preview and genuine Apple receiver evidence
+
+Only the API Preview setting STORE_BILLING_ENABLED changed false→true before the
+candidate deployment, to admit the coordinated Sandbox receiver TEST. Readback
+confirmed APP_ENV=preview and DEV_PROFILE=preview; OWNER_BILLING_ENABLED and new
+review/forward flags remain absent. Production settings, public checkout, native
+purchase scope and notification URLs were unchanged. Sensitive provider flags
+return blank placeholders on read: those are not evidence of empty stored values.
+The original Apple write receipt establishes Sandbox verifier identity and checkout
+false; the new positive signed TEST proves the deployed receiver path.
+
+All Preview deployments completed at 6a4948c8:
+
+- Dashboard: dpl_223t7v1iPNyqfpdBTEH37gibKdnY.
+- Marketing: dpl_3vXobrEMMwZqbzPyKBkgrdeDVv5t.
+- API: dpl_BY9LBysYJSevcEgbrA4VniDv9ZyT; Ready source and canonical
+  https://preview-api.ewatrade.com alias verified; health 200.
+- Storefront: dpl_J3wMgcJFigus555Na79uwQA8RhFJ; configured response/alias checks pass.
+- Trigger Preview: 20261107.3, deployment metfyaz3.
+- Android build 35 reused; compatible OTA group
+  2d7fb5f3-cf65-424d-9a6b-61bd0831f005, update
+  01a1b7f9-1b58-73b0-a16b-281b4aac3746. Runtime remains
+  0a1cc8debc0d42e5b32ff0455e3b5368ff6fed7e. Ignored smoke config was bound to the
+  published group before automatic candidate smoke; no identity assertion bypass.
+
+At 22:40:33 WAT on 7 November, the Apple coordinator requested one genuine Sandbox
+TEST with the approved existing key. Apple reported SUCCESS (attemptDate
+1794087633549). The signed TEST was independently verified with pinned Apple roots
+and the SDK for com.ewatrade.app/Sandbox. Sanitized private evidence:
+/private/tmp/ewatrade-apple-sandbox-canary-6a4948c8.evidence.json.
+Token and signed envelope remain private and were not copied to this receipt.
+This is positive receiver delivery/acknowledgement only: no charge, purchase,
+renewal, restore, coverage, reviewer lifecycle or Production relay acceptance.
+Apple remains 2/6; Android paid acceptance remains 1/8.
+
+### Production outcome
+
+After the Preview executor ended, the sole normal Production executor released
+Dashboard/Marketing/API/jobs using the matching passed web receipt. Database was
+unchanged and skipped as up to date. No concurrent deployment executor, worktree,
+dirty override, native publication or billing activation. Provider IDs:
+
+| Component | Result |
+| --- | --- |
+| Dashboard | Ready dpl_82wszJJD9YWTz3Le5pwaqj2q5kLj; dash.ewatrade.com |
+| Marketing | Ready dpl_84cHbTY4n51ApkG3MNptQ8kE1n9Z; www.ewatrade.com |
+| API | Ready dpl_8hHnYj6S3rTwYCYgv659bbShqA9G; api.ewatrade.com; health passed |
+| Jobs | Production 20261107.2, deployment tgh7ehhh; exited 0 |
+| Database | Prior synchronized bf9bc356 release retained; no new migration |
+| Native | Not released; failed Android acceptance and store readiness still open |
+
+The four changed Production release tags point to 6a4948c8. Marketing appearance
+and tracking were unchanged by this billing/harness source; the earlier live
+visit/page/FAQ collector proof remains relevant and was not unnecessarily repeated.
+
+### Android acceptance remains incomplete
+
+The first run failed before UI because Maestro's driver startup timed out. Device
+and package services remained available. Restarting only the driver allowed a
+same-candidate qa:smoke retry: exact running OTA/build identity, ordinary sign-out,
+QA selection, catalog control/item and New sale passed. The next assertion failed
+because ignored config omitted the existing variant suffix from the Add button.
+Captured accessibility label is `Add Broiler pricing QA 6 Oct · Day-old`, with
+₦2,500 shown. Corrected only that ignored config label; no product or QA data edits.
+
+Because this changes the config fingerprint, regenerated web smoke passed under
+35390ed991445f8cd7787d18231965c6edd449139fbb64660c0b2e31e2543578,
+receipt 23694671-fd16-4587-bd63-f803ace90dcd. Production had admitted the earlier
+valid same-source web receipt before the Android-only label correction; both
+web checks passed. The final Android retry failed during sign-out: the captured
+screen still shows the confirmation sheet, while the tap log targeted the other
+Sign out text. This is a failed harness/interaction assertion, not proof of a
+backend sign-out defect. No sale/payment was submitted and no full money-flow
+receipt was earned. Final private artifacts:
+.scratch/qa-release/artifacts/c28628fe-1fe2-4fc4-87a0-7e3d5398707e.
+Earlier catalog/item-label evidence:
+.scratch/qa-release/artifacts/abc84837-d890-4b7b-95ba-366059224a85.
+
+The earlier blank-dock interpretation is superseded by the narrower accessibility
+and transient-response evidence in the Android handoff. Catalog was subsequently
+verified on this candidate. A future repair must scope the confirmation control
+precisely and obtain the full matching receipt; do not count partial steps or
+remove the total/cancel/billing/runtime assertions. The unchanged native store
+readiness script still exits 1. Reviewer signup and signed StoreKit/lifecycle
+prerequisites remain with the native workstream, without new human requests here.
+
+Private logs: /tmp/full-release-preview-6a4948c8.log,
+/tmp/full-release-production-6a4948c8.log,
+/tmp/full-release-vercel-production-6a4948c8.json and
+/tmp/full-release-android-6a4948c8-label.log. Final documentation commit is evidence,
+not a new deployed source candidate. Brain release/task/mobile-QA pointers updated
+locally; Apple coordinator owns its detailed Apple/Brain receipt after handback.
