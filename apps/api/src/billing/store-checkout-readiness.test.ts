@@ -58,6 +58,65 @@ const productionConfig = {
   EMAIL_FROM: "EwaTrade Alerts <alerts@example.invalid>",
 }
 
+test("Apple production checkout is independent of Play refund operations while Play remains gated", () => {
+  const appleOnly = {
+    ...config,
+    APP_ENV: "production",
+    DEV_PROFILE: "prod",
+    STORE_BILLING_ENABLED: "true",
+    STORE_BILLING_PRODUCTION_CHECKOUT_ENABLED: "true",
+    STORE_BILLING_ENVIRONMENT: "production",
+    PLAY_PACKAGE_NAME: undefined,
+    PLAY_NOTIFICATION_AUDIENCE: undefined,
+    PLAY_NOTIFICATION_SERVICE_EMAIL: undefined,
+    GOOGLE_APPLICATION_CREDENTIALS: undefined,
+  }
+  expect(
+    isNewStoreCheckoutConfigured(
+      products,
+      appleOnly,
+      hasFixtureFile,
+      "app_store",
+    ),
+  ).toBe(true)
+  expect(
+    isNewStoreCheckoutConfigured(
+      products,
+      appleOnly,
+      hasFixtureFile,
+      "play_store",
+    ),
+  ).toBe(false)
+  expect(
+    isNewStoreCheckoutConfigured(products, appleOnly, hasFixtureFile),
+  ).toBe(false)
+  expect(
+    isNewStoreCheckoutConfigured(
+      products,
+      { ...productionConfig, PLAY_REFUND_REVIEW_ACK_ENABLED: "false" },
+      hasFixtureFile,
+      "play_store",
+    ),
+  ).toBe(false)
+  for (const change of [
+    { STORE_BILLING_ENABLED: "false" },
+    { STORE_BILLING_PRODUCTION_CHECKOUT_ENABLED: "false" },
+    { APP_ENV: "preview" },
+    { DEV_PROFILE: "local" },
+    { APPLE_IAP_PRIVATE_KEY: "invalid" },
+    { APPLE_APP_ID: "wrong" },
+  ]) {
+    expect(
+      isNewStoreCheckoutConfigured(
+        products,
+        { ...appleOnly, ...change },
+        hasFixtureFile,
+        "app_store",
+      ),
+    ).toBe(false)
+  }
+})
+
 test("opens checkout only when both store verifier configurations are present", () => {
   expect(isNewStoreCheckoutConfigured(products, config, hasFixtureFile)).toBe(
     true,

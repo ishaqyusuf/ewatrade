@@ -95,15 +95,29 @@ This is a new Apple-specific paid-release denominator, not the historical free
 | I06 Review and rollout | Open | Actual candidate screenshots, reviewer login/contact, privacy/age declarations, selected build plus first subscriptions submitted together and approved rollout. |
 
 Apple native monthly grace permits3/16/28days, not5. The owner confirmed five days
-total with additional application/server implementation. That implementation and
-its lifecycle acceptance remain pending; no native grace setting has changed.
-Never shorten an already verified store grace period or infer nonpayment from
-provider failure. Reviewer workspace/contact and sandbox email remain unconfirmed.
-Manual native addresses and public support@ewatrade.com with founders@ewatrade.com
-operational routing are settled in the shared index; backup/delivery acceptance remains open.
+total with additional application/server implementation. Source now grants courtesy
+only after verified billing-retry/grace status plus signed retry=true,
+expirationIntent=BILLING_ERROR and auto-renew=on. The cutoff is exactly five24-hour
+days after the last paid expiry, never after observation or notification arrival.
+Replays cannot extend it; renewed paid expiry replaces it. Cancellation, refund/
+revocation, unknown status, missing facts and verifier/network failure cannot mint
+courtesy. Longer verified native grace is preserved. Invalid dates/bindings refuse.
+This modifies only Apple verification projection; shared store/DB policy and Play
+verification remain unchanged. At expiry, existing owner Free admission/retained
+record policy applies. Signed lifecycle acceptance remains pending; no native grace
+setting or live billing flag has changed.
 
-Assistant impact: billing remains form-only through existing domain commands. No
-assistant capability, API contract, role, schema or server entitlement change.
+Actual production Apple checkout readiness now checks common activation and Apple
+verifier/product facts independently of Play refund operations. Android and combined
+catalogs still require Play refund custody/monitoring. This completes the earlier
+CLI preflight correction at the runtime boundary, without opening activation flags.
+Reviewer workspace/contact and sandbox email remain unconfirmed. Manual native
+addresses and support@ewatrade.com with founders@ewatrade.com operational routing
+are settled in the shared index; backup/delivery acceptance remains open.
+
+Assistant impact: billing remains form-only through existing canonical commands.
+No new assistant capability, API input, role, schema or client entitlement authority.
+Apple server expiry projection changes as described above; Play policy is unchanged.
 
 ## Verification
 
@@ -119,3 +133,14 @@ execute and pass. These are source checks, not signed/store acceptance.
 Apple key creation/download occurred under explicit owner approval. No device
 or whole-release acceptance, live charge, billing activation, product publication,
 database operation, push or deployment is claimed.
+
+## Product/courtesy phase validation
+
+The525configured prices validate against41Africa/134other intended tables perplan;
+three unique product mappings pass the existing server catalog schema. Browser
+readback confirms ranked products and saved metadata/purchase options. CSV line
+endings were normalized after the initial export. New billing tests pass23/136;
+owned-path fast smoke259/1679 plus QA tooling types/Biome pass. These do not prove
+StoreKit transactions or hosted configuration. Full API types pass with an8GBheap; H01 and H02 pass. The initial4GBtypecheck
+ran out of memory, and the first full run caught an optional fixture-value
+assertion corrected before the passing run. No release readiness is inferred.

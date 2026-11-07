@@ -69,7 +69,11 @@ export function isNewStoreCheckoutConfigured(
     environment === "production" &&
     config.APP_ENV === "production" &&
     profile === "prod" &&
-    productionOperationsConfigured(config)
+    config.STORE_BILLING_ENABLED === "true" &&
+    config.STORE_BILLING_PRODUCTION_CHECKOUT_ENABLED === "true" &&
+    // Play refund-response custody is platform-specific. Apple-only clients
+    // still require their verifier below and all common activation gates.
+    (store === "app_store" || productionOperationsConfigured(config))
   if (!sandbox && !production) return false
   // Older clients request the combined catalog. Keep its both-store gate;
   // a platform-specific client needs only its own verifier and products.

@@ -1,6 +1,9 @@
 import {
   AppStoreServerAPIClient,
   Environment,
+  ExpirationIntent,
+  type JWSRenewalInfoDecodedPayload,
+  type JWSTransactionDecodedPayload,
   SignedDataVerifier,
   Status,
 } from "@apple/app-store-server-library"
@@ -98,38 +101,81 @@ export async function verifyAppleSubscription(
   const renewal = await verifier.verifyAndDecodeRenewalInfo(
     current.signedRenewalInfo,
   )
+  if (purchase.originalTransactionId !== initial.originalTransactionId)
+    throw new Error("Apple subscription identity mismatch.")
+  return projectAppleSubscription(
+    current.status,
+    purchase,
+    renewal,
+    environment,
+  )
+}
+
+/** Only called with Apple's verified transaction and renewal payloads. */
+export function projectAppleSubscription(
+  status: number | undefined,
+  purchase: JWSTransactionDecodedPayload,
+  renewal: JWSRenewalInfoDecodedPayload,
+  environment: VerifiedStoreEntitlement["environment"],
+): VerifiedStoreEntitlement {
   if (
     !purchase.originalTransactionId ||
     !purchase.productId ||
     !purchase.appAccountToken ||
-    !purchase.expiresDate ||
-    !purchase.purchaseDate
+    purchase.expiresDate === undefined ||
+    purchase.purchaseDate === undefined
   )
     throw new Error(
       "Apple subscription does not have the required account binding.",
     )
-  if (
-    purchase.originalTransactionId !== renewal.originalTransactionId ||
-    purchase.originalTransactionId !== initial.originalTransactionId
-  )
+  if (purchase.originalTransactionId !== renewal.originalTransactionId)
     throw new Error("Apple subscription identity mismatch.")
-  const inGrace = current.status === Status.BILLING_GRACE_PERIOD
+  const inGrace = status === Status.BILLING_GRACE_PERIOD
+  const validDate = (value: number) =>
+    Number.isFinite(new Date(value).getTime()) && value > 0
+  if (
+    !validDate(purchase.expiresDate) ||
+    !validDate(purchase.purchaseDate) ||
+    purchase.purchaseDate >= purchase.expiresDate
+  )
+    throw new Error("Invalid Apple subscription dates.")
+  if (
+    inGrace &&
+    !purchase.revocationDate &&
+    (!renewal.gracePeriodExpiresDate ||
+      !validDate(renewal.gracePeriodExpiresDate) ||
+      renewal.gracePeriodExpiresDate < purchase.expiresDate)
+  )
+    throw new Error("Apple grace expiry is missing or invalid.")
+  // Courtesy is anchored to the last paid expiry, never observation/delivery time.
+  // A verified billing failure is required; cancellation, revocation, missing
+  // status and verifier/network failure cannot manufacture five days of access.
+  const courtesy =
+    !purchase.revocationDate &&
+    [Status.BILLING_RETRY, Status.BILLING_GRACE_PERIOD].includes(status ?? 0) &&
+    renewal.isInBillingRetryPeriod === true &&
+    renewal.expirationIntent === ExpirationIntent.BILLING_ERROR &&
+    renewal.autoRenewStatus === 1
+  const expiresAt = Math.max(
+    purchase.expiresDate,
+    inGrace && !purchase.revocationDate
+      ? (renewal.gracePeriodExpiresDate ?? 0)
+      : 0,
+    courtesy ? purchase.expiresDate + 5 * 24 * 60 * 60 * 1000 : 0,
+  )
+  if (!validDate(expiresAt))
+    throw new Error("Invalid Apple subscription dates.")
   return {
     provider: "app_store",
     purchaseId: purchase.originalTransactionId,
     productId: purchase.productId,
     accountToken: purchase.appAccountToken,
     purchasedAt: new Date(purchase.purchaseDate),
-    expiresAt: new Date(
-      inGrace && renewal.gracePeriodExpiresDate
-        ? renewal.gracePeriodExpiresDate
-        : purchase.expiresDate,
-    ),
+    expiresAt: new Date(expiresAt),
     revoked:
       Boolean(purchase.revocationDate) ||
-      ![Status.ACTIVE, Status.BILLING_GRACE_PERIOD].includes(
-        current.status ?? 0,
-      ),
+      (!courtesy &&
+        ![Status.ACTIVE, Status.BILLING_GRACE_PERIOD].includes(status ?? 0)),
     autoRenew: renewal.autoRenewStatus === 1,
     environment,
   }

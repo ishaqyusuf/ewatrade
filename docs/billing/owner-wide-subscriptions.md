@@ -243,3 +243,17 @@ see docs/verification/2026-11-07-owner-plan-limits.md. Database and marketing
 types, H01 and H02 pass. Paid Android launch acceptance remains 1/8, including
 outstanding merchant setup, signed purchase and legal/review gates. Assistant
 billing stays form-only; shared command admission applies across clients.
+
+## Apple five-day courtesy — 7 November 2026
+
+Apple-only verification projects the owner's approved five-day courtesy from the
+last paid transaction expiry only when current verified retry/grace status and
+signed renewal facts confirm a billing failure with renewal still on. It never
+starts at webhook arrival, repeats on restore, or applies to cancellation, refund,
+revocation, unknown status or provider failure. A longer verified Apple grace
+period takes precedence. Existing date-bound owner access and Free admission policy
+remain authoritative; no Google verifier/DB entitlement change.
+
+The saved Apple products and525territory prices are linked from the
+[shared launch index](mobile-paid-launch.md). Target configuration, native/signed
+purchase/renewal/grace acceptance and effective paid policy publication remain open.

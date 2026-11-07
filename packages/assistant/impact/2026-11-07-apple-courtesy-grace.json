@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "id": "2026-11-07-apple-courtesy-grace",
+  "tickets": ["A05"],
+  "summary": "Project five-day Apple courtesy only from verified failed-renewal facts and separate Apple checkout readiness from Play refund custody.",
+  "noAssistantImpact": "Billing stays form-only through existing canonical commands. No assistant tool or permission changes. Apple server entitlement expiry now includes the approved verified billing-failure courtesy, without new client authority or changes to Google policy.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/native-store-billing.md"
+    },
+    {
+      "topic": "api",
+      "status": "local_only",
+      "path": ".brain/api/contracts.md"
+    },
+    {
+      "topic": "decision",
+      "status": "local_only",
+      "path": ".brain/decisions/2026-11-07-apple-five-day-courtesy.md"
+    },
+    {
+      "topic": "feature",
+      "status": "updated",
+      "path": "docs/billing/apple-paid-launch-2026-11-07.md"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "apps/api/src/billing/apple-subscriptions.test.ts",
+      "executed": true,
+      "result": "Verified failure five-day cutoff/replay, native grace precedence, cancellation/revocation exclusion, renewed paid period and malformed/unknown-status refusal pass; signed StoreKit acceptance remains open."
+    },
+    {
+      "kind": "test",
+      "path": "apps/api/src/billing/store-checkout-readiness.test.ts",
+      "executed": true,
+      "result": "Apple production independence preserves common activation/verifier requirements and Android/combined refund-readiness gates."
+    }
+  ]
+}
