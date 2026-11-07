@@ -42,7 +42,7 @@ user to repeat it.
 | Phase | Current state | Next action |
 | --- | --- | --- |
 | 1. Shared contract and core source | Owner limits, coverage, versioned signup and retained-record downgrade implemented (0bd862763; verification daf00b5f0). Manual native addresses implemented cf831c187. | Reuse valid checks. Apple courtesy work remains Apple-owned, not a rewrite of completed Play policy. |
-| 2. Store products and configuration | Apple reports all three monthly products created: Pro6832031107, Growth6832035627, Starter6832036267 in group22556222. Pro/Growth prices saved across175storefronts; Starter regional wizard ongoing. Play subscription page freshly refuses access until a Google Payments merchant account is set up. | Finish Apple catalog; owner completes Play profile, then create/map actual Play monthly products. Play has a broad177-country draft saved, not submitted or paid-territory accepted. |
+| 2. Store products and configuration | Apple reports all three monthly products created: Pro6832031107, Growth6832035627, Starter6832036267 in group22556222. All three monthly price schedules saved across175storefronts, ranked Pro/Growth/Starter with English metadata and owner-only purchase options. Target mapping/wiring remain open. Play subscription page freshly refuses access until a Google Payments merchant account is set up. | Finish Apple catalog; owner completes Play profile, then create/map actual Play monthly products. Play has a broad177-country draft saved, not submitted or paid-territory accepted. |
 | 3. Shared runtime, legal and operations | Billing activation closed. Shared owner contract/source exists; common privacy/safety and operational acceptance remain open. | Verify API/jobs/notifications and operator delivery, paid legal publication, SDK/provider destinations and preserved-record deletion cases without repeating completed empty-data tests. Reuse password-recovery work. |
 | 4. Signed acceptance | Android A01–A08:1/8; Apple I01–I06:1/6 at last accepted checkpoint. Source/config tests do not close these gates. | Freeze exact candidates, inspect permissions/native linkage and run licensed purchase/restore/renewal/grace/refund/switching tests. Reuse platform-valid evidence only. |
 | 5. Submission and publication | Public release after approval/checks is authorized. Neither platform has paid-release acceptance yet. | Complete truthful store declarations/reviewer access, submit accepted candidates, follow review and publish through existing release authority. |
@@ -71,7 +71,7 @@ decisions. Its three products use IDs `com.ewatrade.owner.pro.monthly`,
 `com.ewatrade.owner.growth.monthly` and `com.ewatrade.owner.starter.monthly`.
 Its regional tables can round the20% reference increase to the same local price
 point; report actual store prices rather than claiming an exact local increase.
-Apple owns finishing those tables and the approved five-day courtesy work.
+Apple completed those tables; [525actual country prices](apple-regional-prices-2026-11-07.csv) and [exact mappings](apple-subscription-products.json) are retained. Target installation and approved five-day courtesy work remain Apple-owned.
 
 Android changed the pending Nigeria-only selection to all177named Play countries/
 regions, leaving **Rest of World unselected** so unspecified territories are not

@@ -18,25 +18,37 @@ Program License Agreement. The Account Holder reviewed and accepted it directly.
 Fresh Apple account readback records the October29 agreement accepted November7,
 2026, with the update warning removed. The agent did not accept a binding agreement.
 
-The owner subsequently authorized creation of three monthly products and regional
-prices. Subscription group **EwaTrade Owner Plans** now exists (22556222).
-**EwaTrade Pro Monthly** exists (6832031107), product ID
-`com.ewatrade.owner.pro.monthly`, period1month, Prepare for Submission.
-Growth and Starter are not created yet. Availability, localization, server mapping
-and review metadata remain unfinished. Previous iOS6 remains historical Preview evidence.
+The owner authorized and completed creation of three monthly products and regional
+prices in **EwaTrade Owner Plans**, group22556222. All remain Prepare for Submission.
 
-Pro pricing is still in the unsaved country-price wizard. Apple offers the exact
-NGN30,000 baseline and NGN36,000 higher reference. The175territory tables were
-captured from the UI;41African storefronts are to retain the lower comparable
-prices while134others use the higher reference.22of41African overrides have been
-applied in the retained browser wizard, through Malawi;19remain. This is not a
-saved price schedule. Local resume data is retained outside Git at
-`/private/tmp/ewatrade-apple-pricing-resume.json`, and Chrome tab6431705 is retained.
-No trial, public publication, checkout activation or charge occurred.
+| Level | Product | Apple ID | Product ID | Nigeria monthly |
+| --- | --- | --- | --- | --- |
+| 1 | EwaTrade Pro Monthly | 6832031107 | `com.ewatrade.owner.pro.monthly` | NGN30,000 |
+| 2 | EwaTrade Growth Monthly | 6832035627 | `com.ewatrade.owner.growth.monthly` | NGN15,000 |
+| 3 | EwaTrade Starter Monthly | 6832036267 | `com.ewatrade.owner.starter.monthly` | NGN5,000 |
 
-The owner then prioritized dashboard password recovery before Apple completion.
-New user-owned chat `01a1b704-65c8-7412-b430-8a98b63e24c4` is implementing that flow
-in the current checkout; Apple setup is preserved for resumption afterward.
+All175current storefronts are selected for each product; automatic availability in
+future storefronts is off. English (U.S.) group and product names/descriptions are
+saved. Family Sharing is off; multiseat purchases are disabled, leaving App Store
+purchasing, consistent with owner-wide plans rather than staff seats. No trial,
+annual offer, review submission, checkout activation or charge was performed.
+Subscription review screenshots/notes and the signed app candidate remain pending.
+
+Each full175country price table was validated against its intended region before
+confirmation.41African storefronts retain Apple's comparable baseline;134others use
+Apple's equalization from a20%higher NGN reference (6k/18k/36k). This does not guarantee
+an exact20%increase in every local price: Growth US is9.99USD from both15k and18k
+references, while Starter US is3.99USD versus baseline2.99 and Pro US22.99 versus19.99.
+The actual saved prices are in [the525row export](apple-regional-prices-2026-11-07.csv).
+The [exact server mapping](apple-subscription-products.json) parses through the
+existing catalog schema; target environment/hosted installation is still pending.
+
+The owner resumed Apple work after prioritizing dashboard password recovery.
+That separate chat completed source df9dbb798; reuse its evidence. Shared launch,
+manual native address entry, support aliases and public-after-approval decisions
+are now canonical in [the shared launch index](mobile-paid-launch.md). Use the
+[one shared paid/privacy draft](../releases/mobile-permissions-disclosure-draft-2026-11-07.md);
+no duplicate Apple policy or unreviewed effective legal publication is introduced.
 
 ## Code and configuration audit
 
@@ -87,8 +99,8 @@ total with additional application/server implementation. That implementation and
 its lifecycle acceptance remain pending; no native grace setting has changed.
 Never shorten an already verified store grace period or infer nonpayment from
 provider failure. Reviewer workspace/contact and sandbox email remain unconfirmed.
-Manual address entry for launch and support@ewatrade.com as the primary inbox
-have been recommended; the owner has not yet selected those privacy/support options.
+Manual native addresses and public support@ewatrade.com with founders@ewatrade.com
+operational routing are settled in the shared index; backup/delivery acceptance remains open.
 
 Assistant impact: billing remains form-only through existing domain commands. No
 assistant capability, API contract, role, schema or server entitlement change.

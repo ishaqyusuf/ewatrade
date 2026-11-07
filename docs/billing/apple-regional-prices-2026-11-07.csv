@@ -1,0 +1,526 @@
+plan,product_id,apple_id,country,currency,price,reference_ngn
+starter,com.ewatrade.owner.starter.monthly,6832036267,Afghanistan,USD,$3.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Albania,USD,$4.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Algeria,USD,$2.99,5000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Angola,USD,$2.99,5000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Anguilla,USD,$3.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Antigua and Barbuda,USD,$3.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Argentina,USD,$3.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Armenia,USD,$4.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Australia,AUD,$5.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Austria,EUR,€3.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Azerbaijan,USD,$4.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Bahamas,USD,$3.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Bahrain,USD,$3.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Barbados,USD,$4.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Belarus,USD,$4.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Belgium,EUR,€3.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Belize,USD,$3.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Benin,USD,$3.99,5000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Bermuda,USD,$3.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Bhutan,USD,$3.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Bolivia,USD,$3.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Bosnia and Herzegovina,EUR,€3.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Botswana,USD,$2.99,5000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Brazil,BRL,R$24.90,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,British Virgin Islands,USD,$3.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Brunei,USD,$3.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Bulgaria,EUR,€3.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Burkina Faso,USD,$2.99,5000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Cambodia,USD,$3.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Cameroon,USD,$3.99,5000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Canada,CAD,$4.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Cape Verde,USD,$2.99,5000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Cayman Islands,USD,$3.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Chad,USD,$2.99,5000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Chile,CLP,"$4,990.00",6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,China mainland,CNY,¥28.00,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Colombia,COP,"$19,900.00",6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,"Congo, Democratic Republic of the",USD,$2.99,5000
+starter,com.ewatrade.owner.starter.monthly,6832036267,"Congo, Republic of the",USD,$3.99,5000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Costa Rica,USD,$3.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Croatia,EUR,€3.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Cyprus,EUR,€3.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Czech Republic,CZK,Kč 99.00,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Côte d’Ivoire,USD,$3.99,5000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Denmark,DKK,kr 39.00,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Dominica,USD,$3.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Dominican Republic,USD,$3.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Ecuador,USD,$3.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Egypt,EGP,E£149.99,5000
+starter,com.ewatrade.owner.starter.monthly,6832036267,El Salvador,USD,$3.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Estonia,EUR,€3.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Eswatini,USD,$2.99,5000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Fiji,USD,$3.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Finland,EUR,€3.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,France,EUR,€3.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Gabon,USD,$2.99,5000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Gambia,USD,$2.99,5000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Georgia,USD,$4.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Germany,EUR,€3.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Ghana,USD,$3.99,5000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Greece,EUR,€3.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Grenada,USD,$3.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Guatemala,USD,$3.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Guinea-Bissau,USD,$2.99,5000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Guyana,USD,$3.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Honduras,USD,$3.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Hong Kong,HKD,$32.00,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Hungary,HUF,"Ft 1,790.00",6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Iceland,USD,$4.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,India,INR,₹399.00,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Indonesia,IDR,"Rp 79,000.00",6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Iraq,USD,$3.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Ireland,EUR,€3.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Israel,ILS,₪12.90,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Italy,EUR,€3.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Jamaica,USD,$3.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Japan,JPY,¥600.00,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Jordan,USD,$3.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Kazakhstan,KZT,"₸2,490.00",6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Kenya,USD,$3.99,5000
+starter,com.ewatrade.owner.starter.monthly,6832036267,"Korea, Republic of",KRW,"₩6,600.00",6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Kosovo,EUR,€3.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Kuwait,USD,$3.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Kyrgyzstan,USD,$3.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Laos,USD,$3.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Latvia,EUR,€3.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Lebanon,USD,$3.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Liberia,USD,$2.99,5000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Libya,USD,$2.99,5000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Lithuania,EUR,€3.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Luxembourg,EUR,€3.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Macau,USD,$3.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Madagascar,USD,$2.99,5000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Malawi,USD,$2.99,5000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Malaysia,MYR,RM 19.90,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Maldives,USD,$3.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Mali,USD,$2.99,5000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Malta,EUR,€3.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Mauritania,USD,$2.99,5000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Mauritius,USD,$3.99,5000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Mexico,MXN,$89.00,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Micronesia,USD,$3.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Moldova,USD,$4.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Mongolia,USD,$3.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Montenegro,EUR,€3.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Montserrat,USD,$3.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Morocco,USD,$3.99,5000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Mozambique,USD,$2.99,5000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Myanmar,USD,$3.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Namibia,USD,$2.99,5000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Naoero,USD,$3.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Nepal,USD,$4.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Netherlands,EUR,€3.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,New Zealand,NZD,$6.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Nicaragua,USD,$3.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Niger,USD,$2.99,5000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Nigeria,NGN,"₦5,000.00",5000
+starter,com.ewatrade.owner.starter.monthly,6832036267,North Macedonia,USD,$3.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Norway,NOK,kr 49.00,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Oman,USD,$3.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Pakistan,PKR,"Rs 1,100.00",6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Palau,USD,$3.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Panama,USD,$3.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Papua New Guinea,USD,$3.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Paraguay,USD,$3.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Peru,PEN,PEN 17.90,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Philippines,PHP,₱249.00,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Poland,PLN,zł 19.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Portugal,EUR,€3.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Qatar,QAR,QAR 14.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Romania,RON,lei 19.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Russia,RUB,₽349.00,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Rwanda,USD,$2.99,5000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Saudi Arabia,SAR,SAR 17.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Senegal,USD,$3.99,5000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Serbia,EUR,€3.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Seychelles,USD,$2.99,5000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Sierra Leone,USD,$2.99,5000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Singapore,SGD,$5.98,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Slovakia,EUR,€3.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Slovenia,EUR,€3.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Solomon Islands,USD,$3.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,South Africa,ZAR,R 59.99,5000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Spain,EUR,€3.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Sri Lanka,USD,$3.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,St. Kitts and Nevis,USD,$3.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,St. Lucia,USD,$3.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,St. Vincent and the Grenadines,USD,$3.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Suriname,USD,$3.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Sweden,SEK,kr 49.00,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Switzerland,CHF,CHF 3.00,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,São Tomé and Príncipe,USD,$2.99,5000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Taiwan,TWD,$120.00,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Tajikistan,USD,$3.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Tanzania,TZS,"TZS 9,900.00",5000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Thailand,THB,฿149.00,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Tonga,USD,$3.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Trinidad and Tobago,USD,$3.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Tunisia,USD,$2.99,5000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Turkmenistan,USD,$3.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Turks and Caicos Islands,USD,$3.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Türkiye,TRY,₺199.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Uganda,USD,$3.99,5000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Ukraine,USD,$4.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,United Arab Emirates,AED,AED 14.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,United Kingdom,GBP,£3.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,United States,USD,$3.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Uruguay,USD,$3.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Uzbekistan,USD,$3.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Vanuatu,USD,$3.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Venezuela,USD,$3.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Vietnam,VND,"₫119,000.00",6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Yemen,USD,$3.99,6000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Zambia,USD,$3.99,5000
+starter,com.ewatrade.owner.starter.monthly,6832036267,Zimbabwe,USD,$3.99,5000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Afghanistan,USD,$9.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Albania,USD,$11.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Algeria,USD,$9.99,15000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Angola,USD,$9.99,15000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Anguilla,USD,$9.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Antigua and Barbuda,USD,$9.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Argentina,USD,$9.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Armenia,USD,$11.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Australia,AUD,$14.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Austria,EUR,€9.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Azerbaijan,USD,$11.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Bahamas,USD,$9.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Bahrain,USD,$9.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Barbados,USD,$11.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Belarus,USD,$11.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Belgium,EUR,€9.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Belize,USD,$9.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Benin,USD,$11.99,15000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Bermuda,USD,$9.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Bhutan,USD,$9.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Bolivia,USD,$9.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Bosnia and Herzegovina,EUR,€9.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Botswana,USD,$9.99,15000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Brazil,BRL,R$59.90,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,British Virgin Islands,USD,$9.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Brunei,USD,$9.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Bulgaria,EUR,€9.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Burkina Faso,USD,$9.99,15000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Cambodia,USD,$9.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Cameroon,USD,$11.99,15000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Canada,CAD,$12.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Cape Verde,USD,$9.99,15000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Cayman Islands,USD,$9.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Chad,USD,$9.99,15000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Chile,CLP,"$9,990.00",18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,China mainland,CNY,¥68.00,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Colombia,COP,"$49,900.00",18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,"Congo, Democratic Republic of the",USD,$9.99,15000
+growth,com.ewatrade.owner.growth.monthly,6832035627,"Congo, Republic of the",USD,$11.99,15000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Costa Rica,USD,$9.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Croatia,EUR,€9.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Cyprus,EUR,€9.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Czech Republic,CZK,Kč 249.00,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Côte d’Ivoire,USD,$11.99,15000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Denmark,DKK,kr 89.00,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Dominica,USD,$9.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Dominican Republic,USD,$9.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Ecuador,USD,$9.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Egypt,EGP,E£499.99,15000
+growth,com.ewatrade.owner.growth.monthly,6832035627,El Salvador,USD,$9.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Estonia,EUR,€9.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Eswatini,USD,$9.99,15000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Fiji,USD,$9.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Finland,EUR,€9.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,France,EUR,€9.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Gabon,USD,$9.99,15000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Gambia,USD,$9.99,15000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Georgia,USD,$11.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Germany,EUR,€9.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Ghana,USD,$11.99,15000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Greece,EUR,€9.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Grenada,USD,$9.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Guatemala,USD,$9.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Guinea-Bissau,USD,$9.99,15000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Guyana,USD,$9.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Honduras,USD,$9.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Hong Kong,HKD,$88.00,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Hungary,HUF,"Ft 4,490.00",18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Iceland,USD,$11.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,India,INR,₹999.00,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Indonesia,IDR,"Rp 199,000.00",18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Iraq,USD,$9.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Ireland,EUR,€9.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Israel,ILS,₪29.90,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Italy,EUR,€9.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Jamaica,USD,$9.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Japan,JPY,"¥1,500.00",18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Jordan,USD,$9.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Kazakhstan,KZT,"₸5,990.00",18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Kenya,USD,$11.99,15000
+growth,com.ewatrade.owner.growth.monthly,6832035627,"Korea, Republic of",KRW,"₩17,000.00",18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Kosovo,EUR,€9.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Kuwait,USD,$9.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Kyrgyzstan,USD,$9.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Laos,USD,$9.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Latvia,EUR,€9.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Lebanon,USD,$9.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Liberia,USD,$9.99,15000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Libya,USD,$9.99,15000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Lithuania,EUR,€9.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Luxembourg,EUR,€9.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Macau,USD,$9.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Madagascar,USD,$9.99,15000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Malawi,USD,$9.99,15000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Malaysia,MYR,RM 49.90,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Maldives,USD,$9.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Mali,USD,$9.99,15000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Malta,EUR,€9.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Mauritania,USD,$9.99,15000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Mauritius,USD,$11.99,15000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Mexico,MXN,$199.00,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Micronesia,USD,$9.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Moldova,USD,$11.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Mongolia,USD,$9.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Montenegro,EUR,€9.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Montserrat,USD,$9.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Morocco,USD,$11.99,15000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Mozambique,USD,$9.99,15000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Myanmar,USD,$9.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Namibia,USD,$9.99,15000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Naoero,USD,$9.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Nepal,USD,$11.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Netherlands,EUR,€9.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,New Zealand,NZD,$19.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Nicaragua,USD,$9.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Niger,USD,$9.99,15000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Nigeria,NGN,"₦15,000.00",15000
+growth,com.ewatrade.owner.growth.monthly,6832035627,North Macedonia,USD,$9.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Norway,NOK,kr 129.00,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Oman,USD,$9.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Pakistan,PKR,"Rs 2,900.00",18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Palau,USD,$9.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Panama,USD,$9.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Papua New Guinea,USD,$9.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Paraguay,USD,$9.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Peru,PEN,PEN 44.90,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Philippines,PHP,₱599.00,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Poland,PLN,zł 49.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Portugal,EUR,€9.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Qatar,QAR,QAR 39.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Romania,RON,lei 49.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Russia,RUB,₽899.00,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Rwanda,USD,$9.99,15000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Saudi Arabia,SAR,SAR 39.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Senegal,USD,$11.99,15000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Serbia,EUR,€9.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Seychelles,USD,$9.99,15000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Sierra Leone,USD,$9.99,15000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Singapore,SGD,$14.98,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Slovakia,EUR,€9.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Slovenia,EUR,€9.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Solomon Islands,USD,$9.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,South Africa,ZAR,R 199.99,15000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Spain,EUR,€9.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Sri Lanka,USD,$9.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,St. Kitts and Nevis,USD,$9.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,St. Lucia,USD,$9.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,St. Vincent and the Grenadines,USD,$9.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Suriname,USD,$9.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Sweden,SEK,kr 129.00,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Switzerland,CHF,CHF 9.00,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,São Tomé and Príncipe,USD,$9.99,15000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Taiwan,TWD,$320.00,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Tajikistan,USD,$9.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Tanzania,TZS,"TZS 29,900.00",15000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Thailand,THB,฿399.00,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Tonga,USD,$9.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Trinidad and Tobago,USD,$9.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Tunisia,USD,$9.99,15000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Turkmenistan,USD,$9.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Turks and Caicos Islands,USD,$9.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Türkiye,TRY,₺499.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Uganda,USD,$11.99,15000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Ukraine,USD,$11.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,United Arab Emirates,AED,AED 39.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,United Kingdom,GBP,£9.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,United States,USD,$9.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Uruguay,USD,$9.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Uzbekistan,USD,$9.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Vanuatu,USD,$9.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Venezuela,USD,$9.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Vietnam,VND,"₫299,000.00",18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Yemen,USD,$9.99,18000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Zambia,USD,$11.99,15000
+growth,com.ewatrade.owner.growth.monthly,6832035627,Zimbabwe,USD,$11.99,15000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Afghanistan,USD,$22.99,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Albania,USD,$29.99,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Algeria,USD,$19.99,30000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Angola,USD,$19.99,30000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Anguilla,USD,$22.99,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Antigua and Barbuda,USD,$22.99,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Argentina,USD,$22.99,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Armenia,USD,$29.99,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Australia,AUD,$39.99,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Austria,EUR,€24.99,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Azerbaijan,USD,$29.99,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Bahamas,USD,$24.99,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Bahrain,USD,$24.99,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Barbados,USD,$29.99,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Belarus,USD,$29.99,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Belgium,EUR,€24.99,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Belize,USD,$22.99,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Benin,USD,$22.99,30000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Bermuda,USD,$22.99,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Bhutan,USD,$22.99,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Bolivia,USD,$22.99,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Bosnia and Herzegovina,EUR,€24.99,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Botswana,USD,$19.99,30000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Brazil,BRL,R$149.90,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,British Virgin Islands,USD,$22.99,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Brunei,USD,$22.99,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Bulgaria,EUR,€24.99,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Burkina Faso,USD,$19.99,30000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Cambodia,USD,$24.99,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Cameroon,USD,$22.99,30000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Canada,CAD,$29.99,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Cape Verde,USD,$19.99,30000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Cayman Islands,USD,$22.99,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Chad,USD,$19.99,30000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Chile,CLP,"$24,990.00",36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,China mainland,CNY,¥168.00,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Colombia,COP,"$99,900.00",36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,"Congo, Democratic Republic of the",USD,$19.99,30000
+pro,com.ewatrade.owner.pro.monthly,6832031107,"Congo, Republic of the",USD,$22.99,30000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Costa Rica,USD,$22.99,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Croatia,EUR,€24.99,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Cyprus,EUR,€24.99,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Czech Republic,CZK,Kč 599.00,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Côte d’Ivoire,USD,$22.99,30000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Denmark,DKK,kr 199.00,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Dominica,USD,$22.99,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Dominican Republic,USD,$22.99,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Ecuador,USD,$22.99,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Egypt,EGP,E£999.99,30000
+pro,com.ewatrade.owner.pro.monthly,6832031107,El Salvador,USD,$22.99,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Estonia,EUR,€24.99,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Eswatini,USD,$19.99,30000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Fiji,USD,$22.99,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Finland,EUR,€24.99,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,France,EUR,€24.99,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Gabon,USD,$19.99,30000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Gambia,USD,$19.99,30000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Georgia,USD,$29.99,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Germany,EUR,€24.99,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Ghana,USD,$22.99,30000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Greece,EUR,€24.99,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Grenada,USD,$22.99,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Guatemala,USD,$22.99,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Guinea-Bissau,USD,$19.99,30000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Guyana,USD,$22.99,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Honduras,USD,$22.99,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Hong Kong,HKD,$188.00,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Hungary,HUF,"Ft 9,990.00",36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Iceland,USD,$29.99,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,India,INR,"₹2,299.00",36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Indonesia,IDR,"Rp 499,000.00",36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Iraq,USD,$22.99,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Ireland,EUR,€24.99,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Israel,ILS,₪69.90,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Italy,EUR,€24.99,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Jamaica,USD,$22.99,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Japan,JPY,"¥3,500.00",36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Jordan,USD,$22.99,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Kazakhstan,KZT,"₸12,990.00",36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Kenya,USD,$22.99,30000
+pro,com.ewatrade.owner.pro.monthly,6832031107,"Korea, Republic of",KRW,"₩39,000.00",36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Kosovo,EUR,€24.99,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Kuwait,USD,$22.99,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Kyrgyzstan,USD,$24.99,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Laos,USD,$24.99,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Latvia,EUR,€24.99,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Lebanon,USD,$22.99,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Liberia,USD,$19.99,30000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Libya,USD,$19.99,30000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Lithuania,EUR,€24.99,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Luxembourg,EUR,€24.99,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Macau,USD,$22.99,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Madagascar,USD,$19.99,30000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Malawi,USD,$19.99,30000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Malaysia,MYR,RM 99.90,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Maldives,USD,$22.99,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Mali,USD,$19.99,30000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Malta,EUR,€24.99,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Mauritania,USD,$19.99,30000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Mauritius,USD,$22.99,30000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Mexico,MXN,$499.00,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Micronesia,USD,$22.99,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Moldova,USD,$29.99,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Mongolia,USD,$22.99,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Montenegro,EUR,€19.99,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Montserrat,USD,$22.99,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Morocco,USD,$22.99,30000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Mozambique,USD,$19.99,30000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Myanmar,USD,$22.99,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Namibia,USD,$19.99,30000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Naoero,USD,$22.99,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Nepal,USD,$29.99,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Netherlands,EUR,€24.99,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,New Zealand,NZD,$39.99,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Nicaragua,USD,$22.99,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Niger,USD,$19.99,30000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Nigeria,NGN,"₦30,000.00",30000
+pro,com.ewatrade.owner.pro.monthly,6832031107,North Macedonia,USD,$22.99,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Norway,NOK,kr 299.00,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Oman,USD,$22.99,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Pakistan,PKR,"Rs 5,900.00",36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Palau,USD,$22.99,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Panama,USD,$22.99,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Papua New Guinea,USD,$22.99,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Paraguay,USD,$22.99,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Peru,PEN,PEN 99.90,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Philippines,PHP,"₱1,490.00",36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Poland,PLN,zł 99.99,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Portugal,EUR,€24.99,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Qatar,QAR,QAR 79.99,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Romania,RON,lei 119.99,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Russia,RUB,"₽1,990.00",36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Rwanda,USD,$19.99,30000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Saudi Arabia,SAR,SAR 99.99,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Senegal,USD,$22.99,30000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Serbia,EUR,€24.99,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Seychelles,USD,$19.99,30000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Sierra Leone,USD,$19.99,30000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Singapore,SGD,$34.98,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Slovakia,EUR,€24.99,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Slovenia,EUR,€24.99,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Solomon Islands,USD,$22.99,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,South Africa,ZAR,R 399.99,30000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Spain,EUR,€24.99,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Sri Lanka,USD,$22.99,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,St. Kitts and Nevis,USD,$22.99,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,St. Lucia,USD,$22.99,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,St. Vincent and the Grenadines,USD,$22.99,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Suriname,USD,$24.99,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Sweden,SEK,kr 299.00,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Switzerland,CHF,CHF 20.00,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,São Tomé and Príncipe,USD,$19.99,30000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Taiwan,TWD,$790.00,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Tajikistan,USD,$24.99,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Tanzania,TZS,"TZS 59,900.00",30000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Thailand,THB,฿799.00,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Tonga,USD,$22.99,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Trinidad and Tobago,USD,$22.99,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Tunisia,USD,$19.99,30000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Turkmenistan,USD,$22.99,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Turks and Caicos Islands,USD,$22.99,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Türkiye,TRY,"₺1,199.99",36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Uganda,USD,$22.99,30000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Ukraine,USD,$29.99,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,United Arab Emirates,AED,AED 89.99,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,United Kingdom,GBP,£22.99,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,United States,USD,$22.99,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Uruguay,USD,$22.99,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Uzbekistan,USD,$24.99,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Vanuatu,USD,$22.99,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Venezuela,USD,$22.99,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Vietnam,VND,"₫699,000.00",36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Yemen,USD,$22.99,36000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Zambia,USD,$22.99,30000
+pro,com.ewatrade.owner.pro.monthly,6832031107,Zimbabwe,USD,$22.99,30000
