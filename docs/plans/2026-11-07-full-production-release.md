@@ -450,3 +450,53 @@ Private logs: /tmp/full-release-preview-6a4948c8.log,
 /tmp/full-release-android-6a4948c8-label.log. Final documentation commit is evidence,
 not a new deployed source candidate. Brain release/task/mobile-QA pointers updated
 locally; Apple coordinator owns its detailed Apple/Brain receipt after handback.
+
+## Android selector candidate; emulator acceptance blocked — 7 November 2026
+
+Apple docs 359fa7000 and Android selector 3ac9a217 were handed back committed.
+Reviewed `.maestro/sign-out.yaml` and its captured-tree evidence: the confirmation
+is now scoped to the direct action-row parent containing Cancel. Product source,
+permissions, assertions, totals and cancellation remain unchanged. Coordinated
+tracked freeze was re-established at clean 3ac9a21759fb428f0e83f5ec8e6d6ae851d96bb1.
+
+Initial approved emulator-5554 checks showed boot_completed=1 but no Android package
+service. Its AVD name was confirmed as AlGhurobaa_API34. Cold-restarted only that
+same AVD/port, preserving data and using no snapshot load/save. The additional
+emulator-5560 was observed and left untouched. After boot, package lookup and
+ActivityManager current-user both responded. Offline doctor passed.
+
+The normal tool's dry run selected only a compatible Android Preview OTA;
+web/API/jobs/Storefront/database were up to date. No web push, schema operation or
+Production release was needed for this harness-only change. Root candidate checks
+passed 283 tests / 1,796 assertions. Normal `release --preview --yes` published:
+
+- Candidate 3ac9a21759fb428f0e83f5ec8e6d6ae851d96bb1.
+- Preview group 5b0fdf2d-129e-46f2-9b35-90f53ff74f8a.
+- Android update 01a1b815-655b-7ef1-9762-6c0e526a3182.
+- Compatible runtime 0a1cc8debc0d42e5b32ff0455e3b5368ff6fed7e, existing build 35.
+- Ignored config retains exact Day-old offering, total and device; group updated
+  before smoke. Config hash 704ff8bfe528034502901ca4a51b5d82e35a97f6c8dfd10559fbbdee4c403db0.
+
+The automatic smoke then spent several minutes in startup/hierarchy access. The
+owned JVM stack showed AndroidDriver.callViewHierarchy/contentDescriptor waiting.
+Terminated only this task's Maestro process after the prolonged wait; the flushed
+log showed launch completed and initial Sign in/More assertion begun, but the
+confirmation selector was never reached. The executor exited 1 and wrote failed,
+runtime-unverified receipt 35aa5085-6fc5-4e49-be65-406df9ca8069. This is neither a
+selector pass nor a reproduced selector failure; no full native receipt exists.
+
+A final bounded service check still found the installed package, but ActivityManager
+and screenshot capture each exceeded 10 seconds. No further blind retry, device/data
+wipe, permission change, alternate device use or assertion relaxation. No sale,
+payment or fixture was submitted. Emulator remains running; no owned release/test
+executor remains. Future testing needs responsive authorized Android services, then
+`qa:smoke` for this candidate/config; do not redeploy merely to retry testing.
+
+Private evidence: /tmp/full-release-preview-3ac9a217.log,
+/tmp/full-release-emulator-recovery-3ac9a217.log,
+/private/tmp/full-release-maestro-3ac9a217.private.txt and artifact
+.scratch/qa-release/artifacts/5cbc36ad-bf79-4538-afb0-4b36a4c85c22.
+Production remains 6a4948c8 (DB bf9bc356 unchanged), five of six components complete.
+Native store readiness and human reviewer/signed lifecycle prerequisites persist;
+Apple 2/6 and Android 1/8 are not promoted. Local Brain mobile-QA and in-progress
+pointers updated; this receipt commit is documentation only.
