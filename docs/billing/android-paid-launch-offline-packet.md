@@ -1,5 +1,10 @@
 # Android paid launch: offline setup and review packet
 
+7 November: use the [current paid-launch checklist](android-paid-launch-2026-11-07.md).
+The owner reaffirmed paid subscriptions from day one. This 27 October packet remains
+historical: durable owner-account persistence and reader/privacy wiring were
+implemented 2 November, while native/cutover/provider/signed acceptance is still open.
+
 Prepared 27 October 2026 from the local Android branch. This is a worksheet for
 the future owner-wide billing candidate, not live Console/provider evidence or a
 submission-ready declaration. No service, financial account or release setting

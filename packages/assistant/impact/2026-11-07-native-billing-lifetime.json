@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "id": "2026-11-07-native-billing-lifetime",
+  "tickets": ["A05"],
+  "summary": "Fence native billing callbacks and restore against retired session/business/cache lifetimes, and refresh checkout authority/product mapping before opening Play.",
+  "noAssistantImpact": "Software subscriptions remain form-only. Existing catalog and verifyPurchase procedures retain their server permissions and receipt verification. No assistant tool, provider activation, entitlement, API or schema change. The paid-at-launch correction does not enable checkout.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/native-store-billing.md"
+    },
+    {
+      "topic": "feature",
+      "status": "updated",
+      "path": "docs/billing/android-paid-launch-2026-11-07.md"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "apps/mobile/src/lib/store-purchase-reconciliation.test.ts",
+      "executed": true,
+      "result": "Four new lifetime regressions fail before the fix; all 10 helper tests pass after. Verification remains before store finish; stale restore stops before history or the next receipt."
+    },
+    {
+      "kind": "test",
+      "path": "apps/mobile/src/components/mobile/store-subscription-provider.test.ts",
+      "executed": true,
+      "result": "Actual native controller in isolated fixtures: 7 checkout/callback/restore cases pass, plus disabled-scope provider remains inert. Synthetic module effects, not real Play or device acceptance."
+    }
+  ]
+}

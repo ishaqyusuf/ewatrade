@@ -1,9 +1,11 @@
 # Owner-wide subscriptions: durable adapter, cutover pending
 
-6 November 2026: the owner reconfirmed pre-market status and deferred merchant
-setup/paid activation to ship mobile free first. See the [current free-launch
-scope and regional pricing walkthrough](mobile-free-launch-2026-11-06.md).
-Paid-only integration below remains deferred, not an initial launch prerequisite.
+7 November 2026: owner correction restores **paid owner subscriptions at launch**.
+The 6 November free-first decision is historical. Native integration, paid cutover,
+merchant readiness and signed purchase acceptance are launch prerequisites again.
+See the [current Android checklist](android-paid-launch-2026-11-07.md) and the
+[recorded pricing direction/correction](mobile-free-launch-2026-11-06.md).
+Checkout stays disabled until the reviewed paid candidate is ready.
 
 `@ewatrade/db/owner-billing` has pure policy functions, transactional commands and,
 since 2 November 2026, a durable Prisma adapter wired to the catalog, purchase,

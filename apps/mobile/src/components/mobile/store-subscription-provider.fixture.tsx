@@ -17,7 +17,14 @@ mock.module("@/hooks/use-auth", () => ({
     },
   }),
 }))
-mock.module("@/trpc/client", () => ({ useTRPC: unexpected }))
+mock.module("@/trpc/client", () => ({
+  useTRPC: unexpected,
+  getDataCacheGeneration: unexpected,
+}))
+mock.module("@/lib/session-store", () => ({
+  getSession: unexpected,
+  getSessionGeneration: unexpected,
+}))
 mock.module("expo", () => ({ requireOptionalNativeModule: () => ({}) }))
 mock.module("expo-iap", () => ({
   useIAP: unexpected,

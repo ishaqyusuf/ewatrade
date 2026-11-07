@@ -4,6 +4,88 @@ import {
   restoreMappedStorePurchases,
 } from "./store-purchase-reconciliation"
 
+test("an account switch during verification leaves the purchase unfinished for recovery", async () => {
+  const calls: string[] = []
+  let current = true
+  await expect(
+    completeStorePurchase({
+      isCurrent: () => current,
+      verify: async () => {
+        calls.push("verify")
+        current = false
+      },
+      finish: async () => {
+        calls.push("finish")
+      },
+      refresh: async () => {
+        calls.push("refresh")
+      },
+    }),
+  ).rejects.toThrow("Billing session changed")
+  expect(calls).toEqual(["verify"])
+})
+
+test("retired billing callbacks do not verify or acknowledge a purchase", async () => {
+  const calls: string[] = []
+  await expect(
+    completeStorePurchase({
+      isCurrent: () => false,
+      verify: async () => {
+        calls.push("verify")
+      },
+      finish: async () => {
+        calls.push("finish")
+      },
+      refresh: async () => {
+        calls.push("refresh")
+      },
+    }),
+  ).rejects.toThrow("Billing session changed")
+  expect(calls).toEqual([])
+})
+
+test("restore cannot continue under a different account after loading its catalog", async () => {
+  let current = true
+  let reads = 0
+  await expect(
+    restoreMappedStorePurchases({
+      store: "play_store",
+      isCurrent: () => current,
+      loadProducts: async () => {
+        current = false
+        return [{ store: "play_store", productId: "growth" }]
+      },
+      listPurchases: async () => {
+        reads++
+        return []
+      },
+      reconcile: async () => undefined,
+    }),
+  ).rejects.toThrow("Billing session changed")
+  expect(reads).toBe(0)
+})
+
+test("restore stops between receipts when its business or account changes", async () => {
+  let current = true
+  const receipts: string[] = []
+  await expect(
+    restoreMappedStorePurchases({
+      store: "play_store",
+      isCurrent: () => current,
+      loadProducts: async () => [{ store: "play_store", productId: "growth" }],
+      listPurchases: async () => [
+        { id: "first", productId: "growth", purchaseState: "purchased" },
+        { id: "second", productId: "growth", purchaseState: "purchased" },
+      ],
+      reconcile: async (purchase) => {
+        receipts.push(purchase.id)
+        current = false
+      },
+    }),
+  ).rejects.toThrow("Billing session changed")
+  expect(receipts).toEqual(["first"])
+})
+
 test("does not finish or refresh a purchase the server could not verify", async () => {
   const calls: string[] = []
   await expect(

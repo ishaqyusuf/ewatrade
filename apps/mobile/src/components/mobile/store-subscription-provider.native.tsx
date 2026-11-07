@@ -1,6 +1,8 @@
 import { useAuthContext } from "@/hooks/use-auth"
 import { publicLegalUrl } from "@/lib/public-legal-url"
+import { getSession, getSessionGeneration } from "@/lib/session-store"
 import {
+  StoreBillingSessionChanged,
   completeStorePurchase,
   restoreMappedStorePurchases,
 } from "@/lib/store-purchase-reconciliation"
@@ -8,7 +10,7 @@ import {
   iosSubscriptionPrice,
   playSubscriptionOffer,
 } from "@/lib/store-subscription-disclosure"
-import { useTRPC } from "@/trpc/client"
+import { getDataCacheGeneration, useTRPC } from "@/trpc/client"
 import releaseScope from "@root/mobile-release-scope.json"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { requireOptionalNativeModule } from "expo"
@@ -22,6 +24,7 @@ import {
 import {
   type ReactNode,
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useRef,
@@ -35,10 +38,45 @@ import { AppState, LogBox, Platform } from "react-native"
 LogBox.ignoreLogs(["initConnection failed"])
 
 function useStoreBillingController() {
+  const auth = useAuthContext()
   const trpc = useTRPC()
   const queryClient = useQueryClient()
-  const [message, setMessage] = useState<string | null>(null)
+  const [message, setRawMessage] = useState<string | null>(null)
   const processing = useRef(new Set<string>())
+  // tRPC obtains credentials when a request starts, so an old callback must
+  // retire synchronously when sign-out or a business/account switch happens.
+  // Capture by value for this render. A refreshed session can start new work;
+  // closures already awaiting a result keep their original generation.
+  const lifetime = {
+    session: getSessionGeneration(),
+    cache: getDataCacheGeneration(),
+    userId: auth.profile?.id,
+    businessId: auth.profile?.businessId,
+  }
+  const active = useRef(true)
+  useEffect(() => {
+    active.current = true
+    return () => {
+      active.current = false
+    }
+  }, [])
+  const isCurrent = useCallback(() => {
+    const session = getSession()
+    return (
+      active.current &&
+      lifetime.session === getSessionGeneration() &&
+      lifetime.cache === getDataCacheGeneration() &&
+      session?.profile.id === lifetime.userId &&
+      session?.profile.businessId === lifetime.businessId &&
+      session?.profile.role?.trim().toUpperCase() === "OWNER"
+    )
+  }, [lifetime.session, lifetime.cache, lifetime.userId, lifetime.businessId])
+  const setMessage = useCallback(
+    (value: string | null) => {
+      if (isCurrent()) setRawMessage(value)
+    },
+    [isCurrent],
+  )
   const store = Platform.OS === "ios" ? "app_store" : "play_store"
   const catalog = useQuery(
     trpc.storeSubscriptions.catalog.queryOptions({ store }, { retry: false }),
@@ -50,7 +88,7 @@ function useStoreBillingController() {
     purchase: Purchase,
     products = catalog.data?.products,
   ) => {
-    if (purchase.purchaseState !== "purchased") return
+    if (!isCurrent() || purchase.purchaseState !== "purchased") return
     if (
       !products?.some(
         (product) =>
@@ -70,6 +108,7 @@ function useStoreBillingController() {
     processing.current.add(purchaseId)
     try {
       const result = await completeStorePurchase({
+        isCurrent,
         verify: () => verification.mutateAsync({ store, purchaseId }),
         finish: () => finishTransaction({ purchase, isConsumable: false }),
         refresh: () =>
@@ -95,7 +134,8 @@ function useStoreBillingController() {
           "Your store subscription has been verified for this business.",
         )
       }
-    } catch {
+    } catch (error) {
+      if (error instanceof StoreBillingSessionChanged) throw error
       setMessage(
         "Your purchase is awaiting verification. Check your store purchase history and use Restore purchases to retry verification.",
       )
@@ -105,7 +145,8 @@ function useStoreBillingController() {
   }
   const iap = useIAP({
     onPurchaseSuccess: (purchase) => {
-      void reconcile(purchase)
+      // A retired lifetime leaves the receipt for the next valid recovery.
+      void reconcile(purchase).catch(() => {})
     },
     onPurchaseError: () =>
       setMessage("The purchase did not complete. You can try again."),
@@ -125,7 +166,7 @@ function useStoreBillingController() {
       void fetchProducts({ skus: productIds.split(","), type: "subs" }).catch(
         () => setMessage("Subscription prices could not load."),
       )
-  }, [iap.connected, productIds, fetchProducts])
+  }, [iap.connected, productIds, fetchProducts, setMessage])
   const priceDescription = (product: ProductSubscription) => {
     if (product.platform === "ios")
       return iosSubscriptionPrice(
@@ -136,10 +177,19 @@ function useStoreBillingController() {
     return playSubscriptionOffer(product.subscriptionOffers)?.label ?? null
   }
   const purchase = async (product: ProductSubscription) => {
-    const accountToken = catalog.data?.accountToken
+    if (!isCurrent() || verification.isPending) return
+    // Purchase authority must be fresh; a previously rendered button is not a
+    // current account binding, checkout gate or product mapping.
+    const latest = await catalog.refetch()
+    if (!isCurrent()) return
+    const currentCatalog = latest.isSuccess ? latest.data : null
+    const accountToken = currentCatalog?.accountToken
     if (
-      !catalog.data?.purchaseAvailable ||
+      !currentCatalog?.purchaseAvailable ||
       !accountToken ||
+      !currentCatalog.products.some(
+        (item) => item.store === store && item.productId === product.id,
+      ) ||
       !publicLegalUrl("terms") ||
       !publicLegalUrl("privacy") ||
       verification.isPending ||
@@ -148,8 +198,8 @@ function useStoreBillingController() {
       return
     const currentProvider = Platform.OS === "ios" ? "APP_STORE" : "PLAY_STORE"
     if (
-      catalog.data.activeProvider &&
-      catalog.data.activeProvider !== currentProvider
+      currentCatalog.activeProvider &&
+      currentCatalog.activeProvider !== currentProvider
     ) {
       setMessage(
         "This business already has an active plan through another billing provider. Manage that plan before starting a new store subscription.",
@@ -158,7 +208,7 @@ function useStoreBillingController() {
     }
     if (
       Platform.OS === "android" &&
-      catalog.data.activePlayProductId === product.id
+      currentCatalog.activePlayProductId === product.id
     ) {
       setMessage(
         "This Play plan is already active for the business. Use Manage store subscriptions to change or cancel it.",
@@ -184,7 +234,7 @@ function useStoreBillingController() {
           )
           return
         }
-        const oldProductId = catalog.data.activePlayProductId
+        const oldProductId = currentCatalog.activePlayProductId
         const replacement =
           oldProductId && oldProductId !== product.id
             ? await getAvailablePurchases().then((purchases) =>
@@ -197,6 +247,7 @@ function useStoreBillingController() {
               )
             : []
         const oldPurchase = replacement.length === 1 ? replacement[0] : null
+        if (!isCurrent()) return
         if (
           oldProductId &&
           oldProductId !== product.id &&
@@ -236,6 +287,7 @@ function useStoreBillingController() {
   const restore = async () => {
     try {
       const result = await restoreMappedStorePurchases({
+        isCurrent,
         store,
         loadProducts: async () => {
           const latest = await catalog.refetch()
@@ -269,11 +321,17 @@ function useStoreBillingController() {
     let active = true
     const recover = async () => {
       try {
-        const purchases = await getAvailablePurchases()
-        for (const purchase of purchases) {
-          if (!active) return
-          await reconcileRef.current(purchase)
-        }
+        await restoreMappedStorePurchases({
+          isCurrent: () => active && isCurrent(),
+          store,
+          loadProducts: async () => {
+            const latest = await catalog.refetch()
+            return latest.isSuccess ? latest.data.products : null
+          },
+          listPurchases: getAvailablePurchases,
+          reconcile: (purchase, products) =>
+            reconcileRef.current(purchase, products),
+        })
       } catch {
         if (active)
           setMessage(
@@ -289,7 +347,7 @@ function useStoreBillingController() {
       active = false
       listener.remove()
     }
-  }, [iap.connected, productIds])
+  }, [iap.connected, productIds, catalog.refetch, isCurrent, setMessage, store])
   return {
     catalog,
     verification,
