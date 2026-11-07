@@ -34,10 +34,17 @@ test("Sandbox relay keeps the original signed payload, fixed destination and bou
     },
   )
   expect(sent).toBe(1)
+  await forwardAppleSandboxNotification(
+    "signed-envelope",
+    { ...config, DEV_PROFILE: "production" },
+    async () => Response.json({ received: true }),
+  )
   for (const change of [
     { APP_STORE_SANDBOX_FORWARD_ENABLED: "false" },
     { APP_ENV: "preview", DEV_PROFILE: "preview" },
     { STORE_BILLING_ENVIRONMENT: "sandbox" },
+    { APP_ENV: "preview", DEV_PROFILE: "production" },
+    { APP_ENV: "production", DEV_PROFILE: "local" },
   ]) {
     await expect(
       forwardAppleSandboxNotification(

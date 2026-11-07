@@ -71,7 +71,7 @@ export function isNewStoreCheckoutConfigured(
   const production =
     environment === "production" &&
     config.APP_ENV === "production" &&
-    profile === "prod" &&
+    ["prod", "production"].includes(profile ?? "") &&
     config.STORE_BILLING_ENABLED === "true" &&
     (config.STORE_BILLING_PRODUCTION_CHECKOUT_ENABLED === "true" ||
       (store === "app_store" &&

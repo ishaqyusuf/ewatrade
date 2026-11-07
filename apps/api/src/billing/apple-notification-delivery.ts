@@ -8,7 +8,7 @@ export async function forwardAppleSandboxNotification(
 ) {
   if (
     config.APP_ENV !== "production" ||
-    config.DEV_PROFILE !== "prod" ||
+    !["prod", "production"].includes(config.DEV_PROFILE ?? "") ||
     config.STORE_BILLING_ENVIRONMENT !== "production" ||
     config.APP_STORE_SANDBOX_FORWARD_ENABLED !== "true"
   )

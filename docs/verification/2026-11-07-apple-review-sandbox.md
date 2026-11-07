@@ -72,3 +72,31 @@ charge or effective legal document changed. Earlier genuine Apple TEST was503,
 not successful delivery. **Apple acceptance stays2/6 (33.3%)**; Android keeps its
 own denominator. Brain feature/contracts/permissions/current-task pointers and
 `decisions/2026-11-07-apple-review-sandbox.md` are updated locally (ignored).
+
+## Bounded pre-deploy profile correction
+
+The release coordinator explicitly handed back the source freeze before starting
+any deployment. Canonical `loadRootEnvironment` emits DEV_PROFILE=production;
+earlier Apple readiness/review/relay predicates accepted only prod. These three
+predicates now accept either spelling, still requiring APP_ENV=production and
+every prior flag/identity/owner gate. Local/Preview/mismatched profiles still fail.
+Production sensitive settings cannot be read back as values; blank redacted
+placeholders are not evidence they are empty or that either spelling is installed.
+No Production setting was overwritten to work around that uncertainty.
+
+Focused three-file correction tests pass11/134, including both spellings for
+Apple public and review-only checkout, reviewer policy and the fixed relay, plus
+Preview/profile negatives. An initial combined-store alias assertion failed on
+the existing Play refund-submission profile gate; that Play policy remains
+unchanged and Apple-only acceptance was tested in its correct scope. Prior full
+API/DB types, H01 and guarded Development1/20 are reused: boolean profile spellings
+are covered offline; transaction, persistence, membership, RPC and type shapes are
+unchanged. Corrected owned-path smoke passes283/1796 plus QA types/Biome; H02
+passes with the existing reviewed impact record updated for this follow-up.
+Reviewer account readiness was checked by one exact approved-inbox lookup: no
+account existed yet. No census, credentials read or Production write occurred.
+
+Coordinator has set API Preview STORE_BILLING_ENABLED false→true for the next
+deployment's genuine signed TEST window. Preview APP_ENV/DEV_PROFILE are preview;
+owner/reviewer/forward flags remain absent. Production settings, public checkout
+and native scope stay unchanged. This is not a successful canary or activation.

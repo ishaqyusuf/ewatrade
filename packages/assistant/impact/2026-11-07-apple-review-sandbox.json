@@ -2,7 +2,7 @@
   "version": 1,
   "id": "2026-11-07-apple-review-sandbox",
   "tickets": ["A05"],
-  "summary": "Prepare a default-off Apple App Review Sandbox path restricted to exact server-owned reviewer User IDs, retaining true receipt environment and current business authority.",
+  "summary": "Prepare a default-off Apple App Review Sandbox path restricted to exact server-owned reviewer User IDs, retaining true receipt environment and current business authority. Accept canonical production and existing prod profile spellings only with APP_ENV=production and unchanged billing gates.",
   "noAssistantImpact": "Billing remains form-only through existing canonical store subscription commands. No assistant tool or public input is added. Reviewer policy is server-owned; current owner/member locks, legal acceptance, store signature verification and business entitlement limits remain mandatory. Google and ordinary Production environment rejection are unchanged.",
   "capabilities": [],
   "procedures": [],
@@ -34,6 +34,12 @@
     }
   ],
   "evidence": [
+    {
+      "kind": "test",
+      "path": "apps/api/src/billing/store-checkout-readiness.test.ts",
+      "executed": true,
+      "result": "Bounded profile correction11/134 passes across readiness, review policy and relay: both Production spellings work for Apple, Preview/mismatched profiles refuse. Existing independent Play refund profile policy is unchanged. Prior types/H01/DB integration reused because shapes/locks/persistence are unchanged."
+    },
     {
       "kind": "test",
       "path": "apps/api/src/billing/apple-review-verification.test.ts",

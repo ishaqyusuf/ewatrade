@@ -239,6 +239,10 @@ review path. No client-selected environment or email-based entitlement is added.
   JSON array of one to five distinct immutable User IDs. The dedicated reviewer
   workspace must first be created by the owner, then resolved by its approved
   inbox to an exact current User ID. No reviewer ID is configured yet.
+  Both established Production profile spellings (`DEV_PROFILE=prod` and the
+  canonical loader's `production`) are accepted only with `APP_ENV=production`;
+  Preview, Local and mismatched profiles remain closed. Hosted Production profile
+  values are sensitive/unreadable and were not inferred from blank placeholders.
 - Only the authenticated allowlisted owner can see review-only Apple checkout
   while public checkout is false. Existing legal acceptance and OWNER-role gates
   still apply. Google and the legacy combined catalog retain their prior gates.

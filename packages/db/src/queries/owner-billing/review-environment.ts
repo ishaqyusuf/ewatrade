@@ -9,7 +9,7 @@ export function appStoreReviewOwnerIds(
   if (
     config.APP_STORE_REVIEW_SANDBOX_ENABLED !== "true" ||
     config.APP_ENV !== "production" ||
-    config.DEV_PROFILE !== "prod" ||
+    !["prod", "production"].includes(config.DEV_PROFILE ?? "") ||
     config.STORE_BILLING_ENVIRONMENT !== "production" ||
     config.OWNER_BILLING_ENABLED !== "true" ||
     config.STORE_BILLING_ENABLED !== "true"

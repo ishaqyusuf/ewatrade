@@ -18,6 +18,9 @@ const config = {
 
 test("App Review accepts only explicitly enabled immutable owner IDs on the Production profile", () => {
   expect(appStoreReviewOwnerIds(config)).toEqual([ownerId])
+  expect(
+    appStoreReviewOwnerIds({ ...config, DEV_PROFILE: "production" }),
+  ).toEqual([ownerId])
   expect(isAppStoreReviewOwner(ownerId, config)).toBe(true)
   expect(isAppStoreReviewOwner("other-owner-123", config)).toBe(false)
   expect(isAppStoreReviewOwner(undefined, config)).toBe(false)

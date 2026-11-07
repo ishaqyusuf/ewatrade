@@ -82,6 +82,14 @@ test("Apple production checkout is independent of Play refund operations while P
   expect(
     isNewStoreCheckoutConfigured(
       products,
+      { ...appleOnly, DEV_PROFILE: "production" },
+      hasFixtureFile,
+      "app_store",
+    ),
+  ).toBe(true)
+  expect(
+    isNewStoreCheckoutConfigured(
+      products,
       appleOnly,
       hasFixtureFile,
       "play_store",
@@ -364,6 +372,15 @@ test("review-only Apple checkout uses authenticated allowlisted owner without op
     APP_STORE_REVIEW_SANDBOX_ENABLED: "true",
     APP_STORE_REVIEW_OWNER_IDS: JSON.stringify([ownerId]),
   }
+  expect(
+    isNewStoreCheckoutConfigured(
+      products,
+      { ...review, DEV_PROFILE: "production" },
+      hasFixtureFile,
+      "app_store",
+      ownerId,
+    ),
+  ).toBe(true)
   expect(
     isNewStoreCheckoutConfigured(
       products,
