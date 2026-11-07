@@ -280,6 +280,11 @@ exact total displayed by each platform (native may omit `.00`).
    once with `bun run mobile:android:connect --device SERIAL --require-qa`.
    That existing launcher force-stops/reopens the Dev app without clearing data.
    A host-side doctor pass alone does not prove the running phone has reconnected.
+   The smoke uses normal visible navigation for both Dev and signed Preview;
+   development-only deep links are deliberately unavailable in Preview. Its outer
+   deadline is ten minutes for first-run setup on slower emulators, while each
+   assertion keeps its own timeout. Flow changes select a candidate-bound mobile
+   release; matching native fingerprints can use the existing OTA path.
 4. Prepare a separate `smoke-preview.json` in that same directory: use
    `https://preview-dashboard.ewatrade.com`, `com.ewatrade.preview`, its exact QA
    profile and the installed EAS `buildId`. For an OTA candidate also set

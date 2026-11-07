@@ -198,6 +198,8 @@ export default {
       // OTA update when a build with the same native fingerprint exists on the
       // channel; otherwise a new build.
       name: "mobile",
+      // Signed Preview acceptance must bind navigation changes to its candidate.
+      paths: [".maestro/**", "scripts/qa-smoke.ts"],
       // Cloud builds set APP_VARIANT/EAS_BUILD_PROFILE; APP_ENV is a local fallback.
       env: { ignore: ["APP_ENV"] },
       expo: {

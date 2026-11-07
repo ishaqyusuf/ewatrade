@@ -212,3 +212,25 @@ remains approved for the exact reviewed Production diff. Apple settings installe
 by its owner remain unchanged here: production-checkout false and native purchase
 scope false. A closed STORE_BILLING_ENABLED gate may return503 even for Apple TEST;
 the Apple owner will inspect/canary only after the exact candidate API is Ready.
+
+## Signed Preview smoke navigation correction
+
+Candidate `18c5aed7` completed all configured Preview deployments: Dashboard
+`dpl_AQhhKCBmkNgrRDLH76ZRPNnDA7aX`, Marketing `dpl_2wRvogugh6TXURzKAKHYqzEpPS9p`,
+API `dpl_He8QKGaZBtqwD2JhoyveWBMzXinV`, Storefront
+`dpl_7pWf1Wb76H6vrhQ7piPkPSFhcHHW` (real 404/no-store and alias checks passed),
+Trigger version `20261107.1`, and Android Preview build35
+`91735df8-e7c9-4a80-b4bf-36019a7b4ccc`. APK checksum
+`24bed222777b1e33ab49cf7d0f14df79d204e29986d8128faacfb067681c685c` verified before
+installation on owner-approved `emulator-5554`.
+
+Candidate-bound web smoke passed. Android verified embedded build35 and selected
+the existing QA business, but the catalog step failed: internal deep links are
+intentionally development-only, so Preview routed to Home. A settled-session
+retry confirmed that behavior; normal Goods navigation found the expected catalog
+item (private diagnostic, not a passing release receipt). The smoke now uses
+visible Goods/Home/New sale/More/Plan & billing controls and normal sign-out,
+without relaxing Preview link restrictions or any assertions. Its outer deadline
+is ten minutes for slower first-run emulator setup; per-step deadlines remain.
+Flow changes select mobile release so exact-candidate acceptance can use the normal
+compatible OTA path. Fresh receipts are required. Production remains untouched.

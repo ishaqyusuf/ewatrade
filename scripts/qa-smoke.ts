@@ -475,9 +475,10 @@ async function androidJourney(
     // Maestro also discovers adb itself when reconnecting its driver. The runner
     // already resolved this SDK binary; do not require a separate shell setup.
     env: { ...process.env, PATH: `${dirname(adb)}:${process.env.PATH || ""}` },
-    // Existing-data selection, the free-plan assertions, and ordinary sign-out
-    // need room on the emulator; each flow assertion still fails independently.
-    timeout: 360000,
+    // Normal navigation also works in signed Preview, where development-only
+    // deep links are closed. Allow its first-run setup on slower emulators;
+    // each flow assertion retains its own bounded timeout.
+    timeout: 600000,
   })
   if (result.error)
     throw new Error(

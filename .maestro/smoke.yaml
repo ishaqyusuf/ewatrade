@@ -4,8 +4,9 @@ name: QA catalog and sale draft
 # Do not clear app data/offline queues or change permissions.
 # The QA picker intentionally lives on signed-out login only. Use ordinary
 # sign-out when reusing a client that already completed an earlier journey.
+- launchApp
 - runFlow: sign-out.yaml
-- openLink: ${APP_SCHEME}://login
+- assertVisible: Sign in to your business
 - runFlow:
     when:
       visible: Set up QA
@@ -34,14 +35,15 @@ name: QA catalog and sale draft
     centerElement: true
 - tapOn: ${PROFILE_LABEL}
 - assertNotVisible: QA businesses
-- openLink: ${APP_SCHEME}://catalog-items-modal
+- tapOn: Goods
 - scrollUntilVisible:
     element: ${CATALOG_ITEM}
     direction: DOWN
     timeout: 20000
     centerElement: true
 - assertVisible: ${CATALOG_ITEM}
-- openLink: ${APP_SCHEME}://create-sale-modal
+- tapOn: Home
+- tapOn: New sale
 - assertVisible: New sale
 - scrollUntilVisible:
     element: ${OFFERING_LABEL}
@@ -63,7 +65,13 @@ name: QA catalog and sale draft
 - assertNotVisible: Checkout
 # The current release is free. Paid activation must replace this acceptance
 # with its reviewed signed purchase/restore coverage, not silently skip it.
-- openLink: ${APP_SCHEME}://subscription-modal
+- tapOn: More
+- scrollUntilVisible:
+    element: Plan & billing
+    direction: DOWN
+    timeout: 30000
+    centerElement: true
+- tapOn: Plan & billing
 - assertVisible: Current plan
 - assertNotVisible: Plan unavailable
 - scrollUntilVisible:
@@ -73,6 +81,7 @@ name: QA catalog and sale draft
     centerElement: true
 - assertNotVisible: Restore purchases
 - assertNotVisible: Manage store subscriptions
+- tapOn: Close plan and billing
 - runFlow: sign-out.yaml
 - tapOn: Open [0-9]+ QA businesses
 - tapOn: QA domain options
