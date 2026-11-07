@@ -1,5 +1,13 @@
 # Android paid-at-launch continuation — 7 November 2026
 
+Current shared decisions and next phases: [mobile paid launch](mobile-paid-launch.md).
+The owner's later broad-international-launch preference supersedes Nigeria-first.
+The Nigeria-only Console save below is historical. It has been replaced with a
+saved, unsubmitted177-named-country draft; Rest of World is excluded. Paid territory
+readiness and country requirements must be accepted before submission.
+Manual native addresses, existing support/founders contacts and publication after
+approval/checks remain approved. Coordinate shared work with the Apple chat.
+
 Owner reaffirmed paid business-owner subscriptions from day one. Staff do not
 subscribe separately. Monthly Starter/Growth/Pro: Nigeria NGN 5,000/15,000/30,000;
 comparable Africa baseline and 20% higher reference outside Africa. Store-returned

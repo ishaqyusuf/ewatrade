@@ -1,5 +1,9 @@
 # Owner-wide subscriptions: versioned signup and downgrade integration
 
+Current cross-platform decisions, ownership and execution phases are maintained
+once in [the shared mobile paid-launch index](mobile-paid-launch.md). Both Apple
+and Android reuse this commercial/domain contract and its evidence.
+
 7 November continuation: [plan limits and downgrade integration](owner-plan-limits-and-downgrade.md)
 now implements a versioned baseline for new owner-runtime businesses, canonical
 nullable quotas, creation guards and retained operational access after lapse.

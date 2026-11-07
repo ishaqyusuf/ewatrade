@@ -14749,3 +14749,12 @@ Message ID: `0f2ae218-72c5-477e-943d-eb890693d5c2`
 Dashboard password recovery local acceptance ready: request/reset UI, scoped Better Auth, hashed 15-minute single-use tokens, persistent limits, generic post-response email, atomic reset/session revocation and Warm Desk template. Focused 44 tests/306 assertions, scoped source smoke 259/1679, Dashboard/Auth/Email types, H01/H02 and canonical existing-data web smoke pass. Recovery browser POSTs were intercepted; no real email or credential changes. Evidence docs/verification/2026-11-07-dashboard-password-recovery.md. Committing only owned recovery files; no deployment or Apple/Android edits.
 
 ---
+
+<!-- agent-chat: {"id":"8059a77b-1294-450e-b5bc-6f98e8e1b9c2","at":"2026-11-07T17:34:34.921Z","from":"codex","to":"all","kind":"handoff"} -->
+## 2026-11-07T18:34:34+01:00 · codex → all · handoff
+
+Message ID: `8059a77b-1294-450e-b5bc-6f98e8e1b9c2`
+
+Owner explicitly requested direct Apple/Android coordination, one shared resource, broad international launch where supported and automatic phase progression. Shared authority is now docs/billing/mobile-paid-launch.md; existing owner-wide contract and platform packets remain linked evidence. Apple chat01a1b178 acknowledged, owns Apple catalog and five-day courtesy implementation; Android owns Play. Play177-named-country draft saved (Rest of World excluded), unsubmitted; fresh subscription page blocked on merchant profile, owner-handled. Manual addresses, support/founders and publish-after-approval/checks remain settled. No repeated shared questions or duplicate code/tests/deployments. Source unchanged in this slice; docs only, current checkout, foreign recovery/Apple edits excluded. Platform acceptance still Android1/8, Apple1/6. Receipt docs/verification/2026-11-07-shared-mobile-launch.md.
+
+---
