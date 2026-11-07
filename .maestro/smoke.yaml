@@ -4,7 +4,9 @@ name: QA catalog and sale draft
 # Do not clear app data/offline queues or change permissions.
 # The QA picker intentionally lives on signed-out login only. Use ordinary
 # sign-out when reusing a client that already completed an earlier journey.
-- launchApp
+- launchApp:
+    # An omitted map makes Maestro grant all permissions by default.
+    permissions: {}
 - extendedWaitUntil:
     visible: Sign in to your business|More
     timeout: 60000
@@ -38,7 +40,15 @@ name: QA catalog and sale draft
     centerElement: true
 - tapOn: ${PROFILE_LABEL}
 - assertNotVisible: QA businesses
-- tapOn: Goods
+# The chooser can disappear before the dock's catalog control is accessible.
+# Its label also changes from Catalog to Goods/Services after availability loads.
+# Wait for the actual route control; do not weaken the item assertion below.
+- extendedWaitUntil:
+    visible:
+      id: admin-tab-catalog
+    timeout: 60000
+- tapOn:
+    id: admin-tab-catalog
 - scrollUntilVisible:
     element: ${CATALOG_ITEM}
     direction: DOWN

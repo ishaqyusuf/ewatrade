@@ -10,7 +10,11 @@ appId: ${APP_ID}
           element: Sign out
           direction: DOWN
           timeout: 60000
-          centerElement: true
+          # The final row cannot reach screen center at the scroll limit.
+          centerElement: false
+      # Android can expose the row while it is behind the fixed dock.
+      # Continue toward the menu end before tapping the existing control.
+      - scroll
       - tapOn: Sign out
       - assertVisible: Sign out\?
       - tapOn:
