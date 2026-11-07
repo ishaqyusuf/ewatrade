@@ -1,10 +1,12 @@
 # Apple paid-at-launch preparation — 7 November 2026
 
-Current checkpoint: Apple acceptance remains **2/6**. The common Production
-database/web/API/jobs release completed at `bf9bc356` (receipt `5d961377e`);
-the earlier configuration-only/no-deployment entries below are historical.
-Checkout remains closed. Controlled App Review Sandbox source is prepared after
-that release and requires its own coordinated deployment and signed acceptance.
+Current checkpoint: Apple acceptance remains **2/6**. Controlled review source
+`630f19b8`/`6a4948c8` is deployed to Preview and Production API/web/jobs; the
+synchronized database remains `bf9bc356`. Release receipt `79fad7564` records
+the exact providers and passed web checks. Genuine signed Apple Sandbox TEST
+delivery to Preview passed. Public checkout, reviewer activation and native
+purchase scope remain closed; signed purchase/lifecycle acceptance remains open.
+Earlier configuration-only/no-deployment/negative-canary entries are historical.
 
 The owner requires paid business-owner software subscriptions at launch. Staff
 do not subscribe individually. The app download price is a separate setting.
@@ -97,7 +99,7 @@ This is a new Apple-specific paid-release denominator, not the historical free
 | --- | --- | --- |
 | I01 Commercial prerequisites | Accepted | Live agreement/bank/tax status and owner-accepted updated program license verified. |
 | I02 Products and prices | Accepted | Group22556222; three ranked monthly products,175current storefront prices each, no trials; exact IDs installed in API target settings. Deployment/verification remains I03. |
-| I03 Native/server configuration | In progress | Routing correction and fixture checks pass; secure API-key custody, exact environment, notification delivery, owner coverage/cutover and native linkage require target proof. |
+| I03 Native/server configuration | In progress | Verifier/key/product settings and controlled review source deployed; genuine signed Preview TEST delivery passes. Reviewer identity/Free cohort, owner activation, Production gateway routing and registered signed iOS linkage/coverage still require acceptance. |
 | I04 Policy and privacy | Open | Effective paid terms/privacy, SDK/provider/deletion facts, operational refund response and five-day policy compatibility. |
 | I05 Signed money acceptance | Open | Current signed candidate: purchase, restore, renewal, failure/grace, cancellation, refund/revocation, account/business switching; existing records usable while new admissions obey limits. |
 | I06 Review and rollout | Open | Actual candidate screenshots, reviewer login/contact, privacy/age declarations, selected build plus first subscriptions submitted together and approved rollout. |
@@ -119,7 +121,10 @@ Actual production Apple checkout readiness now checks common activation and Appl
 verifier/product facts independently of Play refund operations. Android and combined
 catalogs still require Play refund custody/monitoring. This completes the earlier
 CLI preflight correction at the runtime boundary, without opening activation flags.
-Reviewer workspace/contact remain unconfirmed; the owner-created Nigeria sandbox tester is verified. Manual native
+Reviewer workspace remains pending. Existing Apple membership provides the Account
+Holder name/business phone for the review contact; no new phone input is needed,
+but review-contact fields are not yet saved. The owner-created Nigeria sandbox
+tester is verified. Manual native
 addresses and support@ewatrade.com with founders@ewatrade.com operational routing
 are settled in the shared index; backup/delivery acceptance remains open.
 
@@ -216,8 +221,8 @@ read back in App Store Connect for app6815837585:
 
 | Apple destination | Saved HTTPS URL | Acceptance |
 | --- | --- | --- |
-| Production | https://api.ewatrade.com/webhooks/store/apple | Configuration saved; deployment and signed TEST/lifecycle canary pending. |
-| Sandbox | https://preview-api.ewatrade.com/webhooks/store/apple | Configuration saved; deployment and signed TEST/lifecycle canary pending. |
+| Production | https://api.ewatrade.com/webhooks/store/apple | Configuration/code deployed with existing closed gates; Production delivery and lifecycle acceptance pending. |
+| Sandbox | https://preview-api.ewatrade.com/webhooks/store/apple | Genuine signed TEST delivery SUCCESS at exact6a4948c8 Preview candidate; purchase/lifecycle acceptance pending. |
 
 These origins match the existing selected Production/Preview profile URLs. No
 shared secret was generated, no transaction was submitted and no billing-enable
@@ -290,3 +295,36 @@ retry uniqueness, covered-plan projection, disabled-policy Free fallback and
 membership-loss refusal. No Apple charge or signed StoreKit test occurred.
 Final source smoke, assistant gates and commit are recorded in the handoff receipt.
 Apple acceptance remains **2/6**.
+
+## Deployed source and positive Preview receiver —7 November2026
+
+The sole release coordinator deployed `6a4948c809ea3a83d3aed9ae4ca2d3f6a96f40d3`
+after clean candidate checks. Preview API `dpl_BY9LBysYJSevcEgbrA4VniDv9ZyT` was
+Ready, bound to https://preview-api.ewatrade.com and healthy before the TEST.
+Only Preview `STORE_BILLING_ENABLED` changed false→true. Preview APP_ENV/DEV_PROFILE
+are preview; owner/reviewer/relay flags remain absent. Existing Sandbox verifier
+settings and checkout=false are retained. Sensitive readback placeholders do not
+reveal configuration values. Production settings/URLs/native scope were unchanged.
+
+At **22:40:33 WAT on7November2026**, one TEST request used the approved existing
+IAP key. Apple's notification-status API reported **SUCCESS**, attemptDate
+1794087633549. Its signed TEST was independently verified with pinned Apple roots
+and the SDK for `com.ewatrade.app`/Sandbox. The private token and signed envelope
+are not copied to Git. Sanitized evidence is
+`/private/tmp/ewatrade-apple-sandbox-canary-6a4948c8.evidence.json`.
+This supersedes the earlier503 delivery result for the old closed receiver.
+
+Production API `dpl_8hHnYj6S3rTwYCYgv659bbShqA9G`, Dashboard and Marketing are Ready;
+Production jobs20261107.2/tgh7ehhh exited0 and API health passed. Database is unchanged
+and remains synchronized atbf9bc356. The registered signed native candidate is not
+published. Exact release metadata and web/Android evidence are in the
+[coordinator receipt](../plans/2026-11-07-full-production-release.md#corrected-appleandroid-handoff-released--7-november-2026).
+Final web smoke23694671-fd16-4587-bd63-f803ace90dcd passes; Android's final sign-out
+confirmation-selector failure remains a separate incomplete acceptance gate.
+
+The TEST proves receiver signature verification, delivery and acknowledgement
+only. It does not prove purchase, restore, renewal, grace, revocation/refund,
+coverage, reviewer Sandbox activation or Production-to-Preview relay. Do not switch
+the saved Sandbox URL or enable owner/reviewer/public purchase gates from this
+result. Reviewer signup is still a direct human step; phone instructions were
+provided without requesting credentials/codes in chat. Apple remains **2/6**.

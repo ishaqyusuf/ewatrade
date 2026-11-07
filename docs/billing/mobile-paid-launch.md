@@ -42,8 +42,8 @@ user to repeat it.
 | Phase | Current state | Next action |
 | --- | --- | --- |
 | 1. Shared contract and core source | Owner limits, coverage, versioned signup and retained-record downgrade implemented (0bd862763; verification daf00b5f0). Manual native addresses implemented cf831c187. | Reuse valid checks. Apple courtesy source and platform-specific runtime readiness are implemented with23billing tests/136assertions, scoped259/1679, API types and H01/H02 passing; signed acceptance remains open. Completed Play policy is unchanged. |
-| 2. Store products and configuration | Apple three ranked monthly products and175price schedules each are saved. Exact mapping/verifier settings were included in the common bf9bc356 API deployment; billing activation and signed delivery remain open. Play subscription page requires a Google Payments merchant account. | Finish the dedicated Apple reviewer workspace and controlled Sandbox source/configuration through the existing coordinator; native linkage/unsigned compile are proven, signed money acceptance remains open. Owner completes Play profile, then create/map actual Play monthly products. Play177-country draft remains unsubmitted and is not paid-territory acceptance. |
-| 3. Shared runtime, legal and operations | Billing activation closed. Shared owner contract/source exists; common privacy/safety and operational acceptance remain open. | Verify API/jobs/notifications and operator delivery, paid legal publication, SDK/provider destinations and preserved-record deletion cases without repeating completed empty-data tests. Reuse password-recovery work. |
+| 2. Store products and configuration | Apple three ranked monthly products and175price schedules each are saved. Mapping/verifier/review source deployed at6a4948c8; genuine signed Preview TEST delivery passes. Public checkout stays closed; reviewer activation and paid lifecycle remain unaccepted. Play subscription page requires a Google Payments merchant account. | Finish dedicated Apple reviewer signup/Free-cohort identity, controlled owner/reviewer configuration and registered signed iOS testing. Native linkage/unsigned compile are proven; signed money acceptance remains open. Owner completes Play profile, then create/map actual Play monthly products. Play177-country draft remains unsubmitted and is not paid-territory acceptance. |
+| 3. Shared runtime, legal and operations | Production web/API/jobs6a4948c8 healthy; synchronized DBbf9bc356 unchanged. Preview Apple receiver enabled and TEST accepted; public checkout/owner/reviewer activation closed. Common legal/privacy and operations acceptance remain open. | Verify paid lifecycle/routing/operator delivery, paid legal publication, SDK/provider destinations and preserved-record deletion cases without repeating completed empty-data tests. Reuse password-recovery work. |
 | 4. Signed acceptance | Android A01–A08:1/8; Apple I01–I06:2/6 after catalog/target-configuration acceptance. Source/config tests do not close these gates. | Freeze exact candidates, inspect permissions/native linkage and run licensed purchase/restore/renewal/grace/refund/switching tests. Reuse platform-valid evidence only. |
 | 5. Submission and publication | Public release after approval/checks is authorized. Neither platform has paid-release acceptance yet. | Complete truthful store declarations/reviewer access, submit accepted candidates, follow review and publish through existing release authority. |
 
@@ -89,6 +89,20 @@ Android navigation/readiness diagnostics are owned by the Android chat. Its
 [receipt](../verification/2026-11-07-android-navigation-readiness.md) distinguishes
 transient accessibility timing, sign-out harness issues and an observed ANR;
 do not assume a persistent dock regression or count diagnostics as release smoke.
+
+Latest coordinated release `6a4948c8` is now deployed; receipt `79fad7564` records
+healthy Production Dashboard/Marketing/API/jobs and unchanged synchronized DBbf9.
+The earlier503 Apple result above is superseded for Preview: the genuine signed
+Sandbox TEST delivered SUCCESS at22:40:33WAT, exact API deployment
+dpl_BY9LBysYJSevcEgbrA4VniDv9ZyT. Only Preview STORE_BILLING_ENABLED changed
+false→true; owner/reviewer/forward flags remain absent, Production billing settings,
+public checkout/native purchase scope and both saved URLs unchanged. This accepts
+receiver delivery only, never paid lifecycle or Production relay; Apple stays2/6.
+Final matched-config web smoke passes. Android verified new OTA/build/catalog/New
+sale but final retry failed a sign-out confirmation selector; its owner has the
+narrow repair handoff. Android stays1/8 and native publication remains excluded.
+Reviewer signup can be completed from the owner's phone; no new duplicate input
+request. [Exact release evidence](../plans/2026-11-07-full-production-release.md#corrected-appleandroid-handoff-released--7-november-2026).
 
 Android changed the pending Nigeria-only selection to all177named Play countries/
 regions, leaving **Rest of World unselected** so unspecified territories are not

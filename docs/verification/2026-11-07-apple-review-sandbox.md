@@ -1,5 +1,9 @@
 # Apple App Review Sandbox source verification —7 November2026
 
+Current result: source630f19b8/6a4948c8 deployed; genuine signed Preview Apple
+TEST SUCCESS, receiver-only. Current production/provider outcome is recorded in
+the final section below; earlier source-only entries retain execution history.
+
 Current checkout/main, parent `5d961377e`; no worktree, branch change or deployment.
 Only Apple review policy/API/DB paths, their tests, example flags, assistant-impact
 record and the Apple/shared launch documentation belong to this change. Concurrent
@@ -100,3 +104,43 @@ Coordinator has set API Preview STORE_BILLING_ENABLED false→true for the next
 deployment's genuine signed TEST window. Preview APP_ENV/DEV_PROFILE are preview;
 owner/reviewer/forward flags remain absent. Production settings, public checkout
 and native scope stay unchanged. This is not a successful canary or activation.
+
+## Positive signed receiver and completed backend rollout
+
+The coordinator opened an exact candidate Preview receiver window after verifying
+source6a4948c809ea3a83d3aed9ae4ca2d3f6a96f40d3, Ready deployment
+dpl_BY9LBysYJSevcEgbrA4VniDv9ZyT, canonical preview-api.ewatrade.com and health200.
+Only Preview STORE_BILLING_ENABLED false→true changed. Owner/reviewer/forward flags
+remain absent; public checkout/native scope, Production settings and saved URLs
+were unchanged. No parallel executor or source change occurred during the window.
+
+One genuine Sandbox TEST was requested with the approved existing key at
+2026-11-07T21:40:33.540Z (**22:40:33WAT**). Apple's status API reported SUCCESS,
+attemptDate1794087633549. The signed TEST was independently verified against pinned
+Apple roots/SDK online checks, Sandbox environment and com.ewatrade.app. Sanitized
+evidence: /private/tmp/ewatrade-apple-sandbox-canary-6a4948c8.evidence.json.
+Token and signed envelope remain in mode0600 private custody, never Git.
+
+Normal Production rollout then completed at6a4948c8: API
+dpl_8hHnYj6S3rTwYCYgv659bbShqA9G, Dashboard/Marketing Ready, jobs20261107.2/tgh7ehhh,
+executor exit0/API health pass. DB unchanged/synchronizedbf9bc356. Final web smoke
+23694671-fd16-4587-bd63-f803ace90dcd passed with config fingerprint
+35390ed991445f8cd7787d18231965c6edd449139fbb64660c0b2e31e2543578.
+Native publication was excluded: Android's last run failed confirmation-selector
+targeting, although earlier same-candidate identity/catalog/New sale passed. No
+sale/payment was submitted. Exact release receipt is79fad7564 in
+docs/plans/2026-11-07-full-production-release.md.
+
+The coordinator explicitly lifted the final freeze with no active executor and a
+clean checkout at79fad7564. This documentation reconciles accepted evidence;
+no source test is rerun for unchanged billing/type/lock code. The existing offline
+doctor and focused docs QA/whitespace checks cover this record. Reviewer signup,
+exact owner ID/Free cohort, owner/review configuration, registered signed iOS
+candidate, purchase/restore/lifecycle and Production relay are still open. A
+successful TEST cannot close I03/I05; Apple stays2/6 (33.3%).
+
+Documentation reconciliation checks: offline doctor and whitespace pass; explicit
+three-owned-doc-path fast QA passes50tests/237assertions plus QA tooling types,
+zero unknown mappings. Concurrent Android Maestro repair is excluded/preserved.
+Brain feature/contracts/permissions/decision and current indexes are updated
+locally; no schema, public contract, source behavior or effective legal change.
