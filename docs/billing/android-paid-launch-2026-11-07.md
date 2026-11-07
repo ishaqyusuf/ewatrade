@@ -22,7 +22,7 @@ within each row must be reused only where source/platform/target still match.
 | --- | --- | --- |
 | A01 Console/artifact/device identity | Accepted historical baseline | Correct app/package and prior signed artifact/device established; freeze and re-identify the new paid candidate before release. |
 | A02 API/access availability | Open | October quota outage was subsequently restored; don't repeat the obsolete outage diagnosis. Fresh target/candidate access proof is still required. Legal/deletion preflight passed 7 November. |
-| A03 Offers and Play merchant readiness | Open | Owner prices/territory rule known. Merchant/tax/bank requirements and actual subscription/base-plan IDs, localized totals and eligible offers need Console evidence and owner action where binding. |
+| A03 Offers and Play merchant readiness | Open | Live 7 November Console says a merchant account/payments profile is required; none is set up. Owner must complete financial account setup. Prices/territory rule known; actual subscription/base-plan IDs, tax/bank readiness, localized totals and eligible offers still need evidence. |
 | A04 Server/provider/terms | Open | Verification, owner purchase reconciliation, RTDN/void/refund and privacy guards exist. Need authenticated target outcomes and paid legal publication; current public copy still says no software subscriptions. |
 | A05 Paid entitlements/native integration | Open | Durable owner adapter/coverage/readers and local migration exist since 2 November; old “no adapter” notes are historical. Native lifetime safeguards and explicit owner coverage controls are wired and pass focused source checks. Native visual/signed acceptance, offer/cap parity, grant/signup cutover and downgrade behavior remain. |
 | A06 Signed candidate/money acceptance | Open | Prior free/local and Play33/35 evidence is insufficient for paid purchase, restore, replacement, renewal, failed renewal, cancellation, refund and account/business switching. |
@@ -43,9 +43,12 @@ within each row must be reused only where source/platform/target still match.
    grants/data and queued commands; versioned signup/cutover must be explicit.
 4. Implement/accept the requested five-day failed-renewal handling and retained
    surplus restrictions. Cancellation keeps verified paid access through its end;
-   refunds/revocations and provider failures are separate. Select stable retained
-   usable items/staff and recovery rules before applying restrictions. No silent
-   deletion, bulk archiving or guessed nonpayment.
+   refunds/revocations and provider failures are separate. Owner confirmed on
+   7 November: **keep existing records usable; block new additions above Free
+   limits**. Do not select a smaller active subset or make retained records
+   read-only merely for exceeding quotas. Apply admission limits to new records
+   and staff additions; do not revoke existing staff solely for quota excess.
+   No silent deletion, bulk archiving or guessed nonpayment.
 5. Finish paid privacy/retention and exact legal snapshot, then the target/store
    setup and signed acceptance steps above. Preserve all current release gates.
 
@@ -71,6 +74,7 @@ resolved by Android's available duration.
 - [Historical provider/offer worksheet](android-paid-launch-offline-packet.md)
 - [Current safety/privacy review](../releases/android-safety-privacy-review-2026-11-07.md)
 - [Native lifetime source evidence](../verification/2026-11-07-android-billing-lifetime.md)
+- [Live Play merchant prerequisite](../verification/2026-11-07-play-paid-prerequisites.md)
 
 No worktree/branch switch, push, deployment, provider activation, destructive
 data operation or binding store declaration follows from these preparations.
