@@ -71,6 +71,9 @@ function paymentLinkPublicHost() {
  * the auth utilities once they are implemented.
  */
 export function middleware(request: NextRequest) {
+  const passwordRecovery = ["/forgot-password", "/reset-password"].includes(
+    request.nextUrl.pathname,
+  )
   const signupChat = request.nextUrl.pathname === "/signup/chat"
   // Short payment links are public only for an exact short code, never other /p/* paths.
   const shortPaymentCode = /^\/p\/([^/]+)(?:\/image)?\/?$/.exec(
@@ -101,7 +104,13 @@ export function middleware(request: NextRequest) {
         `frame-ancestors 'self' ${new URL(MARKETING_URL).origin}`,
       )
     }
-    if (reviewContext || signupChat || paymentPage || paymentLogin) {
+    if (
+      reviewContext ||
+      signupChat ||
+      paymentPage ||
+      paymentLogin ||
+      passwordRecovery
+    ) {
       response.headers.set("Cache-Control", "private, no-store, max-age=0")
       response.headers.set("Referrer-Policy", "no-referrer")
       response.headers.set("X-Robots-Tag", "noindex, nofollow, noarchive")
@@ -153,6 +162,7 @@ export function middleware(request: NextRequest) {
     !isPublicBrandAsset &&
     !isPublicAppAssociation &&
     !paymentPage &&
+    !passwordRecovery &&
     !["/login", "/signup", "/signup/chat", "/staff-onboarding"].includes(
       request.nextUrl.pathname,
     )

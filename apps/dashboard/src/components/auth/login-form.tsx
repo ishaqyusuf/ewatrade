@@ -138,10 +138,10 @@ export function LoginForm({
                 <div className="flex items-center justify-between">
                   <FieldLabel htmlFor="password">Password</FieldLabel>
                   <a
-                    href={`${marketingUrl}/contact`}
+                    href="/forgot-password"
                     className="text-xs text-muted-foreground hover:text-foreground"
                   >
-                    Need help?
+                    Forgot password?
                   </a>
                 </div>
                 <InputGroup appearance="form">

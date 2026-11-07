@@ -1,5 +1,5 @@
 import { createHmac } from "node:crypto"
-import { prisma } from "@ewatrade/db"
+import { type Prisma, prisma } from "@ewatrade/db"
 import { isAccountPrivacyAccessBlocked } from "@ewatrade/db/account-privacy-access"
 import { isLegalSignupSessionBlocked } from "@ewatrade/db/legal-session-access"
 import { normalizeHostname, stripPort } from "@ewatrade/utils"
@@ -333,6 +333,34 @@ function createAuthConfig(options: InitAuthOptions = {}) {
 
 export function initAuth(options: InitAuthOptions = {}) {
   return betterAuth(createAuthConfig(options))
+}
+
+/** Recovery is exposed only by the dashboard's two narrow POST routes. */
+export function initPasswordRecoveryAuth(options: {
+  baseUrl: string
+  database?: Prisma.TransactionClient
+  sendResetPassword: NonNullable<
+    NonNullable<BetterAuthOptions["emailAndPassword"]>["sendResetPassword"]
+  >
+}) {
+  const config = createAuthConfig({ baseUrl: options.baseUrl })
+  return betterAuth({
+    ...config,
+    database: prismaAdapter(options.database ?? prisma, {
+      provider: "postgresql",
+    }),
+    plugins: [],
+    trustedOrigins: [new URL(options.baseUrl).origin],
+    verification: { storeIdentifier: "hashed" },
+    emailAndPassword: {
+      ...config.emailAndPassword,
+      minPasswordLength: 8,
+      maxPasswordLength: 128,
+      resetPasswordTokenExpiresIn: 15 * 60,
+      revokeSessionsOnPasswordReset: true,
+      sendResetPassword: options.sendResetPassword,
+    },
+  })
 }
 
 export function initStaffOnboardingAuth(

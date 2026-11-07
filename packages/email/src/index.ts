@@ -89,6 +89,7 @@ type ResendEmailResponse = {
 }
 
 export * from "../templates/manual-payment-report"
+export * from "../templates/password-reset"
 export * from "../defaults"
 export * from "../templates/marketing-early-access-admin"
 export * from "../templates/early-access-verification"

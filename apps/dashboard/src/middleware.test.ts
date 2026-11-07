@@ -15,6 +15,19 @@ test("dashboard login is public without redirecting to itself", () => {
   expect(middleware(request("/login")).headers.get("location")).toBeNull()
 })
 
+test("password recovery is public, private-cache-only, and limited to exact pages", () => {
+  for (const path of ["/forgot-password", "/reset-password"]) {
+    const response = middleware(request(path))
+    expect(response.headers.get("location")).toBeNull()
+    expect(response.headers.get("cache-control")).toContain("no-store")
+    expect(response.headers.get("referrer-policy")).toBe("no-referrer")
+    expect(response.headers.get("x-robots-tag")).toContain("noindex")
+    expect(
+      middleware(request(`${path}/private`)).headers.get("location"),
+    ).toContain("/login")
+  }
+})
+
 test("exact public app-association paths are available without login", () => {
   for (const path of [
     "/.well-known/apple-app-site-association",
