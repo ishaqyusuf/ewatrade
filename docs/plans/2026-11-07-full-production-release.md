@@ -234,3 +234,16 @@ without relaxing Preview link restrictions or any assertions. Its outer deadline
 is ten minutes for slower first-run emulator setup; per-step deadlines remain.
 Flow changes select mobile release so exact-candidate acceptance can use the normal
 compatible OTA path. Fresh receipts are required. Production remains untouched.
+
+The compatible c422a93f Preview OTA published as group
+`9888e463-1db5-46aa-ba7d-96439eb5d0c5` on native runtime
+`0a1cc8debc0d42e5b32ff0455e3b5368ff6fed7e`. Fresh web smoke passed.
+Android's pre-UI verifier then exposed an outdated EAS permalink assumption:
+current CLI uses `/update/<updateId>` rather than a project-ID path. The verifier
+now reads only that exact HTTPS immutable Expo manifest and binds its project ID,
+update ID and runtime to the inspected candidate/branch/group. Commit, project,
+rollback, native build and on-screen running-update checks remain mandatory.
+Nine focused tests/64 assertions pass, including foreign project, wrong update,
+wrong runtime/commit/branch/group, rollback and malformed/duplicate manifest
+rejection. The real c422a93f manifest passed the same verifier. Fresh candidate
+receipts are still required; no Production rollout has occurred.

@@ -297,7 +297,34 @@ export function verifyAndroidBuild(
     )
 }
 
-export function verifyAndroidUpdate(raw: unknown, sha: string, group: string) {
+export function parseExpoUpdateManifest(body: string): unknown {
+  if (body.length > 1024 * 1024) throw new Error("Expo manifest is too large.")
+  if (body.trimStart().startsWith("{")) return JSON.parse(body)
+  const boundary = body.split(/\r?\n/, 1)[0] ?? ""
+  if (!/^--[A-Za-z0-9-]{1,100}$/.test(boundary))
+    throw new Error("Invalid Expo manifest boundary.")
+  const manifests = body.split(boundary).flatMap((part) => {
+    const separator = /\r?\n\r?\n/.exec(part)
+    if (!separator) return []
+    const headers = part.slice(0, separator.index)
+    if (!/content-disposition:[^\r\n]*\bname="manifest"/i.test(headers))
+      return []
+    if (!/content-type:\s*application\/json\b/i.test(headers))
+      throw new Error("Invalid Expo manifest content type.")
+    return [
+      JSON.parse(part.slice(separator.index + separator[0].length).trim()),
+    ]
+  })
+  if (manifests.length !== 1) throw new Error("Expected one Expo manifest.")
+  return manifests[0]
+}
+
+export function verifyAndroidUpdate(
+  raw: unknown,
+  sha: string,
+  group: string,
+  manifestBody?: unknown,
+) {
   const updates = raw as {
     id?: string
     platform?: string
@@ -305,6 +332,7 @@ export function verifyAndroidUpdate(raw: unknown, sha: string, group: string) {
     branch?: string
     gitCommitHash?: string
     manifestPermalink?: string
+    runtimeVersion?: string
     isRollBackToEmbedded?: boolean
   }[]
   if (!Array.isArray(updates))
@@ -314,14 +342,34 @@ export function verifyAndroidUpdate(raw: unknown, sha: string, group: string) {
     throw new Error("Expected exactly one Android update.")
   const item = android[0]
   const manifest = new URL(item.manifestPermalink || "invalid:")
+  const projectId = "532f9a55-f4f6-4d4e-b60b-ea6fa8807a3b"
+  const body = manifestBody as
+    | {
+        id?: string
+        runtimeVersion?: string
+        extra?: { eas?: { projectId?: string } }
+      }
+    | undefined
+  const projectBound =
+    (manifest.pathname === `/${projectId}` &&
+      manifest.searchParams.get("updateId") === item.id) ||
+    (manifest.pathname === `/update/${item.id}` &&
+      body?.id === item.id &&
+      body?.extra?.eas?.projectId === projectId &&
+      Boolean(item.runtimeVersion) &&
+      body?.runtimeVersion === item.runtimeVersion)
   if (
     !item.id ||
     item.group !== group ||
     item.branch !== "preview" ||
     item.gitCommitHash !== sha ||
     item.isRollBackToEmbedded ||
+    manifest.protocol !== "https:" ||
+    Boolean(
+      manifest.username || manifest.password || manifest.port || manifest.hash,
+    ) ||
     manifest.hostname !== "u.expo.dev" ||
-    !manifest.pathname.includes("532f9a55-f4f6-4d4e-b60b-ea6fa8807a3b")
+    !projectBound
   )
     throw new Error(
       "Android OTA update does not match the selected Preview candidate/project.",
@@ -434,10 +482,33 @@ async function androidJourney(
         throw new Error(
           "Read-only EAS update inspection failed; use the correct existing EAS account.",
         )
+      const updates = JSON.parse(readUpdate.stdout)
+      const android = Array.isArray(updates)
+        ? updates.filter((item) => item.platform === "android")
+        : []
+      let manifestBody: unknown
+      if (android.length === 1) {
+        const item = android[0]
+        // Only read the immutable HTTPS manifest for this exact update ID.
+        // Current EAS CLI URLs omit the project ID, which the manifest proves.
+        if (
+          typeof item.id === "string" &&
+          /^[0-9a-f-]{36}$/.test(item.id) &&
+          item.manifestPermalink === `https://u.expo.dev/update/${item.id}`
+        ) {
+          const response = await fetch(item.manifestPermalink, {
+            redirect: "error",
+            signal: AbortSignal.timeout(30000),
+          })
+          if (!response.ok) throw new Error("Expo manifest inspection failed.")
+          manifestBody = parseExpoUpdateManifest(await response.text())
+        }
+      }
       updateId = verifyAndroidUpdate(
-        JSON.parse(readUpdate.stdout),
+        updates,
         sha,
         value.updateGroupId,
+        manifestBody,
       )
     }
     expectedRuntime = `QA runtime ${updateId} · build ${version}`

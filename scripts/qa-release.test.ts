@@ -12,6 +12,7 @@ import {
   assertEquivalentComponentSource,
   assertMaestroReport,
   inspectPreviewDeployment,
+  parseExpoUpdateManifest,
   readSmokeConfig,
   verifyAndroidBuild,
   verifyAndroidUpdate,
@@ -165,6 +166,60 @@ test("Android build and active OTA source cannot stand in for each other", () =>
     expect(() =>
       verifyAndroidUpdate([{ ...update, ...edit }], sha, "group"),
     ).toThrow()
+})
+test("current Expo permalink proves project, update and runtime from its manifest", () => {
+  const id = "01a1b78d-f40a-7649-a632-4ce07bbc200f"
+  const update = {
+    id,
+    group: "group",
+    platform: "android",
+    branch: "preview",
+    gitCommitHash: sha,
+    runtimeVersion: "native-fingerprint",
+    manifestPermalink: `https://u.expo.dev/update/${id}`,
+  }
+  const manifest = {
+    id,
+    runtimeVersion: update.runtimeVersion,
+    extra: { eas: { projectId: "532f9a55-f4f6-4d4e-b60b-ea6fa8807a3b" } },
+  }
+  const part = `\r\nContent-Disposition: form-data; name="manifest"\r\nContent-Type: application/json\r\n\r\n${JSON.stringify(manifest)}\r\n`
+  const multipart = `--ExpoBoundary${part}--ExpoBoundary--\r\n`
+  expect(parseExpoUpdateManifest(multipart)).toEqual(manifest)
+  expect(parseExpoUpdateManifest(JSON.stringify(manifest))).toEqual(manifest)
+  expect(
+    verifyAndroidUpdate(
+      [update],
+      sha,
+      "group",
+      parseExpoUpdateManifest(multipart),
+    ),
+  ).toBe(id)
+  for (const body of [
+    undefined,
+    {},
+    { ...manifest, id: "other" },
+    { ...manifest, runtimeVersion: "other" },
+    { ...manifest, extra: { eas: { projectId: "other-project" } } },
+  ])
+    expect(() => verifyAndroidUpdate([update], sha, "group", body)).toThrow()
+  for (const edit of [
+    { gitCommitHash: "old" },
+    { branch: "production" },
+    { group: "other" },
+    { isRollBackToEmbedded: true },
+    { manifestPermalink: "https://u.expo.dev/update/other" },
+    { manifestPermalink: `http://u.expo.dev/update/${id}` },
+  ])
+    expect(() =>
+      verifyAndroidUpdate([{ ...update, ...edit }], sha, "group", manifest),
+    ).toThrow()
+  expect(() =>
+    parseExpoUpdateManifest(
+      `--ExpoBoundary${part}--ExpoBoundary${part}--ExpoBoundary--`,
+    ),
+  ).toThrow()
+  expect(() => parseExpoUpdateManifest("not a manifest")).toThrow()
 })
 test("smoke rejects Production origins/apps instead of creating new QA data", () => {
   const directory = mkdtempSync(join(tmpdir(), "qa-smoke-config-"))
