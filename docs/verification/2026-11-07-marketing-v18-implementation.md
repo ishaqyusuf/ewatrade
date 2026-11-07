@@ -103,3 +103,11 @@ assistant authority are unchanged (H02 noAssistantImpact record included).
   differed from the snapshot; no coverage file or capability was changed.
 - H02 assistant impact passed with the task's reviewed noAssistantImpact record.
 - Final whitespace/source review passed.
+
+## Committed implementation receipt
+
+Implementation commit: `6c02ef33`. Workshop receipt:
+`91c4f306-22ac-48c5-a906-3b887ffe82d4`. Catalog read-back confirms the exact v18
+selection is implemented, with two implementation records (v15 and v18). All prior
+revisions remain. Completion covers local implementation and verification only;
+Production and hosted Logly collection are not promoted.
