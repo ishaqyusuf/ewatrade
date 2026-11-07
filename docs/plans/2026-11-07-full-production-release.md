@@ -154,3 +154,25 @@ flow source guard and Mobile types pass. Author added the Apple preparation
 receipt and H02 record; H02 passes. These remain source preparation with billing
 flags closed, not signed Apple/Android acceptance. Freeze/commit the final source
 before resuming the standard executor with a new exact candidate.
+
+## Stable-checkout retry and confirmed local interruption
+
+The other author committed the verified native preparation as `220e40277`; this
+coordinator committed the prior release receipt/freeze note as `adb027193`. The
+checkout was clean, candidate smoke259/1679 passed, and the normal Preview
+executor pushed `adb027193` to origin/preview. It correctly reused the completed
+database step. Vercel accepted new web builds for the exact candidate.
+
+A further tracked edit to `docs/billing/apple-paid-launch-2026-11-07.md` appeared
+while the mobile-release chat continued provider work. To prevent another
+mixed-source upload, only this coordinator's identified local release processes
+63498/63496 were interrupted; exit130 confirmed. External Vercel builds were not
+cancelled. No jobs/native upload, installation, Production database operation or
+Production rollout was performed. No worktree, stash, reset or discarded edit.
+
+The user's earlier database exception remains approved. The current required
+coordination is a stable checkout: pause other tracked edits or finish that work,
+commit its complete source, then pin a final candidate and resume the existing
+executor. A specific user coordination question is pending; general deployment
+permission and the approved Samsung are retained and need not be asked again.
+Native Production acceptance remains a separate gate.
