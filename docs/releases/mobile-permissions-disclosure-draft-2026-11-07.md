@@ -173,6 +173,55 @@ Official cancellation/refund guidance checked7November:
 - [Apple subscription cancellation](https://support.apple.com/en-us/118428)
 - [Apple refund requests](https://support.apple.com/en-us/118223)
 
+## Proposed Privacy addition: AI assistance and uploaded files
+
+When you use an AI feature, EwaTrade sends the information needed for that feature
+to the configured processing service. This can include your message, relevant
+conversation and business context, or the image or recording you choose to submit.
+The resulting text or extracted details may be saved in the conversation and,
+when you confirm an action, in the relevant business record. AI output does not
+by itself authorize a business action.
+
+Original assistant attachments are stored privately off-device. Removing an
+original attachment does not necessarily remove messages, accepted business
+records or information already sent to a processing service. Different record
+categories and external services have separate retention and deletion handling.
+
+Authoring hold: name the actual active services in the final snapshot after target
+verification. Source supports DeepSeek/OpenAI text, OpenAI image analysis and
+moderation, private Vercel Blob storage, and audio fallback through an operated
+Whisper gateway, OpenAI and xAI. A failed audio attempt may transmit bytes before
+the next provider is tried. Do not describe voice as on-device or all media as
+OpenAI-only. Separate category suggestion and Storefront generation settings must
+also be reconciled where reachable. Do not publish every compiled adapter as an
+active recipient merely because it exists in source.
+
+The source uses a 30-day assistant-attachment timestamp and bounded cleanup that
+confirms original-byte absence before clearing attachment content. Sent attachment
+metadata and other conversation/business content can remain. This is not yet a
+verified maximum hosted retention period; omit a fixed erasure deadline until
+actual operations, backlog and external retention are accepted. OpenAI
+`store:false` requests do not establish all-provider zero retention.
+
+## Billing retention details for the final snapshot
+
+The owner billing records contain account-linked purchase/order digests,
+subscription status, product, environment, verification/expiry times and business
+coverage history. They are not anonymous merely because purchase references are
+hashed. Raw references are processed for store verification; separate Play refund
+review can retain encrypted token and order references. No automatic retention
+duration is defined for the owner billing tables in the reviewed source.
+
+Authoring hold: establish the accepted paid-owner retention/disposition procedure
+before promising completed erasure. The current privacy processor correctly
+refuses an empty-data outcome when owner billing or coverage history exists.
+The prior empty-account deletion case cannot establish this positive-data case.
+Keep the statement that deletion does not cancel an external store subscription.
+
+Source evidence and exact remaining target questions are maintained in the
+[shared recipient/retention appendix](android-safety-privacy-review-2026-11-07.md#shared-billing-ai-and-media-source-reconciliation--7-november).
+This addition changes no effective legal text, approval metadata or digest.
+
 ## Required reconciliation before an immutable publication
 
 - Confirm the implemented paid subscription behavior on the release target; replace the current

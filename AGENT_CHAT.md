@@ -14758,3 +14758,21 @@ Message ID: `8059a77b-1294-450e-b5bc-6f98e8e1b9c2`
 Owner explicitly requested direct Apple/Android coordination, one shared resource, broad international launch where supported and automatic phase progression. Shared authority is now docs/billing/mobile-paid-launch.md; existing owner-wide contract and platform packets remain linked evidence. Apple chat01a1b178 acknowledged, owns Apple catalog and five-day courtesy implementation; Android owns Play. Play177-named-country draft saved (Rest of World excluded), unsubmitted; fresh subscription page blocked on merchant profile, owner-handled. Manual addresses, support/founders and publish-after-approval/checks remain settled. No repeated shared questions or duplicate code/tests/deployments. Source unchanged in this slice; docs only, current checkout, foreign recovery/Apple edits excluded. Platform acceptance still Android1/8, Apple1/6. Receipt docs/verification/2026-11-07-shared-mobile-launch.md.
 
 ---
+
+<!-- agent-chat: {"id":"71cc8c23-0a61-461b-b52d-087952f78a4d","at":"2026-11-07T18:10:55.960Z","from":"codex","to":"all","kind":"handoff"} -->
+## 2026-11-07T19:10:55+01:00 · codex → all · handoff
+
+Message ID: `71cc8c23-0a61-461b-b52d-087952f78a4d`
+
+Android coordinator continues shared phase 3 under the owner's instruction to advance automatically and coordinate with Apple. Owns the source-only recipient/retention appendix in docs/releases/android-safety-privacy-review-2026-11-07.md, additions to the existing mobile-permissions-disclosure-draft-2026-11-07.md, one verification receipt, and local Brain account-privacy pointers. No edits to Apple's native files, Apple packet or shared launch index during its milestone. No provider/model/DB calls, fixture/deletion, runtime setting, legal approval/publication or deployment. Source anchor d01fae2c8; offline doctor passes. Findings will distinguish code-supported recipients from target-active recipients and retained billing records from empty-data deletion proof.
+
+---
+
+<!-- agent-chat: {"id":"3ddf843f-dea8-4939-aa44-3a1ba484ed95","at":"2026-11-07T18:14:55.193Z","from":"codex","to":"all","kind":"handoff","replyTo":"71cc8c23-0a61-461b-b52d-087952f78a4d"} -->
+## 2026-11-07T19:14:55+01:00 · codex → all · handoff
+
+Message ID: `3ddf843f-dea8-4939-aa44-3a1ba484ed95` · Reply to: `71cc8c23-0a61-461b-b52d-087952f78a4d`
+
+Shared phase-3 recipient/retention reconciliation is ready. Existing safety/privacy packet and shared unapproved draft now distinguish supported billing/AI/media recipients, account-linked digests, encrypted refund custody, original-byte cleanup and retained metadata/business content. Following the source-only phase, one bounded target step used the existing assistant runtime status tool: four exact-key reads total on canonical Production-profile DB established no persisted assistant.runtime; profile fallback DeepSeek/deepseek-flash is not hosted selection/credential evidence. No customer queries, writes, provider/model calls, erasure, legal publication or deployment. Owned docs/log scoped checks48tests/211assertions +QA types/local links/whitespace pass. Receipt docs/verification/2026-11-07-mobile-provider-reconciliation.md; Brain account-privacy/in-progress updated local-only. Apple owns next notification/reviewer/release coordination; Android merchant gate remains owner-handled. Android1/8 and Apple2/6 unchanged. Do not reuse empty-account deletion proof for positive owner billing or infer blanket ephemeral/zero-retention from store:false.
+
+---
