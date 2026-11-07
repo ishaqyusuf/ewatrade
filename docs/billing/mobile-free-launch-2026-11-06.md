@@ -1,5 +1,24 @@
 # Mobile free launch and later paid activation
 
+## Superseded by owner correction — 7 November 2026
+
+The owner explicitly withdrew free launch: "we are not launching free."
+Prepare paid software subscriptions for launch. This is not an instruction to
+charge for downloading the app. Retain the confirmed owner/staff model and
+regional pricing direction below. The free-first milestones and payment-setup
+deferral below are historical and no longer the current launch plan.
+
+Current code still disables native purchases; this correction does not activate
+checkout or establish paid readiness. Complete native iOS/Android purchase and
+server entitlement integration, store products, signed sandbox acceptance and
+full paid preflights before enabling paid scope. Apple's Paid Apps Agreement,
+banking and tax requirements must be complete before offering In-App Purchases.
+Safety/privacy/deletion and platform review gates remain open. No store settings,
+provider actions, prices, agreements or payments were changed by this correction.
+
+The previous 3/6 free-launch checklist is historical; paid-launch progress must
+be reconciled against its additional requirements before reporting a percentage.
+
 Owner direction, 6 November 2026. EwaTrade is pre-market with no existing
 customers. Ship a free mobile release first; merchant verification and payout
 setup are deferred. This supersedes the 26 October paid-Android-first scope.
