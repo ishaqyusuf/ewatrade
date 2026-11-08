@@ -1,6 +1,6 @@
 # Existing Starter Sandbox purchase verification — 8 November 2026
 
-Status: source correction verified locally; hosted rollout and durable recovery pending.
+Status: source correction verified locally and Preview API116ca57cb READY; matching smoke, Production rollout and durable recovery pending.
 Apple I01–I06 acceptance remains **2/6 (33.3%)**. This is the one existing licensed
 Starter purchase on installed private 1.0.0(10), not a replacement purchase.
 
@@ -124,3 +124,34 @@ assertions; H02 against ba354f2ef passes with both reviewed domain impact record
 and no capability/procedure change. This establishes the added wording's local
 regression check, not permission to deploy it. Full combined API typecheck also
 passes. Exact candidate approval is next.
+
+## Preview ready; source movement prevented acceptance
+
+Owner explicitly approved combined candidate116ca57cb89949c58fbf195eafac35cd24952213
+(billing454972d8c, WhatsApp wording476f874d3 and docs). Normal clean-main guarded
+API-only Preview release reused its passed candidate receipt (284tests/1813assertions),
+passed environment checks and pushed through the existing Preview executor.
+API deployment `dpl_7sn1o5jJd8mQ4irjvBaNPEzfQWeb` is READY at
+https://ewatrade-e4rg88iq7-ishaqyusufs-projects.vercel.app. Build logs show completed
+build; no second deployment was issued to retry testing.
+
+During that build, other source work committed66aecd5c0 (WhatsApp reply instructions),
+293af0156 (marketing palette) and later mobile theme source. The root release
+correctly exited1 with “Source moved during release; verification not accepted.”
+It did not run matching smoke. This Preview is not Production acceptance, and no
+Production push/deployment or purchase-recovery POST was performed. Last accepted
+Production remains2d4424b1 / dpl_CRXkzyZQrtHSew3SWAFeuhv1tRyT.
+
+Owner explicitly authorized coordinating a brief release freeze. Shared operation
+message168d3877-3434-4343-8bf0-18888c22e57a was appended via AGENT_CHAT CLI. The
+source and Workshop chats confirmed holds; neither owns the mobile theme/app.config/
+onboarding changes. Their files remain untouched. Workshop's untracked receipt is
+its own preserved work. Another writer's source ownership is still being clarified
+with the owner before pinning/approving a final candidate. No worktree or branch
+switch will be used to evade this condition.
+
+Prepared private helpers are not yet executed against Production: signed original
+notification recovery through the normal receiver, and distinct before-/after-recovery
+read-only state captures. Preserve initial after-purchase/cancellation evidence.
+No additional buy/restore request, fake receipt or manual grant was made. Public
+checkoutfalse/WEB/no-private-TestFlight-OTA boundaries and Apple2/6 remain.
