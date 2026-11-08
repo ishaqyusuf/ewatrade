@@ -3,8 +3,9 @@ import { Icon, type IconKeys } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
-import { useColors } from "@/hooks/use-color"
+import { useColorScheme, useColors } from "@/hooks/use-color"
 import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
+import { GREEN_TILL_THEME } from "@/lib/green-till-theme"
 import { cn } from "@/lib/utils"
 import { useTRPC } from "@/trpc/client"
 import { formatStoreConversationVoiceElapsed } from "@ewatrade/utils"
@@ -257,6 +258,8 @@ function ReceiptThumb({
   onRemove: () => void
 }) {
   const colors = useColors()
+  const { colorScheme } = useColorScheme()
+  const palette = GREEN_TILL_THEME[colorScheme]
   const large = useLargeTextLayout()
   const size = large ? 112 : 88
   const busy = item.phase === "uploading" || item.phase === "reading"
@@ -293,8 +296,11 @@ function ReceiptThumb({
         </View>
       )}
       {busy ? (
-        <View className="absolute inset-0 items-center justify-center bg-black/30">
-          <ActivityIndicator color="#FFFFFF" />
+        <View
+          className="absolute inset-0 items-center justify-center"
+          style={{ backgroundColor: palette.scrim }}
+        >
+          <ActivityIndicator color={palette.overlayForeground} />
         </View>
       ) : null}
       <Pressable
@@ -305,7 +311,7 @@ function ReceiptThumb({
         onPress={onRemove}
         style={{
           alignItems: "center",
-          backgroundColor: "rgba(255,255,255,0.94)",
+          backgroundColor: palette.paper,
           borderRadius: 14,
           height: 28,
           justifyContent: "center",
@@ -315,7 +321,7 @@ function ReceiptThumb({
           width: 28,
         }}
       >
-        <Icon className="size-[15px]" color="#1E1E1C" name="X" />
+        <Icon className="size-[15px]" color={palette.paperInk} name="X" />
       </Pressable>
     </View>
   )
@@ -337,6 +343,8 @@ function AttachMenu({
   onPick: (source: "camera" | "library" | "file") => void
 }) {
   const colors = useColors()
+  const { colorScheme } = useColorScheme()
+  const palette = GREEN_TILL_THEME[colorScheme]
   const options: Array<{
     icon: IconKeys
     label: string
@@ -373,7 +381,7 @@ function AttachMenu({
         overflow: "hidden",
         paddingVertical: 6,
         position: "absolute",
-        shadowColor: "#000",
+        shadowColor: palette.cardShadow,
         shadowOffset: { height: 6, width: 0 },
         shadowOpacity: 0.16,
         shadowRadius: 18,

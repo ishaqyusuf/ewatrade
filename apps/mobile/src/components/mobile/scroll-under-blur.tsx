@@ -23,11 +23,12 @@ export function ScrollUnderBlur({
   children: ReactNode
 }) {
   const { colorScheme } = useColorScheme()
+  const veil = `${color}99`
   return (
     <View>
       <LinearGradient
         pointerEvents="none"
-        colors={[`${color}00`, `${color}99`]}
+        colors={[`${color}00`, veil]}
         style={{
           position: "absolute",
           top: -fadeAbove,
@@ -43,7 +44,7 @@ export function ScrollUnderBlur({
       >
         <View
           pointerEvents="none"
-          style={[StyleSheet.absoluteFill, { backgroundColor: `${color}99` }]}
+          style={[StyleSheet.absoluteFill, { backgroundColor: veil }]}
         />
         {children}
       </BlurView>
