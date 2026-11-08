@@ -12,6 +12,10 @@ import {
 } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
+import {
+  appStoreReviewOwnerIds,
+  resolveOwnerBillingEnvironment,
+} from "../packages/db/src/queries/owner-billing/review-environment"
 import { EWATRADE_TRIGGER_TARGETS } from "./release-trigger-target.mjs"
 import {
   selectedTriggerDeployEnvironment,
@@ -41,6 +45,88 @@ const production = {
 }
 
 describe("Trigger jobs selected deployment profile", () => {
+  test("owner billing readers receive selected profile facts and retain the Apple-only reviewer scope", () => {
+    const ownerId = "review-owner-123"
+    const selected = {
+      ...production,
+      OWNER_BILLING_ENABLED: "true",
+      STORE_BILLING_ENABLED: "true",
+      STORE_BILLING_ENVIRONMENT: "production",
+      APP_STORE_REVIEW_SANDBOX_ENABLED: "true",
+      APP_STORE_REVIEW_OWNER_IDS: JSON.stringify([ownerId]),
+    }
+    const synced = syncedTriggerJobEnvironment(
+      selectedTriggerDeployEnvironment(production, selected, production),
+    )
+    expect(synced.OWNER_BILLING_ENABLED).toBe("true")
+    expect(synced.STORE_BILLING_ENVIRONMENT).toBe("production")
+    expect(synced.DEV_PROFILE).toBe("production")
+    expect(appStoreReviewOwnerIds(synced)).toEqual([ownerId])
+    expect(
+      resolveOwnerBillingEnvironment(
+        "production",
+        ownerId,
+        "app_store",
+        synced,
+      ),
+    ).toBe("sandbox")
+    for (const provider of ["play_store", "paystack"] as const)
+      expect(
+        resolveOwnerBillingEnvironment("production", ownerId, provider, synced),
+      ).toBe("production")
+    expect(
+      resolveOwnerBillingEnvironment(
+        "production",
+        "other-owner-123",
+        "app_store",
+        synced,
+      ),
+    ).toBe("production")
+
+    const previewReader = syncedTriggerJobEnvironment(
+      selectedTriggerDeployEnvironment(
+        preview,
+        { ...selected, ...preview, STORE_BILLING_ENVIRONMENT: "sandbox" },
+        selected,
+      ),
+    )
+    expect(previewReader.OWNER_BILLING_ENABLED).toBe("true")
+    expect(previewReader.DEV_PROFILE).toBe("preview")
+    expect(previewReader.STORE_BILLING_ENVIRONMENT).toBe("sandbox")
+    expect(appStoreReviewOwnerIds(previewReader)).toEqual([])
+
+    // A later deployment must revoke stale hosted opt-ins, never inherit them
+    // from the shell or the Production file when Preview omitted its settings.
+    for (const profile of [preview, production]) {
+      const revoked = syncedTriggerJobEnvironment(
+        selectedTriggerDeployEnvironment(
+          { ...selected, ...profile },
+          profile,
+          selected,
+        ),
+      )
+      expect(revoked.DEV_PROFILE).toBe(profile.APP_ENV)
+      expect(revoked.OWNER_BILLING_ENABLED).toBe("false")
+      expect(revoked.STORE_BILLING_ENABLED).toBe("false")
+      expect(revoked.STORE_BILLING_ENVIRONMENT).toBe("")
+      expect(revoked.APP_STORE_REVIEW_SANDBOX_ENABLED).toBe("false")
+      expect(revoked.APP_STORE_REVIEW_OWNER_IDS).toBe("[]")
+      expect(appStoreReviewOwnerIds(revoked)).toEqual([])
+    }
+
+    const webOff = syncedTriggerJobEnvironment({
+      ...selected,
+      PAYSTACK_SUBSCRIPTION_SECRET_KEY: "sk_test_FAKE_NOT_A_REAL_KEY",
+      WEB_BILLING_ENABLED: "true",
+      WEB_BILLING_RECONCILIATION_ENABLED: "true",
+      WEB_BILLING_RELEASE_APPROVED: "true",
+    })
+    expect(webOff.PAYSTACK_SUBSCRIPTION_SECRET_KEY).toBeUndefined()
+    expect(
+      Object.keys(webOff).some((key) => key.startsWith("WEB_BILLING_")),
+    ).toBe(false)
+  })
+
   test("receipt worker admission resets every gate and requires its dedicated selected-profile key", () => {
     const gates = [
       "MANUAL_RECEIPT_PROCESSING_ENABLED",

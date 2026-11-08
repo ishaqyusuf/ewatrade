@@ -34,8 +34,19 @@ const manualReceiptFlags = [
   "MANUAL_RECEIPT_WORKER_ADMITTED",
 ]
 
+// Shared plan readers run inside jobs as well as the API. These are server-only
+// projection settings; no credentials or web checkout gates are added here.
+const ownerBillingReaderKeys = [
+  "OWNER_BILLING_ENABLED",
+  "STORE_BILLING_ENABLED",
+  "STORE_BILLING_ENVIRONMENT",
+  "APP_STORE_REVIEW_SANDBOX_ENABLED",
+  "APP_STORE_REVIEW_OWNER_IDS",
+]
+
 export const TRIGGER_JOB_ENV_KEYS = [
   "APP_ENV",
+  ...ownerBillingReaderKeys,
   "JOB_SCHEDULE_MODE",
   "API_URL",
   "INTERNAL_API_KEY",
@@ -334,6 +345,20 @@ export function syncedTriggerJobEnvironment(env) {
       return value ? [[key, value]] : []
     }),
   )
+  // This profile was verified above; never take a hosted profile selector from
+  // an unrelated shell/base file. Omitted settings explicitly clear old opt-ins.
+  result.DEV_PROFILE = env.APP_ENV
+  for (const key of [
+    "OWNER_BILLING_ENABLED",
+    "STORE_BILLING_ENABLED",
+    "APP_STORE_REVIEW_SANDBOX_ENABLED",
+  ])
+    result[key] = env[key]?.trim() === "true" ? "true" : "false"
+  result.STORE_BILLING_ENVIRONMENT = env.STORE_BILLING_ENVIRONMENT?.trim() || ""
+  result.APP_STORE_REVIEW_OWNER_IDS =
+    result.APP_STORE_REVIEW_SANDBOX_ENABLED === "true"
+      ? env.APP_STORE_REVIEW_OWNER_IDS?.trim() || "[]"
+      : "[]"
   // Revoking any receipt gate also clears previously deployed opt-ins.
   const receiptAdmitted = manualReceiptFlags.every(
     (key) => env[key]?.trim() === "true",

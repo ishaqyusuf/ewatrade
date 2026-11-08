@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "id": "2026-11-08-billing-reader-job-config",
+  "tickets": ["A05"],
+  "summary": "Preserve explicit selected-profile owner subscription reader settings in jobs deployment and revoke stale opt-ins.",
+  "noAssistantImpact": "No assistant capability, procedure, RPC, permission or payment activation. Jobs use existing owner plan readers with selected-file server configuration; API-only flags cannot establish other runtime acceptance.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "path": "docs/verification/2026-11-08-billing-reader-job-config.md",
+      "status": "updated"
+    },
+    {
+      "topic": "feature",
+      "path": ".brain/features/owner-wide-billing.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "decision",
+      "path": ".brain/decisions/2026-11-08-web-paystack-only.md",
+      "status": "local_only"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "scripts/trigger-deploy-profile.test.ts",
+      "executed": true,
+      "result": "New selected-profile reader regression failed before the fix. Jobs wrapper and actual shared reviewer resolver pass after the fix; source-only, no deployment, reminder or payment."
+    }
+  ]
+}
