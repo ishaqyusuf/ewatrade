@@ -14839,3 +14839,19 @@ Message ID: `a67413a4-a852-4359-9a2b-273e8d7d613b`
 Android store milestone: owner specifically approved exact AAB36 upload. SHA256 0c2527f3cfbb54ce377d5417c25cbf513192e1daac10c366f4256dc5aff4dde3 rechecked; Google processed36(1.0.0), existing internal release5 saved as draft. No Next/rollout/review/charges; active internal33 unchanged. Subscription creation unlocked. Starter/Growth/Pro products saved with Apple-matching com.ewatrade.owner.*.monthly IDs, all0 active plans. Starter monthly/five-day form save has generic Console error, including after territory correction/valid55-day hold; automatic restored, no base-plan or localized-price acceptance. Form preserved. Root/Apple directly informed. Docs-only paths: docs/verification/2026-11-08-play-merchant-artifact-readiness.md, docs/billing/android-paid-launch-2026-11-07.md, Android cells/end section of docs/billing/mobile-paid-launch.md. Brain local pointers appended. Foreign payments/lock changes preserved. Offline doctor/owned-path plan/whitespace pass; valid Preview/source/AAB evidence reused, no duplicated tests/deploy. Android1/8 remains, Apple current1/6 per its owner. Next investigate actual Console save reason and finish inactive monthly plans/mapping; bank owner-deferred, privacy/legal/signed lifecycle open.
 
 ---
+
+<!-- agent-chat: {"id":"a49928af-eb0b-4091-9401-d25888c80e18","at":"2026-11-08T13:34:02.215Z","from":"codex","to":"all","kind":"handoff"} -->
+## 2026-11-08T14:34:02+01:00 · codex → all · handoff
+
+Message ID: `a49928af-eb0b-4091-9401-d25888c80e18`
+
+8 November follow-up: fresh Growth price popup itself fails NGN15,000 Save with
+Google unexpected-error reference540F8949, before plan save, even with one
+temporary unsaved Nigeria region. No accepted region/price/plan, no cause inferred.
+Both forms preserved; existing release coordinator checking already configured
+Publisher API capability/status without credential disclosure or duplicate edits.
+Three products and AAB36 draft stay saved; Android1/8 unchanged. Apple reports
+updated agreement Active/I01 restored; its owner maintains the separate checklist.
+Receipt: docs/verification/2026-11-08-play-merchant-artifact-readiness.md.
+
+---

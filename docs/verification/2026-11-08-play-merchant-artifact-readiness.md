@@ -115,8 +115,8 @@ Next: resolve the actual Console save error, finish all three inactive monthly
 base plans, reconcile exact Nigeria totals and every African/global region, then
 merge actual Play mappings without replacing Apple entries. Bank readiness,
 signed money lifecycle, truthful Data safety and paid legal remain open. Public
-checkout remains closed. Android acceptance stays1/8; Apple owns its separate
-current1/6 position after the new agreement reopened I01. This milestone changes
+checkout remains closed. Android acceptance stays1/8; the separate Apple
+position is maintained by its owner in the shared index. This milestone changes
 provider drafts and documentation only; no application source/build/deploy or
 paid acceptance test was added. Brain impact: native-store-billing, QA accelerator
 and current-task pointers.
@@ -126,3 +126,21 @@ Documentation verification: offline doctor passed; owned-path plan selects core
 with zero unknown paths; local file links and whitespace pass. Existing source,
 canonical Preview and exact AAB inspection evidence are reused for this docs-only
 change. No application source or new acceptance test was added.
+
+
+## Fresh price-editor diagnosis — 8 November follow-up
+
+A fresh Growth `monthly` auto-renewing/five-day form isolated one temporary
+Nigeria draft region before any plan save. Editing its price to NGN15,000 then
+saving the price popup returned **An unexpected error has occurred. Please try
+again. (540F8949)**. This identifies a failure in the price editor before base-plan
+save; it does not prove a specific bank, permission, currency or grace cause.
+The price/plan/temporary one-region selection is unsaved, and no Nigeria-only
+launch or active offer was established. Both forms remain open for investigation.
+Screenshot: `/private/tmp/ewatrade-play-price-editor-error-540F8949.jpg`.
+
+The existing release coordinator is checking already configured Publisher API
+capability/status without exposing credentials or making duplicate Console edits.
+No new service-account access or provider activation is authorized by that check.
+Apple separately reports its updated agreement is Active and I01 restored; use
+its owner-maintained checklist instead of the earlier reopened I01 observation.

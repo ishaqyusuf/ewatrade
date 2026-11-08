@@ -157,10 +157,11 @@ transactions. Owner-approved exact AAB36 processed in Google Play and release5
 was saved as draft, without rollout. Create subscription unlocked; Starter,
 Growth and Pro products now exist with the same IDs as Apple and0 active base
 plans. Starter monthly/five-day base-plan save failed with a generic Console
-error; price/grace/territory settings and actual Play mapping remain unaccepted.
+error; a fresh Growth price popup also returned error540F8949 before plan save.
+Price/grace/territory settings and actual Play mapping remain unaccepted.
 The unsaved form is preserved and the release coordinator/Apple were informed.
 No checkout/financial activation, new build/deploy or Data safety submission.
 Bank remains deferred; provider/transport/retention/deletion evidence stays open.
-Android1/8 remains; Apple's separate current1/6 is maintained by its owner.
+Android1/8 remains; Apple's separate current position is maintained by its owner.
 See [current evidence](../verification/2026-11-08-play-merchant-artifact-readiness.md)
 and [exact AAB](../verification/2026-11-08-android-production-artifact.md).
