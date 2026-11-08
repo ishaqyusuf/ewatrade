@@ -163,3 +163,33 @@ The202-test smoke explicitly selects only app.config.ts and its regression file;
 it is not full release, UI, signed or money acceptance. H02 passes with the
 updated existing form-only impact record. Final backend release source smoke
 and matching hosted Preview evidence remain required.
+
+## Private build 8 accepted by Expo
+
+The guarded build retry at clean `8f158ba9fa7fa815a1ea7927ee63649404bd92cb`
+passed the real target, live Production API, iOS login/organization and Expo
+attachment checks. EAS selected the restored local signing assets, assigned build
+number8 and created the isolated `testflight-production` channel/branch without
+publishing an OTA. The587MB source archive uploaded in22m22s; command exited0.
+The source freeze remained in force until EAS had captured its post-upload
+fingerprint/Git metadata and accepted the build, then was explicitly released.
+
+[Exact EAS build](https://expo.dev/accounts/cipron-startups/projects/ewatrade/builds/e699c62f-4db6-4614-ae7c-2181d713bc2e)
+`e699c62f-4db6-4614-ae7c-2181d713bc2e` is IN_PROGRESS, iOS/store distribution,
+profile/channel `testflight-production`, version8, exact source8f158ba9f,
+project532f9a55-f4f6-4d4e-b60b-ea6fa8807a3b/owner cipron-startups. No completed
+artifact was available at this observation. No Apple upload, invite, App Review
+submission or public release is claimed. Protected signing assets remain needed
+through the build/retry window. Keep the private channel separate from public
+Production acceptance and future update policy.
+
+The backend Preview plan includes the additive privacy schema and API. Three
+additional dependency names are truthfully dormant: the existing subscription
+processing switch and exact profile-policy JSON/digest pair. Selected local
+Preview has processing=false, and both selected profiles omit those policies and
+positive processing flags. Missing/invalid policy refuses profile processing and
+the minimized-case recovery path. They are classified off in the canonical env
+audit, without fake policies, hosted flags or new provider values. Genuine policy
+installation and operational acceptance are required before enabling processing.
+A final clean candidate, ordinary Preview rollout/matching smoke and Production
+rollout remain; the seven saved API reviewer settings are not yet effective.

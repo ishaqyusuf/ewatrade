@@ -7,7 +7,9 @@ API is `dpl_7A7vegqRxaiUVanBUsw9RPNcLmHg`, source `dafec2e01`; earlier combined
 rollout and Preview TEST receipts below remain historical evidence.
 
 Paid native scope and the guarded Production TestFlight build target are committed
-in `45e9a8c55`, but no current signed iOS artifact is built or uploaded. The
+in `45e9a8c55`, corrected against the real Expo configuration in `8f158ba9f`.
+Private build8 (`e699c62f-4db6-4614-ae7c-2181d713bc2e`) is compiling on Expo;
+no completed artifact or Apple upload is accepted yet. The
 reviewer-only seven-key configuration is saved for the next API deployment;
 effective runtime checks remain pending and public checkout stays closed. The existing internal TestFlight group contains
 only the Account Holder, with manual build distribution and no external groups.
