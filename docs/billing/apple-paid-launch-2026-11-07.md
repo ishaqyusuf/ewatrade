@@ -362,3 +362,17 @@ Owner completed the final Apple review-password entry; fresh reload confirms
 username/password presence and saved contact/notes without reading credentials. Signed iOS, controlled
 review activation, lifecycle tests and truthful legal/privacy acceptance remain.
 See the same reviewer-workspace receipt for observed proof and requested inputs.
+
+## Private Production TestFlight source prepared — 8 November 2026
+
+Existing signing assets are restored/verified without certificate replacement
+(91570cfc7). Existingios-testflight route now supports explicitProductioniOS
+build/upload using isolatedtestflight-production profile/channel, Production
+services, paidnativeScope, local signing, immutable reviewer scope and closed
+publiccheckout/ordinarySandboxforwarding preflight. ProductionTestFlightOTA is
+refused. Publicstore/ordinaryProductiongates remain; no build/flag/URL mutation
+is claimed bysource. Rootownsremaining execution afterdeploymentchatarchive.
+
+Source112/620 +ownedfast284/1813 +scoped/fullmobiletypes +Biome +H01/H02 pass;
+currentreview/checkout/relay/policyunits16/165 pass withoutDB/providercalls.
+Apple2/6 unchanged. [Exact target and execution limits](../verification/2026-11-08-production-testflight-paid-candidate.md).

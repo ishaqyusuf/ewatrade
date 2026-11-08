@@ -1,0 +1,50 @@
+{
+  "version": 1,
+  "id": "2026-11-08-production-testflight-paid-candidate",
+  "tickets": ["A05"],
+  "summary": "Restore the approved paid client scope and add an exact-artifact, Production-backed private TestFlight target for the existing reviewer-only Apple Sandbox path; retain all ordinary public store/OTA gates.",
+  "noAssistantImpact": "Software subscription purchase/restore remain native SDK forms with server-owned identity, signature and entitlement authority. No assistant tool, procedure or prompt authority is added. Private TestFlight upload is operator release tooling, not merchant or assistant publication authority.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/native-store-billing.md"
+    },
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/mobile-production-release.md"
+    },
+    {
+      "topic": "decision",
+      "status": "local_only",
+      "path": ".brain/decisions/2026-11-08-production-testflight-paid-candidate.md"
+    },
+    {
+      "topic": "feature",
+      "status": "updated",
+      "path": "docs/verification/2026-11-08-production-testflight-paid-candidate.md"
+    },
+    {
+      "topic": "api",
+      "status": "local_only",
+      "path": ".brain/api/permissions.md"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "scripts/testflight-production.test.ts",
+      "executed": true,
+      "result": "Private target rejects wrong identity/origins/scope, public checkout, broad reviewer IDs and client-carried server authorization; requires IAP and the registered local-signing profile."
+    },
+    {
+      "kind": "test",
+      "path": "scripts/eas-account-runner.test.ts",
+      "executed": true,
+      "result": "Focused complete suite112/620 including Preview/billing regression passes: Production private build/upload uses dedicated channel and correct Expo environment; rejects OTA/Android/dirty/API/login/identity/attachment and wrong build profile/channel/source/version. Fake provider/auth adapters only."
+    }
+  ]
+}

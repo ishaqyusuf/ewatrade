@@ -100,6 +100,8 @@ const target = resolveTarget(operation, actionArgs)
 const buildPlatform = resolveBuildPlatform(operation, actionArgs)
 const iosSimulator = actionArgs.includes("--ios-simulator")
 const iosTestFlight = actionArgs.includes("--ios-testflight")
+const testFlightProfile =
+  target === "prod" ? "testflight-production" : "testflight-preview"
 const validationOnly = actionArgs.includes("--validation-only")
 const artifactOnly = actionArgs.includes("--artifact-only")
 if (
@@ -127,14 +129,15 @@ if (
 }
 if (
   iosTestFlight &&
-  (target !== "preview" ||
+  ((target !== "preview" && target !== "prod") ||
     buildPlatform !== "ios" ||
     iosSimulator ||
     !["build", "submit", "update"].includes(operation) ||
+    (target === "prod" && operation === "update") ||
     actionArgs.filter((arg) => arg === "--ios-testflight").length !== 1)
 ) {
   throw new Error(
-    "--ios-testflight requires a Preview iOS build, submit or update, without --ios-simulator.",
+    "--ios-testflight requires an iOS build or submit (Preview also permits its reviewed OTA), without --ios-simulator.",
   )
 }
 if (
@@ -214,17 +217,19 @@ env.EXPO_TOKEN = undefined
 // Clear inherited opt-in flags for every ordinary build and publication.
 env.IOS_TESTFLIGHT = iosTestFlight ? "1" : undefined
 if (iosTestFlight) {
-  env.EAS_BUILD_PROFILE = "testflight-preview"
+  env.EAS_BUILD_PROFILE = testFlightProfile
   const easConfig = JSON.parse(
     await readFile(path.join(APP_DIR, "eas.json"), "utf8"),
   )
-  const profileEnv = easConfig.build?.["testflight-preview"]?.env ?? {}
+  const profileEnv = easConfig.build?.[testFlightProfile]?.env ?? {}
   // Match EAS precedence for this profile's reviewed public URL overrides.
   for (const key of [
+    "EXPO_PUBLIC_API_URL",
     "EXPO_PUBLIC_BASE_URL",
     "EXPO_PUBLIC_WEB_URL",
     "EXPO_PUBLIC_LEGAL_ORIGIN",
     "EXPO_PUBLIC_DASHBOARD_URL",
+    "EXPO_PUBLIC_CHAT_URL",
   ]) {
     if (typeof profileEnv[key] === "string") env[key] = profileEnv[key]
   }
@@ -239,10 +244,36 @@ if (
 
 if (iosTestFlight) {
   const code = await runCommand(
-    ["bun", "scripts/check-testflight-preview.mjs"],
+    [
+      "bun",
+      target === "prod"
+        ? "scripts/check-testflight-production.mjs"
+        : "scripts/check-testflight-preview.mjs",
+    ],
     { cwd: REPO_DIR, env, stdio: "inherit" },
   )
-  if (code !== 0) process.exit(code)
+  if (code !== 0) process.exit(target === "prod" ? 1 : code)
+  if (target === "prod") {
+    // Private TestFlight upload gathers acceptance evidence. The ordinary
+    // Production release/OTA path retains the audience, legal and billing gates.
+    for (const script of [
+      "apps/mobile/scripts/check-production-api-live.mjs",
+      "scripts/check-ios-login-readiness.mjs",
+      "scripts/check-production-ios-identity.mjs",
+    ]) {
+      const code = await runCommand(["bun", script], {
+        cwd: REPO_DIR,
+        env,
+        stdio: "inherit",
+      })
+      if (code !== 0) {
+        console.error(
+          `Production TestFlight stopped: ${path.basename(script)} preflight failed.`,
+        )
+        process.exit(1)
+      }
+    }
+  }
 }
 
 if (
@@ -378,7 +409,9 @@ try {
 
   let attachmentReady = true
   const attachmentEnvironment = iosTestFlight
-    ? "preview"
+    ? target === "prod"
+      ? "production"
+      : "preview"
     : operation === "env-check" || operation === "submit"
       ? "production"
       : (operation === "build" || operation === "update") && target !== "dev"
@@ -753,6 +786,7 @@ async function assertExactCommittedMobileSource(
       "packages",
       "scripts/eas-account-runner.ts",
       "scripts/check-testflight-preview.mjs",
+      "scripts/check-testflight-production.mjs",
       "scripts/publish-testflight-preview.ts",
       "package.json",
       "bun.lock",
@@ -847,7 +881,7 @@ function getActionCommand(
       platform,
       "--profile",
       iosTestFlight
-        ? "testflight-preview"
+        ? testFlightProfile
         : iosSimulator
           ? "preview-simulator"
           : TARGET_PROFILES[target],
@@ -861,7 +895,7 @@ function getActionCommand(
       "--platform",
       platform,
       "--profile",
-      iosTestFlight ? "testflight-preview" : TARGET_PROFILES[target],
+      iosTestFlight ? testFlightProfile : TARGET_PROFILES[target],
     ]
   }
 
@@ -1001,6 +1035,7 @@ function getUsage(): string {
     "  bun run eas:build --preview --platform android --artifact-only --expected-commit <full-sha> (signed artifact only; no download publication)",
     "  bun run eas:build --prod --platform android --validation-only --expected-commit <full-sha> (artifact only; no store submission)",
     "  bun run eas:build --preview --platform ios --ios-testflight --expected-commit <full-sha>",
+    "  bun run eas:build --prod --platform ios --ios-testflight --expected-commit <full-sha> (private TestFlight target; no OTA or public review)",
     "  bun run eas:submit --preview --platform ios --ios-testflight --id <build-id> --expected-version <version> --expected-commit <full-sha>",
     "  bun run eas:auth [--account <name>]",
     "  bun run eas:build <--preview|--prod> --expected-commit <full-sha> [--platform android|ios] [--ios-simulator (Preview iOS only)] [--account <name>]",
@@ -1712,10 +1747,10 @@ async function inspectSubmissionBuild({
     build.id === buildId || "build ID",
     build.status === "FINISHED" || "build status",
     build.platform === platform.toUpperCase() || "platform",
-    build.buildProfile ===
-      (iosTestFlight ? "testflight-preview" : "production") || "build profile",
+    build.buildProfile === (iosTestFlight ? testFlightProfile : "production") ||
+      "build profile",
     build.distribution === "STORE" || "store distribution",
-    build.channel === (iosTestFlight ? "testflight-preview" : "production") ||
+    build.channel === (iosTestFlight ? testFlightProfile : "production") ||
       "update channel",
     build.appBuildVersion === expectedVersion || "reviewed version",
     (typeof build.gitCommitHash === "string" &&

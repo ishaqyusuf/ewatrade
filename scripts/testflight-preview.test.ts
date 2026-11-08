@@ -82,7 +82,7 @@ test("rejects simulator, ordinary Preview bundle, Production channel and wrong a
   }
 })
 for (const args of [
-  ["build", "--prod", "--platform", "ios", "--ios-testflight"],
+  ["update", "--prod", "--platform", "ios", "--ios-testflight"],
   ["build", "--preview", "--platform", "android", "--ios-testflight"],
   ["update", "--preview", "--platform", "all", "--ios-testflight"],
   [

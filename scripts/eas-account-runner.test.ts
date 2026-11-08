@@ -69,6 +69,22 @@ for (const [
   [0, "ios", "build", "preview_testflight"],
   [0, "ios", "submit", "preview_testflight"],
   [0, "ios", "update", "preview_testflight"],
+  [0, "ios", "build", "production_testflight"],
+  [0, "ios", "build", "production_testflight_urls"],
+  [0, "ios", "submit", "production_testflight"],
+  [1, "ios", "update", "production_testflight"],
+  [1, "android", "build", "production_testflight"],
+  [1, "ios", "build", "production_testflight_target"],
+  [1, "ios", "build", "production_testflight_api"],
+  [1, "ios", "build", "production_testflight_login"],
+  [1, "ios", "build", "production_testflight_identity"],
+  [1, "ios", "build", "production_testflight_dirty"],
+  [1, "ios", "build", "production_testflight_after_login"],
+  [1, "ios", "build", "production_testflight_attachment"],
+  [1, "ios", "submit", "production_testflight_profile"],
+  [1, "ios", "submit", "production_testflight_channel"],
+  [1, "ios", "submit", "production_testflight_commit"],
+  [1, "ios", "submit", "production_testflight_version"],
   [1, "android", "build", "preview_simulator"],
   [1, "ios", "build", "simulator_prod"],
   [1, "ios", "update", "preview_simulator_update"],
@@ -116,6 +132,8 @@ for (const [
     const authCapturePath = path.join(root, "auth.txt")
     const development = mismatch === "dev"
     const preview = mismatch?.startsWith("preview") ?? false
+    const productionTestFlight =
+      mismatch?.startsWith("production_testflight") ?? false
     const quickPreview = mismatch?.startsWith("preview_quick") ?? false
     await mkdir(path.join(root, "scripts"), { recursive: true })
     await writeFile(
@@ -134,7 +152,17 @@ for (const [
     )
     await writeFile(
       path.join(root, "apps", "mobile", "eas.json"),
-      JSON.stringify({ build: { "testflight-preview": { env: {} } } }),
+      JSON.stringify({
+        build: {
+          "testflight-preview": { env: {} },
+          "testflight-production": {
+            env:
+              mismatch === "production_testflight_urls"
+                ? { EXPO_PUBLIC_API_URL: "https://profile-api.example.test" }
+                : {},
+          },
+        },
+      }),
     )
     await mkdir(path.join(cli, "bin"), { recursive: true })
     await mkdir(path.join(cli, "build", "user"), { recursive: true })
@@ -188,6 +216,7 @@ for (const [
     )
     for (const [label, relativePath] of [
       ["testflight", "scripts/check-testflight-preview.mjs"],
+      ["testflight-production", "scripts/check-testflight-production.mjs"],
       ["teen", "scripts/check-teen-release-readiness.mjs"],
       ["api", "apps/mobile/scripts/check-production-api-live.mjs"],
       ["legal", "scripts/check-production-legal-live.mjs"],
@@ -198,7 +227,7 @@ for (const [
     ]) {
       await writeFile(
         path.join(root, relativePath),
-        `import { appendFileSync, writeFileSync } from "node:fs"; appendFileSync(process.env.EAS_TEST_PREFLIGHT_CAPTURE, "${label}\\n"); if ("${label}" === "attachment" && process.env.EAS_TEST_DIRTY_AFTER_ATTACHMENT === "1") writeFileSync("${path.join(root, "apps", "mobile", "app.config.ts")}", "changed after initial preflight\\n"); if (process.env.EAS_TEST_PREFLIGHT_FAIL === "${label}") process.exit(7);\n`,
+        `import { appendFileSync, writeFileSync } from "node:fs"; appendFileSync(process.env.EAS_TEST_PREFLIGHT_CAPTURE, "${label}\\n"); if ("${label}" === "attachment") writeFileSync(process.env.EAS_TEST_PREFLIGHT_CAPTURE + ".environment", process.env.EXPO_ENV_ATTACHMENT_ONLY ?? "missing"); if ("${label}" === "attachment" && process.env.EAS_TEST_DIRTY_AFTER_ATTACHMENT === "1") writeFileSync("${path.join(root, "apps", "mobile", "app.config.ts")}", "changed after initial preflight\\n"); if (process.env.EAS_TEST_PREFLIGHT_FAIL === "${label}") process.exit(7);\n`,
       )
     }
     await writeFile(
@@ -212,7 +241,7 @@ for (const [
     const easBin = path.join(cli, "bin", "run")
     await writeFile(
       easBin,
-      `#!/usr/bin/env bun\nconst fs = require("node:fs"); const path = require("node:path"); const state = JSON.parse(fs.readFileSync(path.join(process.env.HOME, ".expo", "state.json"), "utf8")); fs.writeFileSync(process.env.EAS_TEST_CAPTURE, JSON.stringify({ home: process.env.HOME, username: state.auth.username, args: process.argv.slice(2), apiUrl: process.env.EXPO_PUBLIC_API_URL, localOnly: process.env.EXPO_PUBLIC_LOCAL_ONLY, profile: process.env.APP_ENV })); if (process.argv.includes("build:view")) console.log(JSON.stringify({ id: process.argv.find((arg) => /^[0-9a-f]{8}-/.test(arg)), status: "FINISHED", platform: process.env.EAS_TEST_BUILD_PLATFORM, buildProfile: process.env.IOS_TESTFLIGHT === "1" ? "testflight-preview" : "production", distribution: "STORE", channel: process.env.IOS_TESTFLIGHT === "1" ? "testflight-preview" : "production", appBuildVersion: process.env.EAS_TEST_BUILD_VERSION, gitCommitHash: process.env.EAS_TEST_BUILD_COMMIT === "missing" ? undefined : process.env.EAS_TEST_BUILD_COMMIT, isForIosSimulator: false, project: { id: "532f9a55-f4f6-4d4e-b60b-ea6fa8807a3b", ownerAccount: { name: "cipron-startups" } }, artifacts: { buildUrl: "https://secret.example.test/artifact" } })); if (process.argv.includes("env:list")) console.log("EXPO_PUBLIC_API_URL=https://api.example.test\\nEXPO_PUBLIC_LEGAL_ORIGIN=https://ewatrade.com\\nEXPO_PUBLIC_LOGLY_ENABLED=false"); process.exitCode = Number(process.env.EAS_TEST_EXIT_CODE);\n`,
+      `#!/usr/bin/env bun\nconst fs = require("node:fs"); const path = require("node:path"); const state = JSON.parse(fs.readFileSync(path.join(process.env.HOME, ".expo", "state.json"), "utf8")); fs.writeFileSync(process.env.EAS_TEST_CAPTURE, JSON.stringify({ home: process.env.HOME, username: state.auth.username, args: process.argv.slice(2), apiUrl: process.env.EXPO_PUBLIC_API_URL, localOnly: process.env.EXPO_PUBLIC_LOCAL_ONLY, profile: process.env.APP_ENV })); if (process.argv.includes("build:view")) console.log(JSON.stringify({ id: process.argv.find((arg) => /^[0-9a-f]{8}-/.test(arg)), status: "FINISHED", platform: process.env.EAS_TEST_BUILD_PLATFORM, buildProfile: process.env.EAS_TEST_BUILD_PROFILE || (process.env.IOS_TESTFLIGHT === "1" ? process.env.EAS_BUILD_PROFILE : "production"), distribution: "STORE", channel: process.env.EAS_TEST_BUILD_CHANNEL || (process.env.IOS_TESTFLIGHT === "1" ? process.env.EAS_BUILD_PROFILE : "production"), appBuildVersion: process.env.EAS_TEST_BUILD_VERSION, gitCommitHash: process.env.EAS_TEST_BUILD_COMMIT === "missing" ? undefined : process.env.EAS_TEST_BUILD_COMMIT, isForIosSimulator: false, project: { id: "532f9a55-f4f6-4d4e-b60b-ea6fa8807a3b", ownerAccount: { name: "cipron-startups" } }, artifacts: { buildUrl: "https://secret.example.test/artifact" } })); if (process.argv.includes("env:list")) console.log("EXPO_PUBLIC_API_URL=https://api.example.test\\nEXPO_PUBLIC_LEGAL_ORIGIN=https://ewatrade.com\\nEXPO_PUBLIC_LOGLY_ENABLED=false"); process.exitCode = Number(process.env.EAS_TEST_EXIT_CODE);\n`,
     )
     await chmod(easBin, 0o755)
     await symlink(easBin, path.join(fakeBin, "eas"))
@@ -264,7 +293,9 @@ for (const [
           : []),
         ...(mismatch === "local_override" ? ["--local"] : []),
         ...(mismatch?.includes("simulator") ? ["--ios-simulator"] : []),
-        ...(mismatch === "preview_testflight" ? ["--ios-testflight"] : []),
+        ...(mismatch === "preview_testflight" || productionTestFlight
+          ? ["--ios-testflight"]
+          : []),
         ...(mismatch === "auto_submit" ? ["--auto-submit"] : []),
         ...(operation === "submit" || operation === "view"
           ? ["--id", exactBuildId]
@@ -283,34 +314,61 @@ for (const [
         EAS_TEST_AUTH_CAPTURE: authCapturePath,
         EAS_TEST_PREFLIGHT_CAPTURE: preflightCapturePath,
         EAS_TEST_PREFLIGHT_FAIL:
-          mismatch === "api"
-            ? "api"
-            : validationOnly && mismatch === undefined
-              ? "teen"
-              : mismatch === "attachment" ||
-                  mismatch === "preview_attachment" ||
-                  mismatch === "preview_quick_attachment"
-                ? "attachment"
-                : mismatch === "teen"
-                  ? "teen"
-                  : mismatch === "ios_identity"
-                    ? "ios-identity"
-                    : expectedExitCode === 1 &&
-                        platform === "ios" &&
-                        mismatch === undefined
-                      ? "legal"
-                      : undefined,
+          mismatch === "production_testflight_target"
+            ? "testflight-production"
+            : mismatch === "production_testflight_login"
+              ? "ios-login"
+              : mismatch === "production_testflight_identity"
+                ? "ios-identity"
+                : mismatch === "production_testflight_attachment"
+                  ? "attachment"
+                  : mismatch === "api" ||
+                      mismatch === "production_testflight_api"
+                    ? "api"
+                    : validationOnly && mismatch === undefined
+                      ? "teen"
+                      : mismatch === "attachment" ||
+                          mismatch === "preview_attachment" ||
+                          mismatch === "preview_quick_attachment"
+                        ? "attachment"
+                        : mismatch === "teen"
+                          ? "teen"
+                          : mismatch === "ios_identity"
+                            ? "ios-identity"
+                            : expectedExitCode === 1 &&
+                                platform === "ios" &&
+                                mismatch === undefined
+                              ? "legal"
+                              : undefined,
         EAS_TEST_DIRTY_AFTER_ATTACHMENT:
-          mismatch === "dirty_after_login" ? "1" : undefined,
+          mismatch === "dirty_after_login" ||
+          mismatch === "production_testflight_after_login"
+            ? "1"
+            : undefined,
         EAS_TEST_GIT_REVISION_MISMATCH:
           mismatch === "revision" ? "1" : undefined,
         EAS_TEST_GIT_DIRTY:
-          mismatch === "dirty" || quickPreview ? "1" : undefined,
+          mismatch === "dirty" ||
+          mismatch === "production_testflight_dirty" ||
+          quickPreview
+            ? "1"
+            : undefined,
         EAS_TEST_GIT_REVISION: reviewedCommit,
         EAS_TEST_BUILD_PLATFORM: platform.toUpperCase(),
-        EAS_TEST_BUILD_VERSION: mismatch === "version" ? "20" : "21",
+        EAS_TEST_BUILD_PROFILE:
+          mismatch === "production_testflight_profile"
+            ? "production"
+            : undefined,
+        EAS_TEST_BUILD_CHANNEL:
+          mismatch === "production_testflight_channel"
+            ? "production"
+            : undefined,
+        EAS_TEST_BUILD_VERSION:
+          mismatch === "version" || mismatch === "production_testflight_version"
+            ? "20"
+            : "21",
         EAS_TEST_BUILD_COMMIT:
-          mismatch === "commit"
+          mismatch === "commit" || mismatch === "production_testflight_commit"
             ? "d".repeat(40)
             : mismatch === "missing_commit"
               ? "missing"
@@ -326,6 +384,52 @@ for (const [
     const exitCode = await proc.exited
     const stderr = await stderrPromise
     expect(exitCode, stderr).toBe(expectedExitCode)
+    if (productionTestFlight && expectedExitCode === 1) {
+      if (platform !== "ios" || operation === "update") {
+        expect(stderr).toContain("--ios-testflight requires")
+        for (const file of [capturePath, authCapturePath, preflightCapturePath])
+          await expect(readFile(file)).rejects.toMatchObject({ code: "ENOENT" })
+        return
+      }
+      const beforeLogin =
+        "testflight-production\napi\nios-login\nios-identity\n"
+      const expectedEvents =
+        mismatch === "production_testflight_target"
+          ? "testflight-production\n"
+          : mismatch === "production_testflight_api"
+            ? "testflight-production\napi\n"
+            : mismatch === "production_testflight_login"
+              ? "testflight-production\napi\nios-login\n"
+              : mismatch === "production_testflight_dirty" ||
+                  mismatch === "production_testflight_identity"
+                ? beforeLogin
+                : `${beforeLogin}attachment\n`
+      expect(await readFile(preflightCapturePath, "utf8")).toBe(expectedEvents)
+      if (operation === "submit") {
+        const inspected = JSON.parse(await readFile(capturePath, "utf8"))
+        expect(inspected.args).toEqual(["build:view", exactBuildId, "--json"])
+        expect(stderr).toContain("EAS submission stopped")
+      } else
+        await expect(readFile(capturePath)).rejects.toMatchObject({
+          code: "ENOENT",
+        })
+      if (
+        [
+          "production_testflight_attachment",
+          "production_testflight_after_login",
+          "production_testflight_profile",
+          "production_testflight_channel",
+          "production_testflight_commit",
+          "production_testflight_version",
+        ].includes(mismatch ?? "")
+      )
+        expect(await readFile(authCapturePath, "utf8")).toBe("login\n")
+      else
+        await expect(readFile(authCapturePath)).rejects.toMatchObject({
+          code: "ENOENT",
+        })
+      return
+    }
     if (
       artifactOnly &&
       (operation !== "build" ||
@@ -471,6 +575,10 @@ for (const [
       return
     }
 
+    if (productionTestFlight)
+      expect(
+        await readFile(`${preflightCapturePath}.environment`, "utf8"),
+      ).toBe("production")
     const capture = JSON.parse(await readFile(capturePath, "utf8")) as {
       home: string
       username: string
@@ -482,11 +590,13 @@ for (const [
     expect(capture.home).not.toBe(sharedHome)
     expect(capture.username).toBe("fixture-user")
     expect(capture.apiUrl).toBe(
-      development
-        ? "https://api-dev.example.test"
-        : preview
-          ? "https://api-preview.example.test"
-          : "https://api.example.test",
+      mismatch === "production_testflight_urls"
+        ? "https://profile-api.example.test"
+        : development
+          ? "https://api-dev.example.test"
+          : preview
+            ? "https://api-preview.example.test"
+            : "https://api.example.test",
     )
     expect(capture.localOnly).toBeUndefined()
     expect(capture.profile).toBe(
@@ -535,24 +645,28 @@ for (const [
                   "--profile",
                   development
                     ? "development"
-                    : mismatch === "preview_testflight"
-                      ? "testflight-preview"
-                      : mismatch === "preview_simulator"
-                        ? "preview-simulator"
-                        : preview
-                          ? "preview"
-                          : "production",
+                    : productionTestFlight
+                      ? "testflight-production"
+                      : mismatch === "preview_testflight"
+                        ? "testflight-preview"
+                        : mismatch === "preview_simulator"
+                          ? "preview-simulator"
+                          : preview
+                            ? "preview"
+                            : "production",
                   ...(operation === "submit" ? ["--id", exactBuildId] : []),
                   "--non-interactive",
                 ],
     )
     if (operation === "submit") {
       expect(await readFile(preflightCapturePath, "utf8")).toBe(
-        mismatch === "preview_testflight"
-          ? "testflight\nattachment\n"
-          : platform === "ios"
-            ? "teen\napi\nlegal\nbilling\nios-login\nios-identity\nattachment\n"
-            : "teen\napi\nlegal\nbilling\nattachment\n",
+        productionTestFlight
+          ? "testflight-production\napi\nios-login\nios-identity\nattachment\n"
+          : mismatch === "preview_testflight"
+            ? "testflight\nattachment\n"
+            : platform === "ios"
+              ? "teen\napi\nlegal\nbilling\nios-login\nios-identity\nattachment\n"
+              : "teen\napi\nlegal\nbilling\nattachment\n",
       )
     }
     if (operation === "build") {
@@ -562,7 +676,7 @@ for (const [
         })
       else
         expect(await readFile(preflightCapturePath, "utf8")).toBe(
-          `${validationOnly ? "api\n" : mismatch === "preview_testflight" ? "testflight\n" : preview ? "" : platform === "ios" ? "teen\napi\nlegal\nios-login\nios-identity\n" : "teen\napi\nlegal\n"}attachment\n`,
+          `${productionTestFlight ? "testflight-production\napi\nios-login\nios-identity\n" : validationOnly ? "api\n" : mismatch === "preview_testflight" ? "testflight\n" : preview ? "" : platform === "ios" ? "teen\napi\nlegal\nios-login\nios-identity\n" : "teen\napi\nlegal\n"}attachment\n`,
         )
     }
     if (operation === "update") {

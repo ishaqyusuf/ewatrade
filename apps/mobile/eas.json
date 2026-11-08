@@ -49,6 +49,25 @@
         "simulator": true
       }
     },
+    "testflight-production": {
+      "extends": "production",
+      "distribution": "store",
+      "channel": "testflight-production",
+      "environment": "production",
+      "credentialsSource": "local",
+      "env": {
+        "APP_VARIANT": "production",
+        "EXPO_PUBLIC_APP_VARIANT": "production",
+        "IOS_TESTFLIGHT": "1",
+        "EXPO_PUBLIC_API_URL": "https://api.ewatrade.com",
+        "EXPO_PUBLIC_DASHBOARD_URL": "https://dash.ewatrade.com",
+        "EXPO_PUBLIC_BASE_URL": "https://dash.ewatrade.com",
+        "EXPO_PUBLIC_WEB_URL": "https://dash.ewatrade.com",
+        "EXPO_PUBLIC_CHAT_URL": "https://chat.ewatrade.com",
+        "EXPO_PUBLIC_LEGAL_ORIGIN": "https://ewatrade.com"
+      },
+      "ios": { "simulator": false }
+    },
     "testflight-preview": {
       "extends": "preview",
       "distribution": "store",
@@ -70,6 +89,13 @@
     }
   },
   "submit": {
+    "testflight-production": {
+      "ios": {
+        "ascAppId": "6815837585",
+        "appleTeamId": "ZXC78SPCV4",
+        "bundleIdentifier": "com.ewatrade.app"
+      }
+    },
     "production": {
       "android": {
         "track": "internal"
