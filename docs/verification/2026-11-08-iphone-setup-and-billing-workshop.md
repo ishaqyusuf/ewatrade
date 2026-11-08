@@ -27,6 +27,14 @@ is retained outside Git.
 
 ## Billing Workshop continuation
 
+Latest owner correction and routing: preserve the **current top plan card and
+Usage section exactly as implemented**, in their current order. Revise only
+Owner subscriptions downward, with all relevant UI states. Earlier unselected
+v3 proposals do not override this restriction. Dedicated Workshop chat
+`01a1bcaf-470c-7bf2-bce4-4ff54a73485e` owns the next same-path immutable revisions;
+deployment chat `01a1bcab-cc78-74e1-b58f-2fe679c1341d` independently owns recovery
+of the existing Starter purchase. See the [handoff and scenario scope](2026-11-08-apple-billing-workshop-handoff.md).
+
 User requested a screenshot and Opus5.5 Workshop. Current build10 billing screenshot
 and current native plan/owner-coverage/offer source ground the comparison. MUI-B026
 documents approved August Compact Plan Ledger A; its four historical variants were
