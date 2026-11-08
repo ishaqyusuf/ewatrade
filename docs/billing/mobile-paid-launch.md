@@ -42,7 +42,7 @@ user to repeat it.
 | Phase | Current state | Next action |
 | --- | --- | --- |
 | 1. Shared contract and core source | Owner limits, coverage, versioned signup and retained-record downgrade implemented (0bd862763; verification daf00b5f0). Manual native addresses implemented cf831c187. | Reuse valid checks. Apple courtesy source and platform-specific runtime readiness are implemented with23billing tests/136assertions, scoped259/1679, API types and H01/H02 passing; signed acceptance remains open. Completed Play policy is unchanged. |
-| 2. Store products and configuration | Apple three ranked monthly products and175price schedules each are saved. Mapping/verifier/review source is live on Production API atdafec2e0 after the verified signup-email repair; the genuine signed Preview TEST at6a4948c8 proves receiver delivery only. Public checkout stays closed; reviewer activation and paid lifecycle remain unaccepted. Play organization merchant profile is linked; bank setup is deferred. Subscription creation now requires a Billing-capable Play artifact; inspected private AAB36 is ready for reviewed draft upload. | Dedicated Apple reviewer identity and versioned Free workspace are prepared. Finish the owner-entered reviewer password, updated Apple Paid Applications Agreement, controlled owner/reviewer configuration and registered signed iOS testing. Native linkage/unsigned compile are proven; signed money acceptance remains open. Finish required bank/merchant verification before paid launch; stage the inspected Billing artifact, then create/map actual Play monthly products. Play177-country draft remains unsubmitted and is not paid-territory acceptance. |
+| 2. Store products and configuration | Apple three ranked monthly products and175price schedules each are saved. Mapping/verifier/review source is live on Production API atdafec2e0 after the verified signup-email repair; the genuine signed Preview TEST at6a4948c8 proves receiver delivery only. Public checkout stays closed; reviewer activation and paid lifecycle remain unaccepted. Play organization merchant profile is linked; bank setup is deferred. Owner-approved AAB36 processed and saved to the existing internal-testing draft. Three Apple-matching Play products are created with0 active base plans; monthly base-plan save has an unresolved generic Console error. | Dedicated Apple reviewer identity and versioned Free workspace are prepared. Finish the owner-entered reviewer password, updated Apple Paid Applications Agreement, controlled owner/reviewer configuration and registered signed iOS testing. Native linkage/unsigned compile are proven; signed money acceptance remains open. Finish required bank/merchant verification before paid launch; resolve the Console base-plan save error, finish exact localized monthly prices/five-day grace and merge actual Play mappings. Play177-country draft remains unsubmitted and is not paid-territory acceptance. |
 | 3. Shared runtime, legal and operations | Production Dashboard/Marketing/API atdafec2e0 healthy after signup repair; jobs remain6a4948c8, synchronized schema tagbf9bc356 unchanged. Preview Apple receiver enabled and TEST accepted; public checkout/owner/reviewer activation closed. Common legal/privacy and operations acceptance remain open. | Verify paid lifecycle/routing/operator delivery, paid legal publication, SDK/provider destinations and preserved-record deletion cases without repeating completed empty-data tests. Reuse password-recovery work. |
 | 4. Signed acceptance | Android A01–A08:1/8; Apple I01–I06:1/6 currently accepted: I02 remains complete, while the newly available Paid Applications Agreement reopened I01 on8November. Source/config tests do not close these gates. | Freeze exact candidates, inspect permissions/native linkage and run licensed purchase/restore/renewal/grace/refund/switching tests. Reuse platform-valid evidence only. |
 | 5. Submission and publication | Public release after approval/checks is authorized. Neither platform has paid-release acceptance yet. | Complete truthful store declarations/reviewer access, submit accepted candidates, follow review and publish through existing release authority. |
@@ -152,13 +152,15 @@ required disclosures or every territory's paid offering is already accepted.
 ## Android continuation after merchant linkage — 8 November 2026
 
 Canonical Preview journey passed source7ba0fd68c/receipt2bd3d2fd with runtime
-verified before/after. This accepts the existing closed-checkout journey, not paid
-store transactions. Current signed private registered AAB36 includes Billing and
-native IAP, omits location permissions and matches Play's registered upload key.
-The uploaded old AAB35 lacks Billing; active internal release remains33. No new
-artifact upload, subscription product creation, financial activation or Data safety
-submission has occurred in this reconciliation. Play's Data safety draft is still
-incomplete at collection/security; global transit and remaining provider/retention
-proof stay open. Android1/8 and Apple's separate2/6 remain unchanged.
+verified before/after. This accepts the closed-checkout journey, not paid store
+transactions. Owner-approved exact AAB36 processed in Google Play and release5
+was saved as draft, without rollout. Create subscription unlocked; Starter,
+Growth and Pro products now exist with the same IDs as Apple and0 active base
+plans. Starter monthly/five-day base-plan save failed with a generic Console
+error; price/grace/territory settings and actual Play mapping remain unaccepted.
+The unsaved form is preserved and the release coordinator/Apple were informed.
+No checkout/financial activation, new build/deploy or Data safety submission.
+Bank remains deferred; provider/transport/retention/deletion evidence stays open.
+Android1/8 remains; Apple's separate current1/6 is maintained by its owner.
 See [current evidence](../verification/2026-11-08-play-merchant-artifact-readiness.md)
-and [exact private AAB](../verification/2026-11-08-android-production-artifact.md).
+and [exact AAB](../verification/2026-11-08-android-production-artifact.md).

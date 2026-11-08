@@ -57,7 +57,7 @@ within each row must be reused only where source/platform/target still match.
 | --- | --- | --- |
 | A01 Console/artifact/device identity | Accepted historical baseline | Correct app/package and prior signed artifact/device established; freeze and re-identify the new paid candidate before release. |
 | A02 API/access availability | Open | October quota outage was subsequently restored; don't repeat the obsolete outage diagnosis. Fresh target/candidate access proof is still required. Legal/deletion preflight passed 7 November. |
-| A03 Offers and Play merchant readiness | Open | 8 November: owner linked the existing organization merchant profile; payout bank setup is explicitly deferred. Subscriptions now offers Upload a new APK, not Create subscription. Uploaded AAB35 lacks BILLING; inspected private AAB36 includes it and matches Play's upload certificate, but is not yet uploaded. Prices/territory rule known; actual subscription/base-plan IDs, tax/bank readiness, localized totals and eligible offers still need evidence. |
+| A03 Offers and Play merchant readiness | Open | 8 November: owner linked the existing organization merchant profile; payout bank setup is explicitly deferred. Owner-approved AAB36 processed and saved to the existing internal-testing draft; subscription creation unlocked. Three Apple-matching product IDs are saved, each with0 active base plans. Starter monthly/five-day form save returns a generic Console error; no saved base plan, accepted localized price table or offer mapping is claimed. Tax/bank readiness and eligible offers remain open. |
 | A04 Server/provider/terms | Open | Verification, owner purchase reconciliation, RTDN/void/refund and privacy guards exist. Need authenticated target outcomes and paid legal publication; current public copy still says no software subscriptions. |
 | A05 Paid entitlements/native integration | Open | Durable adapter, native lifetime/coverage controls, shared nullable limits, versioned signup and non-destructive downgrade are implemented in source. Existing grants remain independent. Native visual/signed and exact-target acceptance remain open. |
 | A06 Signed candidate/money acceptance | Open | Prior free/local and Play33/35 evidence is insufficient for paid purchase, restore, replacement, renewal, failed renewal, cancellation, refund and account/business switching. |
@@ -131,10 +131,13 @@ Canonical Preview acceptance passed source7ba0fd68c, receipt2bd3d2fd-2dc9-40c0-
 The registered signed Production validation AAB36 is a different artifact:
 source dafec2e01, build56f45d80-ec23-4368-add5-49329741f3a5. Actual bundle integrity,
 BILLING/native-IAP and absence of location permissions are verified. Its upload
-certificate SHA256 matches the current Play Upload key. No full paid lifecycle
-or Play upload acceptance follows from those checks.
+certificate SHA256 matches the current Play Upload key. Those checks do not
+establish paid lifecycle acceptance. Owner subsequently approved exact AAB36
+upload; Google processed it and the existing release5 draft was saved successfully.
+It was not rolled out.
 
 [Current merchant, artifact and Data safety evidence](../verification/2026-11-08-play-merchant-artifact-readiness.md).
-The exact three monthly products/base plans remain uncreated pending the Billing
-artifact prerequisite. Data safety remains incomplete; no unknown transit or
-provider/deletion answer was fabricated. Android stays1/8.
+The three monthly product IDs are now created; the Billing artifact prerequisite
+is cleared. Monthly base plans remain unsaved after a generic Console error; no
+price/grace/territory acceptance or activation is claimed. Data safety remains
+incomplete; no unknown transit or provider/deletion answer was fabricated. Android stays1/8.

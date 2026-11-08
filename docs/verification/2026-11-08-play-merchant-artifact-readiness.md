@@ -15,7 +15,7 @@ legal name/registered address. It found bank ownership/details, current addition
 tax documents and signed representative authority gaps. Private originals remain
 outside Git; no raw bank/tax/identity identifiers are committed here.
 
-## Separate Android evidence
+## Evidence before the authorized upload (historical)
 
 - Canonical Preview source7ba0fd68c passed the existing full journey, receipt
   `2bd3d2fd-2dc9-40c0-9731-4ff36eb88b69`, clean/runtimeVerified. Exact build35 /
@@ -61,18 +61,65 @@ The attempted CSV export did not complete and reset the browser tool. No CSV
 import, declaration answer edit, Save draft, review submission or policy acceptance
 was performed. The visible questionnaire was recovered and inspected directly.
 
-## Next reviewable store step
+## Authorized upload and product drafts — completed 8 November
 
-Upload the exact inspected AAB36 only to the existing internal-testing draft,
-then verify Google's processing/permissions and whether subscription creation is
-unlocked. This is distinct from rollout, review submission, price activation or
-charges. Browser upload confirmation is pending; no new artifact was uploaded.
-Bank readiness remains a paid-launch requirement. Keep public/native purchase
-scope closed until the existing signed/target/legal/store gates are accepted.
+Owner explicitly answered “Upload build 36 to the draft”. Immediately before
+upload, the inspected file's SHA256 was rechecked:
+`0c2527f3cfbb54ce377d5417c25cbf513192e1daac10c366f4256dc5aff4dde3`
+(94,591,815 bytes). Google completed upload/optimization and displayed **36 (1.0.0)**
+in the existing internal-testing release5. The release name is
+`1.0.0 (36) - billing validation`. Save as draft returned **Changes saved**.
+No Next/confirmation/rollout or review submission was performed. Active internal
+release33 is unchanged. Local proof: `/private/tmp/ewatrade-play-build36-uploaded-draft.jpg`.
 
-Android paid acceptance remains1/8, Apple's separate2/6 unchanged. The source and
-artifact receipts above are reused; this is a documentation-only reconciliation.
-Brain impact: local native-store-billing, QA accelerator and current-task pointers.
+Subscriptions then exposed **Create subscription**, clearing the Billing-artifact
+prerequisite. The following three products were created and read back from the
+saved list, each showing **0 active base plans**:
+
+| Product | Product ID |
+| --- | --- |
+| EwaTrade Starter | `com.ewatrade.owner.starter.monthly` |
+| EwaTrade Growth | `com.ewatrade.owner.growth.monthly` |
+| EwaTrade Pro | `com.ewatrade.owner.pro.monthly` |
+
+These match Apple's saved IDs. No hosted mapping or checkout flag was changed.
+Local list proof: `/private/tmp/ewatrade-play-three-subscription-drafts.jpg`.
+
+## Base-plan save failure — unresolved
+
+Starter's `monthly` auto-renewing form was prepared with Monthly billing and the
+requested five-day grace. Bulk localization used NGN6,000 outside Africa and
+NGN5,000 for the twelve separately listed African markets. Google's bulk
+conversion added tax/price-point adjustments (Nigeria displayed NGN5,370); a
+subsequent direct NGN5,000 price edit did not persist in the readback. Other grouped
+African countries still need separate baseline overrides. **None of these prices
+or base-plan settings is accepted or saved.** Do not use this incomplete table as
+an actual offer or mapped catalog.
+
+Save returned **Your changes couldn't be saved** without a field-specific reason.
+Excluding New countries/regions and trying an explicit valid 55-day hold with the
+five-day grace did not resolve it. Automatic account hold was restored in the
+unsaved form; it still displayed 53 days, another unresolved readback discrepancy.
+No unsupported root cause (bank verification, grace duration or billing linkage)
+is inferred. Browser console logs contained no additional error. The form was
+preserved in its existing tab; root/Apple were informed. Local error capture:
+`/private/tmp/ewatrade-starter-base-plan-save-error.jpg`.
+
+Google's [current schema](https://developers.google.com/android-publisher/api-ref/rest/v3/monetization.subscriptions)
+still permits five days for a monthly plan, with combined grace/hold between30
+and60 days. Its [Console instructions](https://support.google.com/googleplay/android-developer/answer/140504)
+distinguish product creation, base-plan save and activation. Rechecked8November;
+these references do not establish the cause of this app's failed save.
+
+Next: resolve the actual Console save error, finish all three inactive monthly
+base plans, reconcile exact Nigeria totals and every African/global region, then
+merge actual Play mappings without replacing Apple entries. Bank readiness,
+signed money lifecycle, truthful Data safety and paid legal remain open. Public
+checkout remains closed. Android acceptance stays1/8; Apple owns its separate
+current1/6 position after the new agreement reopened I01. This milestone changes
+provider drafts and documentation only; no application source/build/deploy or
+paid acceptance test was added. Brain impact: native-store-billing, QA accelerator
+and current-task pointers.
 
 
 Documentation verification: offline doctor passed; owned-path plan selects core
