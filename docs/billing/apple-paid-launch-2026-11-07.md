@@ -93,12 +93,13 @@ no duplicate Apple policy or unreviewed effective legal publication is introduce
 ## Paid Apple checklist
 
 This is a new Apple-specific paid-release denominator, not the historical free
-3/6 or Android A01–A08 count. **1/6 currently accepted** after the 8 November
-Paid Applications Agreement recheck reopened I01; source progress is within open rows.
+3/6 or Android A01–A08 count. **2/6 currently accepted** after fresh 8 November
+readback confirmed the owner-accepted Paid Applications Agreement Active again.
+Source progress is within open rows.
 
 | ID | State | Required completion |
 | --- | --- | --- |
-| I01 Commercial prerequisites | Reopened | Fresh 8 November Business page shows Active (New Agreement Available); Account Holder must accept the updated Paid Applications Schedule. Bank/DSA remain Active. Earlier program-license acceptance is separate. |
+| I01 Commercial prerequisites | Accepted | Owner accepted the updated Paid Applications Schedule; fresh 8 November Business reload shows Paid Apps Agreement, bank, both tax forms and DSA Active, with no new-agreement notice. |
 | I02 Products and prices | Accepted | Group22556222; three ranked monthly products,175current storefront prices each, no trials; exact IDs installed in API target settings. Deployment/verification remains I03. |
 | I03 Native/server configuration | In progress | Verifier/key/product settings and controlled review source deployed; genuine signed Preview TEST delivery passes. Verified reviewer identity and dedicated versioned Free workspace prepared on 8 November. Owner activation, Production gateway routing and registered signed iOS linkage/coverage still require acceptance. |
 | I04 Policy and privacy | Open | Effective paid terms/privacy, SDK/provider/deletion facts, operational refund response and five-day policy compatibility. |
@@ -350,3 +351,14 @@ Exact bounded-update, effective-plan, mail and pending-action evidence:
 [reviewer workspace receipt](../verification/2026-11-08-apple-reviewer-workspace.md).
 Signed registered iOS, Sandbox money/lifecycle, routing/configuration, policy/privacy
 and submission remain open. Historical TEST evidence remains receiver-only.
+
+### Commercial acceptance restored — 8 November 2026
+
+Owner accepted the updated Paid Applications Schedule. Fresh Business reload
+confirms Paid Apps Agreement, bank, both tax forms and DSA Active; no new-agreement
+notice remains. Current checklist returns to2/6 (I01/I02). Reviewer password setup
+is confirmed by exact-account credential metadata without reading a hash/password.
+Owner completed the final Apple review-password entry; fresh reload confirms
+username/password presence and saved contact/notes without reading credentials. Signed iOS, controlled
+review activation, lifecycle tests and truthful legal/privacy acceptance remain.
+See the same reviewer-workspace receipt for observed proof and requested inputs.

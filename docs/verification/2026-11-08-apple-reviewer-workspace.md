@@ -85,3 +85,52 @@ DSN/release provisioning is still separate and unchanged.
 
 Local Brain owner-wide/native billing, BRAIN and task pointers are updated and
 remain ignored. No schema or API contract documentation change is needed.
+
+## Human outcomes and commercial step restored — 8 November 2026
+
+The owner reports password setup, updated-agreement acceptance and review-form
+save completed. Fresh Business reload independently confirms Paid Apps Agreement
+Active without the new-agreement notice; bank, both tax forms and DSA are Active.
+I01 is closed again and current Apple acceptance returns to **2/6 (33.3%)**.
+No bank credentials or agreement were entered/accepted by the agent.
+
+A single exact-reviewer Account count confirms one password-bearing credential
+row, without selecting or reading any credential/hash content. Apple Review
+contact fields and notes were initially blank after reload, so the agent restored
+and saved the approved non-secret fields; a subsequent reload retains contact
+name/notes and a populated username. The Password field still shows no value in
+its visible accessibility state. No password was read or supplied by the agent;
+the owner has a specific request to enter it directly and Save again. This is
+not yet a successful independent reviewer sign-in acceptance.
+
+Local `qa:ios-login-config` passes. Platform-iOS billing configuration check passes
+only the currently closed software-purchase scope, not paid readiness; native
+`softwarePlanPurchases` is false. Production signed builds still retain the
+existing teen/chat/legal/login/identity gates. The ordinary Production teen gate
+remains blocked until its documented evidence is accepted; no bypass was made.
+The existing registered Preview TestFlight profile requires local signing
+configuration, which is absent at apps/mobile/credentials.json. A fresh signed
+iOS build and licensed Sandbox lifecycle testing remain on the critical path.
+
+The owner confirms an iPhone is available for TestFlight checks and has designated
+a company-admin backup inbox with a 12-hour initial response target. Exact contact
+is retained privately. No test message was sent and backup delivery/reachability is
+not claimed verified. Existing prices, territory rule, primary contacts, Sandbox
+identity and bank setup are reused. Final privacy/legal approval follows a completed, evidence-backed packet.
+This append changes documentation only; current source/provider/signed proof
+limits remain explicit, and no new checkout or store-publication flag is enabled.
+
+### Final reviewer-form readback
+
+After the owner's direct retry, a fresh App Store Connect version-page reload
+shows populated username and password fields and disabled Save. Only presence
+booleans were inspected; no credential content was read. Reviewer login/contact
+setup is now saved, superseding the prior empty-password result. Actual successful
+signed-client sign-in still belongs to candidate acceptance.
+
+All requested account/commercial/contact inputs in this phase are supplied:
+verified reviewer identity/workspace, dedicated password saved by the owner,
+updated agreement accepted, iPhone available, designated backup and 12-hour initial
+response target. Signing-account verification if requested and approval of the
+finished evidence-backed legal/retention wording remain later direct owner steps.
+No more banking details are currently needed for Apple.
