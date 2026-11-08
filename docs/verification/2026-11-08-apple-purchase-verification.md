@@ -86,3 +86,41 @@ through the normal verified notification/restore path and perform one exact scop
 read. Never make a fake receipt or direct paid grant. Accept purchase only after
 true Sandbox owner/subscription state is durable; explicit coverage, restore
 idempotence, lifecycle and API/Dashboard/jobs reader consistency stay open.
+
+## Release attempts and current candidate
+
+User explicitly approved normal API-only Preview→matching existing-data smoke→
+Production and verified recovery after source commit454972d8c. Initial sandboxed
+release could not write FETCH_HEAD and did not reach provider actions. Automatic
+approval initially rejected inherited deployment authorization; the owner then
+explicitly approved the named source rollout and recovery in this chat.
+
+On retry, concurrent WhatsApp edits appeared in main. The normal executor began
+its dirty-checkout worktree path; execution was stopped130 before deployment.
+Its newly created checkout had no changes, verified with separate structured Git
+status outputs. The first cleanup review confused main's WhatsApp changes with
+that checkout; after explicit per-checkout evidence, ordinary no-force Git removal
+succeeded. No worktree remains from this attempt; no user work was discarded.
+Future release starts require a clean-main/candidate guard.
+
+CLI identity and exact EwaTrade project API access now pass; no renewed login or
+new access grant was needed. Current main560d6e25c also includes another chat's
+owner-approved WhatsApp code-sent wording476f874d3 and documentation-only handoff.
+Automatic approval rejected deploying this newer payload because the explicit
+approval named454972d8c and the additional source change was not approved in this
+chat. No Preview push, deployment or Production change is claimed.
+
+The combined candidate will be approved explicitly after final documentation and
+checks; do not bypass normal release gates or switch branches/worktrees to evade
+the rejection. Existing signed build10 and approved billing source are unchanged.
+
+Brain impact completed: BRAIN, tasks/in-progress, features/native-store-billing,
+api/contracts, api/permissions and the prior review decision now link the new
+local-only environment-selection decision. No database documentation change is
+needed: schema and persistence rules are unchanged.
+
+Combined-candidate validation: WhatsApp's existing focused suite passes9tests/65
+assertions; H02 against ba354f2ef passes with both reviewed domain impact records
+and no capability/procedure change. This establishes the added wording's local
+regression check, not permission to deploy it. Full combined API typecheck also
+passes. Exact candidate approval is next.

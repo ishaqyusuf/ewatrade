@@ -1,5 +1,22 @@
 # Apple paid-at-launch preparation — 7 November 2026
 
+## Existing Starter purchase verification — 8 November 2026
+
+The owner completed one Starter Sandbox purchase on signed build10. Apple confirmed
+success, but verifyPurchase returned400 and the notification returned503; one Restore
+attempt did not recover it. The scoped Production read still found no saved owner
+purchase/subscription/coverage. Do not ask for a second purchase. The genuine signed
+Sandbox SUBSCRIBED capture verifies and exactly matches the existing owner account.
+
+Local actual-verifier replay isolated Production401 before the old404 lookup
+fallback. Commit454972d8c now selects Sandbox directly for the existing server-only
+reviewer policy; full signature/bundle/environment/owner verification remains.
+Genuine capture replay and focused/source/types/assistant checks pass locally;
+rollout and durable recovery remain pending. Apple remains2/6 (33.3%).
+See [purchase-verification receipt](../verification/2026-11-08-apple-purchase-verification.md)
+for evidence, exact candidate and release outcome. The signed native build is
+unchanged; public checkout/WEB settings and the no-Production-TestFlight-OTA gate remain.
+
 Current checkpoint, 8 November: Apple acceptance remains **2/6 (33.3%)**.
 Commercial prerequisites and three regional monthly products are accepted.
 Corrected source `2d4424b1525c4aa05e6ced39ce888e31d7f8140e` passed canonical
@@ -277,7 +294,7 @@ review path. No client-selected environment or email-based entitlement is added.
 - Only the authenticated allowlisted owner can see review-only Apple checkout
   while public checkout is false. Existing legal acceptance and OWNER-role gates
   still apply. Google and the legacy combined catalog retain their prior gates.
-- Apple Production transaction lookup retries Sandbox only for HTTP404 with
+- Historical lookup policy (superseded by454972d8c above): Apple Production transaction lookup retried Sandbox only for HTTP404 with
   `TRANSACTION_ID_NOT_FOUND` (4040010), as [Apple documents](https://developer.apple.com/documentation/appstoreserverapi).
   Authorization/outage/other errors never trigger fallback. Sandbox transaction,
   renewal and notification signatures are verified using the Sandbox verifier;

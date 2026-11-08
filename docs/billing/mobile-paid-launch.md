@@ -1,5 +1,22 @@
 # Shared Apple and Android paid launch
 
+## Existing Starter purchase verification — 8 November 2026
+
+The owner completed one Starter Sandbox purchase on signed build10. Apple confirmed
+success, but verifyPurchase returned400 and the notification returned503; one Restore
+attempt did not recover it. The scoped Production read still found no saved owner
+purchase/subscription/coverage. Do not ask for a second purchase. The genuine signed
+Sandbox SUBSCRIBED capture verifies and exactly matches the existing owner account.
+
+Local actual-verifier replay isolated Production401 before the old404 lookup
+fallback. Commit454972d8c now selects Sandbox directly for the existing server-only
+reviewer policy; full signature/bundle/environment/owner verification remains.
+Genuine capture replay and focused/source/types/assistant checks pass locally;
+rollout and durable recovery remain pending. Apple remains2/6 (33.3%).
+See [purchase-verification receipt](../verification/2026-11-08-apple-purchase-verification.md)
+for evidence, exact candidate and release outcome. The signed native build is
+unchanged; public checkout/WEB settings and the no-Production-TestFlight-OTA gate remain.
+
 This is the single current decision, ownership and phase index for the mobile
 launch. Both chats read/update it and reuse the linked evidence. Platform packets
 retain provider-specific facts and history; they do not override these decisions.
@@ -28,7 +45,7 @@ belong in this file.
 | Apple chat `01a1b178-b8d1-7762-96ef-8d075367d795` | Apple products/prices, Apple credentials/notifications, Apple-specific grace implementation and signed StoreKit/review acceptance. Coordinate shared entitlement edits before changing Android projection. |
 | Android chat `01a1b653-baf1-7ef0-bd1d-be20656b2c86` | Play products/territories/grace/notifications and signed Play acceptance; initial author of this shared index and common safety/privacy evidence reconciliation. |
 | Password recovery chat `01a1b704-65c8-7412-b430-8a98b63e24c4` | Shared Dashboard authentication recovery. Reuse its source and acceptance; mobile chats do not duplicate those edits. |
-| Apple chat, current release executor | The previous release chat `01a1b651-ec49-7fc1-9d95-a6ef06cb29c2` is archived. Apple now coordinates the shared candidate and normal Preview/Production execution; do not start duplicate deployments. |
+| Billing deployment chat `01a1bcab-cc78-74e1-b58f-2fe679c1341d`, current release executor | The previous release chat `01a1b651-ec49-7fc1-9d95-a6ef06cb29c2` is archived. The billing deployment chat now coordinates the shared candidate and normal Preview/Production execution; do not start duplicate deployments. |
 
 Root `AGENT_CHAT.md` is the shared operational log. Direct Apple/Android messages
 are owner-authorized. Before overlapping edits, read the log and claim exact paths.

@@ -1,5 +1,23 @@
 # Production-backed paid TestFlight candidate — 8 November 2026
 
+## Existing Starter purchase verification — 8 November 2026
+
+The owner completed one Starter Sandbox purchase on signed build10. Apple confirmed
+success, but verifyPurchase returned400 and the notification returned503; one Restore
+attempt did not recover it. The scoped Production read still found no saved owner
+purchase/subscription/coverage. Do not ask for a second purchase. The genuine signed
+Sandbox SUBSCRIBED capture verifies and exactly matches the existing owner account.
+
+Local actual-verifier replay isolated Production401 before the old404 lookup
+fallback. Commit454972d8c now selects Sandbox directly for the existing server-only
+reviewer policy; full signature/bundle/environment/owner verification remains.
+Genuine capture replay and focused/source/types/assistant checks pass locally;
+rollout and durable recovery remain pending. Apple remains2/6 (33.3%).
+See [purchase-verification receipt](2026-11-08-apple-purchase-verification.md)
+for evidence, exact candidate and release outcome. The signed native build is
+unchanged; public checkout/WEB settings and the no-Production-TestFlight-OTA gate remain.
+
+
 ## Current private candidate: build10
 
 Exact source `2d4424b1525c4aa05e6ced39ce888e31d7f8140e` produced FINISHED EAS
