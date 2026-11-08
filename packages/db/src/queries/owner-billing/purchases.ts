@@ -23,6 +23,7 @@ import {
   type AppStoreReviewConfig,
   resolveOwnerBillingEnvironment,
 } from "./review-environment"
+import { findPendingOwnerWebCheckout } from "./web-checkout-journal"
 
 function payloadRecord(payload: Prisma.JsonValue | null | undefined) {
   return payload && typeof payload === "object" && !Array.isArray(payload)
@@ -131,6 +132,19 @@ export async function applyVerifiedOwnerSubscription(
       select: { ...subscriptionColumns, verifiedAt: true },
     })
     const current = currentRow ? mapOwnerBillingSubscription(currentRow) : null
+    if (
+      input.status === "active" &&
+      process.env.WEB_BILLING_ENVIRONMENT &&
+      !(
+        currentRow?.provider === provider &&
+        currentRow.purchaseDigest === purchaseDigest
+      )
+    ) {
+      const pendingWeb = await findPendingOwnerWebCheckout(tx, account.id)
+      if (pendingWeb)
+        throw new OwnerBillingPolicyError("ACTIVE_SUBSCRIPTION_CONFLICT")
+    }
+
     // An older receipt of this account (for example the one a Play upgrade
     // replaced) may still notify. Record its facts without displacing the
     // canonical subscription; it can never become the current one while inactive.

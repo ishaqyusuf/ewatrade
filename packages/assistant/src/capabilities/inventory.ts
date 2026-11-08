@@ -59,6 +59,8 @@ formOnly(
   [
     "retailOps.subscription",
     "retailOps.createSubscriptionCheckoutIntent",
+    "retailOps.checkWebSubscriptionPayment",
+    "retailOps.manageWebSubscription",
     "storeSubscriptions.*",
   ],
 )

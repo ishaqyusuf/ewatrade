@@ -6,10 +6,10 @@ Tickets refer to the Brain plan `.brain/plans/2026-10-09-assistant-business-oper
 
 ## Summary
 
-- Router procedures: 792 (602 merchant, 190 public/account/internal)
+- Router procedures: 794 (604 merchant, 190 public/account/internal)
 - Merchant supported by a capability: 179
 - Merchant planned: 142
-- Merchant form-only: 219
+- Merchant form-only: 221
 - Merchant excluded: 62
 - Capabilities: 165 (87 read, 78 write)
 
@@ -777,8 +777,10 @@ track conversational evaluation separately from these source test links.
 | `productAssistant.updateSnapshot` | mutation | Owner/Admin only | assistant | excluded | Assistant transport or a dedicated assistant flow. |
 | `qaAccess.fixtureContext` | query | Owner/Admin only | platform | excluded | Internal QA tooling. |
 | `qaTools.fixtureContext` | query | Owner/Admin only | platform | excluded | Internal QA tooling. |
+| `retailOps.checkWebSubscriptionPayment` | mutation | Owner/Admin only | platform | form_only | Subscription purchase and verification use the billing checkout. |
 | `retailOps.createSubscriptionCheckoutIntent` | mutation | Owner/Admin only | platform | form_only | Subscription purchase and verification use the billing checkout. |
 | `retailOps.inviteStaff` | mutation | Owner/Admin only | staff | planned | S02 |
+| `retailOps.manageWebSubscription` | mutation | Owner/Admin only | platform | form_only | Subscription purchase and verification use the billing checkout. |
 | `retailOps.removeUnacceptedStaff` | mutation | Owner/Admin only | staff | supported | staff.removal.unaccepted |
 | `retailOps.staff` | query | Owner/Admin only | staff | planned | S01 |
 | `retailOps.staffAccessReceipt` | query | Owner/Admin only | staff | supported | staff.access.receipt.read |

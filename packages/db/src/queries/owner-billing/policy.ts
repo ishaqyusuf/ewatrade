@@ -5,7 +5,7 @@ import type {
 import { OWNER_BILLING_OFFERS, OWNER_BILLING_QUOTA_SCOPE } from "./offers"
 
 export type OwnerBillingEnvironment = "production" | "sandbox"
-export type OwnerBillingProvider = "app_store" | "play_store"
+export type OwnerBillingProvider = "app_store" | "play_store" | "paystack"
 
 export type OwnerBillingAccount = {
   id: string
@@ -74,7 +74,7 @@ export function currentOwnerSubscription(input: {
     !subscription ||
     subscription.accountId !== account.id ||
     subscription.environment !== environment ||
-    !["app_store", "play_store"].includes(subscription.provider) ||
+    !["app_store", "play_store", "paystack"].includes(subscription.provider) ||
     !["starter", "growth", "pro"].includes(subscription.planId) ||
     !subscription.purchaseDigest ||
     subscription.status !== "ACTIVE" ||
@@ -164,7 +164,9 @@ export function projectOwnerBusinessAccess(
       owned.some((row) => row.tenantId === tenantId) &&
       snapshot.subscription?.accountId === snapshot.account.id &&
       snapshot.subscription.environment === snapshot.environment &&
-      ["app_store", "play_store"].includes(snapshot.subscription.provider) &&
+      ["app_store", "play_store", "paystack"].includes(
+        snapshot.subscription.provider,
+      ) &&
       ["starter", "growth", "pro"].includes(snapshot.subscription.planId) &&
       ["ACTIVE", "SUSPENDED", "CANCELLED"].includes(
         snapshot.subscription.status,
@@ -280,7 +282,7 @@ export function assertOwnerPurchaseBinding(input: {
     !input.account.ownerUserId ||
     input.verifiedAccountToken !== input.account.id ||
     input.verifiedEnvironment !== input.environment ||
-    !["app_store", "play_store"].includes(input.provider) ||
+    !["app_store", "play_store", "paystack"].includes(input.provider) ||
     !input.purchaseDigest ||
     !Number.isFinite(input.now.getTime()) ||
     (input.existingBinding &&
@@ -300,7 +302,7 @@ export function assertOwnerPurchaseBinding(input: {
       !Number.isFinite(
         input.currentSubscription.currentPeriodEndsAt.getTime(),
       ) ||
-      !["app_store", "play_store"].includes(
+      !["app_store", "play_store", "paystack"].includes(
         input.currentSubscription.provider,
       ) ||
       !["starter", "growth", "pro"].includes(

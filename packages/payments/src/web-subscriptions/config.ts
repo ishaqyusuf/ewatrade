@@ -1,21 +1,18 @@
 import { z } from "zod"
-import {
-  WEB_MONTHLY_BASE_PRICE_MINOR,
-  webMonthlyPriceReference,
-} from "./pricing"
+import { webMonthlyPriceReference } from "./pricing"
 
 export const paidPlanSchema = z.enum(["starter", "growth", "pro"])
 export type WebPlanId = z.infer<typeof paidPlanSchema>
-export type WebBillingProvider = "paystack" | "polar"
+export type WebBillingProvider = "paystack"
 export type WebBillingEnvironment = "sandbox" | "production"
 export type BillingEnvironment = Record<string, string | undefined>
 
 const webBillingProductSchema = z
   .object({
-    provider: z.enum(["paystack", "polar"]),
+    provider: z.literal("paystack"),
     planId: paidPlanSchema,
     productId: z.string().trim().min(1).max(160),
-    currency: z.string().regex(/^[A-Z]{3}$/),
+    currency: z.enum(["NGN", "USD"]),
     amountMinor: z.number().int().positive().max(99_999_999),
     referenceNgnMinor: z.number().int().positive(),
     countries: z.array(z.string().regex(/^[A-Z]{2}$/)).min(1),
@@ -53,19 +50,16 @@ export function webBillingProducts(env: BillingEnvironment = process.env) {
         return []
       countryPlans.add(key)
     }
+    if (!/^PLN_[A-Za-z0-9]+$/.test(product.productId)) return []
     if (
-      product.provider === "paystack" &&
-      (!/^PLN_[A-Za-z0-9]+$/.test(product.productId) ||
-        product.currency !== "NGN" ||
-        product.amountMinor !== WEB_MONTHLY_BASE_PRICE_MINOR[product.planId] ||
-        product.countries.length !== 1 ||
-        product.countries[0] !== "NG")
+      product.currency === "NGN" &&
+      product.amountMinor !== product.referenceNgnMinor
     )
       return []
+    // A saved USD quote is not permission to use an unapproved settlement account.
     if (
-      product.provider === "polar" &&
-      (product.countries.includes("NG") ||
-        !z.uuid().safeParse(product.productId).success)
+      product.currency === "USD" &&
+      (product.countries.includes("NG") || env.PAYSTACK_USD_ENABLED !== "true")
     )
       return []
   }
@@ -86,7 +80,7 @@ export function webBillingProduct(
   env: BillingEnvironment = process.env,
 ) {
   if (!country || !/^[A-Z]{2}$/.test(country)) return null
-  const provider = country === "NG" ? "paystack" : "polar"
+  const provider = "paystack"
   const matches = webBillingProducts(env).filter(
     (p) =>
       p.provider === provider &&
@@ -102,15 +96,14 @@ export function isWebProviderConfigured(
 ) {
   const environment = webBillingEnvironment(env)
   if (!environment) return false
-  return provider === "paystack"
-    ? Boolean(
-        env.PAYSTACK_SECRET_KEY?.startsWith(
-          environment === "production" ? "sk_live_" : "sk_test_",
-        ),
-      )
-    : Boolean(
-        env.POLAR_ACCESS_TOKEN?.trim() && env.POLAR_WEBHOOK_SECRET?.trim(),
-      )
+  return (
+    provider === "paystack" &&
+    Boolean(
+      env.PAYSTACK_SECRET_KEY?.startsWith(
+        environment === "production" ? "sk_live_" : "sk_test_",
+      ),
+    )
+  )
 }
 
 export function isWebCheckoutEnabled(env: BillingEnvironment = process.env) {
@@ -120,6 +113,36 @@ export function isWebCheckoutEnabled(env: BillingEnvironment = process.env) {
       env.WEB_BILLING_ENABLED === "true" &&
       env.OWNER_BILLING_ENABLED === "true" &&
       env.STORE_BILLING_ENVIRONMENT === environment &&
+      (environment !== "production" ||
+        env.WEB_BILLING_RELEASE_APPROVED === "true") &&
       (env.APP_ENV !== "production" || environment === "production"),
   )
+}
+
+export function isWebReconciliationConfigured(
+  env: BillingEnvironment = process.env,
+) {
+  const environment = webBillingEnvironment(env)
+  return Boolean(
+    environment &&
+      isWebProviderConfigured("paystack", env) &&
+      env.OWNER_BILLING_ENABLED === "true" &&
+      env.STORE_BILLING_ENVIRONMENT === environment &&
+      (env.APP_ENV !== "production" || environment === "production"),
+  )
+}
+
+/** Reviewed billing territories keyed by opaque owner account UUID; never request input. */
+export function webBillingOwnerCountry(
+  accountId: string,
+  env: BillingEnvironment = process.env,
+) {
+  try {
+    const countries = z
+      .record(z.uuid(), z.string().regex(/^[A-Z]{2}$/))
+      .parse(JSON.parse(env.WEB_BILLING_OWNER_COUNTRIES ?? ""))
+    return countries[accountId] ?? null
+  } catch {
+    return null
+  }
 }

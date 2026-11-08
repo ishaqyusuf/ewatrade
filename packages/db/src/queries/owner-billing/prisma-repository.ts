@@ -20,6 +20,7 @@ import {
   type AppStoreReviewConfig,
   resolveOwnerBillingEnvironment,
 } from "./review-environment"
+import { findPendingOwnerWebCheckout } from "./web-checkout-journal"
 
 /**
  * Owner-wide billing stays off until the reviewed cutover. Both the explicit
@@ -88,13 +89,16 @@ function toOwnerSubscriptionStatus(
 export function toOwnerBillingProvider(provider: string): OwnerBillingProvider {
   if (provider === "APP_STORE") return "app_store"
   if (provider === "PLAY_STORE") return "play_store"
+  if (provider === "OTHER") return "paystack"
   throw new OwnerBillingPolicyError("INVALID_STATE")
 }
 
 export function toDurableBillingProvider(provider: OwnerBillingProvider) {
   return provider === "app_store"
     ? ("APP_STORE" as const)
-    : ("PLAY_STORE" as const)
+    : provider === "play_store"
+      ? ("PLAY_STORE" as const)
+      : ("OTHER" as const)
 }
 
 function toOwnerEnvironment(environment: string): OwnerBillingEnvironment {
@@ -452,8 +456,18 @@ export async function getOwnerBillingCatalogState(
           select: { accountId: true, productId: true },
         })
       : null
+  const pendingWeb =
+    !current && process.env.WEB_BILLING_ENVIRONMENT
+      ? await findPendingOwnerWebCheckout(db, input.accountId)
+      : null
   return {
-    activeProvider: current ? toDurableBillingProvider(current.provider) : null,
+    hasSubscription: Boolean(current),
+    subscriptionProvider: snapshot.subscription?.provider ?? null,
+    activeProvider: current
+      ? toDurableBillingProvider(current.provider)
+      : pendingWeb
+        ? ("OTHER" as const)
+        : null,
     enrolled: snapshot.coverage.some(
       (row) =>
         row.accountId === snapshot.account.id &&

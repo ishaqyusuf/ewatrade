@@ -4,6 +4,8 @@ import { qaLiveEffectForProcedure } from "./qa-provider-operation"
 describe("qaLiveEffectForProcedure", () => {
   test.each([
     ["storeSubscriptions.verifyPurchase", "subscription"],
+    ["retailOps.checkWebSubscriptionPayment", "subscription"],
+    ["retailOps.manageWebSubscription", "subscription"],
     ["domains.checkAvailability", "domain_registration"],
     ["domains.connectExternal", "domain_hosting"],
     ["domains.createCheckout", "domain_registration"],

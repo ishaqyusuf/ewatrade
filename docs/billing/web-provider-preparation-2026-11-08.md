@@ -1,5 +1,9 @@
 # Paystack and Polar preparation — 8 November 2026
 
+Current owner decision: **Paystack only**, with the USD domiciliary account deferred.
+[Current implementation/setup packet](paystack-only-2026-11-08.md). The earlier
+provider audit/preparation below is retained as historical evidence.
+
 Source preparation only. No active checkout, provider setting, financial account,
 credential, subscription grant, schema, deployment or customer payment changed.
 

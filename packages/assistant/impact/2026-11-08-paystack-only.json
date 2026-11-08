@@ -1,0 +1,87 @@
+{
+  "version": 1,
+  "id": "2026-11-08-paystack-only",
+  "tickets": ["A05"],
+  "summary": "Replace Polar web subscriptions with Paystack for approved NGN regional offers and separately gated USD settlement. Add owner-only checkout/status/management, durable owner payment journal and server-verified canonical owner receipts with explicit business enrollment; live activation remains closed.",
+  "noAssistantImpact": "Billing remains form-only. The new RPCs do not add assistant tools or purchase authority. Fresh OWNER authorization, legal acceptance, server-only account/country/offer/environment, QA provider refusal, native conflicts and canonical owner coverage remain mandatory. Native source/flags and provider financial setup are not changed.",
+  "capabilities": [],
+  "procedures": [
+    {
+      "path": "retailOps.createSubscriptionCheckoutIntent",
+      "status": "form_only",
+      "reason": "Subscription purchase, verified status and provider management stay in owner-reviewed billing forms."
+    },
+    {
+      "path": "retailOps.checkWebSubscriptionPayment",
+      "status": "form_only",
+      "reason": "Subscription purchase, verified status and provider management stay in owner-reviewed billing forms."
+    },
+    {
+      "path": "retailOps.manageWebSubscription",
+      "status": "form_only",
+      "reason": "Subscription purchase, verified status and provider management stay in owner-reviewed billing forms."
+    },
+    {
+      "path": "storeSubscriptions.enrollBusiness",
+      "status": "form_only",
+      "reason": "Subscription purchase, verified status and provider management stay in owner-reviewed billing forms."
+    },
+    {
+      "path": "storeSubscriptions.releaseBusiness",
+      "status": "form_only",
+      "reason": "Subscription purchase, verified status and provider management stay in owner-reviewed billing forms."
+    }
+  ],
+  "docs": [
+    {
+      "topic": "feature",
+      "path": "docs/billing/paystack-only-2026-11-08.md",
+      "status": "updated"
+    },
+    {
+      "topic": "feature",
+      "path": ".brain/features/owner-wide-billing.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "api",
+      "path": ".brain/api/contracts.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "permissions",
+      "path": ".brain/api/permissions.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "decision",
+      "path": ".brain/decisions/2026-11-08-web-paystack-only.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "capability",
+      "path": "packages/assistant/src/capabilities/COVERAGE.md",
+      "status": "updated"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/payments/src/web-subscriptions/web-subscriptions.test.ts",
+      "executed": true,
+      "result": "Paystack-only configuration/client/signature and receipt fixtures pass; full payments suite78 tests/505 assertions. No live transport or activation."
+    },
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/owner-billing/web-checkout.test.ts",
+      "executed": true,
+      "result": "Five delegate-fixture tests pass for reservation, unknown outcome, owner binding, paid replay, refund ordering, native conflict and owner journal survival after the initiating business projection is deleted. No SQL/concurrency or hosted acceptance claim."
+    },
+    {
+      "kind": "test",
+      "path": "apps/api/src/billing/paystack-subscription-webhook.test.ts",
+      "executed": true,
+      "result": "Actual Hono endpoint fixtures pass raw signature, tampered/missing signature, invalid JSON, body limit, configured-off and retryable failure without leaking private errors. No database/provider call."
+    }
+  ]
+}

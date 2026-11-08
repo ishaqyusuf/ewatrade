@@ -26,7 +26,7 @@ import {
   UserCircle02Icon,
 } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { useMutation, useQuery } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useState } from "react"
 
 type SubscriptionSnapshot = RouterOutputs["retailOps"]["subscription"]
@@ -276,6 +276,32 @@ export function RetailOpsSubscriptionSettings() {
       onError: (error) => setCheckoutError(error.message),
     }),
   )
+  const queryClient = useQueryClient()
+  const refresh = () => queryClient.invalidateQueries()
+  const checkPayment = useMutation(
+    trpc.retailOps.checkWebSubscriptionPayment.mutationOptions({
+      onSuccess: (result) => {
+        toast(result.message)
+        void refresh()
+      },
+      onError: (error) => setCheckoutError(error.message),
+    }),
+  )
+  const managePayment = useMutation(
+    trpc.retailOps.manageWebSubscription.mutationOptions({
+      onSuccess: (result) => window.location.assign(result.url),
+      onError: (error) => setCheckoutError(error.message),
+    }),
+  )
+  const enrollBusiness = useMutation(
+    trpc.storeSubscriptions.enrollBusiness.mutationOptions({
+      onSuccess: () => {
+        toast("Subscription applied to this business.")
+        void refresh()
+      },
+      onError: (error) => setCheckoutError(error.message),
+    }),
+  )
   const snapshot = subscriptionQuery.data
   const notice = snapshot ? limitNotice(snapshot) : null
   const currentIndex = snapshot
@@ -288,6 +314,38 @@ export function RetailOpsSubscriptionSettings() {
         title="Plan and billing"
         description="Your plan, how much you've used, and what each plan includes."
       />
+
+      {snapshot?.webBilling ? (
+        <div className="flex flex-wrap gap-2">
+          {snapshot.webBilling.pending ? (
+            <Button
+              variant="outline"
+              disabled={checkPayment.isPending}
+              onClick={() => checkPayment.mutate()}
+            >
+              Check payment status
+            </Button>
+          ) : null}
+          {snapshot.webBilling.hasSubscription &&
+          !snapshot.webBilling.covered ? (
+            <Button
+              disabled={enrollBusiness.isPending}
+              onClick={() => enrollBusiness.mutate()}
+            >
+              Apply plan to this business
+            </Button>
+          ) : null}
+          {snapshot.webBilling.canManage ? (
+            <Button
+              variant="outline"
+              disabled={managePayment.isPending}
+              onClick={() => managePayment.mutate()}
+            >
+              Manage subscription
+            </Button>
+          ) : null}
+        </div>
+      ) : null}
 
       {checkoutError ? (
         <div role="alert">
@@ -402,8 +460,8 @@ export function RetailOpsSubscriptionSettings() {
           ))}
         </div>
         <p className="text-sm text-muted-foreground">
-          Free is free forever. Starter, Growth and Pro are free during launch.
-          Free plan orders reset on the 1st of each month.
+          Free is free forever. Paid plans are billed monthly. Free plan orders
+          reset on the 1st of each month.
         </p>
       </section>
     </SettingsPage>

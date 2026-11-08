@@ -4,6 +4,8 @@ import type { WebBillingProduct } from "./config"
 import {
   isWebCheckoutEnabled,
   isWebProviderConfigured,
+  isWebReconciliationConfigured,
+  webBillingOwnerCountry,
   webBillingProduct,
   webBillingProducts,
 } from "./config"
@@ -12,7 +14,6 @@ import {
   WebSubscriptionClient,
   hostedCheckoutUrl,
   verifyPaystackSubscriptionWebhook,
-  verifyPolarSubscriptionWebhook,
 } from "./providers"
 
 const accountId = "5e882a1e-d161-44cc-844c-4c0e94410001"
@@ -26,15 +27,19 @@ const paystack: WebBillingProduct = {
   referenceNgnMinor: 500_000,
   countries: ["NG"],
 }
-// Foreign amounts below are transport fixtures, not a published price schedule.
-const polar: WebBillingProduct = {
-  provider: "polar",
-  planId: "starter",
-  productId: "5e882a1e-d161-44cc-844c-4c0e94410003",
+// USD is a transport fixture, not an approved commercial dollar price.
+const international: WebBillingProduct = {
+  ...paystack,
+  productId: "PLN_international",
+  countries: ["US", "GB"],
+  amountMinor: 600_000,
+  referenceNgnMinor: 600_000,
+}
+const usd: WebBillingProduct = {
+  ...international,
+  productId: "PLN_usd",
   currency: "USD",
   amountMinor: 400,
-  referenceNgnMinor: 600_000,
-  countries: ["US", "GB"],
 }
 const args = {
   accountId,
@@ -42,7 +47,7 @@ const args = {
   email: "owner@example.test",
   returnUrl: "https://dash.ewatrade.com/settings/billing",
 }
-const env = { WEB_BILLING_PRODUCTS: JSON.stringify([paystack, polar]) }
+const env = { WEB_BILLING_PRODUCTS: JSON.stringify([paystack, international]) }
 
 test("reuses the approved monthly Africa baseline and 20% reference elsewhere", () => {
   for (const [plan, base] of [
@@ -61,9 +66,9 @@ test("reuses the approved monthly Africa baseline and 20% reference elsewhere", 
     expect(webMonthlyPriceReference("starter", country)).toBeNull()
 })
 
-test("Nigeria selects Paystack; only explicitly mapped other territories select Polar", () => {
+test("Paystack serves explicitly mapped Nigeria and international territories", () => {
   expect(webBillingProduct("starter", "NG", env)).toEqual(paystack)
-  expect(webBillingProduct("starter", "US", env)).toEqual(polar)
+  expect(webBillingProduct("starter", "US", env)).toEqual(international)
   expect(webBillingProduct("starter", "KE", env)).toBeNull()
   expect(webBillingProduct("starter", null, env)).toBeNull()
   expect(webBillingProduct("pro", "US", env)).toBeNull()
@@ -75,15 +80,21 @@ test("rejects ambiguous schedules, wrong Nigerian prices and cross-region blanke
     [{ ...paystack, amountMinor: 600_000 }],
     [{ ...paystack, currency: "USD" }],
     [{ ...paystack, countries: ["US"] }],
-    [{ ...polar, countries: ["*"] }],
-    [{ ...polar, countries: ["NG"] }],
-    [{ ...polar, countries: ["US", "KE"] }],
-    [polar, { ...polar, productId: accountId }],
+    [{ ...international, provider: "polar" }],
+    [{ ...international, countries: ["*"] }],
+    [{ ...international, countries: ["NG"] }],
+    [{ ...international, countries: ["US", "KE"] }],
+    [international, { ...international, productId: "PLN_duplicate" }],
   ])
     expect(
       webBillingProducts({ WEB_BILLING_PRODUCTS: JSON.stringify(products) }),
     ).toEqual([])
-  const kenya = { ...polar, countries: ["KE"], referenceNgnMinor: 500_000 }
+  const kenya = {
+    ...international,
+    countries: ["KE"],
+    amountMinor: 500_000,
+    referenceNgnMinor: 500_000,
+  }
   expect(
     webBillingProduct("starter", "KE", {
       WEB_BILLING_PRODUCTS: JSON.stringify([kenya]),
@@ -109,12 +120,6 @@ test("prepared checkout is off by default and retains the owner/environment gate
     isWebProviderConfigured("paystack", {
       WEB_BILLING_ENVIRONMENT: "production",
       PAYSTACK_SECRET_KEY: "sk_test_fixture",
-    }),
-  ).toBe(false)
-  expect(
-    isWebProviderConfigured("polar", {
-      WEB_BILLING_ENVIRONMENT: "sandbox",
-      POLAR_ACCESS_TOKEN: "fixture",
     }),
   ).toBe(false)
 })
@@ -206,24 +211,16 @@ test("callers cannot bypass the approved Nigerian price or credential environmen
 })
 
 test("malformed successful responses remain uncertain without redispatch", async () => {
-  for (const provider of ["paystack", "polar"] as const) {
-    const fake = transport([{ data: null }])
-    const client = new WebSubscriptionClient(
-      provider,
+  const fake = transport([{ data: null }])
+  await expect(
+    new WebSubscriptionClient(
+      "paystack",
       "sandbox",
-      provider === "paystack" ? "sk_test_fixture" : "fixture",
+      "sk_test_fixture",
       fake.fetcher,
-    )
-    await expect(
-      client.createCheckout({
-        ...args,
-        product: provider === "paystack" ? paystack : polar,
-      }),
-    ).rejects.toMatchObject({
-      code: "OUTCOME_UNKNOWN",
-    })
-    expect(fake.calls).toHaveLength(1)
-  }
+    ).createCheckout({ ...args, product: paystack }),
+  ).rejects.toMatchObject({ code: "OUTCOME_UNKNOWN" })
+  expect(fake.calls).toHaveLength(1)
 })
 
 test("Paystack never starts a payment when its saved plan differs from the approved offer", async () => {
@@ -249,121 +246,6 @@ test("Paystack never starts a payment when its saved plan differs from the appro
   }
 })
 
-const polarProduct = {
-  id: polar.productId,
-  is_recurring: true,
-  is_archived: false,
-  recurring_interval: "month",
-  recurring_interval_count: 1,
-  prices: [
-    {
-      amount_type: "fixed",
-      price_amount: 400,
-      price_currency: "usd",
-      is_archived: false,
-    },
-  ],
-}
-function polarCheckout() {
-  return {
-    id: "5e882a1e-d161-44cc-844c-4c0e94410004",
-    url: "https://sandbox.polar.sh/checkout/example",
-    expires_at: new Date(Date.now() + 3_600_000).toISOString(),
-    product_id: polar.productId,
-    currency: "usd",
-    amount: 400,
-    external_customer_id: accountId,
-    metadata: { purpose: "owner_subscription", accountId, checkoutId },
-    allow_trial: false,
-    trial_end: null,
-    allow_discount_codes: false,
-    discount_amount: 0,
-    is_payment_required: true,
-  }
-}
-test("Polar pins its API version and disables trials and discounts in an owner-bound checkout", async () => {
-  const checkout = polarCheckout()
-  const fake = transport([
-    { data: polarProduct },
-    {
-      data: checkout,
-    },
-  ])
-  const result = await new WebSubscriptionClient(
-    "polar",
-    "sandbox",
-    "fixture",
-    fake.fetcher,
-  ).createCheckout({ ...args, product: polar })
-  expect(result.checkoutUrl).toBe("https://sandbox.polar.sh/checkout/example")
-  expect(result.expiresAt?.toISOString()).toBe(checkout.expires_at)
-  expect(fake.calls[0]?.url).toBe(
-    `https://sandbox-api.polar.sh/v1/products/${polar.productId}`,
-  )
-  expect(fake.calls[1]?.init?.headers).toMatchObject({
-    "Polar-Version": "2026-10",
-  })
-  expect(JSON.parse(String(fake.calls[1]?.init?.body))).toMatchObject({
-    products: [polar.productId],
-    currency: "usd",
-    allow_trial: false,
-    allow_discount_codes: false,
-    external_customer_id: accountId,
-    metadata: { checkoutId, accountId },
-    success_url: args.returnUrl,
-  })
-})
-
-test("Polar never returns an expired or differently bound checkout for the owner to pay", async () => {
-  for (const mismatch of [
-    { amount: 1 },
-    { currency: "eur" },
-    { external_customer_id: checkoutId },
-    { metadata: { accountId, checkoutId: accountId } },
-    { allow_trial: true },
-    { discount_amount: 1 },
-    { is_payment_required: false },
-    { expires_at: "2020-01-01T00:00:00Z" },
-  ]) {
-    const fake = transport([
-      { data: polarProduct },
-      { data: { ...polarCheckout(), ...mismatch } },
-    ])
-    await expect(
-      new WebSubscriptionClient(
-        "polar",
-        "sandbox",
-        "fixture",
-        fake.fetcher,
-      ).createCheckout({ ...args, product: polar }),
-    ).rejects.toMatchObject({ code: "OUTCOME_UNKNOWN" })
-    expect(fake.calls).toHaveLength(2)
-  }
-})
-
-test("Polar refuses wrong price/currency, yearly, free, archived and ambiguous products", async () => {
-  for (const mismatch of [
-    { recurring_interval: "year" },
-    { is_recurring: false },
-    { is_archived: true },
-    { prices: [{ ...polarProduct.prices[0], price_amount: 500 }] },
-    { prices: [{ ...polarProduct.prices[0], price_currency: "eur" }] },
-    { prices: [{ ...polarProduct.prices[0], amount_type: "free" }] },
-    { prices: [...polarProduct.prices, ...polarProduct.prices] },
-  ]) {
-    const fake = transport([{ data: { ...polarProduct, ...mismatch } }])
-    await expect(
-      new WebSubscriptionClient(
-        "polar",
-        "sandbox",
-        "fixture",
-        fake.fetcher,
-      ).createCheckout({ ...args, product: polar }),
-    ).rejects.toThrow("approved monthly offer")
-    expect(fake.calls).toHaveLength(1)
-  }
-})
-
 test("unsafe redirects and malformed purchaser/checkout identities never leave the app", async () => {
   for (const url of [
     "javascript:alert(1)",
@@ -374,17 +256,15 @@ test("unsafe redirects and malformed purchaser/checkout identities never leave t
   ]) {
     expect(() => hostedCheckoutUrl(url, "paystack", "sandbox")).toThrow()
   }
-  expect(() =>
-    hostedCheckoutUrl("https://polar.sh/checkout/session", "polar", "sandbox"),
-  ).toThrow()
+
   const fake = transport([])
   await expect(
     new WebSubscriptionClient(
-      "polar",
+      "paystack",
       "sandbox",
-      "fixture",
+      "sk_test_fixture",
       fake.fetcher,
-    ).createCheckout({ ...args, checkoutId: "invalid", product: polar }),
+    ).createCheckout({ ...args, checkoutId: "invalid", product: paystack }),
   ).rejects.toThrow()
   expect(fake.calls).toHaveLength(0)
 })
@@ -392,16 +272,16 @@ test("unsafe redirects and malformed purchaser/checkout identities never leave t
 test("an uncertain or rejected provider response never triggers an automatic second request", async () => {
   for (const status of [400, 401, 408, 409, 429, 500]) {
     const fake = transport([
-      { data: polarProduct },
+      { data: paystackPlan },
       { status, data: { error: "fixture" } },
     ])
     await expect(
       new WebSubscriptionClient(
-        "polar",
+        "paystack",
         "sandbox",
-        "fixture",
+        "sk_test_fixture",
         fake.fetcher,
-      ).createCheckout({ ...args, product: polar }),
+      ).createCheckout({ ...args, product: paystack }),
     ).rejects.toMatchObject({
       code:
         status === 400 || status === 401
@@ -429,44 +309,119 @@ test("Paystack authenticates the exact raw body and rejects missing or tampered 
   expect(verifyPaystackSubscriptionWebhook(body, null, "secret")).toBe(false)
 })
 
-test("Polar accepts current Standard Webhooks secrets and explicitly configured legacy secrets", () => {
-  const key = Buffer.alloc(32, 7)
-  const secret = `whsec_${key.toString("base64")}`
-  const body = '{"type":"order.paid","data":{}}'
-  const now = Math.floor(Date.now() / 1000)
-  function headers(timestamp: number, signingKey: Buffer) {
-    const signature = createHmac("sha256", signingKey)
-      .update(`event-1.${timestamp}.${body}`)
-      .digest("base64")
-    return {
-      "webhook-id": "event-1",
-      "webhook-timestamp": String(timestamp),
-      "webhook-signature": `v1,${signature}`,
-    }
-  }
+test("USD checkout requires explicit settlement approval while NGN works without it", async () => {
+  const usdEnv = { WEB_BILLING_PRODUCTS: JSON.stringify([usd]) }
+  expect(webBillingProducts(usdEnv)).toEqual([])
   expect(
-    verifyPolarSubscriptionWebhook(body, headers(now, key), secret).type,
-  ).toBe("order.paid")
-  expect(
-    verifyPolarSubscriptionWebhook(
-      body,
-      headers(now, Buffer.from(secret)),
-      secret,
-      "legacy",
-    ).type,
-  ).toBe("order.paid")
-  expect(() =>
-    verifyPolarSubscriptionWebhook(
-      body,
-      headers(now, Buffer.from(secret)),
-      secret,
-    ),
-  ).toThrow()
-  expect(() =>
-    verifyPolarSubscriptionWebhook(body, headers(now - 600, key), secret),
-  ).toThrow()
-  expect(() =>
-    verifyPolarSubscriptionWebhook(`${body} `, headers(now, key), secret),
-  ).toThrow()
-  expect(() => verifyPolarSubscriptionWebhook(body, {}, secret)).toThrow()
+    webBillingProduct("starter", "US", {
+      ...usdEnv,
+      PAYSTACK_USD_ENABLED: "true",
+    }),
+  ).toEqual(usd)
+  const fake = transport([])
+  await expect(
+    new WebSubscriptionClient(
+      "paystack",
+      "sandbox",
+      "sk_test_fixture",
+      fake.fetcher,
+    ).createCheckout({ ...args, product: usd }),
+  ).rejects.toThrow("pricing policy")
+  expect(fake.calls).toHaveLength(0)
 })
+
+test("Production checkout requires release acceptance while a paused checkout still reconciles paid receipts", () => {
+  const ready = {
+    WEB_BILLING_ENVIRONMENT: "production",
+    STORE_BILLING_ENVIRONMENT: "production",
+    OWNER_BILLING_ENABLED: "true",
+    WEB_BILLING_ENABLED: "true",
+    APP_ENV: "production",
+    PAYSTACK_SECRET_KEY: "sk_live_fixture",
+  }
+  expect(isWebCheckoutEnabled(ready)).toBe(false)
+  expect(
+    isWebCheckoutEnabled({ ...ready, WEB_BILLING_RELEASE_APPROVED: "true" }),
+  ).toBe(true)
+  expect(
+    isWebReconciliationConfigured({ ...ready, WEB_BILLING_ENABLED: "false" }),
+  ).toBe(true)
+  expect(
+    isWebReconciliationConfigured({
+      ...ready,
+      PAYSTACK_SECRET_KEY: "sk_test_fixture",
+    }),
+  ).toBe(false)
+  expect(
+    isWebReconciliationConfigured({
+      ...ready,
+      STORE_BILLING_ENVIRONMENT: "sandbox",
+    }),
+  ).toBe(false)
+})
+
+test("only explicitly reviewed opaque owner country bindings select regional billing", () => {
+  expect(webBillingOwnerCountry(accountId, {})).toBeNull()
+  expect(
+    webBillingOwnerCountry(accountId, {
+      WEB_BILLING_OWNER_COUNTRIES: JSON.stringify({ [accountId]: "US" }),
+    }),
+  ).toBe("US")
+  expect(
+    webBillingOwnerCountry(accountId, {
+      WEB_BILLING_OWNER_COUNTRIES: JSON.stringify({ [accountId]: "ng" }),
+    }),
+  ).toBeNull()
+  expect(
+    webBillingOwnerCountry(checkoutId, {
+      WEB_BILLING_OWNER_COUNTRIES: JSON.stringify({ [accountId]: "NG" }),
+    }),
+  ).toBeNull()
+})
+
+test.each([international, usd])(
+  "international $currency checkout uses its exact saved monthly offer",
+  async (product) => {
+    const fake = transport([
+      {
+        data: {
+          status: true,
+          data: {
+            ...paystackPlan.data,
+            plan_code: product.productId,
+            amount: product.amountMinor,
+            currency: product.currency,
+          },
+        },
+      },
+      {
+        data: {
+          status: true,
+          data: {
+            authorization_url: "https://checkout.paystack.com/international",
+            reference: `ewasub-${checkoutId}`,
+          },
+        },
+      },
+    ])
+    const result = await new WebSubscriptionClient(
+      "paystack",
+      "sandbox",
+      "sk_test_fixture",
+      fake.fetcher,
+    ).createCheckout({
+      ...args,
+      product,
+      usdApproved: product.currency === "USD",
+    })
+    expect(result.checkoutUrl).toBe(
+      "https://checkout.paystack.com/international",
+    )
+    expect(JSON.parse(String(fake.calls[1]?.init?.body))).toMatchObject({
+      amount: product.amountMinor,
+      currency: product.currency,
+      plan: product.productId,
+    })
+    expect(fake.calls).toHaveLength(2)
+  },
+)

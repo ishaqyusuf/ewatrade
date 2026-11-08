@@ -25,6 +25,7 @@ import { registerAssistantChatRoutes } from "./assistant/chat-route"
 import { registerGeneralAssistantChatRoutes } from "./assistant/general-chat-route"
 import { registerVoiceGatewayRoutes } from "./assistant/voice-gateway"
 import { registerManualPaymentReceiptRoutes } from "./banking/manual-payment-receipts"
+import { registerPaystackSubscriptionWebhook } from "./billing/paystack-subscription-webhook"
 import { registerBillingProviderEventRoutes } from "./billing/provider-events"
 import { registerStoreNotificationRoutes } from "./billing/store-notifications"
 import { registerCatalogPhotoPreviewRoutes } from "./catalog/photo-preview"
@@ -201,6 +202,7 @@ registerBillingProviderEventRoutes(app)
 registerAccountPrivacyResendWebhook(app)
 registerStaffInvitationResendWebhook(app)
 registerStoreNotificationRoutes(app)
+registerPaystackSubscriptionWebhook(app)
 registerCatalogPhotoUploadRoutes(app)
 registerCatalogPhotoPreviewRoutes(app)
 registerCatalogPublicPhotoRoutes(app)

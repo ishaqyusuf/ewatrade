@@ -18,6 +18,7 @@ import {
   isPlayRefundReviewSubmissionEnabled,
   preparePlayRefundReviewResponse,
 } from "@ewatrade/db/queries"
+import { isWebReconciliationConfigured } from "@ewatrade/payments/web-subscriptions"
 import { TRPCError } from "@trpc/server"
 import { z } from "zod"
 import { reconcileStoreSubscription } from "../../billing/reconcile-store-subscription"
@@ -33,7 +34,11 @@ import {
 
 function requireOwnerBilling() {
   const runtime = ownerBillingRuntime()
-  if (!runtime || process.env.STORE_BILLING_ENABLED !== "true")
+  if (
+    !runtime ||
+    (process.env.STORE_BILLING_ENABLED !== "true" &&
+      !isWebReconciliationConfigured())
+  )
     throw new TRPCError({
       code: "PRECONDITION_FAILED",
       message: "Owner subscriptions are not available yet.",

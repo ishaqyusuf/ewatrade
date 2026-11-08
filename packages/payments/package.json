@@ -19,7 +19,6 @@
   },
   "dependencies": {
     "@ewatrade/utils": "workspace:*",
-    "standardwebhooks": "1.1.1",
     "zod": "catalog:"
   },
   "devDependencies": {

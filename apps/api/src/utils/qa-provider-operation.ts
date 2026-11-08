@@ -4,6 +4,8 @@ const EXACT_QA_PROVIDER_OPERATIONS: Readonly<
   Record<string, QaLiveEffectOperation>
 > = {
   "storesubscriptions.verifypurchase": "subscription",
+  "retailops.checkwebsubscriptionpayment": "subscription",
+  "retailops.managewebsubscription": "subscription",
   "domains.checkavailability": "domain_registration",
   "domains.connectexternal": "domain_hosting",
   "domains.createcheckout": "domain_registration",

@@ -593,3 +593,33 @@ describe("owner coverage commands against a transactional port model", () => {
     ).rejects.toThrow("OWNER_REQUIRED")
   })
 })
+
+test("Paystack coverage uses the same owner/business limits and blocks a simultaneous native receipt", () => {
+  const web = { ...subscription, provider: "paystack" as const }
+  const paid = snapshot({ subscription: web })
+  expect(projectOwnerBusinessAccess(paid, "business-a").planId).toBe("growth")
+  expect(projectOwnerBusinessAccess(paid, "business-c").reason).toBe(
+    "uncovered",
+  )
+  expect(
+    projectOwnerBusinessAccess(
+      { ...paid, now: web.currentPeriodEndsAt },
+      "business-a",
+    ).planId,
+  ).toBe("free")
+  expect(() =>
+    assertOwnerPurchaseBinding({
+      account,
+      environment: "sandbox",
+      verifiedAccountToken: account.id,
+      verifiedEnvironment: "sandbox",
+      provider: "app_store",
+      purchaseDigest: "native",
+      existingBinding: null,
+      linkedPurchaseDigest: null,
+      linkedBinding: null,
+      currentSubscription: web,
+      now,
+    }),
+  ).toThrow("ACTIVE_SUBSCRIPTION_CONFLICT")
+})
