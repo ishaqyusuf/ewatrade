@@ -324,7 +324,7 @@ provider health probe or setting mutation was used.
 | Manual receipt selectors | `MANUAL_RECEIPT_PROCESSING_ENABLED=false`, `MANUAL_RECEIPT_PROCESSOR_APPROVED=false`, `MANUAL_RECEIPT_WORKER_ADMITTED=false`; `MANUAL_RECEIPT_MODEL` absent. | This processing route is configured off. It does not prove receipt originals are never uploaded/stored or that all media features are off. |
 | Audio/gateway | `ASSISTANT_TRANSCRIBE_MODEL` absent in the Trigger reads. Exact Production DB read at 17:07:07 found no `assistant.voice.gateway.v1` row or active lease, and no `assistant.runtime` row. | No eligible gateway lease at that observation. Cloud fallback credential/route availability and actual worker process remain unproven. |
 | Analytics selector in jobs | `NEXT_PUBLIC_LOGLY_DASHBOARD_ENABLED=true`. | A dashboard-named flag in jobs does not establish Android collection or API forwarding; the separate client/forward settings still need acceptance. |
-| Owner billing worker selectors | `OWNER_BILLING_ENABLED` and `STORE_BILLING_ENVIRONMENT` absent. Source sync allowlist omits owner-billing inputs. | API-only settings cannot establish worker coverage/projection; worker cutover acceptance remains open. No flag was enabled to manufacture it. |
+| Owner billing worker selectors | `OWNER_BILLING_ENABLED` and `STORE_BILLING_ENVIRONMENT` absent. The observed source sync allowlist omitted owner-billing inputs. | API-only settings cannot establish worker coverage/projection; worker cutover acceptance remains open. No flag was enabled to manufacture it. |
 
 Private receipts: `/private/tmp/ewatrade-apple-trigger-selectors-2026-11-08.json`
 and `/private/tmp/ewatrade-apple-provider-selection-2026-11-08.json`. The previous
@@ -375,3 +375,106 @@ draft was updated in place only. Preparation remains 3/4; Android 1/8 and Apple
 2/6 are unchanged here.
 
 [Documentation checkpoint receipt](../verification/2026-11-08-privacy-disclosure-reconciliation.md).
+
+
+## Signed SDK and corrected backend follow-up — 8 November 2026
+
+### Exact signed iOS builds 8 and 10 SDK evidence
+
+The coordinator verified build 8's IPA signature, team and provisioning profile
+and uploaded it to Apple. The private manifest extraction contains 20 manifests.
+Only the root and GoogleSignIn bundle have collected-data rows: root 14, SDK 8,
+with 16 unique types across the extraction. All collected rows are linked; the
+extracted manifests declare no tracking=true entry. Those are declarations, not
+a packet observation or proof of every possible runtime behavior.
+
+GoogleSignIn 9.2.0 was verified from the artifact's Info.plist. Its manifest is
+separate from the app's root manifest:
+
+| SDK-declared data type | Declared purposes | Linked / tracking |
+| --- | --- | --- |
+| Name, EmailAddress, PhoneNumber, CoarseLocation | App Functionality | Linked=true; tracking=false |
+| OtherDataTypes, UserID | App Functionality and Analytics | Linked=true; tracking=false |
+| DeviceID, OtherUsageData | Analytics | Linked=true; tracking=false |
+
+The root's 14 rows declare App Functionality and tracking=false; that root alone
+does not summarize the SDK's extra coarse-location/usage and analytics entries.
+Google's official [iOS disclosure guidance](https://developers.google.com/identity/sign-in/ios/app-privacy)
+says the SDK may collect a user identifier and use an IP address to estimate
+general device location for fraud prevention. No location usage keys in this IPA
+is therefore compatible with IP-derived SDK location. Do not infer no approximate
+location from the app's manual-address feature or permission removal.
+
+Apple's [manifest guidance](https://developer.apple.com/documentation/bundleresources/describing-data-use-in-privacy-manifests)
+allows SDK data to be declared in the SDK's own manifest and describes aggregating
+the app and linked SDK manifests for a privacy report. This finding does not by
+itself require duplicating SDK types in the root manifest or rebuilding native
+code. Reconcile the actual combined purposes in the final Apple label.
+
+Source `use-mobile-google-auth.ts` uses native GoogleSignin on both iOS and
+Android, with email/profile scopes and offlineAccess=false; web alone uses
+AuthSession. This source check is not a new sign-in test or proof that every SDK
+declaration is exercised in every flow. Google's [core Play services disclosure](https://developers.google.com/android/guides/play-data-disclosure)
+covers base/basement/OSS licenses/tasks, not authentication. Its no-data statement
+must not be generalized to Android Sign-In, and the iOS plist is not an Android
+Data safety answer. Android SDK/version and invocation scope remain separate.
+
+Private evidence: `/private/tmp/ewatrade-ios-build8-privacy-manifests.json` and
+`/private/tmp/ewatrade-ios8-sdk-disclosure-extract-2026-11-08.json`, which binds the
+extraction SHA-256, build ID and source. The Google/Apple guidance was checked
+8 November. No network capture, provider/auth request, tracking authorization or
+store declaration was performed by this documentation pass.
+
+### Replacement candidate and backend acceptance boundary
+
+Physical build 8 accepted login/Free usage, including the owner's later password
+login confirmation against current Production. Paid controls were absent because
+the iOS-specific provider/panel entrypoints overrode the shared native code with
+no-op implementations. The coordinator corrected those entrypoints and the
+signed-notification verification dispatch. Those source fixes do not establish
+signed paid UI, purchase or restore acceptance. Reserved build 9 failed before
+archive/cloud acceptance; it has no accepted artifact ID.
+
+The accepted replacement is build 10,
+`50f69a74-5dae-4d0a-b481-9ad6164146f4`, source
+`2d4424b1525c4aa05e6ced39ce888e31d7f8140e`, store distribution and the private
+Production TestFlight profile/channel. Archive acceptance/source fingerprint is
+confirmed. Build 10 subsequently finished, and the coordinator verified its IPA
+signature/profile/bundle/team, Production origins, StoreKit/native IAP markers
+and GoogleSignIn 9.2.0. IPA SHA-256:
+`eb80bdb6c4bf52a93ab27ea4fe6cc52fec3c7a4bd1a201f33dfbaa9c00b63354`.
+Runtime `018c6c66e7e614408870451b744e5befac86a851` matches build 8; no native
+location usage keys are present. All 20 privacy manifests are structurally
+equivalent under normalized list/set semantics. This lane independently compared
+the two extracted JSON sets ignoring array order and confirmed equality. The
+build 8 SDK disclosure evidence is therefore bound to this exact build 10, not
+merely assumed from source. Native paid UI, purchase and restore remain pending.
+The App Store upload is running at this checkpoint, not accepted processing or
+physical paid acceptance. No native change was made by this privacy lane.
+
+Private new receipts: `/private/tmp/ewatrade-ios-build10-signature-receipt.json`
+and `/private/tmp/ewatrade-ios-build10-privacy-manifests.json`. The manifest JSON
+SHA-256 is `fa0dfdfccf8c24d13255acfc20b6c982d8205c428cf9b8f50dc5579a714f3b12`.
+
+The coordinator reports matching Preview API and web smoke passed with
+`runtimeVerified=true`: Dashboard `dpl_vt2bS6JSDdnbQgWc18Ythchhd11q`, API
+`dpl_GVYSQNTJUaG6YjFQ4kAFAYuDsRc9`, at 18:28:43 WAT. Canonical Production at the
+same candidate completed with API `dpl_CRXkzyZQrtHSew3SWAFeuhv1tRyT`, matching
+canonical alias and health200. The prior genuine captured signed Sandbox TEST
+replay now returns 200/received; the earlier source `2e1ee7e72` returned503.
+These connected checks belong to the release coordinator and were not repeated.
+
+That replay proves the deployed verifier accepts that genuine signed input; it
+is not a fresh Apple delivery to the intended configured URL. The attempted
+Sandbox URL save encountered an Apple error followed by browser/interruption
+failures. The saved URL is UNKNOWN pending authoritative readback; no fresh
+canary or purchase was accepted. Root owns that provider/UI reconciliation and
+exact build 10 upload/native IAP testing. No privacy settings were activated.
+
+Current API/Trigger/DB configuration observations earlier in this packet retain
+their own timestamps. A new Ready API does not retroactively turn them into an
+in-process provider/worker snapshot. Worker billing projection, applicable
+recipient roles/retention and cleanup, positive privacy fulfillment/notice,
+signed Android scope and final declarations remain open. Separate worker read-
+projection allowlist source work does not establish hosted activation. The single legal draft
+was updated in place, without publication or effective approval metadata.

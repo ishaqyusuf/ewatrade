@@ -41,6 +41,29 @@ unaccepted; this paragraph describes the source, not approval to continue it.
 Do not change a shared Privacy Notice into a blanket “we do not collect location”
 claim or erase relevant historical handling. Reconcile embedded web flows too.
 
+## Proposed Privacy addition: Google Sign-In and network information
+
+When you use Google Sign-In, Google processes sign-in information under its
+policies. For its iOS SDK, Google describes collecting a user identifier and IP
+address, which may be used to estimate the device's general location for fraud
+prevention. This is separate from manually entering an address or allowing the
+mobile app to read the device's current location.
+
+Authoring hold: signed iOS builds 8 and 10 contain GoogleSignIn 9.2.0. The embedded
+manifest declares linked CoarseLocation for App Functionality, and Analytics
+purposes for some identifiers/usage data. Aggregate the app and SDK declarations
+when reconciling the final Apple label; the root manifest alone is insufficient.
+Build 10 artifact verification and structural manifest equality are confirmed;
+its native paid UI/purchase/restore acceptance is still pending. Build 8 accepted
+login only, not the paid controls.
+The manifest is not a packet observation or a location-permission grant. Google's
+[iOS disclosure guidance](https://developers.google.com/identity/sign-in/ios/app-privacy)
+supports IP-derived general location, so do not claim approximate location is
+never collected. Reconcile the SDK analytics purposes before freezing the complete
+snapshot. The iOS evidence does not automatically establish Android collection;
+verify its matching SDK/version/flow separately. No declaration or effective legal
+snapshot is changed by this proposed addition.
+
 ## Proposed Terms addition: Owner software subscriptions
 
 EwaTrade offers monthly software subscriptions for business owners through the

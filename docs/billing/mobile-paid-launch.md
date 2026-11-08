@@ -202,3 +202,24 @@ Apple's immutable build 8 archive is accepted for remote compilation at source
 Console declaration, public checkout, legal publication or live privacy activation
 was performed. Android 1/8, Apple 2/6 and preparation 3/4 remain unchanged here.
 [Documentation receipt](../verification/2026-11-08-privacy-disclosure-reconciliation.md).
+
+
+### SDK disclosure and corrected release follow-up — 8 November 2026
+
+The [same shared draft](../releases/mobile-permissions-disclosure-draft-2026-11-07.md)
+now includes Google Sign-In network/IP-derived general-location wording. Signed
+build 8's SDK declarations include linked coarse location and some analytics
+purposes beyond the root manifest; they are not a location permission or measured
+traffic. The [shared appendix](../releases/android-safety-privacy-review-2026-11-07.md#signed-sdk-and-corrected-backend-follow-up--8-november-2026)
+records exact artifact scope, provider guidance and the separate Android hold.
+
+The corrected backend candidate `2d4424b15` passed matching Preview smoke and
+Production API rollout. A genuine captured signed Sandbox TEST replay now
+returns200; the saved Apple callback URL remains UNKNOWN after a failed save/
+interrupted browser, with fresh canary and purchase still pending. Build8 proved
+login, not paid controls. Replacement build10/source2d has accepted archive ID
+`50f69a74-5dae-4d0a-b481-9ad6164146f4`; its signature/native scope and 20-manifest
+structural equality with build 8 are now verified, including GoogleSignIn 9.2.0.
+Signed paid UI and purchase/restore remain pending; App Store upload is running
+at this checkpoint. Root owns Apple routing and IAP. No store privacy declaration,
+legal publication or live privacy activation occurs in this documentation lane.
