@@ -346,6 +346,13 @@ test("old native purchase callback cannot verify under a new session", async () 
   expect(calls).toEqual([])
 })
 
+test("pending store approval cannot start verification or acknowledge a purchase", async () => {
+  renderController()
+  onSuccess({ ...receipt, purchaseState: "pending" })
+  await Promise.resolve()
+  expect(calls).toEqual([])
+})
+
 test("native acknowledgement waits for verification and stops on a switched session", async () => {
   renderController()
   verify = async () => {
@@ -465,6 +472,8 @@ if (iosEntry) {
   )
   test("iOS entries render the shared owner catalog, monthly price and restore controls", () => {
     useAppleCatalog()
+    data.ownerCoverage.reason = "inactive_subscription"
+    data.ownerCoverage.businessLimit = 0
     availableProducts = [appleProduct]
     const html = renderToStaticMarkup(
       createElement(

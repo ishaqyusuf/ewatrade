@@ -204,12 +204,12 @@ const CONTRACTS = [
       "getRetailOpsSubscriptionSnapshot",
       "createSubscriptionCheckoutIntent: protectedProcedure",
       "retailOpsCreateSubscriptionCheckoutIntentSchema",
-      "createRetailOpsSubscriptionCheckoutIntent",
+      "createWebSubscriptionCheckout",
       "surface: input.surface",
       'input.surface === "mobile"',
     ],
     reason:
-      "API must keep billing permission boundaries, subscription snapshot reads, and provider-neutral checkout intent creation",
+      "API must keep billing permission boundaries, subscription snapshot reads, the canonical web checkout adapter, and native-store-only mobile checkout",
   },
 ]
 const failures = []

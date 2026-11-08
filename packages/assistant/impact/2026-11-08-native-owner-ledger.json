@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "id": "2026-11-08-native-owner-ledger",
+  "tickets": ["A05"],
+  "summary": "Implement selected Workshop Owner ledger a/v9 beneath the unchanged native current-plan and Usage sections, with localized mapped offers and explicit coverage/recovery controls.",
+  "noAssistantImpact": "Billing purchase, restore and coverage remain form-only through existing storeSubscriptions catalog/verifyPurchase/enrollBusiness/releaseBusiness. No assistant tool, permission, API/schema, provider activation or entitlement change. Pending/cancelled callback copy does not grant access. UI uses existing fresh owner/session/business verification and domain commands.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/mobile-owner-ledger.md"
+    },
+    {
+      "topic": "feature",
+      "status": "updated",
+      "path": "docs/verification/2026-11-08-owner-ledger-implementation.md"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "apps/mobile/src/components/mobile/store-subscription-provider.test.ts",
+      "executed": true,
+      "result": "Focused native/iOS controller, coverage and owner-ledger render fixtures pass, including missing disclosure, offline, roles, provider conflict, legal/restore and pending-no-grant boundaries."
+    },
+    {
+      "kind": "test",
+      "path": "apps/mobile/src/lib/store-purchase-message.test.ts",
+      "executed": true,
+      "result": "Cancelled, pending/deferred and error copy never implies verified access."
+    }
+  ]
+}

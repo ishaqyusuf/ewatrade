@@ -2,6 +2,10 @@ import { useAuthContext } from "@/hooks/use-auth"
 import { publicLegalUrl } from "@/lib/public-legal-url"
 import { getSession, getSessionGeneration } from "@/lib/session-store"
 import {
+  STORE_PURCHASE_PENDING_MESSAGE,
+  storePurchaseErrorMessage,
+} from "@/lib/store-purchase-message"
+import {
   StoreBillingSessionChanged,
   completeStorePurchase,
   restoreMappedStorePurchases,
@@ -205,11 +209,15 @@ function useStoreBillingController() {
   }
   const iap = useIAP({
     onPurchaseSuccess: (purchase) => {
+      if (purchase.purchaseState === "pending") {
+        setMessage(STORE_PURCHASE_PENDING_MESSAGE)
+        return
+      }
       // A retired lifetime leaves the receipt for the next valid recovery.
       void reconcile(purchase).catch(() => {})
     },
-    onPurchaseError: () =>
-      setMessage("The purchase did not complete. You can try again."),
+    onPurchaseError: (error) =>
+      setMessage(storePurchaseErrorMessage(error.code)),
     onError: () =>
       setMessage(
         "The store is unavailable. Check your connection and try again.",

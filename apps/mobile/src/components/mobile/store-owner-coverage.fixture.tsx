@@ -64,7 +64,7 @@ beforeEach(() => {
 test("uncovered business can explicitly enroll without implying a new charge", async () => {
   const markup = render()
   expect(markup).toContain("Cover this business")
-  expect(markup).toContain("1 of 3 business slots in use.")
+  expect(markup).toContain("1 of 3 slots")
   expect(markup).toContain("Staff do not need separate subscriptions.")
   presses[0]?.()
   expect(actions).toEqual(["enroll"])
