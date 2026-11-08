@@ -231,8 +231,10 @@ source2d4424b1525c4aa05e6ced39ce888e31d7f8140e is processed in the existing
 one-tester internal group. Owner confirmed password login (unchanged source) and
 installed10; Mirroring shows Starter$3.99, Growth$9.99 and Pro$22.99 every month.
 Corrected callback Production replay200 and fresh genuine Apple Sandbox TEST
-delivery SUCCESS pass. These are distinct from actual purchases, coverage, restore
-and lifecycle acceptance, all still open. Ordinary Sandbox relay is not accepted
+delivery SUCCESS pass. Owner confirms Restore is visible and cancelled Starter;
+the exact reviewer Production read verifies zero purchases/subscriptions/coverage
+and effective Free access afterward. Cancellation/no-grant passes. Actual purchase,
+coverage, restore and lifecycle acceptance are still open. Ordinary Sandbox relay is not accepted
 by a TEST event. Public checkout remains false; no WEB activation or public review.
 
 Billing Workshop continues the documented approved MUI-B026 Compact Plan Ledger A

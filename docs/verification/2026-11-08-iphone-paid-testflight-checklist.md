@@ -1,4 +1,37 @@
-# iPhone paid TestFlight acceptance — prepared, not executed
+# iPhone paid TestFlight acceptance — in progress
+
+## Build10 checkpoint — 8 November 2026
+
+Installed private1.0.0(10), EAS50f69a74-5dae-4d0a-b481-9ad6164146f4, native source
+2d4424b1525c4aa05e6ced39ce888e31d7f8140e, runtime
+018c6c66e7e614408870451b744e5befac86a851. Last accepted matching Production API
+deployment is dpl_CRXkzyZQrtHSew3SWAFeuhv1tRyT; the exact signed bundle uses that
+canonical Production origin. This checkpoint makes no new deployment claim.
+
+Owner confirms Restore purchases is visible, tapped Starter, cancelled Apple's
+confirmation and reports the purchase did not complete. At19:22:14.218Z, an exact
+reviewer-owner/business Production read-only transaction verifies:
+
+- Existing owner billing account; zero verified owner purchases/subscriptions.
+- Zero coverage-history or active-coverage rows for the reviewer business.
+- Zero legacy Tenant subscriptions or store purchases for that business.
+- Canonical current plan remains Free, source owner_billing_free.
+
+The helper rechecks current ACTIVE OWNER membership and uses the strict Production
+profile/database isolation loader. It reads only scoped billing/access facts,
+never receipt tokens or credentials; no writes, provider calls or model requests.
+Two initial local helper schema-name errors produced no accepted result; after
+matching the real Membership model/compound key, the read completed successfully.
+Sanitized evidence is retained privately as
+`ewatrade-reviewer-after-cancel.evidence.json`; no identity IDs are copied here.
+
+This accepts the **Starter cancellation/no-grant check**, not a purchase, restore,
+coverage, refund or lifecycle result. Product prices and Restore visibility are
+confirmed; policy-link behavior and exact storefront ISO remain open. The owner
+has been asked to perform one licensed Starter Sandbox purchase and report the
+app result before business enrollment or repeated purchase. Apple remains2/6.
+The remaining sequence below is still required; successful UI alone cannot grant
+acceptance without verified transaction/binding/environment and durable state.
 
 Use only the new exact build after its signature, service origins, native IAP,
 permissions and Apple processing have been accepted. Historical build 6 is not
@@ -51,7 +84,8 @@ Enter all credentials directly on the phone, never in chat or evidence files.
 Capture timestamps, sanitized transaction/delivery references, expected/actual
 results and server evidence for each case. Keep signed payloads, account-binding
 identifiers, passwords and tokens private. Record unsupported or unavailable
-scenarios as open. No result is claimed by this preparation; Apple remains 2/6.
+scenarios as open. Only the checkpoint above records executed results;
+Apple remains 2/6.
 
 Public review, the approved legal snapshot, positive-data privacy acceptance and
 public rollout remain separate gates after this private validation.

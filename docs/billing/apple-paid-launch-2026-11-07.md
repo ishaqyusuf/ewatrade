@@ -22,7 +22,11 @@ the independent Sandbox verifier correction. These establish receiver delivery,
 not purchases, ordinary Sandbox relay, renewals or entitlement acceptance.
 Reviewer-only API authorization is deployed; public checkout remains false and
 WEB activation is unchanged. Production TestFlight OTA remains prohibited.
-No native purchase, cancellation or restore has yet been completed.
+Owner confirms Restore purchases is visible and Starter's Apple confirmation was
+cancelled. The scoped Production read verifies zero purchase/subscription/coverage
+records and canonical Free access afterward. This accepts cancellation without a
+grant; actual purchase, coverage and restore remain pending. See the
+[current signed checklist](../verification/2026-11-08-iphone-paid-testflight-checklist.md).
 See [the iOS entry-point receipt](../verification/2026-11-08-ios-billing-entrypoints.md),
 [the build/callback receipt](../verification/2026-11-08-apple-build8-callback.md) and
 [prepared iPhone checks](../verification/2026-11-08-iphone-paid-testflight-checklist.md).
