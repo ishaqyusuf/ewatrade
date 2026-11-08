@@ -79,3 +79,23 @@ No credential was created/replaced by this source change, and no hosted flag,
 build, upload, tester distribution or public publication is claimed here. Apple
 remains 2/6 accepted milestones. No schema or API contract changed. Assistant
 access stays form-only; an assistant cannot start a store purchase.
+
+## Private TestFlight audience inspected
+
+App Store Connect currently has one internal group, EwaTrade Preview Internal,
+with one tester matching the Account Holder and one historical build, 1.0.0 (6).
+There are no external groups. The group Settings page explicitly reports
+`Manual for Xcode Builds`. No group, tester, distribution or upload setting was
+changed. This is the current audience observation, not proof that a future upload
+has been assigned or installed. Inspect the new exact build after processing.
+Private metadata receipt: `/private/tmp/ewatrade-apple-testflight-audience-2026-11-08.json`.
+
+The seven-key API configuration helper completed a read-only dry run at clean
+`fe3740963`, with three existing sensitive rows, four new rows, no linked shared
+collisions and public checkout closed in the proposed configuration. No mutation
+ledger exists and no value was applied. Subsequent dashboard payment safety edits
+made the checkout dirty, so the old source pin was explicitly released. The
+configuration/deployment/build must use a newly agreed clean committed pin.
+The owner authorized direct coordination with the dashboard payment chat.
+Apple acceptance stays 2/6; source and audience inspection close no signed or
+runtime payment milestone.
