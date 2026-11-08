@@ -5,8 +5,8 @@ Status: Production Dashboard, Marketing and API are now at
 existing Production schema remains synchronized at database release `bf9bc356`.
 The normal executor exited 0 and API health passed. Five of six Production
 components are complete (83.3%). Canonical Android Preview acceptance passed at
-`7ba0fd68c`; signed Android Production validation build 36 is in progress, without
-store submission. Native store readiness and paid-lifecycle gates remain open.
+`7ba0fd68c`; signed Android Production validation build 36 passed artifact inspection,
+without store submission. Native store readiness and paid-lifecycle gates remain open.
 Production signup email delivery now passes; the owner must complete account
 verification directly. No worktree. Historical entries retain earlier states;
 the latest receipt below is authoritative.
@@ -614,3 +614,20 @@ Private command logs: `/tmp/full-release-preview-dafec2e0.log`,
 `/tmp/full-release-web-dafec2e0-retry.log`,
 `/tmp/full-release-production-api-dafec2e0.log`,
 `/tmp/ewatrade-android-validation-dafec2e0.log`.
+
+## Signed Android validation passed — 8 November 2026
+
+Build `56f45d80-ec23-4368-add5-49329741f3a5` finished at 11:36:58Z. Exact candidate
+`dafec2e01`, project, profile and channel matched before exclusive private download.
+Actual AAB package `com.ewatrade.app` / versionCode36, bundle validation and
+signature integrity pass. BILLING and native ExpoIap/OpenIap/BillingClient code
+are present; coarse/fine/background location permissions are absent. The full
+inventory, signature-warning limits, SHA-256 and private evidence paths are in
+[the signed artifact receipt](../verification/2026-11-08-android-production-artifact.md).
+
+Artifact evidence was handed to the existing Android chat for its remaining store
+work. No installation, Play upload, OTA or paid activation was performed. Preview
+smoke and artifact inspection are complete; store/legal/reviewer/paid-lifecycle
+requirements remain. The owner must finish signup verification directly in the
+existing Apple flow; bank setup remains deferred. Production remains five of six
+components complete, with native publication still pending. No worktree.
