@@ -1,6 +1,6 @@
 # Assistant flat conversation Workshop plan
 
-6 November 2026. **Approved plan; five-flow pilot ready for owner review.**
+6 November 2026. **Approved plan; whole-library Flat candidate (v10) ready for owner review (phase 4).**
 The owner confirmed Claude Opus 5.5 (`claude-opus-5-5`) at explicit high effort
 as the intended Workshop author. Codex coordinates the baseline, handoff and
 acceptance. The initial planning checkpoint below is retained as history.
@@ -18,6 +18,30 @@ Five flows / 47 preview states; 96 Current/Flat comparisons pass. The original
 435 entries / 1,689 steps are unchanged. Pilot ledger: 16/428 core scenes;
 412 and seven retained alternatives await the later audit. No new selection or
 implementation. Sequence phases 1–2 delivered; phases 3–4 await owner feedback.
+
+**Whole-library pass (8 November):** after the owner's go-ahead on the pilot, three
+Opus 5.5/high sessions applied Flat by area. Direction `01` / Library v10,
+`e3fbe369-afdf-40a5-9e22-2a029f7ca86f`, opens in Flat with a Current / Flat / Both
+Variant on every app scene; WhatsApp stays native.
+[Exact revision](https://workshop.localhost/ewatrade/assistant/conversations/directions/01?rev=e3fbe369-afdf-40a5-9e22-2a029f7ca86f).
+
+| Area | Scenes | Change | Fits | Exception | Gap |
+| --- | --- | --- | --- | --- | --- |
+| Capability | 165 | 165 | 0 | 0 | 0 |
+| App system | 107 | 71 | 16 | 20 | 0 |
+| WhatsApp | 156 | 7 | 145 | 4 | 0 |
+
+Capability: 56 scenes keep an interaction boundary (draft editors, choice chips) and
+108 record a missing hand-off destination (View order, View all and similar have no
+library target) rather than inventing one. WhatsApp `change` = 9 proposed copy changes,
+not adopted; adoption follows the canonical WhatsApp implementation standard. Strict
+build and coverage pass (435 entries / 1,689 steps unchanged); smoke compares 1,554
+library Current/Flat cards plus the 96 pilot comparisons. Coordinator browser spot
+checks on a local static server: capability review (mobile Both), app system loading
+(mobile Both), What can you do (dashboard Flat, dark), setup offline (mobile Both),
+WhatsApp 9a, Variant switching and scene hash navigation; no console errors. Ledgers:
+Workshop source `notes/library-pass-2026-11-08-*.md`. Product implementation waits for
+the owner's review of this exact revision.
 
 ## Intended result
 
