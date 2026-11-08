@@ -2100,7 +2100,7 @@ export function CatalogItemForm({
         </p>
       ) : (
         <p className="min-w-0 flex-1 truncate text-sm text-muted-foreground">
-          {form.kind === "product" ? "Product" : "Service"}
+          {form.kind === "product" ? "Item" : "Service"}
           {editing ? "" : " draft"} · {priceSummary}
         </p>
       )}
@@ -2120,7 +2120,7 @@ export function CatalogItemForm({
               : createMutation.variables || createAdvancedMutation.variables
                 ? "Retry same item"
                 : form.kind === "product"
-                  ? "Add product"
+                  ? "Add item"
                   : "Add service"}
         </CatalogFooterLabel>
       </SubmitButton>

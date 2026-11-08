@@ -145,7 +145,7 @@ const DASHBOARD_NAV: DashboardNavDefinition[] = [
     canAccess: canUseRetailOps,
   },
   {
-    description: "Product and service item setup",
+    description: "Goods and services setup",
     href: "/catalog",
     icon: "products",
     label: "Catalog",

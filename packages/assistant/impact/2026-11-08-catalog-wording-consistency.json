@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "id": "2026-11-08-catalog-wording-consistency",
+  "tickets": ["H02"],
+  "summary": "Apply approved Goods and Services descriptions to remaining mobile catalog entry points and align dashboard catalog actions, filters, search, badges, metrics, charts and sales CSV labels.",
+  "noAssistantImpact": "Display wording only, including assistant catalog handoff button text. Product/service kinds, persisted keys, URLs, report values, merchant content, domain commands, assistant capabilities and confirmation authority are unchanged. The Home quick-create catalog permission filter follows the renamed Services label and retains the existing catalog-editor grant.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/product-service-catalog-items.md"
+    },
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/mobile-goods-wording.md"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "review",
+      "path": "apps/mobile/src/components/mobile/dashboard/operations-dashboard-screen.tsx",
+      "executed": true,
+      "result": "Goods and Services retain their product/service setup routes and existing online-only availability. The scoped catalog permission filter follows both display labels."
+    },
+    {
+      "kind": "review",
+      "path": "apps/dashboard/src/components/dashboard/operations-report-sections.ts",
+      "executed": true,
+      "result": "Only report display/CSV labels change; monetary fields, quantities, dates and CSV escaping remain intact."
+    },
+    {
+      "kind": "test",
+      "path": "apps/dashboard/src/components/dashboard/operations-report-sections.test.ts",
+      "executed": true,
+      "result": "47 tests/344 assertions across seven focused dashboard/mobile files pass, including exact CSV amounts/escaping and scoped catalog access. Full changed-path fast source smoke passes 284/1813; both application TypeScript checks, tooling types, Biome and H01/H02 pass. Local web smoke failed with runtimeVerified=false and no checks; no native or release acceptance."
+    }
+  ]
+}

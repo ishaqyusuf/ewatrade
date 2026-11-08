@@ -384,15 +384,15 @@ export function OperationsDashboardSurface({
   }
   const allCreateActions: CreateAction[] = [
     {
-      detail: "Add a stock-tracked item to your catalog.",
+      detail: "Items you buy or sell.",
       disabled: isOffline,
       label: "Goods",
       onPress: () => openCreateRoute("/first-product-setup-modal?kind=product"),
     },
     {
-      detail: "Add work that you price and deliver.",
+      detail: "Services you provide for payment.",
       disabled: isOffline,
-      label: "Service",
+      label: "Services",
       onPress: () => openCreateRoute("/first-product-setup-modal?kind=service"),
     },
     ...(featureAvailability.hasCustomers
@@ -426,7 +426,7 @@ export function OperationsDashboardSurface({
     },
   ]
   const createActions = allCreateActions.filter((action) => {
-    if (["Goods", "Service"].includes(action.label)) return canEditCatalog
+    if (["Goods", "Services"].includes(action.label)) return canEditCatalog
     if (action.label === "Staff") return canManageMobileStaff(profile)
     if (action.label === "Customer") return !scopedStaff
     if (action.label === "Stock Entry")

@@ -31,13 +31,13 @@ export function getGettingStartedActions(
   if (canManageCatalog) {
     actions.push(
       {
-        description: "Something you sell and keep in stock.",
+        description: "Items you buy or sell.",
         catalogCreateKind: "product",
         href: "/?catalogItem=create&catalogCreateKind=product",
-        label: "Add a product",
+        label: "Add an item",
       },
       {
-        description: "Work you do for customers, like a visit or a repair.",
+        description: "Services you provide for payment.",
         catalogCreateKind: "service",
         href: "/?catalogItem=create&catalogCreateKind=service",
         label: "Add a service",
@@ -48,7 +48,7 @@ export function getGettingStartedActions(
   if (canCreateOrders) {
     actions.push({
       description: availability.hasActiveSellableItems
-        ? "Sell a product or service you have added."
+        ? "Sell an item or service you have added."
         : "Pick items or type a price.",
       disabled: false,
       href: "/sales?orderSheet=create",

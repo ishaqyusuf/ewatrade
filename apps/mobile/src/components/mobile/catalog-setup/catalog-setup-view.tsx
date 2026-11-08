@@ -169,7 +169,7 @@ export function CatalogSetupView({ model }: { model: CatalogSetupModel }) {
           </View>
           <View className="gap-3">
             <Classic.KindChoice
-              description="Something you keep and sell. Tracks stock."
+              description="Items you buy or sell."
               icon="Package"
               label="Goods"
               tint="mint"
@@ -181,9 +181,9 @@ export function CatalogSetupView({ model }: { model: CatalogSetupModel }) {
               }
             />
             <Classic.KindChoice
-              description="Work you price and deliver. No stock."
+              description="Services you provide for payment."
               icon="Wrench"
-              label="Service"
+              label="Services"
               tint="sky"
               onPress={() => setKind("service")}
               recommendation={

@@ -24,7 +24,7 @@ export function OverviewFab({
   if (catalog)
     actions.push(
       {
-        label: "Add product",
+        label: "Add item",
         icon: Package01Icon,
         onSelect: () =>
           void setParams({

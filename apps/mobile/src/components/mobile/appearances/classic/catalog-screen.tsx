@@ -135,7 +135,7 @@ export function ClassicCatalogChoices({
         Add an item
       </ActionButton>
       <Text className="text-xs text-muted-foreground">
-        Goods you stock, count and sell
+        Items you buy or sell.
       </Text>
       <ActionButton
         disabled={disabled}
@@ -143,10 +143,10 @@ export function ClassicCatalogChoices({
         onPress={onAddService}
         tone="soft"
       >
-        Add a Service
+        Add a service
       </ActionButton>
       <Text className="text-xs text-muted-foreground">
-        Work you price and deliver
+        Services you provide for payment.
       </Text>
     </View>
   )
@@ -175,7 +175,7 @@ export function ClassicCatalogFirstItemGate(props: CatalogChoiceProps) {
             onPress={props.onAddService}
             tone="cream"
           >
-            Add a Service
+            Add a service
           </ActionButton>
         </View>
       </HeroCard>

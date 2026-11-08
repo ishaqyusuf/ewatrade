@@ -108,12 +108,12 @@ export function AssistantLinks({
         ) : null}
         {productData ? (
           <QuietLink onClick={() => openProduct(null)}>
-            Add product with AI
+            Add item with AI
           </QuietLink>
         ) : null}
         {draft ? (
           <QuietLink onClick={() => openProduct(draft.id)}>
-            Continue “{draft.title ?? "product"}” draft
+            Continue “{draft.title ?? "item"}” draft
           </QuietLink>
         ) : null}
         {setupData && areas.length ? (

@@ -78,7 +78,7 @@ export async function OverviewMetrics({
     ...(availability.hasCatalogItems
       ? [
           {
-            label: "Products and services",
+            label: "Goods and services",
             value: summary.catalogItems.toLocaleString(),
             sub: "In your catalog",
           },
@@ -89,7 +89,7 @@ export async function OverviewMetrics({
           {
             label: "Tracked in stock",
             value: summary.stockBalances.toLocaleString(),
-            sub: "Products with a stock count",
+            sub: "Goods with a stock count",
           },
         ]
       : []),

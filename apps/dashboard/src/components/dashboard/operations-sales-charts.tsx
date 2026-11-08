@@ -79,7 +79,7 @@ export function SalesByDayCard({
         empty
           ? undefined
           : {
-              columns: ["Date", "Orders", "Products", "Services", "Sales"],
+              columns: ["Date", "Orders", "Goods", "Services", "Sales"],
               numericFrom: 1,
               rows: [...report.days].reverse().map((day) => ({
                 cells: [
@@ -107,7 +107,7 @@ export function SalesByDayCard({
             items={[
               {
                 color: PRODUCT_COLOR,
-                label: "Products",
+                label: "Goods",
                 value: money(totals.productMinor),
               },
               {
@@ -131,14 +131,14 @@ export function SalesByDayCard({
             formatValue={money}
             label={`Sales by day, ${formatReportRangeLabel(range)}. Use the arrow keys to read each day.`}
             series={[
-              { color: PRODUCT_COLOR, key: "product", label: "Products" },
+              { color: PRODUCT_COLOR, key: "product", label: "Goods" },
               { color: SERVICE_COLOR, key: "service", label: "Services" },
             ]}
             totalLabel="Items total"
           />
           {itemsTotal !== totals.orderValueMinor ? (
             <p className="text-xs text-muted-foreground">
-              Products and Services are item amounts. Sales (
+              Goods and services are item amounts. Sales (
               {money(totals.orderValueMinor)}) also includes Order charges and
               discounts.
             </p>
@@ -164,7 +164,7 @@ export function TopSellersCard({ report }: { report: OperationsSalesReport }) {
               rows: topItems.map((item) => ({
                 cells: [
                   item.name,
-                  item.kind === "service" ? "Service" : "Product",
+                  item.kind === "service" ? "Service" : "Goods",
                   formatQuantity(item.quantity),
                   formatMinorMoney(item.totalMinor, currencyCode),
                 ],
@@ -179,8 +179,8 @@ export function TopSellersCard({ report }: { report: OperationsSalesReport }) {
         <>
           <ReportChartLegend
             items={[
-              { color: PRODUCT_COLOR, label: "Product" },
-              { color: SERVICE_COLOR, label: "Service" },
+              { color: PRODUCT_COLOR, label: "Goods" },
+              { color: SERVICE_COLOR, label: "Services" },
             ]}
           />
           <ReportBarList

@@ -35,7 +35,7 @@ export function CatalogHeader({
     <PageHeader
       title="Catalog"
       eyebrow={storeName}
-      description="Products and Services with separate stock and work behavior."
+      description="Goods and services you offer."
     >
       <PageToolbar
         actions={

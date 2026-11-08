@@ -78,7 +78,7 @@ export function getDashboardCommands(
   if (options.setupAssistant) {
     commands.push({
       description:
-        "Add products, stock, customers and balances by chat, voice note or photo.",
+        "Add goods, stock, customers and balances by chat, voice note or photo.",
       href: "/?setup=assistant",
       id: "setup-assistant",
       title: "Set up with the assistant",
@@ -87,7 +87,7 @@ export function getDashboardCommands(
 
   if (available.has("/catalog")) {
     commands.push({
-      description: "Open the catalog and add a Product or Service item.",
+      description: "Open the catalog and add an item or service.",
       href: "/catalog?catalogItem=create",
       id: "create-item",
       title: "Add item",

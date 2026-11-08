@@ -125,7 +125,7 @@ export function OpenMissingCatalogItem({
           ? "Checking catalog…"
           : handoff.kind === "service"
             ? "Add service"
-            : "Add product"}
+            : "Add item"}
       </Button>
       {error ? (
         <output className="text-xs text-muted-foreground">{error}</output>

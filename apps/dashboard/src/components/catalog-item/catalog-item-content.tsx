@@ -82,9 +82,9 @@ export function CatalogItemContent(props: CatalogItemContentProps) {
         props.editItem
           ? form.kind === "service"
             ? "Edit service"
-            : "Edit product"
+            : "Edit item"
           : form.kind === "product"
-            ? "Add product"
+            ? "Add item"
             : form.kind === "service"
               ? "Add service"
               : "Add item"

@@ -121,7 +121,7 @@ export function CatalogKindBadge({
         className,
       )}
     >
-      {item.kind === "service" ? "Service" : "Product"}
+      {item.kind === "service" ? "Service" : "Goods"}
     </Badge>
   )
 }

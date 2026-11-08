@@ -130,7 +130,7 @@ export function buildSalesReportCsv(
 ) {
   const rows: Array<Array<string | number>> = [
     ["Sales by day", storeName, `Amounts in ${report.currencyCode}`],
-    ["Date", "Orders", "Product sales", "Service sales", "Sales"],
+    ["Date", "Orders", "Goods sales", "Service sales", "Sales"],
     ...report.days.map((day) => [
       day.date,
       day.orderCount,
@@ -150,7 +150,7 @@ export function buildSalesReportCsv(
     ["Item", "Type", "Sold", "Sales"],
     ...report.topItems.map((item) => [
       item.name,
-      item.kind === "service" ? "Service" : "Product",
+      item.kind === "service" ? "Service" : "Goods",
       item.quantity,
       reportCsvMoney(item.totalMinor),
     ]),

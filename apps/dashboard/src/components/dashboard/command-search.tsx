@@ -39,7 +39,7 @@ type Props = {
 function groupLabel(group: string) {
   switch (group) {
     case "products":
-      return "Products"
+      return "Goods"
     case "customers":
       return "Customers"
     case "staff":

@@ -68,7 +68,7 @@ export function OverviewActions({
                 })
               }
             >
-              Add product
+              Add item
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={() =>

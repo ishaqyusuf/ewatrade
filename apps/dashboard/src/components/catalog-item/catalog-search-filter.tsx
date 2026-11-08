@@ -14,7 +14,7 @@ export function CatalogSearchFilter() {
   const { catalogKind, catalogQuery, catalogStatus, setParams } =
     useCatalogItemParams()
   const kinds = [
-    { id: "product", label: "Products" },
+    { id: "product", label: "Goods" },
     { id: "service", label: "Services" },
   ] as const
   const statuses = [
@@ -74,7 +74,7 @@ export function CatalogSearchFilter() {
           ? [
               {
                 id: "kind",
-                label: catalogKind === "product" ? "Products" : "Services",
+                label: catalogKind === "product" ? "Goods" : "Services",
                 onRemove: () => void setParams({ catalogKind: null }),
               },
             ]
