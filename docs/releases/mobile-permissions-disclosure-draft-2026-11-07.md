@@ -132,11 +132,17 @@ revocation handling. Authorized operators may use relevant billing information
 to resolve an access or refund issue. Do not email passwords, store purchase
 tokens or full payment-card details to support.
 
-Billing records are subject to the published retention and deletion process;
-closing a login does not erase every financial or business record automatically.
-Any retained categories and reasons must be documented and access restricted.
-The store manages its own account, payment and transaction records under its
-policies. EwaTrade's privacy process does not claim to erase the store's records.
+We may retain limited billing information needed to reconcile payments, prevent
+receipt misuse, handle refunds or disputes, or meet applicable record obligations.
+We minimize the personal profile separately from necessary billing links. Each
+retained category needs a documented reason, expiry or hold basis, responsible
+reviewer and next review date. We review retention within twelve months, or sooner
+when the applicable deadline or hold requires it; review does not automatically
+extend a retention period. The account-deletion result explains retained categories
+and reasons. Closing a login does not automatically erase financial or business
+records or cancel renewal. The store manages its own account, payment and
+transaction records under its policies. EwaTrade's process does not claim to erase
+the store's records.
 
 Authoring instruction: replace the existing “App-store software purchases are not
 offered in this mobile release” sentence in Privacy/Purposes and providers with
@@ -212,11 +218,18 @@ hashed. Raw references are processed for store verification; separate Play refun
 review can retain encrypted token and order references. No automatic retention
 duration is defined for the owner billing tables in the reviewed source.
 
-Authoring hold: establish the accepted paid-owner retention/disposition procedure
-before promising completed erasure. The current privacy processor correctly
-refuses an empty-data outcome when owner billing or coverage history exists.
-The prior empty-account deletion case cannot establish this positive-data case.
-Keep the statement that deletion does not cancel an external store subscription.
+Authoring hold updated 8 November: the owner approved the minimum-necessary
+paid-owner policy and source implementation. Source `49df03a06` supports explicit
+category review, terminal checkout-link minimization, current-scope checks and
+independent annual/earlier review duties. Development-only fixtures and source
+checks pass. The three new settings remain dormant. This packet has not accepted
+Production schema application, a positive live case, provider erasure or a requester
+notice/result.
+The prior empty-account case does not establish paid-owner fulfillment. Do not
+publish this proposed wording until exact release-target behavior and the complete
+legal snapshot are approved. See the [operator procedure](../billing/paid-owner-deletion-review.md)
+and [source receipt](../verification/2026-11-08-paid-owner-privacy.md). Keep cancellation
+separate from deletion and preserve the existing effective legal snapshot.
 
 Source evidence and exact remaining target questions are maintained in the
 [shared recipient/retention appendix](android-safety-privacy-review-2026-11-07.md#shared-billing-ai-and-media-source-reconciliation--7-november).

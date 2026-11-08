@@ -179,3 +179,26 @@ choices, retention/positive paid-owner deletion and one complete legal snapshot.
 Apple owns its active Production TestFlight candidate; no overlapping native/EAS
 edits or duplicate executor. Bank setup remains owner-deferred; no new input is
 needed for the current read-only privacy reconciliation.
+
+
+### Paid-owner privacy source and disclosure reconciliation — 8 November 2026
+
+Owner-approved policy/source is committed as `49df03a06`: explicit retained billing
+review, current-scope proof and independent review duties now exist. Source/
+Development acceptance is complete; live paid-owner fulfillment, provider result
+and notice remain open. See the [operator procedure](paid-owner-deletion-review.md)
+and [source receipt](../verification/2026-11-08-paid-owner-privacy.md).
+
+The [single shared legal draft](../releases/mobile-permissions-disclosure-draft-2026-11-07.md)
+now reflects that retention policy and its remaining operational hold. It is not
+a new approved/effective snapshot. The [shared privacy appendix](../releases/android-safety-privacy-review-2026-11-07.md#paid-owner-source-and-current-provider-metadata--8-november-2026)
+records bounded API/Trigger/DB observations and API-specific provider references,
+separating current settings from final deployed behavior. WhatsApp media/manual
+receipt processing switches are off; other in-app media, analytics, provider roles
+and worker billing coverage still require their own evidence.
+
+Apple's immutable build 8 archive is accepted for remote compilation at source
+`8f158ba9f`; this is not TestFlight/paid-flow acceptance. No new Android build,
+Console declaration, public checkout, legal publication or live privacy activation
+was performed. Android 1/8, Apple 2/6 and preparation 3/4 remain unchanged here.
+[Documentation receipt](../verification/2026-11-08-privacy-disclosure-reconciliation.md).

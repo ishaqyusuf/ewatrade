@@ -1,5 +1,13 @@
 # Android safety and privacy review — 7 November 2026
 
+8 November continuation: paid-owner retention policy/source is now approved and
+implemented in `49df03a06`; hosted fulfillment remains open. Current API/Trigger
+configuration and exact-key DB observations are recorded in the
+[latest reconciliation](#paid-owner-source-and-current-provider-metadata--8-november-2026).
+These observations do not establish final deployed-process behavior or a public
+Data safety answer. The older inventory and its acceptance limits remain dated
+evidence; the single shared legal draft is still unapproved/unpublished.
+
 Later owner-approved update: automatic native address lookup is removed for
 launch and manual fields retained/added. The mobile API refuses geocoding without
 forwarding coordinates; Android config blocks all location permissions. The
@@ -264,3 +272,106 @@ SDKs silent or all collected data encrypted. Exact hosted flags, gateway/provide
 selection, retention and positive paid-owner deletion still need acceptance.
 No source/config/declaration edit, provider send, new build or device test. The
 incoming paid TestFlight/native candidate is separate; Android1/8 remains.
+
+
+## Paid-owner source and current provider metadata — 8 November 2026
+
+### Paid-owner disposition source accepted, fulfillment still open
+
+Owner approval covers the [minimum-necessary billing policy and source procedure](../billing/paid-owner-deletion-review.md).
+Commit `49df03a06` adds explicit per-category controller/necessity/basis review,
+expiry or bounded hold, annual/earlier review duties, terminal checkout-link
+minimization and current-source checks before profile/completion. Ordinary
+workflow resumption handles late billing data, including after exact canonical
+profile minimization, without restoring a login. Empty-account evidence cannot
+stand in for paid records. The independent ledger survives case-evidence expiry.
+The [source receipt](../verification/2026-11-08-paid-owner-privacy.md) records focused
+unit, API, actual Development concurrency/JSON-join and minimized-case checks.
+
+This supersedes the older statement that a positive source command is missing;
+it does not supersede the requirement for hosted paid-owner fulfillment. The
+three new retention inputs remain dormant. Three existing subscription/profile
+policy prerequisites surfaced in the backend plan and were assessed as dormant
+while processing is off; the release coordinator owns their configuration
+classification, without fabricated policies or activation. No Production schema
+application, real account disposition, provider erasure or delivered result is
+accepted by this packet. Cancellation remains separate.
+
+The inventory also covers tenant-less Paystack checkout/charge/binding/refund
+journals, including when a compatibility checkout is gone. Those records can
+contain customer/subscription codes, authorization/order digests, country, price
+snapshots and session state. They are not universally hash-only. Separate Play
+refund cases hold encrypted token/order custody; refund responses hold actor and
+decision evidence. Historical/shared/unresolved scope remains blocked.
+
+### Current settings are distinct from a deployed-process snapshot
+
+The coordinator's [API evidence](../verification/2026-11-08-api-provider-readiness.md)
+found no persisted assistant override, no API assistant/model/media overrides and
+dedicated DeepSeek credential-name metadata; text safety selected
+`openai-moderation` with dedicated key/approval-reference metadata. API Sentry and
+Logly collector/project names were absent in that inventory. Credential validity,
+actual calls, separate deployments and their runtime state were not tested.
+
+The following additional allowlisted receipts were read directly. Times are WAT
+(Africa/Lagos), on 8 November. No credential value, customer record, model request,
+provider health probe or setting mutation was used.
+
+| Read | Exact observation | Limit |
+| --- | --- | --- |
+| Trigger `proj_ahtovhgtjjkctpakuwjz` / `prod`, 17:05:37 | `APP_ENV=production`; `DEV_PROFILE` absent. | Current environment entries, not proof of the deployed worker version or its in-process values. |
+| WhatsApp worker selectors | `ASSISTANT_WHATSAPP_ENABLED=true`; `ASSISTANT_WHATSAPP_MEDIA_ENABLED=false`. | These switches govern that channel; they do not settle other in-app uploads or generation recipients. |
+| Manual receipt selectors | `MANUAL_RECEIPT_PROCESSING_ENABLED=false`, `MANUAL_RECEIPT_PROCESSOR_APPROVED=false`, `MANUAL_RECEIPT_WORKER_ADMITTED=false`; `MANUAL_RECEIPT_MODEL` absent. | This processing route is configured off. It does not prove receipt originals are never uploaded/stored or that all media features are off. |
+| Audio/gateway | `ASSISTANT_TRANSCRIBE_MODEL` absent in the Trigger reads. Exact Production DB read at 17:07:07 found no `assistant.voice.gateway.v1` row or active lease, and no `assistant.runtime` row. | No eligible gateway lease at that observation. Cloud fallback credential/route availability and actual worker process remain unproven. |
+| Analytics selector in jobs | `NEXT_PUBLIC_LOGLY_DASHBOARD_ENABLED=true`. | A dashboard-named flag in jobs does not establish Android collection or API forwarding; the separate client/forward settings still need acceptance. |
+| Owner billing worker selectors | `OWNER_BILLING_ENABLED` and `STORE_BILLING_ENVIRONMENT` absent. Source sync allowlist omits owner-billing inputs. | API-only settings cannot establish worker coverage/projection; worker cutover acceptance remains open. No flag was enabled to manufacture it. |
+
+Private receipts: `/private/tmp/ewatrade-apple-trigger-selectors-2026-11-08.json`
+and `/private/tmp/ewatrade-apple-provider-selection-2026-11-08.json`. The previous
+API inventory and this later exact-key DB read retain their own observation times.
+Do not re-label either as the final Ready release's effective environment.
+
+### Provider and declaration interpretation
+
+The official [DeepSeek API reference](https://api-docs.deepseek.com/api/deepseek-api/)
+links its [Open Platform Terms](https://cdn.deepseek.com/policies/en-US/deepseek-open-platform-terms-of-service.html),
+released 22 April/effective 29 April 2026. Sections 3.3/5.5 place downstream notice
+and rights responsibilities with the developer and describe provider cooperation.
+This identifies API-specific terms, not this project's accepted contract, fixed
+API retention, residency or completed erasure. Do not infer API training behavior
+from consumer wording or secondary commentary alone.
+
+Official [context-cache documentation](https://api-docs.deepseek.com/guides/kv_cache/)
+describes default disk caching of request prefixes and typical clearing of unused
+cache within hours to days. That is not a maximum for logs/backups/all API data,
+or evidence of memory-only real-time processing. No API call was sent.
+
+Google's [Data safety guidance](https://support.google.com/googleplay/android-developer/answer/10787469?hl=en)
+includes pseudonymous data, SDK transfers and controlled webviews; the
+service-provider exception depends on actual processing on the developer's behalf.
+Its payment FAQ distinguishes inaccessible card data collected directly by a
+payment service from purchase/fraud data the app receives. These are conditional
+rules, not a blanket no-sharing, no-financial-data or all-encrypted answer.
+The [deletion requirements](https://support.google.com/googleplay/android-developer/answer/13327111?hl=en)
+require the in-app/external request paths and clear explanation of legitimate
+retention. Policy/source approval does not certify hosted completion or provider
+erasure. No Console declaration was saved or submitted in this reconciliation.
+
+### Next acceptance boundary
+
+The archived private iOS build 8 is accepted for remote compilation as
+`e699c62f-4db6-4614-ae7c-2181d713bc2e`, source
+`8f158ba9fa7fa815a1ea7927ee63649404bd92cb`; it is not yet a compiled/TestFlight
+or paid-flow acceptance in this packet. The Android36 equality/manifest receipt
+remains scoped to that frozen artifact; later config/source changes do not inherit
+its byte-equality claim. No new native test was repeated for these docs.
+
+Still required: final Ready API/worker/source and effective selectors; actual
+worker coverage; signed Android recipient/SDK/transport scope; applicable provider
+roles/account retention and storage/cleanup operations; paid-owner fulfillment
+and reviewed delivery. Then freeze one complete immutable legal snapshot for
+exact-content approval and complete the store declarations. The existing shared
+draft was updated in place only. Preparation remains 3/4; Android 1/8 and Apple
+2/6 are unchanged here.
+
+[Documentation checkpoint receipt](../verification/2026-11-08-privacy-disclosure-reconciliation.md).
