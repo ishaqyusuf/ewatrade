@@ -113,3 +113,53 @@ operational privacy acceptance or authorize live account processing. Move the
 names out of the dormant list when enabling the feature. Existing privacy and
 billing gates remain effective. Validation is a bounded config diff/format review;
 the final clean-candidate release audit must still run.
+
+## Real Expo configuration correction and saved reviewer configuration
+
+The first actual private build at clean `49df03a06` stopped before Expo auth,
+archive upload or cloud build: `app.config.ts` still rejected the TestFlight flag
+outside Preview. Fixture-only target/runner checks had not exercised that import.
+The dynamic config now permits Production only with the explicit
+`testflight-production` profile, retaining Preview's registered-bundle override and
+ordinary Production identity. Real-config regression cases exercise Production
+preflight, Preview and ordinary Production resolution, and unintended target
+refusal. No public store/OTA gate was removed.
+
+At that same source checkpoint, the seven reviewed API Production settings and
+seven-key local operator mirror were installed. Three existing Sensitive row IDs,
+types and targets were preserved; four new Production-only Sensitive rows were
+created. Final metadata readback and unrelated-setting/profile-byte comparisons
+passed. One immutable reviewer is configured; public checkout is explicitly false.
+No WEB billing setting changed. The operator ledger is private at
+`/private/tmp/ewatrade-reviewer-config-application.private.json`; no ID/secret value
+is copied here. A redeployment and effective-runtime checks remain necessary.
+
+Two initial requests were rejected without changing metadata because the API
+forbids a key field on Sensitive edits, even unchanged. The corrected value-only
+request then exposed the create endpoint's single-object response shape. The
+partial application was stopped and reconciled by exact metadata; the captured
+new row ID received an explicit value replacement before continuing. No duplicate
+row, delete/recreate, blind retry or runtime rollback was used. The completed
+ledger contains all seven operations; earlier stopped ledgers remain private.
+
+Apple's native Billing Grace Period is currently unconfigured, consistent with
+using the five-day application courtesy against verified retry facts. No grace
+setting changed. The draft review notes now give the exact native **Use password**
+then **Sign in with password** route; persisted text and disabled Save were checked
+after reload without reading credentials. Proof:
+`/private/tmp/ewatrade-apple-review-password-instructions-2026-11-08.jpg`.
+This preparation closes no signed or hosted acceptance milestone (Apple 2/6).
+
+Follow-up verification: offline doctor; real-config/runner/Preview/billing suite
+114 tests/628 assertions; scoped runtime-path smoke202/1,056; full mobile types;
+scoped test types; owned Biome/diff checks pass. The new tests evaluate the real
+Expo module with fresh module cache and restore their environment. Early
+noncanonical test invocations lost subprocess diagnostics and failed; the
+canonical `bun --env-file=/dev/null test ./<exact-file>` invocation passes all114.
+H01 must use documented APP_ENV=local to include QA routes; its temporary
+wrong-profile regeneration was discarded in full before the correct check.
+No coverage inventory or permission was changed by this native-config correction.
+The202-test smoke explicitly selects only app.config.ts and its regression file;
+it is not full release, UI, signed or money acceptance. H02 passes with the
+updated existing form-only impact record. Final backend release source smoke
+and matching hosted Preview evidence remain required.

@@ -8,8 +8,8 @@ rollout and Preview TEST receipts below remain historical evidence.
 
 Paid native scope and the guarded Production TestFlight build target are committed
 in `45e9a8c55`, but no current signed iOS artifact is built or uploaded. The
-reviewer-only seven-key configuration passed its dry run without being applied;
-public checkout remains closed. The existing internal TestFlight group contains
+reviewer-only seven-key configuration is saved for the next API deployment;
+effective runtime checks remain pending and public checkout stays closed. The existing internal TestFlight group contains
 only the Account Holder, with manual build distribution and no external groups.
 Final clean source, effective backend configuration, signed money/lifecycle and
 privacy/legal acceptance remain open. See the

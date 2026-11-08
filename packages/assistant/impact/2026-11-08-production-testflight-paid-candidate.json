@@ -38,13 +38,13 @@
       "kind": "test",
       "path": "scripts/testflight-production.test.ts",
       "executed": true,
-      "result": "Private target rejects wrong identity/origins/scope, public checkout, broad reviewer IDs and client-carried server authorization; requires IAP and the registered local-signing profile."
+      "result": "Private target rejects wrong identity/origins/scope, public checkout, broad reviewer IDs and client-carried server authorization; requires IAP and the registered local-signing profile. Follow-up executes the real dynamic Expo config: explicit Production TestFlight now resolves; Preview and ordinary Production identities remain; unintended TestFlight targets refuse."
     },
     {
       "kind": "test",
       "path": "scripts/eas-account-runner.test.ts",
       "executed": true,
-      "result": "Focused complete suite112/620 including Preview/billing regression passes: Production private build/upload uses dedicated channel and correct Expo environment; rejects OTA/Android/dirty/API/login/identity/attachment and wrong build profile/channel/source/version. Fake provider/auth adapters only."
+      "result": "Focused complete suite114/628 including Preview/billing regression passes: Production private build/upload uses dedicated channel and correct Expo environment; rejects OTA/Android/dirty/API/login/identity/attachment and wrong build profile/channel/source/version. Fake provider/auth adapters only."
     }
   ]
 }

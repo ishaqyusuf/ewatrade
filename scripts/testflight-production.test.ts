@@ -31,6 +31,61 @@ const scope = { softwarePlanPurchases: true }
 const check = (changed = {}) =>
   testFlightProductionFailures({ env, app, eas, scope, ...changed })
 
+async function actualAppConfig(
+  changes: Record<string, string | undefined> = {},
+) {
+  const selected: Record<string, string | undefined> = { ...env, ...changes }
+  const previous = Object.fromEntries(
+    Object.keys(selected).map((key) => [key, process.env[key]]),
+  )
+  try {
+    for (const [key, value] of Object.entries(selected)) {
+      if (value === undefined) delete process.env[key]
+      else process.env[key] = value
+    }
+    // Bun caches dynamic config by path, including imports with query strings.
+    // Clear this one owned module so each case evaluates its actual target.
+    delete require.cache[require.resolve("../apps/mobile/app.config.ts")]
+    return require("../apps/mobile/app.config.ts").default
+  } finally {
+    delete require.cache[require.resolve("../apps/mobile/app.config.ts")]
+    for (const [key, value] of Object.entries(previous)) {
+      if (value === undefined) delete process.env[key]
+      else process.env[key] = value
+    }
+  }
+}
+
+test("actual Production TestFlight preflight imports the real dynamic Expo config", async () => {
+  expect(check({ app: await actualAppConfig() })).toEqual([])
+})
+
+test("actual Expo config preserves Preview and ordinary Production identities and refuses unintended TestFlight variants", async () => {
+  const preview = await actualAppConfig({
+    ...eas.build["testflight-preview"].env,
+    APP_VARIANT: "preview",
+    EXPO_PUBLIC_APP_VARIANT: "preview",
+    EAS_BUILD_PROFILE: "testflight-preview",
+  })
+  expect(preview.ios.bundleIdentifier).toBe("com.ewatrade.app")
+  expect(preview.extra.appVariant).toBe("preview")
+  const production = await actualAppConfig({
+    IOS_TESTFLIGHT: undefined,
+    EAS_BUILD_PROFILE: "production",
+  })
+  expect(production.ios.bundleIdentifier).toBe("com.ewatrade.app")
+  expect(production.extra.appVariant).toBe("production")
+  for (const changes of [
+    { EAS_BUILD_PROFILE: "production" },
+    { EAS_BUILD_PROFILE: undefined },
+    { APP_VARIANT: "development", EXPO_PUBLIC_DASHBOARD_URL: undefined },
+  ]) {
+    await expect(actualAppConfig(changes)).rejects.toThrow(
+      "TestFlight requires",
+    )
+  }
+})
+
 test("private paid TestFlight uses Production identity/services and a separate channel", () => {
   expect(check()).toEqual([])
   for (const key of Object.keys(eas.build["testflight-production"].env).filter(

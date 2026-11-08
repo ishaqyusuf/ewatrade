@@ -51,10 +51,18 @@ const onboardingLinks = getOnboardingLinkConfig(
   normalizedAppVariant,
   process.env.EXPO_PUBLIC_DASHBOARD_URL,
 )
-// Store signing identity is separate from the Preview runtime/service variant.
-const isTestFlightPreview = process.env.IOS_TESTFLIGHT === "1"
-if (isTestFlightPreview && normalizedAppVariant !== "preview") {
-  throw new Error("TestFlight Preview requires the Preview app variant.")
+// Preview TestFlight borrows the registered store identity. Production uses it
+// directly and requires its explicit isolated TestFlight profile.
+const isTestFlight = process.env.IOS_TESTFLIGHT === "1"
+const isTestFlightPreview = isTestFlight && normalizedAppVariant === "preview"
+const isTestFlightProduction =
+  isTestFlight &&
+  normalizedAppVariant === "production" &&
+  process.env.EAS_BUILD_PROFILE === "testflight-production"
+if (isTestFlight && !isTestFlightPreview && !isTestFlightProduction) {
+  throw new Error(
+    "TestFlight requires the Preview variant or the explicit Production TestFlight profile.",
+  )
 }
 const isDevelopmentBuild =
   normalizedAppVariant === "development" || normalizedAppVariant === "dev"
