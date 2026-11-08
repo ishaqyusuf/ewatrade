@@ -250,3 +250,17 @@ These are remaining evidence tasks, not a new launch-readiness denominator.
 Android remains 1/8; Apple remains 2/6 at this checkpoint. The source review and
 documentation validation are recorded in the
 [phase receipt](../verification/2026-11-07-mobile-provider-reconciliation.md).
+
+
+## Exact Android36 static transport follow-up — 8 November 2026
+
+The [bounded SDK/transport receipt](../verification/2026-11-08-android-sdk-transport.md)
+now records actual targetSdk36/default transport attributes, HTTPS Expo update
+origin, native Sentry auto-init false and the unchanged source fences for analytics,
+Google auth and Preview-only native installation. Eleven source paths match frozen
+AAB36 source byte-for-byte. Expo launch-check NEVER does not disable the explicit
+JS update flow; packaged Sentry providers and source HTTPS guards do not prove all
+SDKs silent or all collected data encrypted. Exact hosted flags, gateway/provider
+selection, retention and positive paid-owner deletion still need acceptance.
+No source/config/declaration edit, provider send, new build or device test. The
+incoming paid TestFlight/native candidate is separate; Android1/8 remains.

@@ -14892,3 +14892,24 @@ docs/releases/play-subscription-price-support-request-2026-11-08.md and
 docs/verification/2026-11-08-play-merchant-artifact-readiness.md.
 
 ---
+
+<!-- agent-chat: {"id":"0da43fb9-1c37-4268-8841-6cf9e2a8fe9e","at":"2026-11-08T14:27:28.484Z","from":"codex","to":"all","kind":"handoff"} -->
+## 2026-11-08T15:27:28+01:00 · codex → all · handoff
+
+Message ID: `0da43fb9-1c37-4268-8841-6cf9e2a8fe9e`
+
+## Android independent SDK/transport privacy phase — 8 November 2026
+
+While Google pricing ticket is Pending/caseIDpending, exact AAB36 targetSdk36,
+no explicit cleartext override/networkSecurityConfig, HTTPS Expo update URL and
+native Sentry auto-initfalse extracted. Eleven reviewed runtime/config paths match
+frozen dafec2e01 byte-for-byte; explicit JS OTA checks and packaged Sentry providers
+prevent blanket no-traffic conclusions. Analytics/auth/API source guards reviewed;
+actual embedded/hosted provider flags, media/gateway transport, retention and
+positive paid-owner deletion remain. No code/config/provider send/build/device
+check/declaration/DB writes. Source/Preview/artifact evidence reused, Android1/8.
+Next exact non-secret hosted choices via existing release owner, then immutable
+legal snapshot/final declaration. Apple retains active paidTestFlight/native paths.
+Receipt docs/verification/2026-11-08-android-sdk-transport.md; shared index updated.
+
+---

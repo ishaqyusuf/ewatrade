@@ -165,3 +165,17 @@ Bank remains deferred; provider/transport/retention/deletion evidence stays open
 Android1/8 remains; Apple's separate current position is maintained by its owner.
 See [current evidence](../verification/2026-11-08-play-merchant-artifact-readiness.md)
 and [exact AAB](../verification/2026-11-08-android-production-artifact.md).
+
+
+### Android independent privacy phase — 8 November 2026
+
+The [Google specialist report](../releases/play-subscription-price-support-request-2026-11-08.md)
+is submitted/Pending, case ID not yet assigned; do not create a duplicate.
+While pricing is unresolved, Android advanced [exact36 SDK/transport evidence](../verification/2026-11-08-android-sdk-transport.md):
+manifest and eleven unchanged source paths reviewed without a new build or test.
+This closes the bounded static evidence task, not all-data encryption, final Data
+safety or signed paid acceptance. Next: exact hosted provider/analytics/media
+choices, retention/positive paid-owner deletion and one complete legal snapshot.
+Apple owns its active Production TestFlight candidate; no overlapping native/EAS
+edits or duplicate executor. Bank setup remains owner-deferred; no new input is
+needed for the current read-only privacy reconciliation.
