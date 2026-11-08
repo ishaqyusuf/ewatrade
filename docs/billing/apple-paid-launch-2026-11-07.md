@@ -1,26 +1,28 @@
 # Apple paid-at-launch preparation — 7 November 2026
 
-Current checkpoint, 8 November: Apple acceptance remains **2/6**. Commercial
-agreements/payout/tax and three regional subscription products are accepted.
-Reviewer login and Free workspace are prepared. Backend2e1ee7e72 completed normal
-Preview/matching web smoke/Production DB+web+API rollout; jobs are unchanged.
-The signed Sandbox callback exposed Apple's identifier-before-environment check;
-server correction is committed224e6be99 with focused19/176, real-SDK captured-TEST,
-API types and source smoke passing. It still needs final deployed acceptance.
+Current checkpoint, 8 November: Apple acceptance remains **2/6 (33.3%)**.
+Commercial prerequisites and three regional monthly products are accepted.
+Corrected source `2d4424b1525c4aa05e6ced39ce888e31d7f8140e` passed canonical
+Preview API plus matching existing-data web smoke, then normal Production
+Dashboard/Marketing/API rollout. SQL-backed API health is200. Jobs are unchanged;
+Dashboard/jobs owner-plan reader configuration and paid consistency remain open.
 
-Private build **1.0.0 (8)** was signed, uploaded, processed and assigned to the
-existing one-tester internal group. The owner entered an email code and reached
-Free plan/usage, but no upgrade controls. This is login/usage evidence only.
-Two stale `.ios.tsx` provider/panel modules overrode the shared native billing
-implementation with no-ops. Their direct re-exports are now corrected, and actual
-iOS-entry controller/render regressions pass. **Build9 is required**; build8 is not
-a paid candidate. Production TestFlight OTA remains prohibited. No purchase made.
+Private **1.0.0 (10)** is signed, uploaded, processed and assigned only to the
+existing one-tester internal group. The owner confirmed password login on build8
+(the login source is unchanged in10), installed10 and reported the three prices.
+iPhone Mirroring confirms $3.99/$9.99/$22.99 every month for Starter/Growth/Pro.
+The `.ios` no-op provider/panel defect is corrected and those billing strings are
+present in the exact signed10 bundle. Build8 remains login-only evidence; counter9
+was consumed by a failed pre-upload attempt, with no accepted cloud build9.
 
-Root stopped only its own local Preview224e6be99 release wait (exit130) to combine
-the native entry correction into the next clean candidate; external builds continue.
-The corrected candidate requires source checks, guarded build9, canonical API
-rollout, a genuine callback and iPhone product/purchase/restore acceptance. Public
-checkout stays closed and Apple's saved Sandbox URL remains Preview.
+Apple's saved Production and Sandbox callback URLs now both point to
+`https://api.ewatrade.com/webhooks/store/apple`, confirmed after reload. The genuine
+previous TEST replays200, and a fresh Apple Sandbox TEST has delivery SUCCESS after
+the independent Sandbox verifier correction. These establish receiver delivery,
+not purchases, ordinary Sandbox relay, renewals or entitlement acceptance.
+Reviewer-only API authorization is deployed; public checkout remains false and
+WEB activation is unchanged. Production TestFlight OTA remains prohibited.
+No native purchase, cancellation or restore has yet been completed.
 See [the iOS entry-point receipt](../verification/2026-11-08-ios-billing-entrypoints.md),
 [the build/callback receipt](../verification/2026-11-08-apple-build8-callback.md) and
 [prepared iPhone checks](../verification/2026-11-08-iphone-paid-testflight-checklist.md).
@@ -119,7 +121,7 @@ Source progress is within open rows.
 | --- | --- | --- |
 | I01 Commercial prerequisites | Accepted | Owner accepted the updated Paid Applications Schedule; fresh 8 November Business reload shows Paid Apps Agreement, bank, both tax forms and DSA Active, with no new-agreement notice. |
 | I02 Products and prices | Accepted | Group22556222; three ranked monthly products,175current storefront prices each, no trials; exact IDs installed in API target settings. Deployment/verification remains I03. |
-| I03 Native/server configuration | In progress | Verifier/key/product settings and controlled review source deployed; genuine signed Preview TEST delivery passes. Verified reviewer identity and dedicated versioned Free workspace prepared on 8 November. Owner activation, Production gateway routing and registered signed iOS linkage/coverage still require acceptance. |
+| I03 Native/server configuration | In progress | Exact signed10 linkage and visible monthly offers, deployed reviewer-only API policy, saved Production gateway URLs and fresh genuine Sandbox TEST delivery pass. Actual purchase binding/coverage, ordinary Sandbox relay and Dashboard/jobs reader consistency remain open. |
 | I04 Policy and privacy | Open | Effective paid terms/privacy, SDK/provider/deletion facts, operational refund response and five-day policy compatibility. |
 | I05 Signed money acceptance | Open | Current signed candidate: purchase, restore, renewal, failure/grace, cancellation, refund/revocation, account/business switching; existing records usable while new admissions obey limits. |
 | I06 Review and rollout | Open | Actual candidate screenshots, reviewer login/contact, privacy/age declarations, selected build plus first subscriptions submitted together and approved rollout. |

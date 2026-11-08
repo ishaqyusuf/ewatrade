@@ -1,5 +1,31 @@
 # iOS billing entry points — 8 November 2026
 
+## Current signed follow-through
+
+The correction shipped in private TestFlight1.0.0(10), exact native source
+`2d4424b1525c4aa05e6ced39ce888e31d7f8140e`, EAS
+`50f69a74-5dae-4d0a-b481-9ad6164146f4`. The first attempt consumed counter9 but
+failed before archive upload/cloud acceptance on a sandbox Git-config write;
+the authorized retry produced10. No accepted build9 is claimed.
+
+Build10 finished, exact guarded upload exited0, Apple processed it Ready to Submit,
+and only the existing internal group/one Account Holder tester was assigned.
+IPA SHA256 `eb80bdb6c4bf52a93ab27ea4fe6cc52fec3c7a4bd1a201f33dfbaa9c00b63354`;
+deep/strict signature, registered bundle/team, store profile, Production origins,
+StoreKit/ExpoIap/OpenIAP markers pass. Owner subscriptions, Restore purchases and
+Manage store subscriptions strings are absent in8 and present in10. All20 privacy
+manifests are structurally equal to8, including GoogleSignIn9.2.0 declarations;
+this is artifact evidence, not measured provider traffic or privacy acceptance.
+
+Owner confirmed password login on8; login source/Production origins are unchanged
+in10. After updating to10 the owner reported22.99/9.99/3.99; Mirroring confirms
+Pro/Growth/Starter show those dollar prices every month. Currency ISO identity,
+actual cancellation/purchase/restore and all signed lifecycle checks remain open.
+Mirroring screenshot capture works but coordinate clicks fail even on unrelated
+controls, so no click/transaction acceptance is inferred. Apple remains2/6.
+
+The following sections retain the source-fix checkpoint and its then-pending work.
+
 Apple remains **2/6**. Owner testing of build8 reached Free plan, usage and AI
 usage but no upgrade controls. This exposed a source-routing defect, not a need
 for another customer account. No purchase or paid acceptance occurred.

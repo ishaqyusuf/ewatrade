@@ -7,7 +7,7 @@ Commercial/domain detail lives in [owner-wide subscriptions](owner-wide-subscrip
 No credentials, receipts containing personal data, identity documents or secrets
 belong in this file.
 
-## Owner decisions — current as of 7 November 2026
+## Owner decisions — current as of 8 November 2026
 
 | Decision | Agreed direction |
 | --- | --- |
@@ -15,7 +15,7 @@ belong in this file.
 | Prices | Monthly Nigeria baseline Starter NGN5,000, Growth NGN15,000, Pro NGN30,000. Comparable Africa baseline, +20% reference elsewhere; actual localized store offers/taxes/price points control checkout. |
 | Geography | Broad international launch wherever the store, paid products and applicable country requirements support it. This supersedes the earlier Nigeria-first instruction and its unsubmitted Play targeting draft. Record exclusions and their concrete blockers; do not silently retain Nigeria-only or claim every country is accepted. |
 | Addresses | Manual native address entry at launch. Source cf831c187 removes automatic lookup and blocks Android location permissions; exact signed behavior remains to verify. Shared web geocoding is separate and must be disclosed accurately. |
-| Support | Reuse public support@ewatrade.com and the existing founders@ewatrade.com forwarding/operational contact. No duplicate mailboxes or separate platform support systems. Actual monitored alert delivery, backup and response time remain to verify. |
+| Support | Reuse public support@ewatrade.com and the existing founders@ewatrade.com forwarding/operational contact. No duplicate mailboxes or separate platform support systems. Owner named admin@zeroesandone.com.ng as backup with a12-hour initial response target; monitored routing/delivery remains unverified. |
 | Grace/downgrade | Five days total requested; afterward keep existing records/staff usable and block new additions above current Free limits. Play uses actual configured grace/verified expiry. Apple needs its separately approved server/application courtesy implementation; do not shorten verified store access or invent grace from an outage. |
 | Publication | Publish publicly after store approval and all required release checks. This decision is settled; do not ask it again. It does not waive store checks, personal verification or binding-agreement boundaries. |
 | Autonomy | Move directly to the next authorized phase when ready. If one dependency is blocked, continue independent work. Coordinate directly between Apple and Android chats and ask each shared question only once. |
@@ -28,7 +28,7 @@ belong in this file.
 | Apple chat `01a1b178-b8d1-7762-96ef-8d075367d795` | Apple products/prices, Apple credentials/notifications, Apple-specific grace implementation and signed StoreKit/review acceptance. Coordinate shared entitlement edits before changing Android projection. |
 | Android chat `01a1b653-baf1-7ef0-bd1d-be20656b2c86` | Play products/territories/grace/notifications and signed Play acceptance; initial author of this shared index and common safety/privacy evidence reconciliation. |
 | Password recovery chat `01a1b704-65c8-7412-b430-8a98b63e24c4` | Shared Dashboard authentication recovery. Reuse its source and acceptance; mobile chats do not duplicate those edits. |
-| Release chat `01a1b651-ec49-7fc1-9d95-a6ef06cb29c2` | Existing Preview/Production deployment executor and candidate freeze. No independent duplicate deployment. |
+| Apple chat, current release executor | The previous release chat `01a1b651-ec49-7fc1-9d95-a6ef06cb29c2` is archived. Apple now coordinates the shared candidate and normal Preview/Production execution; do not start duplicate deployments. |
 
 Root `AGENT_CHAT.md` is the shared operational log. Direct Apple/Android messages
 are owner-authorized. Before overlapping edits, read the log and claim exact paths.
@@ -42,8 +42,8 @@ user to repeat it.
 | Phase | Current state | Next action |
 | --- | --- | --- |
 | 1. Shared contract and core source | Owner limits, coverage, versioned signup and retained-record downgrade implemented (0bd862763; verification daf00b5f0). Manual native addresses implemented cf831c187. | Reuse valid checks. Apple courtesy source and platform-specific runtime readiness are implemented with23billing tests/136assertions, scoped259/1679, API types and H01/H02 passing; signed acceptance remains open. Completed Play policy is unchanged. |
-| 2. Store products and configuration | Apple three ranked monthly products and175price schedules each are saved. Mapping/verifier/review source is live on Production API atdafec2e0 after the verified signup-email repair; the genuine signed Preview TEST at6a4948c8 proves receiver delivery only. Public checkout stays closed; reviewer activation and paid lifecycle remain unaccepted. Play organization merchant profile is linked; bank setup is deferred. Owner-approved AAB36 processed and saved to the existing internal-testing draft. Three Apple-matching Play products are created with0 active base plans; monthly base-plan save has an unresolved generic Console error. | Dedicated Apple reviewer identity and versioned Free workspace are prepared. Updated Apple Paid Applications Agreement is accepted/Active and reviewer password setup is confirmed. Apple reviewer login/contact are saved. Continue controlled owner/reviewer configuration and registered signed iOS testing. Native linkage/unsigned compile are proven; signed money acceptance remains open. Finish required bank/merchant verification before paid launch; resolve the Console base-plan save error, finish exact localized monthly prices/five-day grace and merge actual Play mappings. Play177-country draft remains unsubmitted and is not paid-territory acceptance. |
-| 3. Shared runtime, legal and operations | Production Dashboard/Marketing/API atdafec2e0 healthy after signup repair; jobs remain6a4948c8, synchronized schema tagbf9bc356 unchanged. Preview Apple receiver enabled and TEST accepted; public checkout/owner/reviewer activation closed. Common legal/privacy and operations acceptance remain open. | Verify paid lifecycle/routing/operator delivery, paid legal publication, SDK/provider destinations and preserved-record deletion cases without repeating completed empty-data tests. Reuse password-recovery work. |
+| 2. Store products and configuration | Apple three ranked monthly products and175price schedules each are saved. Mapping/verifier/review source and reviewer-only authorization are live on Production API at2d4424b1525c4aa05e6ced39ce888e31d7f8140e. Both Apple callback URLs point to the Production gateway; genuine fresh Sandbox TEST delivery succeeds. Public checkout stays closed; paid lifecycle remains unaccepted. Play organization merchant profile is linked; bank setup is deferred. Owner-approved AAB36 processed and saved to the existing internal-testing draft. Three Apple-matching Play products are created with0 active base plans; monthly base-plan save has an unresolved generic Console error. | Dedicated Apple reviewer identity and versioned Free workspace are prepared. Updated Apple Paid Applications Agreement is accepted/Active and reviewer password setup is confirmed. Apple reviewer login/contact are saved. Private signed1.0.0(10) is processed and installed with visible monthly products; owner password login is confirmed on unchanged login source. Continue purchase/coverage/restore and lifecycle tests. Signed money acceptance remains open. Finish required bank/merchant verification before paid launch; resolve the Console base-plan save error, finish exact localized monthly prices/five-day grace and merge actual Play mappings. Play177-country draft remains unsubmitted and is not paid-territory acceptance. |
+| 3. Shared runtime, legal and operations | Production Dashboard/Marketing/API at2d4424b1525c4aa05e6ced39ce888e31d7f8140e READY after matching Preview smoke; API SQL health200. Jobs remain6a4948c8; additive privacy schema synchronized by the normal2e1ee7e72 push. Reviewer-only API billing enabled, public checkoutfalse, WEB activation unchanged. Dashboard/jobs reader configuration and actual paid consistency, common legal/privacy and operations acceptance remain open. | Verify paid lifecycle/routing/operator delivery, paid legal publication, SDK/provider destinations and preserved-record deletion cases without repeating completed empty-data tests. Reuse password-recovery work. |
 | 4. Signed acceptance | Android A01–A08:1/8; Apple I01–I06:2/6 currently accepted after fresh8November readback restored I01; products/prices I02 remain complete. Source/config tests do not close these gates. | Freeze exact candidates, inspect permissions/native linkage and run licensed purchase/restore/renewal/grace/refund/switching tests. Reuse platform-valid evidence only. |
 | 5. Submission and publication | Public release after approval/checks is authorized. Neither platform has paid-release acceptance yet. | Complete truthful store declarations/reviewer access, submit accepted candidates, follow review and publish through existing release authority. |
 
@@ -223,3 +223,26 @@ structural equality with build 8 are now verified, including GoogleSignIn 9.2.0.
 Signed paid UI and purchase/restore remain pending; App Store upload is running
 at this checkpoint. Root owns Apple routing and IAP. No store privacy declaration,
 legal publication or live privacy activation occurs in this documentation lane.
+
+## Apple private signed10 and gateway checkpoint — 8 November 2026
+
+Apple remains **2/6 (33.3%)**, Android **1/8 (12.5%)**. Exact signed10/native
+source2d4424b1525c4aa05e6ced39ce888e31d7f8140e is processed in the existing
+one-tester internal group. Owner confirmed password login (unchanged source) and
+installed10; Mirroring shows Starter$3.99, Growth$9.99 and Pro$22.99 every month.
+Corrected callback Production replay200 and fresh genuine Apple Sandbox TEST
+delivery SUCCESS pass. These are distinct from actual purchases, coverage, restore
+and lifecycle acceptance, all still open. Ordinary Sandbox relay is not accepted
+by a TEST event. Public checkout remains false; no WEB activation or public review.
+
+Billing Workshop continues the documented approved MUI-B026 Compact Plan Ledger A
+in the shared catalog, preserving August history and current build10 context.
+New previews are unselected and not native implementation; they do not replace
+the signed candidate or authorize a release. Setup input diagnosis on the existing
+reviewer workspace finds a SKIPPED conversation/no running request and a visible
+Continue setup action, rather than a payment-driven disable. User resume check
+pending; no assistant settings/data were changed.
+
+[Signed candidate](../verification/2026-11-08-production-testflight-paid-candidate.md) ·
+[Callback evidence](../verification/2026-11-08-apple-build8-callback.md) ·
+[Workshop and Setup diagnosis](../verification/2026-11-08-iphone-setup-and-billing-workshop.md).

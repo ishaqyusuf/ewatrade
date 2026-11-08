@@ -1,5 +1,32 @@
 # Production-backed paid TestFlight candidate — 8 November 2026
 
+## Current private candidate: build10
+
+Exact source `2d4424b1525c4aa05e6ced39ce888e31d7f8140e` produced FINISHED EAS
+`50f69a74-5dae-4d0a-b481-9ad6164146f4`, version1.0.0/build10,
+testflight-production profile/channel and store/device distribution. Guarded exact
+submission `677bd2c2-ebf0-43c8-87fb-0e1cf0eaa96a` exited0. Apple build
+`75d31ddf-d530-4cfc-8532-7036d9c7c20a` processed Ready to Submit. Only existing
+EwaTrade Preview Internal group `fca0f39a-400c-4349-86dc-636eed0cfed5` with its one
+Account Holder tester was assigned; What to Test instructions saved. No external
+group, invitation, App Review submission or public rollout occurred.
+
+Build9's local attempt failed before archive upload/cloud acceptance after its
+counter was reserved. Retry produced10; no accepted build9 ID is asserted. Exact10
+IPA/signature/profile/origin/native-linkage proof and the owner-visible monthly
+products are in [the entry-point receipt](2026-11-08-ios-billing-entrypoints.md).
+Password route works by owner test on8 with unchanged login source in10.
+Corrected Production gateway and fresh genuine Sandbox TEST succeed; see
+[callback follow-through](2026-11-08-apple-build8-callback.md).
+
+This remains a **private validation artifact**, not ordinary public Production
+release acceptance. No private Production TestFlight OTA bypass, actual purchase,
+restore or lifecycle acceptance. Apple remains2/6. The next signed checks require
+the installed10 and approved reviewer business, starting with cancellation, then
+licensed Sandbox purchase, explicit business coverage and restore. Mirroring
+click-control failure currently prevents agent-driven interaction; screenshots
+work and do not by themselves prove a transaction or editable input.
+
 The approved reviewer account and its versioned Free workspace are in Production.
 The existing Preview TestFlight target cannot exercise that identity or the
 deployed, owner-restricted Apple Sandbox verification path. Ordinary Production

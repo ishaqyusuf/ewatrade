@@ -1,5 +1,40 @@
 # Build 8 and controlled Apple callback — 8 November 2026
 
+## Superseding deployed callback checkpoint
+
+Corrected combined source `2d4424b1525c4aa05e6ced39ce888e31d7f8140e` passed canonical
+Preview API `dpl_GVYSQNTJUaG6YjFQ4kAFAYuDsRc9` and matching Dashboard
+`dpl_vt2bS6JSDdnbQgWc18Ythchhd11q` existing-data smoke. Receipt
+`.scratch/qa-release/smoke-2d4424b1525c4aa05e6ced39ce888e31d7f8140e-preview-web.json`
+verifies target/runtime identity, populated catalog and a cancelled sale draft;
+no submitted sale, payment or manufactured fixture. Normal Production exited0:
+
+| Component | Exact corrected deployment |
+| --- | --- |
+| Dashboard | dpl_14LrYhkGKPG6yUtBjJiXmDQE5wyJ |
+| Marketing | dpl_9dBpP56qgN5D3FD6uW1YdLUTiiGn |
+| API | dpl_CRXkzyZQrtHSew3SWAFeuhv1tRyT |
+
+Canonical aliases are READY at that source; API SQL-backed health200. Schema
+already synchronized through the earlier ordinary2e push, not a claim that the
+migration-history ledger was applied. Jobs remain unchanged. Public checkoutfalse,
+WEB activation unchanged, seven reviewer-only API settings effective. Cross-runtime
+Dashboard/jobs paid-reader consistency remains open.
+
+Previously genuine signed Sandbox TEST replays200 through corrected Production.
+App Store Connect Sandbox and Production URLs both saved as
+`https://api.ewatrade.com/webhooks/store/apple`, with reload readback. Fresh Apple
+Sandbox TEST delivery reports SUCCESS at1794161244304 (18:07:24.304Z on8November),
+and full Sandbox signature/bundle/type verification passes. Private captures and
+sanitized local receipts are retained outside Git. No keys/payloads copied here.
+TEST is receiver proof only: ordinary Sandbox relay, purchase/server API lookup,
+renewal/grace/refund, owner binding and business coverage are not accepted by it.
+
+Private signed10 supersedes8 for billing; see
+[actual iOS entry-point follow-through](2026-11-08-ios-billing-entrypoints.md).
+The sections below preserve the earlier503 and its investigation rather than
+rewriting it as an earlier success. Apple stays2/6.
+
 Apple acceptance remains **2/6**. This records private testing preparation, not
 paid-lifecycle acceptance or public launch approval.
 
