@@ -163,3 +163,27 @@ existing screenshots have not been uploaded. Sending to Google support requires
 explicit owner messaging authorization. The requested AAB36 upload and three
 product creations remain completed; base plans and overall paid launch remain
 unaccepted. Owner-deferred bank setup is not re-requested.
+
+
+## Support ticket submitted — 8 November 2026
+
+Owner approved sending the prepared report and then explicitly approved Google's
+mandatory feedback (“The recommendation is wrong or irrelevant”) and specialist
+escalation. The original feedback-and-create attempt was blocked by automatic
+approval review; no ticket was created until the second, explicitly authorized
+action. Google accepted the text-only report under Monetization → Managing
+monetization → subscriptions and returned **Ticket submitted**. The support list
+shows Managing monetization / Pending / Case ID pending. Do not invent a case ID.
+Google says email responses normally arrive within two business days, though some
+take longer. No screenshot, credential, bank detail or personal document was sent.
+
+Its initial AI suggestion about grace/hold duration is not an accepted root cause: a
+valid explicit duration had already failed, as documented in the approved report.
+No further pricing change, new access, rollout, review submission or deployment
+was performed in this support step. Owner-deferred bank setup remains deferred.
+
+[Sent message and authorization receipt](../releases/play-subscription-price-support-request-2026-11-08.md).
+Confirmation: `/private/tmp/ewatrade-play-support-ticket-submitted-2026-11-08.jpg`.
+Next: Google's case response, then actual inactive monthly-plan save/mapping and
+remaining signed/privacy/legal acceptance. Android remains1/8; other chats own
+their independent work. This receipt supersedes the earlier pending-send state.

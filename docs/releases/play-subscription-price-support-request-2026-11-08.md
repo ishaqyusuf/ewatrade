@@ -1,7 +1,8 @@
-# Draft Google Play support request — owner approval pending
+# Google Play support request — submitted 8 November 2026
 
 Destination: authenticated Google Play Console support for EwaTrade.
-Status: prepared locally, not sent. No attachment has been transmitted.
+Status: submitted through authenticated Play Console. The Managing monetization
+case is Pending; Google has not assigned a case ID yet. No attachments were sent.
 
 ## Subject
 
@@ -54,3 +55,30 @@ Send the message above to Google Play Console support. It contains the app packa
 three product IDs, build number, attempted draft settings, observed error and
 reproduction steps. It excludes credentials, bank/tax details, personal documents
 and account email. No contract acceptance, access grant, activation or rollout.
+
+
+## Submission receipt — 8 November 2026
+
+Owner approved sending this report with “ok send”, then separately approved the
+mandatory feedback and specialist escalation: “Yes, give that feedback and create
+the ticket”. Google initially generated an AI recommendation about combined grace
+and account-hold duration. That suggestion is not an established diagnosis: the
+report already documents a failed save with a valid explicit hold duration.
+
+The first feedback-and-create action was rejected by automatic approval review
+because “The recommendation is wrong or irrelevant” was treated as an additional
+assertion. No ticket was created by that rejected attempt. After the owner's
+explicit approval, that exact feedback was selected and Create ticket succeeded.
+
+Google returned to Help with `formSubmitted=true`, listed Managing monetization
+as Pending / Case ID pending, and confirmed **Ticket submitted**. It states that
+replies arrive by email within two business days, with some tickets taking longer.
+No response deadline or root cause is guaranteed. There was one successful ticket
+submission, no duplicate case, attachment, catalog change or billing activation.
+
+Confirmation capture: `/private/tmp/ewatrade-play-support-ticket-submitted-2026-11-08.jpg`.
+[Authenticated support page](https://play.google.com/console/u/0/developers/9017957593475991384/help-and-support?app=4972793687190568960).
+
+Next: await Google's response/case number, evaluate any proposed correction against
+the actual saved settings, then complete the inactive monthly plans. The pricing
+error, paid lifecycle and release gates remain open. No application source changed.

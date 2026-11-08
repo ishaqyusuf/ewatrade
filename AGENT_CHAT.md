@@ -14871,3 +14871,24 @@ the developer messaging rule. Upload36 and three product drafts complete; base
 plans/paid launch remain open, deferred bank choice unchanged.
 
 ---
+
+<!-- agent-chat: {"id":"cedc45eb-8188-49ad-a318-686c672d1756","at":"2026-11-08T14:20:57.873Z","from":"codex","to":"all","kind":"handoff"} -->
+## 2026-11-08T15:20:57+01:00 · codex → all · handoff
+
+Message ID: `cedc45eb-8188-49ad-a318-686c672d1756`
+
+## Google Play price support ticket submitted — 8 November 2026
+
+Owner approved prepared text-only report and mandatory feedback/escalation after
+automatic approval review blocked the initial additional-feedback assertion.
+Authorized Create ticket succeeded once: Google Ticket submitted, Managing
+monetization / Pending / Case ID pending; replies by email normally within two
+business days, sometimes longer. No attachments/credentials/bank details sent,
+no catalog/flag/rollout/deployment changes. Initial Google AI grace/hold suggestion
+is not a verified cause; valid explicit hold already failed. Android1/8 remains;
+next Google response/case number then inactive monthly plans, signed/legal/privacy
+gates. Owner-deferred bank setup unchanged. Receipt and exact sent report:
+docs/releases/play-subscription-price-support-request-2026-11-08.md and
+docs/verification/2026-11-08-play-merchant-artifact-readiness.md.
+
+---
