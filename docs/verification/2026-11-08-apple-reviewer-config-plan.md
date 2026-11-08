@@ -1,7 +1,10 @@
 # Production Apple reviewer configuration plan — 8 November 2026
 
 Status: metadata-only preparation. No environment value was decrypted, no setting
-was applied, and no deployment or provider notification URL changed. The candidate
+was applied, and no deployment or provider notification URL changed. The rollback
+section below corrects the earlier assumption that existing values could be backed
+up: all three existing rows are literally Vercel `sensitive`, which are unreadable
+after creation. The candidate
 is not yet pinned; shared source gates remain required before execution.
 
 ## Target and precedence
@@ -40,10 +43,12 @@ metadata presence does not establish any current scalar value or rollout state.
    the current checkout. No worktree or dirty-candidate bypass.
 2. Re-read the target metadata and compare row IDs, target, type and modification
    revisions with this inventory. Stop on drift or unexpected shared/own entries.
-3. Immediately before an authorized apply, securely capture the three existing
-   values as protected rollback before-images. They were deliberately not read
-   in this metadata-only task. Preserve sensitive storage and target scoping.
-   Record each newly created row ID. Skip writes if desired values already match.
+3. Confirm the proposed closed configuration baseline below with the release
+   coordinator before any mutation. Exact old-value backups cannot be retrieved
+   from the three literal `sensitive` rows. Do not attempt decryption or add runtime
+   disclosure to recover them. Preserve storage type/Production scoping and record
+   metadata plus each new row ID; compare with known installation receipts where
+   available, never infer equality from names or metadata.
 4. Confirm actual Production identity, bounded reviewer count/identity, Apple
    verifier/products and unchanged public-checkout closure. Apply only the exact
    intended server scope through the canonical release/configuration process;
@@ -73,17 +78,38 @@ path to the retained accepted deployment, then verify canonical health and close
 reviewer/public checkout. This does not itself revert project environment settings
 for future deployments.
 
-For configuration rollback, remove only the four rows actually created by this
-change, by their recorded IDs, and restore only the three existing rows from the
-protected before-images, retaining sensitivity and Production target. Never delete
-or replace a previously existing row or alter linked shared settings. Verify IDs
-and revisions before each operation; stop on concurrent drift. If an existing row
-was a no-op, leave it untouched. Redeploy through the canonical process if needed
-and verify the resulting runtime, not metadata alone. Any provider callback change
-must be restored using its separately recorded previous destination.
+For configuration rollback, use this explicitly proposed closed baseline only
+once the coordinator confirms it as acceptable for the prelaunch state:
 
-Exact value restoration is a prerequisite of apply, not a completed capability:
-the protected before-images do not exist yet because this task is metadata-only.
+| Existing Production row | Proposed rollback value | Provenance |
+| --- | --- | --- |
+| STORE_BILLING_ENABLED | false | Deliberate closed baseline; original value remains unknown |
+| STORE_BILLING_ENVIRONMENT | production | Earlier explicit installation receipt |
+| STORE_BILLING_PRODUCTION_CHECKOUT_ENABLED | false | Earlier explicit installation receipt |
+
+The two installation facts are recorded in
+[the Apple launch packet](../billing/apple-paid-launch-2026-11-07.md). They do not
+prove the unknown STORE_BILLING_ENABLED value. Vercel's
+[Secret-type documentation](https://vercel.com/changelog/environment-variables-now-use-config-and-secret-types)
+confirms existing Sensitive values remain write-only; runtime code can use them,
+but project members cannot retrieve them after saving. No before-images exist.
+This procedure restores a known closed state, not exact prior bytes.
+
+If an Apple Sandbox callback URL was changed, restore and verify its recorded
+prior Preview destination first, while the working forwarding path remains
+available. Then remove only the four rows actually created by this change, by
+recorded IDs, and update the three existing rows to the confirmed closed baseline,
+retaining IDs, sensitive type and Production targets. Never delete/recreate an
+existing row or alter shared/Preview settings. Recheck metadata revisions before
+each operation and stop on drift. Retain the accepted deployment as immediate
+runtime recovery; canonical redeployment must subsequently verify the closed
+configuration for future deploys. The baseline's global receiver shutdown and
+removal of the owner adapter are intentional rollback consequences and require
+checking the prior notification route and unrelated closed paths.
+
+No mutation is authorized by this plan itself. Execution remains held for the
+coordinator's confirmation of this concrete baseline and the clean candidate
+checks. Exact recovery of the original STORE_BILLING_ENABLED value is unavailable.
 
 ## Evidence and Brain
 
