@@ -1,22 +1,26 @@
 # Production-backed paid TestFlight candidate — 8 November 2026
 
-## Existing Starter purchase verification — 8 November 2026
+## Existing Starter purchase recovered — 8 November 2026
 
-The owner completed one Starter Sandbox purchase on signed build10. Apple confirmed
-success, but verifyPurchase returned400 and the notification returned503; one Restore
-attempt did not recover it. The scoped Production read still found no saved owner
-purchase/subscription/coverage. Do not ask for a second purchase. The genuine signed
-Sandbox SUBSCRIBED capture verifies and exactly matches the existing owner account.
+Normal Preview and Production Dashboard/Marketing/API rollout completed at
+`e047ed676fff074a4ec8e0627ddc3e579b9a7448`; matching existing-data Preview web
+smoke and Production API health pass. Canonical Production identities match that
+exact Ready candidate. Mobile build/upload/OTA is explicitly excluded by the owner;
+installed signed build10 remains unchanged. Jobs remain at6a4948c8.
 
-Local actual-verifier replay isolated Production401 before the old404 lookup
-fallback. Commit454972d8c now selects Sandbox directly for the existing server-only
-reviewer policy; full signature/bundle/environment/owner verification remains.
-Genuine capture replay and focused/source/types/assistant checks pass locally;
-rollout and durable recovery remain pending. Apple remains2/6 (33.3%).
-See [purchase-verification receipt](2026-11-08-apple-purchase-verification.md)
-for evidence, exact candidate and release outcome. The signed native build is
-unchanged; public checkout/WEB settings and the no-Production-TestFlight-OTA gate remain.
+The original genuine signed Starter notification was re-verified and replayed once
+through the normal Production receiver: HTTP200/received:true. Scoped read-only
+checks prove zero→one owner purchase, one ACTIVE Starter subscription, true Sandbox
+environment, correct owner and an exact original-purchase digest match. Paid period
+ends2026-11-09T19:26:34Z. No second purchase, manual paid grant or coverage was created.
+The business is still Free with zero coverage rows; explicit Cover this business
+is the next owner action after confirming the app shows its verified subscription.
 
+Native client finish/restore/coverage and lifecycle acceptance remain open; Apple
+I01–I06 remains **2/6 (33.3%)**. Public checkoutfalse, WEB activation and private
+Production TestFlight OTA prohibition are unchanged. See the
+[purchase-verification receipt](2026-11-08-apple-purchase-verification.md).
+Earlier checkpoints below retain their historical scope.
 
 ## Current private candidate: build10
 

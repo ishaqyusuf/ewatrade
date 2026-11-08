@@ -1,21 +1,26 @@
 # Apple paid-at-launch preparation — 7 November 2026
 
-## Existing Starter purchase verification — 8 November 2026
+## Existing Starter purchase recovered — 8 November 2026
 
-The owner completed one Starter Sandbox purchase on signed build10. Apple confirmed
-success, but verifyPurchase returned400 and the notification returned503; one Restore
-attempt did not recover it. The scoped Production read still found no saved owner
-purchase/subscription/coverage. Do not ask for a second purchase. The genuine signed
-Sandbox SUBSCRIBED capture verifies and exactly matches the existing owner account.
+Normal Preview and Production Dashboard/Marketing/API rollout completed at
+`e047ed676fff074a4ec8e0627ddc3e579b9a7448`; matching existing-data Preview web
+smoke and Production API health pass. Canonical Production identities match that
+exact Ready candidate. Mobile build/upload/OTA is explicitly excluded by the owner;
+installed signed build10 remains unchanged. Jobs remain at6a4948c8.
 
-Local actual-verifier replay isolated Production401 before the old404 lookup
-fallback. Commit454972d8c now selects Sandbox directly for the existing server-only
-reviewer policy; full signature/bundle/environment/owner verification remains.
-Genuine capture replay and focused/source/types/assistant checks pass locally;
-rollout and durable recovery remain pending. Apple remains2/6 (33.3%).
-See [purchase-verification receipt](../verification/2026-11-08-apple-purchase-verification.md)
-for evidence, exact candidate and release outcome. The signed native build is
-unchanged; public checkout/WEB settings and the no-Production-TestFlight-OTA gate remain.
+The original genuine signed Starter notification was re-verified and replayed once
+through the normal Production receiver: HTTP200/received:true. Scoped read-only
+checks prove zero→one owner purchase, one ACTIVE Starter subscription, true Sandbox
+environment, correct owner and an exact original-purchase digest match. Paid period
+ends2026-11-09T19:26:34Z. No second purchase, manual paid grant or coverage was created.
+The business is still Free with zero coverage rows; explicit Cover this business
+is the next owner action after confirming the app shows its verified subscription.
+
+Native client finish/restore/coverage and lifecycle acceptance remain open; Apple
+I01–I06 remains **2/6 (33.3%)**. Public checkoutfalse, WEB activation and private
+Production TestFlight OTA prohibition are unchanged. See the
+[purchase-verification receipt](../verification/2026-11-08-apple-purchase-verification.md).
+Earlier checkpoints below retain their historical scope.
 
 Current checkpoint, 8 November: Apple acceptance remains **2/6 (33.3%)**.
 Commercial prerequisites and three regional monthly products are accepted.
@@ -142,9 +147,9 @@ Source progress is within open rows.
 | --- | --- | --- |
 | I01 Commercial prerequisites | Accepted | Owner accepted the updated Paid Applications Schedule; fresh 8 November Business reload shows Paid Apps Agreement, bank, both tax forms and DSA Active, with no new-agreement notice. |
 | I02 Products and prices | Accepted | Group22556222; three ranked monthly products,175current storefront prices each, no trials; exact IDs installed in API target settings. Deployment/verification remains I03. |
-| I03 Native/server configuration | In progress | Exact signed10 linkage and visible monthly offers, deployed reviewer-only API policy, saved Production gateway URLs and fresh genuine Sandbox TEST delivery pass. Actual purchase binding/coverage, ordinary Sandbox relay and Dashboard/jobs reader consistency remain open. |
+| I03 Native/server configuration | In progress | Exact signed10 linkage and visible monthly offers, deployed reviewer-only API policy, saved Production gateway URLs and fresh genuine Sandbox TEST delivery pass. Original purchase owner binding and Sandbox durability now pass. Explicit coverage, ordinary Sandbox relay and Dashboard/jobs paid-reader consistency remain open. |
 | I04 Policy and privacy | Open | Effective paid terms/privacy, SDK/provider/deletion facts, operational refund response and five-day policy compatibility. |
-| I05 Signed money acceptance | Open | Current signed candidate: purchase, restore, renewal, failure/grace, cancellation, refund/revocation, account/business switching; existing records usable while new admissions obey limits. |
+| I05 Signed money acceptance | Open | Original signed10 purchase is recovered and durable; native client finish, explicit coverage, restore, renewal, failure/grace, refund/revocation and account/business switching remain. Cancellation/no-grant passed; retained-record/limit acceptance remains. |
 | I06 Review and rollout | Open | Actual candidate screenshots, reviewer login/contact, privacy/age declarations, selected build plus first subscriptions submitted together and approved rollout. |
 
 Apple native monthly grace permits3/16/28days, not5. The owner confirmed five days

@@ -1,6 +1,7 @@
 # Existing Starter Sandbox purchase verification — 8 November 2026
 
-Status: source correction verified locally and Preview API116ca57cb READY; matching smoke, Production rollout and durable recovery pending.
+Status: web/API Production rollout and original Starter server recovery complete.
+Native client confirmation, explicit coverage/restore/lifecycle acceptance pending.
 Apple I01–I06 acceptance remains **2/6 (33.3%)**. This is the one existing licensed
 Starter purchase on installed private 1.0.0(10), not a replacement purchase.
 
@@ -155,3 +156,79 @@ notification recovery through the normal receiver, and distinct before-/after-re
 read-only state captures. Preserve initial after-purchase/cancellation evidence.
 No additional buy/restore request, fake receipt or manual grant was made. Public
 checkoutfalse/WEB/no-private-TestFlight-OTA boundaries and Apple2/6 remain.
+
+## Final web/API rollout and original-purchase recovery
+
+The owner confirmed other chats paused and explicitly excluded mobile release.
+The native implementation author completed only its checked local milestone and
+confirmed a tracked-edit hold. Final clean main candidate:
+`e047ed676fff074a4ec8e0627ddc3e579b9a7448`; billing correction remains454972d8c.
+No worktree/branch switch was used for this final run.
+
+Candidate checks:284tests/1813assertions and QA tooling types pass; H01 current;
+H02 against prior accepted2d4424b1 passes8records with no capability/procedure
+changes. Existing actual-capture red→green,23Apple/reviewer tests/169assertions
+and API type evidence remain valid for unchanged verifier source. Native author
+reports20focused tests, mobile types and14component UI checks, with its existing
+Ask style-guard failure recorded separately; no native release acceptance is claimed.
+
+Normal `release --preview --only dashboard,marketing,api --mobile skip --yes`
+completed the three deployments. First smoke refused an old canonical Dashboard
+identity; new deployment reported its correct alias assigned with no error.
+Only qa:smoke was retried. The first browser attempt was blocked by macOS MachPort
+registration inside the command sandbox before creating a page. The exact existing
+runner with normal browser-launch permissions passed; no source/runner/fixture
+change or redeployment was used to retry tests. Both failures remain captured in
+private receipt copies.
+
+Matching passed Preview receipt:
+`.scratch/qa-release/smoke-e047ed676fff074a4ec8e0627ddc3e579b9a7448-preview-web.json`.
+It proves existing QA login/exact profile, populated catalog, sale draft/total and
+Cancel, without submitting a sale/payment. Runtime IDs: Dashboard
+`dpl_CqJ7y2S5TDQtstmRzvLh9VFhAodn`, API `dpl_Hmgmbh7sbhTemAdoZP6oFNykM3xp`.
+Marketing `dpl_HTSWXXCtM7xw5KLYFEQk37GxVv8F` was separately identity-verified
+and visually inspected through its actual Preview URL; hero/CTA layout rendered.
+
+Normal `release --production --only dashboard,marketing,api --mobile skip --yes`
+completed0 and SQL-backed API health passed. At20:26:28.544Z, canonical provider
+metadata independently verifies project/team, Production target, READY state and
+exacte047ed676 source for all three:
+
+| Surface | Canonical host | Production deployment |
+| --- | --- | --- |
+| Dashboard | dash.ewatrade.com | dpl_CrBPVUMwyyu2Fx17EW9qmV4RNGSp |
+| Marketing | ewatrade.com | dpl_AnLvPeXbzVcbmCHZJV2K6LH59iaS |
+| API | api.ewatrade.com | dpl_B7AtaDiHhKMJhqG5hHJYNAe7o4iY |
+
+At20:26:40.371Z, an exact current ACTIVE OWNER membership / Production read-only
+transaction still found zero owner purchases/subscription/coverage. The original
+SUBSCRIBED capture was fully Sandbox signature/bundle/transaction re-verified,
+then replayed once to `https://api.ewatrade.com/webhooks/store/apple` using only
+its original signedPayload. Response at20:27:15.296Z: HTTP200, received:true.
+No Apple purchase, replacement receipt, key, provider mutation or manual grant.
+
+After-recovery read-only transaction at20:27:25.864Z proves:
+
+- Exactly one owner purchase and one ACTIVE APP_STORE Starter subscription.
+- Environment remains sandbox. The stored purchase and subscription digests each
+  exactly match the original captured transaction chain, without exposing refs.
+- Verified at20:27:14.526Z; paid period ends2026-11-09T19:26:34Z, renewal on.
+- Zero coverage-history/active rows; canonical business plan remains Free.
+  Subscription verification and explicit owner enrollment are separate commands.
+
+This proves hosted key/API authentication and normal durable reviewer reconciliation,
+not merely envelope delivery. The prior400/503 is recovered for this real purchase.
+No second purchase or repeated Restore was requested. Owner has been asked to
+refresh Plan & billing once and report verified subscription / Cover this business.
+Native StoreKit finish, Restore idempotence, coverage/lifecycle, ordinary Sandbox
+relay and API/Dashboard/jobs paid-reader consistency remain open.
+
+Mobile build/upload/OTA is excluded; installed1.0.0(10), native source2d4424b1 and
+runtime018c6c66e7e614408870451b744e5befac86a851 are unchanged. Jobs remain6a4948c8;
+public checkoutfalse, WEB activation, legal/provider settings and existing records
+are unchanged. Apple remains2/6 (33.3%). Other chats remain paused by the owner.
+
+Brain impact: updated current BRAIN/task/native billing pointers, API contracts/
+permissions, and both reviewer-environment decisions. No schema/migration update
+is needed. Prevention: keep actual signed Sandbox capture/SDK proof paired with
+the prelaunch Production401 regression; a mocked404-only response missed this case.
