@@ -20,6 +20,7 @@ run(["run", "--cwd", "packages/db", "db:generate"])
 run([
   "build",
   "--target=bun",
+  "--production",
   "--packages=bundle",
   "--env=disable",
   ...apiBundleExternalArgs(),
