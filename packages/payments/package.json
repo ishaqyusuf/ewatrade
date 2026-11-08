@@ -9,7 +9,8 @@
     "./manual-transfer-identity": "./src/manual-transfer-identity.ts",
     "./receipt-assessment": "./src/receipt-assessment.ts",
     "./receipt-extractor": "./src/receipt-extractor.ts",
-    "./manual-payment-allocation": "./src/manual-payment-allocation.ts"
+    "./manual-payment-allocation": "./src/manual-payment-allocation.ts",
+    "./web-subscriptions": "./src/web-subscriptions/index.ts"
   },
   "scripts": {
     "lint": "biome check .",
@@ -17,7 +18,9 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@ewatrade/utils": "workspace:*"
+    "@ewatrade/utils": "workspace:*",
+    "standardwebhooks": "1.1.1",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@ewatrade/tsconfig": "workspace:*",

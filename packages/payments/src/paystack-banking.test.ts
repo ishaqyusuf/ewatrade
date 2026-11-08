@@ -6,6 +6,12 @@ import {
 
 const response = (data: unknown, status = 200) =>
   new Response(JSON.stringify({ status: status === 200, data }), { status })
+
+function mockFetch(
+  handler: (...args: Parameters<typeof fetch>) => ReturnType<typeof fetch>,
+): typeof fetch {
+  return Object.assign(handler, { preconnect: () => {} })
+}
 const recipient = {
   active: true,
   currency: "NGN",
@@ -22,11 +28,11 @@ describe("Paystack banking transport", () => {
     const calls: Array<{ url: string; body: unknown }> = []
     const provider = new PaystackBankingProvider({
       secretKey: "secret-for-test",
-      fetch: (async (url, init) => {
+      fetch: mockFetch(async (url, init) => {
         calls.push({ url: String(url), body: JSON.parse(String(init?.body)) })
         expect(init?.redirect).toBe("error")
         return response(recipient)
-      }) as typeof fetch,
+      }),
     })
     expect(
       await provider.createRecipient({
@@ -53,11 +59,12 @@ describe("Paystack banking transport", () => {
   test("refuses returned recipient identity changes", async () => {
     const provider = new PaystackBankingProvider({
       secretKey: "test",
-      fetch: (async () =>
+      fetch: mockFetch(async () =>
         response({
           ...recipient,
           details: { ...recipient.details, bank_code: "044" },
-        })) as typeof fetch,
+        }),
+      ),
     })
     await expect(
       provider.createRecipient({
@@ -72,10 +79,10 @@ describe("Paystack banking transport", () => {
     let attempts = 0
     const provider = new PaystackBankingProvider({
       secretKey: "private",
-      fetch: (async () => {
+      fetch: mockFetch(async () => {
         attempts++
         throw new Error("private account data")
-      }) as typeof fetch,
+      }),
     })
     const error = await provider
       .sendTransfer({
@@ -100,7 +107,7 @@ describe("Paystack banking transport", () => {
     }
     const provider = new PaystackBankingProvider({
       secretKey: "test",
-      fetch: (async (_url, init) => {
+      fetch: mockFetch(async (_url, init) => {
         expect(JSON.parse(String(init?.body))).toEqual({
           source: "balance",
           amount: input.amountMinor,
@@ -117,7 +124,7 @@ describe("Paystack banking transport", () => {
           status: "success",
           currency: "NGN",
         })
-      }) as typeof fetch,
+      }),
     })
     await expect(provider.sendTransfer(input)).rejects.toMatchObject({
       outcome: "UNKNOWN",
@@ -127,7 +134,7 @@ describe("Paystack banking transport", () => {
   test("missing DVA assignment proof cannot activate an account", async () => {
     const provider = new PaystackBankingProvider({
       secretKey: "test",
-      fetch: (async () =>
+      fetch: mockFetch(async () =>
         response({
           id: 1,
           account_number: "0123456789",
@@ -136,7 +143,8 @@ describe("Paystack banking transport", () => {
           active: true,
           customer: { customer_code: "CUS_a" },
           bank: { name: "Wema", slug: "wema-bank" },
-        })) as typeof fetch,
+        }),
+      ),
     })
     await expect(
       provider.createReceivingAccount({
@@ -150,10 +158,10 @@ describe("Paystack banking transport", () => {
     let calls = 0
     const provider = new PaystackBankingProvider({
       secretKey: "test",
-      fetch: (async () => {
+      fetch: mockFetch(async () => {
         calls++
         return response({})
-      }) as typeof fetch,
+      }),
     })
     expect(() =>
       provider.resolveAccount({ accountNumber: "123", bankCode: "058" }),

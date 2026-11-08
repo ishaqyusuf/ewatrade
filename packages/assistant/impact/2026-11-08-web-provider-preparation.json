@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "id": "2026-11-08-web-provider-preparation",
+  "tickets": ["A05"],
+  "summary": "Prepare Paystack and Polar hosted subscription clients and signed-webhook authenticators under the existing Africa baseline and +20% international reference policy. No active API or entitlement integration.",
+  "noAssistantImpact": "The new payments subpath is not imported by any active API or assistant route. Existing manager/owner, QA, native and entitlement boundaries remain intact; software subscriptions remain form-only. No capability, procedure, grant or provider activation changes.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "path": ".brain/features/retail-ops-subscription-packaging.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "decision",
+      "path": ".brain/decisions/2026-11-08-web-paystack-polar-pricing.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "feature",
+      "path": "docs/billing/web-provider-preparation-2026-11-08.md",
+      "status": "updated"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/payments/src/web-subscriptions/web-subscriptions.test.ts",
+      "executed": true,
+      "result": "15 new module tests pass; combined existing hosted adapter cohort24/155. Only stubbed transport and local signatures; no live checkout or grant accepted."
+    }
+  ]
+}

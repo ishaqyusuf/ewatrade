@@ -1,5 +1,24 @@
 # Website and dashboard payment audit — 8 November 2026
 
+## Confirmed continuation
+
+The owner confirmed **Polar** for international web payments and reaffirmed the
+existing pricing plan; no new pricing decision is requested. Nigeria remains
+NGN5,000/15,000/30,000 monthly; other Africa uses comparable baseline prices;
+outside Africa uses NGN6,000/18,000/36,000 as the +20% conversion reference.
+The canonical policy is in `docs/billing/mobile-free-launch-2026-11-06.md`,
+Confirmed commercial policy / Regional pricing walkthrough. Its free-first
+launch choice is superseded; its commercial policy is retained.
+
+Paystack/Polar transport clients, strict product configuration, price-reference
+checks and signed-webhook authenticators are now prepared in
+`@ewatrade/payments/web-subscriptions`. They are **not connected to the dashboard
+API or entitlement fulfillment**. No server/provider activation occurred and
+zero working dashboard subscription checkouts remain the current runtime result.
+Read [provider preparation](web-provider-preparation-2026-11-08.md) for code,
+checks, existing Polar account findings and the remaining implementation boundary.
+The initial audit below describes the starting source state.
+
 Status: navigation repaired locally; direct subscription payment remains unfinished.
 Owner request: inspect both expected providers, replace paid-plan Contact links,
 and prepare everything possible before returning for missing account details.
@@ -61,15 +80,17 @@ remain open. The committed handoff repairs are a partial step toward checkout.
 
 When the owner returns:
 
-1. Confirm the international service/account (Stripe is only a placeholder;
-   Polar is used by the local Midday reference, not by EwaTrade).
+1. Completed: owner confirmed Polar. Stripe remains an unused placeholder.
+   The accessible Polar organization is Zeroes and One Hi-Tech; its active catalog
+   contains AfterService products, with no active EwaTrade product observed.
 2. Make the EwaTrade Paystack test/live account credentials available through
    approved secret configuration. Confirm account eligibility for subscription
    billing; do not paste secret keys into chat. Provide the international account
    access/credentials through the same secure route.
-3. Confirm the exact international currencies/prices and product/plan IDs. Reuse
-   the approved NGN monthly Starter 5,000 / Growth 15,000 / Pro 30,000 baseline;
-   do not invent foreign-currency prices or silently change launch grants.
+3. Apply the existing approved regional policy above to EwaTrade's provider
+   products and retain their actual currency/price/territory mapping. This is
+   provider configuration work, not a request to decide the prices again.
+   Keep Apple price-point exports separate from Polar offers and retain grants.
 4. Finish server-selected provider checkout, owner-account purchase binding,
    explicit business coverage, duplicate-purchase protection and signed event
    reconciliation for paid activation, renewal/failure, cancellation, expiry,
