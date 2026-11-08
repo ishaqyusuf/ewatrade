@@ -107,6 +107,7 @@ test("prepared checkout is off by default and retains the owner/environment gate
   expect(isWebCheckoutEnabled({})).toBe(false)
   const ready = {
     WEB_BILLING_ENABLED: "true",
+    WEB_BILLING_RECONCILIATION_ENABLED: "true",
     OWNER_BILLING_ENABLED: "true",
     WEB_BILLING_ENVIRONMENT: "sandbox",
     STORE_BILLING_ENVIRONMENT: "sandbox",
@@ -119,7 +120,7 @@ test("prepared checkout is off by default and retains the owner/environment gate
   expect(
     isWebProviderConfigured("paystack", {
       WEB_BILLING_ENVIRONMENT: "production",
-      PAYSTACK_SECRET_KEY: "sk_test_fixture",
+      PAYSTACK_SUBSCRIPTION_SECRET_KEY: "sk_test_fixture",
     }),
   ).toBe(false)
 })
@@ -333,11 +334,12 @@ test("USD checkout requires explicit settlement approval while NGN works without
 test("Production checkout requires release acceptance while a paused checkout still reconciles paid receipts", () => {
   const ready = {
     WEB_BILLING_ENVIRONMENT: "production",
+    WEB_BILLING_RECONCILIATION_ENABLED: "true",
     STORE_BILLING_ENVIRONMENT: "production",
     OWNER_BILLING_ENABLED: "true",
     WEB_BILLING_ENABLED: "true",
     APP_ENV: "production",
-    PAYSTACK_SECRET_KEY: "sk_live_fixture",
+    PAYSTACK_SUBSCRIPTION_SECRET_KEY: "sk_live_fixture",
   }
   expect(isWebCheckoutEnabled(ready)).toBe(false)
   expect(
@@ -349,7 +351,7 @@ test("Production checkout requires release acceptance while a paused checkout st
   expect(
     isWebReconciliationConfigured({
       ...ready,
-      PAYSTACK_SECRET_KEY: "sk_test_fixture",
+      PAYSTACK_SUBSCRIPTION_SECRET_KEY: "sk_test_fixture",
     }),
   ).toBe(false)
   expect(
@@ -425,3 +427,54 @@ test.each([international, usd])(
     expect(fake.calls).toHaveLength(2)
   },
 )
+
+test.each(["sandbox", "production"] as const)(
+  "a configured %s key with global native billing enabled cannot activate web billing without its receiver",
+  (environment) => {
+    const configured = {
+      APP_ENV: environment === "production" ? "production" : "local",
+      WEB_BILLING_ENVIRONMENT: environment,
+      STORE_BILLING_ENVIRONMENT: environment,
+      OWNER_BILLING_ENABLED: "true",
+      STORE_BILLING_ENABLED: "true",
+      PAYSTACK_SUBSCRIPTION_SECRET_KEY:
+        environment === "production" ? "sk_live_fixture" : "sk_test_fixture",
+      WEB_BILLING_ENABLED: "true",
+      WEB_BILLING_RELEASE_APPROVED: "true",
+    }
+    expect(isWebReconciliationConfigured(configured)).toBe(false)
+    expect(isWebCheckoutEnabled(configured)).toBe(false)
+    expect(
+      isWebReconciliationConfigured({
+        ...configured,
+        WEB_BILLING_RECONCILIATION_ENABLED: "true",
+      }),
+    ).toBe(true)
+    expect(
+      isWebCheckoutEnabled({
+        ...configured,
+        WEB_BILLING_RECONCILIATION_ENABLED: "true",
+      }),
+    ).toBe(true)
+  },
+)
+
+test("software subscriptions require their scoped merchant credential and never inherit another payment feature's key", () => {
+  const unrelated = {
+    WEB_BILLING_ENVIRONMENT: "sandbox",
+    PAYSTACK_SECRET_KEY: "sk_test_othermerchant",
+  }
+  expect(isWebProviderConfigured("paystack", unrelated)).toBe(false)
+  expect(
+    isWebProviderConfigured("paystack", {
+      ...unrelated,
+      PAYSTACK_SUBSCRIPTION_SECRET_KEY: "sk_test_fixture",
+    }),
+  ).toBe(true)
+  expect(
+    isWebProviderConfigured("paystack", {
+      ...unrelated,
+      PAYSTACK_SUBSCRIPTION_SECRET_KEY: "sk_live_fixture",
+    }),
+  ).toBe(false)
+})

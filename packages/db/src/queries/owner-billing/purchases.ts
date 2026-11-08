@@ -301,6 +301,7 @@ const subscriptionColumns = {
   planId: true,
   status: true,
   currentPeriodEndsAt: true,
+  cancelAtPeriodEnd: true,
 } as const
 
 /**

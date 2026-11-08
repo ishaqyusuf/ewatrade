@@ -1,0 +1,55 @@
+{
+  "version": 1,
+  "id": "2026-11-08-paystack-sandbox-setup",
+  "tickets": ["A05"],
+  "summary": "Prepare the separate EwaTrade Paystack sandbox catalog and add independent receiver activation plus a renewable-provider purchase reservation after refund/expiry. Keep live and USD activation off and canonical dormant release-env checks truthful.",
+  "noAssistantImpact": "No assistant tool, RPC or rollout added. Payments, verified status, management and coverage remain owner-reviewed form-only actions. The new default-off receiver flag prevents a provider key/global native billing flags from opening dormant web receipt or coverage paths. Provider billing reservations never grant paid access.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "path": "docs/billing/paystack-only-2026-11-08.md",
+      "status": "updated"
+    },
+    {
+      "topic": "feature",
+      "path": "docs/verification/2026-11-08-paystack-sandbox-setup.md",
+      "status": "updated"
+    },
+    {
+      "topic": "feature",
+      "path": ".brain/features/owner-wide-billing.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "api",
+      "path": ".brain/api/contracts.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "permissions",
+      "path": ".brain/api/permissions.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "decision",
+      "path": ".brain/decisions/2026-11-08-web-paystack-only.md",
+      "status": "local_only"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/payments/src/web-subscriptions/web-subscriptions.test.ts",
+      "executed": true,
+      "result": "Both sandbox and Production fixtures keep web checkout/receipt processing off under global OWNER/STORE enabled until the independent receiver flag is true. Full payments81/516 pass."
+    },
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/owner-billing/owner-billing.test.ts",
+      "executed": true,
+      "result": "A refundable or expired Paystack subscription that can still renew blocks a second native purchase; paid access remains Free. Confirmed non-renewal releases the hold. Focused policy/journal/webhook43/188 pass; no real SQL or charged transaction."
+    }
+  ]
+}

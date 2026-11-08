@@ -1,5 +1,9 @@
 # Paystack-only web subscriptions — 8 November 2026
 
+Sandbox update: EwaTrade2096714 now has its existing test key and6 verified NGN
+monthly test plans in the ignored local profile. All web receipt/checkout/live/USD
+activation remains off. [Setup and follow-up safety receipt](../verification/2026-11-08-paystack-sandbox-setup.md).
+
 Owner decision: drop Polar from EwaTrade web subscriptions. Use Paystack for
 Nigeria and international customers. The Zenith USD domiciliary account can be
 set up later. This supersedes the provider selection in
@@ -68,26 +72,29 @@ or provider credential authority is added.
 
 ## Configuration still required, outside source verification
 
-No payment key, product, webhook, country binding, feature flag or deployment was
-changed by this implementation. Do not treat the source as a working live checkout.
+The subsequent sandbox setup configured the existing EwaTrade test key and6
+verified test plans locally. No hosted key, webhook, owner country binding, native
+flag, deployment or live activation changed. Do not treat the test catalog as
+accepted hosted checkout. The remaining steps below retain their individual gates.
 
-1. Supply the EwaTrade Paystack test secret through the private environment path.
+1. Local test credential is configured as `PAYSTACK_SUBSCRIPTION_SECRET_KEY` through the private environment path.
    Do not send it in chat. Keep sandbox/test and Production/live keys separate.
-2. Create/map the actual monthly Paystack plans. Nigeria/Africa and outside-Africa
+2. Six real test plans are created/mapped. Nigeria/Africa and outside-Africa
    NGN prices require separate saved prices; no reused AfterService/Polar catalog.
 3. Review owner billing territories, then set `WEB_BILLING_OWNER_COUNTRIES` to a
    JSON object mapping existing opaque OwnerBillingAccount UUIDs to verified ISO
    countries. Missing/unverified territory refuses checkout rather than defaulting
    to the Nigerian discount. This is an operator-managed initial binding, not a
    user-editable discount switch.
-4. Set `WEB_BILLING_PRODUCTS` to explicit objects with provider `paystack`, planId,
+4. Local `WEB_BILLING_PRODUCTS` contains6 validated explicit objects with provider `paystack`, planId,
    actual `PLN_` productId, currency, amountMinor, referenceNgnMinor and countries.
    For NGN, amountMinor must equal the approved regional reference. Duplicate,
    unknown or mixed-price mappings refuse. Do not include USD products yet.
 5. Sandbox requires `WEB_BILLING_ENVIRONMENT=sandbox`, matching
    `STORE_BILLING_ENVIRONMENT=sandbox`, `OWNER_BILLING_ENABLED=true`, the matching
    `sk_test_` key and `WEB_BILLING_RETURN_URL=https://<dashboard>/settings/billing`.
-   New checkout additionally requires `WEB_BILLING_ENABLED=true`; foreign owner
+   The receiver explicitly requires `WEB_BILLING_RECONCILIATION_ENABLED=true`.
+   New checkout additionally requires that receiver flag and `WEB_BILLING_ENABLED=true`; foreign owner
    countries additionally require `PAYSTACK_INTERNATIONAL_ENABLED=true` only
    after Paystack approves that capability. Existing receipt processing remains
    available when the new-checkout switch is turned off. Production refuses

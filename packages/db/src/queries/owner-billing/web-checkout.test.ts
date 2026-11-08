@@ -409,3 +409,19 @@ test("foreign-owner receipts, expired periods and old renewals cannot replace th
   await revokeOwnerWebCharge(db, older)
   expect(state.subscription?.status).toBe("ACTIVE")
 })
+
+test("a refunded Paystack period still reserves billing until its provider confirms non-renewal", async () => {
+  const { db, state } = fixture()
+  state.subscription = {
+    provider: "OTHER",
+    status: "CANCELLED",
+    cancelAtPeriodEnd: false,
+    currentPeriodEndsAt: new Date(Date.now() + 86400000),
+  }
+  await expect(prepareOwnerWebCheckout(db, input)).rejects.toThrow(
+    "existing subscription",
+  )
+  expect(state.sessions).toHaveLength(0)
+  state.subscription.cancelAtPeriodEnd = true
+  expect((await prepareOwnerWebCheckout(db, input)).dispatch).toBe(true)
+})

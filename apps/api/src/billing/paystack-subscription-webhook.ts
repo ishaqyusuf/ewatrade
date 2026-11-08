@@ -15,7 +15,7 @@ export function registerPaystackSubscriptionWebhook(
     process: (payload: unknown) => Promise<void>
   } = {
     configured: () => isWebReconciliationConfigured(),
-    secret: () => process.env.PAYSTACK_SECRET_KEY ?? "",
+    secret: () => process.env.PAYSTACK_SUBSCRIPTION_SECRET_KEY ?? "",
     process: (payload) => processPaystackSubscriptionEvent(prisma, payload),
   },
 ) {

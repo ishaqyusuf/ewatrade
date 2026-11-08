@@ -21,6 +21,8 @@ export type OwnerBillingSubscription = {
   planId: RetailOpsPaidPlanId
   status: "ACTIVE" | "SUSPENDED" | "CANCELLED"
   currentPeriodEndsAt: Date
+  /** Paystack billing stops only after verified provider non-renewal. */
+  cancelAtPeriodEnd?: boolean
 }
 
 export type OwnerBusinessCoverage = {
@@ -60,12 +62,14 @@ export function assertBillingOwner(
     throw new OwnerBillingPolicyError("OWNER_REQUIRED")
 }
 
-export function currentOwnerSubscription(input: {
+type OwnerSubscriptionContext = {
   account: OwnerBillingAccount
   subscription: OwnerBillingSubscription | null
   environment: OwnerBillingEnvironment
   now: Date
-}) {
+}
+
+function validOwnerSubscriptionFacts(input: OwnerSubscriptionContext) {
   const { account, subscription, environment, now } = input
   if (
     !account.id ||
@@ -77,13 +81,35 @@ export function currentOwnerSubscription(input: {
     !["app_store", "play_store", "paystack"].includes(subscription.provider) ||
     !["starter", "growth", "pro"].includes(subscription.planId) ||
     !subscription.purchaseDigest ||
-    subscription.status !== "ACTIVE" ||
+    !["ACTIVE", "SUSPENDED", "CANCELLED"].includes(subscription.status) ||
     !Number.isFinite(now.getTime()) ||
-    !Number.isFinite(subscription.currentPeriodEndsAt.getTime()) ||
-    subscription.currentPeriodEndsAt <= now
+    !Number.isFinite(subscription.currentPeriodEndsAt.getTime())
   )
     return null
   return subscription
+}
+
+export function currentOwnerSubscription(input: OwnerSubscriptionContext) {
+  const subscription = validOwnerSubscriptionFacts(input)
+  return subscription?.status === "ACTIVE" &&
+    subscription.currentPeriodEndsAt > input.now
+    ? subscription
+    : null
+}
+
+/** Paid access and a provider's ability to charge again are separate facts. */
+export function ownerSubscriptionPurchaseSlot(input: OwnerSubscriptionContext) {
+  const subscription = validOwnerSubscriptionFacts(input)
+  if (!subscription) return null
+  if (
+    subscription.provider === "paystack" &&
+    subscription.cancelAtPeriodEnd !== true
+  )
+    return subscription
+  return subscription.status !== "CANCELLED" &&
+    subscription.currentPeriodEndsAt > input.now
+    ? subscription
+    : null
 }
 
 export type OwnerCoverageSnapshot = {
@@ -316,12 +342,12 @@ export function assertOwnerPurchaseBinding(input: {
     throw new OwnerBillingPolicyError("INVALID_STATE")
   // A suspended provider subscription can recover. It still occupies the
   // purchase slot until its period ends or the provider confirms cancellation.
-  const current =
-    input.currentSubscription &&
-    input.currentSubscription.status !== "CANCELLED" &&
-    input.currentSubscription.currentPeriodEndsAt > input.now
-      ? input.currentSubscription
-      : null
+  const current = ownerSubscriptionPurchaseSlot({
+    account: input.account,
+    subscription: input.currentSubscription,
+    environment: input.environment,
+    now: input.now,
+  })
   if (
     current &&
     (current.provider !== input.provider ||

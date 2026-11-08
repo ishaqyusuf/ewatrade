@@ -99,7 +99,7 @@ export function isWebProviderConfigured(
   return (
     provider === "paystack" &&
     Boolean(
-      env.PAYSTACK_SECRET_KEY?.startsWith(
+      env.PAYSTACK_SUBSCRIPTION_SECRET_KEY?.startsWith(
         environment === "production" ? "sk_live_" : "sk_test_",
       ),
     )
@@ -111,6 +111,7 @@ export function isWebCheckoutEnabled(env: BillingEnvironment = process.env) {
   return Boolean(
     environment &&
       env.WEB_BILLING_ENABLED === "true" &&
+      env.WEB_BILLING_RECONCILIATION_ENABLED === "true" &&
       env.OWNER_BILLING_ENABLED === "true" &&
       env.STORE_BILLING_ENVIRONMENT === environment &&
       (environment !== "production" ||
@@ -126,6 +127,7 @@ export function isWebReconciliationConfigured(
   return Boolean(
     environment &&
       isWebProviderConfigured("paystack", env) &&
+      env.WEB_BILLING_RECONCILIATION_ENABLED === "true" &&
       env.OWNER_BILLING_ENABLED === "true" &&
       env.STORE_BILLING_ENVIRONMENT === environment &&
       (env.APP_ENV !== "production" || environment === "production"),

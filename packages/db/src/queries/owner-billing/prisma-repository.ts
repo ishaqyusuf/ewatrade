@@ -14,6 +14,7 @@ import {
   type OwnerBillingSubscription,
   type OwnerBusinessCoverage,
   currentOwnerSubscription,
+  ownerSubscriptionPurchaseSlot,
   projectOwnerBusinessAccess,
 } from "./policy"
 import {
@@ -115,6 +116,7 @@ export function mapOwnerBillingSubscription(row: {
   planId: string
   status: string
   currentPeriodEndsAt: Date
+  cancelAtPeriodEnd?: boolean
 }): OwnerBillingSubscription {
   return {
     accountId: row.accountId,
@@ -124,6 +126,7 @@ export function mapOwnerBillingSubscription(row: {
     planId: toOwnerPaidPlanId(row.planId),
     status: toOwnerSubscriptionStatus(row.status),
     currentPeriodEndsAt: row.currentPeriodEndsAt,
+    cancelAtPeriodEnd: row.cancelAtPeriodEnd === true,
   }
 }
 
@@ -135,6 +138,7 @@ const subscriptionSelect = {
   planId: true,
   status: true,
   currentPeriodEndsAt: true,
+  cancelAtPeriodEnd: true,
 } satisfies Prisma.OwnerBillingSubscriptionSelect
 
 async function readAccount(
@@ -444,27 +448,28 @@ export async function getOwnerBillingCatalogState(
   })
   if (!snapshot) return null
   const current = currentOwnerSubscription(snapshot)
+  const occupied = ownerSubscriptionPurchaseSlot(snapshot)
   const purchase =
-    current?.provider === "play_store"
+    occupied?.provider === "play_store"
       ? await db.ownerBillingPurchase.findUnique({
           where: {
             provider_purchaseDigest: {
               provider: "PLAY_STORE",
-              purchaseDigest: current.purchaseDigest,
+              purchaseDigest: occupied.purchaseDigest,
             },
           },
           select: { accountId: true, productId: true },
         })
       : null
   const pendingWeb =
-    !current && process.env.WEB_BILLING_ENVIRONMENT
+    !occupied && process.env.WEB_BILLING_ENVIRONMENT
       ? await findPendingOwnerWebCheckout(db, input.accountId)
       : null
   return {
     hasSubscription: Boolean(current),
     subscriptionProvider: snapshot.subscription?.provider ?? null,
-    activeProvider: current
-      ? toDurableBillingProvider(current.provider)
+    activeProvider: occupied
+      ? toDurableBillingProvider(occupied.provider)
       : pendingWeb
         ? ("OTHER" as const)
         : null,

@@ -82,8 +82,8 @@ export async function prepareOwnerWebCheckout(
     })
     if (
       current &&
-      current.status !== "CANCELLED" &&
-      (current.currentPeriodEndsAt > new Date() ||
+      ((current.status !== "CANCELLED" &&
+        current.currentPeriodEndsAt > new Date()) ||
         (current.provider === "OTHER" && !current.cancelAtPeriodEnd))
     )
       throw new Error(

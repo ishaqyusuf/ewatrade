@@ -14,6 +14,7 @@ import {
   assertOwnerBusinessAllowance,
   assertOwnerPurchaseBinding,
   decideOwnerBusinessEnrollment,
+  ownerSubscriptionPurchaseSlot,
   projectOwnerBusinessAccess,
 } from "./policy"
 
@@ -622,4 +623,63 @@ test("Paystack coverage uses the same owner/business limits and blocks a simulta
       now,
     }),
   ).toThrow("ACTIVE_SUBSCRIPTION_CONFLICT")
+})
+
+test("an unpaid or refunded Paystack period cannot open a second native billing channel while it can renew", () => {
+  const nativeReceipt = {
+    account,
+    environment: "sandbox" as const,
+    verifiedAccountToken: account.id,
+    verifiedEnvironment: "sandbox" as const,
+    provider: "app_store" as const,
+    purchaseDigest: "native",
+    existingBinding: null,
+    linkedPurchaseDigest: null,
+    linkedBinding: null,
+    now,
+  }
+  const refunded = {
+    ...subscription,
+    provider: "paystack" as const,
+    status: "CANCELLED" as const,
+    cancelAtPeriodEnd: false,
+  }
+  expect(() =>
+    assertOwnerPurchaseBinding({
+      ...nativeReceipt,
+      currentSubscription: refunded,
+    }),
+  ).toThrow("ACTIVE_SUBSCRIPTION_CONFLICT")
+  expect(
+    projectOwnerBusinessAccess(
+      snapshot({ subscription: refunded }),
+      "business-a",
+    ).planId,
+  ).toBe("free")
+  expect(
+    ownerSubscriptionPurchaseSlot(snapshot({ subscription: refunded }))
+      ?.provider,
+  ).toBe("paystack")
+  expect(
+    ownerSubscriptionPurchaseSlot(
+      snapshot({ subscription: { ...refunded, cancelAtPeriodEnd: true } }),
+    ),
+  ).toBeNull()
+  const expired = {
+    ...refunded,
+    status: "ACTIVE" as const,
+    currentPeriodEndsAt: now,
+  }
+  expect(() =>
+    assertOwnerPurchaseBinding({
+      ...nativeReceipt,
+      currentSubscription: expired,
+    }),
+  ).toThrow("ACTIVE_SUBSCRIPTION_CONFLICT")
+  expect(() =>
+    assertOwnerPurchaseBinding({
+      ...nativeReceipt,
+      currentSubscription: { ...refunded, cancelAtPeriodEnd: true },
+    }),
+  ).not.toThrow()
 })

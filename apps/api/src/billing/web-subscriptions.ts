@@ -43,7 +43,7 @@ function paymentClient(env: BillingEnvironment = process.env) {
   return new WebSubscriptionClient(
     "paystack",
     environment,
-    env.PAYSTACK_SECRET_KEY ?? "",
+    env.PAYSTACK_SUBSCRIPTION_SECRET_KEY ?? "",
   )
 }
 

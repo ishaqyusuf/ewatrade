@@ -6,6 +6,11 @@ const team = "team_BV5rgKHJH4fMyFL1YfscZIZK"
 // Env names the release's env check skips. The code reads them, but the deployed
 // app doesn't need them today. Move a name out of these lists when that changes.
 const featuresOff = [
+  // Paystack web billing is independently default-off. Missing provider config
+  // must not block an Apple-only deployment; runtime checks still refuse it.
+  "PAYSTACK_SECRET_KEY",
+  "PAYSTACK_SUBSCRIPTION_SECRET_KEY",
+  "WEB_BILLING_ENVIRONMENT",
   "PLAY_PACKAGE_NAME", // Google Play billing: add before enabling STORE_BILLING_ENABLED
   "ACCOUNT_PRIVACY_OTP_SECRET", // add both before enabling account-privacy requests
   "ACCOUNT_PRIVACY_NOTICE_RECIPIENT_HMAC_KEY",
