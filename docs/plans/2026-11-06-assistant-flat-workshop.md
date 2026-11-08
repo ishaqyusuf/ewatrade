@@ -1,6 +1,11 @@
 # Assistant flat conversation Workshop plan
 
-6 November 2026. **Approved plan; whole-library Flat candidate (v10) ready for owner review (phase 4).**
+6 November 2026. **On hold: owner kept the card design (8 November). Flat is not adopted.**
+
+**Owner decision, 8 November:** do not move the AI assistant to the Flat design; keep the
+current card design for now. No product implementation follows from the pilot or v10.
+Selected v7 stays the selected revision; v9/v10 remain in Workshop history for reference
+only. The nine proposed WhatsApp copy changes from the v10 audit are not adopted.
 The owner confirmed Claude Opus 5.5 (`claude-opus-5-5`) at explicit high effort
 as the intended Workshop author. Codex coordinates the baseline, handoff and
 acceptance. The initial planning checkpoint below is retained as history.
