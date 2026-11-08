@@ -4,8 +4,8 @@ Status: Production Dashboard, Marketing, API and jobs are now at
 `6a4948c809ea3a83d3aed9ae4ca2d3f6a96f40d3`; the existing Production schema remains
 synchronized at database release `bf9bc356`. The normal executor exited 0 and API
 health passed. Five of six Production components are complete (83.3%). Native
-remains blocked by incomplete Android Preview acceptance and the existing store
-readiness gate. Genuine Apple Sandbox TEST delivery succeeded on the exact new
+has now passed canonical Android Preview acceptance at `7ba0fd68c`; its existing
+store readiness and paid-lifecycle gates remain open. Genuine Apple Sandbox TEST delivery succeeded on the exact new
 Preview API; it does not establish purchase/lifecycle acceptance. No worktree.
 Historical entries retain earlier states; the latest receipt below is authoritative.
 
@@ -500,3 +500,58 @@ Production remains 6a4948c8 (DB bf9bc356 unchanged), five of six components comp
 Native store readiness and human reviewer/signed lifecycle prerequisites persist;
 Apple 2/6 and Android 1/8 are not promoted. Local Brain mobile-QA and in-progress
 pointers updated; this receipt commit is documentation only.
+
+## Android Preview acceptance passed — 8 November 2026
+
+Owner resumed Android checks and explicitly authorized coordination across chats.
+The Android owner recovered approved emulator-5554 using a read-only instance,
+preserving saved data/permissions. Another chat stopped its own 5560 and handed
+the resource back. Follow-up evidence showed distinct AVD backing directories;
+their shared AVD name did not prove a writable-data collision or root cause.
+
+Committed repairs: bb0e932b3 adds strict documentation-only ancestor equivalence
+to native source verification; 7ba0fd68c repairs the QA setup hydration race and
+targets the actual confirmation button through its forwarded testID. No product
+layout, sign-out behavior, permissions or purchasing policy changed. Android's
+scoped source checks and the normal clean release gate each passed 284 tests /
+1,813 assertions plus QA types/Biome; H01 unchanged and H02 passed. See the focused
+8 November source-equivalence and emulator-recovery receipts.
+
+The normal `release --preview --only mobile --yes` published one compatible OTA:
+
+- Candidate: 7ba0fd68c9730e6a5d14915958a75343f193df0b.
+- Group: b49c9007-b859-4457-b7c9-c096bc443c84.
+- Android update: 01a1bab9-f367-76b4-8e52-786bf41fab39.
+- Runtime: 0a1cc8debc0d42e5b32ff0455e3b5368ff6fed7e.
+- Existing signed Preview build 35: 91735df8-e7c9-4a80-b4bf-36019a7b4ccc.
+
+Its automatic smoke failed initial More/Sign-out navigation before identity proof;
+the failure capture retained Home content with no bottom dock. This is retained
+as a failed run, not a pass or proven persistent product bug. Reopening only the
+same installed app after publication restored the normal visible dock. No data
+reset, permission change, assertion relaxation or second deployment was used.
+
+The canonical `qa:smoke --target preview --surface android` retry then exited 0:
+1/1 full flow passed in 1m48s. It verified the exact build/update before and after,
+QA OWNER selection, populated catalog, Day-old offering, ₦2,500 checkout total,
+draft cancellation, current closed-purchasing UI and final sign-out. Both runtime
+assertions and both confirmation-ID taps completed. No sale/payment or fixture
+was submitted; the client was left signed out.
+
+- Passed receipt: 2bd3d2fd-2dc9-40c0-9731-4ff36eb88b69.
+- `sha` and `runtimeSourceSha`: exact candidate above; clean/runtimeVerified true.
+- Config hash: e536995bd7c5da22a8d2b0a41cb524461ec581c9bcf9c374dbd4b8e4bbbd126a.
+- Completed: 2026-11-08T10:40:51.213Z (11:40:51 WAT).
+- The existing receipt validator independently accepted freshness/config/runtime.
+- Private artifacts: `.scratch/qa-release/artifacts/8f7af7e9-d510-4d50-900f-73059e038e4c`;
+  retry log `/tmp/full-release-android-7ba0fd68-retry.log`.
+- First failed receipt c2f697a8-56db-4987-8a58-575939828686 is preserved privately
+  at `/private/tmp/ewatrade-7ba0-first-smoke-receipt.json`; initial release log
+  `/tmp/full-release-preview-7ba0fd68.log` and artifact 025e6e91 remain historical.
+
+All source freezes were lifted and Android device ownership returned to its chat;
+there is no active release/test executor. Apple continues the reviewer-signup
+failure investigation. Android continues merchant/product/signed store readiness.
+This verifies the current Preview journey, not paid purchase/lifecycle acceptance
+or store publication: Android 1/8 and Apple 2/6 remain separate. Production remains
+6a4948c8, DB bf9bc356; five of six components (83.3%), native not released. No worktree.

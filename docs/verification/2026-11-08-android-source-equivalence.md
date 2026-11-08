@@ -30,7 +30,12 @@ quick runner already does. No connected fixtures or business writes.
 This runner change itself is not documentation-only and is mapped to the mobile
 release component. It must be committed with the separately owned setup/sign-out
 repairs before normal Preview publication and canonical native acceptance.
-Source validation is complete; native acceptance is pending that combined candidate.
+The combined candidate `7ba0fd68c` subsequently published through the normal
+mobile-only Preview path. Canonical Android smoke passed 1/1 with clean/verified
+receipt `2bd3d2fd-2dc9-40c0-9731-4ff36eb88b69` at 10:40:51Z on 8 November. Both
+receipt source fields name 7ba0fd68c; documentation-only equivalence is covered by
+the Git fixture rather than claimed as an exercised hosted difference in this run.
+See the full Production release journal for exact runtime, retry and gate limits.
 No merchant capability, API, schema or assistant authority changed; existing
 assistant coverage/impact evidence is reusable. Brain QA feature and task pointers
 are updated locally; they remain ignored rather than force-added.
