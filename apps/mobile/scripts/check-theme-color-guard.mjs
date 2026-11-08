@@ -90,22 +90,23 @@ function checkDarkThemeTokens() {
       file: relative(MOBILE_DIR, GLOBAL_CSS_FILE),
     },
   ]
+  // Midnight (owner pick, 8 Nov 2026): blue-ink surfaces, periwinkle accent.
   const requiredDarkTokens = [
     {
-      label: "charcoal canvas",
-      token: "#111715",
+      label: "blue-ink canvas",
+      token: "#0C1017",
     },
     {
-      label: "charcoal card surface",
-      token: "#1B2320",
+      label: "blue-ink card surface",
+      token: "#151B25",
     },
     {
-      label: "crisp white foreground",
-      token: "#F0F3F1",
+      label: "cool white foreground",
+      token: "#EDF1F7",
     },
     {
-      label: "brand-green action accent",
-      token: "#8CD5B5",
+      label: "periwinkle action accent",
+      token: "#9DBBFF",
     },
     {
       label: "green success/online accent",
@@ -116,17 +117,22 @@ function checkDarkThemeTokens() {
       token: "rgb(245, 158, 11)",
     },
     {
-      label: "muted gray metadata",
-      token: "#AAB7AF",
+      label: "cool gray metadata",
+      token: "#9AA6B8",
     },
   ]
-  const retiredSlateTokens = [
+  // Stock Tailwind slate/sky and orange, and the green dark theme Midnight replaced.
+  const retiredDarkTokens = [
     "rgb(15, 23, 42)",
     "rgb(30, 41, 59)",
     "rgb(51, 65, 85)",
     "rgb(96, 165, 250)",
     "rgb(125, 211, 252)",
     "rgb(255, 108, 0)",
+    "#111715",
+    "#1B2320",
+    "#8CD5B5",
+    "#AAB7AF",
   ]
 
   for (const { contents, file } of tokenFiles) {
@@ -141,13 +147,13 @@ function checkDarkThemeTokens() {
       })
     }
 
-    for (const token of retiredSlateTokens) {
+    for (const token of retiredDarkTokens) {
       if (!contents.includes(token)) continue
 
       violations.push({
         file,
         line: 1,
-        reason: "retired slate/navy dark token still present",
+        reason: "retired dark token still present",
         text: token,
       })
     }

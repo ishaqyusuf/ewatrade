@@ -71,17 +71,17 @@
   :root {
     --radius: 0.65rem;
 
-    --background: #F3F4F5;
-    --foreground: #182420;
+    --background: #F1F4F9;
+    --foreground: #141B2B;
 
     --card: #FFFFFF;
-    --card-foreground: #182420;
+    --card-foreground: #141B2B;
 
     --popover: #FFFFFF;
-    --popover-foreground: #182420;
+    --popover-foreground: #141B2B;
 
-    --primary: #17684F;
-    --primary-foreground: #FFF9ED;
+    --primary: #3D50C4;
+    --primary-foreground: #FFFFFF;
 
     --success: rgb(22, 163, 74);
     --success-foreground: rgb(240, 253, 244);
@@ -89,33 +89,33 @@
     --warn: rgb(217, 119, 6);
     --warn-foreground: rgb(255, 247, 237);
 
-    --secondary: #ECF3EE;
-    --secondary-foreground: #182420;
+    --secondary: #E8ECFA;
+    --secondary-foreground: #141B2B;
 
-    --muted: #F6F7F7;
-    --muted-foreground: #626D69;
+    --muted: #E8EDF5;
+    --muted-foreground: #586378;
 
-    --accent: #ECF3EE;
-    --accent-foreground: #17684F;
+    --accent: #E8ECFA;
+    --accent-foreground: #3D50C4;
 
     --destructive: rgb(185, 28, 28);
     --destructive-foreground: rgb(254, 242, 242);
 
-    --border: #DCE2DF;
-    --input: #F6F7F7;
+    --border: #DDE3EE;
+    --input: #E8EDF5;
     --overlay: rgba(0, 0, 0, 0.48);
-    --ring: #17684F;
+    --ring: #3D50C4;
 
-    --chart-1: #17684F;
+    --chart-1: #3D50C4;
     --chart-2: rgb(13, 148, 136);
     --chart-3: rgb(217, 119, 6);
     --chart-4: rgb(31, 41, 55);
     --chart-5: rgb(225, 29, 72);
 
     --gold: #F2A51A;
-    --cream: #FFF9ED;
+    --cream: #F4F7FF;
     --gold-foreground: #1E1E1C;
-    --ink: #1E1E1C;
+    --ink: #141B2B;
     --tint-mint: #E4F2EA;
     --tint-mint-foreground: #135C45;
     --tint-amber: #FFF1D9;
@@ -132,17 +132,17 @@
 @media (prefers-color-scheme: dark) {
   @layer base {
     :root {
-      --background: #111715;
-      --foreground: #F0F3F1;
+      --background: #0C1017;
+      --foreground: #EDF1F7;
 
-      --card: #1B2320;
-      --card-foreground: #F0F3F1;
+      --card: #151B25;
+      --card-foreground: #EDF1F7;
 
-      --popover: #1B2320;
-      --popover-foreground: #F0F3F1;
+      --popover: #151B25;
+      --popover-foreground: #EDF1F7;
 
-      --primary: #8CD5B5;
-      --primary-foreground: #10271D;
+      --primary: #9DBBFF;
+      --primary-foreground: #0B1530;
 
       --success: rgb(34, 197, 94);
       --success-foreground: rgb(236, 253, 245);
@@ -150,43 +150,43 @@
       --warn: rgb(245, 158, 11);
       --warn-foreground: rgb(255, 251, 235);
 
-      --secondary: #26372D;
-      --secondary-foreground: #F0F3F1;
+      --secondary: #1F2B45;
+      --secondary-foreground: #EDF1F7;
 
-      --muted: #232E28;
-      --muted-foreground: #AAB7AF;
+      --muted: #1E2532;
+      --muted-foreground: #9AA6B8;
 
-      --accent: #26372D;
-      --accent-foreground: #8CD5B5;
+      --accent: #1F2B45;
+      --accent-foreground: #9DBBFF;
 
       --destructive: rgb(220, 38, 38);
       --destructive-foreground: rgb(254, 242, 242);
 
-      --border: #3D4A43;
-      --input: #232E28;
+      --border: #2A3342;
+      --input: #1E2532;
       --overlay: rgba(0, 0, 0, 0.68);
-      --ring: #8CD5B5;
+      --ring: #9DBBFF;
 
-      --chart-1: #8CD5B5;
+      --chart-1: #9DBBFF;
       --chart-2: rgb(34, 197, 94);
       --chart-3: rgb(251, 191, 36);
       --chart-4: rgb(115, 115, 115);
       --chart-5: rgb(244, 63, 94);
 
       --gold: #F5B12E;
-      --cream: #F3FBF6;
+      --cream: #F1F5FF;
       --gold-foreground: #1E1E1C;
-      --ink: #F0F3F1;
-      --tint-mint: #17302A;
-      --tint-mint-foreground: #8CD5B5;
-      --tint-amber: #33270F;
-      --tint-amber-foreground: #F8C66A;
-      --tint-sky: #172A40;
-      --tint-sky-foreground: #9CC3F5;
-      --tint-lilac: #2A2340;
+      --ink: #EDF1F7;
+      --tint-mint: #142C28;
+      --tint-mint-foreground: #86D3AE;
+      --tint-amber: #30260F;
+      --tint-amber-foreground: #F6C56A;
+      --tint-sky: #16253D;
+      --tint-sky-foreground: #A9C8F7;
+      --tint-lilac: #242144;
       --tint-lilac-foreground: #C4B2F5;
-      --tint-rose: #3A1D1D;
-      --tint-rose-foreground: #F7A3A3;
+      --tint-rose: #381D27;
+      --tint-rose-foreground: #F5A3B4;
     }
   }
 }

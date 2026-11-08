@@ -147,8 +147,8 @@ const variantConfig = isDevelopmentBuild
 
 const nativeSplashImageLight = variantConfig.icons.splashDark
 const nativeSplashImageDark = variantConfig.icons.splashDark
-const nativeSplashBackgroundColor = "#17684F"
-const nativeSplashDarkBackgroundColor = "#17543F"
+const nativeSplashBackgroundColor = "#3354A8"
+const nativeSplashDarkBackgroundColor = "#24427A"
 
 // App-owned data sent to the EwaTrade API. SDK-owned collection remains in
 // each SDK's manifest and the final Xcode privacy report.

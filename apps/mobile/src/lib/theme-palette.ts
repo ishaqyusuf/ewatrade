@@ -15,7 +15,7 @@ export const THEME = {
 
     overlay: "rgba(0, 0, 0, 0.48)",
 
-    skeleton: "rgb(226, 232, 229)",
+    skeleton: "rgb(222, 228, 238)",
     skeletonHighlight: "rgba(255, 255, 255, 0.75)",
 
     radius: "0.65rem",
@@ -39,7 +39,7 @@ export const THEME = {
 
     overlay: "rgba(0, 0, 0, 0.68)",
 
-    skeleton: "rgb(40, 51, 46)",
+    skeleton: "rgb(34, 42, 56)",
     skeletonHighlight: "rgba(255, 255, 255, 0.08)",
 
     radius: "0.65rem",

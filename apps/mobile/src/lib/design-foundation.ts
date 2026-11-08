@@ -17,12 +17,12 @@ export const MOBILE_ACCOUNT_AVATAR_TOKENS = {
 export const MOBILE_OPERATIONAL_BOTTOM_TAB_TOKENS = {
   activeForeground: "#FFFFFF",
   centerAccent: "#F2A51A",
-  centerForeground: "#1E1E1C",
-  centerSurface: "#FCFCFA",
+  centerForeground: "#141B2B",
+  centerSurface: "#FAFBFF",
   darkBorder: "rgba(255, 255, 255, 0.10)",
-  inactiveForeground: "#9B9B97",
+  inactiveForeground: "#99A2B6",
   shadow: "#000000",
-  surface: "#1E1E1C",
+  surface: "#161C2B",
 } as const
 
 export const MOBILE_DESIGN_FOUNDATION = {
