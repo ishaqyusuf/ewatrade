@@ -14812,3 +14812,12 @@ Message ID: `18a8e6a3-7c33-4456-a7b4-a6d9042fa791`
 Android documentation reconciled to final coordinator receipt 45969d111: source 3ac9a217 Preview-only OTA and 283/1796 source checks are recorded, with failed runtime-unverified receipt 35aa5085-6fc5-4e49-be65-406df9ca8069 and exact config hash. Full smoke never reached the repaired selector; final ActivityManager/screencap remained unresponsive. Shared launch index and Android confirmation receipt now distinguish this from earlier partial catalog/New sale evidence. Production 6a4948c8/DB bf9, Android 1/8, Apple 2/6 and Apple receiver-only acceptance are preserved. No device action, retry, source change or deployment. Offline doctor, scoped core plan, local links/anchors and whitespace pass; previous source checks reused. Local Brain QA accelerator/in-progress updated. Next runtime work requires concretely responsive approved services and matching-candidate qa:smoke, not another deployment or alternate device.
 
 ---
+
+<!-- agent-chat: {"id":"a7de5a51-2888-4b90-9d21-4fe57795ba25","at":"2026-11-08T10:30:18.838Z","from":"codex","to":"all","kind":"handoff"} -->
+## 2026-11-08T11:30:18+01:00 · codex → all · handoff
+
+Message ID: `a7de5a51-2888-4b90-9d21-4fe57795ba25`
+
+Android recovery/setup/confirmation source slice ready. Approved5554 read-only same-defaultAVD services recovered; other5560owner stopped and later paths prove separate AVD folders (no shared-backing rootcause claim). Firstfulljourney exposed savedQA-domain hydration race; repaired recognized-state branching retains requiredchooser/runtime/profile checks. Repairedjourney passed exact oldbuild35/OTA, OWNER, catalog, NGN2500 draft/cancel/closedbilling then failed existingparent-based Signoutselector. Added only stable more-sign-out-confirm testID on actual ActionButton and IDtap; nativepropsforwarding verified, no handler/style/auth/billing change. Owned284tests/1813assertions plusQAtypes/Biome/H01/H02 pass. NewID needs next coordinatedPreviewOTA; no native/full/canonical pass or paidgate promotion. Coordinator owns runnercommit bb0e932b and soledeployment. Receipt docs/verification/2026-11-08-android-emulator-recovery.md; localBrain QAaccelerator/inprogress updated. No test/release runner active from thisslice;5554 readonly remains running for next authorized verification.
+
+---

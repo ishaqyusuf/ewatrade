@@ -17,11 +17,8 @@ appId: ${APP_ID}
       - scroll
       - tapOn: Sign out
       - assertVisible: Sign out\?
-      # The menu remains in the accessibility tree behind the sheet.
-      # Match the confirmation action alongside Cancel, not its screen position.
+      # Background menu text remains accessible behind the sheet. Target the
+      # actual confirmation button rather than text or inferred parent layers.
       - tapOn:
-          text: Sign out
-          childOf:
-            containsChild:
-              text: Cancel
+          id: more-sign-out-confirm
       - assertVisible: Sign in to your business

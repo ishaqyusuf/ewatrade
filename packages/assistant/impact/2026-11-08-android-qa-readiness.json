@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "id": "2026-11-08-android-qa-readiness",
+  "tickets": ["A02"],
+  "summary": "Recover authorized Android emulator, handle saved QA-domain hydration in smoke setup, and give the real Sign out confirmation button a stable test identifier.",
+  "noAssistantImpact": "Only native test identification and QA orchestration change. No assistant tool, procedure, domain command, permission, billing policy or sign-out handler changes. The ActionButton forwards its existing native props.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/mobile-dev-preview-qa-accelerator.md"
+    },
+    {
+      "topic": "feature",
+      "status": "updated",
+      "path": "docs/verification/2026-11-08-android-emulator-recovery.md"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": ".maestro/smoke.yaml",
+      "executed": true,
+      "result": "Recovered-emulator diagnostic passes exact prior build/OTA, chooser, OWNER profile, catalog, offering, NGN2500 checkout total, cancellation and closed billing. Existing parent-based sign-out selector then fails at runtime. New unique confirmation testID needs the coordinated Preview candidate before native acceptance; no full pass claimed."
+    }
+  ]
+}

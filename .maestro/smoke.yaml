@@ -12,15 +12,32 @@ name: QA catalog and sale draft
     timeout: 60000
 - runFlow: sign-out.yaml
 - assertVisible: Sign in to your business
+# Saved QA configuration can hydrate between the initial condition and tap.
+# Follow the resulting setup, login or chooser screen, then require the chooser.
 - runFlow:
     when:
       visible: Set up QA
     commands:
-      - tapOn: Set up QA
-      - tapOn: QA domain, like name.qa.test
-      - inputText: ${QA_DOMAIN}
-      - tapOn: Load QA businesses
-- tapOn: Open [0-9]+ QA businesses
+      - tapOn: Set up QA|Open [0-9]+ QA businesses
+      - extendedWaitUntil:
+          visible: QA domain, like name.qa.test|Open [0-9]+ QA businesses|QA domain options
+          timeout: 60000
+      - runFlow:
+          when:
+            visible: QA domain, like name.qa.test
+          commands:
+            - tapOn: QA domain, like name.qa.test
+            - inputText: ${QA_DOMAIN}
+            - tapOn: Load QA businesses
+- runFlow:
+    when:
+      visible: Open [0-9]+ QA businesses
+      notVisible: QA domain options
+    commands:
+      - tapOn: Open [0-9]+ QA businesses
+- extendedWaitUntil:
+    visible: QA domain options
+    timeout: 60000
 - tapOn: QA domain options
 - tapOn: Build details
 - assertVisible: ${EXPECTED_RUNTIME}

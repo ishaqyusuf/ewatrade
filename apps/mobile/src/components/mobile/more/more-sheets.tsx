@@ -172,6 +172,7 @@ export const MoreSignOutSheet = forwardRef<
           <ActionButton
             className={largeText ? "w-full" : "w-auto flex-1"}
             variant="destructive"
+            testID="more-sign-out-confirm"
             onPress={onConfirm}
           >
             Sign out
