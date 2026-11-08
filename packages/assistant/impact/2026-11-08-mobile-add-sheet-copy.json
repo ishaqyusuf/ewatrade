@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "id": "2026-11-08-mobile-add-sheet-copy",
+  "tickets": ["H02"],
+  "summary": "Clarify mobile Add sheet Goods and Services descriptions and pluralize the Services action label.",
+  "noAssistantImpact": "Display copy only. Catalog routes, product/service kind values, domain commands, assistant capabilities and confirmations are unchanged. The existing catalog permission filter uses the renamed Services label, preserving its role and catalog-editor checks.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/mobile-goods-wording.md"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "apps/mobile/src/lib/admin-create-actions.test.ts",
+      "executed": true,
+      "result": "4 tests / 18 assertions pass, including scoped catalog-editor access and offline availability. Scoped fast source smoke passes 202 tests / 1056 assertions; source-only, no device or release acceptance."
+    }
+  ]
+}

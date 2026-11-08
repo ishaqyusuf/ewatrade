@@ -24,7 +24,7 @@ describe("admin create actions", () => {
 
     expect(actions.map((action) => action.label)).toEqual([
       "Goods",
-      "Service",
+      "Services",
       "Customer",
       "Staff",
       "Order",
@@ -86,7 +86,7 @@ test("scoped quick create follows Store role and separate catalog grant", () => 
   expect(labels("MANAGER")).toEqual(["Order", "Stock Entry"])
   expect(labels("MANAGER", true)).toEqual([
     "Goods",
-    "Service",
+    "Services",
     "Order",
     "Stock Entry",
   ])

@@ -28,7 +28,7 @@ export function buildAdminCreateActions(
 ): AdminCreateAction[] {
   const actions: AdminCreateAction[] = [
     {
-      detail: "A stock-tracked item you sell.",
+      detail: "Items you buy or sell.",
       disabled: isOffline,
       emphasis: "catalog",
       icon: "FolderPlus",
@@ -37,11 +37,11 @@ export function buildAdminCreateActions(
       statusLabel: isOffline ? "Online only" : undefined,
     },
     {
-      detail: "Work you price and deliver.",
+      detail: "Services you provide for payment.",
       disabled: isOffline,
       emphasis: "catalog",
       icon: "Briefcase",
-      label: "Service",
+      label: "Services",
       route: "/first-product-setup-modal?kind=service",
       statusLabel: isOffline ? "Online only" : undefined,
     },
@@ -88,7 +88,7 @@ export function buildAdminCreateActions(
     profile.staffAccessMode === "SCOPED" &&
     !["OWNER", "ADMIN"].includes(normalizeMobileRole(profile.role))
   return actions.filter((action) => {
-    if (action.label === "Goods" || action.label === "Service")
+    if (action.label === "Goods" || action.label === "Services")
       return canEditMobileCatalog(profile)
     if (action.label === "Staff") return canManageMobileStaff(profile)
     if (action.label === "Customer") return !scopedStaff
