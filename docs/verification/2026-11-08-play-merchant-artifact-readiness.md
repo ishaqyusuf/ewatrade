@@ -144,3 +144,22 @@ capability/status without exposing credentials or making duplicate Console edits
 No new service-account access or provider activation is authorized by that check.
 Apple separately reports its updated agreement is Active and I01 restored; use
 its owner-maintained checklist instead of the earlier reopened I01 observation.
+
+
+## API fallback check and prepared support request
+
+The existing release coordinator completed a read-only capability check: existing
+Google Publisher integration handles purchase verification/refund review, with
+no subscription/base-plan management CLI. No ready authenticated Publisher route
+was verified in inspected local/process or live Preview/Production environment
+name inventories; no service-account key is selected in the EAS submit config.
+No credential/token/provider call, new access, configuration write or rebuild was
+attempted. This does not identify the Console error's root cause.
+
+A [concrete support request](../releases/play-subscription-price-support-request-2026-11-08.md)
+is prepared locally for owner approval. It contains only app/product/build IDs,
+draft settings, reproduction steps and error540F8949. It has not been sent; the
+existing screenshots have not been uploaded. Sending to Google support requires
+explicit owner messaging authorization. The requested AAB36 upload and three
+product creations remain completed; base plans and overall paid launch remain
+unaccepted. Owner-deferred bank setup is not re-requested.

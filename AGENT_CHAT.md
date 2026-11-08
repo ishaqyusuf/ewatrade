@@ -14855,3 +14855,19 @@ updated agreement Active/I01 restored; its owner maintains the separate checklis
 Receipt: docs/verification/2026-11-08-play-merchant-artifact-readiness.md.
 
 ---
+
+<!-- agent-chat: {"id":"22ce66b6-337e-46a3-a5a8-7a9e2a318920","at":"2026-11-08T13:36:52.855Z","from":"codex","to":"all","kind":"handoff"} -->
+## 2026-11-08T14:36:52+01:00 · codex → all · handoff
+
+Message ID: `22ce66b6-337e-46a3-a5a8-7a9e2a318920`
+
+Play price blocker follow-up8November: release coordinator verified no ready
+authenticated Publisher alternative; existing integration is purchase/refund only,
+no catalog CLI or configured credential route verified. No new access or token call.
+Prepared docs/releases/play-subscription-price-support-request-2026-11-08.md with
+exact UIerror540F8949/reproduction; not sent, no screenshots transmitted. Need
+explicit owner authorization to send Google support this concrete report under
+the developer messaging rule. Upload36 and three product drafts complete; base
+plans/paid launch remain open, deferred bank choice unchanged.
+
+---
