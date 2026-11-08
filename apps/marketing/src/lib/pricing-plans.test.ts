@@ -76,18 +76,23 @@ test("Free lists the paid features it leaves out, with human labels", () => {
   expect(getMissingFeatureLabels(paid, [free, paid])).toEqual([])
 })
 
-test("plan CTAs: Free and Starter sign up, Growth and Pro talk to us", () => {
+test("plan CTAs: Free signs up and paid plans open dashboard billing", () => {
   Reflect.set(process.env, "NODE_ENV", "production")
   process.env.NEXT_PUBLIC_DASHBOARD_URL = "https://dash.ewatrade.com"
   const open = getPricingPlans(true)
   expect(open.map((plan) => [plan.id, plan.cta.label, plan.cta.href])).toEqual([
     ["free", "Create your store", "https://dash.ewatrade.com/signup"],
-    ["starter", "Create your store", "https://dash.ewatrade.com/signup"],
-    ["growth", "Talk to us", "/contact"],
-    ["pro", "Talk to us", "/contact"],
+    ["starter", "Choose Starter", "https://dash.ewatrade.com/settings/billing"],
+    ["growth", "Choose Growth", "https://dash.ewatrade.com/settings/billing"],
+    ["pro", "Choose Pro", "https://dash.ewatrade.com/settings/billing"],
   ])
   expect(
-    getPricingPlans(false).every((plan) => plan.cta.href === "/contact"),
+    getPricingPlans(false)
+      .filter((plan) => plan.id !== "free")
+      .every(
+        (plan) =>
+          plan.cta.href === "https://dash.ewatrade.com/settings/billing",
+      ),
   ).toBe(true)
   expect(open.filter((plan) => plan.popular).map((plan) => plan.id)).toEqual([
     "growth",

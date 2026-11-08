@@ -9,6 +9,48 @@ import {
 } from "./index"
 
 describe("hosted payment provider contract", () => {
+  test("initializes Paystack with server-owned minor units and returns its hosted checkout", async () => {
+    const calls: Array<{ url: string; init?: RequestInit }> = []
+    const provider = new PaystackHostedPaymentProvider({
+      secretKey: "test-secret",
+      fetch: Object.assign(
+        async (url: string | URL | Request, init?: RequestInit) => {
+          calls.push({ url: String(url), init })
+          return Response.json({
+            status: true,
+            data: {
+              authorization_url: "https://checkout.paystack.com/test-session",
+              reference: "payment-1",
+            },
+          })
+        },
+        { preconnect: () => {} },
+      ),
+    })
+    const input = {
+      amountMinor: 500_000,
+      callbackUrl: "https://dash.ewatrade.com/payment-return",
+      currencyCode: "NGN",
+      customerEmail: "owner@example.test",
+      metadata: { orderId: "order-1" },
+      reference: "payment-1",
+    }
+    expect(await provider.createCheckout(input)).toEqual({
+      checkoutUrl: "https://checkout.paystack.com/test-session",
+      providerReference: "payment-1",
+    })
+    expect(calls).toHaveLength(1)
+    expect(calls[0]?.url).toBe("https://api.paystack.co/transaction/initialize")
+    expect(calls[0]?.init?.method).toBe("POST")
+    expect(JSON.parse(String(calls[0]?.init?.body))).toEqual({
+      amount: 500_000,
+      callback_url: input.callbackUrl,
+      currency: "NGN",
+      email: input.customerEmail,
+      metadata: input.metadata,
+      reference: "payment-1",
+    })
+  })
   test("retains canonical refund IDs without treating processor references as API IDs", () => {
     const adapter = new PaystackWebhookAdapter("test-secret")
     const data = {

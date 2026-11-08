@@ -1682,7 +1682,7 @@ export async function createRetailOpsSubscriptionCheckoutIntent(
     message:
       status === "active_plan"
         ? `${targetPlan.name} is already your plan.`
-        : "Subscription checkout is not available here. Open Plan & billing in the app to review store availability.",
+        : "Online checkout is not available yet. No payment has been taken.",
     provider: "none",
     subscription: snapshot.subscription,
     targetPlan,

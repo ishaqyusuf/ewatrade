@@ -712,7 +712,7 @@ describe("retail ops subscription queries", () => {
       },
     })
     expect(intent.message).toContain(
-      "Subscription checkout is not available here",
+      "Online checkout is not available yet. No payment has been taken.",
     )
 
     const planUpsert = getCall(db.calls, "subscriptionPlan.upsert")

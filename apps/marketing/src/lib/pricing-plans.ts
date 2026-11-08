@@ -4,7 +4,8 @@ import {
   type RetailOpsPlanFeature,
   type RetailOpsSubscriptionPlan,
 } from "@ewatrade/db/subscription-plans"
-import { type CreateStoreCta, getCreateStoreCta } from "./create-store-url"
+import { getCreateStoreCta } from "./create-store-url"
+import { getMarketingPlanCta } from "./marketing-offers"
 
 export const PLAN_FEATURE_LABELS: Record<RetailOpsPlanFeature, string> = {
   customerMessages: "Customer messages",
@@ -99,10 +100,9 @@ export function getMissingFeatureLabels(
 export function getPlanCta(
   plan: Pick<RetailOpsSubscriptionPlan, "id">,
   signupEnabled: boolean,
-): CreateStoreCta {
-  if (plan.id === "free" || plan.id === "starter")
-    return getCreateStoreCta(signupEnabled)
-  return { href: "/contact", label: "Talk to us", kind: "contact" }
+): ReturnType<typeof getMarketingPlanCta> {
+  if (plan.id === "free") return getCreateStoreCta(signupEnabled)
+  return getMarketingPlanCta(plan.id, signupEnabled)
 }
 
 export type PricingPlanView = {
@@ -113,7 +113,7 @@ export type PricingPlanView = {
   popular: boolean
   limits: PlanLimitLabel[]
   notIncluded: string[]
-  cta: CreateStoreCta
+  cta: ReturnType<typeof getPlanCta>
 }
 
 export function getPricingPlans(

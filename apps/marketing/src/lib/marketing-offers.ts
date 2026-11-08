@@ -1,3 +1,4 @@
+import { getDashboardRouteUrl } from "@ewatrade/onboarding/lib/signup-navigation"
 import { getCreateStoreCta } from "./create-store-url"
 
 // Approved marketing offer. Runtime entitlements/billing are owned by the separately reviewed pricing rollout.
@@ -77,8 +78,8 @@ export function getMarketingPlanCta(
     return { ...cta, label: signupEnabled ? "Start free" : cta.label }
   }
   return {
-    href: "/contact",
-    kind: "contact" as const,
-    label: `Contact us for ${MARKETING_OFFERS.find((p) => p.id === id)?.name ?? id}`,
+    href: getDashboardRouteUrl("/settings/billing"),
+    kind: "login" as const,
+    label: `Choose ${MARKETING_OFFERS.find((p) => p.id === id)?.name ?? id}`,
   }
 }

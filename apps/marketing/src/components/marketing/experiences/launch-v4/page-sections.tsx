@@ -381,10 +381,10 @@ export function FaqV15() {
             How do paid plans work?<span aria-hidden="true">+</span>
           </summary>
           <p>
-            Choose a plan, then contact us to activate it. Prices are monthly.
-            Each plan includes assistant use for questions and drafts; confirm
-            the allowance with us before upgrading. Customer messaging is a
-            separate Growth and Pro feature.
+            Choose a plan to open Plan and billing in your dashboard. Prices are
+            monthly, and checkout availability is shown there. Each plan
+            includes assistant use for questions and drafts. Customer messaging
+            is a separate Growth and Pro feature.
           </p>
         </details>
       </div>

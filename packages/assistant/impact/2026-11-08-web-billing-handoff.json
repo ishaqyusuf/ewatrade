@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "id": "2026-11-08-web-billing-handoff",
+  "tickets": ["A05"],
+  "summary": "Route paid website plan controls to dashboard billing, open valid server checkout URLs and retain checkout failures. Audit shows website subscription providers remain unimplemented and unconfigured.",
+  "noAssistantImpact": "Billing stays form-only through the existing manager-gated retailOps.createSubscriptionCheckoutIntent procedure. No assistant tool, provider activation, owner entitlement, permission, schema or purchase authority changes. Native Apple/Play paths and QA provider refusal remain intact.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/retail-ops-subscription-packaging.md"
+    },
+    {
+      "topic": "api",
+      "status": "local_only",
+      "path": ".brain/api/contracts.md"
+    },
+    {
+      "topic": "feature",
+      "status": "updated",
+      "path": "docs/billing/web-payment-readiness-2026-11-08.md"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "apps/marketing/src/lib/marketing-offers.test.tsx",
+      "executed": true,
+      "result": "Rendered paid controls reproduce /contact and pass after routing to canonical dashboard billing; gated Free signup retained."
+    },
+    {
+      "kind": "test",
+      "path": "apps/dashboard/src/lib/subscription-checkout-navigation.test.ts",
+      "executed": true,
+      "result": "Payable redirect, unavailable/active outcomes and insecure/malformed destination refusal pass. No real provider traffic."
+    }
+  ]
+}

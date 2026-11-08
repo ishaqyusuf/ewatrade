@@ -8,6 +8,7 @@ import {
   SettingsSection,
 } from "@/components/settings/settings-page"
 import { SettingsStatusPill } from "@/components/settings/settings-status-pill"
+import { openSubscriptionCheckout } from "@/lib/subscription-checkout-navigation"
 import { useTRPC } from "@/trpc/client"
 import { cn } from "@/utils"
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
@@ -26,6 +27,7 @@ import {
 } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { useMutation, useQuery } from "@tanstack/react-query"
+import { useState } from "react"
 
 type SubscriptionSnapshot = RouterOutputs["retailOps"]["subscription"]
 type Entitlement = SubscriptionSnapshot["entitlements"][number]
@@ -145,12 +147,14 @@ function UsageRow({ entitlement }: { entitlement: Entitlement }) {
 
 function PlanCard({
   current,
+  disabled,
   onUpgrade,
   pending,
   plan,
   upgrade,
 }: {
   current: boolean
+  disabled: boolean
   onUpgrade: (planId: RetailOpsPaidPlanId) => void
   pending: boolean
   plan: Plan
@@ -210,12 +214,12 @@ function PlanCard({
           type="button"
           size="sm"
           className="mt-3 w-full"
-          disabled={pending}
+          disabled={disabled}
           onClick={() => {
             if (plan.id !== "free") onUpgrade(plan.id)
           }}
         >
-          {pending ? "Checking…" : `Upgrade to ${plan.name}`}
+          {pending ? "Opening checkout…" : `Upgrade to ${plan.name}`}
         </Button>
       ) : null}
     </div>
@@ -254,6 +258,7 @@ function limitNotice(snapshot: SubscriptionSnapshot) {
 
 export function RetailOpsSubscriptionSettings() {
   const trpc = useTRPC()
+  const [checkoutError, setCheckoutError] = useState<string | null>(null)
   const subscriptionQuery = useQuery(
     trpc.retailOps.subscription.queryOptions(undefined, {
       retry: false,
@@ -261,8 +266,14 @@ export function RetailOpsSubscriptionSettings() {
   )
   const upgrade = useMutation(
     trpc.retailOps.createSubscriptionCheckoutIntent.mutationOptions({
-      onSuccess: (intent) => toast(intent.message),
-      onError: (error) => toast.error(error.message),
+      onMutate: () => setCheckoutError(null),
+      onSuccess: (intent) =>
+        openSubscriptionCheckout(intent, {
+          navigate: (url) => window.location.assign(url),
+          notify: (message) => toast(message),
+          error: setCheckoutError,
+        }),
+      onError: (error) => setCheckoutError(error.message),
     }),
   )
   const snapshot = subscriptionQuery.data
@@ -277,6 +288,12 @@ export function RetailOpsSubscriptionSettings() {
         title="Plan and billing"
         description="Your plan, how much you've used, and what each plan includes."
       />
+
+      {checkoutError ? (
+        <div role="alert">
+          <SettingsNotice tone="warning">{checkoutError}</SettingsNotice>
+        </div>
+      ) : null}
 
       {subscriptionQuery.isError ? (
         <SettingsNotice
@@ -373,6 +390,7 @@ export function RetailOpsSubscriptionSettings() {
               key={plan.id}
               plan={plan}
               current={plan.id === snapshot?.plan.id}
+              disabled={upgrade.isPending}
               upgrade={currentIndex >= 0 && index > currentIndex}
               pending={
                 upgrade.isPending && upgrade.variables?.planId === plan.id
