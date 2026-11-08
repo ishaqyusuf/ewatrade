@@ -1,13 +1,15 @@
 # Full Production release preflight — 7 November 2026
 
-Status: Production Dashboard, Marketing, API and jobs are now at
-`6a4948c809ea3a83d3aed9ae4ca2d3f6a96f40d3`; the existing Production schema remains
-synchronized at database release `bf9bc356`. The normal executor exited 0 and API
-health passed. Five of six Production components are complete (83.3%). Native
-has now passed canonical Android Preview acceptance at `7ba0fd68c`; its existing
-store readiness and paid-lifecycle gates remain open. Genuine Apple Sandbox TEST delivery succeeded on the exact new
-Preview API; it does not establish purchase/lifecycle acceptance. No worktree.
-Historical entries retain earlier states; the latest receipt below is authoritative.
+Status: Production Dashboard, Marketing and API are now at
+`dafec2e01fda01b243a8207f5092b011ff46bb03`; jobs remain at `6a4948c8` and the
+existing Production schema remains synchronized at database release `bf9bc356`.
+The normal executor exited 0 and API health passed. Five of six Production
+components are complete (83.3%). Canonical Android Preview acceptance passed at
+`7ba0fd68c`; signed Android Production validation build 36 is in progress, without
+store submission. Native store readiness and paid-lifecycle gates remain open.
+Production signup email delivery now passes; the owner must complete account
+verification directly. No worktree. Historical entries retain earlier states;
+the latest receipt below is authoritative.
 
 ## Owner decisions
 
@@ -555,3 +557,60 @@ failure investigation. Android continues merchant/product/signed store readiness
 This verifies the current Preview journey, not paid purchase/lifecycle acceptance
 or store publication: Android 1/8 and Apple 2/6 remain separate. Production remains
 6a4948c8, DB bf9bc356; five of six components (83.3%), native not released. No worktree.
+
+## Signup repair released; signed Android validation queued — 8 November 2026
+
+Apple isolated a real Production email-rendering defect: the Git-connected API
+build helper omitted Bun's `--production` flag. Fix `dafec2e01` adds that flag and
+an actual-helper/email-template regression. Focused checks passed 9 tests / 22
+assertions, scoped tooling checks and assistant gates; the normal clean release
+verification passed 284 tests / 1,813 assertions. No API contract, schema, auth
+policy or purchase authority changed. Details and live delivery proof are in
+[the signup receipt](../verification/2026-11-08-signup-email-build.md).
+
+`release --preview --only api --yes` deployed the exact candidate. Its automatic
+web smoke encountered the still-previous Dashboard alias before UI acceptance.
+After the same Git push's Dashboard build became Ready, the canonical web-only
+`qa:smoke` retry passed without another deployment or source-verification bypass:
+
+- Receipt `f5d7ab34-b680-4563-9366-1699c5b8bdf4`, exact candidate `dafec2e01`,
+  clean/runtimeVerified, completed `2026-11-08T11:04:11.995Z`.
+- Preview API `dpl_Er5jMtZCwUydvh1Td2PCRAF278eb` and Dashboard
+  `dpl_4awXedRFn7qRDmMwqBG5NpHL8X6w`.
+- Config hash `e536995bd7c5da22a8d2b0a41cb524461ec581c9bcf9c374dbd4b8e4bbbd126a`.
+- Existing QA account/catalog, sale draft total and cancellation passed; no sale,
+  payment or fixture was submitted.
+
+The normal `release --production --only api --yes` automatically included the
+Git-connected Dashboard and Marketing under the owner's deploy-all authorization.
+It exited 0 and API health passed. All three Ready deployments match `dafec2e01`:
+
+| Production surface | Deployment |
+| --- | --- |
+| API, api.ewatrade.com | `dpl_7A7vegqRxaiUVanBUsw9RPNcLmHg` |
+| Dashboard, dash.ewatrade.com | `dpl_6cab5Yvd7PpGTm4P1GtW9YjovS5Y` |
+| Marketing, www.ewatrade.com | `dpl_218t5aMFDUSCJvCr4BxorhwaiGZn` |
+
+Dashboard/Marketing source is unchanged from the previous Production candidate;
+the accepted warm-layout and hosted Logly evidence is reused. Jobs retain
+Production version `20261107.2` / deployment `tgh7ehhh` at `6a4948c8`; the database
+retains synchronized `bf9bc356`. No new jobs or database operation was needed.
+One owner-authorized signup retry then returned API HTTP 200, advanced the browser
+to code entry and produced Resend Delivered email ID
+`01a1bade-5d52-721b-9670-af328da09b1c`. Agents did not read the OTP/body or complete
+account verification. Production Sentry provisioning remains a separate open item.
+
+The existing `eas:build --prod --platform android --validation-only` path accepted
+exact committed source `dafec2e01fda01b243a8207f5092b011ff46bb03` and queued private
+signed build `56f45d80-ec23-4368-add5-49329741f3a5`, versionCode 36, production
+profile/channel, project `532f9a55-f4f6-4d4e-b60b-ea6fa8807a3b`. The uploaded archive
+is immutable and source freezes are lifted. Actual bundle permissions and IAP
+linkage await the completed artifact. This is not a Play upload, store release,
+paid purchase/lifecycle acceptance or gate override. Android retains emulator and
+store/Data Safety ownership; Apple retains reviewer verification. Android 1/8 and
+Apple 2/6 remain separate accepted milestones.
+
+Private command logs: `/tmp/full-release-preview-dafec2e0.log`,
+`/tmp/full-release-web-dafec2e0-retry.log`,
+`/tmp/full-release-production-api-dafec2e0.log`,
+`/tmp/ewatrade-android-validation-dafec2e0.log`.
