@@ -717,7 +717,7 @@ export async function advanceWhatsAppAddBusiness(
           requestedAt: message.now,
           challengeExpiresAt: issued.expiresAt.getTime(),
         },
-        `🔐 Confirm it’s you to create *${label(current.business?.businessName ?? "your business")}*. We emailed a six-digit code to ${maskEmail(current.email)}. Send it here. Never send your password.`,
+        `🔒 Code sent to *${maskEmail(current.email)}*.\nSend it here to create *${label(current.business?.businessName ?? "your business")}*.\n\n_It works for ${Math.max(1, Math.round((issued.expiresAt.getTime() - message.now) / 60_000))} minutes. Nothing is created until then. Never send your password._`,
       )
     } catch {
       return result(

@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "id": "2026-11-08-whatsapp-add-business-code-copy",
+  "tickets": ["H02"],
+  "summary": "Adopt the owner-approved WhatsApp case 4f (c-addbiz-n) code-sent wording from Assistant conversations Workshop v11: fact first, then where to send it, then expiry and safety in one italic line.",
+  "noAssistantImpact": "Reply wording only for the add-business email proof step. Email proof, challenge lifetime, masking, stage transitions, creation authority and the never-send-your-password warning are unchanged; the shown minutes come from the issued challenge expiry.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "updated",
+      "path": "docs/plans/2026-11-06-assistant-flat-workshop.md"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "apps/api/src/communications/whatsapp-onboarding-add-business.test.ts",
+      "executed": true,
+      "result": "9 tests/65 assertions pass, including the exact new code-sent lines with 10-minute expiry. Biome passes on both changed files. whatsapp-onboarding-runtime.test.ts did not load without EWATRADE_DATABASE_URL (environment, not this change). No real WhatsApp acceptance."
+    }
+  ]
+}

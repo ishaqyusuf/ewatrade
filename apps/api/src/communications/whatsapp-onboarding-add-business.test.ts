@@ -158,7 +158,11 @@ test("grouped facts → review → Create → email proof → canonical create �
   expect(h.calls.create).toHaveLength(0)
 
   const proof = await h.send("CREATE BUSINESS")
-  expect(proof.reply).toContain("a•••@example.com")
+  expect(proof.reply).toContain("🔒 Code sent to *a•••@example.com*.")
+  expect(proof.reply).toContain("Send it here to create *Ada Kitchen*.")
+  expect(proof.reply).toContain(
+    "_It works for 10 minutes. Nothing is created until then. Never send your password._",
+  )
   expect(h.calls.request).toEqual(["adaeze@example.com"])
   expect(h.calls.create).toHaveLength(0)
 

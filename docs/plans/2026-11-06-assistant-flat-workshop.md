@@ -5,7 +5,17 @@
 **Owner decision, 8 November:** do not move the AI assistant to the Flat design; keep the
 current card design for now. No product implementation follows from the pilot or v10.
 Selected v7 stays the selected revision; v9/v10 remain in Workshop history for reference
-only. The nine proposed WhatsApp copy changes from the v10 audit are not adopted.
+only.
+
+**WhatsApp copy adoption, 8 November:** the owner adopted all nine copy changes from the
+v10 audit (C1–C9: cases 4f, 6c, 13d, 16.10, 17.7, 17.9, 18.4). Library v11
+`32229ad4-ccf4-4ae7-9ed0-704275b35344` carries them, opens on WhatsApp with app scenes
+defaulting to Current (cards), and is the selected revision. Only C1 (add-business
+code sent) is fixed product text; it is implemented in
+`apps/api/src/communications/whatsapp-onboarding-add-business.ts`, keeping the
+never-send-your-password line and the real challenge expiry. The other eight are
+assistant-written or not yet built, so they guide reply style only. The private review
+Site mirrors the older `assistant/whatsapp-system` Workshop and was not changed.
 The owner confirmed Claude Opus 5.5 (`claude-opus-5-5`) at explicit high effort
 as the intended Workshop author. Codex coordinates the baseline, handoff and
 acceptance. The initial planning checkpoint below is retained as history.
