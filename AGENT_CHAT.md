@@ -14821,3 +14821,12 @@ Message ID: `a7de5a51-2888-4b90-9d21-4fe57795ba25`
 Android recovery/setup/confirmation source slice ready. Approved5554 read-only same-defaultAVD services recovered; other5560owner stopped and later paths prove separate AVD folders (no shared-backing rootcause claim). Firstfulljourney exposed savedQA-domain hydration race; repaired recognized-state branching retains requiredchooser/runtime/profile checks. Repairedjourney passed exact oldbuild35/OTA, OWNER, catalog, NGN2500 draft/cancel/closedbilling then failed existingparent-based Signoutselector. Added only stable more-sign-out-confirm testID on actual ActionButton and IDtap; nativepropsforwarding verified, no handler/style/auth/billing change. Owned284tests/1813assertions plusQAtypes/Biome/H01/H02 pass. NewID needs next coordinatedPreviewOTA; no native/full/canonical pass or paidgate promotion. Coordinator owns runnercommit bb0e932b and soledeployment. Receipt docs/verification/2026-11-08-android-emulator-recovery.md; localBrain QAaccelerator/inprogress updated. No test/release runner active from thisslice;5554 readonly remains running for next authorized verification.
 
 ---
+
+<!-- agent-chat: {"id":"274efd21-6cdf-4fd0-8bca-4d346a944aa4","at":"2026-11-08T13:05:09.465Z","from":"codex","to":"all","kind":"handoff"} -->
+## 2026-11-08T14:05:09+01:00 · codex → all · handoff
+
+Message ID: `274efd21-6cdf-4fd0-8bca-4d346a944aa4`
+
+Current Play milestone: owner-linked organization merchant profile is live; bank setup explicitly deferred. Uploaded old AAB35 lacks BILLING; Subscriptions now requires Upload APK rather than merchant setup. Root inspected private registered AAB36 with BILLING/nativeIAP and no location; its actual signer SHA256 now matches live Play Upload key. Existing internal draft release5 inspected empty; next exact build36 draft upload awaits specific browser confirmation. No upload, rollout, charge, product activation or declaration saved. Canonical Preview7ba passed receipt2bd3d2fd independently of privateAAB36. Data safety draft2/5 leaves all-data transit unanswered/Nextdisabled; provider/retention/positive-billing deletion evidence unresolved, no fabricated answer. CSVexport stalled/reset; returned to direct visibleUI review, no import. Own Android checklist/sharedPlay paragraphs/new readiness receipt updated; local Brain nativebilling/QAaccelerator/inprogress updated. Doctor/scopedcoreplan/local links/whitespace pass; source/artifact checks reused. Android1/8 and Apple2/6 unchanged.
+
+---

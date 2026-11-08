@@ -42,7 +42,7 @@ user to repeat it.
 | Phase | Current state | Next action |
 | --- | --- | --- |
 | 1. Shared contract and core source | Owner limits, coverage, versioned signup and retained-record downgrade implemented (0bd862763; verification daf00b5f0). Manual native addresses implemented cf831c187. | Reuse valid checks. Apple courtesy source and platform-specific runtime readiness are implemented with23billing tests/136assertions, scoped259/1679, API types and H01/H02 passing; signed acceptance remains open. Completed Play policy is unchanged. |
-| 2. Store products and configuration | Apple three ranked monthly products and175price schedules each are saved. Mapping/verifier/review source deployed at6a4948c8; genuine signed Preview TEST delivery passes. Public checkout stays closed; reviewer activation and paid lifecycle remain unaccepted. Play subscription page requires a Google Payments merchant account. | Finish dedicated Apple reviewer signup/Free-cohort identity, controlled owner/reviewer configuration and registered signed iOS testing. Native linkage/unsigned compile are proven; signed money acceptance remains open. Owner completes Play profile, then create/map actual Play monthly products. Play177-country draft remains unsubmitted and is not paid-territory acceptance. |
+| 2. Store products and configuration | Apple three ranked monthly products and175price schedules each are saved. Mapping/verifier/review source deployed at6a4948c8; genuine signed Preview TEST delivery passes. Public checkout stays closed; reviewer activation and paid lifecycle remain unaccepted. Play organization merchant profile is linked; bank setup is deferred. Subscription creation now requires a Billing-capable Play artifact; inspected private AAB36 is ready for reviewed draft upload. | Finish dedicated Apple reviewer signup/Free-cohort identity, controlled owner/reviewer configuration and registered signed iOS testing. Native linkage/unsigned compile are proven; signed money acceptance remains open. Finish required bank/merchant verification before paid launch; stage the inspected Billing artifact, then create/map actual Play monthly products. Play177-country draft remains unsubmitted and is not paid-territory acceptance. |
 | 3. Shared runtime, legal and operations | Production web/API/jobs6a4948c8 healthy; synchronized DBbf9bc356 unchanged. Preview Apple receiver enabled and TEST accepted; public checkout/owner/reviewer activation closed. Common legal/privacy and operations acceptance remain open. | Verify paid lifecycle/routing/operator delivery, paid legal publication, SDK/provider destinations and preserved-record deletion cases without repeating completed empty-data tests. Reuse password-recovery work. |
 | 4. Signed acceptance | Android A01–A08:1/8; Apple I01–I06:2/6 after catalog/target-configuration acceptance. Source/config tests do not close these gates. | Freeze exact candidates, inspect permissions/native linkage and run licensed purchase/restore/renewal/grace/refund/switching tests. Reuse platform-valid evidence only. |
 | 5. Submission and publication | Public release after approval/checks is authorized. Neither platform has paid-release acceptance yet. | Complete truthful store declarations/reviewer access, submit accepted candidates, follow review and publish through existing release authority. |
@@ -52,8 +52,9 @@ Changing a country draft or finishing source code does not close a signed gate.
 
 ## One shared outstanding-input list
 
-- Owner completes the Play payments profile/required personal verification; inspect
-  status before asking for information already supplied.
+- Play organization payments profile is linked. Owner deferred payout-bank setup;
+  finish the bank and any requested verification before paid launch. Do not re-ask
+  for the already completed profile selection or agreement submission.
 - Actual monitored operational backup and response-time commitment are not yet
   recorded. Primary owner and existing support aliases are known; do not re-ask
   their identity or create duplicate inboxes.
@@ -146,3 +147,18 @@ Google's [supported distribution locations](https://support.google.com/googlepla
 and [country-specific requirements](https://support.google.com/googleplay/android-developer/answer/6223646?hl=en)
 were checked7November. Broad preference is not evidence that merchant verification,
 required disclosures or every territory's paid offering is already accepted.
+
+
+## Android continuation after merchant linkage — 8 November 2026
+
+Canonical Preview journey passed source7ba0fd68c/receipt2bd3d2fd with runtime
+verified before/after. This accepts the existing closed-checkout journey, not paid
+store transactions. Current signed private registered AAB36 includes Billing and
+native IAP, omits location permissions and matches Play's registered upload key.
+The uploaded old AAB35 lacks Billing; active internal release remains33. No new
+artifact upload, subscription product creation, financial activation or Data safety
+submission has occurred in this reconciliation. Play's Data safety draft is still
+incomplete at collection/security; global transit and remaining provider/retention
+proof stay open. Android1/8 and Apple's separate2/6 remain unchanged.
+See [current evidence](../verification/2026-11-08-play-merchant-artifact-readiness.md)
+and [exact private AAB](../verification/2026-11-08-android-production-artifact.md).

@@ -57,7 +57,7 @@ within each row must be reused only where source/platform/target still match.
 | --- | --- | --- |
 | A01 Console/artifact/device identity | Accepted historical baseline | Correct app/package and prior signed artifact/device established; freeze and re-identify the new paid candidate before release. |
 | A02 API/access availability | Open | October quota outage was subsequently restored; don't repeat the obsolete outage diagnosis. Fresh target/candidate access proof is still required. Legal/deletion preflight passed 7 November. |
-| A03 Offers and Play merchant readiness | Open | Live 7 November Console says a merchant account/payments profile is required; none is set up. Owner must complete financial account setup. Prices/territory rule known; actual subscription/base-plan IDs, tax/bank readiness, localized totals and eligible offers still need evidence. |
+| A03 Offers and Play merchant readiness | Open | 8 November: owner linked the existing organization merchant profile; payout bank setup is explicitly deferred. Subscriptions now offers Upload a new APK, not Create subscription. Uploaded AAB35 lacks BILLING; inspected private AAB36 includes it and matches Play's upload certificate, but is not yet uploaded. Prices/territory rule known; actual subscription/base-plan IDs, tax/bank readiness, localized totals and eligible offers still need evidence. |
 | A04 Server/provider/terms | Open | Verification, owner purchase reconciliation, RTDN/void/refund and privacy guards exist. Need authenticated target outcomes and paid legal publication; current public copy still says no software subscriptions. |
 | A05 Paid entitlements/native integration | Open | Durable adapter, native lifetime/coverage controls, shared nullable limits, versioned signup and non-destructive downgrade are implemented in source. Existing grants remain independent. Native visual/signed and exact-target acceptance remain open. |
 | A06 Signed candidate/money acceptance | Open | Prior free/local and Play33/35 evidence is insufficient for paid purchase, restore, replacement, renewal, failed renewal, cancellation, refund and account/business switching. |
@@ -116,3 +116,25 @@ resolved by Android's available duration.
 
 No worktree/branch switch, push, deployment, provider activation, destructive
 data operation or binding store declaration follows from these preparations.
+
+
+## Current Play continuation — 8 November 2026
+
+The 7 November missing-profile observation is historical. Owner completed the
+organization merchant-profile linkage directly; no payout bank has been added.
+The owner chose to defer bank setup while independent work continues. Do not
+promise customer charging or bank payouts before Google's merchant requirements
+are met. User-entered financial details remain outside repository/chat logs.
+
+Canonical Preview acceptance passed source7ba0fd68c, receipt2bd3d2fd-2dc9-40c0-
+9731-4ff36eb88b69, with exact runtime before/after and sale-draft cancellation.
+The registered signed Production validation AAB36 is a different artifact:
+source dafec2e01, build56f45d80-ec23-4368-add5-49329741f3a5. Actual bundle integrity,
+BILLING/native-IAP and absence of location permissions are verified. Its upload
+certificate SHA256 matches the current Play Upload key. No full paid lifecycle
+or Play upload acceptance follows from those checks.
+
+[Current merchant, artifact and Data safety evidence](../verification/2026-11-08-play-merchant-artifact-readiness.md).
+The exact three monthly products/base plans remain uncreated pending the Billing
+artifact prerequisite. Data safety remains incomplete; no unknown transit or
+provider/deletion answer was fabricated. Android stays1/8.
