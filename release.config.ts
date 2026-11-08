@@ -11,6 +11,11 @@ const featuresOff = [
   "PAYSTACK_SECRET_KEY",
   "PAYSTACK_SUBSCRIPTION_SECRET_KEY",
   "WEB_BILLING_ENVIRONMENT",
+  // Paid-owner privacy review remains default-off until its exact policy and
+  // operational acceptance are installed; source deployment does not enable it.
+  "ACCOUNT_PRIVACY_SUBSCRIPTION_RETENTION_ENABLED",
+  "ACCOUNT_PRIVACY_SUBSCRIPTION_POLICY_JSON",
+  "ACCOUNT_PRIVACY_APPROVED_SUBSCRIPTION_POLICY_SHA256",
   "PLAY_PACKAGE_NAME", // Google Play billing: add before enabling STORE_BILLING_ENABLED
   "ACCOUNT_PRIVACY_OTP_SECRET", // add both before enabling account-privacy requests
   "ACCOUNT_PRIVACY_NOTICE_RECIPIENT_HMAC_KEY",

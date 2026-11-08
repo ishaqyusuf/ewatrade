@@ -99,3 +99,17 @@ configuration/deployment/build must use a newly agreed clean committed pin.
 The owner authorized direct coordination with the dashboard payment chat.
 Apple acceptance stays 2/6; source and audience inspection close no signed or
 runtime payment milestone.
+
+## Dormant paid-owner privacy configuration
+
+The owner-approved privacy implementation introduces three deployment names:
+`ACCOUNT_PRIVACY_SUBSCRIPTION_RETENTION_ENABLED`,
+`ACCOUNT_PRIVACY_SUBSCRIPTION_POLICY_JSON` and
+`ACCOUNT_PRIVACY_APPROVED_SUBSCRIPTION_POLICY_SHA256`. The canonical release audit
+now classifies those exact names as a currently disabled feature. No placeholder
+policy, processing flag, provider value or hosted setting was installed. This
+classification permits deployment of dormant source and does not establish
+operational privacy acceptance or authorize live account processing. Move the
+names out of the dormant list when enabling the feature. Existing privacy and
+billing gates remain effective. Validation is a bounded config diff/format review;
+the final clean-candidate release audit must still run.
