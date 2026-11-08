@@ -213,3 +213,14 @@ and restricted-browser launch failure remain failed attempts, not acceptance.
 Production health200. Genuine captured SandboxTEST replay503 revealed SDK
 identifier-before-environment behavior. Source correction and exact evidence are
 in [the callback receipt](2026-11-08-apple-build8-callback.md). Apple2/6 remains.
+
+## Physical build8 finding supersedes paid-candidate status
+
+The owner reached Free/usage after email-code entry but could not see upgrades.
+Actual iOS-specific provider/panel files were still no-ops and overrode shared
+native implementations. Signature/IAP linkage did not establish UI reachability.
+Direct iOS entry re-exports and actual-entry fixtures now correct this; see
+[iOS entry-point evidence](2026-11-08-ios-billing-entrypoints.md). Build9 is required,
+without weakening the Production TestFlight OTA prohibition. Build8 has no paid
+acceptance. Backend callback correction224e6be99 is combined with this next source;
+its local Preview wait was stopped130, leaving external accepted builds running.

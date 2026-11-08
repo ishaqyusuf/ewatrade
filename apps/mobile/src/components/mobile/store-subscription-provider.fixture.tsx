@@ -2,9 +2,13 @@ import { expect, mock, test } from "bun:test"
 import { createElement } from "react"
 import { renderToStaticMarkup } from "react-dom/server"
 
+mock.module("@root/mobile-release-scope.json", () => ({
+  default: { softwarePlanPurchases: false },
+}))
+
 const unexpected = () => {
   throw new Error(
-    "Free launch must not initialize store billing or call its API",
+    "Disabled billing scope must not initialize store billing or call its API",
   )
 }
 mock.module("@/hooks/use-auth", () => ({
@@ -46,7 +50,7 @@ function Child() {
   return createElement("span", null, "Business app remains available")
 }
 
-test("free launch renders an authenticated owner's app without billing initialization", () => {
+test("disabled billing scope renders an authenticated owner's app without billing initialization", () => {
   expect(
     renderToStaticMarkup(
       createElement(StoreSubscriptionProvider, null, createElement(Child)),

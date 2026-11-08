@@ -4,12 +4,15 @@ import type {
   ProductSubscriptionIOS,
   Purchase,
 } from "expo-iap"
-import { createElement } from "react"
+import { type ReactNode, createElement } from "react"
 import { renderToStaticMarkup } from "react-dom/server"
 
 let generation = 0
 let cacheGeneration = 0
 let platform = "android"
+let availableProducts: Array<
+  ProductSubscriptionAndroid | ProductSubscriptionIOS
+> = []
 const profile = { id: "owner", businessId: "business", role: "OWNER" }
 const products = [
   { store: "play_store", productId: "growth", planId: "growth" },
@@ -81,11 +84,12 @@ mock.module("@tanstack/react-query", () => ({
 }))
 mock.module("expo", () => ({ requireOptionalNativeModule: () => ({}) }))
 mock.module("expo-iap", () => ({
+  deepLinkToSubscriptions: async () => {},
   useIAP: (callbacks: { onPurchaseSuccess: typeof onSuccess }) => {
     onSuccess = callbacks.onPurchaseSuccess
     return {
       connected: true,
-      subscriptions: [],
+      subscriptions: availableProducts,
       fetchProducts: async () => {},
       requestPurchase: async (input: unknown) => {
         calls.push({ operation: "checkout", input })
@@ -103,13 +107,16 @@ mock.module("react-native", () => ({
       return platform
     },
   },
+  Linking: { openURL: async () => {} },
   LogBox: { ignoreLogs: () => {} },
   AppState: { addEventListener: () => ({ remove: () => {} }) },
 }))
 
-const { StoreSubscriptionProvider, useStoreSubscription } = await import(
-  "./store-subscription-provider.native"
-)
+const iosEntry = process.env.BILLING_TEST_ENTRYPOINT === "ios"
+const provider = iosEntry
+  ? await import("./store-subscription-provider.ios")
+  : await import("./store-subscription-provider.native")
+const { StoreSubscriptionProvider, useStoreSubscription } = provider
 function renderController() {
   const captured: { value: ReturnType<typeof useStoreSubscription> } = {
     value: null,
@@ -170,6 +177,7 @@ const receipt: Purchase = {
 }
 beforeEach(() => {
   platform = "android"
+  availableProducts = []
   generation++
   cacheGeneration++
   calls.length = 0
@@ -434,3 +442,45 @@ test("coverage started during checkout refresh prevents a competing store launch
   await Promise.all([checkout, coverage])
   expect(calls.map((call) => call.operation)).toEqual(["enroll", "refresh"])
 })
+
+if (iosEntry) {
+  const node = ({ children }: { children?: ReactNode }) =>
+    createElement("div", null, children)
+  mock.module("@/components/ui/view", () => ({ View: node }))
+  mock.module("@/components/ui/text", () => ({ Text: node }))
+  mock.module("@/components/ui/pressable", () => ({
+    Pressable: ({
+      children,
+      disabled,
+    }: { children?: ReactNode; disabled?: boolean }) =>
+      createElement("button", { type: "button", disabled }, children),
+  }))
+  mock.module("expo-router", () => ({ useRouter: () => ({ push: () => {} }) }))
+  mock.module("./store-owner-coverage", () => ({
+    StoreOwnerCoverage: () => null,
+  }))
+  mock.module("./store-subscription-provider", () => provider)
+  const { StoreSubscriptionPanel } = await import(
+    "./store-subscription-panel.ios"
+  )
+  test("iOS entries render the shared owner catalog, monthly price and restore controls", () => {
+    useAppleCatalog()
+    availableProducts = [appleProduct]
+    const html = renderToStaticMarkup(
+      createElement(
+        StoreSubscriptionProvider,
+        null,
+        createElement(StoreSubscriptionPanel),
+      ),
+    )
+    expect(html).toContain("Owner subscriptions")
+    expect(html).toContain("Growth")
+    expect(html).toContain("₦15,000")
+    expect(html).toContain("month")
+    expect(html).toContain("Restore purchases")
+    expect(html).toContain("Manage store subscriptions")
+    expect(calls.filter((call) => call.operation === "checkout")).toHaveLength(
+      0,
+    )
+  })
+}

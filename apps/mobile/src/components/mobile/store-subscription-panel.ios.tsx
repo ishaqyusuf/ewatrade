@@ -1,3 +1,1 @@
-export function StoreSubscriptionPanel() {
-  return null
-}
+export { StoreSubscriptionPanel } from "./store-subscription-panel.native"

@@ -1,29 +1,29 @@
 # Apple paid-at-launch preparation — 7 November 2026
 
 Current checkpoint, 8 November: Apple acceptance remains **2/6**. Commercial
-agreements/payout/tax and three regional subscription products are accepted. The
-reviewer login and Free workspace are prepared. The normal Production rollout at
-`2e1ee7e722aef00370e4e968f40e7803a2778688` completed for database, Dashboard,
-Marketing and API, with matching Preview web smoke and Production health passing.
-Production API is `dpl_AHaA4TdfNLthNBGxGX1Fs9U7rJis`; jobs remain unchanged.
+agreements/payout/tax and three regional subscription products are accepted.
+Reviewer login and Free workspace are prepared. Backend2e1ee7e72 completed normal
+Preview/matching web smoke/Production DB+web+API rollout; jobs are unchanged.
+The signed Sandbox callback exposed Apple's identifier-before-environment check;
+server correction is committed224e6be99 with focused19/176, real-SDK captured-TEST,
+API types and source smoke passing. It still needs final deployed acceptance.
 
-Private build **1.0.0 (8)** finished, passed artifact/signature/service/IAP checks,
-and was uploaded and processed by Apple. Its exact native source is `8f158ba9f`,
-runtime `018c6c66e7e614408870451b744e5befac86a851`. It is assigned only to the
-existing internal group with one tester; testing instructions are saved. The owner
-is continuing sign-in on an iPhone; actual native password and money acceptance
-are not inferred from that report. Public checkout remains closed.
+Private build **1.0.0 (8)** was signed, uploaded, processed and assigned to the
+existing one-tester internal group. The owner entered an email code and reached
+Free plan/usage, but no upgrade controls. This is login/usage evidence only.
+Two stale `.ios.tsx` provider/panel modules overrode the shared native billing
+implementation with no-ops. Their direct re-exports are now corrected, and actual
+iOS-entry controller/render regressions pass. **Build9 is required**; build8 is not
+a paid candidate. Production TestFlight OTA remains prohibited. No purchase made.
 
-A genuine signed Sandbox TEST replay to the new Production API returned503. The
-installed Apple SDK checks appAppleId before environment; Sandbox TEST omits that
-ID and reports INVALID_APP_IDENTIFIER. The bounded source correction now allows
-that status or INVALID_ENVIRONMENT to dispatch only to a fresh, full Sandbox
-signature/bundle/environment verifier under the existing reviewer policy. Foreign
-apps and Production mismatches still refuse. Local real-SDK/captured-TEST and
-focused19/176 checks pass; the correction must still be deployed and accepted.
-Apple's saved Sandbox URL remains Preview until the corrected gateway is ready.
-See [the build and callback receipt](../verification/2026-11-08-apple-build8-callback.md)
-and [prepared iPhone checks](../verification/2026-11-08-iphone-paid-testflight-checklist.md).
+Root stopped only its own local Preview224e6be99 release wait (exit130) to combine
+the native entry correction into the next clean candidate; external builds continue.
+The corrected candidate requires source checks, guarded build9, canonical API
+rollout, a genuine callback and iPhone product/purchase/restore acceptance. Public
+checkout stays closed and Apple's saved Sandbox URL remains Preview.
+See [the iOS entry-point receipt](../verification/2026-11-08-ios-billing-entrypoints.md),
+[the build/callback receipt](../verification/2026-11-08-apple-build8-callback.md) and
+[prepared iPhone checks](../verification/2026-11-08-iphone-paid-testflight-checklist.md).
 
 
 The owner requires paid business-owner software subscriptions at launch. Staff

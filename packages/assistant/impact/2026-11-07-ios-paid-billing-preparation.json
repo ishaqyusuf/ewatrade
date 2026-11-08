@@ -2,7 +2,7 @@
   "version": 1,
   "id": "2026-11-07-ios-paid-billing-preparation",
   "tickets": ["A05"],
-  "summary": "Route the gated native subscription panel on iOS, exercise Apple checkout/restore controller behavior, and scope billing preflight refund operations to Play.",
+  "summary": "Route the iOS platform-specific billing provider and panel to the existing gated native implementation. Verify the actual iOS entry modules render localized monthly offers and restore controls, retaining owner/session/server and release-scope checks.",
   "noAssistantImpact": "Existing billing commands remain form-only with unchanged owner, session and server authority. No assistant capability, procedure, permission, schema, entitlement or live activation changes.",
   "capabilities": [],
   "procedures": [],
@@ -23,7 +23,7 @@
       "kind": "test",
       "path": "apps/mobile/src/components/mobile/store-subscription-provider.test.ts",
       "executed": true,
-      "result": "Three isolated wrappers pass; actual controller fixture has18 cases including four Apple checkout/restore cases. No native provider traffic."
+      "result": "Four isolated wrappers pass: disabled release scope,18 shared controller cases,4 coverage render cases, and19 cases through actual .ios provider/panel entries (including visible owner catalog, monthly price and restore/manage controls, with no checkout launched). Original iOS no-op modules made the new wrapper fail19cases before re-export correction. Simulated native/SSR evidence, not signed StoreKit acceptance."
     },
     {
       "kind": "test",
