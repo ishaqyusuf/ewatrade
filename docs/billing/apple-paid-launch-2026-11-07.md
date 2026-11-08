@@ -1,12 +1,20 @@
 # Apple paid-at-launch preparation — 7 November 2026
 
-Current checkpoint: Apple acceptance remains **2/6**. Controlled review source
-`630f19b8`/`6a4948c8` is deployed to Preview and Production API/web/jobs; the
-synchronized database remains `bf9bc356`. Release receipt `79fad7564` records
-the exact providers and passed web checks. Genuine signed Apple Sandbox TEST
-delivery to Preview passed. Public checkout, reviewer activation and native
-purchase scope remain closed; signed purchase/lifecycle acceptance remains open.
-Earlier configuration-only/no-deployment/negative-canary entries are historical.
+Current checkpoint, 8 November: Apple acceptance remains **2/6**. Commercial
+agreements/payout/tax and three regional subscription products are accepted. The
+reviewer login and Free workspace are prepared. The retained accepted Production
+API is `dpl_7A7vegqRxaiUVanBUsw9RPNcLmHg`, source `dafec2e01`; earlier combined
+rollout and Preview TEST receipts below remain historical evidence.
+
+Paid native scope and the guarded Production TestFlight build target are committed
+in `45e9a8c55`, but no current signed iOS artifact is built or uploaded. The
+reviewer-only seven-key configuration passed its dry run without being applied;
+public checkout remains closed. The existing internal TestFlight group contains
+only the Account Holder, with manual build distribution and no external groups.
+Final clean source, effective backend configuration, signed money/lifecycle and
+privacy/legal acceptance remain open. See the
+[current candidate receipt](../verification/2026-11-08-production-testflight-paid-candidate.md)
+and [prepared iPhone checks](../verification/2026-11-08-iphone-paid-testflight-checklist.md).
 
 The owner requires paid business-owner software subscriptions at launch. Staff
 do not subscribe individually. The app download price is a separate setting.
