@@ -93,13 +93,14 @@ no duplicate Apple policy or unreviewed effective legal publication is introduce
 ## Paid Apple checklist
 
 This is a new Apple-specific paid-release denominator, not the historical free
-3/6 or Android A01–A08 count. **2/6 accepted**; source progress is within open rows.
+3/6 or Android A01–A08 count. **1/6 currently accepted** after the 8 November
+Paid Applications Agreement recheck reopened I01; source progress is within open rows.
 
 | ID | State | Required completion |
 | --- | --- | --- |
-| I01 Commercial prerequisites | Accepted | Live agreement/bank/tax status and owner-accepted updated program license verified. |
+| I01 Commercial prerequisites | Reopened | Fresh 8 November Business page shows Active (New Agreement Available); Account Holder must accept the updated Paid Applications Schedule. Bank/DSA remain Active. Earlier program-license acceptance is separate. |
 | I02 Products and prices | Accepted | Group22556222; three ranked monthly products,175current storefront prices each, no trials; exact IDs installed in API target settings. Deployment/verification remains I03. |
-| I03 Native/server configuration | In progress | Verifier/key/product settings and controlled review source deployed; genuine signed Preview TEST delivery passes. Reviewer identity/Free cohort, owner activation, Production gateway routing and registered signed iOS linkage/coverage still require acceptance. |
+| I03 Native/server configuration | In progress | Verifier/key/product settings and controlled review source deployed; genuine signed Preview TEST delivery passes. Verified reviewer identity and dedicated versioned Free workspace prepared on 8 November. Owner activation, Production gateway routing and registered signed iOS linkage/coverage still require acceptance. |
 | I04 Policy and privacy | Open | Effective paid terms/privacy, SDK/provider/deletion facts, operational refund response and five-day policy compatibility. |
 | I05 Signed money acceptance | Open | Current signed candidate: purchase, restore, renewal, failure/grace, cancellation, refund/revocation, account/business switching; existing records usable while new admissions obey limits. |
 | I06 Review and rollout | Open | Actual candidate screenshots, reviewer login/contact, privacy/age declarations, selected build plus first subscriptions submitted together and approved rollout. |
@@ -328,3 +329,24 @@ coverage, reviewer Sandbox activation or Production-to-Preview relay. Do not swi
 the saved Sandbox URL or enable owner/reviewer/public purchase gates from this
 result. Reviewer signup is still a direct human step; phone instructions were
 provided without requesting credentials/codes in chat. Apple remains **2/6**.
+
+## Verified reviewer workspace; commercial recheck — 8 November 2026
+
+Owner completed email-code verification after the deployed signup-email repair.
+EwaTrade Review is now one General store/Main store in Nigeria/NGN. Exact reviewer
+identity is privately resolved; only that new workspace was prepared as versioned
+Free through a backed-up, guarded transaction, with canonical effective-plan
+readback. No paid receipt/grant was fabricated and no ordinary workspace or
+global billing/reviewer flag changed.
+
+A dedicated reviewer password reset-link is Delivered. App Review username/contact/
+notes are prepared but unsaved; the owner must set the password and enter/save it
+directly in Apple. Fresh Business state is Paid Apps Agreement Active (New Agreement
+Available), with explicit new Schedule2 acceptance required for submissions. The
+owner has a direct review request. I01 is reopened; current count1/6 supersedes the
+prior2/6 until acceptance is verified. Bank/DSA remain Active, I02 unchanged.
+
+Exact bounded-update, effective-plan, mail and pending-action evidence:
+[reviewer workspace receipt](../verification/2026-11-08-apple-reviewer-workspace.md).
+Signed registered iOS, Sandbox money/lifecycle, routing/configuration, policy/privacy
+and submission remain open. Historical TEST evidence remains receiver-only.
