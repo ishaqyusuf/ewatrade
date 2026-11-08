@@ -20,7 +20,7 @@ import {
   accountPrivacyRetentionDeadlines,
   getApprovedAccountPrivacyRetentionPolicy,
 } from "./account-privacy-retention-policy"
-import { ownerCoveragePrivacyWhere } from "./account-privacy-subscription"
+import { accountPrivacySubscriptionRetentionIsConfirmed } from "./account-privacy-subscription-retention"
 import { mobileOtpIdentifiersForEmail } from "./mobile-otp-identifier"
 import { runInOwnSerializableTransaction } from "./own-transaction"
 
@@ -160,6 +160,14 @@ export async function assessAccountPrivacyCompletion(
     | "playRefundReviewResponse"
     | "ownerBillingAccount"
     | "ownerBusinessCoverage"
+    | "ownerBillingPurchase"
+    | "ownerBillingSubscription"
+    | "storeSubscriptionPurchase"
+    | "tenantSubscription"
+    | "billingInvoice"
+    | "billingProviderEvent"
+    | "playRefundReviewCase"
+    | "accountPrivacySubscriptionReview"
     | "tenantPhotoErasureRun"
     | "commercialOrder"
     | "commercialServiceFulfillment"
@@ -597,30 +605,16 @@ export async function assessAccountPrivacyCompletion(
           blockers.push("ACCOUNT_PROFILE_ANONYMIZATION_UNCONFIRMED")
       }
     }
-    if (softwareSubscriptionOutcome?.disposition === "NOT_APPLICABLE") {
-      // Checkout attribution is retained by user ID even if the User row is
-      // later removed. A recorded checkout needs a reviewed outcome.
-      const initiatedCheckouts = await db.billingCheckoutSession.count({
-        where: { requestedByUserId: subjectId },
-      })
-      const refundReviewActions = await db.playRefundReviewResponse.count({
-        where: { actorUserId: subjectId },
-      })
-      // Owner-wide receipts and coverage history also outlive the claim.
-      const ownerBillingAccounts = await db.ownerBillingAccount.count({
-        where: { ownerUserId: subjectId },
-      })
-      const ownerCoverageActions = await db.ownerBusinessCoverage.count({
-        where: ownerCoveragePrivacyWhere(subjectId),
-      })
-      if (
-        initiatedCheckouts > 0 ||
-        refundReviewActions > 0 ||
-        ownerBillingAccounts > 0 ||
-        ownerCoverageActions > 0
-      )
-        blockers.push("SOFTWARE_SUBSCRIPTION_REVIEW_REQUIRED")
-    }
+    if (
+      softwareSubscriptionOutcome &&
+      !(await accountPrivacySubscriptionRetentionIsConfirmed(db, {
+        requestId: request.id,
+        subjectId,
+        outcome: softwareSubscriptionOutcome,
+        now,
+      }))
+    )
+      blockers.push("SOFTWARE_SUBSCRIPTION_REVIEW_REQUIRED")
     if (conversationOutcome?.disposition === "NOT_APPLICABLE") {
       // Revoking a link or expiring a WhatsApp candidate does not make the
       // subject's historical conversation data disappear. These records need

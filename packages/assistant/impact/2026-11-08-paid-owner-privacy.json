@@ -1,0 +1,56 @@
+{
+  "version": 1,
+  "id": "2026-11-08-paid-owner-privacy",
+  "tickets": ["A04", "A05"],
+  "summary": "Implement the owner-approved minimum-necessary paid-owner billing privacy review, scoped checkout-link minimization, independent retained review duties and current-scope guards before profile/completion. Generated additive Development migration only; live processing, provider cancellation and legal publication stay separate.",
+  "noAssistantImpact": "Six new accountPrivacy procedures are platform-admin nonmerchant operations. Business Owner/Admin roles and merchant assistants gain no deletion, retention, payment or provider authority. The existing workflow consumes explicit reviewed evidence; it cannot create generic outcomes or infer cancellation from expired/refunded access.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "path": ".brain/features/account-privacy.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "api",
+      "path": ".brain/api/contracts.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "permissions",
+      "path": ".brain/api/permissions.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "schema",
+      "path": ".brain/database/schema.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "decision",
+      "path": ".brain/decisions/2026-11-08-paid-owner-privacy-retention.md",
+      "status": "local_only"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/account-privacy-subscription-retention.test.ts",
+      "executed": true,
+      "result": "Focused guards cover source/policy/operator validation, mobile receipts, tenant-less Paystack journal, terminal-link minimization, stale/late source, unsupported shared scope, annual/hold bounds and independent reassessment. Source-only adapters; no provider call."
+    },
+    {
+      "kind": "test",
+      "path": "apps/api/src/trpc/routers/account-privacy-subscriptions.test.ts",
+      "executed": true,
+      "result": "All six operations deny ordinary business owners before DB access; disabled writes and client operator/policy injection are refused."
+    },
+    {
+      "kind": "run",
+      "path": "docs/verification/2026-11-08-paid-owner-privacy.md",
+      "executed": true,
+      "result": "Canonical generated migration and db:push passed on verified Development; positive scoped rehearsal with owned cleanup passed. Final focused evidence is retained in the receipt; no live-case/hosted acceptance."
+    }
+  ]
+}

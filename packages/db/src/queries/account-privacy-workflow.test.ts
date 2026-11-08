@@ -87,6 +87,7 @@ function database(
     status?: string
     count?: number
     channelCount?: number
+    lateBilling?: boolean
   } = {},
 ) {
   return {
@@ -101,9 +102,21 @@ function database(
         verifiedSubjectUserId: input.subject ?? "subject",
         verifiedAt: new Date(0),
         accessRevocation: { status: "REVOKED" },
-        domainOutcomes: domains.map((domain) => ({ domain })),
+        domainOutcomes: domains.map((domain) => ({
+          domain,
+          disposition: "NOT_APPLICABLE",
+        })),
       }),
     },
+    membership: { findMany: async () => [] },
+    billingCheckoutSession: { count: async () => 0 },
+    playRefundReviewResponse: { count: async () => 0 },
+    ownerBillingAccount: { count: async () => (input.lateBilling ? 1 : 0) },
+    ownerBusinessCoverage: { count: async () => 0 },
+    storeSubscriptionPurchase: { count: async () => 0 },
+    tenantSubscription: { count: async () => 0 },
+    billingInvoice: { count: async () => 0 },
+    billingProviderEvent: { count: async () => 0 },
     assistantConversation: { count: async () => 0 },
     assistantRun: { count: async () => 0 },
     assistantAttachment: { count: async () => 0 },
@@ -196,4 +209,19 @@ test("channel-only private attribution keeps canonical erasure step available", 
   )
   expect(result.privateAssistantRecords).toBe(1)
   expect(result.nextStep).toBe("ERASE_PRIVATE_ASSISTANT")
+})
+
+test("stale subscription evidence returns the resumable workflow to billing review", async () => {
+  expect(
+    nextAccountPrivacyWorkflowStep({
+      ...snapshot,
+      subscriptionReviewRequired: true,
+    }),
+  ).toBe("CONFIRM_SUBSCRIPTIONS")
+  const state = await getAccountPrivacyWorkflow(
+    database({ lateBilling: true }),
+    { requestId: "request", operatorUserId: "operator" },
+  )
+  expect(state.subscriptionReviewRequired).toBe(true)
+  expect(state.nextStep).toBe("CONFIRM_SUBSCRIPTIONS")
 })

@@ -10,6 +10,7 @@ import {
 } from "./account-privacy-profile-policy"
 import { assessAccountPrivacyProfilePrerequisites } from "./account-privacy-profile-prerequisites"
 import { accountPrivacyAdditionalScopeIsResolved } from "./account-privacy-record-scope"
+import { accountPrivacySubscriptionRetentionIsConfirmed } from "./account-privacy-subscription-retention"
 import { assistantWhatsAppOnboardingPrivateWhere } from "./assistant-whatsapp/onboarding-privacy"
 import { mobileOtpIdentifiersForEmail } from "./mobile-otp-identifier"
 import { runInOwnSerializableTransaction } from "./own-transaction"
@@ -150,6 +151,21 @@ export async function processAccountPrivacyProfile(
         subjectId,
         contactEmail: request.contactEmail,
         outcome: commercial,
+        now,
+      }))
+    )
+      throw new AccountPrivacyProfileError(
+        existing ? "CLAIM_CONFLICT" : "NOT_READY",
+      )
+    const subscriptions = request.domainOutcomes.find(
+      (row) => row.domain === "SOFTWARE_SUBSCRIPTIONS",
+    )
+    if (
+      subscriptions &&
+      !(await accountPrivacySubscriptionRetentionIsConfirmed(tx, {
+        requestId: request.id,
+        subjectId,
+        outcome: subscriptions,
         now,
       }))
     )

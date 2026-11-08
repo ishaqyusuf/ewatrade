@@ -263,3 +263,27 @@ model AccountPrivacyRecordRetention {
   @@index([reviewedAt, reviewDueAt])
   @@index([tenantId, category])
 }
+
+// Independent of deletion-case evidence expiry. Only opaque identifiers,
+// category decisions and evidence digests; no provider tokens, URLs or contacts.
+// Expiry/hold deadlines create an operator review duty, never blanket deletion.
+model AccountPrivacySubscriptionReview {
+  id                       String   @id @default(cuid())
+  requestId                String
+  subjectUserId            String
+  policyVersion            String
+  policyDigest             String
+  inventoryDigest          String
+  controllerEvidenceDigest String
+  decisionDigest           String   @unique
+  decisions                Json
+  operatorUserId           String
+  reviewedAt               DateTime
+  nextReviewAt             DateTime
+  supersededAt             DateTime?
+  createdAt                DateTime @default(now())
+
+  @@index([requestId, reviewedAt])
+  @@index([subjectUserId, reviewedAt])
+  @@index([supersededAt, nextReviewAt])
+}

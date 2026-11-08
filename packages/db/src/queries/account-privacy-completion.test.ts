@@ -115,6 +115,7 @@ function fixture(
     refundReviewActions?: number
     ownerBillingAccounts?: number
     ownerCoverageActions?: number
+    providerJournals?: number
     commercialOrders?: number
     commercialPayments?: number
     commercialFulfillments?: number
@@ -378,6 +379,10 @@ function fixture(
         return live.initiatedCheckouts ?? 0
       },
     },
+    storeSubscriptionPurchase: { count: async () => 0 },
+    tenantSubscription: { count: async () => 0 },
+    billingInvoice: { count: async () => 0 },
+    billingProviderEvent: { count: async () => live.providerJournals ?? 0 },
     playRefundReviewResponse: {
       count: async (query: unknown) => {
         refundReviewQueries.push(query)
@@ -1262,7 +1267,8 @@ describe("account privacy completion assessment", () => {
       approvedPolicyVersion: policyVersion,
       now,
     })
-    expect(reviewed.eligible).toBe(true)
+    expect(reviewed.eligible).toBe(false)
+    expect(reviewed.blockers).toContain("SOFTWARE_SUBSCRIPTION_REVIEW_REQUIRED")
   })
 
   test("requires subscription review for a historical refund action after User removal", async () => {
@@ -2246,3 +2252,12 @@ test.each([
     }
   },
 )
+
+test("completion refuses an orphaned journal after a previously empty billing outcome", async () => {
+  const { db } = fixture({}, { providerJournals: 1 })
+  const assessment = await assessAccountPrivacyCompletion(db, "request-1", {
+    approvedPolicyVersion: policyVersion,
+    now,
+  })
+  expect(assessment.blockers).toContain("SOFTWARE_SUBSCRIPTION_REVIEW_REQUIRED")
+})

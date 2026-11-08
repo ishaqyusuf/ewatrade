@@ -18,7 +18,10 @@ import {
   processAccountPrivacyPrivateAssistant,
 } from "./account-privacy-private-assistant"
 import { processAccountPrivacyProfile } from "./account-privacy-profile"
-import { confirmNoAccountPrivacySubscriptions } from "./account-privacy-subscription"
+import {
+  accountPrivacySubscriptionRetentionIsConfirmed,
+  confirmAccountPrivacySubscriptions,
+} from "./account-privacy-subscription-retention"
 
 export const ACCOUNT_PRIVACY_WORKFLOW_STEPS = [
   "BEGIN_REVIEW",
@@ -63,6 +66,7 @@ type WorkflowSnapshot = {
   analyticsEvents: number
   conversationAccessRemains: boolean
   privateAssistantRecords?: number
+  subscriptionReviewRequired?: boolean
 }
 /** Next action only. Existing ledgers cannot bypass any processor or completion postcondition. */
 export function nextAccountPrivacyWorkflowStep(
@@ -88,6 +92,7 @@ export function nextAccountPrivacyWorkflowStep(
       return step
     }
   }
+  if (snapshot.subscriptionReviewRequired) return "CONFIRM_SUBSCRIPTIONS"
   if (snapshot.analyticsEvents) return "ERASE_ANALYTICS"
   if (!snapshot.domains.includes("EXTERNAL_PROCESSORS"))
     return "REVIEW_EXTERNAL_PROCESSORS"
@@ -116,7 +121,18 @@ export async function getAccountPrivacyWorkflow(
       verifiedSubjectUserId: true,
       verifiedAt: true,
       accessRevocation: { select: { status: true } },
-      domainOutcomes: { select: { domain: true } },
+      domainOutcomes: {
+        select: {
+          domain: true,
+          userId: true,
+          policyVersion: true,
+          disposition: true,
+          processor: true,
+          evidenceDigest: true,
+          nextReviewAt: true,
+          processedAt: true,
+        },
+      },
     },
   })
   if (!request) throw new AccountPrivacyWorkflowError("NOT_FOUND")
@@ -146,6 +162,21 @@ export async function getAccountPrivacyWorkflow(
     db,
     subjectId,
   )
+  const subscriptionOutcome = request.domainOutcomes.find(
+    (row) => row.domain === "SOFTWARE_SUBSCRIPTIONS",
+  )
+  const subscriptionReviewRequired =
+    request.status === "PROCESSING" &&
+    Boolean(subscriptionOutcome) &&
+    !(
+      subscriptionOutcome &&
+      (await accountPrivacySubscriptionRetentionIsConfirmed(db, {
+        requestId: input.requestId,
+        subjectId,
+        outcome: subscriptionOutcome,
+        now: new Date(),
+      }))
+    )
   const snapshot = {
     status: request.status,
     accessStatus: request.accessRevocation?.status ?? null,
@@ -153,6 +184,7 @@ export async function getAccountPrivacyWorkflow(
     analyticsEvents,
     privateAssistantRecords: privateAssistant.total,
     conversationAccessRemains: activeConversationLinks > 0,
+    subscriptionReviewRequired,
   }
   const nextStep = nextAccountPrivacyWorkflowStep(snapshot)
   return {
@@ -221,7 +253,7 @@ export async function advanceAccountPrivacyWorkflow(
       await confirmAccountPrivacyRetainedCommercialRecords(db, input)
       break
     case "CONFIRM_SUBSCRIPTIONS":
-      await confirmNoAccountPrivacySubscriptions(db, input)
+      await confirmAccountPrivacySubscriptions(db, input)
       break
     case "ERASE_ANALYTICS":
       await processAccountPrivacyActivity(db, input)

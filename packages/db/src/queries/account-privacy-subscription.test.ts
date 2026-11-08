@@ -38,6 +38,7 @@ function fixture(
     billingInvoices?: number
     ownerBillingAccounts?: number
     ownerCoverage?: number
+    providerJournals?: number
     emailVerified?: boolean
     contactEmail?: string
   } = {},
@@ -84,6 +85,7 @@ function fixture(
         { tenantId: "tenant-1", status: input.membershipStatus ?? "REMOVED" },
       ],
     },
+    billingProviderEvent: { count: async () => input.providerJournals ?? 0 },
     billingCheckoutSession: {
       count: async (query: unknown) => {
         queries.checkout = query
@@ -227,6 +229,7 @@ describe("account privacy no-subscription outcome", () => {
     ["billing invoice", { billingInvoices: 1 }],
     ["owner billing account", { ownerBillingAccounts: 1 }],
     ["owner business coverage", { ownerCoverage: 1 }],
+    ["orphaned provider journal", { providerJournals: 1 }],
   ])("requires review for %s", async (_name, live) => {
     enable()
     const { db, outcomes } = fixture(live)

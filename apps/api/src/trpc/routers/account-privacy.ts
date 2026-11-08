@@ -33,12 +33,18 @@ import {
   getAccountPrivacyWorkflow,
   inspectAccountPrivacyRetainedRecord,
   inspectAccountPrivacyRetentionRecord,
+  inspectAccountPrivacySubscriptionRetention,
+  inspectAccountPrivacySubscriptions,
   listAccountPrivacyRequests,
   listAccountPrivacyRetainedRecordReviews,
   listAccountPrivacyRetentionReviews,
+  listAccountPrivacySubscriptionReviews,
   minimizeAccountPrivacyCustomers,
   minimizeAccountPrivacyCustomersSchema,
+  minimizeAccountPrivacySubscriptionLinks,
   processAccountPrivacyProfile,
+  reassessAccountPrivacySubscriptions,
+  reassessAccountPrivacySubscriptionsSchema,
   recordAccountPrivacyExternalReview,
   recordAccountPrivacyExternalReviewSchema,
   recordLegalAcceptance,
@@ -48,6 +54,8 @@ import {
   reviewAccountPrivacyRetainedRecord,
   reviewAccountPrivacyRetainedRecordSchema,
   reviewAccountPrivacyRetention,
+  reviewAccountPrivacySubscriptions,
+  reviewAccountPrivacySubscriptionsSchema,
   revokeAccountPrivacyAccess,
   revokeAccountPrivacyConversationAccess,
   revokeAccountPrivacyMembershipAccess,
@@ -121,6 +129,25 @@ function recordRetentionError(error: unknown): never {
   throw error
 }
 
+async function subscriptionPrivacyResult<T>(run: () => Promise<T>): Promise<T> {
+  try {
+    return await run()
+  } catch (error) {
+    if (
+      error instanceof AccountPrivacySubscriptionError ||
+      error instanceof AccountPrivacyRecordRetentionError
+    )
+      throw new TRPCError({
+        code:
+          error.code === "OPERATOR_REQUIRED"
+            ? "FORBIDDEN"
+            : "PRECONDITION_FAILED",
+        message: error.code,
+      })
+    throw error
+  }
+}
+
 function tenantPhotoErasureError(error: unknown): never {
   if (error instanceof TenantPhotoErasureError)
     throw new TRPCError({
@@ -138,6 +165,75 @@ function tenantPhotoErasureError(error: unknown): never {
   throw error
 }
 export const accountPrivacyRouter = createTRPCRouter({
+  inspectSubscriptionRetention: platformAdminProcedure
+    .input(z.object({ reviewId: z.string().min(1) }).strict())
+    .query(({ ctx, input }) =>
+      subscriptionPrivacyResult(() =>
+        inspectAccountPrivacySubscriptionRetention(ctx.db, {
+          ...input,
+          operatorUserId: ctx.session.user.id,
+        }),
+      ),
+    ),
+  reassessSubscriptions: platformAdminProcedure
+    .input(reassessAccountPrivacySubscriptionsSchema)
+    .mutation(({ ctx, input }) =>
+      subscriptionPrivacyResult(() =>
+        reassessAccountPrivacySubscriptions(ctx.db, {
+          ...input,
+          operatorUserId: ctx.session.user.id,
+        }),
+      ),
+    ),
+  inspectSubscriptions: platformAdminProcedure
+    .input(z.object({ requestId: z.string().min(1) }).strict())
+    .query(({ ctx, input }) =>
+      subscriptionPrivacyResult(() =>
+        inspectAccountPrivacySubscriptions(ctx.db, {
+          ...input,
+          operatorUserId: ctx.session.user.id,
+        }),
+      ),
+    ),
+  minimizeSubscriptionLinks: platformAdminProcedure
+    .input(
+      z
+        .object({
+          requestId: z.string().min(1),
+          expectedInventoryDigest: z.string().regex(/^[a-f0-9]{64}$/),
+        })
+        .strict(),
+    )
+    .mutation(({ ctx, input }) =>
+      subscriptionPrivacyResult(() =>
+        minimizeAccountPrivacySubscriptionLinks(ctx.db, {
+          ...input,
+          operatorUserId: ctx.session.user.id,
+        }),
+      ),
+    ),
+  reviewSubscriptions: platformAdminProcedure
+    .input(reviewAccountPrivacySubscriptionsSchema)
+    .mutation(({ ctx, input }) =>
+      subscriptionPrivacyResult(() =>
+        reviewAccountPrivacySubscriptions(ctx.db, {
+          ...input,
+          operatorUserId: ctx.session.user.id,
+        }),
+      ),
+    ),
+  subscriptionRetentionReviews: platformAdminProcedure
+    .input(z.object({ cursor: z.string().min(1).optional() }).strict())
+    .query(async ({ ctx, input }) => {
+      const rows = await listAccountPrivacySubscriptionReviews(ctx.db, {
+        ...input,
+        operatorUserId: ctx.session.user.id,
+      })
+      return {
+        items: rows.slice(0, 50),
+        nextCursor: rows.length > 50 ? (rows[49]?.id ?? null) : null,
+      }
+    }),
   inspectRetentionRecord: platformAdminProcedure
     .input(accountPrivacyRecordInspectionSchema)
     .query(async ({ ctx, input }) => {

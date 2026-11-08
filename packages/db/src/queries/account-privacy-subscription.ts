@@ -1,6 +1,67 @@
 import { createHash } from "node:crypto"
 import type { PrismaClient } from "../../generated/prisma/client"
 
+type SubscriptionCountClient = Pick<
+  PrismaClient,
+  | "membership"
+  | "billingCheckoutSession"
+  | "playRefundReviewResponse"
+  | "storeSubscriptionPurchase"
+  | "tenantSubscription"
+  | "billingInvoice"
+  | "ownerBillingAccount"
+  | "ownerBusinessCoverage"
+  | "billingProviderEvent"
+>
+
+function journalAttributionWhere(subjectId: string, tenantIds: string[]) {
+  return {
+    OR: [
+      {
+        payload: { path: ["session", "requestedByUserId"], equals: subjectId },
+      },
+      { tenantId: { in: tenantIds } },
+    ],
+  }
+}
+
+/** Empty evidence is rechecked too: later receipts or orphaned journals must not pass profile/completion. */
+export async function accountPrivacySubscriptionDataIsEmpty(
+  db: SubscriptionCountClient,
+  subjectId: string,
+) {
+  const memberships = await db.membership.findMany({
+    where: { userId: subjectId },
+    select: { tenantId: true },
+    take: 501,
+  })
+  if (memberships.length > 500) return false
+  const tenantIds = [...new Set(memberships.map((row) => row.tenantId))]
+  const counts = [
+    await db.billingCheckoutSession.count({
+      where: { requestedByUserId: subjectId },
+    }),
+    await db.playRefundReviewResponse.count({
+      where: { actorUserId: subjectId },
+    }),
+    await db.ownerBillingAccount.count({ where: { ownerUserId: subjectId } }),
+    await db.ownerBusinessCoverage.count({
+      where: ownerCoveragePrivacyWhere(subjectId, tenantIds),
+    }),
+    await db.storeSubscriptionPurchase.count({
+      where: { tenantId: { in: tenantIds } },
+    }),
+    await db.tenantSubscription.count({
+      where: { tenantId: { in: tenantIds }, provider: { not: "NONE" } },
+    }),
+    await db.billingInvoice.count({ where: { tenantId: { in: tenantIds } } }),
+    await db.billingProviderEvent.count({
+      where: journalAttributionWhere(subjectId, tenantIds),
+    }),
+  ]
+  return counts.every((count) => count === 0)
+}
+
 export type AccountPrivacySubscriptionCode =
   | "DISABLED"
   | "POLICY_NOT_APPROVED"
@@ -10,6 +71,7 @@ export type AccountPrivacySubscriptionCode =
   | "ACCESS_REVOCATION_REQUIRED"
   | "MEMBERSHIP_REVOCATION_REQUIRED"
   | "SUBSCRIPTION_REVIEW_REQUIRED"
+  | "SOURCE_CHANGED"
   | "CLAIM_CONFLICT"
 
 export class AccountPrivacySubscriptionError extends Error {
@@ -97,7 +159,12 @@ export async function confirmNoAccountPrivacySubscriptions(
       const memberships = await tx.membership.findMany({
         where: { userId: subjectId },
         select: { tenantId: true, status: true },
+        take: 501,
       })
+      if (memberships.length > 500)
+        throw new AccountPrivacySubscriptionError(
+          "SUBSCRIPTION_REVIEW_REQUIRED",
+        )
       if (memberships.some((membership) => membership.status !== "REMOVED"))
         throw new AccountPrivacySubscriptionError(
           "MEMBERSHIP_REVOCATION_REQUIRED",
@@ -150,6 +217,9 @@ export async function confirmNoAccountPrivacySubscriptions(
       const ownerCoverage = await tx.ownerBusinessCoverage.count({
         where: ownerCoveragePrivacyWhere(subjectId, tenantIds),
       })
+      const providerJournals = await tx.billingProviderEvent.count({
+        where: journalAttributionWhere(subjectId, tenantIds),
+      })
       if (
         ownerBillingAccounts ||
         ownerCoverage ||
@@ -157,7 +227,8 @@ export async function confirmNoAccountPrivacySubscriptions(
         refundReviewActions ||
         storePurchases ||
         providerSubscriptions ||
-        billingInvoices
+        billingInvoices ||
+        providerJournals
       )
         throw new AccountPrivacySubscriptionError(
           "SUBSCRIPTION_REVIEW_REQUIRED",
@@ -203,6 +274,7 @@ export async function confirmNoAccountPrivacySubscriptions(
             billingInvoices,
             ownerBillingAccounts,
             ownerCoverage,
+            providerJournals,
           }),
         )
         .digest("hex")

@@ -56,6 +56,7 @@ function fixture(
     failOutcome?: boolean
     wrongSubject?: boolean
     additional?: string
+    billingData?: "owner" | "journal"
     whatsappOnboarding?: number
   } = {},
 ) {
@@ -194,7 +195,22 @@ function fixture(
         state.whatsappOnboarding = 0
       },
     },
-    membership: { count: async () => options.memberships ?? 0 },
+    membership: {
+      count: async () => options.memberships ?? 0,
+      findMany: async () => [],
+    },
+    billingCheckoutSession: { count: async () => 0 },
+    playRefundReviewResponse: { count: async () => 0 },
+    ownerBillingAccount: {
+      count: async () => (options.billingData === "owner" ? 1 : 0),
+    },
+    ownerBusinessCoverage: { count: async () => 0 },
+    storeSubscriptionPurchase: { count: async () => 0 },
+    tenantSubscription: { count: async () => 0 },
+    billingInvoice: { count: async () => 0 },
+    billingProviderEvent: {
+      count: async () => (options.billingData === "journal" ? 1 : 0),
+    },
     storeConversationPushEndpoint: { count: async () => 0 },
     legalAcceptance: {
       count: async () => state.acceptances,
@@ -404,4 +420,31 @@ test("profile erasure removes only the subject's private WhatsApp onboarding nam
   await expect(
     processAccountPrivacyProfile(f.db, command),
   ).rejects.toMatchObject({ code: "CLAIM_CONFLICT" })
+})
+
+test.each(["owner", "journal"] as const)(
+  "profile refuses stale empty subscription proof after late %s data",
+  async (billingData) => {
+    enable()
+    const f = fixture({ billingData })
+    await expect(
+      processAccountPrivacyProfile(f.db, command),
+    ).rejects.toMatchObject({ code: "NOT_READY" })
+    expect(f.mutations()).toBe(0)
+  },
+)
+
+test("profile refuses an arbitrary positive billing outcome before any personal mutation", async () => {
+  enable()
+  const f = fixture()
+  const outcome = f
+    .state()
+    .outcomes.find((row) => row.domain === "SOFTWARE_SUBSCRIPTIONS")
+  if (!outcome) throw new Error("Missing subscription fixture")
+  outcome.disposition = "RETENTION_APPROVED"
+  outcome.nextReviewAt = new Date("2027-01-01")
+  await expect(
+    processAccountPrivacyProfile(f.db, command),
+  ).rejects.toMatchObject({ code: "NOT_READY" })
+  expect(f.mutations()).toBe(0)
 })
