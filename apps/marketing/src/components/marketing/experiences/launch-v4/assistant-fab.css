@@ -283,10 +283,10 @@
   display: grid;
   gap: 12px;
   padding: 15px;
-  border: 1px solid var(--ew-line, #dce4df);
+  border: 1px solid var(--ew-line, #dde3ee);
   border-radius: 14px;
   background: var(--ew-card, #fff);
-  color: var(--ew-fg, #182420);
+  color: var(--ew-fg, #141b2b);
   font: 13px / 1.5 var(--ew-text, system-ui);
 }
 .w-registration h3 {
@@ -295,7 +295,7 @@
 }
 .w-registration p {
   margin: 0;
-  color: var(--ew-muted, #5f6a63);
+  color: var(--ew-muted, #586378);
 }
 .w-registration label {
   display: grid;
@@ -306,16 +306,16 @@
 .w-registration select {
   width: 100%;
   min-height: 44px;
-  border: 1px solid var(--ew-line, #dce4df);
+  border: 1px solid var(--ew-line, #dde3ee);
   border-radius: 9px;
   padding: 8px 10px;
-  background: var(--ew-paper, #fbfaf6);
+  background: var(--ew-paper, #f1f4f9);
   color: inherit;
   font: 16px / 1.4 inherit;
 }
 .w-registration input:focus-visible,
 .w-registration select:focus-visible {
-  outline: 2px solid var(--ew-green, #17684f);
+  outline: 2px solid var(--ew-green, #3d50c4);
   outline-offset: 2px;
 }
 .w-registration .w-registration-consent {

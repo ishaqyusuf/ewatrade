@@ -2,10 +2,10 @@
    Scoped to .ewm so legal, auth and signup routes keep their own styles. */
 .ewm .product-screen {
   --p-bg: #fff;
-  --p-ink: #1c1917;
-  --p-muted: #78716c;
-  --p-border: #e7e5e4;
-  --p-green: oklch(.508 .118 165.612);
+  --p-ink: #141b2b;
+  --p-muted: #586378;
+  --p-border: #dde3ee;
+  --p-green: #3d50c4;
   background: var(--p-bg);
   color: var(--p-ink);
   font: 400 14px/1.5 EwmFigtree,system-ui,sans-serif;
@@ -79,8 +79,8 @@
   border: 1px solid transparent;
 }
 .ewm .real-rail>span.active {
-  border-color: #e6e6e6;
-  background: #f7f7f7;
+  border-color: #dde3ee;
+  background: #f1f4f9;
 }
 .ewm .real-desk-main {
   min-width: 0;
@@ -112,7 +112,7 @@
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background: #f5f5f4;
+  background: #f1f4f9;
 }
 .ewm .real-page {
   padding: 24px 30px 30px;
@@ -244,8 +244,8 @@
   border-radius: 99px;
   padding: 3px 9px;
   white-space: nowrap;
-  background: #e4f3eb;
-  color: #27654c;
+  background: #e4f2ea;
+  color: #135c45;
 }
 .ewm .product-pill.info {
   background: #e1f1fa;
@@ -464,10 +464,10 @@
   font-size: 12px;
 }
 .ewm .report-key>span:first-child {
-  color: #007a55;
+  color: #3d50c4;
 }
 .ewm .report-key>span:last-child {
-  color: #2a78d6;
+  color: #93aaf0;
 }
 .ewm .sales-chart {
   height: 148px;
@@ -488,10 +488,10 @@
 .ewm .sales-chart i {
   width: 50%;
   display: block;
-  background: #007a55;
+  background: #3d50c4;
 }
 .ewm .sales-chart i {
-  background: #2a78d6;
+  background: #93aaf0;
 }
 .ewm .sales-chart small {
   font-size: 11px;
@@ -569,7 +569,7 @@
   font-weight: 500;
   text-align: left;
   padding: 10px 8px;
-  background: #fafaf9;
+  background: #f7f9fc;
   color: var(--p-muted);
   border-block: 1px solid var(--p-border);
 }
@@ -628,7 +628,7 @@
   font-size: 15px;
   line-height: 1.7;
   margin-top: 18px;
-  color: #59615d;
+  color: #5a6375;
 }
 .ewm .public-store-actions {
   display: flex;
@@ -638,7 +638,7 @@
   margin-block: 20px;
 }
 .ewm .public-store-actions>b {
-  background: #191b1a;
+  background: #141b2b;
   color: white;
   padding: 10px 14px;
   border-radius: 5px;
@@ -664,10 +664,10 @@
   width: min(100%,390px);
 }
 .ewm .real-native {
-  background: #f3f4f5;
-  color: #182420;
+  background: #f1f4f9;
+  color: #141b2b;
   font: 400 14px/1.4 -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
-  border: 6px solid #202723;
+  border: 6px solid #1a2130;
   border-radius: 40px;
   min-height: 800px;
   display: flex;
@@ -675,7 +675,7 @@
   position: relative;
   padding-bottom: 24px;
   isolation: isolate;
-  box-shadow: 0 24px 45px -30px #18242055;
+  box-shadow: 0 24px 45px -30px #141b2b55;
 }
 .ewm .handset-status {
   display: flex;
@@ -715,7 +715,7 @@
 }
 .ewm .native-top p {
   font-size: 14px;
-  color: #626d69;
+  color: #586378;
   margin-top: 3px;
   line-height: 20px;
 }
@@ -728,7 +728,7 @@
   width: 39px;
   height: 39px;
   flex: none;
-  box-shadow: 0 2px 4px #18242014;
+  box-shadow: 0 2px 4px #141b2b14;
 }
 .ewm .native-circle svg {
   width: 20px;
@@ -745,8 +745,8 @@
   align-items: center;
   justify-content: center;
   gap: 7px;
-  background: #ecf3ee;
-  color: #17684f;
+  background: #e9ecfa;
+  color: #3d50c4;
   min-height: 44px;
   border-radius: 14px;
   font-size: 14px;
@@ -763,7 +763,7 @@
   justify-content: space-between;
   margin: 19px 0 9px;
   font-size: 12px;
-  color: #626d69;
+  color: #586378;
   letter-spacing: .3px;
 }
 .ewm .native-section-label b,
@@ -790,7 +790,7 @@
 }
 .ewm .native-selected-line p {
   font-size: 13px;
-  color: #626d69;
+  color: #586378;
   margin-top: 4px;
   line-height: 19px;
 }
@@ -800,8 +800,8 @@
   width: 42px;
   height: 42px;
   border-radius: 13px;
-  background: #ecf3ee;
-  color: #17684f;
+  background: #e9ecfa;
+  color: #3d50c4;
   font-size: 18px;
   font-weight: 800;
   flex: none;
@@ -820,8 +820,8 @@
   width: 120px;
   height: 44px;
   border-radius: 13px;
-  background: #ecf3ee;
-  color: #17684f;
+  background: #e9ecfa;
+  color: #3d50c4;
   flex: none;
 }
 .ewm .native-quantity button {
@@ -857,7 +857,7 @@
   gap: 9px;
   padding: 12px;
   min-height: 72px;
-  border-bottom: 1px solid #e7ebe8;
+  border-bottom: 1px solid #e4e9f1;
 }
 .ewm .native-option:last-child {
   border: 0;
@@ -872,15 +872,15 @@
 }
 .ewm .native-option p {
   font-size: 12px;
-  color: #626d69;
+  color: #586378;
   margin-top: 3px;
   line-height: 18px;
 }
 .ewm .native-add {
   padding: 8px 9px;
   border-radius: 11px;
-  background: #ecf3ee;
-  color: #17684f;
+  background: #e9ecfa;
+  color: #3d50c4;
   font-size: 13px;
   font-weight: 800;
   white-space: nowrap;
@@ -893,21 +893,21 @@
   display: flex;
   align-items: center;
   gap: 9px;
-  border: 1px solid #dce2df;
+  border: 1px solid #dde3ee;
   border-radius: 99px;
   background: #fff;
   margin-left: auto;
   width: max-content;
   max-width: 100%;
   padding: 7px 14px;
-  box-shadow: 0 3px 10px #18242010;
+  box-shadow: 0 3px 10px #141b2b10;
   margin-bottom: 12px;
   min-height: 34px;
 }
 .ewm .native-total span {
   font-size: 14px;
   font-weight: 700;
-  color: #626d69;
+  color: #586378;
 }
 .ewm .native-total strong {
   font-size: 16px;
@@ -923,9 +923,9 @@
   align-items: center;
   gap: 10px;
   min-height: 52px;
-  border: 1px solid #dce2df;
+  border: 1px solid #dde3ee;
   border-radius: 99px;
-  box-shadow: 0 4px 10px #18242012;
+  box-shadow: 0 4px 10px #141b2b12;
   padding: 10px 15px;
   background: white;
   min-width: 0;
@@ -934,12 +934,12 @@
 .ewm .native-search svg {
   width: 20px;
   height: 20px;
-  color: #626d69;
+  color: #586378;
   flex: none;
 }
 .ewm .native-search input {
   font: 400 16px/22px -apple-system,BlinkMacSystemFont,sans-serif;
-  color: #626d69;
+  color: #586378;
   border: 0;
   outline: none;
   min-width: 0;
@@ -954,7 +954,7 @@
   justify-content: center;
   gap: 9px;
   min-height: 52px;
-  background: #17684f;
+  background: #3d50c4;
   color: #fff;
   border-radius: 99px;
   width: 132px;
@@ -964,8 +964,8 @@
 }
 .ewm .native-search-row>button:disabled {
   background: #fff;
-  color: #626d69;
-  border: 1px solid #dce2df;
+  color: #586378;
+  border: 1px solid #dde3ee;
 }
 .ewm .native-primary {
   width: 100%;
@@ -977,7 +977,7 @@
 .ewm .home-indicator {
   width: 105px;
   height: 4px;
-  background: #182420;
+  background: #141b2b;
   border-radius: 10px;
   position: absolute;
   bottom: 10px;
@@ -996,21 +996,21 @@
 }
 .ewm .native-card>p {
   font-size: 14px;
-  color: #626d69;
+  color: #586378;
   margin-top: 6px;
   line-height: 20px;
 }
 .ewm .native-preview-note {
   font-size: 12px;
-  color: #626d69;
+  color: #586378;
   margin-bottom: 14px;
   text-align: center;
 }
 .ewm .native-empty {
-  border: 1px dashed #dce2df;
+  border: 1px dashed #dde3ee;
   padding: 24px;
   border-radius: 20px;
-  color: #626d69;
+  color: #586378;
   text-align: center;
 }
 .ewm .native-item {
@@ -1025,7 +1025,7 @@
 .ewm .native-item-bar>span:not(.native-circle) {
   font-size: 12px;
   font-weight: 700;
-  color: #626d69;
+  color: #586378;
   flex: 1;
 }
 .ewm .native-item-heading {
@@ -1080,7 +1080,7 @@
   border-radius: 18px;
   min-height: 64px;
   background: #fff;
-  color: #182420;
+  color: #141b2b;
   font-size: 11px;
   font-weight: 700;
   padding: 8px 3px;
@@ -1106,17 +1106,17 @@
 }
 .ewm .native-price-head {
   min-height: 34px;
-  color: #626d69;
+  color: #586378;
   font-size: 10px;
   font-weight: 800;
-  background: #eaeeeb;
+  background: #e8edf5;
   padding-block: 9px;
   letter-spacing: .2px;
 }
 .ewm .native-price-row {
   min-height: 68px;
   align-items: center;
-  border-bottom: 1px solid #e7ebe8;
+  border-bottom: 1px solid #e4e9f1;
   font-size: 14px;
 }
 .ewm .native-price-row:last-child {
@@ -1128,7 +1128,7 @@
 }
 .ewm .native-price-row small {
   display: block;
-  color: #626d69;
+  color: #586378;
   font-size: 12px;
   margin-top: 4px;
 }
@@ -1141,11 +1141,11 @@
   gap: 20px;
   padding-block: 14px;
   margin-bottom: 14px;
-  border-bottom: 1px solid #e7ebe8;
-  color: #626d69;
+  border-bottom: 1px solid #e4e9f1;
+  color: #586378;
 }
 .ewm .native-about-row strong {
-  color: #182420;
+  color: #141b2b;
   font-weight: 700;
 }
 .ewm .native-usage {
@@ -1160,8 +1160,8 @@
 }
 .ewm .native-usage b {
   padding: 9px 14px;
-  background: #ecf3ee;
-  color: #17684f;
+  background: #e9ecfa;
+  color: #3d50c4;
   border-radius: 10px;
   font-weight: 700;
 }
@@ -1189,8 +1189,8 @@
   background: #efe7f8;
 }
 .ewm .buyer-rail .chosen {
-  background: #e2f2fa;
-  border-color: #17684f;
+  background: #e9ecfa;
+  border-color: #3d50c4;
 }
 .ewm .buyer-rail svg {
   width: 24px;
@@ -1200,13 +1200,13 @@
   width: min(100%,430px);
 }
 .ewm .whatsapp-window {
-  border: 1px solid #dce2df;
+  border: 1px solid #dde3ee;
   border-radius: 20px;
   overflow: clip;
-  color: #182420;
+  color: #141b2b;
   background: #f1eee8;
   font: 400 15px/1.5 -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
-  box-shadow: 0 22px 45px -32px #15231f40;
+  box-shadow: 0 22px 45px -32px #141b2b40;
 }
 .ewm .wa-title {
   display: flex;
@@ -1214,7 +1214,7 @@
   gap: 12px;
   padding: 18px 20px;
   background: #fff;
-  border-bottom: 1px solid #e2e5e2;
+  border-bottom: 1px solid #e1e6ee;
 }
 .ewm .wa-title>div {
   flex: 1;
@@ -1225,7 +1225,7 @@
 }
 .ewm .wa-title small {
   font-size: 12px;
-  color: #6b7570;
+  color: #667085;
   display: block;
   min-height: 18px;
 }
@@ -1234,7 +1234,7 @@
   height: 42px;
   border-radius: 50%;
   background: #faf7ec;
-  color: #175840;
+  color: #1c2e68;
   display: grid;
   place-items: center;
 }
@@ -1261,18 +1261,18 @@
   background: #fff;
   padding: 4px 9px;
   border-radius: 6px;
-  color: #707a75;
-  box-shadow: 0 1px 1px #18242010;
+  color: #6b7488;
+  box-shadow: 0 1px 1px #141b2b10;
 }
 .ewm .wa-message {
   padding: 12px 13px 7px;
   border-radius: 10px;
   max-width: 92%;
-  box-shadow: 0 1px 2px #18242016;
+  box-shadow: 0 1px 2px #141b2b16;
   animation: ewm-message-in .28s ease-out;
 }
 .ewm .wa-message p {
-  color: #182420;
+  color: #141b2b;
   font-size: 15px;
   line-height: 1.5;
   margin-bottom: 10px;
@@ -1291,7 +1291,7 @@
   display: block;
   text-align: right;
   font-size: 11px;
-  color: #53665a;
+  color: #5d6a80;
   margin-top: -1px;
 }
 .ewm .wa-message>small>span {
@@ -1316,7 +1316,7 @@
   align-items: center;
   gap: 13px;
   padding: 12px 16px;
-  background: #f5f6f4;
+  background: #f4f6fa;
 }
 .ewm .wa-compose>div {
   display: flex;
@@ -1327,7 +1327,7 @@
   border-radius: 99px;
   background: white;
   padding: 8px 15px;
-  color: #58675f;
+  color: #586378;
   font-size: 15px;
 }
 .ewm .wa-compose svg {
@@ -1347,7 +1347,7 @@
 .ewm .wa-typing i {
   width: 5px;
   height: 5px;
-  background: #7f8d85;
+  background: #8590a3;
   border-radius: 50%;
   animation: ewm-typing-dot 1.1s infinite;
 }
@@ -1360,9 +1360,9 @@
 .ewm .wa-review-note {
   font-size: 12px!important;
   line-height: 1.6!important;
-  color: #3e5c4b!important;
+  color: #3a4870!important;
   background: #fff;
-  border: 1px solid #d7e1d8;
+  border: 1px solid #d9dff0;
   padding: 12px;
   border-radius: 8px;
 }
@@ -1780,10 +1780,10 @@
   flex: none;
 }
 .ewm .sales-chart .stacked-bar>i {
-  background: #2a78d6;
+  background: #93aaf0;
 }
 .ewm .sales-chart .stacked-bar>b {
-  background: #007a55;
+  background: #3d50c4;
 }
 .ewm .sales-chart.stacked small {
   bottom: -24px;
@@ -1912,9 +1912,9 @@
   place-items: center;
   background: white;
   border-radius: 18px;
-  box-shadow: 0 2px 4px #18242010;
+  box-shadow: 0 2px 4px #141b2b10;
   flex: none;
-  color: #17684f;
+  color: #3d50c4;
 }
 .ewm .native-quick-actions i.gold {
   background: #f2a51a;
@@ -1930,7 +1930,7 @@
   margin-bottom: 13px;
 }
 .ewm .native-variant-chips button {
-  border: 1px solid #dce2df;
+  border: 1px solid #dde3ee;
   border-radius: 99px;
   background: #fff;
   min-height: 36px;
@@ -1942,9 +1942,9 @@
   font-weight: 700;
 }
 .ewm .native-variant-chips button[aria-pressed="true"] {
-  background: #17684f;
+  background: #3d50c4;
   color: white;
-  border-color: #17684f;
+  border-color: #3d50c4;
 }
 .ewm .native-variant-chips small {
   font-size: 12px;
@@ -1977,13 +1977,13 @@
 .ewm .whatsapp-window {
   width: 100%;
   height: 758px;
-  border: 6px solid #222b27;
+  border: 6px solid #1a2130;
   border-radius: 38px;
   display: flex;
   flex-direction: column;
   overflow: clip;
   background: #f1eee8;
-  box-shadow: 0 24px 45px -32px #15231f55;
+  box-shadow: 0 24px 45px -32px #141b2b55;
 }
 .ewm .wa-status {
   height: 34px;
@@ -1999,7 +1999,7 @@
   padding: 10px 12px;
   gap: 8px;
   flex: none;
-  border-bottom: 1px solid #e2e5e2;
+  border-bottom: 1px solid #e1e6ee;
 }
 .ewm .wa-title>svg {
   width: 20px;
@@ -2055,7 +2055,7 @@
 .ewm .wa-cancel {
   font: 400 14px/1.4 -apple-system,BlinkMacSystemFont,sans-serif;
   border: 0;
-  border-top: 1px solid #edf0ec;
+  border-top: 1px solid #edf1f6;
   background: transparent;
   color: #027eb5;
   display: block;
@@ -2081,14 +2081,14 @@
 .ewm .wa-home {
   height: 17px;
   flex: none;
-  background: #f5f6f4;
+  background: #f4f6fa;
   position: relative;
 }
 .ewm .wa-home:after {
   content: '';
   width: 100px;
   height: 4px;
-  background: #202824;
+  background: #1a2130;
   border-radius: 99px;
   position: absolute;
   bottom: 5px;

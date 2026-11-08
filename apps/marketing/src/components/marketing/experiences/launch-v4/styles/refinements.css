@@ -1,48 +1,54 @@
-/* Approved Workshop 01 v18; scoped palette and polish. */
+/* Approved Workshop 01 v18 layout; Midnight Paper palette (marketing/midnight-site 01). */
 .ewm {
-  --paper: #f6f2ea;
-  --ink: #20242b;
-  --muted: #655d53;
-  --line: #d7caba;
-  --wash: #ede3d4;
-  --accent: #b64d35;
-  --button: #b64d35;
-  --button-ink: #ffffff;
-  --warm-action-hover: #963a27;
-  --warm-tint: #f0dfd2;
-  --warm-icon: #a3432e;
-  --warm-footer: #262923;
-  --warm-footer-ink: #f6f2ea;
-  --warm-footer-muted: #d5cbbb;
-  --warm-footer-line: #606356;
-  --warm-header: #faf7f1;
+  --paper: #f1f4f9;
+  --ink: #141b2b;
+  --muted: #586378;
+  --line: #dde3ee;
+  --wash: #e8edf5;
+  --accent: #3d50c4;
+  --button: #f2a51a;
+  --button-ink: #161c2b;
+  --shadow: 0 18px 48px -30px rgba(20, 27, 43, 0.35);
+  --mid-action-hover: #e3960c;
+  --mid-tint: #e6eafb;
+  --mid-icon: #3d50c4;
+  --mid-header: #f8fafd;
+  --mid-navy: #161c2b;
+  --mid-footer: #161c2b;
+  --mid-footer-ink: #eef2f8;
+  --mid-footer-muted: #a4aec2;
+  --mid-footer-line: #2e3747;
+  --mid-footer-accent: #9dbbff;
 }
 .ewm[data-theme="dark"] {
-  --paper: #211f1c;
-  --ink: #f6f2ea;
-  --muted: #c9bcab;
-  --line: #62574b;
-  --wash: #302a24;
-  --accent: #f3ab8f;
-  --button: #eaa386;
-  --button-ink: #2b201b;
-  --warm-action-hover: #f5bca2;
-  --warm-tint: #3c2b22;
-  --warm-icon: #f3ab8f;
-  --warm-footer: #191c17;
-  --warm-footer-ink: #f6f2ea;
-  --warm-footer-muted: #d5cbbb;
-  --warm-footer-line: #606356;
-  --warm-header: #26221e;
+  --paper: #0c1017;
+  --ink: #edf1f7;
+  --muted: #9aa6b8;
+  --line: #2a3342;
+  --wash: #151b25;
+  --accent: #9dbbff;
+  --button: #f5b12e;
+  --button-ink: #1a1405;
+  --shadow: 0 18px 48px -30px #0008;
+  --mid-action-hover: #f7c258;
+  --mid-tint: #1a2440;
+  --mid-icon: #9dbbff;
+  --mid-header: #10151e;
+  --mid-navy: #151b25;
+  --mid-footer: #080b11;
+  --mid-footer-ink: #edf1f7;
+  --mid-footer-muted: #9aa6b8;
+  --mid-footer-line: #232b38;
+  --mid-footer-accent: #9dbbff;
 }
 .ewm .site-header {
-  background: var(--warm-header);
+  background: var(--mid-header);
 }
 .ewm .brand > svg {
   color: var(--accent);
 }
 .ewm .button.primary:hover {
-  background: var(--warm-action-hover);
+  background: var(--mid-action-hover);
   color: var(--button-ink);
 }
 .ewm .button.secondary {
@@ -50,7 +56,7 @@
   color: var(--accent);
 }
 .ewm .button.secondary:hover {
-  background: var(--warm-tint);
+  background: var(--mid-tint);
 }
 .ewm nav a:hover,
 .ewm .text-button:hover {
@@ -62,11 +68,11 @@
   border-color: var(--line);
 }
 .ewm .suite-icon {
-  background: var(--warm-tint);
+  background: var(--mid-tint);
   border-color: var(--line);
 }
 .ewm .suite-icon svg {
-  color: var(--warm-icon);
+  color: var(--mid-icon);
 }
 .ewm .suite-feature:hover .suite-icon {
   background: var(--wash);
@@ -83,52 +89,62 @@
   background: var(--accent);
 }
 .ewm .business-track li {
-  background: var(--warm-tint);
+  background: var(--mid-tint);
   border-color: var(--line);
 }
 .ewm .business-track svg {
-  color: var(--warm-icon);
+  color: var(--mid-icon);
 }
 .ewm .preview-tabs button[aria-pressed="true"] {
-  border-color: var(--button);
+  border-color: var(--accent);
 }
 .ewm .site-footer {
-  --paper: var(--warm-footer);
-  --ink: var(--warm-footer-ink);
-  --muted: var(--warm-footer-muted);
-  --line: var(--warm-footer-line);
-  background: var(--warm-footer);
-  color: var(--warm-footer-ink);
-  border-top-color: var(--warm-footer-line);
+  --paper: var(--mid-footer);
+  --ink: var(--mid-footer-ink);
+  --muted: var(--mid-footer-muted);
+  --line: var(--mid-footer-line);
+  --accent: var(--mid-footer-accent);
+  background: var(--mid-footer);
+  color: var(--mid-footer-ink);
+  border-top-color: var(--mid-footer-line);
 }
 .ewm .site-footer .foot-column > a:hover {
-  color: #f3ab8f;
+  color: var(--mid-footer-accent);
 }
 .ewm .site-footer .foot-wordmark {
-  -webkit-text-stroke-color: #d5cbbb;
+  -webkit-text-stroke-color: #5d6a85;
+}
+.ewm .site-footer .brand > svg {
+  color: var(--mid-footer-accent);
 }
 .ewm .footer-theme:hover {
-  background: #363b30;
+  background: #222a3a;
 }
 .ewm :focus-visible {
   outline-color: var(--accent);
 }
 .ewm .site-footer :focus-visible {
-  outline-color: #f3ab8f;
+  outline-color: var(--mid-footer-accent);
 }
 .ewm ::selection {
-  background: #b64d35;
+  background: #3d50c4;
   color: #fff;
 }
 
+/* WhatsApp band and announcement: Midnight navy; WhatsApp's own green stays. */
 .ewm .whatsapp-launch,
 .ewm .launch-announcement {
   --paper: #fff;
-  --ink: #151b28;
-  --muted: #59616e;
-  --line: #dfe3e8;
-  --wash: #f5f6f8;
-  --accent: #2747b4;
+  --ink: #141b2b;
+  --muted: #586378;
+  --line: #dde3ee;
+  --wash: #f1f4f9;
+  --accent: #3d50c4;
+  background: var(--mid-navy);
+}
+.ewm .whatsapp-launch .wa-review-note {
+  background: #1e2638;
+  border-color: #3a4558;
 }
 
 .ewm {
@@ -253,17 +269,17 @@
   scroll-margin-top: 0;
 }
 .ewm .hero-product .real-order-card:first-child {
-  border-color: #a4bdb1;
+  border-color: #b9c3ee;
 }
 .ewm .hero-product .real-order-card:first-child .order-card-total {
-  background: #f0f7f2;
+  background: #eef1fc;
 }
 .ewm .product-screen .product-muted,
 .ewm .product-screen .product-description {
-  color: #68615b;
+  color: #586378;
 }
 .ewm .product-screen .product-eyebrow {
-  color: #68615b;
+  color: #586378;
 }
 .ewm .foot-base > span:nth-child(2) {
   max-width: 58ch;
