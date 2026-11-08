@@ -240,8 +240,9 @@ in the shared catalog, preserving August history and current build10 context.
 New previews are unselected and not native implementation; they do not replace
 the signed candidate or authorize a release. Setup input diagnosis on the existing
 reviewer workspace finds a SKIPPED conversation/no running request and a visible
-Continue setup action, rather than a payment-driven disable. User resume check
-pending; no assistant settings/data were changed.
+Continue setup action, rather than a payment-driven disable. The owner confirmed
+typing works after Continue setup on installed10; no assistant settings/data or
+native code were changed. Model response and record creation were not tested.
 
 [Signed candidate](../verification/2026-11-08-production-testflight-paid-candidate.md) ·
 [Callback evidence](../verification/2026-11-08-apple-build8-callback.md) ·

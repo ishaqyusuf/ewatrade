@@ -16,12 +16,14 @@ is ACTIVE. Catalog entry only navigates; Continue setup calls the guarded existi
 offline, pending/run and cache-generation safeguards also remain authoritative.
 The text Setup state route has no payment configuration switch disabling this
 reviewer; role/active Store guards remain. No billing or assistant configuration
-was changed during this diagnosis. The user was asked to tap Continue setup and
-confirm whether typing works; that runtime resume check remains pending.
+was changed during this diagnosis. The owner subsequently confirmed **typing
+works after Continue setup** on the installed iPhone build10. That completes the
+reported resume/input check without a native patch or configuration change.
 
-No native code fix is claimed. This identifies a confusing existing activation
-step, not an established keyboard, model-provider or permission failure. Local
-private screenshot `ewatrade-setup-skipped-build10.png` is retained outside Git.
+No native code fix is claimed. The confirmed cause was the inactive session and
+its existing resume step. Successful typing does not establish a model response
+or record creation. Local private screenshot `ewatrade-setup-skipped-build10.png`
+is retained outside Git.
 
 ## Billing Workshop continuation
 
