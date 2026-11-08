@@ -127,7 +127,11 @@ export async function verifyAppleNotification(
       runtime.environment !== "production" ||
       appStoreReviewOwnerIds(config).length === 0 ||
       !(error instanceof VerificationException) ||
-      error.status !== VerificationStatus.INVALID_ENVIRONMENT
+      // Apple's SDK checks appAppleId before environment. Sandbox TESTs omit
+      // that ID, so they can report INVALID_APP_IDENTIFIER first. Either status
+      // only dispatches to a fresh Sandbox verifier; neither accepts a payload.
+      (error.status !== VerificationStatus.INVALID_ENVIRONMENT &&
+        error.status !== VerificationStatus.INVALID_APP_IDENTIFIER)
     )
       throw error
     runtime = createRuntime("sandbox")

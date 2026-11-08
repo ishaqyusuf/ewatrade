@@ -193,3 +193,23 @@ audit, without fake policies, hosted flags or new provider values. Genuine polic
 installation and operational acceptance are required before enabling processing.
 A final clean candidate, ordinary Preview rollout/matching smoke and Production
 rollout remain; the seven saved API reviewer settings are not yet effective.
+
+## Build 8 processed; first Production backend rollout
+
+Build8 finished and the exact artifact was downloaded with matching EAS/project/
+profile/channel/source/version checks. Deep strict code-signature verification,
+existing profile/certificate/team, registered bundle, Production JS origins,
+ExpoIap/OpenIAP native markers and StoreKit linkage pass. No location usage keys;
+actual runtime018c6c66e7e614408870451b744e5befac86a851. Exact guarded submission
+c8e75eb2-ef5f-4ed4-ad60-10025e867e8f exited0; Apple build6447d652-122b-4873-895b-b28d962e5ee4
+is Ready to Submit and assigned to the existing one-tester internal group.
+What to Test saved, with backend-ready hold before purchases. No external invite,
+App Review submission, public payment activation or native money acceptance.
+
+Backend2e1ee7e72 completed canonical Preview and Production database/API rollout,
+including automatically Git-deployed Production Dashboard/Marketing. Matching
+Preview web smoke passed after Dashboard finished; first source-mismatch refusal
+and restricted-browser launch failure remain failed attempts, not acceptance.
+Production health200. Genuine captured SandboxTEST replay503 revealed SDK
+identifier-before-environment behavior. Source correction and exact evidence are
+in [the callback receipt](2026-11-08-apple-build8-callback.md). Apple2/6 remains.

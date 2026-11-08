@@ -2,7 +2,7 @@
   "version": 1,
   "id": "2026-11-07-apple-review-sandbox",
   "tickets": ["A05"],
-  "summary": "Prepare a default-off Apple App Review Sandbox path restricted to exact server-owned reviewer User IDs, retaining true receipt environment and current business authority. Accept canonical production and existing prod profile spellings only with APP_ENV=production and unchanged billing gates.",
+  "summary": "Prepare a default-off Apple App Review Sandbox path restricted to exact server-owned reviewer User IDs, retaining true receipt environment and current business authority. Accept canonical production and existing prod profile spellings only with APP_ENV=production and unchanged billing gates. Handle Apple SDK identifier-before-environment ordering with a mandatory independent Sandbox verification; no client-derived environment routing.",
   "noAssistantImpact": "Billing remains form-only through existing canonical store subscription commands. No assistant tool or public input is added. Reviewer policy is server-owned; current owner/member locks, legal acceptance, store signature verification and business entitlement limits remain mandatory. Google and ordinary Production environment rejection are unchanged.",
   "capabilities": [],
   "procedures": [],
@@ -44,7 +44,7 @@
       "kind": "test",
       "path": "apps/api/src/billing/apple-review-verification.test.ts",
       "executed": true,
-      "result": "Only transaction4040010/environment mismatch trigger the separately verified Sandbox fallback; signature, bundle and outage failures refuse. These are injected-runtime source tests, not signed StoreKit evidence."
+      "result": "Focused19/176 passes across verifier/relay/readiness/review policy. Actual installed SDK identity ordering covers Sandbox TEST without appAppleId; foreign bundle, Production payload, disabled review and invalid second signature refuse. Private genuine signed TEST passes corrected function with real SDK; deployed callback and purchase/lifecycle acceptance remain separate."
     },
     {
       "kind": "test",

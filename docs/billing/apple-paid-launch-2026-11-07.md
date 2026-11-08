@@ -2,21 +2,29 @@
 
 Current checkpoint, 8 November: Apple acceptance remains **2/6**. Commercial
 agreements/payout/tax and three regional subscription products are accepted. The
-reviewer login and Free workspace are prepared. The retained accepted Production
-API is `dpl_7A7vegqRxaiUVanBUsw9RPNcLmHg`, source `dafec2e01`; earlier combined
-rollout and Preview TEST receipts below remain historical evidence.
+reviewer login and Free workspace are prepared. The normal Production rollout at
+`2e1ee7e722aef00370e4e968f40e7803a2778688` completed for database, Dashboard,
+Marketing and API, with matching Preview web smoke and Production health passing.
+Production API is `dpl_AHaA4TdfNLthNBGxGX1Fs9U7rJis`; jobs remain unchanged.
 
-Paid native scope and the guarded Production TestFlight build target are committed
-in `45e9a8c55`, corrected against the real Expo configuration in `8f158ba9f`.
-Private build8 (`e699c62f-4db6-4614-ae7c-2181d713bc2e`) is compiling on Expo;
-no completed artifact or Apple upload is accepted yet. The
-reviewer-only seven-key configuration is saved for the next API deployment;
-effective runtime checks remain pending and public checkout stays closed. The existing internal TestFlight group contains
-only the Account Holder, with manual build distribution and no external groups.
-Final clean source, effective backend configuration, signed money/lifecycle and
-privacy/legal acceptance remain open. See the
-[current candidate receipt](../verification/2026-11-08-production-testflight-paid-candidate.md)
+Private build **1.0.0 (8)** finished, passed artifact/signature/service/IAP checks,
+and was uploaded and processed by Apple. Its exact native source is `8f158ba9f`,
+runtime `018c6c66e7e614408870451b744e5befac86a851`. It is assigned only to the
+existing internal group with one tester; testing instructions are saved. The owner
+is continuing sign-in on an iPhone; actual native password and money acceptance
+are not inferred from that report. Public checkout remains closed.
+
+A genuine signed Sandbox TEST replay to the new Production API returned503. The
+installed Apple SDK checks appAppleId before environment; Sandbox TEST omits that
+ID and reports INVALID_APP_IDENTIFIER. The bounded source correction now allows
+that status or INVALID_ENVIRONMENT to dispatch only to a fresh, full Sandbox
+signature/bundle/environment verifier under the existing reviewer policy. Foreign
+apps and Production mismatches still refuse. Local real-SDK/captured-TEST and
+focused19/176 checks pass; the correction must still be deployed and accepted.
+Apple's saved Sandbox URL remains Preview until the corrected gateway is ready.
+See [the build and callback receipt](../verification/2026-11-08-apple-build8-callback.md)
 and [prepared iPhone checks](../verification/2026-11-08-iphone-paid-testflight-checklist.md).
+
 
 The owner requires paid business-owner software subscriptions at launch. Staff
 do not subscribe individually. The app download price is a separate setting.

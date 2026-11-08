@@ -2,7 +2,10 @@ import { expect, test } from "bun:test"
 import {
   APIError,
   APIException,
+  Environment,
   NotificationTypeV2,
+  type ResponseBodyV2DecodedPayload,
+  SignedDataVerifier,
   Status,
   VerificationException,
   VerificationStatus,
@@ -194,10 +197,9 @@ test("notification fallback verifies the envelope and nested transaction again i
   expect(disabled.calls).not.toContain("runtime:sandbox")
 })
 
-test("signature or app identity failures never trigger notification fallback or grants", async () => {
+test("signature and outage failures never trigger notification fallback or grants", async () => {
   for (const status of [
     VerificationStatus.INVALID_CERTIFICATE,
-    VerificationStatus.INVALID_APP_IDENTIFIER,
     VerificationStatus.RETRYABLE_VERIFICATION_FAILURE,
   ]) {
     const f = fixture({ notificationError: new VerificationException(status) })
@@ -218,4 +220,116 @@ test("signature or app identity failures never trigger notification fallback or 
     verifyAppleNotification("signed-envelope", f.createRuntime, config),
   ).rejects.toThrow()
   expect(f.calls).not.toContain("transaction:sandbox:nested")
+})
+
+// This seam starts after signature verification and exercises the installed
+// Apple SDK's real identity/environment ordering. Cryptography is separately
+// checked with the private, genuine signed TEST capture; never commit that JWS.
+class NotificationIdentityGate extends SignedDataVerifier {
+  assertNotificationIdentity(notification: ResponseBodyV2DecodedPayload) {
+    this.verifyNotification(
+      notification.data?.bundleId,
+      notification.data?.appAppleId,
+      notification.data?.environment,
+    )
+  }
+}
+
+function sdkIdentityRuntime(notification: ResponseBodyV2DecodedPayload) {
+  const f = fixture()
+  const createRuntime = (override?: "production" | "sandbox") => {
+    const runtime = f.createRuntime(override)
+    const gate = new NotificationIdentityGate(
+      [],
+      false,
+      runtime.environment === "production"
+        ? Environment.PRODUCTION
+        : Environment.SANDBOX,
+      "com.ewatrade.app",
+      runtime.environment === "production" ? 6815837585 : undefined,
+    )
+    return {
+      ...runtime,
+      verifier: {
+        ...runtime.verifier,
+        async verifyAndDecodeNotification() {
+          f.calls.push(`sdk-identity:${runtime.environment}`)
+          gate.assertNotificationIdentity(notification)
+          return notification
+        },
+      },
+    }
+  }
+  return { ...f, createRuntime }
+}
+
+test("real Apple SDK identifies a Sandbox TEST without appAppleId before checking environment", async () => {
+  const f = sdkIdentityRuntime({
+    notificationType: NotificationTypeV2.TEST,
+    data: { bundleId: "com.ewatrade.app", environment: Environment.SANDBOX },
+  })
+  const result = await verifyAppleNotification(
+    "signed-test",
+    f.createRuntime,
+    config,
+  )
+  expect(result.environment).toBe("sandbox")
+  expect(result.notification.notificationType).toBe(NotificationTypeV2.TEST)
+  expect(result.transaction).toBeUndefined()
+  expect(f.calls).toEqual([
+    "runtime:production",
+    "sdk-identity:production",
+    "runtime:sandbox",
+    "sdk-identity:sandbox",
+  ])
+})
+
+test("independent Sandbox SDK identity validation rejects a foreign bundle or Production payload", async () => {
+  for (const data of [
+    { bundleId: "com.foreign.app", environment: Environment.SANDBOX },
+    {
+      bundleId: "com.ewatrade.app",
+      appAppleId: 1234,
+      environment: Environment.PRODUCTION,
+    },
+  ]) {
+    const f = sdkIdentityRuntime({
+      notificationType: NotificationTypeV2.TEST,
+      data,
+    })
+    await expect(
+      verifyAppleNotification("signed-test", f.createRuntime, config),
+    ).rejects.toThrow()
+    expect(f.calls).toEqual([
+      "runtime:production",
+      "sdk-identity:production",
+      "runtime:sandbox",
+      "sdk-identity:sandbox",
+    ])
+  }
+})
+
+test("identifier mismatch cannot enable a disabled review path or skip fresh Sandbox verification", async () => {
+  const disabled = fixture({
+    notificationError: new VerificationException(
+      VerificationStatus.INVALID_APP_IDENTIFIER,
+    ),
+  })
+  await expect(
+    verifyAppleNotification("signed-test", disabled.createRuntime, {}),
+  ).rejects.toThrow()
+  expect(disabled.calls).not.toContain("runtime:sandbox")
+  const invalid = fixture({
+    notificationError: new VerificationException(
+      VerificationStatus.INVALID_APP_IDENTIFIER,
+    ),
+    sandboxError: new VerificationException(
+      VerificationStatus.INVALID_CERTIFICATE,
+    ),
+  })
+  await expect(
+    verifyAppleNotification("signed-test", invalid.createRuntime, config),
+  ).rejects.toThrow()
+  expect(invalid.calls).toContain("notification:sandbox:signed-test")
+  expect(invalid.calls).not.toContain("transaction:sandbox:nested")
 })
