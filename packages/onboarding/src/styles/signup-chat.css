@@ -8,11 +8,13 @@
   display: none;
 }
 .signup-chat {
-  --chat-bg: #fbfaf6;
+  --chat-bg: #f1f4f9;
   --chat-card: #fff;
-  --chat-fg: #182420;
-  --chat-line: #dce4df;
-  --chat-muted: #5f6a63;
+  --chat-fg: #141b2b;
+  --chat-line: #dde3ee;
+  --chat-muted: #586378;
+  --chat-accent: #3d50c4;
+  --chat-cta: #f2a51a;
   min-height: 100vh;
   padding: 12px;
   margin: 0;
@@ -22,11 +24,13 @@
 }
 @media (prefers-color-scheme: dark) {
   .signup-chat {
-    --chat-bg: #0f1513;
-    --chat-card: #1a2320;
-    --chat-fg: #eef3f0;
-    --chat-line: #26312d;
-    --chat-muted: #a3aea8;
+    --chat-bg: #0c1017;
+    --chat-card: #151b25;
+    --chat-fg: #edf1f7;
+    --chat-line: #2a3342;
+    --chat-muted: #9aa6b8;
+    --chat-accent: #9dbbff;
+    --chat-cta: #f5b12e;
   }
 }
 .signup-chat-card {
@@ -69,7 +73,7 @@
 }
 .signup-chat input:focus-visible,
 .signup-chat select:focus-visible {
-  outline: 2px solid #49b98d;
+  outline: 2px solid var(--chat-accent);
   outline-offset: 2px;
 }
 .signup-chat .signup-chat-consent {
@@ -92,8 +96,8 @@
   min-height: 46px;
   border-radius: 10px;
   padding: 10px;
-  background: #17684f;
-  color: white;
+  background: var(--chat-cta);
+  color: #1e1e1c;
   text-decoration: none;
   text-align: center;
   white-space: normal;
@@ -129,8 +133,8 @@
   border-radius: 4px;
 }
 .signup-chat-consent [data-slot="checkbox"][data-checked] {
-  background: #17684f;
-  color: white;
+  background: var(--chat-accent);
+  color: var(--chat-bg);
 }
 .signup-chat-consent [data-slot="checkbox"] svg {
   width: 16px;

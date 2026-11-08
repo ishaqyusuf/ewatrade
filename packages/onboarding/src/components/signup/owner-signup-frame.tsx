@@ -72,7 +72,7 @@ export function OwnerSignupFrame({
             <a href={getMarketingUrl()} aria-label="EwaTrade home">
               <img
                 className="owner-ref-logo"
-                src={`/brand/ewatrade-logo-precision-rise-v1${theme === "dark" ? "-reverse" : ""}.svg`}
+                src={`/brand/ewatrade-logo-precision-rise-v1-${theme === "dark" ? "reverse" : "mono"}.svg`}
                 alt="ẸwáTrade"
               />
             </a>
