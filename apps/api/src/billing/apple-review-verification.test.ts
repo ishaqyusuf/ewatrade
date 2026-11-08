@@ -38,6 +38,7 @@ const purchase = {
 function fixture(
   options: {
     lookupError?: Error
+    sandboxLookupError?: Error
     notificationError?: Error
     sandboxError?: Error
   } = {},
@@ -55,6 +56,8 @@ function fixture(
           calls.push(`lookup:${environment}:${id}`)
           if (environment === "production" && options.lookupError)
             throw options.lookupError
+          if (environment === "sandbox" && options.sandboxLookupError)
+            throw options.sandboxLookupError
           return { signedTransactionInfo: "initial" }
         },
         async getAllSubscriptionStatuses() {
@@ -105,7 +108,7 @@ function fixture(
   return { calls, createRuntime }
 }
 
-test("approved review lookup retries only Apple's transaction-not-found signal and retains Sandbox facts", async () => {
+test("approved review lookup selects Sandbox directly and retains verified Sandbox facts", async () => {
   const { calls, createRuntime } = fixture({
     lookupError: new APIException(404, APIError.TRANSACTION_ID_NOT_FOUND),
   })
@@ -118,8 +121,6 @@ test("approved review lookup retries only Apple's transaction-not-found signal a
   expect(result.accountToken).toBe(purchase.appAccountToken)
   expect(result.purchaseId).toBe(purchase.originalTransactionId)
   expect(calls).toEqual([
-    "runtime:production",
-    "lookup:production:transaction",
     "runtime:sandbox",
     "lookup:sandbox:transaction",
     "transaction:sandbox:initial",
@@ -128,17 +129,35 @@ test("approved review lookup retries only Apple's transaction-not-found signal a
   ])
 })
 
-test("ordinary users and authorization, outage or ambiguous not-found errors cannot fall back", async () => {
-  for (const [allow, error] of [
-    [false, new APIException(404, APIError.TRANSACTION_ID_NOT_FOUND)],
-    [true, new APIException(401)],
-    [true, new APIException(503)],
-    [true, new APIException(404, APIError.ORIGINAL_TRANSACTION_ID_NOT_FOUND)],
-    [true, new Error("4040010")],
-  ] as const) {
+test("dedicated reviewer lookup reaches Sandbox when the unreleased Production app returns 401", async () => {
+  const f = fixture({ lookupError: new APIException(401) })
+  const result = await verifyAppleSubscription(
+    "transaction",
+    true,
+    f.createRuntime,
+  )
+  expect(result.environment).toBe("sandbox")
+  expect(result.accountToken).toBe(purchase.appAccountToken)
+  expect(f.calls).toEqual([
+    "runtime:sandbox",
+    "lookup:sandbox:transaction",
+    "transaction:sandbox:initial",
+    "status:sandbox",
+    "transaction:sandbox:current",
+  ])
+})
+
+test("ordinary users never dispatch Production failures to Sandbox", async () => {
+  for (const error of [
+    new APIException(404, APIError.TRANSACTION_ID_NOT_FOUND),
+    new APIException(401),
+    new APIException(503),
+    new APIException(404, APIError.ORIGINAL_TRANSACTION_ID_NOT_FOUND),
+    new Error("4040010"),
+  ]) {
     const f = fixture({ lookupError: error })
     await expect(
-      verifyAppleSubscription("transaction", allow, f.createRuntime),
+      verifyAppleSubscription("transaction", false, f.createRuntime),
     ).rejects.toThrow()
     expect(f.calls).toEqual([
       "runtime:production",
@@ -147,10 +166,24 @@ test("ordinary users and authorization, outage or ambiguous not-found errors can
   }
   const good = fixture()
   expect(
-    (await verifyAppleSubscription("transaction", true, good.createRuntime))
+    (await verifyAppleSubscription("transaction", false, good.createRuntime))
       .environment,
   ).toBe("production")
   expect(good.calls).not.toContain("runtime:sandbox")
+})
+
+test("Sandbox authentication, outage and not-found failures never retry or switch environments", async () => {
+  for (const error of [
+    new APIException(401),
+    new APIException(503),
+    new APIException(404, APIError.TRANSACTION_ID_NOT_FOUND),
+  ]) {
+    const f = fixture({ sandboxLookupError: error })
+    await expect(
+      verifyAppleSubscription("transaction", true, f.createRuntime),
+    ).rejects.toThrow()
+    expect(f.calls).toEqual(["runtime:sandbox", "lookup:sandbox:transaction"])
+  }
 })
 
 test("a Sandbox lookup still requires a fresh transaction signature verification", async () => {

@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "id": "2026-11-08-apple-review-known-environment",
+  "tickets": ["A05"],
+  "summary": "Select Sandbox before Apple subscription lookup for the existing server-approved review owner; unreleased apps can return Production 401 before the prior not-found fallback.",
+  "noAssistantImpact": "Purchase and restore remain native SDK forms. The existing authenticated actor or fully verified notification/account binding supplies reviewer policy. No assistant tool, RPC, permission, prompt authority or manual entitlement grant is added; ordinary and Google environments remain unchanged.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/native-store-billing.md"
+    },
+    {
+      "topic": "api",
+      "status": "local_only",
+      "path": ".brain/api/permissions.md"
+    },
+    {
+      "topic": "decision",
+      "status": "local_only",
+      "path": ".brain/decisions/2026-11-08-apple-review-environment-selection.md"
+    },
+    {
+      "topic": "feature",
+      "status": "updated",
+      "path": "docs/verification/2026-11-08-apple-purchase-verification.md"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "apps/api/src/billing/apple-review-verification.test.ts",
+      "executed": true,
+      "result": "New unreleased-Production-401 regression failed before the fix and passes with direct Sandbox selection. Ordinary failures do not dispatch; Sandbox authentication/outage/not-found remain errors; fresh signature verification remains required."
+    },
+    {
+      "kind": "test",
+      "path": "apps/api/src/billing/apple-subscriptions.test.ts",
+      "executed": true,
+      "result": "Existing identity/status selection and fixed-expiry five-day courtesy tests pass; no projection or courtesy change."
+    }
+  ]
+}

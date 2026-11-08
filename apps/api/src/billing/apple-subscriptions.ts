@@ -1,6 +1,4 @@
 import {
-  APIError,
-  APIException,
   AppStoreServerAPIClient,
   Environment,
   ExpirationIntent,
@@ -76,7 +74,9 @@ export type AppleBillingRuntime = {
   >
 }
 
-/** Apple documents this one error as the production-to-sandbox lookup signal. */
+/** The server-approved review account is Sandbox-only, including before launch.
+ * Unreleased apps can receive Production 401 rather than transaction-not-found.
+ * Select the known environment before I/O; never reinterpret an auth failure. */
 export async function lookupAppleTransaction(
   transactionId: string,
   allowReviewSandbox: boolean,
@@ -84,26 +84,10 @@ export async function lookupAppleTransaction(
     environment?: "production" | "sandbox",
   ) => AppleBillingRuntime = appleBillingClient,
 ) {
-  let runtime = createRuntime()
-  try {
-    return {
-      runtime,
-      transaction: await runtime.client.getTransactionInfo(transactionId),
-    }
-  } catch (error) {
-    if (
-      !allowReviewSandbox ||
-      runtime.environment !== "production" ||
-      !(error instanceof APIException) ||
-      error.httpStatusCode !== 404 ||
-      error.apiError !== APIError.TRANSACTION_ID_NOT_FOUND
-    )
-      throw error
-    runtime = createRuntime("sandbox")
-    return {
-      runtime,
-      transaction: await runtime.client.getTransactionInfo(transactionId),
-    }
+  const runtime = createRuntime(allowReviewSandbox ? "sandbox" : undefined)
+  return {
+    runtime,
+    transaction: await runtime.client.getTransactionInfo(transactionId),
   }
 }
 
