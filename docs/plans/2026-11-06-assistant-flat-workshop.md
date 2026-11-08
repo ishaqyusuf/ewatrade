@@ -14,7 +14,9 @@ defaulting to Current (cards), and is the selected revision. Only C1 (add-busine
 code sent) is fixed product text; it is implemented in
 `apps/api/src/communications/whatsapp-onboarding-add-business.ts`, keeping the
 never-send-your-password line and the real challenge expiry. The other eight are
-assistant-written or not yet built, so they guide reply style only. The private review
+assistant-written or not yet built. Their patterns (C2–C9) are now rules in the shared
+WhatsApp presentation instructions
+(`packages/assistant/src/channels/instructions.ts`, prompt `whatsapp-v6`). The private review
 Site mirrors the older `assistant/whatsapp-system` Workshop and was not changed.
 The owner confirmed Claude Opus 5.5 (`claude-opus-5-5`) at explicit high effort
 as the intended Workshop author. Codex coordinates the baseline, handoff and

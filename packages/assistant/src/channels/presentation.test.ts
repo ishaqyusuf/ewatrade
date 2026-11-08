@@ -111,6 +111,15 @@ test("actual General renderer styles authoritative facts and suppresses conflict
   expect(text).toContain("not a promise of availability")
   expect(text).not.toContain("sold 100")
   expect(whatsAppAssistantInstructions()).toContain("one asterisk each side")
+  for (const rule of [
+    "One result per request.",
+    "Say each status or safety fact once.",
+    "end with a short italic hand-off line",
+    "show the position once, in the body",
+    "lead with the bold amount still owed",
+    "💰 a money or payment status read",
+  ])
+    expect(whatsAppAssistantInstructions()).toContain(rule)
 })
 
 test("new chunking preserves nonbreaking currency spaces and every fact across pages", () => {
