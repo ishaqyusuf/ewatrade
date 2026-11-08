@@ -38,18 +38,19 @@ export type SmokeReceipt = {
   completedAt: string
   runtimeVerified: boolean
   runtimeIds?: string[]
+  runtimeSourceSha?: string
   checks: string[]
   failure?: string
 }
 export const root = resolve(import.meta.dir, "..")
-export function git(root: string, args: string[]) {
+export function git(root: string, args: string[], trimOutput = true) {
   const result = spawnSync("git", args, {
     cwd: root,
     encoding: "utf8",
     timeout: 10000,
   })
   if (result.status !== 0) throw new Error("Git source inspection failed.")
-  return result.stdout.trim()
+  return trimOutput ? result.stdout.trim() : result.stdout
 }
 export function receiptDirectory(repo: string) {
   // Worktrees and the existing release tool's clean copy share receipts without
@@ -267,6 +268,48 @@ export function assertEquivalentComponentSource(
     )
 }
 
+// Release receipts and coordination notes must not require another native OTA.
+// Compare the entire tree, not just app files: tooling, flows, locks, config and
+// unknown paths all remain candidate changes. The provider SHA stays explicit.
+export function verifyAndroidDocumentationSource(
+  repo: string,
+  deployedSha: unknown,
+  candidateSha: string,
+) {
+  if (
+    typeof deployedSha !== "string" ||
+    !/^[a-f0-9]{40}$/.test(deployedSha) ||
+    !/^[a-f0-9]{40}$/.test(candidateSha)
+  )
+    throw new Error("Android source requires full Git commit identities.")
+  git(repo, ["merge-base", "--is-ancestor", deployedSha, candidateSha])
+  const changed = git(
+    repo,
+    [
+      "diff",
+      "--no-renames",
+      "--name-only",
+      "-z",
+      deployedSha,
+      candidateSha,
+      "--",
+    ],
+    false,
+  )
+    .split("\0")
+    .filter(Boolean)
+  if (
+    changed.some(
+      (path) =>
+        path !== "AGENT_CHAT.md" && !/^docs\/(?:[^/]+\/)*[^/]+\.md$/.test(path),
+    )
+  )
+    throw new Error(
+      "Android candidate differs beyond documentation; matching Preview source is required.",
+    )
+  return deployedSha
+}
+
 export function verifyAndroidBuild(
   raw: unknown,
   sha: string,
@@ -435,6 +478,7 @@ async function androidJourney(
       "The selected Android app/device is not available; no installation is performed.",
     )
   let runtimeVerified = false
+  let runtimeSourceSha: string | undefined
   const runtimeIds: string[] = []
   let expectedRuntime = "QA runtime development"
   if (target === "preview" && !value.buildId)
@@ -460,9 +504,16 @@ async function androidJourney(
       .find((line) => line.startsWith("{"))
     if (read.status !== 0 || !jsonLine)
       throw new Error("Read-only EAS build inspection failed.")
+    const build = JSON.parse(jsonLine)
+    if (!value.updateGroupId)
+      runtimeSourceSha = verifyAndroidDocumentationSource(
+        repo,
+        build.gitCommitHash,
+        sha,
+      )
     verifyAndroidBuild(
-      JSON.parse(jsonLine),
-      sha,
+      build,
+      runtimeSourceSha || sha,
       value.buildId,
       version,
       !value.updateGroupId,
@@ -486,6 +537,11 @@ async function androidJourney(
       const android = Array.isArray(updates)
         ? updates.filter((item) => item.platform === "android")
         : []
+      runtimeSourceSha = verifyAndroidDocumentationSource(
+        repo,
+        android.length === 1 ? android[0].gitCommitHash : undefined,
+        sha,
+      )
       let manifestBody: unknown
       if (android.length === 1) {
         const item = android[0]
@@ -506,7 +562,7 @@ async function androidJourney(
       }
       updateId = verifyAndroidUpdate(
         updates,
-        sha,
+        runtimeSourceSha,
         value.updateGroupId,
         manifestBody,
       )
@@ -562,6 +618,7 @@ async function androidJourney(
   assertMaestroReport(readFileSync(resolve(artifacts, "report.xml"), "utf8"))
   return {
     runtimeVerified,
+    runtimeSourceSha,
     runtimeIds,
     checks: [
       "QA business session",

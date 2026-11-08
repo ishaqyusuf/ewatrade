@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test"
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs"
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import {
@@ -15,12 +15,104 @@ import {
   parseExpoUpdateManifest,
   readSmokeConfig,
   verifyAndroidBuild,
+  verifyAndroidDocumentationSource,
   verifyAndroidUpdate,
 } from "./qa-smoke"
 
 const sha = "a".repeat(40)
 const time = Date.parse("2026-10-26T09:00:00Z")
 const completedAt = new Date(time).toISOString()
+
+test("Android accepts only known ancestor source with documentation-only differences", () => {
+  const directory = mkdtempSync(join(tmpdir(), "qa-android-source-"))
+  const run = (...args: string[]) => {
+    const result = Bun.spawnSync(["git", ...args], {
+      cwd: directory,
+      stdout: "pipe",
+      stderr: "pipe",
+      env: { ...process.env, GIT_CONFIG_GLOBAL: "/dev/null" },
+    })
+    if (result.exitCode !== 0)
+      throw new Error(`Fixture Git failed: ${result.stderr}`)
+    return result.stdout.toString().trim()
+  }
+  const commit = (path: string) => {
+    mkdirSync(join(directory, path, ".."), { recursive: true })
+    writeFileSync(join(directory, path), `${path}\n`)
+    run("add", "--", path)
+    run(
+      "-c",
+      "user.name=QA",
+      "-c",
+      "user.email=qa@example.test",
+      "-c",
+      "commit.gpgsign=false",
+      "commit",
+      "-qm",
+      "fixture",
+    )
+    return run("rev-parse", "HEAD")
+  }
+  try {
+    run("init", "-q")
+    const deployed = commit("apps/mobile/index.ts")
+    expect(deployed).toMatch(/^[a-f0-9]{40}$/)
+    expect(
+      verifyAndroidDocumentationSource(directory, deployed, deployed),
+    ).toBe(deployed)
+    commit("docs/verification/result.md")
+    const documented = commit("AGENT_CHAT.md")
+    expect(
+      verifyAndroidDocumentationSource(directory, deployed, documented),
+    ).toBe(deployed)
+    expect(() =>
+      verifyAndroidDocumentationSource(directory, documented, deployed),
+    ).toThrow()
+    for (const unknown of [undefined, "HEAD", "bad", "f".repeat(40)])
+      expect(() =>
+        verifyAndroidDocumentationSource(directory, unknown, documented),
+      ).toThrow()
+    // Every non-document path is refused, including harness and dependency edits.
+    let parent = documented
+    for (const path of [
+      ".maestro/smoke.yaml",
+      "scripts/qa-smoke.ts",
+      "bun.lock",
+      "release.config.ts",
+      "apps/mobile/next.ts",
+      "docs/runtime.json",
+      "unexpected.md",
+      " docs/disguised.md",
+    ]) {
+      const changed = commit(path)
+      expect(() =>
+        verifyAndroidDocumentationSource(directory, parent, changed),
+      ).toThrow()
+      parent = changed
+    }
+    run("mv", "apps/mobile/index.ts", "docs/verification/renamed.md")
+    run(
+      "-c",
+      "user.name=QA",
+      "-c",
+      "user.email=qa@example.test",
+      "-c",
+      "commit.gpgsign=false",
+      "commit",
+      "-qm",
+      "rename source",
+    )
+    expect(() =>
+      verifyAndroidDocumentationSource(
+        directory,
+        parent,
+        run("rev-parse", "HEAD"),
+      ),
+    ).toThrow()
+  } finally {
+    rmSync(directory, { recursive: true, force: true })
+  }
+})
 
 test("unchanged deployed dependencies can qualify while changed component source cannot", () => {
   expect(() => assertEquivalentComponentSource("older", sha, [])).not.toThrow()

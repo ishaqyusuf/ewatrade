@@ -317,6 +317,16 @@ group/project/commit. An emergency fallback or old installed update cannot pass
 as the candidate. Existing native compatibility/signing gates remain separate.
 Local smoke is useful development evidence; it never qualifies Production.
 
+Android Preview also permits a provider commit that is a known ancestor of the
+selected checkout when the **entire Git tree difference** contains only Markdown
+under `docs/` or `AGENT_CHAT.md`. The receipt records that provider commit as
+`runtimeSourceSha`; its `sha` remains the selected checkout. Any app, dependency,
+configuration, smoke-runner, Maestro or unknown-path difference is rejected.
+Build/project/channel/update identity and both visible runtime assertions remain
+required. This lets documentation receipts be committed without invalidating an
+otherwise identical Android candidate; it does not reuse an older app or bypass
+native release readiness. No worktree, branch change or candidate override is used.
+
 For an authorized local performance check, the existing web smoke can also write
 private navigation diagnostics:
 
