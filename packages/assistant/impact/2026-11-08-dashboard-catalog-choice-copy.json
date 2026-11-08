@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "id": "2026-11-08-dashboard-catalog-choice-copy",
+  "tickets": ["H02"],
+  "summary": "Match the dashboard shared catalog chooser to the approved mobile Goods and Services labels and descriptions.",
+  "noAssistantImpact": "Display copy only in the shared catalog chooser and kind label. Product/service kind values, URL parameters, catalog commands, permission checks, assistant tools and confirmation behavior are unchanged.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/product-service-catalog-items.md"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "review",
+      "path": "apps/dashboard/src/components/catalog-item/catalog-item-kind-choices.tsx",
+      "executed": true,
+      "result": "Only the two display titles and descriptions change. Both chooser callbacks continue passing the original product/service kind values to their existing form and route consumers."
+    }
+  ]
+}

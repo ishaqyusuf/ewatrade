@@ -7,14 +7,14 @@ import type { SimpleCatalogItemKind } from "./form-context"
 export const catalogItemKinds = [
   {
     kind: "product",
-    title: "Product",
-    description: "Something you count or keep in stock.",
+    title: "Goods",
+    description: "Items you buy or sell.",
     icon: Package01Icon,
   },
   {
     kind: "service",
-    title: "Service",
-    description: "Work you price without stock.",
+    title: "Services",
+    description: "Services you provide for payment.",
     icon: ToolsIcon,
   },
 ] as const
