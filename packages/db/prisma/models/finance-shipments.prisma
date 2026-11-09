@@ -1,0 +1,135 @@
+enum FinanceShipmentStatus {
+  DRAFT
+  EXPECTED
+  PARTIALLY_RECEIVED
+  RECEIVED
+  CLOSED_SHORT
+  CANCELLED
+}
+
+// Named incoming shipment. Expected goods are plans only: stock and supplier
+// money change solely through each receipt's canonical received purchase.
+model FinanceShipment {
+  id                  String                         @id @default(cuid())
+  tenantId            String
+  bookId              String
+  supplierId          String
+  storeId             String
+  name                String
+  reference           String?
+  expectedAt          DateTime?
+  status              FinanceShipmentStatus          @default(DRAFT)
+  // Shared freight in its original currency; converted by this shipment's pinned rate.
+  freightAmount       Decimal                        @default(0) @db.Decimal(38, 18)
+  freightCurrencyCode String
+  freightMinor        BigInt?
+  revision            Int                            @default(0)
+  confirmedAt         DateTime?
+  closedAt            DateTime?
+  closeReason         String?
+  actorUserId         String
+  createdAt           DateTime                       @default(now())
+  updatedAt           DateTime                       @updatedAt
+  book                FinanceBook                    @relation(fields: [tenantId, bookId], references: [tenantId, id], onDelete: Restrict)
+  supplier            FinanceSupplierAccount         @relation(fields: [bookId, supplierId], references: [bookId, id], onDelete: Restrict)
+  rates               FinanceShipmentRate[]
+  lines               FinanceShipmentLine[]
+  adjustments         FinanceShipmentCostAdjustment[]
+  receipts            FinanceShipmentReceipt[]
+
+  @@unique([bookId, id])
+  @@index([bookId, status, createdAt])
+  @@index([bookId, supplierId, createdAt])
+}
+
+// Merchant-entered book-currency units per 1 source unit (NGN per 1 CNY).
+model FinanceShipmentRate {
+  id           String          @id @default(cuid())
+  bookId       String
+  shipmentId   String
+  currencyCode String
+  rate         Decimal         @db.Decimal(38, 18)
+  rateDate     DateTime
+  source       String
+  shipment     FinanceShipment @relation(fields: [bookId, shipmentId], references: [bookId, id], onDelete: Cascade)
+
+  @@unique([shipmentId, currencyCode])
+}
+
+model FinanceShipmentLine {
+  id                     String                          @id @default(cuid())
+  tenantId               String
+  bookId                 String
+  shipmentId             String
+  position               Int
+  description            String
+  // New items carry only a proposed name until mapped to a Store balance source.
+  proposedName           String?
+  balanceSourceId        String?
+  enteredInventoryUnitId String?
+  expectedQuantity       Decimal                         @db.Decimal(38, 18)
+  sourceCurrencyCode     String
+  sourceUnitPrice        Decimal                         @db.Decimal(38, 18)
+  freightOverrideMinor   BigInt?
+  // Pinned on confirmation; drafts are computed on read.
+  goodsMinor             BigInt?
+  freightMinor           BigInt?
+  adjustmentMinor        BigInt                          @default(0)
+  receivedQuantity       Decimal                         @default(0) @db.Decimal(38, 18)
+  receivedCostMinor      BigInt                          @default(0)
+  shipment               FinanceShipment                 @relation(fields: [bookId, shipmentId], references: [bookId, id], onDelete: Cascade)
+  balanceSource          StockBalanceSource?             @relation(fields: [tenantId, balanceSourceId], references: [tenantId, id], onDelete: Restrict)
+  adjustments            FinanceShipmentCostAdjustment[]
+  receiptLines           FinanceShipmentReceiptLine[]
+
+  @@unique([shipmentId, position])
+  @@unique([shipmentId, id])
+  @@index([tenantId, balanceSourceId])
+}
+
+// Append-only reviewed change to a line's not-yet-received landed cost.
+model FinanceShipmentCostAdjustment {
+  id          String              @id @default(cuid())
+  bookId      String
+  shipmentId  String
+  lineId      String
+  amountMinor BigInt
+  reason      String
+  actorUserId String
+  createdAt   DateTime            @default(now())
+  shipment    FinanceShipment     @relation(fields: [bookId, shipmentId], references: [bookId, id], onDelete: Restrict)
+  line        FinanceShipmentLine @relation(fields: [shipmentId, lineId], references: [shipmentId, id], onDelete: Restrict)
+
+  @@index([shipmentId, createdAt])
+}
+
+// One arrival; its money and stock live in the linked canonical purchase bill.
+model FinanceShipmentReceipt {
+  id          String                       @id @default(cuid())
+  bookId      String
+  shipmentId  String
+  billId      String                       @unique
+  receivedAt  DateTime
+  actorUserId String
+  createdAt   DateTime                     @default(now())
+  shipment    FinanceShipment              @relation(fields: [bookId, shipmentId], references: [bookId, id], onDelete: Restrict)
+  bill        FinanceBill                  @relation(fields: [bookId, billId], references: [bookId, id], onDelete: Restrict)
+  lines       FinanceShipmentReceiptLine[]
+
+  @@unique([shipmentId, id])
+  @@unique([bookId, billId])
+  @@index([shipmentId, receivedAt])
+}
+
+model FinanceShipmentReceiptLine {
+  id         String                 @id @default(cuid())
+  shipmentId String
+  receiptId  String
+  lineId     String
+  quantity   Decimal                @db.Decimal(38, 18)
+  costMinor  BigInt
+  receipt    FinanceShipmentReceipt @relation(fields: [shipmentId, receiptId], references: [shipmentId, id], onDelete: Restrict)
+  line       FinanceShipmentLine    @relation(fields: [shipmentId, lineId], references: [shipmentId, id], onDelete: Restrict)
+
+  @@unique([receiptId, lineId])
+}

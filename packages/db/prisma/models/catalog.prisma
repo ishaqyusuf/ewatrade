@@ -335,6 +335,7 @@ model CatalogCommandReceipt {
 }
 
 model StockBalanceSource {
+  shipmentLines FinanceShipmentLine[]
   purchaseRecognitionLines        FinancePurchaseRecognitionLine[]
   financeInventoryPools           FinanceInventoryPool[]
   id                              String                           @id @default(cuid())
