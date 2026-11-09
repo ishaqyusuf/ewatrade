@@ -1,5 +1,10 @@
 # Preview Publisher secret and notification setup review
 
+Later same-day status: the owner approved both scopes and they were
+[executed with readback](../verification/2026-11-09-play-preview-notification-provisioning.md).
+The original prepared scope below is retained. Play delivery remains off; no
+deployment or test message is included in that approval or execution.
+
 9 November 2026. **Prepared, not approved or applied.** The completed local
 Publisher setup is [64fcf66bb's receipt](../verification/2026-11-09-play-publisher-local-custody.md).
 Its approval restricted the key to local custody. The following two new actions

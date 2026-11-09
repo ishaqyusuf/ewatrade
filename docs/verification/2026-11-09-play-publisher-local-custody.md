@@ -1,5 +1,10 @@
 # Google Play Publisher identity and local custody
 
+Later same-day owner approval also permitted the
+[Preview secret upload and inactive transport setup](2026-11-09-play-preview-notification-provisioning.md).
+Earlier local-only custody and unapproved/unconfigured statements below describe
+this receipt's original checkpoint. No runtime deployment or Play delivery followed.
+
 9 November 2026. The owner explicitly approved the reviewed service account,
 EwaTrade-only app permissions and one protected local JSON key. This completes
 that setup checkpoint, not Android paid-runtime or purchase acceptance.

@@ -264,6 +264,20 @@ actual operations, backlog and external retention are accepted. OpenAI
 
 ## Billing retention details for the final snapshot
 
+9November infrastructure authoring note: the approved Google notification transport
+is provisioned for controlled Preview, while Play delivery remains off. The API
+Publisher credential is stored as a Preview-only Vercel Secret, awaiting deployment.
+Pub/Sub push and recovery subscriptions each retain unacknowledged messages for
+seven days, with acknowledged retention off. Forwarding creates a recovery copy
+with its own window; this is not a global seven-day erasure promise. Both topics
+currently allow storage in any region under the project's unrestricted policy and
+use Google-managed encryption. This records allowed locations, not actual message
+residence or provider/log/backup retention. No test/customer notification or
+transport/lifecycle acceptance is established. Reconcile these exact recipients,
+retention and operations before the immutable legal snapshot; see the
+[provisioning receipt](../verification/2026-11-09-play-preview-notification-provisioning.md).
+This draft note changes no effective legal text or publication metadata.
+
 The owner billing records contain account-linked purchase/order digests,
 subscription status, product, environment, verification/expiry times and business
 coverage history. They are not anonymous merely because purchase references are
