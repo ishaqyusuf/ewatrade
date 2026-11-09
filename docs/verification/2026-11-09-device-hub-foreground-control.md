@@ -62,7 +62,27 @@ private UI APIs, new phone pairing, changed permissions or a new automation serv
 Keep the target app in front during coordinate operations. Background operation
 is still unaccepted; this does not promise fully unattended device access.
 
-## Input limits and billing restoration
+## Scrolling and input limits
+
+Further read-only Developer-settings inspection established content scrolling
+with short coordinate drags beginning on noninteractive text. A long drag starting
+on a row initially opened that row; the subpage was exited without changing a
+toggle. Scroll inertia can outlast the first capture: inspect a settled frame
+before targeting another control. A safe empty-edge touch stopped deceleration
+for the subsequent reads. Wheel scrolling did not establish a content-scroll pass.
+Device Hub's Controls menu exposed Home, Lock, Siri, App Switcher, Action Button,
+rotation and capture commands, without a dedicated swipe command. Its exposed AX
+Cancel dismissed the menu when the keyboard Escape route had not done so.
+
+The inspected Developer sections did not expose a Sandbox account control. This
+is an attributed inspection, not an exhaustive absence or Apple-account identity
+claim. UI Automation remained off; no account, testing toggle, cache or history
+was changed. Apple's current [TestFlight guidance](https://developer.apple.com/help/app-store-connect/test-a-beta-version/testing-subscriptions-and-in-app-purchases-in-testflight)
+requires Media & Purchases sign-out and Sandbox account login for controllable
+scenarios. That identity change needs a separate reviewed case protecting the
+original purchase/coverage; it was not performed during control diagnosis.
+
+## Billing restoration
 
 Tap, Home gesture, app opening and EwaTrade navigation were actually observed.
 Device Hub's AX Home/app-grid control returned without a visible Home transition;

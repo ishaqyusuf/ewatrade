@@ -151,17 +151,18 @@ no duplicate Apple policy or unreviewed effective legal publication is introduce
 ## Paid Apple checklist
 
 This is a new Apple-specific paid-release denominator, not the historical free
-3/6 or Android A01–A08 count. **2/6 currently accepted** after fresh 8 November
-readback confirmed the owner-accepted Paid Applications Agreement Active again.
-Source progress is within open rows.
+3/6 or Android A01–A08 count. **3/6 currently accepted (50%)** after the coordinator's
+9 November reconciliation of the original I03 configuration requirement. Earlier
+dated2/6 checkpoints retain their historical scope. This is not public paid-launch
+approval; I04, I05 and I06 remain open.
 
 | ID | State | Required completion |
 | --- | --- | --- |
 | I01 Commercial prerequisites | Accepted | Owner accepted the updated Paid Applications Schedule; fresh 8 November Business reload shows Paid Apps Agreement, bank, both tax forms and DSA Active, with no new-agreement notice. |
 | I02 Products and prices | Accepted | Group22556222; three ranked monthly products,175current storefront prices each, no trials; exact IDs installed in API target settings. Deployment/verification remains I03. |
-| I03 Native/server configuration | In progress | Exact signed10 linkage and visible monthly offers, deployed reviewer-only API policy, saved Production gateway URLs and fresh genuine Sandbox TEST delivery pass. Original purchase owner binding and Sandbox durability now pass. Basic explicit coverage and one Restore preserve the original purchase/coverage. First-tap feedback, further coverage/switching, ordinary Sandbox relay and Dashboard/jobs paid-reader consistency remain open. |
+| I03 Native/server configuration | Accepted — approved one-reviewer private target | Original secure key custody, exact environment, notification delivery, owner binding/coverage cutover and signed10 native linkage have target evidence. Actual paid and released-Free API-backed/Settings/jobs reader results now pass; normal coverage restoration is observed. Public checkout remains closed. Ordinary nonreviewer Sandbox dispatch is unexecuted/deferred outside this private configuration scope. Positive Production server-API authorization remains unobserved/platform-limited until first-release eligibility; retain its conditional follow-through, without another prelaunch canary or invalid-key inference. See the [configuration audit](../verification/2026-11-09-i03-configuration-audit.md) and [actual coverage/reader receipt](../verification/2026-11-09-coverage-release-free-reenroll.md). |
 | I04 Policy and privacy | Open | Effective paid terms/privacy, SDK/provider/deletion facts, operational refund response and five-day policy compatibility. |
-| I05 Signed money acceptance | Open | Original signed10 purchase is recovered and durable; basic enrollment and one Restore preserve Starter/one slot. Native store finish, first-tap behavior, remaining coverage/account switching, renewal, failure/grace and refund/revocation remain. Cancellation/no-grant passed; retained-record/limit acceptance remains. |
+| I05 Signed money acceptance | Open | Original signed10 purchase, basic enrollment, one Restore, bounded fresh native finish-return and actual voluntary Release→Free→normal Cover observations have positive evidence. The operator's exact two-minute baseline condition remains inconclusive after timing correction. First-tap cause, account/staff/business switching, renewal, failure/grace, cancellation/expiry, refund/revocation and populated retained-record/admission behavior remain separate. No global queue or fresh row/transaction-ID census is claimed. |
 | I06 Review and rollout | Open | Actual candidate screenshots, reviewer login/contact, privacy/age declarations, selected build plus first subscriptions submitted together and approved rollout. |
 
 Apple native monthly grace permits3/16/28days, not5. The owner confirmed five days

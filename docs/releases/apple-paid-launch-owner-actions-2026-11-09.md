@@ -3,7 +3,17 @@
 This is the source chat's consolidated handoff, not a release approval or a new
 questionnaire. Do not repeat completed login, device or banking requests, and do
 not send the withdrawn AI-provider inquiries. Canonical platform
-progress remains **Apple I01–I06: 2/6 (33.3%)**. Android has its separate 1/8 ledger.
+progress is **Apple I01–I06: 3/6 (50%)**. Android has its separate 1/8 ledger.
+
+I03 is accepted against its original configuration scope for the approved private
+reviewer target, after actual paid/Free reader and restored coverage evidence.
+Ordinary nonreviewer Sandbox dispatch remains unexecuted/deferred; positive
+Production server-API authorization remains unobserved/platform-limited before
+first-release eligibility, with conditional follow-through retained. Public
+checkout stays closed. I04 policy/privacy, I05 wider signed money/scope/lifecycle/
+retention and I06 review/rollout remain open. The
+[canonical ledger](../billing/apple-paid-launch-2026-11-07.md#paid-apple-checklist)
+owns this scope; earlier dated scores retain their historical meaning.
 
 ## Current checkpoint — Free readers observed; physical coverage restored
 
@@ -88,7 +98,8 @@ and [remaining phone sequence](../verification/2026-11-09-build10-finish-and-lif
 Evidence: [signed checklist](../verification/2026-11-08-iphone-paid-testflight-checklist.md),
 [purchase verification](../verification/2026-11-08-apple-purchase-verification.md)
 and [actual hosted reader](../verification/2026-11-09-billing-reader-job-check.md).
-These passes do not close the broader I03/I04/I05/I06 gates.
+I03 configuration is accepted under the limited scope above. These passes do not
+close I04/I05/I06 or grant public release approval.
 
 ## Owner actions in dependency order
 

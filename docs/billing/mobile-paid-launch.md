@@ -1,5 +1,24 @@
 # Shared Apple and Android paid launch
 
+## Current acceptance — I03 configuration accepted, Apple3/6
+
+The coordinator reconciled I03 against its original five configuration criteria
+after the actual released-Free reader and restored Starter observations. It is
+accepted for the approved one-reviewer private target: secure verifier-key custody,
+exact environment, genuine notification receiver delivery, owner binding/coverage
+cutover and signed native linkage. Paid/Free actual API-backed, Settings-server
+and hosted-jobs reader evidence is now recorded. **Apple3/6 (50%)**; Android stays
+on its separate1/8 ledger. Earlier dated scores below are historical checkpoints.
+
+Public checkout remains closed. Actual ordinary nonreviewer Sandbox dispatch is
+unexecuted/deferred outside this private configuration scope; positive Production
+server-API authorization is still unobserved/platform-limited before first-release
+eligibility and retains conditional follow-through. I04 policy/privacy, I05 wider
+signed money/lifecycle/scope/retained-record acceptance, and I06 review/rollout
+remain open. Do not repeat the I05 matrix as an additional I03 gate or convert
+the corrected timing estimate into a measured pass. See the
+[canonical Apple ledger](apple-paid-launch-2026-11-07.md#paid-apple-checklist).
+
 ## Actual Free readers and physical coverage restoration — 9 November 2026
 
 After the owner's single normal Release, the physical app showed Free/uncovered,
@@ -181,8 +200,8 @@ user to repeat it.
 | --- | --- | --- |
 | 1. Shared contract and core source | Owner limits, coverage, versioned signup and retained-record downgrade implemented (0bd862763; verification daf00b5f0). Manual native addresses implemented cf831c187. | Reuse valid checks. Apple courtesy source and platform-specific runtime readiness are implemented with23billing tests/136assertions, scoped259/1679, API types and H01/H02 passing; signed acceptance remains open. Completed Play policy is unchanged. |
 | 2. Store products and configuration | Apple three monthly products/175price schedules saved; controlled reviewer API runs at b0e29c66d, with original Sandbox Starter purchase, enrollment and one Restore durably verified. Fresh signed10 native finish-return has a bounded positive observation; actual app availability is175, with the separate eleven-country proposal awaiting decision. Public checkout stays closed. Play merchant profile linked, payout bank deferred; existing AAB36 remains in its internal-testing draft. App and3Draft monthly plans have equal165country sets,5day grace/55dayhold; all522stored prices unchanged (495available/27retained). Mappings are documented, not installed. | Complete scope/lifecycle and actual Free runtime cases. For Play, finish approved merchant/license/security-access inputs and the reviewed registered-package/isolated-Preview test path before licensed acceptance or activation. Country-specific compliance remains open; draft settings do not accept public territories. |
-| 3. Shared runtime, legal and operations | Production Dashboard/Marketing/API exact b0e29c66d READY after matching Preview smoke; SQL-backed API health passed. Jobs retain20261109.2/e162 actual read-only reviewer Starter proof. Actual authenticated Settings server read now passes resolved/starter/owner_subscription after a full reload. Public checkoutfalse/WEB unchanged; Free fallback and common legal/privacy/operations remain open. | Reuse accepted paid reader evidence; no new login or repeated paid test. Verify Free scope, native/lifecycle, monitored support, retained-record deletion and actual recipient/retention/terms facts. Implement the owner-approved18+liveAI policy through its current owner; no provider inquiry or speculative privacy promise. |
-| 4. Signed acceptance | Android A01–A08:1/8; Apple I01–I06:2/6 currently accepted after fresh8November readback restored I01; products/prices I02 remain complete. Source/config tests do not close these gates. | Freeze exact candidates, inspect permissions/native linkage and run licensed purchase/restore/renewal/grace/refund/switching tests. Reuse platform-valid evidence only. |
+| 3. Shared runtime, legal and operations | Production Dashboard/Marketing/API exact b0e29c66d READY after matching Preview smoke; SQL-backed API health passed. Jobs retain20261109.2/e162 with actual paid and released-Free read-only proof. Actual authenticated Settings server paid, released-Free and restored paid reads pass. Public checkoutfalse/WEB unchanged; expiry/retained-record fallback and common legal/privacy/operations remain open. | Reuse accepted paid/Free reader evidence; no new login, Release or repeated paid test. Complete wider native/lifecycle/scope, monitored support, retained-record deletion and actual recipient/retention/terms facts. Implement approved18+user-invoked liveAI and13+screened-action guardian/regional safeguards through the existing owner; no provider inquiry or speculative privacy promise. |
+| 4. Signed acceptance | Android A01–A08:1/8; Apple I01–I06:3/6 currently accepted: I01 commercial, I02 products/prices, I03 approved private-target native/server configuration. I04/I05/I06 remain open. | Reuse accepted exact signed10 linkage, purchase/basic Restore, bounded finish-return and coverage observations. Complete remaining licensed renewal/grace/refund/switching and privacy/review gates with platform-valid evidence. |
 | 5. Submission and publication | Public release after approval/checks is authorized. Neither platform has paid-release acceptance yet. | Complete truthful store declarations/reviewer access, submit accepted candidates, follow review and publish through existing release authority. |
 
 Do not add the two platform denominators into a fabricated combined score.
