@@ -33,7 +33,13 @@
       "kind": "test",
       "path": "packages/jobs/src/handlers/owner-billing-reader-check.test.ts",
       "executed": true,
-      "result": "Three focused tests/18 assertions pass: Preview/default-off refusal, exact reviewer/payload admission and malformed/foreign/extra-field/broader-allowlist refusal; disabled execution returns before DB import. Actual hosted membership/READ ONLY/plan proof remains separate until deployment and its licensed scoped invocation."
+      "result": "Three focused tests/18 assertions pass: Preview/default-off refusal, exact reviewer/payload admission and malformed/foreign/extra-field/broader-allowlist refusal; disabled execution returns before DB import."
+    },
+    {
+      "kind": "run",
+      "path": "docs/verification/2026-11-09-billing-reader-job-check.md",
+      "executed": true,
+      "result": "Exact clean e1626301d passed normal Preview/matching existing-data smoke/Production. Hosted Preview20261109.2 completed disabled with empty payload and no Production identity. Hosted Production20261109.2 completed READ ONLY with fresh ACTIVE OWNER scope, canonical Starter/owner_subscription and owner-plan Starter for the existing licensed reviewer business; no business write, purchase, coverage mutation or reminder send. Actual reviewer Dashboard SSR/Free/native/lifecycle remain open."
     }
   ]
 }

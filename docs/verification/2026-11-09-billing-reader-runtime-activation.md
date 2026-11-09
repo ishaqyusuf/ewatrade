@@ -1,5 +1,16 @@
 # Dashboard/jobs billing-reader activation — 9 November 2026
 
+## Final task-local checkpoint — 9 November 2026
+
+The follow-up diagnostic is now deployed in clean e1626301d after normal Preview,
+matching existing-data smoke and Production health. All public web/API aliases are
+exacte162; both jobs projects promoted20261109.2. Preview returned disabled without
+Production identity input. Actual Production READ ONLY execution returned current
+reviewer Starter/owner_subscription and owner-plan Starter, with fresh owner scope.
+See the [hosted check receipt](2026-11-09-billing-reader-job-check.md).
+Actual signed-in Dashboard SSR/Free/native lifecycle remain open; Apple2/6 and
+mobile exclusion unchanged. Earlier activation evidence below keeps its scope.
+
 Status: owner-approved configuration and normal Preview → matching smoke →
 Production rollout complete. Hosted configuration and shared-reader reconstruction
 pass. Actual reviewer Dashboard SSR and task-local jobs reads remain separate

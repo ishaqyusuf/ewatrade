@@ -1,7 +1,11 @@
 # Hosted owner-plan read check — 9 November 2026
 
-Status: source verified; no deployed diagnostic or task-local read accepted yet. The prior [configuration rollout](2026-11-09-billing-reader-runtime-activation.md)
-at529a44998 remains verified. Apple2/6 unchanged; mobile release excluded.
+Status: actual hosted reviewer Starter read accepted, and Preview default-off
+refusal accepted. Source `fc2b64f8d` is deployed in clean final candidate
+`e1626301dd3aef0925ac9cda3b2140c9cfc04012`. The prior
+[configuration rollout](2026-11-09-billing-reader-runtime-activation.md) remains
+verified. Actual signed-in Dashboard SSR, Free fallback and native/lifecycle
+checks remain open. Apple2/6 unchanged; mobile release excluded.
 
 The owner-approved reader activation/acceptance needs proof from inside the jobs
 process. The existing reminder task can write/send, so it is not a safe diagnostic.
@@ -19,7 +23,7 @@ task runtime project/environment/version, with no owner/business identity.
 Preview or removed reviewer policy returns disabled before loading the DB client.
 Wrong owner/membership or malformed/broader scope refuses with one generic error.
 No scheduler, product/assistant caller, HTTP/RPC, new credential, feature gate,
-payment/provider action or reminder dispatch is added. One attempt and concurrency1
+payment-provider request or reminder dispatch is added. One attempt and concurrency1
 bound diagnostic execution. An actual same-scope paid read may be accepted only
 after clean candidate Preview/matching smoke/Production and verified task result.
 Free fallback and native/lifecycle checks remain separate; no fixture or live
@@ -33,7 +37,59 @@ for the canonical all-route snapshot and passes; regeneration reproduces committ
 COVERAGE.md exactly. An initial command without that profile used the non-QA router
 and falsely appeared stale; no procedure/capability row or snapshot is changed.
 H02 passes one record with zero capability/procedure changes. Documentation links
-and git diff --check pass. Connected proof remains pending.
+and git diff --check pass.
+
+## Actual connected verification
+
+The Workshop chat completed one owned handoff-documentation commit before the
+final candidate was pinned; there was no design selection/native implementation.
+The current checkout stayed clean and on main throughout both normal releases;
+no worktree, branch change or mobile build/upload/OTA was used.
+
+Full candidate source smoke passed284/1813. Normal Preview release completed0 for
+Dashboard/Marketing/API/jobs. Candidate-bound existing-data web smoke passed at
+09:33:32.492Z, clean/runtimeVerified, runtime IDs
+`dpl_6pLhVbm4QHXnCvqVsgLPMgu8vxxH` and
+`dpl_AZGKvyCZ7dcZKwCLbyYkSdwjqGpc`. Its receipt is
+`.scratch/qa-release/smoke-e1626301dd3aef0925ac9cda3b2140c9cfc04012-preview-web.json`.
+No sale, payment or fixture was submitted.
+
+Preview's names-only env audit warned that the reviewer flag was absent locally;
+Production warned that Marketing lacked it. Those surfaces retain default-off
+behavior; no additional setting was written or warning hidden. The actual Preview
+task below confirms refusal. The initial private runner stopped before creating a
+run because it expected a role field absent from the saved capture. Its preflight
+was corrected to the known tenant shape; fresh ACTIVE OWNER admission remains
+inside the actual database transaction and was not weakened.
+
+| Check | Exact deployed result |
+| --- | --- |
+| Preview, empty payload | Completed09:34:12.043Z, `run_06grva2u92dba21j2iffs0i3a2`; deployment `deployment_9mfc68561g74k84f1qg89`, version20261109.2, exacte162. Output disabled/readOnly, no plan or scope facts. No Production identity was transmitted to Preview. |
+| Production, existing reviewer/business | Completed09:44:01.653Z, `run_06grvcam81m8faqgq0aqrbdla2`; deployment `deployment_3jikxtf8sh3urb4aeq15r`, version20261109.2, exacte162. Output checked/readOnly/scopeVerified, planId=starter, subscriptionSource=owner_subscription, ownerPlanId=starter. |
+
+The Production command completed0 and SQL-backed API health passed before the
+Production invocation. Canonical public aliases were independently checked at
+09:42:51.051Z: all owned/READY/Production and exacte162:
+
+- Dashboard: `dpl_4EMAUhJWUAeGL8cw2PiZE3qnCWU8`.
+- Marketing: `dpl_5iZY6TLNnWZ85V9NLoW6mkHxoiCb`.
+- API: `dpl_GnRoZhghsnUa288d5ep4thF6ymH6`.
+
+Each diagnostic invocation used an idempotency key and saved its handle before
+polling. These are infrastructure verification runs; their SQL/business behavior
+was read-only. No purchase, coverage mutation, grant or reminder send occurred.
+The Production result is now **actual hosted-task evidence**, not the earlier
+operator reconstruction. It accepts only the current licensed reviewer paid read;
+it does not accept Free fallback, staff/ordinary access, grace, renewal/refund,
+native finishing or the still-pending signed-in Dashboard render.
+
+Private mode0600 evidence:
+`/private/tmp/ewatrade-owner-billing-reader-{preview,production}-e1626301d.evidence.json`,
+the adjacent saved handles, and
+`/private/tmp/ewatrade-billing-read-check-e1626301d-production-identity.evidence.json`.
+Both release logs use the same e1626301d prefix. Credentials, payload identities
+and signed store receipts remain private. Saved evidence assertions, documentation
+links, changed-file formatting and git diff --check pass.
 
 Brain impact: local `.brain/BRAIN.md`, `.brain/tasks/in-progress.md`,
 `.brain/features/owner-wide-billing.md`, `.brain/features/native-store-billing.md`,

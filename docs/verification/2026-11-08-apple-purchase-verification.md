@@ -2,8 +2,10 @@
 
 Status: web/API Production rollout and original Starter server recovery complete.
 Basic installed-app enrollment and one Restore confirmed9November; first-tap cause, native store-finish, further switching/lifecycle and shared paid-reader acceptance remain open.
-Owner-approved Dashboard/jobs settings and normal rollout are verified at529a44998
-on9November; actual signed-in Dashboard SSR/task-local jobs reads remain open.
+Owner-approved Dashboard/jobs settings and final normal rollout are verified at
+e1626301d on9November. Actual hosted jobs confirms current reviewer Starter;
+Preview stays disabled. Signed-in Dashboard SSR/Free/lifecycle remain open.
+See the [hosted task proof](2026-11-09-billing-reader-job-check.md).
 See the [runtime activation receipt](2026-11-09-billing-reader-runtime-activation.md).
 Apple I01–I06 acceptance remains **2/6 (33.3%)**. This is the one existing licensed
 Starter purchase on installed private 1.0.0(10), not a replacement purchase.
