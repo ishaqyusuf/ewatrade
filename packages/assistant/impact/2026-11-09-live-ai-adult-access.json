@@ -46,6 +46,12 @@
       "path": "docs/verification/2026-11-09-live-ai-adult-access.md",
       "executed": true,
       "result": "Actual local public-help/registration view verified; API/jobs/AI/Marketing typechecks pass. Two unrelated Studio preview failures reproduced in original HEAD tests and retained as baseline limitations; no signed/hosted acceptance."
+    },
+    {
+      "kind": "test",
+      "path": "apps/api/src/assistant/chat-route.test.ts",
+      "executed": true,
+      "result": "Independent P2 reproduced red500vs403; real registered Setup/Product handler plus default model resolver now gives403/fixed adult guidance for8purpose/age combinations before model configuration, run/budget/write. Route/resolver29pass/169assertions+1provider skip; unexpected/internal failures remain sanitized500."
     }
   ]
 }

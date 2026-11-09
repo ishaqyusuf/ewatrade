@@ -4,13 +4,19 @@ import { createRehearsalModel } from "@ewatrade/ai/rehearsal-model"
 import type { RehearsalTurn } from "@ewatrade/ai/rehearsal-model"
 import { resolveAssistantRuntimeConfiguration } from "@ewatrade/ai/runtime-config"
 import type { SetupDraftEntityWrite } from "@ewatrade/assistant/setup/tools"
-import { AssistantRecordError } from "@ewatrade/db/assistant"
+import {
+  AssistantRecordError,
+  LIVE_AI_ADULT_MESSAGE,
+  requireAdultLiveAiAccount,
+} from "@ewatrade/db/assistant"
 import { assistantBudgetScopeKey } from "@ewatrade/db/assistant"
+import { toPublicErrorEnvelope } from "@ewatrade/errors"
 import { OpenAPIHono } from "@hono/zod-openapi"
 import { TRPCError } from "@trpc/server"
 import type { AssistantChatRepository } from "./chat-repository"
 import {
   type AssistantChatDependencies,
+  defaultAssistantChatDependencies,
   registerAssistantChatRoutes,
 } from "./chat-route"
 import type { ResolvedAssistantModel } from "./model-resolution"
@@ -31,6 +37,36 @@ const business = {
   currencyCode: "NGN",
   countryCode: "NG",
   existing: { catalogItems: 0, customers: 0 },
+}
+
+const productWorkflowContext = {
+  handoffDigest: "a".repeat(64),
+  snapshot: {
+    form: {
+      kind: "product",
+      name: "",
+      description: "",
+      unitName: "",
+      price: "",
+      openingStockQuantity: "",
+      usage: "FOR_SALE",
+    },
+    storeId: scope.storeId,
+    category: "",
+    illustrationId: null,
+    photoAssetIds: [],
+    sku: "",
+    barcode: "",
+    showAdvanced: false,
+    showUnits: false,
+    showDescription: false,
+    showOpeningStock: false,
+    selectedHelperKey: null,
+    canonicalTransactionScale: 2,
+    optionGroups: [],
+    variantDrafts: {},
+    additionalUnits: [],
+  },
 }
 
 type Fake = ReturnType<typeof fakeRepository>
@@ -243,6 +279,84 @@ describe("assistant chat admission", () => {
     expect(fake.calls.begun).toBe(0)
   })
 
+  test("Setup and Product adult refusals keep HTTP 403 and guidance before model configuration or dispatch", async () => {
+    for (const purpose of ["SETUP", "PRODUCT_CREATE"] as const) {
+      for (const ageBand of [
+        "AGE_13_TO_15",
+        "AGE_16_TO_17",
+        "UNDECLARED",
+        null,
+      ]) {
+        const fake = fakeRepository({
+          purpose,
+          workflowContext: productWorkflowContext,
+        })
+        let configurationReads = 0
+        fake.repository.authorizeLiveAi = () =>
+          requireAdultLiveAiAccount(
+            {
+              user: {
+                findUnique: async () => (ageBand === null ? null : { ageBand }),
+              },
+            },
+            scope.userId,
+          )
+        fake.repository.readRuntimeConfiguration = async () => {
+          configurationReads += 1
+          throw new Error(
+            "No model configuration or provider should be reached",
+          )
+        }
+        const { server, deps } = app(fake, {
+          admit: async () => ({
+            scope: { ...scope, dataClassification: "LIVE" },
+            repository: fake.repository,
+          }),
+          resolveModel: defaultAssistantChatDependencies().resolveModel,
+        })
+        const response = await chat(server)
+        expect(response.status).toBe(403)
+        expect(await response.json()).toEqual({
+          code: "FORBIDDEN",
+          error: LIVE_AI_ADULT_MESSAGE,
+        })
+        expect(response.headers.get("cache-control")).toBe("no-store")
+        expect(configurationReads).toBe(0)
+        expect(fake.calls.begun).toBe(0)
+        expect(fake.calls.budgetScopeKey).toBeNull()
+        expect(fake.calls.writes).toEqual([])
+        expect(() => deps.guard.acquire(scope.userId).release()).not.toThrow()
+      }
+    }
+  })
+
+  test("unexpected and internal failures retain the public 500 envelope", async () => {
+    for (const error of [
+      new Error("private provider payload"),
+      new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "private provider payload",
+      }),
+    ]) {
+      const fake = fakeRepository()
+      const { server } = app(fake, {
+        resolveModel: async () => {
+          throw error
+        },
+      })
+      let unhandled: unknown
+      server.onError((failure, context) => {
+        unhandled = failure
+        return context.json(toPublicErrorEnvelope(failure), 500)
+      })
+      const response = await chat(server)
+      expect(response.status).toBe(500)
+      expect(unhandled).toBe(error)
+      expect(await response.text()).not.toContain("private provider payload")
+      expect(fake.calls.begun).toBe(0)
+    }
+  })
+
   test("another Store's conversation is not found and never runs", async () => {
     const fake = fakeRepository()
     const { server, modelCalls } = app(fake)
@@ -322,35 +436,7 @@ describe("assistant chat turn", () => {
   test("focused product policy stages one stable product and shares the business allowance", async () => {
     const fake = fakeRepository({
       purpose: "PRODUCT_CREATE",
-      workflowContext: {
-        handoffDigest: "a".repeat(64),
-        snapshot: {
-          form: {
-            kind: "product",
-            name: "",
-            description: "",
-            unitName: "",
-            price: "",
-            openingStockQuantity: "",
-            usage: "FOR_SALE",
-          },
-          storeId: scope.storeId,
-          category: "",
-          illustrationId: null,
-          photoAssetIds: [],
-          sku: "",
-          barcode: "",
-          showAdvanced: false,
-          showUnits: false,
-          showDescription: false,
-          showOpeningStock: false,
-          selectedHelperKey: null,
-          canonicalTransactionScale: 2,
-          optionGroups: [],
-          variantDrafts: {},
-          additionalUnits: [],
-        },
-      },
+      workflowContext: productWorkflowContext,
     })
     const { server } = app(fake, {
       model: scriptedModel([

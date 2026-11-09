@@ -157,6 +157,11 @@ async function handleChat(context: Context, deps: AssistantChatDependencies) {
       },
     })
   } catch (error) {
+    if (error instanceof TRPCError) {
+      const status = getHTTPStatusCodeFromError(error)
+      if (status < 500)
+        return failure(context, status, error.code, error.message)
+    }
     if (!(error instanceof WorkflowTurnError)) throw error
     if (error.resetAt)
       context.header(

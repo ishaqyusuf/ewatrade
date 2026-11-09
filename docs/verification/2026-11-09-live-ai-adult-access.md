@@ -109,3 +109,32 @@ the automatic-safety terms/payload review, actual recipient/retention evidence,
 end-user geography controls and the remaining store/privacy/legal acceptance
 remain open. Android release milestones remain 1/8 and all 18 acceptance tickets
 are retained. The shared legal draft still needs exact final-content approval.
+
+## Independent review follow-up: Setup/Product HTTP refusal
+
+The Apple/root coordinator's independent review found that the real Setup/Product
+workflow let the model resolver's `TRPCError(FORBIDDEN)` escape to the global
+500 handler. Dispatch was blocked, but the intended 403/adult guidance was lost.
+The regression first reproduced **500 instead of 403** on the unmodified route.
+
+`handleChat` now uses its existing `{code,error}`/`no-store` failure response for
+TRPC client errors. It leaves server errors and unexpected exceptions to the
+existing global public-error envelope; normal WorkflowTurnError handling and
+rate-limit Retry-After remain. No global error handler, provider or age policy
+changed.
+
+The actual registered Hono POST regression uses the real workflow and default
+model resolver with a narrow in-memory account-age reader/repository. Both
+Setup and Product cover 13–15, 16–17, undeclared and missing accounts: 403 with
+fixed adult guidance, zero configuration reads, zero runs/budget reservations/
+draft writes, and released concurrency lease. Original role refusal, ordinary
+turn, replay, rate/budget-limit and stream tests remain; unexpected and internal
+TRPC failures retain the sanitized 500 envelope without the private message.
+
+Focused route/resolver checks: **29 pass, 1 real-provider test skipped,
+169 assertions**. Private red/green logs:
+`/private/tmp/ewatrade-adult-ai-http-{red,green}-2026-11-09.log`. Explicit four-owned-path smoke passes **284 tests / 1,813 assertions**, plus
+QA tooling types and Biome; plan has no unsupported mappings. Full API types
+and H02 pass. H01 unchanged coverage evidence is reused because no procedure
+or capability rows changed. Whitespace checks pass. Root owns separate
+release-review evidence; this source correction is not deployment or acceptance.
