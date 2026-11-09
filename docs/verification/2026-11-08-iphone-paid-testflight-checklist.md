@@ -89,6 +89,13 @@ Enter all credentials directly on the phone, never in chat or evidence files.
 
 ## Owner and coordinator sequence
 
+For the existing paid reviewer, use the
+[build10 finishing and remaining lifecycle packet](2026-11-09-build10-finish-and-lifecycle-sequence.md).
+The initial case inventory below is not an instruction to repeat the accepted
+purchase, cancellation/no-grant or basic Restore. No provider control, business
+release or additional purchase is authorized by this checklist. The single
+Dashboard sign-in request stays with the source chat.
+
 1. Open the plan screen from the owner account. Confirm Starter, Growth and Pro
    load with localized monthly prices and accessible Terms/Privacy links. Check
    the displayed storefront against the configured territory, not phone region.
