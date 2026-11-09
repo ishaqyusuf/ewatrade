@@ -1,5 +1,15 @@
 # Play merchant, artifact and Data safety readiness — 8 November 2026
 
+9 November superseding declaration/connection checkpoint: owner-approved account
+Trader/public-profile consent and local-law certification are saved. EwaTrade
+app-level Trader confirmation is saved to Publishing overview, not submitted.
+The Samsung is connected by wireless ADB TLS and still has Play build33, not36.
+The approved eight exclusions already supersede the historical173-market count
+below: app/plans now match165 with522stored prices unchanged. See the
+[declaration and wireless receipt](2026-11-09-play-trader-wireless-readiness.md)
+and [territory receipt](2026-11-09-play-provider-territory-adjustment.md).
+These steps do not accept merchant tax/payout, signed paid testing or release.
+
 9 November current readback: all three inactive `monthly` Draft base plans now
 have saved/reloaded international prices, five-day grace and automatic 55-day
 hold. Nigeria is exactly NGN5,000/15,000/30,000. App targets and all three available
