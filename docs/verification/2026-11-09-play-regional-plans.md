@@ -1,5 +1,12 @@
 # Play regional catalog and acceptance inputs — 9 November 2026
 
+Later 9 November update: the owner approved excluding eight territories after
+reviewing existing AI-provider geographic terms. App and all three draft base
+plans now reload with the same **165** named territories. All **522** stored
+prices are unchanged; **495** are available and **27** retained/unavailable.
+The earlier 173-country alignment below is historical. See the
+[exact saved adjustment](2026-11-09-play-provider-territory-adjustment.md).
+
 ## Accepted configuration evidence
 
 All three existing products now have saved base plan `monthly`, status **Draft**,

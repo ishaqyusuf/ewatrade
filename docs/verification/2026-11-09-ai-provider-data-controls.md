@@ -4,6 +4,15 @@ The owner asked the Android coordinator to arrange DeepSeek/OpenAI privacy
 settings or agreements. This is a read-only account check and proposed request
 packet, not an executed agreement or a launch-acceptance receipt.
 
+**Superseding owner direction:** no provider contact. Use applicable existing
+terms and actual practices, flag concrete conflicts and adjust the product.
+Both requests are cancelled; the OpenAI draft was cleared without sending.
+Custom agreements or zero retention are not universal launch prerequisites.
+The owner subsequently approved 18+ live AI while preserving eligible 13+
+ordinary functions/history, and the exact eight-territory draft exclusion in
+the [saved regional adjustment](2026-11-09-play-provider-territory-adjustment.md).
+The age decision is approved policy, not implemented or released in this receipt.
+
 ## OpenAI account observation
 
 The existing signed-in Platform account exposed the CIPRON organization and one
@@ -43,10 +52,10 @@ deadline, accepted opt-out or private agreement is inferred.
 
 ## Prepared next action and boundaries
 
-[Exact provider request drafts](../releases/ai-provider-privacy-requests-2026-11-09.md)
-identify the recipients, company information and questions. Pending exact owner
-send approval. No inquiry, email, cooperation form, signature, terms acceptance,
-credential access or setting change occurred during this preparation.
+[Historical provider request drafts](../releases/ai-provider-privacy-requests-2026-11-09.md)
+identify the proposed recipients and questions. They are cancelled, with no
+pending send-approval requirement. No inquiry, email, cooperation form, signature,
+terms acceptance, credential access or setting change occurred in this preparation.
 
 Read-only browser evidence is account-specific but not deployed-runtime proof.
 The existing source inventory, active-recipient acceptance, shared legal draft

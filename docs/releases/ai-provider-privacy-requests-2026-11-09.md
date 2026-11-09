@@ -1,9 +1,11 @@
 # AI provider privacy requests — 9 November 2026
 
-Status: prepared for owner review; not sent, signed or applied. The owner asked
-the Android coordinator to arrange provider privacy settings/agreements. This
-packet makes the proposed communications reviewable before submission. It does
-not authorize a contract, paid plan, new access or routing change.
+Status: **cancelled by the owner on 9 November 2026; do not send**. The owner
+directed the coordinator to use existing provider terms/policies and report
+concrete conflicts instead of contacting providers. The OpenAI Support draft was
+cleared and verified empty; no provider request was sent, signed or applied.
+The proposed messages below are retained as history, not a pending approval or
+required launch step. Do not ask again to send them without a new owner request.
 
 [Read-only account observations and limitations](../verification/2026-11-09-ai-provider-data-controls.md).
 
