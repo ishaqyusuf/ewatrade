@@ -78,3 +78,49 @@ tooling types and changed-file checks. All 18 relative file targets and
 whitespace checks pass. Existing application/native/provider checks were reused
 within their original scope. Private log:
 `/private/tmp/ewatrade-automatic-safety-doc-checks-2026-11-09.log`.
+
+## Affected-flow and denial-impact inventory
+
+This is a bounded inventory of the identified moderation callers, not an
+exhaustive current-runtime traffic trace. All rows retain independent existing
+role, business, consent and storage checks. An account's declaration does not
+establish the age of every person described in submitted business data.
+
+| Flow and concrete source | Actor/age before the provider call | Input and effect of an adult-only restriction at this call |
+| --- | --- | --- |
+| Account free-form Store/customer replies: `store-conversations-guest.ts`, `store-conversations-staff.ts`, `store-conversation-chat-authority.ts` | Current signed account must already be `ADULT`; staff replies also require an adult account recipient before screening. | Message text. Existing adult chat rule already applies; no new ordinary-tools restriction is needed here. This does not establish age assurance. |
+| Public Storefront order: `apps/storefront/src/app/storefront-commerce-actions.ts`, `storefront-orders.ts` | Session is optional and passes only optional customer ID; no account-age input at submission screening. | Name, optional notes/address. Refusal would prevent an unknown-age or teen shopper from submitting an order request, not merely remove AI help. |
+| Public Storefront service: the same server actions plus `storefront-service-intake.ts`, `storefront-service-requests.ts` | Optional session; host/current-form validation precedes some processing, but no actor-age authority reaches screening. | Name, details, collection address. Refusal would prevent the corresponding service enquiry/request. |
+| Order/service receipt replies and quote declines: `storefront-orders.ts`, `storefront-service-requests.ts` | Host/receipt-token paths; some screening happens before receipt lookup. No adult declaration at this boundary. | Further-information reply or decline reason. Refusal could stop a customer completing an existing request; it must not hide saved receipts/history. |
+| Structured Store service intake/start: `store-conversation-service-intake.ts`, `store-conversation-service-start.ts` | Guest credential or account identity/terms are checked downstream; name/details screening occurs first. Structured intake is independent of adult free-form chat. | Name/details. An age refusal here would restrict structured customer requests despite the existing 13+ business/account scope. |
+| Customer-visible Catalog writes: `catalog.ts`, `assertCatalogPublicationSafety` | Existing merchant scope supplies actorUserId, but the safety function does not read age or guardian authority. | Distinct names/descriptions and other customer-visible copy. Blanket refusal would affect ordinary product/service creation or edits by eligible teen staff/owners. Current URL publication is separately paused pending approved media screening. |
+| Merchant quote publication/approval: `commerce-quotes.ts`, `store-conversation-action-release.ts` | Merchant/source authority exists at owning commands, but exact-text screening has no age/guardian parameter; quote screening also supports no-chat cases. | Labels, customer notes, fulfilment promises and line notes. Refusal could block sending/approving ordinary quotes, rather than only live generation. |
+| Provider-ingested Store WhatsApp text: `store-conversation-whatsapp-message-repository.ts` | Requires one of the admitted bridge reason codes; direct/candidate discovery refuses. This repository's text screen does not itself reread sender age/guardian authority. | External message. Add any new decision at the canonical bridge authority before transmission; do not trust a reason-code string as fresh age proof or break the existing queue/replay protocol. |
+| Catalog image review: `packages/jobs/src/handlers/catalog-photo-review.ts`, `packages/catalog/src/photo-review.ts` | Claimed work, scope/digest/QA/provider rules; no fresh actor age in the worker's review admission. | Normalized image bytes. New refusal would leave the asset private/pending; adult generation permission alone does not authorize this automatic scan. |
+
+### Smallest concrete product options for coordinator review
+
+1. Preserve all currently eligible 13+ actions and introduce a guardian-consent
+   path for the affected young/unknown actors, plus applicable digital-consent
+   and provider-retention safeguards before transmission. This needs a real
+   guardian verification/revocation flow and regional policy; it is not a
+   checkbox or the adult declaration already approved. Consent alone does not
+   establish the under-digital-consent-age retention requirement.
+2. For launch, require declared adulthood only for the specific externally
+   screened publishing/intake actions above, including unknown-age public
+   submissions, while retaining ordinary saved data/reading and unaffected
+   tools. This is the smallest source change, but materially restricts teen
+   Catalog/quote work and anonymous customer ordering. It needs an explicit
+   product decision; it is not implied by the approved 18+ live-AI policy.
+3. Retain those 13+ actions using a separately accepted safety-processing path
+   with suitable handling for young/unknown actors, such as an operated private
+   classifier/review queue. Equivalent safety, failure behavior, capacity,
+   retention, deployment and disclosures must be accepted first. No such
+   replacement is currently established by this review, and no always-allow
+   fallback is acceptable.
+
+No option is selected here. Removing fail-closed screening, describing the
+existing background processing as consent-exempt, or silently raising every
+account/business function to 18+ is not authorized. The coordinator will review
+this concrete impact before another owner policy question. No additional source,
+provider setting or human-input request was made for this inventory.
