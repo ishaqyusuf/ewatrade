@@ -6,6 +6,29 @@ Status: deployed and actual authenticated Settings server paid-read accepted at
 smoke/Production and API health passed. Mobile release excluded. Apple2/6 remains;
 this closes only the licensed reviewer's Settings canonical server-read subcase.
 
+## Later actual Free read —9 November,18:09 Africa/Lagos
+
+After the owner's separately reviewed Release, the same existing authenticated
+EwaTrade Review/Main store tab was fully reloaded once. Actual observation
+17:09:55.010–17:09:55.124Z found one wrapper read=resolved, planId=free,
+source=owner_billing_free. The fresh API-backed retailOps.subscription client
+card independently displayed Free/Active, stores1of1, catalog0of10, staff0of0 and
+orders0of50. This is a normal client API-read observation, not a copied raw HTTP
+response or current ownerCatalog period measurement. Stores1of1 is retained
+Store usage, not occupied owner-coverage slots; root saw coverage0of1 on native.
+
+The [coverage receipt](2026-11-09-coverage-release-free-reenroll.md) records the
+separate actual hosted jobs Free/null read and original phase/run artifacts.
+Root later corrected its Release confirmation timestamp from an estimate to a
+clock interval. The two-minute operator baseline precondition is inconclusive;
+these actual Free reader facts do not repair that timing gap. No retry, new
+Release, database write, purchase or deployment. Restoration is still pending.
+The owner subsequently prioritized DeviceHub diagnosis; no restoration read or
+further billing action follows without root's later handoff and current-state review.
+Screenshot and actual DOM marker/identity context are saved privately at
+`/private/tmp/ewatrade-coverage-settings-free-2026-11-09.png` and adjacent
+`.evidence.json`. The earlier paid read below remains historical evidence.
+
 ## Evidence gap and alternatives
 
 The [authenticated paid view](2026-11-09-dashboard-authenticated-paid-view.md)

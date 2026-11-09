@@ -1,11 +1,74 @@
 # Reviewed coverage Release → Free → re-enroll case — 9 November 2026
 
-Status: **prepared for coordinator review, not executed**. No new owner question,
-Release, enrollment, database/provider/task call, purchase or deployment. The
-fresh build10 finish observation concluded with a bounded observed pass at
-17:51–17:52 Africa/Lagos; its message is saved before any coverage feedback can
-replace it. See the [observed receipt](2026-11-09-build10-fresh-finish-observation.md).
-Apple stays2/6 (33.3%).
+Status: **actual Free reader facts observed; restoration paused by owner priority**. The owner
+performed the separately reviewed Release once. The normal API-backed Dashboard
+card, actual Settings server read and one hosted READ ONLY jobs result show Free.
+The operator's two-minute baseline precondition is **INCONCLUSIVE**, because root
+corrected an estimated confirmation timestamp after the task had run. Preserve
+the original phase/intent/handle/result and the separate correction; do not rerun
+the case to manufacture timing proof. No new purchase, Restore, deployment or
+mobile release. Apple stays2/6 (33.3%); wider I05 remains open.
+
+After root requested the normal Cover step, the owner prioritized fixing DeviceHub
+before continuing acceptance and did not report Cover performed. Preserve the
+last observed business Free/uncovered0of1. The finite read window is complete;
+there is no continuing test hold or instruction to keep the owner waiting on
+documentation. No billing action, new probe or repeated Cover request follows
+this checkpoint. Root owns device diagnosis and must reassess actual subscription
+activity before any later normal re-enrollment. Restoration is not accepted.
+
+## Executed Free observations and timing correction
+
+Root observed Active Starter, NGN5,000/month, covered business and1of1 owner slots
+on the original signed10 reviewer/business. The honest baseline observation clock
+bound is17:05:20–17:06:01Z (18:05:20–18:06:01 Africa/Lagos). After the owner's named
+Release, root saw Free limits, not enrolled,0of1 owner slots and Cover this business.
+The Free observation is bounded17:07:07–17:07:42Z; the exact tap time is unknown.
+The owner was instructed to hold Free without Cover, Restore or a new purchase.
+
+Root first supplied17:07:13Z as the confirmation time, later correcting it as an
+estimate from a preceding clock and CUA duration. The runner had already created
+its one run using that supplied phase input. A113-second subtraction from the
+estimate is not accepted clock proof. The corrected bounds do not independently
+establish the required <=120seconds. No original file was backdated or rewritten,
+no new key/run was created, and no subsequent read is described as a new paid
+baseline. Actual Free facts stand separately from this inconclusive precondition.
+
+| Actual reader | Observed result and boundary |
+| --- | --- |
+| API through normal Dashboard client | Existing reviewer tab6434088 was fully reloaded. Fresh retailOps.subscription useQuery displayed Free/Active, stores1of1, catalog0of10, staff0of0 and orders0of50. This is actual API-backed UI proof, not an exported raw HTTP response or a separate current ownerCatalog response. Source uses /api/trpc through the configured API rewrite; the billing page has no subscription prefetch. |
+| Settings server | One real wrapper resolved/free/owner_billing_free after full reload, captured17:09:55.010–17:09:55.124Z (18:09:55 Africa/Lagos), same EwaTrade Review/Main store session. This is distinct from the client card and navigation. |
+| Hosted jobs | One run `run_06gs2i1cdod7s2jofuaa19vna2`, checked17:08:23.460Z, saved17:08:24Z. Actual checked/readOnly/scopeVerified, free/owner_billing_free, ownerPlanId=null; Production project/environment, clean e162 deployment and20261109.2 verified by the reviewed runner. No business write or reminder. |
+
+The jobs and browser reads are after the corrected Free observation's latest
+bound and before any requested restoration. The finite read window was reported
+complete to root immediately after capture, without holding Free for Git/docs.
+No current ownerCatalog period/status response was independently exported; the
+earlier Active UI and historical paid end remain context. No concrete restoration
+error was observed. Root owns the one normal Cover request and its result; active
+subscription, slot and OWNER guards still apply. No forced grant is authorized.
+
+Private mode0600 evidence: root's paid baseline screenshot/JSON and Free screen;
+`/private/tmp/ewatrade-coverage-settings-free-2026-11-09.png` and adjacent
+`.evidence.json`; phase-specific jobs receipt
+`/private/tmp/ewatrade-coverage-free-20261109-af1cd93f8526d605-released-free.evidence.json`;
+root's `/private/tmp/ewatrade-coverage-timing-correction-2026-11-09.private.json`.
+The original phase file and adjacent intent/handle are preserved unchanged.
+No purchase, provider setting, direct database write or new mobile artifact.
+The combined private receipt with original artifact hashes and explicit timing
+qualification is
+`/private/tmp/ewatrade-coverage-free-result-with-timing-correction-2026-11-09.evidence.json`.
+
+The earlier fresh-finish [observed pass](2026-11-09-build10-fresh-finish-observation.md)
+was captured before coverage feedback replaced it. The remaining sections retain
+the reviewed protocol and preparation history; they are not new action requests.
+
+Executed-result documentation checks: four-owned-document quick smoke passed
+51 tests/254 assertions plus QA tooling types; 12 relative links, private artifact
+modes/hashes, corrected facts and unchanged original phase/intent/handle/result
+assertions passed. Prior offline doctor/native source evidence is reused.
+Concurrent mobile, finance and catalog changes were excluded and preserved.
+These checks accept the evidence update, not restoration or the timing condition.
 
 This is a genuine product coverage scenario, not a simulated expiry. One reviewed
 Release phase may provide its I05 coverage evidence and the declared actual Free
@@ -111,7 +174,8 @@ Unapproved template:
 `/private/tmp/ewatrade-coverage-free-phase-template-2026-11-09.private.json`.
 All are mode0600. The template has reviewApproved=false and null baseline,
 Release and window times; it is not evidence that an action occurred. Invalid
-input is refused before environment/SDK loading. No active Free window exists.
+input is refused before environment/SDK loading. At preparation no active Free
+window existed; the executed observations and timing correction are recorded above.
 
 After root reviews the runner/effects/stop conditions, root alone requests the
 named owner action and confirms the fresh active-paid baseline and Release.

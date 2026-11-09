@@ -14,7 +14,14 @@ See the [fresh-finish receipt](2026-11-09-build10-fresh-finish-observation.md).
 The accepted actual Dashboard server read is now b0e29c66d; jobs retain
 e1626301d/version20261109.2 with accepted paid task-local evidence. The genuine
 [Release → Free → re-enroll case](2026-11-09-coverage-release-free-reenroll.md)
-and actual Free-reader window are prepared, not executed. Native scope switching,
+now has actual Free observations from the API-backed card, Settings server and
+one hosted read-only jobs task. Re-enrollment/restoration remains pending: the
+owner prioritized DeviceHub diagnosis before further billing acceptance and did
+not confirm Cover performed. No further action or probe is requested here. Root's
+Release timestamp was corrected from an estimate to an interval; the operator's
+two-minute baseline precondition is inconclusive, not a pass. Original run/input
+evidence is preserved with the correction; no repeat run is requested.
+Native scope switching,
 original-subscription management, wider paid lifecycle, retained populated-record
 limits and public/legal gates remain open. Apple remains **2/6 (33.3%)**.
 Earlier checkpoints below describe their historical state.

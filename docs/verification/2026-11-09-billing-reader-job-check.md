@@ -1,5 +1,32 @@
 # Hosted owner-plan read check — 9 November 2026
 
+## Later actual released-business Free read —9 November
+
+The existing unscheduled task ran once for the same original reviewer/business
+after the owner's separately reviewed Release. Run `run_06gs2i1cdod7s2jofuaa19vna2`
+checked at17:08:23.460Z (18:08:23.460 Africa/Lagos), saved17:08:24Z; actual result
+checked/readOnly/scopeVerified, planId=free, subscriptionSource=owner_billing_free,
+ownerPlanId=null. Runtime is the same verified Production project/environment,
+clean e162 deployment `deployment_3jikxtf8sh3urb4aeq15r`, version20261109.2.
+No reminder, business write, new purchase, source or deployment change.
+
+The private phase runner checked the exact known Production deployment before
+sending the strict two-identifier payload and saved exclusive intent/handle before
+inspection. Its original phase used root's supplied17:07:13Z Release confirmation,
+subsequently corrected as an estimate: actual Free observation is bounded
+17:07:07–17:07:42Z, baseline17:05:20–17:06:01Z. The <=120second precondition is
+**INCONCLUSIVE**. The actual Free output is preserved as read evidence, not a
+passing timing-guard receipt. No file was backdated/rewritten and no second run
+was created. Original paid task/handle/evidence remain unchanged.
+
+Private receipt:
+`/private/tmp/ewatrade-coverage-free-20261109-af1cd93f8526d605-released-free.evidence.json`;
+adjacent intent/handle and reviewed phase file; separate root correction
+`/private/tmp/ewatrade-coverage-timing-correction-2026-11-09.private.json`.
+See the [coverage case](2026-11-09-coverage-release-free-reenroll.md) for API-backed
+and actual Settings Free observations, limits and pending restoration. The paid
+checkpoint below remains historical; wider lifecycle acceptance is still open.
+
 Status: actual hosted reviewer Starter read accepted, and Preview default-off
 refusal accepted. Source `fc2b64f8d` is deployed in clean final candidate
 `e1626301dd3aef0925ac9cda3b2140c9cfc04012`. The prior
