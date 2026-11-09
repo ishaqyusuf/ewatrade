@@ -1,9 +1,10 @@
 # Dashboard server plan result — 9 November 2026
 
-Status: source preparation only; not deployed and no new live probe performed.
-Actual Dashboard SSR acceptance remains open until the reviewed candidate passes
-normal Preview, matching existing-data smoke and Production, followed by the
-existing authenticated reviewer check. Mobile release excluded. Apple2/6 remains.
+Status: deployed and actual authenticated Settings server paid-read accepted at
+14:21:03.995Z (15:21:03.995 Africa/Lagos), exact candidate
+`b0e29c66dc663e781a46989c3415beecd94c2694`. Normal Preview/matching existing-data
+smoke/Production and API health passed. Mobile release excluded. Apple2/6 remains;
+this closes only the licensed reviewer's Settings canonical server-read subcase.
 
 ## Evidence gap and alternatives
 
@@ -64,44 +65,78 @@ workspace, failed fresh read after success with no stale ID/source/error,
 no-context refusal to read, and launch_default distinct from owner coverage.
 It does not substitute a result marker for the canonical reader in runtime code.
 
-## Proposed normal rollout and actual-result check
+## Reviewed rollout and actual-result check
 
-Do not execute an unreviewed candidate. After coordinator review, pin the exact
-coherent clean candidate in the current checkout; preserve other chats' changes
-and do not use worktrees. Dashboard is the only changed deployable component.
-API/jobs/Marketing retain their verified candidates; no provider/config changes
-or repeated jobs diagnostic are needed for this source change.
+Coordinator reviewed exact clean b0. The existing normal Production dry plan
+revealed that a Git push rebuilds API and Marketing despite --only dashboard.
+Their existing normalized component closures differed from e162 only in four
+assistant impact metadata JSONs, with no executable source, config, manifest or
+lockfile change. Dashboard is the only runtime-code change. Coordinator reconciled
+the unavoidable API/Marketing rebuilds within the owner's existing normal rollout
+scope. Because metadata is inside the strict source closure, both were included
+in Preview qualification as well; no equivalence gate or provider Git setting was
+bypassed. Jobs/mobile stayed skipped, database up to date. No new provider/config
+change or repeated jobs diagnostic was needed.
 
-1. `bun run release --preview --only dashboard --mobile skip --yes`.
-2. `bun run qa:smoke --target preview --surface web --config .scratch/qa-release/smoke-preview.json`.
-   Require clean, passed, runtimeVerified receipt matching the exact candidate
-   and owned Ready Preview deployment. No sale/payment/fixture. Retry a failed
-   smoke with qa:smoke; do not deploy merely to retry a test.
-3. `bun run release --production --only dashboard --mobile skip --yes`.
-   Its shared executor retains clean-copy verification and matching-smoke gates.
-4. Independently verify canonical Dashboard ownership/Ready/Production/source.
-   Reuse the current signed-in reviewer session. Fully reload the existing
-   /settings/billing page once so a retained client layout cannot supply an older
-   marker, then read the existing wrapper's DOM attributes. Record observation
-   time, route, deployment/candidate and the finite server result. Verify the
-   reviewer/workspace through normal visible UI without exposing identifiers.
+1. `bun run qa:candidate` passed284/1813 for exact clean b0; the release hook
+   legitimately reused that fresh source receipt.
+2. `bun run release --preview --only dashboard,marketing,api --mobile skip --yes`
+   completed0. Its existing executor ran the matching existing-data web smoke
+   once with `.scratch/qa-release/smoke-preview.json`; no redundant rerun.
+3. `bun run release --production --only dashboard,marketing,api --mobile skip --yes`
+   accepted that matching receipt, completed0 and passed Production API health.
+4. Canonical alias metadata independently verified all three owned/READY/
+   Production/exactb0 at14:20:24.442Z. The existing reviewer session was fully
+   reloaded once at /settings/billing, then its actual DOM result was read.
 
-Expected paid acceptance requires resolved/starter/owner_subscription for the
-original still-covered licensed reviewer. If the genuine period has advanced,
-record the actual result and reconcile it with current policy; do not force
-Starter. Unavailable, absent, launch_default, wrong scope/runtime or a stale render
-does not close the paid SSR subcase. A legitimate resolved Free state can close a
-separately identified current Free-read observation, not the historical paid one.
-This marker proves the Settings canonical server read only; it does not independently
-prove the shell's optimized/joined navigation projection, native queue finishing
-or the remaining lifecycle/retained-data cases.
+Actual result at14:21:03.995Z: one server wrapper, read=resolved, planId=starter,
+source=owner_subscription. Fresh visible account menu matched the original
+reviewer email/Owner role and EwaTrade Review/Main store. The client card also
+showed Starter Active, ₦5,000/month, stores1of1. No duplicate login/reset, credential
+handling, direct database/Apple read, purchase, Restore, coverage write, grant or
+reminder occurred. Current signed-in user tab was preserved on billing.
 
-The single next device request remains with the coordinating chat: in installed10
-on the original owner/business, tap Manage store subscriptions once, inspect which
-Apple screen and original Starter subscription appear, record product/period/
-renewal state, then return. Stop if absent/ambiguous. No cancel, refund, purchase,
-Restore, release or Apple-account/tester switch. Owner handles system authentication
-directly. See the [build10 sequence](2026-11-09-build10-finish-and-lifecycle-sequence.md).
+This accepts the current licensed paid Settings canonical server read, rather
+than inferring it from API cards/navigation. It does not independently prove the
+shell's optimized/joined projection, native finishing, renewal, Free fallback or
+retained-data cases. Future unavailable/absent/launch_default/wrong-scope/stale
+results must not qualify; a legitimate later Free result must never be forced to
+Starter. The actual hosted jobs e162 proof remains valid unchanged runtime source
+and was not repeated.
+
+The coordinator's single Manage request was answered during rollout: Apple screen
+opens, original product absent; later owner reported no Sandbox entry found.
+Only link opening is accepted. Original subscription management/control provenance
+and native finish remain open; no account/tester/control change or duplicate phone
+request was made. See the [build10 observations](2026-11-09-build10-finish-and-lifecycle-sequence.md).
+
+## Exact connected evidence
+
+Preview smoke receipt:
+`.scratch/qa-release/smoke-b0e29c66dc663e781a46989c3415beecd94c2694-preview-web.json`.
+Passed14:10:32.782Z, clean/runtimeVerified, exactb0; QA login/account selection,
+populated catalog and sale draft/item/total passed, cancelled without submission.
+No sale, payment or fixture was created. Its runtime IDs are Dashboard and API
+in the table below. Marketing was independently Ready in the normal release.
+
+| Component | Ready Preview | Canonical Ready Production |
+| --- | --- | --- |
+| Dashboard | dpl_DXny5xjhbNT4JErB35NW5LMyMARq | dpl_97WwGQfoLsbFseFqt3YoQM1hkFhN |
+| Marketing | dpl_3gtchwcCLtJ6jqvxzRWpxMCZV9Sk | dpl_HkLpusDKrPiPdbFbBv62dN9iiZi8 |
+| API | dpl_64HsnXVaA5a5cHFnY6BqHUq7sta4 | dpl_ePJLRPxehAWYZJ6wEKxtSKm7U3ue |
+
+All bind exactb0. Preview API held the shared build slot after install/Prisma/
+bundling; Marketing queued then built normally. No failed smoke, retry deployment,
+manual promotion, rollback, checkout/worktree switch or candidate drift occurred.
+Both environment-name audits reported no missing settings; no value was changed.
+The existing clean-copy executor and normal Preview/main Git pushes were retained.
+
+Private mode0600 evidence uses `/private/tmp/ewatrade-server-plan-b0e29c66d-`:
+`production-identity.evidence.json`, `ssr.evidence.json`, both release logs,
+Production dry plan and the bounded Preview API build-log capture. The SSR record
+contains only finite result/display facts and scope-match booleans, no identity,
+cookie, signed receipt or credential. Source remained clean/pinned until final
+evidence documentation; temporary tracked-source hold closes after that commit.
 
 ## Source verification
 
@@ -118,7 +153,9 @@ directly. See the [build10 sequence](2026-11-09-build10-finish-and-lifecycle-seq
   environment setting was changed.
 
 Private local logs use `/private/tmp/ewatrade-settings-plan-read-` with types,
-quick and h01 dated2026-11-09 suffixes. These checks do not replace the proposed
-candidate-bound Preview and actual authenticated Production read. Brain impact:
+quick and h01 dated2026-11-09 suffixes. Candidate-bound release/runtime evidence
+above supplements, rather than expands, the source-check scope. Final evidence-only
+edits received link and diff checks; no repeat source/device/provider matrix.
+Brain impact:
 local `.brain/features/owner-wide-billing.md`, `.brain/features/native-store-billing.md`
 and `.brain/tasks/in-progress.md`. No schema/API/domain contract changes.

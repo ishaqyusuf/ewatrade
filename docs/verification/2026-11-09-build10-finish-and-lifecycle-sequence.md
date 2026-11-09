@@ -1,10 +1,11 @@
 # Build10 finishing evidence and remaining owner sequence — 9 November 2026
 
-Preparation only. No new device action, provider request, database query, purchase,
-Restore, release, build, OTA or deployment occurred. Apple remains **2/6**.
-Root/source owns the single pending Dashboard password sign-in; this packet adds
-no question or immediate phone action. It supplies the next cases after that
-handoff, individually, rather than authorizing a batch of provider changes.
+Source audit complete; later owner Manage observations are partial, recorded below.
+No new native source/build/OTA, purchase, Restore, release or provider-control
+change was made. Apple remains **2/6**. Dashboard sign-in is complete and its
+[actual server paid read](2026-11-09-dashboard-server-plan-result.md) is accepted.
+Root/source owns device handoffs; this packet adds no duplicate question or batch
+authorization for provider/account changes.
 
 ## Exact candidate and saved evidence
 
@@ -16,8 +17,9 @@ IPA SHA256 `eb80bdb6c4bf52a93ab27ea4fe6cc52fec3c7a4bd1a201f33dfbaa9c00b63354`,
 valid signature, linked StoreKit/native IAP and Production origins. The saved
 distribution entitlement has get-task-allow false. This audit did not re-inspect
 the connected phone, archive or signature. Last accepted live backend is
-`e1626301dd3aef0925ac9cda3b2140c9cfc04012`; later local/source changes do not replace
-either deployed candidate.
+`b0e29c66dc663e781a46989c3415beecd94c2694` after the normal reviewed web/API rollout;
+jobs retain unchanged e162/version20261109.2. That web-only rollout does not replace
+the installed native candidate or publish later mobile source.
 
 The pinned dependency is expo-iap3.4.13; package.json and bun.lock are unchanged
 from build10. The installed dependency version agrees. The reconciliation helper
@@ -37,6 +39,36 @@ Default TestFlight renewal is daily; controlled Sandbox renewal settings differ.
 The saved24-hour period is consistent with that default, but is not Apple-account
 identity proof. Our appAccountToken binds the EwaTrade owner; it does not identify
 the Apple login or prove that this chain has the Sandbox tester's failure controls.
+
+## Owner Manage observations — 9 November
+
+The coordinator relayed the owner's single installed-app check: Manage opens
+Apple's subscriptions screen, but this product is not listed. Only link opening
+is accepted; original Starter identity, period and management controls were not
+located. The subsequent conditional existing-Sandbox inspection was answered
+“I don't see any sandbox here.” Record only that no Sandbox entry was found;
+Developer availability, signed-in tester and original-chain attribution are not
+thereby established. No sign-in/out, Developer Mode/UI Automation toggle, tester
+switch, history clear, new purchase, Restore, release, cancel or refund occurred.
+
+This is consistent with build10 opening the universal subscriptions URL, rather
+than embedded Sandbox controls; it does not prove receipt loss or account mismatch.
+Apple's [TestFlight guidance](https://developer.apple.com/help/app-store-connect/test-a-beta-version/testing-subscriptions-and-in-app-purchases-in-testflight/)
+confirms automatic Sandbox and daily default renewals. Accessing tester controls
+requires a Sandbox Apple Account; that is distinct from this chain's verified
+environment. The [Sandbox testing guide](https://developer.apple.com/documentation/storekit/testing-in-app-purchases-with-sandbox)
+documents Media & Purchases sign-out and Sandbox sign-in for TestFlight controls,
+and attributes subsequent TestFlight purchases to the ordinary Apple Account
+again when Media & Purchases is signed back in. Those identity changes were not
+requested or performed to make this subscription appear. The
+[auto-renew test guide](https://developer.apple.com/documentation/storekit/testing-disabling-auto-renew)
+locates an already signed-in tester's management under Settings/Developer/Sandbox
+Account/Manage; its cancellation action is outside these observations.
+
+Preserve the original signed chain and its historical24-hour period. No Sandbox
+control is assumed from appAccountToken, the word Sandbox, public-list absence or
+wireless device connectivity. Native finishing and management/lifecycle cases
+remain open; the coordinator owns any next precise device/access decision.
 
 ## What build10 actually does
 
@@ -123,7 +155,7 @@ by this preparation.
 
 ## Correct expected expiry and courtesy facts
 
-Livee162 apple-subscriptions.ts215–260 requires fully verified status/renewal facts.
+Apple verifier source, unchanged e162→liveb0, requires fully verified status/renewal facts.
 The five-day contribution is anchored to last paid expiresDate, never lookup time;
 it requires billing retry/grace status, isInBillingRetryPeriod=true,
 expirationIntent=BILLING_ERROR, autoRenewStatus=1 and no revocation. Voluntary
@@ -140,14 +172,16 @@ planId=free/source=owner_billing_free with ownerPlanId=starter can be correct.
 Do not "repair" that retained tier into a loss of existing-record access, and do
 not mistake it for paid capacity. Voluntary Release changes enrollment and is a
 different case from lapse. Exact source: retail-ops-subscriptions.ts withOwnerBusinessCoverage
-and owner-billing/policy.ts projectOwnerBusinessAccess; unchanged from livee162.
+and owner-billing/policy.ts projectOwnerBusinessAccess; unchanged e162→liveb0.
 
 ## Verification and remaining acceptance
 
 Saved-proof assertions bind the exact native artifact, dependency pin, unchanged
 helper/test bytes, zero-line capture and saved Restore outcome. Source audit is
 `/private/tmp/ewatrade-build10-finish-lifecycle-source-audit-2026-11-09.evidence.json`.
-No new physical or provider-control subcase closes from this review. Existing
+The source audit itself closed no physical/provider-control subcase. Later owner
+observations above accept only Manage link opening, not original-subscription
+management or queue finishing. Existing
 source ordering/lifetime safeguards are reused; existing cancellation/recovery/
 enrollment/Restore/jobs acceptance is preserved. Offline doctor passed. Quick smoke scoped to exactly the two owned documentation
 paths passed51tests/254assertions plus QA tooling types; unrelated mobile-age work
@@ -156,5 +190,6 @@ No source/native test was rerun. These checks qualify this documentation only.
 
 Brain impact: `.brain/features/native-store-billing.md` and
 `.brain/tasks/in-progress.md` updated locally. No source, schema, API, permission,
-provider setting, legal snapshot or deployment changed by this work. Root owns shared legal and
+provider setting or legal snapshot changed by this packet. The separate web/API
+rollout is recorded in the linked actual-server-read receipt. Root owns shared legal and
 input reconciliation; its paid publication gate remains intact.
