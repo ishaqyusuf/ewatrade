@@ -1,0 +1,523 @@
+plan,product_id,base_plan_id,country,displayed_price,status,grace_days,automatic_hold_days,available_for_launch
+starter,com.ewatrade.owner.starter.monthly,monthly,Algeria,DZD 500.00,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Argentina,"ARS 6,900.00",DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Australia,AUD 6.99,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Austria,EUR 4.79,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Azerbaijan,AZN 7.49,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Bahrain,USD 4.89,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Bangladesh,BDT 650.00,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Belgium,EUR 4.79,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Bermuda,USD 4.49,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Bolivia,BOB 52.99,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Brazil,BRL 24.99,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,British Virgin Islands,USD 4.49,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Bulgaria,EUR 4.79,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Cambodia,USD 4.49,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Cameroon,"XAF 2,600",DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Canada,CAD 6.49,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Cayman Islands,USD 4.49,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Chile,"CLP 5,200",DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Colombia,"COP 14,500",DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Costa Rica,"CRC 2,000.00",DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Croatia,EUR 4.99,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Cyprus,EUR 4.69,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Czechia,CZK 119.99,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Côte d’Ivoire,"XOF 2,600",DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Denmark,DKK 37.00,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Ecuador,USD 4.49,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Egypt,EGP 229.99,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,El Salvador,USD 4.49,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Estonia,EUR 4.89,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Ethiopia,ETB 599.00,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Finland,EUR 4.99,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,France,EUR 4.79,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Georgia,GEL 14.00,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Germany,EUR 4.69,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Ghana,GHS 50.00,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Gibraltar,GBP 3.29,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Greece,EUR 4.89,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Hong Kong,HKD 34.90,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Hungary,"HUF 1,799",DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,India,INR 490.00,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Indonesia,"IDR 80,000",DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Iraq,"IQD 6,700",DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Ireland,EUR 4.89,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Israel,ILS 14.00,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Italy,EUR 4.89,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Japan,JPY 780,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Jordan,JOD 3.150,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Kazakhstan,"KZT 2,290.00",DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Kenya,KES 600.00,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Kuwait,USD 4.49,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Latvia,EUR 4.79,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Liechtenstein,CHF 3.90,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Lithuania,EUR 4.79,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Luxembourg,EUR 4.69,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Macao,MOP 35.99,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Malaysia,MYR 19.99,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Mexico,MXN 95.00,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Micronesia,USD 4.49,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Monaco,EUR 4.79,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Mongolia,"MNT 16,000.00",DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Morocco,MAD 43.99,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Myanmar (Burma),"MMK 9,000",DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Netherlands,EUR 4.79,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,New Zealand,NZD 8.99,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Nigeria,"NGN 5,000.00",DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Norway,NOK 55.00,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Oman,USD 4.69,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Pakistan,"PKR 1,250.00",DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Panama,USD 4.49,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Paraguay,"PYG 30,000",DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Peru,PEN 14.99,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Philippines,PHP 315.00,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Poland,PLN 21.99,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Portugal,EUR 4.89,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Qatar,QAR 16.00,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Romania,RON 25.99,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Russia,RUB 369.00,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,San Marino,EUR 3.99,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Saudi Arabia,SAR 18.99,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Senegal,"XOF 2,600",DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Serbia,RSD 549,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Singapore,SGD 5.99,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Slovakia,EUR 4.89,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Slovenia,EUR 4.89,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,South Africa,ZAR 69.99,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,South Korea,"KRW 6,500",DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Spain,EUR 4.79,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Sri Lanka,"LKR 1,475.00",DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Sweden,SEK 55.00,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Switzerland,CHF 3.60,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Taiwan,TWD 150.00,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Tanzania,"TZS 10,000.00",DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Thailand,THB 150.00,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Turks & Caicos Islands,USD 4.49,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Türkiye,TRY 269.99,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Ukraine,UAH 239.99,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,United Arab Emirates,AED 16.99,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,United Kingdom,GBP 3.99,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,United States,USD 4.49,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Uzbekistan,"UZS 59,770.00",DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Vatican City,EUR 3.99,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Vietnam,"VND 114,000",DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Albania,USD 5.49,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Angola,USD 3.69,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Antigua & Barbuda,USD 4.49,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Armenia,USD 4.49,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Aruba,USD 4.49,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Bahamas,USD 4.49,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Belarus,USD 5.49,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Belize,USD 4.49,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Bosnia & Herzegovina,USD 4.49,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Botswana,USD 3.69,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Cape Verde,USD 3.69,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Chad,USD 3.69,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Comoros,USD 3.69,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Congo - Brazzaville,USD 3.69,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Congo - Kinshasa,USD 3.69,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Djibouti,USD 3.69,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Dominica,USD 4.49,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Dominican Republic,USD 4.49,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Eritrea,USD 3.69,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Fiji,USD 4.49,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Gambia,USD 3.69,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Grenada,USD 4.49,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Guatemala,USD 4.49,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Guinea,USD 3.69,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Haiti,USD 4.49,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Honduras,USD 4.49,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Jamaica,USD 4.49,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Kyrgyzstan,USD 4.49,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Laos,USD 4.49,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Lebanon,USD 4.49,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Liberia,USD 3.69,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Libya,USD 3.69,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Maldives,USD 4.49,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Mauritius,USD 3.69,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Moldova,USD 5.49,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Mozambique,USD 3.69,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Namibia,USD 3.69,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Nepal,USD 4.99,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Nicaragua,USD 4.49,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,North Macedonia,USD 5.49,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Papua New Guinea,USD 4.49,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Rwanda,USD 3.69,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Samoa,USD 4.49,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Seychelles,USD 3.69,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Sierra Leone,USD 3.69,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Solomon Islands,USD 4.49,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Somalia,USD 3.69,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,St. Kitts & Nevis,USD 4.49,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,St. Lucia,USD 4.49,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Suriname,USD 4.49,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Tajikistan,USD 4.49,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Tonga,USD 4.49,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Trinidad & Tobago,USD 4.49,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Tunisia,USD 3.69,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Turkmenistan,USD 4.49,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Uganda,USD 4.39,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Uruguay,USD 4.49,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Vanuatu,USD 4.49,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Venezuela,USD 4.49,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Yemen,USD 4.49,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Zambia,USD 3.69,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Zimbabwe,USD 3.69,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Benin,EUR 3.29,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Burkina Faso,EUR 3.29,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Central African Republic,EUR 3.29,DRAFT,5,55,False
+starter,com.ewatrade.owner.starter.monthly,monthly,Gabon,EUR 3.29,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Guinea-Bissau,EUR 3.29,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Iceland,EUR 4.89,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Mali,EUR 3.29,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Malta,EUR 4.69,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Niger,EUR 3.29,DRAFT,5,55,True
+starter,com.ewatrade.owner.starter.monthly,monthly,Togo,EUR 3.29,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Algeria,"DZD 1,525.00",DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Argentina,"ARS 20,600.00",DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Australia,AUD 20.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Austria,EUR 13.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Azerbaijan,AZN 22.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Bahrain,USD 14.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Bangladesh,"BDT 1,900.00",DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Belgium,EUR 13.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Bermuda,USD 12.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Bolivia,BOB 159.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Brazil,BRL 73.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,British Virgin Islands,USD 12.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Bulgaria,EUR 13.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Cambodia,USD 12.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Cameroon,"XAF 7,800",DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Canada,CAD 18.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Cayman Islands,USD 12.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Chile,"CLP 15,500",DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Colombia,"COP 43,500",DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Costa Rica,"CRC 6,000.00",DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Croatia,EUR 14.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Cyprus,EUR 13.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Czechia,CZK 349.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Côte d’Ivoire,"XOF 7,700",DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Denmark,DKK 109.00,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Ecuador,USD 12.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Egypt,EGP 689.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,El Salvador,USD 12.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Estonia,EUR 14.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Ethiopia,"ETB 1,799.00",DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Finland,EUR 14.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,France,EUR 13.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Georgia,GEL 39.00,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Germany,EUR 13.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Ghana,GHS 160.00,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Gibraltar,GBP 9.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Greece,EUR 14.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Hong Kong,HKD 108.00,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Hungary,"HUF 5,499",DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,India,"INR 1,500.00",DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Indonesia,"IDR 239,000",DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Iraq,"IQD 20,150",DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Ireland,EUR 14.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Israel,ILS 42.90,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Italy,EUR 14.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Japan,"JPY 2,320",DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Jordan,JOD 9.450,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Kazakhstan,"KZT 6,990.00",DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Kenya,"KES 1,700.00",DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Kuwait,USD 12.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Latvia,EUR 13.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Liechtenstein,CHF 12.00,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Lithuania,EUR 13.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Luxembourg,EUR 13.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Macao,MOP 108.00,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Malaysia,MYR 58.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Mexico,MXN 289.00,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Micronesia,USD 12.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Monaco,EUR 13.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Mongolia,"MNT 48,100.00",DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Morocco,MAD 129.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Myanmar (Burma),"MMK 28,000",DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Netherlands,EUR 13.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,New Zealand,NZD 26.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Nigeria,"NGN 15,000.00",DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Norway,NOK 159.00,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Oman,USD 13.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Pakistan,"PKR 3,700.00",DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Panama,USD 12.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Paraguay,"PYG 90,000",DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Peru,PEN 45.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Philippines,PHP 945.00,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Poland,PLN 64.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Portugal,EUR 14.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Qatar,QAR 49.00,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Romania,RON 74.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Russia,"RUB 1,099.00",DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,San Marino,EUR 11.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Saudi Arabia,SAR 57.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Senegal,"XOF 7,700",DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Serbia,"RSD 1,699",DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Singapore,SGD 18.98,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Slovakia,EUR 14.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Slovenia,EUR 14.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,South Africa,ZAR 209.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,South Korea,"KRW 20,000",DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Spain,EUR 13.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Sri Lanka,"LKR 4,450.00",DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Sweden,SEK 165.00,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Switzerland,CHF 11.00,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Taiwan,TWD 460.00,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Tanzania,"TZS 29,000.00",DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Thailand,THB 475.00,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Turks & Caicos Islands,USD 12.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Türkiye,TRY 799.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Ukraine,UAH 729.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,United Arab Emirates,AED 50.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,United Kingdom,GBP 11.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,United States,USD 12.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Uzbekistan,"UZS 179,300.00",DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Vatican City,EUR 11.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Vietnam,"VND 341,000",DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Albania,USD 15.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Angola,USD 10.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Antigua & Barbuda,USD 12.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Armenia,USD 12.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Aruba,USD 12.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Bahamas,USD 12.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Belarus,USD 15.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Belize,USD 12.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Bosnia & Herzegovina,USD 12.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Botswana,USD 10.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Cape Verde,USD 10.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Chad,USD 10.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Comoros,USD 10.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Congo - Brazzaville,USD 10.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Congo - Kinshasa,USD 10.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Djibouti,USD 10.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Dominica,USD 12.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Dominican Republic,USD 12.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Eritrea,USD 10.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Fiji,USD 12.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Gambia,USD 10.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Grenada,USD 12.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Guatemala,USD 12.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Guinea,USD 10.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Haiti,USD 12.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Honduras,USD 12.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Jamaica,USD 12.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Kyrgyzstan,USD 12.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Laos,USD 12.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Lebanon,USD 12.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Liberia,USD 10.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Libya,USD 10.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Maldives,USD 12.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Mauritius,USD 10.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Moldova,USD 15.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Mozambique,USD 10.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Namibia,USD 10.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Nepal,USD 14.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Nicaragua,USD 12.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,North Macedonia,USD 15.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Papua New Guinea,USD 12.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Rwanda,USD 10.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Samoa,USD 12.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Seychelles,USD 10.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Sierra Leone,USD 10.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Solomon Islands,USD 12.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Somalia,USD 10.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,St. Kitts & Nevis,USD 12.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,St. Lucia,USD 12.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Suriname,USD 12.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Tajikistan,USD 12.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Tonga,USD 12.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Trinidad & Tobago,USD 12.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Tunisia,USD 10.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Turkmenistan,USD 12.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Uganda,USD 12.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Uruguay,USD 12.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Vanuatu,USD 12.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Venezuela,USD 12.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Yemen,USD 12.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Zambia,USD 10.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Zimbabwe,USD 10.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Benin,EUR 9.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Burkina Faso,EUR 9.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Central African Republic,EUR 9.99,DRAFT,5,55,False
+growth,com.ewatrade.owner.growth.monthly,monthly,Gabon,EUR 9.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Guinea-Bissau,EUR 9.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Iceland,EUR 14.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Mali,EUR 9.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Malta,EUR 13.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Niger,EUR 9.99,DRAFT,5,55,True
+growth,com.ewatrade.owner.growth.monthly,monthly,Togo,EUR 9.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Algeria,"DZD 3,025.00",DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Argentina,"ARS 41,300.00",DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Australia,AUD 42.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Austria,EUR 28.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Azerbaijan,AZN 44.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Bahrain,USD 28.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Bangladesh,"BDT 3,800.00",DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Belgium,EUR 28.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Bermuda,USD 26.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Bolivia,BOB 314.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Brazil,BRL 144.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,British Virgin Islands,USD 26.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Bulgaria,EUR 28.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Cambodia,USD 26.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Cameroon,"XAF 15,600",DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Canada,CAD 37.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Cayman Islands,USD 26.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Chile,"CLP 31,100",DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Colombia,"COP 87,000",DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Costa Rica,"CRC 12,000.00",DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Croatia,EUR 29.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Cyprus,EUR 27.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Czechia,CZK 699.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Côte d’Ivoire,"XOF 15,400",DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Denmark,DKK 225.00,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Ecuador,USD 26.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Egypt,"EGP 1,349.99",DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,El Salvador,USD 26.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Estonia,EUR 29.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Ethiopia,"ETB 3,599.00",DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Finland,EUR 29.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,France,EUR 28.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Georgia,GEL 79.00,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Germany,EUR 27.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Ghana,GHS 310.00,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Gibraltar,GBP 19.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Greece,EUR 29.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Hong Kong,HKD 209.00,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Hungary,"HUF 10,999",DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,India,"INR 2,950.00",DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Indonesia,"IDR 479,000",DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Iraq,"IQD 40,300",DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Ireland,EUR 28.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Israel,ILS 85.00,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Italy,EUR 28.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Japan,"JPY 4,640",DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Jordan,JOD 18.950,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Kazakhstan,"KZT 13,990.00",DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Kenya,"KES 3,400.00",DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Kuwait,USD 26.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Latvia,EUR 28.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Liechtenstein,CHF 24.00,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Lithuania,EUR 28.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Luxembourg,EUR 27.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Macao,MOP 218.00,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Malaysia,MYR 114.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Mexico,MXN 579.00,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Micronesia,USD 26.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Monaco,EUR 28.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Mongolia,"MNT 96,100.00",DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Morocco,MAD 259.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Myanmar (Burma),"MMK 56,000",DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Netherlands,EUR 28.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,New Zealand,NZD 54.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Nigeria,"NGN 30,000.00",DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Norway,NOK 315.00,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Oman,USD 27.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Pakistan,"PKR 7,400.00",DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Panama,USD 26.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Paraguay,"PYG 175,000",DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Peru,PEN 90.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Philippines,"PHP 1,900.00",DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Poland,PLN 129.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Portugal,EUR 28.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Qatar,QAR 97.00,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Romania,RON 154.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Russia,"RUB 2,199.00",DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,San Marino,EUR 23.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Saudi Arabia,SAR 114.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Senegal,"XOF 15,400",DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Serbia,"RSD 3,399",DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Singapore,SGD 36.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Slovakia,EUR 28.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Slovenia,EUR 28.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,South Africa,ZAR 424.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,South Korea,"KRW 40,000",DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Spain,EUR 28.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Sri Lanka,"LKR 8,875.00",DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Sweden,SEK 329.00,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Switzerland,CHF 22.00,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Taiwan,TWD 920.00,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Tanzania,"TZS 59,000.00",DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Thailand,THB 950.00,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Turks & Caicos Islands,USD 26.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Türkiye,"TRY 1,609.99",DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Ukraine,"UAH 1,449.99",DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,United Arab Emirates,AED 104.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,United Kingdom,GBP 23.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,United States,USD 26.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Uzbekistan,"UZS 358,600.00",DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Vatican City,EUR 23.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Vietnam,"VND 682,000",DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Albania,USD 31.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Angola,USD 21.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Antigua & Barbuda,USD 26.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Armenia,USD 26.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Aruba,USD 26.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Bahamas,USD 26.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Belarus,USD 31.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Belize,USD 26.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Bosnia & Herzegovina,USD 26.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Botswana,USD 21.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Cape Verde,USD 21.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Chad,USD 21.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Comoros,USD 21.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Congo - Brazzaville,USD 21.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Congo - Kinshasa,USD 21.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Djibouti,USD 21.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Dominica,USD 26.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Dominican Republic,USD 26.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Eritrea,USD 21.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Fiji,USD 26.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Gambia,USD 21.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Grenada,USD 26.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Guatemala,USD 26.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Guinea,USD 21.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Haiti,USD 26.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Honduras,USD 26.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Jamaica,USD 26.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Kyrgyzstan,USD 26.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Laos,USD 26.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Lebanon,USD 26.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Liberia,USD 21.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Libya,USD 21.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Maldives,USD 26.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Mauritius,USD 21.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Moldova,USD 31.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Mozambique,USD 21.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Namibia,USD 21.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Nepal,USD 29.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Nicaragua,USD 26.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,North Macedonia,USD 31.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Papua New Guinea,USD 26.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Rwanda,USD 21.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Samoa,USD 26.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Seychelles,USD 21.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Sierra Leone,USD 21.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Solomon Islands,USD 26.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Somalia,USD 21.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,St. Kitts & Nevis,USD 26.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,St. Lucia,USD 26.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Suriname,USD 26.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Tajikistan,USD 26.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Tonga,USD 26.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Trinidad & Tobago,USD 26.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Tunisia,USD 21.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Turkmenistan,USD 26.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Uganda,USD 25.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Uruguay,USD 26.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Vanuatu,USD 26.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Venezuela,USD 26.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Yemen,USD 26.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Zambia,USD 21.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Zimbabwe,USD 21.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Benin,EUR 19.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Burkina Faso,EUR 19.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Central African Republic,EUR 19.99,DRAFT,5,55,False
+pro,com.ewatrade.owner.pro.monthly,monthly,Gabon,EUR 19.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Guinea-Bissau,EUR 19.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Iceland,EUR 29.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Mali,EUR 19.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Malta,EUR 27.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Niger,EUR 19.99,DRAFT,5,55,True
+pro,com.ewatrade.owner.pro.monthly,monthly,Togo,EUR 19.99,DRAFT,5,55,True

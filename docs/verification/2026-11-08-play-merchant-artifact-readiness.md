@@ -1,13 +1,14 @@
 # Play merchant, artifact and Data safety readiness — 8 November 2026
 
-9 November current readback: the fresh-page price retry now saves all three
-existing `monthly` base plans as inactive Drafts. Full reload verifies Nigeria
-Starter NGN5,000 / Growth NGN15,000 / Pro NGN30,000, monthly auto-renew, five-day
-grace and automatic 55-day account hold. Only Nigeria is currently configured in
-these minimal drafts; international plan tables and paid acceptance remain open.
-No activation, charge or rollout. Google case `6-1181000042003` remains Open;
-no root cause or case closure is inferred. The older failed/unsaved observations
-below remain historical. [Current retry receipt](2026-11-09-play-price-save-retry.md).
+9 November current readback: all three inactive `monthly` Draft base plans now
+have saved/reloaded international prices, five-day grace and automatic 55-day
+hold. Nigeria is exactly NGN5,000/15,000/30,000. App targets and all three available
+country sets are aligned at 173 named markets; New countries and Rest of World
+remain off. The 522 stored prices include 519 available prices and three retained,
+unavailable Central African Republic prices. Country compliance, merchant,
+activation, runtime, legal/privacy and signed money acceptance remain open.
+Google case `6-1181000042003` was last read Open; no cause or closure is inferred.
+Earlier unsaved/Nigeria-only observations below are historical. [Current regional receipt](2026-11-09-play-regional-plans.md).
 
 ## Verified current state
 

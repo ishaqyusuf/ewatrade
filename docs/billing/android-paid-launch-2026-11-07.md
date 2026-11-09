@@ -1,19 +1,21 @@
 # Android paid-at-launch continuation — 7 November 2026
 
-9 November current readback: the fresh-page price retry now saves all three
-existing `monthly` base plans as inactive Drafts. Full reload verifies Nigeria
-Starter NGN5,000 / Growth NGN15,000 / Pro NGN30,000, monthly auto-renew, five-day
-grace and automatic 55-day account hold. Only Nigeria is currently configured in
-these minimal drafts; international plan tables and paid acceptance remain open.
-No activation, charge or rollout. Google case `6-1181000042003` remains Open;
-no root cause or case closure is inferred. The older failed/unsaved observations
-below remain historical. [Current retry receipt](../verification/2026-11-09-play-price-save-retry.md).
+9 November current readback: all three inactive `monthly` Draft base plans now
+have saved/reloaded international prices, five-day grace and automatic 55-day
+hold. Nigeria is exactly NGN5,000/15,000/30,000. App targets and all three available
+country sets are aligned at 173 named markets; New countries and Rest of World
+remain off. The 522 stored prices include 519 available prices and three retained,
+unavailable Central African Republic prices. Country compliance, merchant,
+activation, runtime, legal/privacy and signed money acceptance remain open.
+Google case `6-1181000042003` was last read Open; no cause or closure is inferred.
+Earlier unsaved/Nigeria-only observations below are historical. [Current regional receipt](../verification/2026-11-09-play-regional-plans.md).
 
 Current shared decisions and next phases: [mobile paid launch](mobile-paid-launch.md).
 The owner's later broad-international-launch preference supersedes Nigeria-first.
 The Nigeria-only Console save below is historical. It has been replaced with a
-saved, unsubmitted177-named-country draft; Rest of World is excluded. Paid territory
-readiness and country requirements must be accepted before submission.
+saved, unsubmitted 173-named-country draft after matching the available paid
+markets; Rest of World is excluded. Country requirements and final paid
+readiness must still be accepted before submission.
 Manual native addresses, existing support/founders contacts and publication after
 approval/checks remain approved. Coordinate shared work with the Apple chat.
 
@@ -66,7 +68,7 @@ within each row must be reused only where source/platform/target still match.
 | --- | --- | --- |
 | A01 Console/artifact/device identity | Accepted historical baseline | Correct app/package and prior signed artifact/device established; freeze and re-identify the new paid candidate before release. |
 | A02 API/access availability | Open | October quota outage was subsequently restored; don't repeat the obsolete outage diagnosis. Fresh target/candidate access proof is still required. Legal/deletion preflight passed 7 November. |
-| A03 Offers and Play merchant readiness | Open | 8 November: owner linked the existing organization merchant profile; payout bank setup is explicitly deferred. Owner-approved AAB36 processed and saved to the existing internal-testing draft; subscription creation unlocked. Three Apple-matching product IDs are saved, each with0 active base plans. Starter monthly/five-day form save returns a generic Console error; no saved base plan, accepted localized price table or offer mapping is claimed. Tax/bank readiness and eligible offers remain open. |
+| A03 Offers and Play merchant readiness | Open | 9 November: organization profile linked, bank deferred. Three actual monthly base plans are saved as inactive Drafts, five-day grace/automatic55-day hold, with exact Nigeria prices and 173 available markets matching app targeting. The 522 stored prices include three retained/unavailable CAR rows. Merchant/tax/country requirements, final activation and actual runtime/offer acceptance remain open; see the current regional receipt above. |
 | A04 Server/provider/terms | Open | Verification, owner purchase reconciliation, RTDN/void/refund and privacy guards exist. Need authenticated target outcomes and paid legal publication; current public copy still says no software subscriptions. |
 | A05 Paid entitlements/native integration | Open | Durable adapter, native lifetime/coverage controls, shared nullable limits, versioned signup and non-destructive downgrade are implemented in source. Existing grants remain independent. Native visual/signed and exact-target acceptance remain open. |
 | A06 Signed candidate/money acceptance | Open | Prior free/local and Play33/35 evidence is insufficient for paid purchase, restore, replacement, renewal, failed renewal, cancellation, refund and account/business switching. |
