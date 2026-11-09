@@ -109,16 +109,23 @@ An active item being restorable does not prove finishing failed.
 No saved evidence contains a native finish-return or unfinished-queue observation.
 The original private native-runtime JSONL capture has zero lines. Server verification,
 Starter, slot1 and an Apple success sheet do not prove StoreKit finishing. An exact
-fresh success-message branch could support a bridge-return inference, but not queue
-emptiness; stale messages or a later successful receipt can hide earlier outcomes.
-The owner did not report such a scoped branch, so it remains open.
+fresh current-lifetime message can accept at least one awaited native finish-return;
+global queue emptiness is not a prerequisite for that bounded subcase. True process
+termination clears its local state; merely leaving the screen does not. Success
+can overwrite another callback's failure and names no transaction ID. The
+[fresh-launch protocol](2026-11-09-build10-fresh-finish-observation.md) records exact
+success/failure branches and limits. The coordinator has issued its single owner
+action; result remains pending, not accepted from source alone.
 
 The SDK contains getPendingTransactionsIOS, but build10 app source has no caller or
 viewer. No StoreKit refund-sheet entry point is present either. Native logging
 defaults off outside DEBUG, and no enabling override was found in the app; no
-retrospective SDK log is promised. Existing signed-device/console access would
-need to provide a matching observation. Otherwise a future diagnostic build needs
-its own explicit mobile authorization, which is currently excluded.
+retrospective SDK log is promised. A fresh branch observation can satisfy the
+bounded finish-return case without a new build. Exact transaction correlation or
+global queue inventory would need its own evidence if separately required; do not
+invent that stronger requirement as a reason to leave a positive finish-return
+case open. A future native diagnostic or refund entry point remains separately
+authorized work; mobile publication is currently excluded.
 
 Do not call clearTransactionIOS, finish from an ad-hoc bridge, or Apple's server
 [Finish Transaction endpoint](https://developer.apple.com/documentation/appstoreserverapi/finish-transaction)
