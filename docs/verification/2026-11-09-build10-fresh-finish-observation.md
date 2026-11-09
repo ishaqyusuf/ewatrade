@@ -1,9 +1,40 @@
 # Build10 fresh native finish-return observation — 9 November 2026
 
-Status: source-backed protocol prepared; physical result pending. The coordinator
-has already issued the single owner action below. Do not ask it again. No native,
-database or provider call, purchase, Restore, mobile change/build or deployment
-was made in preparing this packet. Apple remains2/6 (33.3%).
+Status: **OBSERVED PASS for the bounded native finish-return subcase**. On
+9 November,17:51–17:52 Africa/Lagos (16:51–16:52Z), the source-chat coordinator
+viewed the physical phone through DeviceHub and recorded the exact success message
+after the owner's confirmed fresh close/reopen. No new purchase, manual Restore,
+coverage change, mobile build or deployment was performed for this observation.
+Normal startup recovery can verify and finish an existing purchase. Broader I05
+and lifecycle acceptance remain open; Apple remains2/6 (33.3%).
+
+## Physical observation and provenance
+
+The owner answered “ready” after the coordinator's single instruction to terminate
+the app in the app switcher and reopen installed signed10 under the original
+reviewer/EwaTrade Review business. Termination and unchanged identity are attributed
+to that completed owner instruction, not independently inferred from a screenshot.
+The coordinator then saw the live exact text:
+
+> Your store subscription has been verified. Review this business's current plan and coverage below.
+
+The same screen showed Release this business; Starter$3.99, Growth$9.99 and Pro$22.99
+monthly offers; Restore purchases, Manage store subscriptions, Terms and Privacy.
+The current top plan card, slot count and business identity header were outside
+the captured view. No new claim about those values follows from this image.
+The Release control alone does not prove the paid period remains active.
+
+This accepts at least one mapped, authenticated current-lifetime reconciliation
+whose native finish promise returned successfully, using the pinned source proof
+below. It does not establish an exact transaction ID, that all callbacks finished,
+an empty unfinished queue or the first historical finish. Refresh promises fulfilled;
+fresh current plan/coverage requires its separate visible/server evidence.
+
+Private mode0600 screenshot, with hardware inspector hidden:
+`/private/tmp/ewatrade-build10-fresh-finish-2026-11-09.png`.
+Distinct observed receipt, including screenshot hash and attribution:
+`/private/tmp/ewatrade-build10-fresh-finish-observed-2026-11-09.evidence.json`.
+The earlier source-audit receipt remains unchanged. Do not repeat the phone action.
 
 ## Accepted scope and exact candidate
 
@@ -66,7 +97,7 @@ Two important qualifications:
   plan/coverage separately; native finish-return does not require pretending that
   cache invalidation proves a fresh subscription snapshot.
 
-## Single controlled owner action — already requested by coordinator
+## Single controlled owner action — completed; retained protocol
 
 Fully swipe EwaTrade away in the iPhone app switcher, reopen the existing signed10
 app, keep the original reviewer owner/EwaTrade Review business, open Plan & billing,
@@ -118,13 +149,21 @@ bounded positive finish-return case and do not authorize a diagnostic build.
 
 Current source/tests already cover verify-before-finish, failure separation and
 retired-lifetime fencing. Their accepted unchanged evidence is reused. This
-documentation-only preparation adds no implementation, device test or live call.
+documentation update adds no implementation, repeated device test or live call.
 Offline doctor passed. Quick smoke scoped to exactly these two owned documents
 passed51tests/254assertions plus QA tooling types; unrelated assistant/AI source
 work was excluded. Pinned source/SDK assertions, local links and diff checks pass.
 Private mode0600 audit:
 `/private/tmp/ewatrade-build10-fresh-finish-source-audit-2026-11-09.evidence.json`.
-These checks qualify preparation only. Actual outcome remains pending.
+Those earlier checks qualify the protocol/source proof, not the physical outcome.
+The coordinator's later live observation above supplies the bounded actual result;
+it does not convert source tests into broader lifecycle acceptance.
+
+This observed-result update passed offline doctor, quick smoke scoped to the four
+owned acceptance documents (51 tests/254 assertions plus QA tooling types), eleven
+relative-link checks and diff checks. Unrelated finance/catalog changes were
+excluded and preserved. Existing native source/test proof was reused; no further
+device or provider request was made to update the receipt.
 
 Brain impact: local `.brain/features/native-store-billing.md` and
 `.brain/tasks/in-progress.md`. No API, permission, schema or provider change.

@@ -1,5 +1,24 @@
 # iPhone paid TestFlight acceptance — in progress
 
+## Current bounded acceptance —9 November,17:51–17:52 Africa/Lagos
+
+The coordinator physically observed the exact verified-subscription success
+message after the owner confirmed a full close/reopen of original signed10.
+Pinned source/SDK evidence supports **at least one current-lifetime authenticated,
+mapped purchase whose native finish awaited successfully**. No exact transaction
+ID, all-callback result, empty queue or first historical finish is asserted.
+Current top-plan/slot count were outside the captured view. No new buy, manual
+Restore, Release, mobile build or deployment was performed for this observation.
+See the [fresh-finish receipt](2026-11-09-build10-fresh-finish-observation.md).
+
+The accepted actual Dashboard server read is now b0e29c66d; jobs retain
+e1626301d/version20261109.2 with accepted paid task-local evidence. The genuine
+[Release → Free → re-enroll case](2026-11-09-coverage-release-free-reenroll.md)
+and actual Free-reader window are prepared, not executed. Native scope switching,
+original-subscription management, wider paid lifecycle, retained populated-record
+limits and public/legal gates remain open. Apple remains **2/6 (33.3%)**.
+Earlier checkpoints below describe their historical state.
+
 ## Starter enrollment and Restore confirmed — 9 November 2026
 
 The original TestFlight Starter Sandbox purchase is verified and saved. The owner

@@ -2,8 +2,10 @@
 
 Status: **prepared for coordinator review, not executed**. No new owner question,
 Release, enrollment, database/provider/task call, purchase or deployment. The
-existing fresh build10 finish observation must conclude first; its message must
-be captured before coverage feedback can replace it. Apple stays2/6 (33.3%).
+fresh build10 finish observation concluded with a bounded observed pass at
+17:51–17:52 Africa/Lagos; its message is saved before any coverage feedback can
+replace it. See the [observed receipt](2026-11-09-build10-fresh-finish-observation.md).
+Apple stays2/6 (33.3%).
 
 This is a genuine product coverage scenario, not a simulated expiry. One reviewed
 Release phase may provide its I05 coverage evidence and the declared actual Free
@@ -30,8 +32,8 @@ instruction to execute either now.
 
 ## Preconditions and stop conditions
 
-- Coordinator first records the pending fresh-launch finish result, including an
-  inconclusive result if that is what actually occurs. Do not repeat it until green.
+- Fresh-launch finish evidence is recorded as the bounded observed pass linked
+  above. Do not repeat that phone action; broader native/lifecycle claims stay open.
 - Reuse installed signed10/source2d and the existing original app/store identity.
   Confirm the reviewer and business, active Starter owner subscription, covered
   business and1of1 business slots through normal current UI/API reads. Stop for
@@ -99,6 +101,78 @@ result is Free/null as above. Save the new handle before polling, then resume on
 that same handle if inspection is interrupted. Require the run to start after
 confirmed Release and finish before re-enrollment; a prior paid run is stale even
 if its source/version matches. No source change, new task or repeated paid probe.
+
+### Prepared private runner — root review required before execution
+
+Runner: `/private/tmp/ewatrade-coverage-free-reader-2026-11-09.mjs`.
+Offline fake-port checks:
+`/private/tmp/ewatrade-coverage-free-reader-2026-11-09.test.mjs`.
+Unapproved template:
+`/private/tmp/ewatrade-coverage-free-phase-template-2026-11-09.private.json`.
+All are mode0600. The template has reviewApproved=false and null baseline,
+Release and window times; it is not evidence that an action occurred. Invalid
+input is refused before environment/SDK loading. No active Free window exists.
+
+After root reviews the runner/effects/stop conditions, root alone requests the
+named owner action and confirms the fresh active-paid baseline and Release.
+The billing coordinator then copies the private template to a new private phase
+file, preserving its original scope digest and case nonce, and records actual
+baselineConfirmedActiveAt, releaseConfirmedAt and windowExpiresAt UTC values.
+Set reviewApproved=true only for that reviewed completed Release. Baseline must
+be within two minutes before Release; maximum Free hold is ten minutes. The
+runner conservatively pins the last proved paid end19:26:34Z and requires the
+window to end at least five minutes earlier, by19:21:34Z (20:21:34 Africa/Lagos).
+Starting a task needs at least90seconds left. The earlier boundary is not a new
+claim that the subscription remains active. If timing or active-paid status is
+uncertain, stop and review; no provider/time change or forced restoration.
+
+Only after that handoff, the one task invocation is:
+
+```sh
+bun /private/tmp/ewatrade-coverage-free-reader-2026-11-09.mjs --execute-reviewed-free-read /private/tmp/ewatrade-coverage-free-phase-reviewed-2026-11-09.private.json
+```
+
+It first checks the local Production project and actual current deployment ID
+`deployment_3jikxtf8sh3urb4aeq15r`, exact clean e162 source and20261109.2. This unique
+known Production deployment, matched against prior paid evidence, disambiguates
+Preview even though both projects share source/version. Only then may it send
+the original privately captured ownerUserId/tenantId. The payload has no phase
+field or extra identifiers; current ACTIVE OWNER is rechecked by the unchanged
+task inside its READ ONLY transaction. No scheduler/reminder command is used.
+
+The phase nonce determines a separate idempotency key and private filenames.
+An exclusive intent is written before submission; its handle is saved before
+inspection. HTTP submission uses maxAttempts1; task retry remains1, queue TTL60s.
+An ambiguous submission leaves the intent and stops, never automatically
+retriggering. A saved handle resumes read-only inspection of that same run only.
+A completed saved receipt is not run again. The old Starter runner/handle/evidence
+remain untouched and cannot qualify this Free phase.
+
+Acceptance requires the same handle/idempotency, non-test completed successful
+task, exact project/environment/version, readOnly/scopeVerified and
+free/owner_billing_free/ownerPlanId=null. Creation/start/read/finish must be ordered
+after confirmed Release and inside the unchanged Free hold; checkedAt must be
+fresh within two minutes. Private receipts omit SDK payloads/credentials; stdout
+contains only status and receipt path. Unexpected paid/stale/foreign output fails.
+Inspection polling is bounded40s and the CLI50s. The CLI timeout does not cancel
+server execution; preserve its intent/handle and inspect the same run instead
+of starting another. Root must complete/close the Free observations before asking
+for re-enrollment; no result is accepted after that hold or the recorded deadline.
+
+Offline tests cover valid Free output, stale paid/foreign/scope/runtime output,
+wrong Production deployment despite identical source, timing/recovery buffers,
+strict payload, exclusive intent, ambiguous submission and same-handle resumption.
+These are operator safeguards, not hosted Free acceptance. No live task, Release,
+re-enrollment, database read, provider call or new phone request was performed
+while preparing/testing this runner.
+
+Readiness verification: 30 offline fake-port guard cases passed, and the real
+pending template was rejected before environment/SDK loading as expected. Offline
+doctor, four-owned-document quick smoke (51 tests/254 assertions plus QA tooling
+types), eleven relative-link checks and owned diff checks passed. Unrelated
+finance/catalog work was excluded and preserved. Private mode0600 preparation
+receipt, including runner/test/template hashes:
+`/private/tmp/ewatrade-coverage-free-reader-preparation-2026-11-09.evidence.json`.
 
 ## Restoration failure and empty-record limits
 

@@ -1,6 +1,7 @@
 # Build10 finishing evidence and remaining owner sequence — 9 November 2026
 
-Source audit complete; later owner Manage observations are partial, recorded below.
+Source audit complete. Fresh native finish-return is now an observed bounded pass;
+owner Manage observations remain partial, recorded below.
 No new native source/build/OTA, purchase, Restore, release or provider-control
 change was made. Apple remains **2/6**. Dashboard sign-in is complete and its
 [actual server paid read](2026-11-09-dashboard-server-plan-result.md) is accepted.
@@ -67,8 +68,25 @@ Account/Manage; its cancellation action is outside these observations.
 
 Preserve the original signed chain and its historical24-hour period. No Sandbox
 control is assumed from appAccountToken, the word Sandbox, public-list absence or
-wireless device connectivity. Native finishing and management/lifecycle cases
-remain open; the coordinator owns any next precise device/access decision.
+wireless device connectivity. Original-subscription management and wider lifecycle
+cases remain open; the coordinator owns any next precise device/access decision.
+The later fresh-launch result below accepts only its native finish-return subcase.
+
+## Fresh native finish-return — observed pass,9 November
+
+At17:51–17:52 Africa/Lagos (16:51–16:52Z), after the owner confirmed the instructed
+full termination/reopen of original signed10, the source-chat coordinator viewed
+the physical phone and saw “Your store subscription has been verified. Review
+this business's current plan and coverage below.” Reused pinned source establishes
+at least one authenticated mapped-purchase reconciliation awaited native finish
+successfully in that fresh lifetime. The visible Release control and monthly
+offers do not add a fresh current top-plan, slot-count or paid-period assertion.
+Identity/termination provenance is the completed owner instruction.
+
+Exact transaction identity, all callbacks, queue emptiness and first historical
+finish are not proven; no new Restore, buy, Release or provider control occurred.
+See the [full observation and limits](2026-11-09-build10-fresh-finish-observation.md).
+Broader I05 remains open and Apple stays2/6.
 
 ## What build10 actually does
 
@@ -187,8 +205,9 @@ Saved-proof assertions bind the exact native artifact, dependency pin, unchanged
 helper/test bytes, zero-line capture and saved Restore outcome. Source audit is
 `/private/tmp/ewatrade-build10-finish-lifecycle-source-audit-2026-11-09.evidence.json`.
 The source audit itself closed no physical/provider-control subcase. Later owner
-observations above accept only Manage link opening, not original-subscription
-management or queue finishing. Existing
+Manage observations above accept only link opening, not original-subscription
+management. The later fresh-launch observation accepts bounded native finish-return,
+not whole-queue finishing. Existing
 source ordering/lifetime safeguards are reused; existing cancellation/recovery/
 enrollment/Restore/jobs acceptance is preserved. Offline doctor passed. Quick smoke scoped to exactly the two owned documentation
 paths passed51tests/254assertions plus QA tooling types; unrelated mobile-age work
