@@ -17,6 +17,7 @@ import {
   createCatalogUnitDefinition,
   createProductUnitConfigurationDraft,
   createSimpleCatalogItem,
+  findCatalogOfferingsByCode,
   getCatalogAttentionSummary,
   getCatalogItem,
   listCatalogDirectoryPage,
@@ -54,6 +55,7 @@ import {
   catalogCreateItemSchema,
   catalogCreateSimpleItemSchema,
   catalogCreateUnitDefinitionSchema,
+  catalogFindByCodeSchema,
   catalogGetItemSchema,
   catalogListItemsPageSchema,
   catalogListItemsSchema,
@@ -464,6 +466,17 @@ export const catalogRouter = createTRPCRouter({
         }
         throw error
       }
+    }),
+
+  /** Exact Business-scoped barcode/SKU match for scan-to-sale; identification only. */
+  findByCode: protectedProcedure
+    .input(catalogFindByCodeSchema)
+    .query(({ ctx, input }) => {
+      assertCanReadCatalog(ctx.tenantContext.membership.role)
+      return findCatalogOfferingsByCode(ctx.db, {
+        tenantId: ctx.tenantContext.tenant.id,
+        code: input.code,
+      })
     }),
 
   getItem: protectedProcedure

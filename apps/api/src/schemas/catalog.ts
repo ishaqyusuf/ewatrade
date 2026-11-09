@@ -426,6 +426,11 @@ export const catalogGetItemSchema = z
   })
   .strict()
 
+// Raw scanned text; the lookup keeps it exact and never follows a link.
+export const catalogFindByCodeSchema = z
+  .object({ code: z.string().max(2_000) })
+  .strict()
+
 export const catalogListItemsSchema = z
   .object({
     kind: z.enum(["product", "service"]).optional(),

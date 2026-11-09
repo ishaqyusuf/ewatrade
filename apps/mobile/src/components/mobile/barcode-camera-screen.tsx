@@ -23,6 +23,8 @@ const BARCODE_TYPES: BarcodeType[] = [
   "code93",
   "itf14",
   "codabar",
+  // QR text is only ever matched as an exact code; links are never opened.
+  "qr",
 ]
 
 export function BarcodeCameraScreen({
