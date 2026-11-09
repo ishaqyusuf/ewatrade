@@ -1,6 +1,11 @@
 # Existing Android upload-key custody review
 
-Prepared9November2026; **export not approved or performed**. The Android upload
+Prepared9November2026. **Superseded execution checkpoint:** the owner approved
+the bounded export below; the matching existing signer is now in protected local
+custody, with all non-Android credential fields preserved. See the
+[execution receipt](../verification/2026-11-09-play-signer-and-publisher-readiness.md).
+No build, upload or deployment was started. The original review below records
+the proposed scope before approval. The Android upload
 keystore signs app bundles. The separately approved Google Publisher credential
 verifies purchases. This review concerns an additional local copy of the existing
 upload signer, not another Publisher key.

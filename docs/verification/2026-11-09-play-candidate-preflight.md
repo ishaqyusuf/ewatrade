@@ -1,5 +1,13 @@
 # Android candidate preflight checkpoint
 
+**Later checkpoint:** Vercel CLI login is restored and the approved existing
+upload signer passes the actual local certificate check. The normal protected
+Preview environment pull still redacts the hosted product catalog, so current
+hosted equality remains unproven. New peer changes include `app.config.ts` and
+API release inputs; the earlier unchanged-native-source observation below is
+historical and cannot certify that newer candidate. See the
+[execution receipt](2026-11-09-play-signer-and-publisher-readiness.md).
+
 9November2026. Continues after approved secret/RTDN provisioning in31e073775.
 No active runtime profile, hosted product mapping, signing credential or build was
 changed by this offline preparation.
