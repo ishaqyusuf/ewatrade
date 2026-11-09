@@ -56,6 +56,13 @@ See the [actual country adjustment](../verification/2026-11-09-apple-provider-te
 This is not public distribution, runtime location enforcement or legal acceptance.
 Do not repeat the country decision or Apple sign-in request.
 
+One original-reviewer post-period READ ONLY snapshot at19:54:56.024UTC now proves
+the same original purchase's stored period advanced24hours to10November19:26:34UTC,
+with ACTIVE status, one purchase and one correct-owner active coverage. No app
+reopen, purchase or control was used. This is [stored-period proof](../verification/2026-11-09-original-reviewer-period-advance.md),
+not a delivered renewal-event or new native plan observation. No phone action is
+requested to reproduce it.
+
 ## Accepted Dashboard server read
 
 The owner completed password sign-in. Billing chat verified the correct reviewer
