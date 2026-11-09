@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "id": "2026-11-09-guardian-safety-policy-foundation",
+  "tickets": ["H02"],
+  "summary": "Begin the owner-approved guardian/regional safety path with one internal provider-free policy evaluator and a concrete six-stage implementation plan. Preserve eligible 13+ ordinary actions and separate 18+ live AI. This foundation is not wired to current admission or provider dispatch.",
+  "noAssistantImpact": "No new merchant procedure, tool, domain write or assistant authority is exposed. The internal evaluator has no application caller or package export; its calculated result is never a client-supplied permit. Durable guardian verification, canonical subject/region readers, every provider boundary, UI/withdrawal, privacy and actual regional acceptance remain planned. Personal age, guardian relationship, verification, regional policy and legal approval remain human/server-only; a model cannot approve them. No current role, account-wide age, provider, schema, live-AI policy or rollout changes.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "path": ".brain/features/guardian-regional-safety.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "decision",
+      "path": ".brain/decisions/2026-11-09-guardian-regional-safety.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "schema",
+      "status": "not_applicable",
+      "note": "Step 1 is a provider-free calculation; no Prisma model, migration or database write yet."
+    },
+    {
+      "topic": "api",
+      "status": "not_applicable",
+      "note": "No route/procedure or public contract added; existing role/age/admission behavior is unchanged until the remaining plan stages are implemented and accepted."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/service-commerce/src/safety-processing-policy.test.ts",
+      "executed": true,
+      "result": "17 focused tests/66 assertions with synthetic records only; full Service Commerce types; owned four-path quick285/1818 plus QA types/Biome; owned H02 domain gate passes. No real guardian, regional law table, database, provider transport or account setting is certified. No application caller/export; current admission unchanged."
+    },
+    {
+      "kind": "review",
+      "path": "docs/plans/2026-11-09-guardian-regional-safety.md",
+      "executed": true,
+      "result": "Source seams identify distinct Account/Guest/anonymous customer authority and no current guardian API. Six required stages retain durable verification, revocation, every-dispatch scope, privacy, UI, regional/provider evidence and signed acceptance. Guardian grants cannot unlock live AI."
+    }
+  ]
+}
