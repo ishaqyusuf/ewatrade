@@ -93,8 +93,11 @@ prices in **EwaTrade Owner Plans**, group22556222. All remain Prepare for Submis
 | 2 | EwaTrade Growth Monthly | 6832035627 | `com.ewatrade.owner.growth.monthly` | NGN15,000 |
 | 3 | EwaTrade Starter Monthly | 6832036267 | `com.ewatrade.owner.starter.monthly` | NGN5,000 |
 
-All175current storefronts are selected for each product; automatic availability in
-future storefronts is off. English (U.S.) group and product names/descriptions are
+The initial175-storefront selection was narrowed with explicit owner approval on
+9November: the app and all three subscriptions now have the same164 storefronts,
+excluding the eleven in the [country receipt](../verification/2026-11-09-apple-provider-territory-review.md).
+Persisted selections and future-country availability OFF were read back for all
+four; price controls were not edited. English (U.S.) group and product names/descriptions are
 saved. Family Sharing is off; multiseat purchases are disabled, leaving App Store
 purchasing, consistent with owner-wide plans rather than staff seats. No trial,
 annual offer, review submission, checkout activation or charge was performed.
@@ -159,7 +162,7 @@ approval; I04, I05 and I06 remain open.
 | ID | State | Required completion |
 | --- | --- | --- |
 | I01 Commercial prerequisites | Accepted | Owner accepted the updated Paid Applications Schedule; fresh 8 November Business reload shows Paid Apps Agreement, bank, both tax forms and DSA Active, with no new-agreement notice. |
-| I02 Products and prices | Accepted | Group22556222; three ranked monthly products,175current storefront prices each, no trials; exact IDs installed in API target settings. Deployment/verification remains I03. |
+| I02 Products and prices | Accepted | Group22556222; three ranked monthly products,175 retained price rows each,164 configured launch storefronts after owner-approved eleven exclusions, future countries off, no trials; exact IDs installed in API target settings. Deployment/verification remains I03. |
 | I03 Native/server configuration | Accepted — approved one-reviewer private target | Original secure key custody, exact environment, notification delivery, owner binding/coverage cutover and signed10 native linkage have target evidence. Actual paid and released-Free API-backed/Settings/jobs reader results now pass; normal coverage restoration is observed. Public checkout remains closed. Ordinary nonreviewer Sandbox dispatch is unexecuted/deferred outside this private configuration scope. Positive Production server-API authorization remains unobserved/platform-limited until first-release eligibility; retain its conditional follow-through, without another prelaunch canary or invalid-key inference. See the [configuration audit](../verification/2026-11-09-i03-configuration-audit.md) and [actual coverage/reader receipt](../verification/2026-11-09-coverage-release-free-reenroll.md). |
 | I04 Policy and privacy | Open | Effective paid terms/privacy, SDK/provider/deletion facts, operational refund response and five-day policy compatibility. |
 | I05 Signed money acceptance | Open | Original signed10 purchase, basic enrollment, one Restore, bounded fresh native finish-return and actual voluntary Release→Free→normal Cover observations have positive evidence. The operator's exact two-minute baseline condition remains inconclusive after timing correction. First-tap cause, account/staff/business switching, renewal, failure/grace, cancellation/expiry, refund/revocation and populated retained-record/admission behavior remain separate. No global queue or fresh row/transaction-ID census is claimed. |
@@ -290,7 +293,7 @@ shared secret was generated, no transaction was submitted and no billing-enable
 flag was changed. The running deployment must receive the new configuration and
 current code through the existing release coordinator before delivery is accepted.
 Fresh App Information also retains incomplete age/content-rights and China ICP
-fields; subscription availability in175storefronts is not acceptance of every
+fields; configured subscription availability is not acceptance of every
 country's app-distribution requirements. Do not invent a filing or declaration.
 
 ## Controlled App Review Sandbox — source prepared after common deployment

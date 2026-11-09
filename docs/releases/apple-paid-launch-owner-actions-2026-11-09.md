@@ -48,11 +48,13 @@ query refetch succeeded. Release this business and the three monthly offers were
 visible; the offscreen top plan/slot state was not freshly measured from that view.
 See the [fresh-finish observation](../verification/2026-11-09-build10-fresh-finish-observation.md).
 
-Apple access is restored. Actual expanded app availability is175countries and
-matches the saved pricing country set. Eleven enabled storefronts are not
-explicitly listed by the AI provider. The [exact country review](../verification/2026-11-09-apple-provider-territory-review.md)
-proposes164 launch storefronts; no Apple settings changed or exclusion approval
-is inferred from the separate Play decision. Do not request sign-in again.
+Apple access is restored. The owner separately approved the exact eleven Apple
+storefront exclusions; the app and all three monthly products now have the same
+164 launch storefronts and automatic future countries OFF. Reopened saved dialogs
+verify the exact set; prices were not edited and the525-row export is unchanged.
+See the [actual country adjustment](../verification/2026-11-09-apple-provider-territory-review.md).
+This is not public distribution, runtime location enforcement or legal acceptance.
+Do not repeat the country decision or Apple sign-in request.
 
 ## Accepted Dashboard server read
 
@@ -108,7 +110,7 @@ close I04/I05/I06 or grant public release approval.
 | Completed 9 November | Owner password sign-in and correct reviewer/business confirmed. No further login is requested. | Authenticated API-backed Starter view and actual full-reload Settings canonical server Starter/owner-subscription read pass at exactb0. |
 | Completed 9 November,17:51–17:52 Lagos | Fresh signed10 app launch and restored Apple sign-in were completed. No repeated cold launch or Apple login is requested. | Exact current-lifetime success message observed; bounded native finish-return accepted. Broader I05 remains open. |
 | Completed bounded native coverage and restored server observations | Owner completed Release once; after device-control repair, the agent restored coverage once. No new owner tap is requested. | Actual Free API-backed/Settings/jobs reads, native restored Active Starter/covered1of1 and subsequent restored server Starter/owner_subscription observed. Retain the timing correction and empty-data limits in the [coverage receipt](../verification/2026-11-09-coverage-release-free-reenroll.md); no repeated job, Release, Cover or purchase is needed. |
-| Before country changes | Decide the exact proposed Apple eleven-storefront exclusion after review. | Preserve prices, read back the resulting set, and keep actual user-location/country compliance distinct. No Apple change is authorized by Play's different exclusions. |
+| Completed9November | Owner approved the exact Apple eleven-storefront exclusions for app plus all three products. No further country answer is requested. | Actual persisted164-country sets match for all four; future countries OFF, no price edits or submission. Runtime/user-location compliance remains distinct; Play approval was not reused as Apple authority. |
 | Connection and foreground tap/gesture completed; later protected actions only | Wi-Fi after USB removal is verified. Keep build10 installed and Wi-Fi available; handle unlock, passwords/biometrics directly when a concrete remaining case needs them. | Keep Device Hub in front for coordinate input; the agent can reactivate it through Finder File→Open. No UI Automation toggle is needed for the observed tap/swipe. Background input and literal typing remain limits; do not promise fully unattended navigation. |
 | Before lifecycle controls change state | Use the prepared Sandbox Manage/cancel-renewal or failure/refund controls only after the exact case and expected effects are identified. | Match genuine signed facts to durable period, coverage and Free fallback; distinguish cancellation, expiry, billing failure and revocation. Do not use a real-money charge, arbitrary receipt replay, synthetic paid grant or five accelerated minutes as proof of five actual days. |
 | No provider inquiry requested | Owner directs no AI-provider contact; assess existing applicable terms/policies and actual flows. Review only a concrete proposed adjustment or unresolved material conflict. | Android owns this review and the approved18+live-AI adjustment; preserve eligible13+ ordinary functions/history. Resolve actual provider/account/flow facts and truthful retention disclosure without inventing bespoke-contract or ZDR launch prerequisites. |
