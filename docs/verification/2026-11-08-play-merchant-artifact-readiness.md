@@ -1,5 +1,14 @@
 # Play merchant, artifact and Data safety readiness — 8 November 2026
 
+9 November current readback: the fresh-page price retry now saves all three
+existing `monthly` base plans as inactive Drafts. Full reload verifies Nigeria
+Starter NGN5,000 / Growth NGN15,000 / Pro NGN30,000, monthly auto-renew, five-day
+grace and automatic 55-day account hold. Only Nigeria is currently configured in
+these minimal drafts; international plan tables and paid acceptance remain open.
+No activation, charge or rollout. Google case `6-1181000042003` remains Open;
+no root cause or case closure is inferred. The older failed/unsaved observations
+below remain historical. [Current retry receipt](2026-11-09-play-price-save-retry.md).
+
 ## Verified current state
 
 The owner directly selected and submitted the existing ZEROES AND ONE TECH HUB
