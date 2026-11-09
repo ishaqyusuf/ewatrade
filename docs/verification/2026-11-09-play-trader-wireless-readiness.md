@@ -1,5 +1,11 @@
 # Play declarations and Samsung Wi-Fi — 9 November 2026
 
+Later owner-approved actions: the one-person license-testing Save and Publisher
+API Enable are now complete. The earlier pending-approval statements below are
+historical; see the [actual saved receipt](2026-11-09-play-licensing-publisher-enabled.md).
+The owner selected guardian/regional safeguards for 13+ automatic-screening
+actions; that implementation is separate from the saved Google settings.
+
 The owner approved the pending declarations and asked to connect the known
 Samsung over Wi-Fi. Approval covers the trader declaration, public developer
 profile consent and local-law certification. It is not an inferred approval of

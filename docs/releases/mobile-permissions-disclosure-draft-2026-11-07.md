@@ -237,6 +237,15 @@ from an AI conversation. This draft does not claim that every ordinary business
 function is provider-free or that minors' submitted information never reaches
 a provider.
 
+Owner direction updated 9 November: retain the eligible 13+ ordinary actions and
+add guardian-consent and regional safeguards for affected external safety
+processing. Do not apply an adult-only restriction to those ordinary actions.
+This is an implementation direction, not a claim that a guardian system or
+regional compliance is already accepted. Guardian consent must remain separate
+from the 18+ live-AI rule and cannot grant a minor live-AI access. The final
+snapshot must describe the actual guardian verification, scope, withdrawal,
+regional conditions, retention and alternative/recovery handling after acceptance.
+
 Authoring hold updated 9 November: the approved adult-only live-generation
 source is committed in `d13bc50f9` and verified locally, with the existing 13+
 registration view preserved. It is not yet present in accepted hosted/signed
