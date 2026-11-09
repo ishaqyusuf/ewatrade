@@ -177,6 +177,8 @@ type PublicListingSqlScope = {
   category: string | null
   subcategory?: string | null
   terms: string[]
+  /** Mirrors `platformListedItemWhere`; trusted server projection only. */
+  platformListed?: boolean
 }
 
 /** Public items joined to their public offerings; mirrors `publicCatalogItemWhere`. */
@@ -186,6 +188,12 @@ function publicEligibleItemsFromSql(input: PublicListingSqlScope) {
     filters.push(Prisma.sql`AND i."categoryId" = ${input.category}`)
   if (input.subcategory)
     filters.push(Prisma.sql`AND i."subcategoryId" = ${input.subcategory}`)
+  if (input.platformListed)
+    filters.push(
+      Prisma.sql`AND i.kind = 'PRODUCT' AND EXISTS (SELECT 1 FROM "CatalogStorefrontPolicy" listed
+        WHERE listed."tenantId" = ${input.tenantId} AND listed."storeId" = ${input.storeId}
+          AND listed."catalogItemId" = i.id AND listed."platformListed" = true)`,
+    )
   for (const term of input.terms)
     filters.push(
       Prisma.sql`AND (i.name ILIKE ${`%${escapePublicListingTerm(term)}%`} OR i.description ILIKE ${`%${escapePublicListingTerm(term)}%`} OR i.category ILIKE ${`%${escapePublicListingTerm(term)}%`})`,

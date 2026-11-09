@@ -6,6 +6,9 @@ model CatalogStorefrontPolicy {
   catalogItemId  String
   unavailable    Boolean     @default(false)
   allowBookAhead Boolean     @default(false)
+  /// Owner listed this product on the platform-hosted catalog (`/b/<slug>`).
+  /// Public only while its Store is also listed; never implies Site publication.
+  platformListed Boolean     @default(false)
   revision       Int         @default(1)
   updatedAt      DateTime    @updatedAt
   tenant         Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)

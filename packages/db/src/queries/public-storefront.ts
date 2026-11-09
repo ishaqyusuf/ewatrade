@@ -207,6 +207,16 @@ export function publicOfferingWhere(tenantId: string, storeId: string) {
   } satisfies Prisma.SellableOfferingWhereInput
 }
 
+/** Owner-listed products of a Store on the platform-hosted (no-Site) catalog. */
+export function platformListedItemWhere(tenantId: string, storeId: string) {
+  return {
+    kind: "PRODUCT" as const,
+    storefrontPolicies: {
+      some: { tenantId, storeId, platformListed: true },
+    },
+  } satisfies Prisma.CatalogItemWhereInput
+}
+
 /** Public catalog item eligibility (before any plan cap). */
 export function publicCatalogItemWhere(tenantId: string, storeId: string) {
   return {
@@ -259,6 +269,11 @@ export type PublicItemProjection = {
   lowStockCounts?: boolean
   /** Trusted server projection only; customer/public request input cannot select it. */
   catalog?: "none" | "detail"
+  /**
+   * Platform-hosted catalog: narrows every read to products the owner listed
+   * there. Server-decided only, never from request input.
+   */
+  platformListed?: boolean
 }
 
 /** Same-origin path of the existing public photo route; the host proxies it to the API. */
@@ -674,7 +689,14 @@ export async function readPublicStorefrontFromContext(
   const subcategory =
     category && validId(options.subcategory) ? options.subcategory : null
   const listing = normalizePublicListing(options)
-  const eligibleWhere = publicCatalogItemWhere(tenant.id, store.id)
+  const eligibleWhere: Prisma.CatalogItemWhereInput = projection.platformListed
+    ? {
+        AND: [
+          publicCatalogItemWhere(tenant.id, store.id),
+          platformListedItemWhere(tenant.id, store.id),
+        ],
+      }
+    : publicCatalogItemWhere(tenant.id, store.id)
   const baseWhere = {
     ...eligibleWhere,
     ...(category ? { categoryId: category } : {}),
@@ -802,6 +824,7 @@ export async function readPublicStorefrontFromContext(
       publicBucketOrderedIdsSql({
         tenantId: tenant.id,
         storeId: store.id,
+        platformListed: projection.platformListed,
         category,
         subcategory,
         terms,
@@ -968,6 +991,7 @@ export async function readPublicStorefrontFromContext(
               publicPriceSortedIdsSql({
                 tenantId: tenant.id,
                 storeId: store.id,
+                platformListed: projection.platformListed,
                 currencyCode: store.currencyCode,
                 category,
                 subcategory,

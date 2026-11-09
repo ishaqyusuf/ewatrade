@@ -41,6 +41,7 @@ export const catalogStorefrontRouter = createTRPCRouter({
         .extend({
           unavailable: z.boolean(),
           allowBookAhead: z.boolean(),
+          platformListed: z.boolean().optional(),
           expectedRevision: z.number().int().nonnegative(),
           clientOperationId: z.string().min(8).max(160),
         })

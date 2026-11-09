@@ -1,5 +1,7 @@
 export * from "./public-storefront"
 export * from "./catalog-product-share"
+export * from "./platform-business-catalog"
+export * from "./store-public-listing"
 export * from "./storefront-service-intake"
 export * from "./storefront-orders"
 export * from "./storefront-service-requests"

@@ -16,6 +16,7 @@ type Source = NonNullable<
 >
 const scope = { tenantId: "tenant", storeId: "store", itemId: "sandals" }
 const db = {} as Parameters<typeof getCatalogProductShareSource>[0]
+const noPlatform = async () => null
 
 function source(): Source {
   const manifest = templateRegistry.find(
@@ -93,7 +94,7 @@ function source(): Source {
 
 test("sharing returns only the current public product's canonical link and actor scope", async () => {
   expect(
-    await readCatalogProductShare(db, scope, async () => source()),
+    await readCatalogProductShare(db, scope, async () => source(), noPlatform),
   ).toEqual({
     status: "available",
     url: "https://shop.ewatrade.com/?item=sandals",
@@ -105,7 +106,7 @@ test("sharing returns only the current public product's canonical link and actor
 
 test("missing publication, hidden products, services, QA, foreign Store and invalid release fail closed", async () => {
   expect(
-    await readCatalogProductShare(db, scope, async () => null),
+    await readCatalogProductShare(db, scope, async () => null, noPlatform),
   ).toMatchObject({ status: "unavailable" })
   const cases: Array<(value: Source) => void> = [
     (value) => {
@@ -138,7 +139,7 @@ test("missing publication, hidden products, services, QA, foreign Store and inva
     const value = source()
     change(value)
     expect(
-      await readCatalogProductShare(db, scope, async () => value),
+      await readCatalogProductShare(db, scope, async () => value, noPlatform),
     ).toMatchObject({ status: "unavailable" })
   }
 })
@@ -175,4 +176,44 @@ test("read schema cannot select a different actor, Store, host or publication st
       { ...tenant, membership: { role: "VIEWER" } },
     ),
   ).toThrow()
+})
+
+test("without a live Site, only a platform-listed product shares its platform page", async () => {
+  const platformScopes: unknown[] = []
+  const listed = async (_db: unknown, value: unknown) => {
+    platformScopes.push(value)
+    return { path: "/b/shop/p/sandals", title: "Sandals · Shop" }
+  }
+  expect(
+    await readCatalogProductShare(db, scope, async () => null, listed, {
+      MARKETING_URL: "https://ewatrade.com",
+    }),
+  ).toEqual({
+    status: "available",
+    url: "https://ewatrade.com/b/shop/p/sandals",
+    title: "Sandals · Shop",
+    tenantId: "tenant",
+    storeId: "store",
+  })
+  expect(platformScopes).toEqual([scope])
+  expect(
+    await readCatalogProductShare(db, scope, async () => null, noPlatform),
+  ).toMatchObject({ status: "unavailable" })
+})
+
+test("a live Site link wins and the platform catalog is not consulted", async () => {
+  let consulted = false
+  const result = await readCatalogProductShare(
+    db,
+    scope,
+    async () => source(),
+    async () => {
+      consulted = true
+      return { path: "/b/shop/p/sandals", title: "x" }
+    },
+  )
+  expect(result).toMatchObject({
+    url: "https://shop.ewatrade.com/?item=sandals",
+  })
+  expect(consulted).toBe(false)
 })

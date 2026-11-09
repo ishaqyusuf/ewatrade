@@ -598,3 +598,51 @@ test("included-plan category searches match the saved full path without extendin
     applyCappedListing([item], listing, "NGN", () => "Services / Inspection"),
   ).toEqual([])
 })
+
+test("the platform-listed projection narrows Prisma reads and raw listing SQL to owner-listed products", async () => {
+  const included = repository("free", { findMany: () => [row("one")] })
+  await getPublicStorefront(included.db, "merchant")
+  expect(JSON.stringify(included.reads[0]?.where)).not.toContain(
+    "platformListed",
+  )
+
+  const paid = repository("growth", {
+    findMany: () => [row("one")],
+    queryRaw: () => [{ id: "one", out: false }],
+  })
+  const { readPublicStorefrontFromContext, projectStorefrontBusiness } =
+    await import("./public-storefront")
+  const business = projectStorefrontBusiness(
+    {
+      id: "tenant",
+      name: "Merchant",
+      slug: "merchant",
+      dataClassification: "LIVE",
+      timezone: "Africa/Lagos",
+      metadata: { retailOpsPlanId: "growth" },
+      subscription: null,
+    } as never,
+    { id: "store", description: null, currencyCode: "NGN" } as never,
+    false,
+    "growth",
+  )
+  if (!business) throw new Error("expected business")
+  const listed = await readPublicStorefrontFromContext(
+    paid.db,
+    business,
+    undefined,
+    { item: "one" },
+    { platformListed: true },
+  )
+  expect(listed?.items.map((item) => item.id)).toEqual(["one"])
+  const listedWhere = {
+    kind: "PRODUCT",
+    storefrontPolicies: {
+      some: { tenantId: "tenant", storeId: "store", platformListed: true },
+    },
+  }
+  for (const read of paid.reads)
+    expect(JSON.stringify(read.where)).toContain(JSON.stringify(listedWhere))
+  expect(paid.raws.length).toBeGreaterThan(0)
+  for (const raw of paid.raws) expect(raw.sql).toContain('"platformListed"')
+})

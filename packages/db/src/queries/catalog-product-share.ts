@@ -1,5 +1,8 @@
 import { getStorefrontDomain } from "@ewatrade/utils"
-import { loadLiveStorefrontForHost } from "./storefront-factory-loader"
+import {
+  loadLiveStorefrontForHost,
+  loadStorefrontContextForHost,
+} from "./storefront-factory-loader"
 import type { DbClient } from "./types"
 
 /**
@@ -52,6 +55,29 @@ export async function getCatalogProductShareSource(
       current.site.storeId === scope.storeId
     )
       return { host, ...current }
+  }
+  return null
+}
+
+/**
+ * The verified host currently serving this Store's live published Site, or
+ * null when the Store has none (the platform catalog then applies).
+ */
+export async function resolveStoreSiteHost(
+  db: DbClient,
+  scope: { tenantId: string; storeId: string },
+  slug: string,
+  loadContext = loadStorefrontContextForHost,
+) {
+  for (const host of await storeShareHosts(db, scope, slug)) {
+    const current = await loadContext(db, host)
+    if (
+      current &&
+      !current.storefront.isQaPreview &&
+      current.site.release.tenantId === scope.tenantId &&
+      current.site.storeId === scope.storeId
+    )
+      return host
   }
   return null
 }

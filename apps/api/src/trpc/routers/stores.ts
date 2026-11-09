@@ -3,6 +3,8 @@ import {
   StoreContactError,
   getStoreContact,
   getStoreOrderVisibility,
+  getStorePublicListing,
+  setStorePublicListing,
   updateStoreContact,
   updateStoreOrderVisibility,
 } from "@ewatrade/db/queries"
@@ -16,6 +18,10 @@ import {
   storeContactSchema,
   updateStoreContactSchema,
 } from "../../schemas/store-contact"
+import {
+  storePublicListingSchema,
+  updateStorePublicListingSchema,
+} from "../../schemas/store-public-listing"
 import { createTRPCRouter, protectedProcedure } from "../init"
 
 function storeIdFor(tenant: TenantContext, requested?: string) {
@@ -65,7 +71,42 @@ async function contactResult<T>(operation: () => Promise<T>) {
   }
 }
 
+/** Platform catalog opt-in is an Owner/Admin business decision, like contact details. */
+const listingProcedure = protectedProcedure.use(({ ctx, next }) => {
+  const role = normalizeRole(ctx.tenantContext.membership.role)
+  if (!role || !canManageTenant(role))
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "Only Owners and Admins can list the business publicly.",
+    })
+  return next()
+})
+
 export const storesRouter = createTRPCRouter({
+  publicListing: listingProcedure
+    .input(storePublicListingSchema)
+    .query(async ({ ctx, input }) =>
+      requireStore(
+        await getStorePublicListing(ctx.db, {
+          tenantId: ctx.tenantContext.tenant.id,
+          storeId: contactStoreIdFor(ctx.tenantContext, input.storeId),
+        }),
+      ),
+    ),
+  updatePublicListing: listingProcedure
+    .input(updateStorePublicListingSchema)
+    .mutation(async ({ ctx, input }) =>
+      requireStore(
+        await setStorePublicListing(
+          ctx.db,
+          {
+            tenantId: ctx.tenantContext.tenant.id,
+            storeId: contactStoreIdFor(ctx.tenantContext, input.storeId),
+          },
+          input.listed,
+        ),
+      ),
+    ),
   contact: contactProcedure.input(storeContactSchema).query(({ ctx, input }) =>
     contactResult(() =>
       getStoreContact(ctx.db, {

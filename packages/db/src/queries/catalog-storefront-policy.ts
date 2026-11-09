@@ -10,12 +10,15 @@ import {
 export type CatalogStorefrontPolicyValue = {
   unavailable: boolean
   allowBookAhead: boolean
+  /** Shown on the platform-hosted catalog once the Store is listed; products only. */
+  platformListed: boolean
   revision: number
 }
 
 export const defaultCatalogStorefrontPolicy: CatalogStorefrontPolicyValue = {
   unavailable: false,
   allowBookAhead: false,
+  platformListed: false,
   revision: 0,
 }
 
@@ -61,7 +64,12 @@ export async function readCatalogStorefrontPolicy(
             catalogItemId: scope.catalogItemId,
           },
         },
-        select: { unavailable: true, allowBookAhead: true, revision: true },
+        select: {
+          unavailable: true,
+          allowBookAhead: true,
+          platformListed: true,
+          revision: true,
+        },
       })
       return (
         policy ?? {
@@ -85,6 +93,8 @@ export async function setCatalogStorefrontPolicy(
     catalogItemId: string
     unavailable: boolean
     allowBookAhead: boolean
+    /** Omitted keeps the current listing, so older clients never unlist. */
+    platformListed?: boolean
     expectedRevision: number
     clientOperationId: string
   },
@@ -98,6 +108,8 @@ export async function setCatalogStorefrontPolicy(
         input.unavailable,
         input.allowBookAhead,
         input.expectedRevision,
+        // Appended only when sent, so existing receipts keep their hashes.
+        ...(input.platformListed === undefined ? [] : [input.platformListed]),
       ]),
     )
     .digest("hex")
@@ -105,8 +117,10 @@ export async function setCatalogStorefrontPolicy(
     async (tx) => {
       await authorizeCatalogPhotoScope(tx, input)
       await lockCatalogCommandInTransaction(tx, input)
-      const rows = await tx.$queryRaw<Array<{ id: string }>>(Prisma.sql`
-      SELECT "id" FROM "CatalogItem" WHERE "id"=${input.catalogItemId}
+      const rows = await tx.$queryRaw<
+        Array<{ id: string; kind: string }>
+      >(Prisma.sql`
+      SELECT "id", "kind" FROM "CatalogItem" WHERE "id"=${input.catalogItemId}
         AND "tenantId"=${input.tenantId} AND "archivedAt" IS NULL
         AND "systemRole" IS NULL AND "status" <> 'ARCHIVED' FOR UPDATE
     `)
@@ -114,6 +128,11 @@ export async function setCatalogStorefrontPolicy(
         throw new CatalogError(
           "CATALOG_ITEM_NOT_FOUND",
           "Catalog item not found.",
+        )
+      if (input.platformListed && rows[0]?.kind !== "PRODUCT")
+        throw new CatalogError(
+          "INVALID_CATALOG_ITEM",
+          "Only products can be listed on the public catalog.",
         )
       const previous = await tx.catalogCommandReceipt.findUnique({
         where: {
@@ -132,9 +151,21 @@ export async function setCatalogStorefrontPolicy(
             "INVALID_CATALOG_ITEM",
             "This save identity belongs to another change.",
           )
+        const stored = await tx.catalogStorefrontPolicy.findUnique({
+          where: {
+            tenantId_storeId_catalogItemId: {
+              tenantId: input.tenantId,
+              storeId: input.storeId,
+              catalogItemId: input.catalogItemId,
+            },
+          },
+          select: { platformListed: true },
+        })
         return {
           unavailable: input.unavailable,
           allowBookAhead: input.allowBookAhead,
+          platformListed:
+            input.platformListed ?? stored?.platformListed ?? false,
           revision: input.expectedRevision + 1,
           replayed: true,
         }
@@ -158,13 +189,22 @@ export async function setCatalogStorefrontPolicy(
           ...where.tenantId_storeId_catalogItemId,
           unavailable: input.unavailable,
           allowBookAhead: input.allowBookAhead,
+          platformListed: input.platformListed ?? false,
         },
         update: {
           unavailable: input.unavailable,
           allowBookAhead: input.allowBookAhead,
+          ...(input.platformListed === undefined
+            ? {}
+            : { platformListed: input.platformListed }),
           revision: { increment: 1 },
         },
-        select: { unavailable: true, allowBookAhead: true, revision: true },
+        select: {
+          unavailable: true,
+          allowBookAhead: true,
+          platformListed: true,
+          revision: true,
+        },
       })
       await tx.catalogCommandReceipt.create({
         data: {

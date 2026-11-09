@@ -29,6 +29,8 @@ model Store {
   region                                            String?
   postalCode                                        String?
   countryCode                                       String?
+  /// Owner opt-in to the platform-hosted business catalog; null = not listed.
+  publicCatalogListedAt                             DateTime?
   isMarketplaceLive                                 Boolean                                              @default(false)
   metadata                                          Json?
   salesRepOrderVisibility                           SalesRepOrderVisibility                              @default(OWN_SALES)
