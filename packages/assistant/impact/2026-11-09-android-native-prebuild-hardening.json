@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "id": "2026-11-09-android-native-prebuild-hardening",
+  "tickets": ["H02"],
+  "summary": "Explicit Android release cleartext refusal and repair of the registered Play Preview native scheme prebuild blocker; preserve local Development HTTP and existing app variants.",
+  "noAssistantImpact": "Native configuration only; no new assistant capability, procedure, merchant command, model access, account authority or billing permission. No iOS mod, dependency, credential, provider setting, build, install or rollout. The platform policy does not certify every SDK's transport or final Data safety answers.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "path": ".brain/features/native-store-billing.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "permissions",
+      "path": ".brain/api/permissions.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "feature",
+      "path": "docs/verification/2026-11-09-android-native-prebuild-hardening.md",
+      "status": "updated"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "apps/mobile/android-transport-policy.test.ts",
+      "executed": true,
+      "result": "Focused transport/variant tests:5pass/25assertions. Credential-free Expo introspection: Production false, Development true, Play Preview com.ewatrade.app/false/isolated scheme/OTA disabled. No signed or traffic acceptance."
+    },
+    {
+      "kind": "review",
+      "path": "docs/verification/2026-11-09-android-native-prebuild-hardening.md",
+      "executed": true,
+      "result": "Original Play Preview scheme rejection reproduced before the repair. Review records platform best-effort/XML/target38 limitations and remaining signed SDK/recipient/Data safety acceptance."
+    }
+  ]
+}

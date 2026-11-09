@@ -281,6 +281,10 @@ const config: ExpoConfig = {
     "./plugins/with-variant-link-schemes.cjs",
     "./plugins/with-app-update.cjs",
     "./plugins/with-foreground-audio-only.cjs",
+    [
+      "./plugins/with-android-transport-policy.cjs",
+      { allowDevelopmentCleartext: isDevelopmentBuild },
+    ],
     "./plugins/with-ios-pod-deployment-target.cjs",
     "expo-apple-authentication",
     [

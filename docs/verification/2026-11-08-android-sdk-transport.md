@@ -1,5 +1,10 @@
 # Android36 SDK and transport evidence — 8 November 2026
 
+Later source checkpoint: [9 November native prebuild hardening](2026-11-09-android-native-prebuild-hardening.md)
+adds explicit release cleartext refusal and fixes the isolated Play Preview
+scheme rejection. It does not change the frozen build36 facts below or establish
+all-data encryption, signed acceptance or a final Data safety answer.
+
 This advances the existing Data safety preparation while Google investigates
 subscription-price error540F8949. It is a bounded manifest/source review, not a
 network capture, final Data safety declaration or paid-release acceptance.
@@ -12,6 +17,14 @@ Registered Production validation AAB36 (1.0.0), package `com.ewatrade.app`, EAS
 `0c2527f3cfbb54ce377d5417c25cbf513192e1daac10c366f4256dc5aff4dde3`.
 The owner-approved [upload and saved draft](2026-11-08-play-merchant-artifact-readiness.md)
 are complete; no rollout was authorized by that upload.
+
+9November official-reference check: Google's
+[Play services disclosure page](https://developers.google.com/android/guides/play-data-disclosure)
+explicitly covers only base, basement, OSS licenses and tasks. Its no-collection
+statement cannot be reused for `play-services-auth`. The linked Sign-In guide
+now redirects to Credential Manager documentation, not an auth-specific data
+sheet. Exact auth SDK collection/transport therefore remains open; no new
+sign-in or SDK migration was performed merely to inspect documentation.
 
 Reused bundletool manifest: `/private/tmp/ewatrade-android36-manifest.xml`, SHA256
 `c6c0a82490f6b528794c87e6574e42b508d236ecff2b116f8db495e30511ff74`.

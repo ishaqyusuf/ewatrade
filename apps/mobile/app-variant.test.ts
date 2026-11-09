@@ -22,11 +22,17 @@ test("the root local/preview profile serves the matching app configuration", () 
   expect(resolveAppVariant({})).toBe("production")
 })
 test("incremental native prebuild removes other app variants' schemes only", () => {
-  for (const selected of ["ewatrade", "ewatrade-preview", "ewatrade-dev"]) {
+  for (const selected of [
+    "ewatrade",
+    "ewatrade-preview",
+    "ewatrade-dev",
+    "ewatrade-play-preview",
+  ]) {
     const schemes = [
       "ewatrade",
       "ewatrade-preview",
       "ewatrade-dev",
+      "ewatrade-play-preview",
       "exp+ewatrade",
       "google-oauth",
     ]

@@ -1,5 +1,10 @@
 const { withAndroidManifest, withInfoPlist } = require("expo/config-plugins")
-const appSchemes = new Set(["ewatrade", "ewatrade-preview", "ewatrade-dev"])
+const appSchemes = new Set([
+  "ewatrade",
+  "ewatrade-preview",
+  "ewatrade-dev",
+  "ewatrade-play-preview",
+])
 function allowedScheme(scheme, selected) {
   return !appSchemes.has(scheme) || scheme === selected
 }
