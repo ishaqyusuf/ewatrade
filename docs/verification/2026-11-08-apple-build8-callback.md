@@ -1,25 +1,32 @@
 # Build 8 and controlled Apple callback — 8 November 2026
 
-## Existing Starter purchase recovered — 8 November 2026
+## Starter enrollment and Restore confirmed — 9 November 2026
 
-Normal Preview and Production Dashboard/Marketing/API rollout completed at
-`e047ed676fff074a4ec8e0627ddc3e579b9a7448`; matching existing-data Preview web
-smoke and Production API health pass. Canonical Production identities match that
-exact Ready candidate. Mobile build/upload/OTA is explicitly excluded by the owner;
-installed signed build10 remains unchanged. Jobs remain at6a4948c8.
+The original TestFlight Starter Sandbox purchase is verified and saved. The owner
+then enrolled this business in the installed TestFlight app and reports Starter
+survives refresh. Exact scoped read-only checks confirm one purchase, one active
+coverage row belonging to the same owner, one of one owner slots used, and the
+canonical business plan Starter. The owner-reported first tap appeared ineffective;
+second tap succeeded. Available CDN evidence shows one enrollment POST200; the
+first-tap cause remains unproven and is an open QA note.
 
-The original genuine signed Starter notification was re-verified and replayed once
-through the normal Production receiver: HTTP200/received:true. Scoped read-only
-checks prove zero→one owner purchase, one ACTIVE Starter subscription, true Sandbox
-environment, correct owner and an exact original-purchase digest match. Paid period
-ends2026-11-09T19:26:34Z. No second purchase, manual paid grant or coverage was created.
-The business is still Free with zero coverage rows; explicit Cover this business
-is the next owner action after confirming the app shows its verified subscription.
+After one requested Restore and refresh, the owner reports one of one slots still
+in use. The second scoped read proves verification advanced while the original
+purchase/period, same enrollment row and Starter plan remained unchanged; no
+purchase or coverage duplication. Native StoreKit finish, further coverage/account
+switching and paid lifecycle acceptance remain separate open checks.
 
-Native client finish/restore/coverage and lifecycle acceptance remain open; Apple
-I01–I06 remains **2/6 (33.3%)**. Public checkoutfalse, WEB activation and private
-Production TestFlight OTA prohibition are unchanged. See the
-[purchase-verification receipt](2026-11-08-apple-purchase-verification.md).
+The coverage card intentionally remains visible for managing owner enrollment.
+Release frees this business's slot and returns it to Free limits while preserving
+records; store renewal continues until cancelled separately in the store. The
+owner's requested Restore/Release floating-sheet progress/success/close/refresh/top
+flow was handed to the existing billing Workshop thread, with its exact revision
+review boundary retained. No live release action or mobile publication occurred.
+
+Last accepted web/API rollout: `e047ed676fff074a4ec8e0627ddc3e579b9a7448`, normal
+Preview smoke and Production health passed8November. Jobs remain6a4948c8; actual
+Dashboard/jobs paid-reader parity remains open. Apple remains **2/6 (33.3%)**.
+See the [verification receipt](2026-11-08-apple-purchase-verification.md).
 Earlier checkpoints below retain their historical scope.
 
 ## Superseding deployed callback checkpoint

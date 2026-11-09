@@ -1,25 +1,32 @@
 # Shared Apple and Android paid launch
 
-## Existing Starter purchase recovered — 8 November 2026
+## Starter enrollment and Restore confirmed — 9 November 2026
 
-Normal Preview and Production Dashboard/Marketing/API rollout completed at
-`e047ed676fff074a4ec8e0627ddc3e579b9a7448`; matching existing-data Preview web
-smoke and Production API health pass. Canonical Production identities match that
-exact Ready candidate. Mobile build/upload/OTA is explicitly excluded by the owner;
-installed signed build10 remains unchanged. Jobs remain at6a4948c8.
+The original TestFlight Starter Sandbox purchase is verified and saved. The owner
+then enrolled this business in the installed TestFlight app and reports Starter
+survives refresh. Exact scoped read-only checks confirm one purchase, one active
+coverage row belonging to the same owner, one of one owner slots used, and the
+canonical business plan Starter. The owner-reported first tap appeared ineffective;
+second tap succeeded. Available CDN evidence shows one enrollment POST200; the
+first-tap cause remains unproven and is an open QA note.
 
-The original genuine signed Starter notification was re-verified and replayed once
-through the normal Production receiver: HTTP200/received:true. Scoped read-only
-checks prove zero→one owner purchase, one ACTIVE Starter subscription, true Sandbox
-environment, correct owner and an exact original-purchase digest match. Paid period
-ends2026-11-09T19:26:34Z. No second purchase, manual paid grant or coverage was created.
-The business is still Free with zero coverage rows; explicit Cover this business
-is the next owner action after confirming the app shows its verified subscription.
+After one requested Restore and refresh, the owner reports one of one slots still
+in use. The second scoped read proves verification advanced while the original
+purchase/period, same enrollment row and Starter plan remained unchanged; no
+purchase or coverage duplication. Native StoreKit finish, further coverage/account
+switching and paid lifecycle acceptance remain separate open checks.
 
-Native client finish/restore/coverage and lifecycle acceptance remain open; Apple
-I01–I06 remains **2/6 (33.3%)**. Public checkoutfalse, WEB activation and private
-Production TestFlight OTA prohibition are unchanged. See the
-[purchase-verification receipt](../verification/2026-11-08-apple-purchase-verification.md).
+The coverage card intentionally remains visible for managing owner enrollment.
+Release frees this business's slot and returns it to Free limits while preserving
+records; store renewal continues until cancelled separately in the store. The
+owner's requested Restore/Release floating-sheet progress/success/close/refresh/top
+flow was handed to the existing billing Workshop thread, with its exact revision
+review boundary retained. No live release action or mobile publication occurred.
+
+Last accepted web/API rollout: `e047ed676fff074a4ec8e0627ddc3e579b9a7448`, normal
+Preview smoke and Production health passed8November. Jobs remain6a4948c8; actual
+Dashboard/jobs paid-reader parity remains open. Apple remains **2/6 (33.3%)**.
+See the [verification receipt](../verification/2026-11-08-apple-purchase-verification.md).
 Earlier checkpoints below retain their historical scope.
 
 This is the single current decision, ownership and phase index for the mobile
@@ -64,7 +71,7 @@ user to repeat it.
 | Phase | Current state | Next action |
 | --- | --- | --- |
 | 1. Shared contract and core source | Owner limits, coverage, versioned signup and retained-record downgrade implemented (0bd862763; verification daf00b5f0). Manual native addresses implemented cf831c187. | Reuse valid checks. Apple courtesy source and platform-specific runtime readiness are implemented with23billing tests/136assertions, scoped259/1679, API types and H01/H02 passing; signed acceptance remains open. Completed Play policy is unchanged. |
-| 2. Store products and configuration | Apple three ranked monthly products and175price schedules each are saved. Mapping/verifier/review source and reviewer-only authorization are live on Production API ate047ed676fff074a4ec8e0627ddc3e579b9a7448. Both Apple callback URLs point to the Production gateway; genuine fresh Sandbox TEST delivery succeeds. Public checkout stays closed; paid lifecycle remains unaccepted. Play organization merchant profile is linked; bank setup is deferred. Owner-approved AAB36 processed and saved to the existing internal-testing draft. Three Apple-matching Play products are created with0 active base plans; monthly base-plan save has an unresolved generic Console error. | Dedicated Apple reviewer identity and versioned Free workspace are prepared. Updated Apple Paid Applications Agreement is accepted/Active and reviewer password setup is confirmed. Apple reviewer login/contact are saved. Private signed1.0.0(10) is processed and installed with visible monthly products; owner password login is confirmed on unchanged login source. Original Starter purchase is recovered and durable in Sandbox; confirm native client finish, then continue explicit coverage/restore and lifecycle tests. Signed money acceptance remains open. Finish required bank/merchant verification before paid launch; resolve the Console base-plan save error, finish exact localized monthly prices/five-day grace and merge actual Play mappings. Play177-country draft remains unsubmitted and is not paid-territory acceptance. |
+| 2. Store products and configuration | Apple three ranked monthly products and175price schedules each are saved. Mapping/verifier/review source and reviewer-only authorization are live on Production API ate047ed676fff074a4ec8e0627ddc3e579b9a7448. Both Apple callback URLs point to the Production gateway; genuine fresh Sandbox TEST delivery succeeds. Public checkout stays closed; paid lifecycle remains unaccepted. Play organization merchant profile is linked; bank setup is deferred. Owner-approved AAB36 processed and saved to the existing internal-testing draft. Three Apple-matching Play products are created with0 active base plans; monthly base-plan save has an unresolved generic Console error. | Dedicated Apple reviewer identity and versioned Free workspace are prepared. Updated Apple Paid Applications Agreement is accepted/Active and reviewer password setup is confirmed. Apple reviewer login/contact are saved. Private signed1.0.0(10) is processed and installed with visible monthly products; owner password login is confirmed on unchanged login source. Original Starter purchase is recovered and durable in Sandbox; basic enrollment and one Restore now preserve Starter/one slot. Continue native store-finish, first-tap feedback, account/business switching and lifecycle checks. Signed money acceptance remains open. Finish required bank/merchant verification before paid launch; resolve the Console base-plan save error, finish exact localized monthly prices/five-day grace and merge actual Play mappings. Play177-country draft remains unsubmitted and is not paid-territory acceptance. |
 | 3. Shared runtime, legal and operations | Production Dashboard/Marketing/API ate047ed676fff074a4ec8e0627ddc3e579b9a7448 READY after matching Preview smoke; API SQL health200. Jobs remain6a4948c8; additive privacy schema synchronized by the normal2e1ee7e72 push. Reviewer-only API billing enabled, public checkoutfalse, WEB activation unchanged. Dashboard/jobs reader configuration and actual paid consistency, common legal/privacy and operations acceptance remain open. | Verify paid lifecycle/routing/operator delivery, paid legal publication, SDK/provider destinations and preserved-record deletion cases without repeating completed empty-data tests. Reuse password-recovery work. |
 | 4. Signed acceptance | Android A01–A08:1/8; Apple I01–I06:2/6 currently accepted after fresh8November readback restored I01; products/prices I02 remain complete. Source/config tests do not close these gates. | Freeze exact candidates, inspect permissions/native linkage and run licensed purchase/restore/renewal/grace/refund/switching tests. Reuse platform-valid evidence only. |
 | 5. Submission and publication | Public release after approval/checks is authorized. Neither platform has paid-release acceptance yet. | Complete truthful store declarations/reviewer access, submit accepted candidates, follow review and publish through existing release authority. |

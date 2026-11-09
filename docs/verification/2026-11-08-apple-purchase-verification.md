@@ -1,7 +1,7 @@
 # Existing Starter Sandbox purchase verification — 8 November 2026
 
 Status: web/API Production rollout and original Starter server recovery complete.
-Native client confirmation, explicit coverage/restore/lifecycle acceptance pending.
+Basic installed-app enrollment and one Restore confirmed9November; first-tap cause, native store-finish, further switching/lifecycle and shared paid-reader acceptance remain open.
 Apple I01–I06 acceptance remains **2/6 (33.3%)**. This is the one existing licensed
 Starter purchase on installed private 1.0.0(10), not a replacement purchase.
 
@@ -248,3 +248,61 @@ At the owner's request, selected Owner ledger v9 revision
 owner subscription,0of1slots, business stillFree and Cover this business. The tab
 is retained for review. This is the local simulated presentation of the same case;
 no new revision, selection, implementation or deployment occurred.
+
+## Real installed-app enrollment and Restore — 9 November 2026
+
+Owner explicitly clarified these actions occurred in the installed TestFlight app,
+not the Workshop. First Cover tap appeared ineffective even after refresh; a second
+tap succeeded. Owner then reports persistent Starter/₦5,000 per month at the top
+and the Business coverage section still visible. Source confirms that section is
+intentionally retained in owner-billing scope. Covered state replaces Cover with
+Release and shows used slots. ₦5,000 is the existing native plan-reference label;
+localized Apple offer/confirmation remains billing authority, and enrollment does
+not create a second store purchase. No upper-card design change was made.
+
+At08:32:39.489Z, the guarded exact-owner/business Production READ ONLY transaction
+proves purchase count1; original digest match for purchase and ACTIVE Sandbox
+Starter subscription; one coverage-history row and one active row, correct owner,
+active owner slot count1; enrolled08:28:16.993Z; canonical plan Starter with source
+owner_subscription. This corroborates persistent installed-app coverage, not a
+simulator transition. The helper changes no records and exposes no identity/ref.
+
+A fresh CLI metadata/log read could not authenticate; normal CLI refresh required
+its own auth-file write, then returned missing-auth-token403. No new login/access
+was granted. Read-only existing Vercel Chrome access succeeded. Its Runtime Logs
+had no matching enrollment message; CDN Requests for09:05–09:34Lagos displayed
+one POST `/api/trpc/storeSubscriptions.enrollBusiness`, HTTP200 at09:28:16.83.
+No failed matching row was visible. This does not establish why the first tap
+appeared inert; there is no red-capable reproduction of that first attempt.
+Keep that QA item open. No speculative fix, live enrollment reset or release was
+made to reproduce it. Current API deployment identity was not independently
+rechecked this date; e047ed676 remains the last verified deployed source.
+
+Owner was asked for ONE post-fix Restore, with no new purchase, and reports1of1
+slots still used afterward. At08:39:19.318Z the same read-only proof establishes:
+
+- Same one original purchase and ACTIVE Sandbox Starter subscription.
+- verifiedAt advanced08:28:02.392Z→08:37:17.056Z; period unchanged through
+  2026-11-09T19:26:34Z, auto-renew remains on.
+- Same enrolledAt08:28:16.993Z; one coverage row, one active correct-owner row,
+  one active owner slot, canonical Starter/source owner_subscription.
+
+This accepts this Restore's durable preservation/no duplication result. It does
+not prove native StoreKit finish, every Restore outcome or the new sheet UX.
+
+Owner separately requests Restore and Release floating bottom sheets: immediate
+processing, truthful completion confirmation, auto-close, owning-screen refresh
+and scroll to top. Release needs prior confirmation explaining the freed slot,
+Free limits, retained data and continuing store renewal. Errors/no purchase/store
+finish/stale-scope outcomes must remain truthful. Request was delivered to existing
+billing Workshop thread01a1bcaf-470c-7bf2-bce4-4ff54a73485e, which acknowledged it.
+It retains the current top card/Usage and implemented baseline, latest benefits
+work and immutable revision history; exact new revision approval precedes native
+implementation/publication. That thread owns its design artifacts; this chat owns
+runtime acceptance. No mobile release or runtime configuration was performed.
+
+Current subchecks: original purchase recovery, explicit enrollment/persistent
+Starter, and this Restore's no-duplication result pass. First-tap behavior and
+StoreKit finish/further scope/lifecycle remain open. Overall Apple stays2/6.
+Next independent gate is actual API/Dashboard/jobs paid-reader consistency, which
+requires each hosted process's reviewed configuration and read-only evidence.
