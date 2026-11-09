@@ -34,8 +34,8 @@ configuration, the wrong registered package or any of the three monthly mappings
 Production checkout/reviewer flags, incorrect Preview RTDN audience/push identity,
 and invalid Publisher credentials. A separate local-keytool check requires the
 registered AAB36 upload-certificate SHA-256; the keystore password is passed only
-through the child environment, never command arguments or output. It reuses the actual product and RSA credential
-parsers; no credentials are printed. Offline configuration checks do not prove
+through the child environment, never command arguments or output. It reuses the
+actual product and RSA credential parsers; no credentials are printed. Offline configuration checks do not prove
 hosted API permissions, deployed settings or durable callbacks. This checkpoint
 tests the signing guard with fixtures; the actual local keystore and signed
 artifact have not been inspected for a new candidate.
@@ -45,21 +45,38 @@ artifact have not been inspected for a new candidate.
 - Offline doctor and seven-owned-path fast plan: core/mobile/domain, no unknowns.
 - Scoped fast smoke: 202 tests / 1,056 assertions, QA tooling types and Biome pass.
 - Actual Expo config/profile/Sandbox negative checks: 5 tests / 68 assertions pass.
-- Runner fixture suite: 98 tests / 605 assertions pass in a private temporary
-  copy of the same runner, fixture and two helper files. SHA-256 equality was
-  checked; no Git worktree or different implementation was used.
-- Ordinary Preview inherited-opt-in clearing is passes 2 tests / 24 assertions separately after adding
-  the explicit inherited flag/profile fixture. No external EAS calls occur: the
-  fixture uses fake CLI/auth/attachment/git commands.
-- Focused TypeScript check of app.config.ts and the runner, and assistant H02 pass.
-  Existing route coverage evidence is reused: no route or merchant command changed.
+- Full current-checkout focused suite: **103 tests / 673 assertions pass**, including
+  all 98 runner cases and five actual Expo config/Sandbox/signing-guard cases:
 
-The suite run directly from the checkout had twelve empty-stderr diagnostic
-assertion failures; those same cases pass from the identical isolated copy.
-The cause of that checkout-specific output behavior remains unproven. A baseline
-copy also encountered one default five-second fixture timeout under concurrent
-checks; the isolated suite used a bounded ten-second per-case timeout. These
-observations are retained and are not signed-client or hosted acceptance.
+  ```sh
+  bun test --no-env-file ./scripts/eas-account-runner.test.ts ./scripts/play-preview.test.ts --timeout 10000
+  ```
+
+- Ordinary Preview inherited-opt-in clearing also passed 2 tests / 24 assertions
+  separately. The runner uses fake CLI/auth/attachment/git commands; no external
+  EAS calls occur.
+- Focused strict TypeScript check of app.config.ts and the runner, and assistant
+  H02 pass. Existing route coverage evidence is reused: no route or merchant
+  command changed.
+
+### Earlier output failures: invocation boundary resolved
+
+The earlier bare positional filter `scripts/eas-account-runner.test.ts` produced
+12 empty-stderr diagnostic assertion failures. An identical isolated file copy
+passed 98 tests / 605 assertions; this was retained as limited historical proof.
+Paired minimal runs now show the bare-filter invocation still fails while the
+explicit `./scripts/eas-account-runner.test.ts` invocation passes the same refusal
+cases. The full current-checkout exact-file suite above then passed unchanged.
+
+[Bun's documented discovery contract](https://bun.com/docs/test/discovery)
+distinguishes substring filters from explicit `./` or absolute file paths. The
+repository's existing testing guide already requires exact paths. This resolves
+the acceptance-check invocation; it does not establish Bun's internal reason for
+the missing output in discovery mode. No assertion was removed or relaxed, no
+application fix was inferred, and no toolchain upgrade was needed. The private
+paired logs and minimized recipe remain available. One earlier baseline copy
+also hit the default five-second fixture timeout during concurrent checks;
+the complete direct suite used the bounded ten-second per-case timeout above.
 
 Logs are private `/private/tmp/ewatrade-play-profile-*-2026-11-09.log` files.
 No application flow, database, provider, emulator or payment was exercised.
@@ -88,3 +105,22 @@ is a Google APIs image with Play Store disabled and is not accepted for this pro
 
 [Regional catalog receipt](2026-11-09-play-regional-plans.md) ·
 [Audience/country review](2026-11-09-play-audience-country-review.md)
+
+
+## Provider readback after the source checkpoint
+
+Play Monetization setup shows RTDN unchecked, topic length zero, and disabled
+Send test notification/Save changes controls. Pause is enabled. In the existing
+EwaTrade Mobile Retail Ops Cloud project (`ewatrade-mobile-retail-ops`, number
+`211207022957`), Topics shows no topics. During navigation Google displayed
+“Cloud Pub/Sub API enabled for this project.” This is an observed configuration
+state change; page timing does not prove actor or cause. No explicit Enable or
+terms control was clicked in that inspection. No topic, subscription, service
+account, key, IAM grant or test message was created by this work. The separate
+Play Publisher API Enable/terms approval remains pending.
+
+Private UI evidence: `/private/tmp/ewatrade-play-rtdn-readback-2026-11-09.*` and
+`/private/tmp/ewatrade-play-pubsub-topics-2026-11-09.*`. No RTDN delivery, receipt
+verification or user-data processing acceptance follows from an enabled service
+or an empty topic list. Further first-use Cloud feature pages that may provision
+services require effects review before navigation.

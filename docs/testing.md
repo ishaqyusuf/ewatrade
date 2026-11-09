@@ -117,6 +117,13 @@ test paths to Bun; use that form for focused commands too, so Bun does not treat
 them as recursive filters and accidentally discover archived copies. Unknown
 packages still fail visibly. Tests are never removed or skipped to hide a failure.
 
+For the private Android Play profile/runner check, use the exact-file command
+`bun test --no-env-file ./scripts/eas-account-runner.test.ts ./scripts/play-preview.test.ts --timeout 10000`.
+The [9 November receipt](verification/2026-11-09-play-preview-profile.md) records
+103 tests / 673 assertions in the current checkout and the earlier bare-filter
+output discrepancy. This focused source proof does not authorize a cloud build
+or replace signed Play/device/provider acceptance.
+
 ### Scoped check environment
 
 - Type checks: `packages/db` needs `NODE_OPTIONS=--max-old-space-size=8192`
