@@ -132,9 +132,9 @@ const variantConfig = isDevelopmentBuild
         scheme: "ewatrade",
         iosBundleIdentifier: "com.ewatrade.app",
         androidPackage: "com.ewatrade.app",
-        iconBackgroundColor: "#FFF8E9",
-        splashBackgroundColor: "#FFF8E9",
-        splashDarkBackgroundColor: "#08372A",
+        iconBackgroundColor: "#F4F7FF",
+        splashBackgroundColor: "#F4F7FF",
+        splashDarkBackgroundColor: "#1C2E68",
         icons: {
           app: "./assets/icons/precision-rise-loading-icon.png",
           adaptive: "./assets/icons/precision-rise-adaptive-icon.png",
