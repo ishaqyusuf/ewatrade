@@ -1,5 +1,15 @@
 # Billing reader jobs configuration — 8 November 2026
 
+## Current checkpoint — 9 November 2026
+
+The owner subsequently approved this exact Dashboard/jobs scope. CLI access and
+selected-file credentials were restored; configuration and normal Preview →
+matching smoke → Production completed at529a44998. Hosted settings and shared-reader
+reconstruction pass; actual reviewer SSR/task-local reads remain open. Mobile is
+excluded, Apple2/6 unchanged. See the
+[runtime activation receipt](2026-11-09-billing-reader-runtime-activation.md).
+The audit/proposal and source-only checkpoints below are historical.
+
 ## Hosted Dashboard audit — 9 November 2026
 
 Read-only inspection of the `ewatrade-dashboard` Vercel project found **No Results

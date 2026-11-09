@@ -23,9 +23,13 @@ owner's requested Restore/Release floating-sheet progress/success/close/refresh/
 flow was handed to the existing billing Workshop thread, with its exact revision
 review boundary retained. No live release action or mobile publication occurred.
 
-Last accepted web/API rollout: `e047ed676fff074a4ec8e0627ddc3e579b9a7448`, normal
-Preview smoke and Production health passed8November. Jobs remain6a4948c8; actual
-Dashboard/jobs paid-reader parity remains open. Apple remains **2/6 (33.3%)**.
+Dashboard/jobs activation is deployed at clean `529a44998` after matching Preview
+smoke and normal Production health9November. Both jobs projects promoted20261109.1;
+Production has the exact existing reviewer1, Preview billing remains off. Canonical
+Dashboard/Marketing are exact529; unchanged API retainse047 with verified component
+source equivalence. Hosted settings/shared-reader reconstruction return Starter;
+actual signed-in Dashboard SSR and task-local jobs reads remain open. Apple remains
+**2/6 (33.3%)**. See the [reader activation receipt](2026-11-09-billing-reader-runtime-activation.md) for the precise proof boundary.
 See the [verification receipt](2026-11-08-apple-purchase-verification.md).
 Earlier checkpoints below retain their historical scope.
 
