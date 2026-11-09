@@ -5,6 +5,22 @@ questionnaire. Continue the existing pending requests; do not send duplicate log
 reset, credentials, banking or provider-agreement questions. Canonical platform
 progress remains **Apple I01–I06: 2/6 (33.3%)**. Android has its separate 1/8 ledger.
 
+## Latest checkpoint — Dashboard login completed
+
+The owner completed password sign-in. Billing chat verified the correct reviewer
+Owner account and EwaTrade Review / Main store in the separate signed-in Chrome
+tab. At the bounded 13:50Z window (14:50 Africa/Lagos), Dashboard showed Starter
+Active, one of one business slots, 0/100 items and 0/2 staff. The canonical owned
+READY Production deployment still matches e162. This accepts the authenticated
+API-backed paid view, not the independent Dashboard SSR reader: existing server
+layouts catch failures and the same navigation can render in their fallback.
+
+Do not repeat login or ask for credentials. The single next phone request is a
+read-only Manage store subscriptions inspection, with no cancellation, purchase,
+Restore, release or Apple-account switch. No new rollout is authorized by this
+checkpoint. See the [authenticated-view receipt](../verification/2026-11-09-dashboard-authenticated-paid-view.md)
+and [exact remaining phone sequence](../verification/2026-11-09-build10-finish-and-lifecycle-sequence.md).
+
 ## Accepted facts to reuse
 
 - Apple commercial prerequisites and three monthly products/regional prices are
@@ -35,7 +51,7 @@ These passes do not close the broader I03/I04/I05/I06 gates.
 
 | When | Owner action | Coordinator work and acceptance condition |
 | --- | --- | --- |
-| Now; one handoff already pending | Complete normal password sign-in in the prepared Chrome Dashboard tab at `https://dash.ewatrade.com/login`, using `ishaqyusuf024+ewatrade-review@gmail.com` and the dedicated reviewer password. Enter the password only on that page. | Billing chat verifies an authenticated, source-backed Dashboard SSR paid-plan postcondition. Visible navigation or an API-backed plan card alone is insufficient. No new account, OTP or password reset is needed. |
+| Completed 9 November | Owner password sign-in and correct reviewer/business confirmed. No further login is requested. | Authenticated API-backed Starter view passes. Independent Dashboard SSR result remains open because the current visible page cannot distinguish a successful read from fallback. |
 | For the next physical session | Connect the iPhone if convenient; unlock and approve Trust only if the device asks. Keep build 10 installed. Enter Apple/device/Mac passwords or biometric confirmation directly when required. | Inspect available device/mirroring access first. Use the smallest remaining tap sequence; USB pairing is not proof of working screen control. Preserve existing signed acceptance and record any unsupported controls. |
 | Before lifecycle controls change state | Use the prepared Sandbox Manage/cancel-renewal or failure/refund controls only after the exact case and expected effects are identified. | Match genuine signed facts to durable period, coverage and Free fallback; distinguish cancellation, expiry, billing failure and revocation. Do not use a real-money charge, arbitrary receipt replay, synthetic paid grant or five accelerated minutes as proof of five actual days. |
 | When existing provider evidence is located | Continue the provider-agreement/retention-location handoff already pending in Android. Share the document location or approved console evidence, not API keys or a password. | Reconcile actual reachable text, image, audio, moderation and storage recipients against the final runtime. A contract's existence or `store:false` does not establish organization-wide zero retention. |
@@ -48,9 +64,9 @@ These passes do not close the broader I03/I04/I05/I06 gates.
 
 The billing deployment chat owns native finish/source investigation and remaining
 runtime acceptance. Root owns the shared legal/input reconciliation. Continue
-offline preparation and reuse unchanged signed/source evidence while the login
-handoff is pending. Do not start duplicate deployments or change runtime flags
-to make a test pass.
+offline preparation and reuse unchanged signed/source evidence while the next
+physical-device handoff is pending. Do not start duplicate deployments or change
+runtime flags to make a test pass.
 
 Remaining evidence includes actual Dashboard SSR; native StoreKit finishing;
 ordinary account/staff and owner/business separation; uncovered/covered/released

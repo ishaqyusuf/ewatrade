@@ -110,9 +110,11 @@ Changing a country draft or finishing source code does not close a signed gate.
 
 ## One shared outstanding-input list
 
-- Apple has one existing reviewer Dashboard password-sign-in handoff pending;
-  do not repeat it, reset the password or request credentials in chat. Later
-  physical-device and exact legal-review actions are consolidated in the
+- Apple reviewer Dashboard sign-in is completed and the correct Owner/business
+  and API-backed Starter view are verified in ef22e41f4. Do not repeat login,
+  reset the password or request credentials. Independent SSR proof remains open;
+  the next single iPhone request is read-only Manage subscriptions inspection.
+  Physical-device and exact legal-review actions are consolidated in the
   [Apple owner-action packet](../releases/apple-paid-launch-owner-actions-2026-11-09.md).
 - Play organization payments profile is linked. Owner deferred payout-bank setup;
   finish the bank and any requested verification before paid launch. Do not re-ask
