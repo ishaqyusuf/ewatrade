@@ -2,7 +2,8 @@
 
 Status: actual availability read; proposed adjustment requires owner decision.
 No Apple availability, subscription, price, provider or runtime setting changed.
-This is not submission approval. Apple remains2/6; Android has its own ledger.
+This is not submission approval. Apple is now3/6 under the canonical ledger;
+Android has its own ledger.
 
 ## Actual Apple observation
 
@@ -60,12 +61,13 @@ Existing price CSV SHA256:
 
 ## Concrete recommendation and remaining boundary
 
-Recommend excluding those eleven from the app's launch availability, yielding
-164 named storefronts, while retaining the existing prices. This is a conservative
+Recommend excluding those eleven from the app and all three subscriptions' launch
+availability, yielding164 named storefronts, while retaining existing prices and
+keeping automatic future-country availability off. This is a conservative
 distribution recommendation inferred from the provider list, not a claim that a
 storefront precisely determines a user's physical location or legal eligibility.
-Review the three subscriptions' actual availability separately before proposing
-any corresponding product-setting change; pricing rows alone do not establish it.
+Actual subscription availability was reviewed separately, as recorded below;
+pricing rows alone are not the evidence for those product settings.
 
 The owner's approval for eight Play exclusions does not authorize Apple's
 different eleven-country change. No Apple change has been submitted or saved.
@@ -74,6 +76,35 @@ Ukraine's exceptions or establish all country-specific legal requirements.
 Do not contact providers: the owner withdrew outreach and requested assessment
 under applicable existing terms and actual processing flows.
 
+## Completed subscription availability read
+
+The earlier Starter dialog showed175 selected countries and automatic future
+countries off. Root subsequently opened the actual Growth and Pro availability
+dialogs, read their country-level checked states, and cancelled both without
+changing a checkbox or saving. Each has175 selected countries and automatic future
+countries off. Both extracted selected sets equal the existing175-country pricing
+set after applying the documented Naoero/Nauru alias on both sides. No prices were
+opened for editing or changed. Pro's closed-dialog summary still read all countries
+or regions selected.
+
+| Product | Apple ID | Current selected countries | Automatic future countries |
+| --- | --- | --- | --- |
+| Starter | 6832036267 | 175, earlier actual dialog evidence reused | Off |
+| Growth | 6832035627 | 175, actual country-level selection read | Off |
+| Pro | 6832031107 | 175, actual country-level selection read | Off |
+
+Growth/Pro observations were completed before the actual18:33:47UTC clock read;
+the later closed-dialog readback confirms no saved change. Private mode0600 JSON
+evidence is `/private/tmp/ewatrade-apple-growth-availability-2026-11-09.json` and
+`/private/tmp/ewatrade-apple-pro-availability-2026-11-09.json`. The current app's
+automatic-future-country setting has not been independently measured by this
+follow-up; off is part of the proposed target, not an asserted observation.
+
+Root presented one exact owner decision for the app plus all three products:
+exclude the eleven named storefronts, target164, preserve prices, future countries
+off, no submission/publication. **Owner approval remains pending.** The different
+approved Play exclusions remain separate and confer no Apple authority.
+
 ## Verification and Brain impact
 
 Read-only UI inspection and offline set equality establish only the observations
@@ -81,3 +112,7 @@ above. Focused documentation checks are recorded with the consolidated checkpoin
 no purchase, task invocation, native input, build or deployment is part of this
 review. The local Brain Apple handoff records the same evidence and pending
 decision; no API, schema, permission or product behavior changed.
+Follow-up offline selected-set equality passes for Growth/Pro. Documentation uses
+the already passed core51tests/254assertions and QA-tooling types from the same
+unchanged tooling; owned diff/local-link checks remain required. No repeated
+Starter device/provider case or broad whole-checkout approval is claimed.
