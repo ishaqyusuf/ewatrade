@@ -1,12 +1,18 @@
 # I03 configuration evidence audit — 9 November 2026
 
-Status: **offline reconciliation recommends coordinator acceptance of I03 for the
-approved one-reviewer private target**. No concrete original configuration
-criterion remains unsupported under the explicit scope below. The coordinator
-owns the gate/ledger decision; this audit does not change I03's recorded state,
-the platform score **Apple2/6 (33.3%)**, or any goal status. No new deployment,
-native/provider/database call, grant, fixture, purchase, account switch, gateway
-or flag change was made by this reconciliation.
+Status: **coordinator accepted I03 for the approved one-reviewer private target**
+on 9 November, after reviewing the five original configuration criteria and actual
+paid/Free reader/restoration evidence. This records that decision; root owns the
+separate canonical ledger/shared-index/owner-actions milestone of 3/6 (50%). Earlier
+dated 2/6 checkpoints remain historical. This audit changes no global ledger or
+goal status. No new deployment, native/provider/database call, grant, fixture,
+purchase, account switch, gateway or flag change was made by this reconciliation.
+
+Public checkout remains CLOSED; I04/I05/I06 remain open. Ordinary nonreviewer
+Sandbox dispatch is UNEXECUTED/DEFERRED outside this private configuration scope.
+Positive Production App Store Server API authorization remains UNOBSERVED/platform-
+limited, with conditional follow-through after release eligibility. The original
+operator timing precondition stays INCONCLUSIVE; no whole-queue pass is claimed.
 
 ## Requirement authority and accepted evidence
 
@@ -16,7 +22,7 @@ notification delivery, owner coverage/cutover and native linkage. The adjacent I
 row separately requires signed purchase/Restore/lifecycle/account-business
 switching and retained-record/admission behavior. The current
 [I03/I05 ledger](../billing/apple-paid-launch-2026-11-07.md#paid-apple-checklist)
-has accumulated some I05 QA carryover in I03's status text; it does not justify
+previously accumulated I05 QA carryover in I03's status text; it does not justify
 testing the entire money/lifecycle matrix twice.
 
 The separately owner-approved
@@ -48,10 +54,11 @@ All five original I03 configuration assertions now have target evidence for the
 approved private reviewer context. The reader activation's additional narrow
 actual paid/Free postcondition also has actual runtime evidence. With the
 coordinator's explicit ordinary-dispatch scope classification, no further live
-check or source change is identified as necessary to recommend I03 acceptance.
+check or source change was identified as necessary for I03 acceptance. The
+coordinator has accepted I03 under that scope.
 This does not authorize public checkout, accept Production transactions/auth,
-or complete I04/I05/I06. The coordinator must record the accepted scope and
-remaining limits when reconciling the global ledger.
+or complete I04/I05/I06. The coordinator owns recording this accepted scope and
+remaining limits in the global ledger.
 
 The audit does not reopen accepted passes because the Apple web console session
 later needs normal sign-in. That session is distinct from the accepted verifier-key
@@ -151,7 +158,8 @@ Coordinator's explicit scope classification, preserving the unexecuted scenario:
   reviewer-purchase proof. Keep the optional ordinary-dispatch scenario deferred/
   unaccepted, rather than changing TEST behavior or adding a purchase just to
   improve the score. Coordinator has supplied that classification and owns its
-  ledger entry; this audit recommends acceptance but does not mark I03 accepted.
+  ledger entry. This audit now records the coordinator's I03 acceptance under
+  that scope; it does not label the deferred dispatch accepted.
 - If a later explicit scope promises ordinary nonreviewer Sandbox delivery, plan
   that named target's safe case then. Do not infer such a promise from a shipped
   relay helper or count source tests as an executed live ordinary transaction.
@@ -197,6 +205,15 @@ Private mode0600 receipt:
 `/private/tmp/ewatrade-i03-final-offline-reconciliation-2026-11-09.evidence.json`.
 Restoration receipts are committed in c27fca5a3. Only this owned audit is updated
 by the reconciliation; root owns the global checklist and decision.
+
+Coordinator decision recorded from the source-chat handoff after 64e286c50:
+I03 accepted under its five original criteria and approved private scope. The
+decision adds no technical pass beyond the recorded evidence and does not resolve
+I04/I05/I06, ordinary dispatch, positive Production auth or the timing condition.
+Decision wording, retained limits, 15 local links and owned diff were checked;
+unchanged prior source/test evidence is reused. No live work was performed.
+Private mode0600 decision receipt:
+`/private/tmp/ewatrade-i03-coordinator-decision-2026-11-09.evidence.json`.
 
 Brain impact: local `.brain/features/native-store-billing.md`,
 `.brain/features/owner-wide-billing.md` and `.brain/tasks/in-progress.md`.
