@@ -1,5 +1,33 @@
 # Shared Apple and Android paid launch
 
+## Actual Free readers and physical coverage restoration — 9 November 2026
+
+After the owner's single normal Release, the physical app showed Free/uncovered,
+0of1 owner slots and Cover available. The existing canonical Dashboard full reload
+then returned `resolved / free / owner_billing_free` and its normal API-backed card
+showed Free at17:09:55Z. One new phase-bound actual Production jobs read checked
+Free/owner_billing_free/ownerPlanId=null at17:08:23.460Z on exacte162/20261109.2,
+readOnly/scopeVerified. These are real runtime observations, not local reconstructions.
+The initial Release second was estimated; the corrected clock interval leaves
+the operator's two-minute baseline condition inconclusive. Preserve the original
+phase/intent/handle/result and correction; do not claim a113-second measured pass.
+
+The owner prioritized Device Hub control repair before restoration. Foreground
+coordinate taps and the actual phone Home gesture now work; normal Finder
+File→Open reactivates Device Hub after focus loss. Background coordinate input
+and arbitrary literal text entry remain unaccepted. With original EwaTrade Review/
+Owner explicitly confirmed, one agent Cover tap restored displayed Active Starter,
+covered,1of1 owner slots at17:28:48.083Z. No new Apple purchase or Restore occurred.
+See [control and restoration evidence](../verification/2026-11-09-device-hub-foreground-control.md)
+and the [coverage receipt](../verification/2026-11-09-coverage-release-free-reenroll.md).
+One actual restored Settings full reload subsequently returned
+`resolved / starter / owner_subscription`, with normal API-backed Active Starter
+and the same business/Store, after17:28:48.083Z and before17:30:23Z. The executor
+recorded the honest observation bound and reused unchanged acceptedb0 runtime
+evidence; no new jobs, row census or provider query was added.
+Apple2/6 and Android1/8 remain unchanged; lifecycle and populated over-limit cases
+are not accepted by this empty reviewer business.
+
 ## Fresh native finish-return and Apple access — 9 November 2026,17:51–17:59 Lagos
 
 After the owner's single requested full termination/relaunch of installed signed10,
