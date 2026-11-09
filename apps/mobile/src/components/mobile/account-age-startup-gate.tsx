@@ -50,10 +50,14 @@ export function AccountAgeStartupGate({
   // Network errors never block the app, and a rejected session is signed out
   // by the session-expiry link.
   const ageMissing =
-    !localQaSession && ageStatus.isSuccess && ageStatus.data.ageBand == null
+    !localQaSession &&
+    ageStatus.isSuccess &&
+    // Legacy accounts use the explicit server enum; older responses used null.
+    (ageStatus.data.ageBand == null || ageStatus.data.ageBand === "UNDECLARED")
   const underage =
     !localQaSession &&
     ageStatus.isSuccess &&
+    !ageMissing &&
     ageStatus.data.ageBand != null &&
     ageStatus.data.eligible !== true
   if (!ageMissing && !underage)

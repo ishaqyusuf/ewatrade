@@ -37,7 +37,11 @@ mock.module("@/components/mobile/auth-header", () => ({
   AuthBrandHeader: box,
 }))
 mock.module("@/components/mobile/green-till/auth-screen", () => ({
-  AuthFlowScreen: box,
+  AuthFlowScreen: ({
+    children,
+    title,
+  }: { children?: ReactNode; title?: string }) =>
+    createElement("main", null, createElement("h1", null, title), children),
 }))
 
 const { AccountAgeStartupGate } = await import(
@@ -45,21 +49,34 @@ const { AccountAgeStartupGate } = await import(
 )
 const render = () =>
   renderToStaticMarkup(createElement(AccountAgeStartupGate, null, "WORKSPACE"))
-for (const value of [
-  { isSuccess: true, data: { ageBand: null, eligible: false } },
-  { isSuccess: true, data: { ageBand: "UNDER_13", eligible: false } },
-]) {
-  status = value
+for (const ageBand of [null, "UNDECLARED"]) {
+  status = { isSuccess: true, data: { ageBand, eligible: false } }
   const markup = render()
+  assert.ok(
+    markup.includes("Confirm your age range"),
+    `${ageBand}: show declaration controls, not an underage refusal`,
+  )
+  for (const label of ["Under 13", "13–15", "16–17", "18 or older"])
+    assert.ok(markup.includes(label), `${ageBand}: missing ${label}`)
   assert.ok(markup.includes('data-update-restore="false"'))
   assert.ok(!markup.includes("WORKSPACE"))
 }
+status = { isSuccess: true, data: { ageBand: "UNDER_13", eligible: false } }
+const underageMarkup = render()
+assert.ok(underageMarkup.includes("available"))
+assert.ok(!underageMarkup.includes("Confirm your age range"))
+assert.ok(!underageMarkup.includes("18 or older"))
+assert.ok(!underageMarkup.includes("WORKSPACE"))
+assert.ok(underageMarkup.includes('data-update-restore="false"'))
 // The current gate opens the workspace while the background status request is
 // pending or unavailable; the normal workspace owns updates in these states.
 for (const value of [
   { isPending: true },
   { isError: true },
-  { isSuccess: true, data: { ageBand: "ADULT", eligible: true } },
+  ...["ADULT", "AGE_13_TO_15", "AGE_16_TO_17"].map((ageBand) => ({
+    isSuccess: true,
+    data: { ageBand, eligible: true },
+  })),
 ]) {
   status = value
   assert.equal(render(), "WORKSPACE")

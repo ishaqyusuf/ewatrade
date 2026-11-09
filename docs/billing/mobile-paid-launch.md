@@ -110,12 +110,20 @@ Changing a country draft or finishing source code does not close a signed gate.
 
 ## One shared outstanding-input list
 
+- Apple has one existing reviewer Dashboard password-sign-in handoff pending;
+  do not repeat it, reset the password or request credentials in chat. Later
+  physical-device and exact legal-review actions are consolidated in the
+  [Apple owner-action packet](../releases/apple-paid-launch-owner-actions-2026-11-09.md).
 - Play organization payments profile is linked. Owner deferred payout-bank setup;
   finish the bank and any requested verification before paid launch. Do not re-ask
   for the already completed profile selection or agreement submission.
-- Actual monitored operational backup and response-time commitment are not yet
-  recorded. Primary owner and existing support aliases are known; do not re-ask
-  their identity or create duplicate inboxes.
+- Backup `admin@zeroesandone.com.ng` and a12-hour initial response target are
+  recorded. Actual monitored routing/delivery is unverified; do not re-ask for the
+  contact or commitment, publish a guarantee or create duplicate inboxes.
+- Provider-agreement/retention evidence location is already pending in Android;
+  reuse that handoff. Actual reachable recipient/retention facts and a complete
+  next-version paid legal snapshot remain open; an incomplete draft is not ready
+  for exact publication approval.
 - Any reviewer workspace, sandbox identities or country-specific business facts
   must first be sought in existing configuration/evidence. Never invent an answer
   or ask both chats independently for the same fact.

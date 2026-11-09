@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "id": "2026-11-09-mobile-undeclared-age-repair",
+  "tickets": ["H02"],
+  "summary": "Restore existing one-time age-declaration controls for legacy UNDECLARED mobile accounts, preserving actual under-13 refusal and ordinary pending/error behavior. Source only; no account mutation, native SDK or publication.",
+  "noAssistantImpact": "Personal age declarations are user-only identity controls. The assistant cannot select, guess or change an age. Existing serviceCommerce.accountAgeStatus/accountDeclareAgeBand and authenticated session/server domain eligibility remain authoritative. No merchant command, assistant tool, capability, procedure, permission or rollout changes.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "path": ".brain/features/mobile-account-age-startup.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "schema",
+      "status": "not_applicable",
+      "note": "No schema, database, enum, API contract or migration change."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "apps/mobile/src/lib/fixtures/app-update-age-gate-scenario.ts",
+      "executed": true,
+      "result": "Actual component UNDECLARED recovery fails before predicate fix and passes after; nine null/undeclared/under13/teen/adult/pending/error/signed-out state vectors preserve update recovery. No real declaration or provider request."
+    },
+    {
+      "kind": "run",
+      "path": "docs/verification/2026-11-09-mobile-age-declaration-repair.md",
+      "executed": true,
+      "result": "Offline doctor, owned source quick202 tests/1056assertions plus QA-tooling types/Biome and full Mobile TypeScript pass. Signed/platform/publication acceptance remains separate."
+    }
+  ]
+}
