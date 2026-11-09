@@ -5,7 +5,25 @@ questionnaire. Do not repeat completed login, device or banking requests, and do
 not send the withdrawn AI-provider inquiries. Canonical platform
 progress remains **Apple I01–I06: 2/6 (33.3%)**. Android has its separate 1/8 ledger.
 
-## Latest checkpoint — actual Dashboard server read accepted
+## Latest checkpoint — fresh native finish-return observed
+
+The owner completed the requested full app termination/relaunch and Apple
+sign-in. At17:51–17:52 Lagos, Device Hub displayed the exact signed10 message:
+“Your store subscription has been verified. Review this business's current plan
+and coverage below.” The source-backed branch accepts a bounded current-lifetime
+mapped-purchase native finish-return. It does not identify an exact transaction,
+prove every callback or the entire queue finished, or independently prove every
+query refetch succeeded. Release this business and the three monthly offers were
+visible; the offscreen top plan/slot state was not freshly measured from that view.
+See the [fresh-finish observation](../verification/2026-11-09-build10-fresh-finish-observation.md).
+
+Apple access is restored. Actual expanded app availability is175countries and
+matches the saved pricing country set. Eleven enabled storefronts are not
+explicitly listed by the AI provider. The [exact country review](../verification/2026-11-09-apple-provider-territory-review.md)
+proposes164 launch storefronts; no Apple settings changed or exclusion approval
+is inferred from the separate Play decision. Do not request sign-in again.
+
+## Accepted Dashboard server read
 
 The owner completed password sign-in. Billing chat verified the correct reviewer
 Owner account and EwaTrade Review / Main store in the separate signed-in Chrome
@@ -35,7 +53,8 @@ and [remaining phone sequence](../verification/2026-11-09-build10-finish-and-lif
 - Password login, displayed monthly offers, cancellation without a grant, the
   original genuine Starter Sandbox purchase, explicit business coverage and one
   idempotent Restore have candidate-specific evidence. Do not buy again merely
-  to reproduce these passes. Native transaction finishing remains distinct.
+  to reproduce these passes. The bounded fresh native finish-return now passes;
+  stronger transaction/queue and lifecycle claims remain separate.
 - Dashboard/Marketing/API are accepted Production source
   `b0e29c66dc663e781a46989c3415beecd94c2694`. Both jobs retain e162/version
   `20261109.2`, with actual hosted read-only Starter proof and Preview disabled.
@@ -55,6 +74,9 @@ These passes do not close the broader I03/I04/I05/I06 gates.
 | When | Owner action | Coordinator work and acceptance condition |
 | --- | --- | --- |
 | Completed 9 November | Owner password sign-in and correct reviewer/business confirmed. No further login is requested. | Authenticated API-backed Starter view and actual full-reload Settings canonical server Starter/owner-subscription read pass at exactb0. |
+| Completed 9 November,17:51–17:52 Lagos | Fresh signed10 app launch and restored Apple sign-in were completed. No repeated cold launch or Apple login is requested. | Exact current-lifetime success message observed; bounded native finish-return accepted. Broader I05 remains open. |
+| Next finite coverage case, when coordinator requests | Release only EwaTrade Review's coverage once, hold the resulting Free state for reads, then re-enroll only after the coordinator finishes that window. | Follow the [prepared protocol](../verification/2026-11-09-coverage-release-free-reenroll.md): current active owner subscription/slot baseline; actual API, full-reload Settings and new-phase read-only jobs Free evidence; normal recovery using the existing subscription. No new purchase, Restore or cancellation. |
+| Before country changes | Decide the exact proposed Apple eleven-storefront exclusion after review. | Preserve prices, read back the resulting set, and keep actual user-location/country compliance distinct. No Apple change is authorized by Play's different exclusions. |
 | Connection completed; later protected actions only | Wi-Fi after USB removal is verified. Keep build10 installed and Wi-Fi available; handle unlock, passwords/biometrics directly when a concrete remaining case needs them. | Device Hub displays the physical phone. Direct coordinate input fails even in Mac app sidebars; do not promise unattended navigation or ask the owner to enable UI Automation as a proven fix. |
 | Before lifecycle controls change state | Use the prepared Sandbox Manage/cancel-renewal or failure/refund controls only after the exact case and expected effects are identified. | Match genuine signed facts to durable period, coverage and Free fallback; distinguish cancellation, expiry, billing failure and revocation. Do not use a real-money charge, arbitrary receipt replay, synthetic paid grant or five accelerated minutes as proof of five actual days. |
 | No provider inquiry requested | Owner directs no AI-provider contact; assess existing applicable terms/policies and actual flows. Review only a concrete proposed adjustment or unresolved material conflict. | Android owns this review and the approved18+live-AI adjustment; preserve eligible13+ ordinary functions/history. Resolve actual provider/account/flow facts and truthful retention disclosure without inventing bespoke-contract or ZDR launch prerequisites. |
@@ -71,8 +93,7 @@ offline preparation and reuse unchanged signed/source evidence while a concrete
 physical-device case is prepared. Do not start duplicate deployments or change
 runtime flags to make a test pass.
 
-Remaining evidence includes native StoreKit finishing;
-ordinary account/staff and owner/business separation; uncovered/covered/released
+Remaining evidence includes ordinary account/staff and owner/business separation; uncovered/covered/released
 coverage; renewal/cancellation, failed-renewal recovery and refund/revocation;
 retained records and new-admission limits after Free fallback; operational support;
 positive paid-owner privacy handling; truthful store declarations and final review.
@@ -125,9 +146,11 @@ keep protected credentials/payment confirmations owner-handled.
 ## Verification and Brain impact
 
 This documentation-only reconciliation reuses the linked candidate-specific
-receipts. Offline doctor passes without runtime probes. The explicit two-document
+receipts and adds the attributed fresh phone/Apple read-only observations above.
+Offline doctor passes without runtime probes. The explicit three-document
 fast scope has zero unknown paths and passes 51 tests/254 assertions plus QA
 tooling types; local links and whitespace pass. This does not accept an additional
-native, payment, privacy or release case. The local Brain task-handoff note records
+payment lifecycle, privacy or release case beyond the bounded native finish-return
+described above. The local Brain task-handoff note records
 the consolidated inputs and remaining gates; no API, permission, schema or product
 behavior changed.
