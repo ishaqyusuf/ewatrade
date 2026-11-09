@@ -193,3 +193,21 @@ export {
   type FinancePurchaseReviewInput,
 } from "./purchase-recording-review"
 export { prepareReviewedFinancePurchaseRecordingInTransaction } from "./purchases"
+export {
+  adjustFinanceShipmentLineCost,
+  closeFinanceShipment,
+  confirmFinanceShipment,
+  createFinanceShipment,
+  getFinanceShipment,
+  listFinanceShipments,
+  mapFinanceShipmentLine,
+  receiveFinanceShipment,
+  reopenFinanceShipment,
+  updateFinanceShipmentDraft,
+} from "./shipments"
+export {
+  allocateShipmentFreight,
+  computeShipmentCosting,
+  shipmentLandedUnitMinor,
+  shipmentReceiptCostMinor,
+} from "./shipment-costing"
