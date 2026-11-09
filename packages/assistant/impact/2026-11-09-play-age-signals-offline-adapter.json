@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "id": "2026-11-09-play-age-signals-offline-adapter",
+  "tickets": ["H02"],
+  "summary": "Prepare a disabled Android-only Play Age Signals adapter, validated unattested observation contract and restrictive local hints with offline source checks. No product wiring, live SDK calls, age mutation or publication.",
+  "noAssistantImpact": "Personal store age observations are excluded from assistant/model input and cannot select or change a person's saved age or server privileges. The adapter has no product entrypoint, RPC, request header, database storage, assistant tool or capability. Canonical declaration/session/server eligibility remains authoritative; native source gate is false pending terms/policy/signed review.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/play-age-signals.md"
+    },
+    {
+      "topic": "schema",
+      "status": "not_applicable",
+      "note": "No database, API contract or persistent age/identifier field."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "apps/mobile/src/lib/play-age-observation.test.ts",
+      "executed": true,
+      "result": "Focused exact-file contract/protocol and isolated actual native-adapter tests9/75 pass; no real SDK invocation. Context-switch/query suppression and no adult grants preserved."
+    },
+    {
+      "kind": "run",
+      "path": "docs/verification/2026-11-09-play-age-adapter-source.md",
+      "executed": true,
+      "result": "Full Mobile types, Android-only autolinking discovery, official AAR ABI inspection and one-file Kotlin compile against actual SDK/Android/Expo interfaces pass. No APK/build/signing/runtime or country-compliance acceptance."
+    }
+  ]
+}
