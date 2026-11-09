@@ -100,8 +100,9 @@ describe("retail ops subscription helpers", () => {
 })
 
 test("storefront caps and customer messages stay on their intended tiers", () => {
+  expect(getPlan("free").limits.storefrontItems).toBe(10)
+  expect(getPlan("starter").limits.storefrontItems).toBeNull()
   for (const id of ["free", "starter"] as const) {
-    expect(getPlan(id).limits.storefrontItems).toBe(3)
     expect(getPlan(id).features).not.toContain("customerMessages")
   }
   for (const id of ["growth", "pro"] as const) {

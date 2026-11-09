@@ -38,6 +38,8 @@ let refetch = async () => ({ isSuccess: true, data })
 let listPurchases: () => Promise<Purchase[]> = async () => []
 let verify: () => Promise<void> = async () => {}
 let mutateCoverage: () => Promise<void> = async () => {}
+let finish: () => Promise<void> = async () => {}
+let invalidate: () => Promise<void> = async () => {}
 let onSuccess: (purchase: Purchase) => void = () => {}
 const calls: Array<{ operation: string; input?: unknown }> = []
 
@@ -79,6 +81,7 @@ mock.module("@tanstack/react-query", () => ({
   useQueryClient: () => ({
     invalidateQueries: async () => {
       calls.push({ operation: "refresh" })
+      await invalidate()
     },
   }),
 }))
@@ -99,9 +102,11 @@ mock.module("expo-iap", () => ({
   getAvailablePurchases: () => listPurchases(),
   finishTransaction: async () => {
     calls.push({ operation: "finish" })
+    await finish()
   },
 }))
 mock.module("react-native", () => ({
+  ActivityIndicator: () => null,
   Platform: {
     get OS() {
       return platform
@@ -186,6 +191,8 @@ beforeEach(() => {
   listPurchases = async () => [receipt]
   verify = async () => {}
   mutateCoverage = async () => {}
+  finish = async () => {}
+  invalidate = async () => {}
 })
 
 const appleProduct: ProductSubscriptionIOS = {
@@ -224,6 +231,8 @@ function useAppleCatalog() {
 }
 
 test("Apple checkout binds the fresh owner account and the localized monthly offer", async () => {
+  data.ownerCoverage.businessLimit = 0
+  data.ownerCoverage.reason = "inactive_subscription"
   useAppleCatalog()
   const controller = renderController()
   refetch = async () => ({
@@ -288,6 +297,8 @@ test("Apple restore leaves an unverified transaction unfinished for recovery", a
 })
 
 test("native checkout uses the refreshed owner binding and the disclosed offer", async () => {
+  data.ownerCoverage.businessLimit = 0
+  data.ownerCoverage.reason = "inactive_subscription"
   const controller = renderController()
   refetch = async () => ({
     isSuccess: true,
@@ -450,6 +461,84 @@ test("coverage started during checkout refresh prevents a competing store launch
   expect(calls.map((call) => call.operation)).toEqual(["enroll", "refresh"])
 })
 
+test("an already paid owner cannot launch another purchase from a stale callback", async () => {
+  const controller = renderController()
+  await controller.purchase(product)
+  expect(calls.filter((c) => c.operation === "checkout")).toHaveLength(0)
+})
+test("settled enrollment without a fresh covered postcondition is not success", async () => {
+  const result = await renderController().changeCoverage("enroll")
+  expect(result.status).toBe("unconfirmed")
+})
+test("a no-op release cannot report success", async () => {
+  data.ownerCoverage.enrolled = true
+  data.ownerCoverage.reason = "covered"
+  const result = await renderController().changeCoverage("release")
+  expect(result.status).toBe("unconfirmed")
+})
+test("release success requires a fresh unenrolled Free projection", async () => {
+  data.ownerCoverage.enrolled = true
+  data.ownerCoverage.reason = "covered"
+  mutateCoverage = async () => {
+    data = {
+      ...data,
+      ownerCoverage: {
+        ...data.ownerCoverage,
+        enrolled: false,
+        reason: "uncovered",
+        planId: "free",
+      },
+    }
+  }
+  const result = await renderController().changeCoverage("release")
+  expect(result.status).toBe("confirmed")
+  expect(result.message).toContain("existing staff")
+})
+test("restore confirms verified history only after preserving enrollment", async () => {
+  const result = await renderController().restore()
+  expect(result.status).toBe("confirmed")
+  expect(result.message).toContain("coverage was not changed")
+})
+
+test("Restore does not confirm a verified purchase whose store finalization failed", async () => {
+  finish = async () => {
+    throw Error("finish failed")
+  }
+  expect((await renderController().restore()).status).toBe("unconfirmed")
+})
+test("Restore does not confirm when verified projections could not refresh", async () => {
+  invalidate = async () => {
+    throw Error("refresh failed")
+  }
+  expect((await renderController().restore()).status).toBe("unconfirmed")
+})
+test("Restore never confirms an unexpected business enrollment change", async () => {
+  verify = async () => {
+    data = {
+      ...data,
+      ownerCoverage: {
+        ...data.ownerCoverage,
+        enrolled: true,
+        reason: "covered",
+      },
+    }
+  }
+  expect((await renderController().restore()).status).toBe("unconfirmed")
+})
+test("a second Restore is blocked while the first is reading store history", async () => {
+  let resolve: (v: Purchase[]) => void = () => {}
+  listPurchases = () =>
+    new Promise((r) => {
+      resolve = r
+    })
+  const controller = renderController()
+  const first = controller.restore()
+  await new Promise((r) => setTimeout(r, 0))
+  expect((await controller.restore()).status).toBe("unconfirmed")
+  resolve([receipt])
+  expect((await first).status).toBe("confirmed")
+})
+
 if (iosEntry) {
   const node = ({ children }: { children?: ReactNode }) =>
     createElement("div", null, children)
@@ -463,6 +552,19 @@ if (iosEntry) {
       createElement("button", { type: "button", disabled }, children),
   }))
   mock.module("expo-router", () => ({ useRouter: () => ({ push: () => {} }) }))
+  mock.module("@/components/ui/icon", () => ({ Icon: () => null }))
+  mock.module("@/components/ui/modal", () => ({
+    Modal: node,
+    useModal: () => ({
+      ref: { current: null },
+      present: () => {},
+      dismiss: () => {},
+    }),
+  }))
+  mock.module("@gorhom/bottom-sheet", () => ({
+    BottomSheetScrollView: node,
+    BottomSheetView: node,
+  }))
   mock.module("./store-owner-coverage", () => ({
     StoreOwnerCoverage: () => null,
   }))
@@ -479,15 +581,15 @@ if (iosEntry) {
       createElement(
         StoreSubscriptionProvider,
         null,
-        createElement(StoreSubscriptionPanel),
+        createElement(StoreSubscriptionPanel, { currentPlanId: "starter" }),
       ),
     )
-    expect(html).toContain("Owner subscriptions")
+    expect(html).toContain("Upgrade")
     expect(html).toContain("Growth")
     expect(html).toContain("₦15,000")
     expect(html).toContain("month")
     expect(html).toContain("Restore purchases")
-    expect(html).toContain("Manage store subscriptions")
+    expect(html).toContain("Manage in App Store")
     expect(calls.filter((call) => call.operation === "checkout")).toHaveLength(
       0,
     )

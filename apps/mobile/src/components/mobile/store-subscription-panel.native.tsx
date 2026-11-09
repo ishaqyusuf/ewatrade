@@ -1,416 +1,568 @@
+import { Modal, useModal } from "@/components/ui/modal"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
 import { useAuthContext } from "@/hooks/use-auth"
-import { getMobileRoleLabel } from "@/lib/mobile-roles"
 import { publicLegalUrl } from "@/lib/public-legal-url"
-import { getPlan } from "@/lib/retail-ops-subscription"
+import {
+  RETAIL_OPS_PLANS,
+  type RetailOpsPlanId,
+} from "@/lib/retail-ops-subscription"
+import { getSessionGeneration } from "@/lib/session-store"
 import { useOperationalModeStore } from "@/store/operationalModeStore"
+import { getDataCacheGeneration } from "@/trpc/client"
+import { BottomSheetScrollView, BottomSheetView } from "@gorhom/bottom-sheet"
 import { deepLinkToSubscriptions } from "expo-iap"
 import { useRouter } from "expo-router"
-import { useState } from "react"
-import { Linking } from "react-native"
-import { StoreOwnerCoverage } from "./store-owner-coverage"
+import { useEffect, useRef, useState } from "react"
+import { ActivityIndicator, Linking } from "react-native"
 import { useStoreSubscription } from "./store-subscription-provider"
+import {
+  SubscriptionPlanAction,
+  SubscriptionPlanBenefits,
+} from "./subscription-plan-benefits"
+import {
+  formatPlanBillingDisclosure,
+  getUpgradePlans,
+} from "./subscription-plan-benefits-model"
 
-const PLAN_ORDER = ["starter", "growth", "pro"] as const
-
-/** Native implementation of Owner ledger / Workshop a v9. */
-export function StoreSubscriptionPanel() {
-  const { profile } = useAuthContext()
-  return (
-    <OwnerSubscriptionLedger key={`${profile?.id}:${profile?.businessId}`} />
-  )
+type PanelOptions = {
+  currentPlanId: RetailOpsPlanId | null
+  onCompleted?: () => Promise<void> | void
+}
+type Operation = "restore" | "enroll" | "release"
+type Feedback = {
+  operation: Operation
+  phase: "confirm" | "processing" | "success" | "error"
+  title: string
+  message: string
 }
 
-function OwnerSubscriptionLedger() {
-  const router = useRouter()
+/** Selected Workshop a/v19. The parent retains its current-plan hero and Usage. */
+export function useSubscriptionPlanPanel({
+  currentPlanId,
+  onCompleted,
+}: PanelOptions) {
   const { profile } = useAuthContext()
-  const offline = useOperationalModeStore((state) => state.isOfflineMode)
+  const router = useRouter()
   const billing = useStoreSubscription()
-  const [showLimits, setShowLimits] = useState(false)
-  const [showOffers, setShowOffers] = useState(false)
-  const [restoring, setRestoring] = useState(false)
+  const offline = useOperationalModeStore((state) => state.isOfflineMode)
+  const [chosen, setChosen] = useState<RetailOpsPlanId | null>(null)
+  const [settingsOpen, setSettingsOpen] = useState(false)
+  const [feedback, setFeedback] = useState<Feedback | null>(null)
+  const [feedbackOpen, setFeedbackOpen] = useState(false)
+  const [working, setWorking] = useState(false)
   const [failedPolicies, setFailedPolicies] = useState<Set<string>>(
     () => new Set(),
   )
-  const context = (
-    <View className="flex-row items-start justify-between gap-3">
-      <Text className="min-w-0 flex-1 text-xs text-muted-foreground">
-        {profile?.businessName ?? "Current business"}
-      </Text>
-      <Text className="text-xs text-muted-foreground">
-        {getMobileRoleLabel(profile?.role)}
-      </Text>
-    </View>
+  const settings = useModal()
+  const resultSheet = useModal()
+  const sessionGeneration = getSessionGeneration()
+  const cacheGeneration = getDataCacheGeneration()
+  const scope = `${profile?.id}:${profile?.businessId}:${profile?.role}:${sessionGeneration}:${cacheGeneration}`
+  const lifetime = useRef({ scope, mounted: true, run: 0 })
+  lifetime.current.scope = scope
+  const effectBusy = useRef(false)
+  const successTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const feedbackPresented = useRef(false)
+  const confirmedCompletion = useRef<(() => void) | null>(null)
+  useEffect(() => {
+    lifetime.current.scope = scope
+    lifetime.current.mounted = true
+    effectBusy.current = false
+    feedbackPresented.current = false
+    confirmedCompletion.current = null
+    setWorking(false)
+    setChosen(null)
+    setFeedback(null)
+    setFeedbackOpen(false)
+    setSettingsOpen(false)
+    setFailedPolicies(new Set())
+    settings.dismiss()
+    resultSheet.dismiss()
+    return () => {
+      lifetime.current.mounted = false
+      lifetime.current.run++
+      if (successTimer.current) clearTimeout(successTimer.current)
+    }
+  }, [scope, settings.dismiss, resultSheet.dismiss])
+  const isCurrent = (run?: number) =>
+    lifetime.current.mounted &&
+    lifetime.current.scope === scope &&
+    sessionGeneration === getSessionGeneration() &&
+    cacheGeneration === getDataCacheGeneration() &&
+    (run === undefined || run === lifetime.current.run)
+  const owner = profile?.role?.trim().toUpperCase() === "OWNER"
+  const current =
+    RETAIL_OPS_PLANS.find((plan) => plan.id === currentPlanId) ?? null
+  const options = getUpgradePlans(currentPlanId)
+  const selected =
+    options.find((plan) => plan.id === chosen) ?? options[0] ?? current
+  const catalog = billing?.catalog
+  const data = catalog?.data
+  const coverage = data?.ownerCoverage
+  const hasOwnerPlan = Boolean(
+    data?.billingScope === "owner" &&
+      coverage &&
+      coverage.businessLimit > 0 &&
+      ["covered", "uncovered", "over_business_limit"].includes(coverage.reason),
   )
-  if (!billing)
-    return (
-      <View className="gap-3">
-        <Text
-          accessibilityRole="header"
-          className="text-lg font-bold text-foreground"
-        >
-          Owner subscriptions
-        </Text>
-        {context}
-        <Text className="text-sm text-muted-foreground">
-          The owner manages subscriptions and business coverage. Staff and
-          admins do not subscribe separately.
-        </Text>
-      </View>
-    )
-
-  const {
-    catalog,
-    verification,
-    message,
-    setMessage,
-    iap,
-    productIds,
-    priceDescription,
-    purchase,
-    restore,
-    store,
-    coveragePending,
-  } = billing
-  const hasLegalPages = Boolean(
+  const hasPaidPlan = hasOwnerPlan || Boolean(data?.activeProvider)
+  const providerConflict = Boolean(
+    data?.activeProvider &&
+      data.activeProvider !==
+        (billing?.store === "app_store" ? "APP_STORE" : "PLAY_STORE"),
+  )
+  const busy =
+    working ||
+    Boolean(billing?.verification.isPending || billing?.coveragePending)
+  const unavailable =
+    offline ||
+    !billing ||
+    Boolean(catalog?.isError || catalog?.isPending || !billing.iap.connected)
+  const legalPages = Boolean(
     publicLegalUrl("terms") && publicLegalUrl("privacy"),
   )
-  const coverage = catalog.data?.ownerCoverage
-  const hasOwnerPlan =
-    catalog.data?.billingScope === "owner" &&
-    coverage &&
-    coverage.businessLimit > 0 &&
-    ["covered", "uncovered", "over_business_limit"].includes(coverage.reason)
-  const currentProvider = store === "app_store" ? "APP_STORE" : "PLAY_STORE"
-  const activeProvider = catalog.data?.activeProvider
-  const providerConflict = Boolean(
-    activeProvider && activeProvider !== currentProvider,
+  const configured = data?.products.find(
+    (product) =>
+      product.store === billing?.store && product.planId === selected?.id,
   )
-  const busy = verification.isPending || coveragePending || restoring
-  const unavailable = offline || catalog.isError || !iap.connected
+  const product = billing?.iap.subscriptions.find(
+    (item) => item.id === configured?.productId,
+  )
+  const disclosure = formatPlanBillingDisclosure(
+    product && billing ? billing.priceDescription(product) : null,
+  )
+  const price = disclosure ? (product?.displayPrice.trim() ?? null) : null
+  const period =
+    disclosure && price && disclosure.startsWith(price)
+      ? disclosure.slice(price.length).trim()
+      : disclosure
   const canPurchase =
-    catalog.data?.purchaseAvailable &&
-    hasLegalPages &&
+    owner &&
+    Boolean(current) &&
+    !hasPaidPlan &&
+    Boolean(data?.purchaseAvailable && product && disclosure) &&
+    legalPages &&
+    !data?.legalAcceptanceRequired &&
+    !failedPolicies.size &&
     !busy &&
     !unavailable &&
-    !verification.isError &&
-    failedPolicies.size === 0 &&
+    !billing?.verification.isError &&
     !providerConflict
-  const mappedOffers = (catalog.data?.products ?? [])
-    .filter((product) => product.store === store)
-    .sort((a, b) => PLAN_ORDER.indexOf(a.planId) - PLAN_ORDER.indexOf(b.planId))
-  const canShowOffers = !hasOwnerPlan || showOffers
-  const openPolicy = (path: "terms" | "privacy") => {
+  const canActivate =
+    owner &&
+    !unavailable &&
+    !busy &&
+    data?.billingScope === "owner" &&
+    data.coverageAvailable &&
+    currentPlanId === "free" &&
+    coverage?.reason === "uncovered" &&
+    !coverage.enrolled &&
+    coverage.coveredBusinessCount < coverage.businessLimit
+  const canRelease =
+    owner &&
+    !unavailable &&
+    !busy &&
+    data?.billingScope === "owner" &&
+    data.coverageAvailable &&
+    coverage?.enrolled
+  const storeName =
+    billing?.store === "play_store" ? "Google Play" : "App Store"
+  const openSettings = () => {
+    if (!isCurrent()) return
+    setSettingsOpen(true)
+    settings.present()
+  }
+  const openPolicy = async (path: "terms" | "privacy") => {
+    if (!isCurrent()) return
     const url = publicLegalUrl(path)
-    if (!url) {
-      setFailedPolicies((current) => new Set(current).add(path))
-      setMessage(
-        "The policy page is unavailable in this build. New subscriptions are unavailable.",
+    try {
+      if (!url) throw new Error("Policy unavailable")
+      await Linking.openURL(url)
+      if (!isCurrent()) return
+      setFailedPolicies((values) => {
+        const next = new Set(values)
+        next.delete(path)
+        return next
+      })
+    } catch {
+      if (!isCurrent()) return
+      setFailedPolicies((values) => new Set(values).add(path))
+      billing?.setMessage(
+        "The policy page could not open. Retry it in Subscription settings before subscribing.",
       )
+    }
+  }
+  const manage = async () => {
+    if (!owner || unavailable || busy || !isCurrent()) return
+    if (providerConflict) {
+      billing?.setMessage(
+        "Manage this subscription in its original store or website.",
+      )
+      openSettings()
       return
     }
-    void Linking.openURL(url)
-      .then(() => {
-        setFailedPolicies((current) => {
-          const next = new Set(current)
-          next.delete(path)
-          return next
-        })
-        if (message === "The policy page could not open. Please try again.")
-          setMessage(null)
-      })
-      .catch(() => {
-        setFailedPolicies((current) => new Set(current).add(path))
-        setMessage("The policy page could not open. Please try again.")
-      })
+    try {
+      await deepLinkToSubscriptions()
+    } catch {
+      billing?.setMessage(
+        "Store subscription settings could not open. Open subscriptions in your device settings or try again.",
+      )
+    }
   }
-
-  return (
-    <View className="gap-3">
-      <Text
-        accessibilityRole="header"
-        className="text-lg font-bold text-foreground"
+  const showFeedback = (value: Feedback) => {
+    feedbackPresented.current = true
+    setFeedback(value)
+    setFeedbackOpen(true)
+    resultSheet.present()
+  }
+  const run = async (operation: Operation) => {
+    if (
+      !billing ||
+      !owner ||
+      unavailable ||
+      busy ||
+      effectBusy.current ||
+      !isCurrent()
+    )
+      return
+    if (
+      (operation === "enroll" && !canActivate) ||
+      (operation === "release" && !canRelease)
+    )
+      return
+    effectBusy.current = true
+    confirmedCompletion.current = null
+    const ticket = ++lifetime.current.run
+    setWorking(true)
+    setSettingsOpen(false)
+    settings.dismiss()
+    showFeedback({
+      operation,
+      phase: "processing",
+      title:
+        operation === "restore"
+          ? "Restoring purchases"
+          : "Updating this business",
+      message:
+        operation === "restore"
+          ? "Checking your store history and verifying purchases. Business coverage stays as it is."
+          : "Checking the confirmed business plan. Please wait.",
+    })
+    try {
+      const result =
+        operation === "restore"
+          ? await billing.restore()
+          : await billing.changeCoverage(operation)
+      if (!isCurrent(ticket)) return
+      if (result?.status !== "confirmed") {
+        setFeedback({
+          operation,
+          phase: "error",
+          title:
+            result?.status === "none"
+              ? "No matching purchase found"
+              : "Could not confirm",
+          message:
+            result?.message ??
+            "Refresh your status before trying again. No success was confirmed.",
+        })
+        return
+      }
+      setFeedback({
+        operation,
+        phase: "success",
+        title:
+          operation === "restore"
+            ? "Purchase history verified"
+            : operation === "release"
+              ? "Plan removed here"
+              : "Plan is active here",
+        message: result.message,
+      })
+      // All ways to dismiss a verified success share one scoped completion.
+      let completed = false
+      confirmedCompletion.current = () => {
+        if (completed || !isCurrent(ticket)) return
+        completed = true
+        void Promise.resolve(onCompleted?.()).catch(() => {
+          if (isCurrent(ticket))
+            billing.setMessage(
+              "The action was verified, but this screen could not refresh. Pull to refresh your current plan.",
+            )
+        })
+      }
+      successTimer.current = setTimeout(() => {
+        if (!isCurrent(ticket)) return
+        if (feedbackPresented.current) resultSheet.dismiss()
+        else confirmedCompletion.current?.()
+      }, 1200)
+    } catch {
+      if (isCurrent(ticket))
+        setFeedback({
+          operation,
+          phase: "error",
+          title: "Could not confirm",
+          message:
+            "Refresh your status and try again. No success was confirmed.",
+        })
+    } finally {
+      if (isCurrent(ticket)) {
+        effectBusy.current = false
+        setWorking(false)
+      }
+    }
+  }
+  const confirmRelease = () => {
+    if (!canRelease || !isCurrent()) return
+    setSettingsOpen(false)
+    settings.dismiss()
+    showFeedback({
+      operation: "release",
+      phase: "confirm",
+      title: "Remove plan here?",
+      message:
+        "This business returns to Free limits. Its records and existing staff are kept. This does not cancel store renewal or move the plan to another business.",
+    })
+  }
+  const purchase = () => {
+    if (canPurchase && product && billing && !effectBusy.current && isCurrent())
+      void billing.purchase(product)
+  }
+  const action =
+    selected && owner && billing
+      ? {
+          label: hasPaidPlan
+            ? `Manage in ${providerConflict ? "original store" : storeName}`
+            : `Upgrade to ${selected.name}`,
+          disabled: hasPaidPlan ? unavailable || busy : !canPurchase,
+          onPress: hasPaidPlan ? () => void manage() : purchase,
+          disclosure: hasPaidPlan ? null : disclosure,
+          note: hasPaidPlan
+            ? null
+            : !owner
+              ? "The owner manages this plan."
+              : unavailable
+                ? "Connect to refresh billing availability."
+                : !disclosure
+                  ? "Price and billing terms unavailable."
+                  : !canPurchase
+                    ? "Review subscription availability and policies in Settings."
+                    : "Renews automatically until cancelled in store settings.",
+        }
+      : null
+  const status = offline
+    ? "Offline · Showing saved billing information. Reconnect to change your plan."
+    : catalog?.isPending
+      ? "Loading subscription availability…"
+      : catalog?.isError
+        ? "Subscription availability could not load. Refresh before changing billing."
+        : billing && !billing.iap.connected
+          ? "The store is unavailable. Reconnect to load prices or restore purchases."
+          : providerConflict
+            ? "An existing subscription is managed through another provider. Use its original store or website."
+            : data?.legalAcceptanceRequired
+              ? "Review and accept the current Terms and Privacy before subscribing. Restore remains available."
+              : !legalPages || failedPolicies.size
+                ? "A required policy is unavailable. Retry it in Subscription settings. Restore remains available."
+                : coverage?.reason === "over_business_limit"
+                  ? "This business uses Free limits. Review the businesses using your plan. Records and existing staff are kept."
+                  : coverage?.reason === "uncovered" &&
+                      coverage.coveredBusinessCount >= coverage.businessLimit &&
+                      coverage.businessLimit > 0
+                    ? "Your plan is in use on other businesses. Review them in Subscription settings."
+                    : !owner || !billing
+                      ? "The owner manages this plan. Staff do not need separate subscriptions."
+                      : null
+  const row = (label: string, press: () => void, disabled = false) => (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityState={{ disabled }}
+      disabled={disabled}
+      onPress={press}
+      className="min-h-11 justify-center py-3 disabled:opacity-50"
+    >
+      <Text className="text-base font-semibold text-primary">{label}</Text>
+    </Pressable>
+  )
+  const content = (
+    <>
+      <SubscriptionPlanBenefits
+        currentPlanId={currentPlanId}
+        selectedPlan={selected}
+        options={options}
+        onSelect={setChosen}
+        price={price}
+        period={period}
+        onSettingsPress={openSettings}
+        inlineAction={options.length ? null : action}
       >
-        {catalog.data?.billingScope === "business"
-          ? "App subscriptions"
-          : "Owner subscriptions"}
-      </Text>
-      {context}
-      {offline ||
-      catalog.isError ||
-      message ||
-      verification.isPending ||
-      restoring ? (
-        <View
-          accessibilityLiveRegion="polite"
-          className="gap-1 rounded-[14px] bg-muted p-3"
-        >
-          {offline ? (
-            <Text className="text-sm text-muted-foreground">
-              Offline · Showing saved billing information when available.
-              Reconnect to purchase, restore or change coverage.
-            </Text>
-          ) : catalog.isError ? (
-            <>
+        {status || billing?.message || billing?.verification.isPending ? (
+          <View
+            accessibilityLiveRegion="polite"
+            className="gap-2 rounded-2xl bg-muted p-3.5"
+          >
+            {status ? (
+              <Text className="text-sm text-muted-foreground">{status}</Text>
+            ) : null}
+            {billing?.verification.isPending ? (
               <Text className="text-sm text-muted-foreground">
-                Subscription availability could not load. Any saved coverage is
-                shown below; refresh before changing billing.
+                Verifying your purchase. This business is not activated
+                automatically.
               </Text>
-              <Pressable
-                accessibilityRole="button"
-                className="min-h-11 justify-center"
-                onPress={() => void catalog.refetch()}
+            ) : null}
+            {billing?.message ? (
+              <Text
+                accessibilityRole="alert"
+                className="text-sm text-muted-foreground"
               >
-                <Text className="font-semibold text-primary">
-                  Refresh status
-                </Text>
-              </Pressable>
+                {billing.message}
+              </Text>
+            ) : null}
+            {catalog?.isError
+              ? row(
+                  "Refresh status",
+                  () => void catalog.refetch(),
+                  offline || busy,
+                )
+              : null}
+            {data?.legalAcceptanceRequired
+              ? row(
+                  "Review Terms and Privacy",
+                  () => router.push("/account-privacy"),
+                  offline || busy,
+                )
+              : null}
+          </View>
+        ) : null}
+        {canActivate ? (
+          <SubscriptionPlanAction
+            action={{
+              label: `Use my ${coverage?.businessLimit === 1 ? "Starter" : coverage?.businessLimit === 3 ? "Growth" : "Pro"} plan here`,
+              disabled: false,
+              onPress: () => void run("enroll"),
+            }}
+          />
+        ) : null}
+      </SubscriptionPlanBenefits>
+      <Modal
+        ref={settings.ref}
+        title="Subscription settings"
+        onDismiss={() => setSettingsOpen(false)}
+      >
+        <BottomSheetScrollView
+          contentContainerStyle={{ padding: 18, paddingBottom: 32 }}
+        >
+          <Text className="mb-3 text-sm text-muted-foreground">
+            Catalog items include products, services and drafts. Your storefront
+            shows published items only, within your catalog allowance. Business
+            allowance is shared across businesses on the plan; other limits
+            apply per business.
+          </Text>
+          <Text className="mb-2 text-sm text-muted-foreground">
+            Monthly subscriptions renew automatically until cancelled in the
+            original store. Buying a plan and using it for a business are
+            separate steps.
+          </Text>
+          {owner && billing ? (
+            <>
+              {row(
+                "Restore purchases",
+                () => void run("restore"),
+                unavailable || busy,
+              )}
+              {row(
+                `Manage in ${providerConflict ? "original store" : storeName}`,
+                () => void manage(),
+                unavailable || busy,
+              )}
+              {canRelease
+                ? row("Move plan to another business", confirmRelease)
+                : null}
+              {hasOwnerPlan
+                ? row(
+                    "Review businesses",
+                    () => {
+                      settings.dismiss()
+                      router.push("/business-switch-modal")
+                    },
+                    busy || offline,
+                  )
+                : null}
+            </>
+          ) : (
+            <Text className="text-sm text-muted-foreground">
+              The owner manages purchases and business activation.
+            </Text>
+          )}
+          {row("Terms of service", () => void openPolicy("terms"))}
+          {row("Privacy notice", () => void openPolicy("privacy"))}
+        </BottomSheetScrollView>
+      </Modal>
+      <Modal
+        ref={resultSheet.ref}
+        hideHeader
+        enableDynamicSizing
+        enablePanDownToClose={feedback?.phase !== "processing"}
+        onDismiss={() => {
+          feedbackPresented.current = false
+          setFeedbackOpen(false)
+          if (successTimer.current) clearTimeout(successTimer.current)
+          const complete = confirmedCompletion.current
+          confirmedCompletion.current = null
+          complete?.()
+        }}
+      >
+        <BottomSheetView className="gap-3 px-[18px] pb-6">
+          {feedback ? (
+            <>
+              {feedback.phase === "processing" ? (
+                <ActivityIndicator accessibilityLabel="Processing billing action" />
+              ) : null}
+              <Text
+                accessibilityRole="header"
+                className="text-[22px] font-bold text-foreground"
+              >
+                {feedback.title}
+              </Text>
+              <Text
+                accessibilityLiveRegion="polite"
+                className="text-base text-muted-foreground"
+              >
+                {feedback.message}
+              </Text>
+              {feedback.phase === "confirm" ? (
+                <>
+                  <SubscriptionPlanAction
+                    action={{
+                      label: "Remove plan here",
+                      disabled: !canRelease,
+                      onPress: () => void run("release"),
+                    }}
+                  />
+                  {row("Keep plan here", resultSheet.dismiss)}
+                </>
+              ) : feedback.phase !== "processing" ? (
+                row("Done", resultSheet.dismiss)
+              ) : null}
             </>
           ) : null}
-          {verification.isPending ? (
-            <Text className="text-sm text-muted-foreground">
-              Verifying your store purchase with EwaTrade. Business coverage is
-              a separate step after verification.
-            </Text>
-          ) : null}
-          {restoring && !verification.isPending ? (
-            <Text className="text-sm text-muted-foreground">
-              Restoring purchases. Checking your store history and EwaTrade
-              verification; business coverage is not changed automatically.
-            </Text>
-          ) : null}
-          {message ? (
-            <Text
-              accessibilityRole="alert"
-              className="text-sm text-muted-foreground"
-            >
-              {message}
-            </Text>
-          ) : null}
-        </View>
-      ) : null}
-      {catalog.data ? (
-        <StoreOwnerCoverage
-          disabled={unavailable || busy}
-          onSwitchBusiness={() => router.push("/business-switch-modal")}
-        />
-      ) : catalog.isPending ? (
-        <Text className="text-sm text-muted-foreground">
-          Loading owner subscriptions…
-        </Text>
-      ) : null}
-      {providerConflict ? (
-        <Text className="text-sm text-muted-foreground">
-          An existing subscription is managed through another billing provider.
-          Manage that plan in its original store or website before starting a
-          new subscription here.
-        </Text>
-      ) : null}
-      {failedPolicies.size > 0 ? (
-        <Text className="text-sm text-muted-foreground">
-          A required policy could not open. Retry that policy before starting a
-          new subscription. Existing purchases can still be restored.
-        </Text>
-      ) : null}
-      {catalog.data?.legalAcceptanceRequired && hasLegalPages ? (
-        <View className="gap-1">
-          <Text className="text-sm text-muted-foreground">
-            Review and accept the current Terms and Privacy Notice before a new
-            subscription. Existing purchases can still be restored.
-          </Text>
-          <Pressable
-            accessibilityRole="button"
-            disabled={offline || busy}
-            className="min-h-11 justify-center disabled:opacity-50"
-            onPress={() => router.push("/account-privacy")}
-          >
-            <Text className="font-semibold text-primary">
-              Review Terms and Privacy
-            </Text>
-          </Pressable>
-        </View>
-      ) : productIds && (!catalog.data?.purchaseAvailable || !hasLegalPages) ? (
-        <Text className="text-sm text-muted-foreground">
-          New subscriptions are temporarily unavailable. Existing purchases can
-          still be restored.
-        </Text>
-      ) : null}
-      {!iap.connected && !offline ? (
-        <Text className="text-sm text-muted-foreground">
-          The store is unavailable. Reconnect to load prices or restore
-          purchases.
-        </Text>
-      ) : null}
-      {!productIds && !catalog.isPending ? (
-        <Text className="text-sm text-muted-foreground">
-          Store subscriptions are not available yet.
-        </Text>
-      ) : null}
-      {hasOwnerPlan ? (
-        <Pressable
-          accessibilityRole="button"
-          accessibilityState={{ expanded: showOffers }}
-          className="min-h-11 justify-center"
-          onPress={() => setShowOffers((value) => !value)}
-        >
-          <Text className="font-semibold text-primary">
-            {showOffers ? "Hide monthly plans" : "Compare monthly plans"}
-          </Text>
-        </Pressable>
-      ) : null}
-      {canShowOffers && mappedOffers.length > 0 ? (
-        <View className="overflow-hidden rounded-[18px] bg-card shadow-sm">
-          {mappedOffers.map((configured, index) => {
-            const product = iap.subscriptions.find(
-              (item) => item.id === configured.productId,
-            )
-            const plan = getPlan(configured.planId)
-            const disclosure = product ? priceDescription(product) : null
-            const price = product?.displayPrice.trim()
-            // Keep the complete store disclosure, including any phased Play terms.
-            const period =
-              disclosure && price && disclosure.startsWith(price)
-                ? disclosure.slice(price.length).trim()
-                : disclosure
-            const disabled = !canPurchase || !product || !disclosure
-            return (
-              <Pressable
-                accessibilityRole="button"
-                accessibilityState={{ disabled }}
-                key={configured.productId}
-                disabled={disabled}
-                className={`gap-1 px-3.5 py-3.5 disabled:opacity-50 ${index > 0 ? "border-t border-border" : ""}`}
-                onPress={() => {
-                  if (product) void purchase(product)
-                }}
-              >
-                <View className="flex-row items-start justify-between gap-3">
-                  <Text className="min-w-0 flex-1 font-bold text-foreground">
-                    {plan.name}
-                  </Text>
-                  <View className="max-w-[65%] items-end">
-                    {disclosure && price ? (
-                      <Text className="text-right font-bold text-foreground">
-                        {price}
-                      </Text>
-                    ) : null}
-                    <Text className="text-right text-xs text-muted-foreground">
-                      {period ?? "Price and billing terms unavailable"}
-                    </Text>
-                  </View>
-                </View>
-                <Text className="text-xs text-muted-foreground">
-                  {plan.limits.businesses}{" "}
-                  {plan.limits.businesses === 1 ? "business" : "businesses"}
-                </Text>
-                <Text className="text-xs text-muted-foreground">
-                  {plan.limits.products === null
-                    ? "Unlimited"
-                    : plan.limits.products.toLocaleString()}{" "}
-                  goods · {plan.limits.staff} staff
-                </Text>
-              </Pressable>
-            )
-          })}
-        </View>
-      ) : null}
-      {canShowOffers && mappedOffers.length > 0 ? (
-        <>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityState={{ expanded: showLimits }}
-            className="min-h-11 justify-center"
-            onPress={() => setShowLimits((value) => !value)}
-          >
-            <Text className="font-semibold text-primary">
-              {showLimits ? "Hide all limits" : "See all plan limits"}
-            </Text>
-          </Pressable>
-          {showLimits ? (
-            <View className="gap-2 rounded-[18px] border border-border p-3.5">
-              {PLAN_ORDER.map((id) => {
-                const plan = getPlan(id)
-                return (
-                  <Text key={id} className="text-sm text-muted-foreground">
-                    <Text className="font-bold text-foreground">
-                      {plan.name}
-                    </Text>{" "}
-                    · {plan.limits.offlineDevices} offline{" "}
-                    {plan.limits.offlineDevices === 1 ? "device" : "devices"} ·
-                    Unlimited orders · {plan.limits.reportsHistoryDays} days
-                    history · {plan.supportLabel}
-                  </Text>
-                )
-              })}
-            </View>
-          ) : null}
-        </>
-      ) : null}
-      <Text className="text-xs [-rn-line-height:19] text-muted-foreground">
-        Monthly subscriptions renew automatically through your store account
-        until cancelled. Review the localized price, billing period and renewal
-        terms before confirmation. Manage or cancel renewal in store settings.
-        Coverage is a separate step.
-      </Text>
-      <View className="flex-row flex-wrap items-center gap-x-3 gap-y-1">
-        <Pressable
-          accessibilityRole="button"
-          accessibilityState={{ disabled: offline || busy || !iap.connected }}
-          disabled={offline || busy || !iap.connected}
-          className="min-h-11 min-w-[130px] flex-1 items-center justify-center rounded-xl bg-primary/10 px-3 py-2.5 disabled:opacity-50"
-          onPress={async () => {
-            setRestoring(true)
-            try {
-              await restore()
-            } finally {
-              setRestoring(false)
-            }
-          }}
-        >
-          <Text className="font-bold text-primary">
-            {restoring ? "Restoring purchases…" : "Restore purchases"}
-          </Text>
-        </Pressable>
-        <Pressable
-          accessibilityRole="button"
-          disabled={offline || busy}
-          className="min-h-11 min-w-[130px] flex-1 justify-center py-2.5 disabled:opacity-50"
-          onPress={() => {
-            if (providerConflict) {
-              setMessage(
-                "Manage the existing plan in its original billing provider's subscription settings. New subscriptions here remain blocked.",
-              )
-              return
-            }
-            void deepLinkToSubscriptions().catch(() =>
-              setMessage("Store subscription settings could not open."),
-            )
-          }}
-        >
-          <Text className="font-semibold text-primary">
-            Manage store subscriptions ↗
-          </Text>
-        </Pressable>
-      </View>
-      <View className="flex-row flex-wrap gap-x-4">
-        {(
-          [
-            ["Terms of service", "terms"],
-            ["Privacy notice", "privacy"],
-          ] as const
-        ).map(([label, path]) => (
-          <Pressable
-            key={path}
-            accessibilityRole="link"
-            className="min-h-11 justify-center"
-            onPress={() => openPolicy(path)}
-          >
-            <Text className="text-xs text-primary">{label}</Text>
-          </Pressable>
-        ))}
-      </View>
-    </View>
+        </BottomSheetView>
+      </Modal>
+    </>
   )
+  return {
+    content,
+    footer:
+      options.length && !settingsOpen && !feedbackOpen && action ? (
+        <SubscriptionPlanAction action={action} />
+      ) : null,
+  }
+}
+
+export function StoreSubscriptionPanel({
+  currentPlanId = null,
+}: { currentPlanId?: RetailOpsPlanId | null }) {
+  return useSubscriptionPlanPanel({ currentPlanId }).content
 }

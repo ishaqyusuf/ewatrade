@@ -38,7 +38,7 @@ test("native billing session lifetime in an isolated controller fixture", () => 
   )
   if (result.exitCode !== 0)
     throw new Error(new TextDecoder().decode(result.stderr))
-  expect(new TextDecoder().decode(result.stderr)).toContain("19 pass")
+  expect(new TextDecoder().decode(result.stderr)).toContain("28 pass")
   expect(result.exitCode).toBe(0)
 })
 
@@ -82,7 +82,7 @@ test("iOS platform entries expose the real native billing controller and plan co
   )
   if (result.exitCode !== 0)
     throw new Error(new TextDecoder().decode(result.stderr))
-  expect(new TextDecoder().decode(result.stderr)).toContain("20 pass")
+  expect(new TextDecoder().decode(result.stderr)).toContain("29 pass")
   expect(result.exitCode).toBe(0)
 })
 
@@ -103,5 +103,5 @@ test("owner ledger renders real mapped offers and preserves purchase and recover
   )
   if (result.exitCode !== 0)
     throw new Error(new TextDecoder().decode(result.stderr))
-  expect(new TextDecoder().decode(result.stderr)).toContain("9 pass")
+  expect(new TextDecoder().decode(result.stderr)).toContain("11 pass")
 })

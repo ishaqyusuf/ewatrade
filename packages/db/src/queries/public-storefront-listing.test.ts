@@ -89,7 +89,7 @@ function row(
 type Row = ReturnType<typeof row>
 
 function repository(
-  plan: "starter" | "growth",
+  plan: "free" | "starter" | "growth",
   handlers: {
     findMany?: (query: Record<string, unknown>) => Row[]
     findFirst?: (query: Record<string, unknown>) => Row | null
@@ -162,13 +162,20 @@ test("included plans cap the first N entries before search, filter and sort", as
     row("one"),
     row("two"),
     row("three"),
-    row("four", { name: "Hidden gem" }),
+    row("four"),
+    row("five"),
+    row("six"),
+    row("seven"),
+    row("eight"),
+    row("nine"),
+    row("ten"),
+    row("eleven", { name: "Hidden gem" }),
   ]
-  const hidden = repository("starter", { findMany: () => capped })
+  const hidden = repository("free", { findMany: () => capped })
   const store = await getPublicStorefront(hidden.db, "merchant", undefined, {
     q: "gem",
     sort: "name_asc",
-    item: "four",
+    item: "eleven",
   })
   expect(store?.items).toEqual([])
   expect(store?.highlightedItem).toBeNull()
@@ -178,11 +185,11 @@ test("included plans cap the first N entries before search, filter and sort", as
   expect(store?.query).toEqual({ q: "gem", sort: "name_asc" })
   // The capped read carries no listing filter and no cursor.
   expect(hidden.reads).toHaveLength(1)
-  expect(hidden.reads[0]?.take).toBe(4)
+  expect(hidden.reads[0]?.take).toBe(11)
   expect(JSON.stringify(hidden.reads[0]?.where)).not.toContain("gem")
   expect(hidden.raws).toHaveLength(0)
 
-  const visible = repository("starter", { findMany: () => capped })
+  const visible = repository("free", { findMany: () => capped })
   const narrowed = await getPublicStorefront(visible.db, "merchant", "o:four", {
     q: "  TWO ",
     item: "three",

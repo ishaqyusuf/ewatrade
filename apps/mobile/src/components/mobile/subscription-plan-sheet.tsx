@@ -6,20 +6,22 @@ import { Modal } from "@/components/ui/modal"
 import { Text } from "@/components/ui/text"
 import { useColorScheme, useColors } from "@/hooks/use-color"
 import { GREEN_TILL_THEME } from "@/lib/green-till-theme"
+import { getSessionGeneration } from "@/lib/session-store"
 import { useOperationalModeStore } from "@/store/operationalModeStore"
 import type {
   RetailOpsPlan,
   RetailOpsPlanId,
   RetailOpsSubscription,
 } from "@/store/subscriptionStore"
-import { useTRPC } from "@/trpc/client"
+import { getDataCacheGeneration, useTRPC } from "@/trpc/client"
 import type { BottomSheetModal } from "@gorhom/bottom-sheet"
 import releaseScope from "@root/mobile-release-scope.json"
 import { useQuery } from "@tanstack/react-query"
-import { forwardRef } from "react"
-import { Platform } from "react-native"
+import { forwardRef, useRef, useState } from "react"
+import { Platform, type ScrollView } from "react-native"
 import { View } from "react-native"
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller"
+import { BottomSearchFooter } from "./bottom-search-footer"
 import {
   ListCard,
   RecordRow,
@@ -27,7 +29,7 @@ import {
   StatusPill,
 } from "./green-till/kit"
 import { SettingsScreen } from "./settings-screen"
-import { StoreSubscriptionPanel } from "./store-subscription-panel"
+import { useSubscriptionPlanPanel } from "./store-subscription-panel"
 import { SUBSCRIPTION_SCREEN_COPY } from "./subscription-plan-presentation"
 
 type SubscriptionPlanSheetProps = {
@@ -180,6 +182,31 @@ export function SubscriptionPlanContent({
   const usesNativeBilling =
     releaseScope.softwarePlanPurchases &&
     (Platform.OS === "android" || Platform.OS === "ios")
+  const scrollRef = useRef<ScrollView>(null)
+  const [planTop, setPlanTop] = useState(Number.POSITIVE_INFINITY)
+  const [scrollY, setScrollY] = useState(0)
+  const completionSession = getSessionGeneration()
+  const completionCache = getDataCacheGeneration()
+  const panel = useSubscriptionPlanPanel({
+    currentPlanId: verified?.plan.id ?? null,
+    onCompleted: async () => {
+      if (
+        getSessionGeneration() !== completionSession ||
+        getDataCacheGeneration() !== completionCache
+      )
+        return
+      const result = await subscriptionQuery.refetch()
+      if (
+        getSessionGeneration() !== completionSession ||
+        getDataCacheGeneration() !== completionCache
+      )
+        return
+      if (!result.isSuccess) throw new Error("Plan refresh failed")
+      scrollRef.current?.scrollTo({ y: 0, animated: true })
+    },
+  })
+  const footer =
+    usesNativeBilling && scrollY + 200 >= planTop ? panel.footer : null
   const plans = verified?.plans.filter((plan) => plan.id !== "free") ?? []
   const order: readonly string[] = USAGE_ORDER
   const limits = verified ? verified.entitlements.map((e) => e) : []
@@ -265,7 +292,9 @@ export function SubscriptionPlanContent({
           </View>
         ) : null}
         {usesNativeBilling ? (
-          <StoreSubscriptionPanel />
+          <View onLayout={(event) => setPlanTop(event.nativeEvent.layout.y)}>
+            {panel.content}
+          </View>
         ) : plans.length ? (
           <View>
             <SectionHeader title="Plans" />
@@ -301,6 +330,9 @@ export function SubscriptionPlanContent({
     return (
       <View className="flex-1">
         <KeyboardAwareScrollView
+          ref={scrollRef}
+          onScroll={(event) => setScrollY(event.nativeEvent.contentOffset.y)}
+          scrollEventThrottle={16}
           className="flex-1"
           bottomOffset={140}
           contentContainerStyle={{ paddingBottom: 40 }}
@@ -312,6 +344,20 @@ export function SubscriptionPlanContent({
         >
           {content}
         </KeyboardAwareScrollView>
+        {footer ? (
+          <BottomSearchFooter
+            accessibilityLabel="Plan action"
+            variant="action-bar"
+            position="relative"
+            searchVisible={false}
+            onChangeText={() => undefined}
+            placeholder=""
+            totalCount={0}
+            value=""
+          >
+            {footer}
+          </BottomSearchFooter>
+        ) : null}
       </View>
     )
   }
@@ -323,6 +369,9 @@ export function SubscriptionPlanContent({
       keyboardShouldPersistTaps="handled"
     >
       {content}
+      {usesNativeBilling && panel.footer ? (
+        <View className="px-[18px] pb-4">{panel.footer}</View>
+      ) : null}
     </BottomSheetKeyboardAwareScrollView>
   )
 }

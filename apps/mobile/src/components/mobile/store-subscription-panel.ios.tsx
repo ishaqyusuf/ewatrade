@@ -1,1 +1,4 @@
-export { StoreSubscriptionPanel } from "./store-subscription-panel.native"
+export {
+  StoreSubscriptionPanel,
+  useSubscriptionPlanPanel,
+} from "./store-subscription-panel.native"

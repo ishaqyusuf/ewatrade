@@ -93,6 +93,7 @@ mock.module("expo-iap", () => ({
   },
 }))
 mock.module("react-native", () => ({
+  ActivityIndicator: () => null,
   Linking: { openURL: async () => {} },
   Alert: { alert: () => {} },
 }))
@@ -117,116 +118,159 @@ mock.module("@/components/ui/pressable", () => ({
     return createElement("button", { type: "button", disabled }, children)
   },
 }))
-const { StoreSubscriptionPanel } = await import(
+
+mock.module("@/components/ui/icon", () => ({ Icon: () => null }))
+mock.module("@/components/ui/modal", () => ({
+  Modal: () => null,
+  useModal: () => ({
+    ref: { current: null },
+    present: () => {},
+    dismiss: () => {},
+  }),
+}))
+mock.module("@gorhom/bottom-sheet", () => ({
+  BottomSheetScrollView: () => null,
+  BottomSheetView: () => null,
+}))
+mock.module("@/lib/session-store", () => ({ getSessionGeneration: () => 1 }))
+mock.module("@/trpc/client", () => ({ getDataCacheGeneration: () => 1 }))
+const { useSubscriptionPlanPanel } = await import(
   "./store-subscription-panel.native"
 )
-const render = () => renderToStaticMarkup(createElement(StoreSubscriptionPanel))
-const offer = (name: string) =>
-  presses.find((press) => press.label.startsWith(name))
-const restore = () =>
-  presses.find((press) => press.label === "Restore purchases")
+let currentPlanId: "free" | "starter" | "growth" | "pro" | null = "free"
+function Harness() {
+  const panel = useSubscriptionPlanPanel({ currentPlanId })
+  return createElement("main", null, panel.content, panel.footer)
+}
+const render = () => renderToStaticMarkup(createElement(Harness))
+const action = () =>
+  presses.find((press) => press.label.startsWith("Upgrade to"))
 beforeEach(() => {
   billing = initial()
   offline = false
   policies = true
   role = "OWNER"
+  currentPlanId = "free"
   purchases.length = 0
   presses.length = 0
   messages.length = 0
   restoreCalls = 0
   manageCalls = 0
 })
-test("mapped monthly offers are ordered and use localized store prices; pressing only delegates checkout", async () => {
+test("selected package uses mapped localized price and separate guarded checkout", async () => {
   const html = render()
-  expect(html.indexOf("Starter")).toBeLessThan(html.indexOf("Growth"))
-  expect(html.indexOf("Growth")).toBeLessThan(html.indexOf("Pro</span>"))
-  expect(html).toContain("$3.99")
-  expect(html).toContain("every 1 month")
+  expect(html).toContain("$3.99 per month")
   expect(html).not.toContain("₦5,000")
-  expect(html).toContain("Coverage is a separate step")
-  await offer("Starter")?.press()
+  expect(html).toContain("Included in")
+  expect(action()?.disabled).toBe(false)
+  await action()?.press()
   expect(purchases).toEqual(["starter"])
 })
-test("partial missing period disables only that mapped offer", () => {
-  if (!billing) throw new Error("fixture")
-  billing.priceDescription = (product) =>
-    product.id === "growth" ? null : `${product.displayPrice} every 1 month`
-  expect(render()).toContain("Price and billing terms unavailable")
-  expect(offer("Starter")?.disabled).toBe(false)
-  expect(offer("Growth")?.disabled).toBe(true)
+test("plan tabs select without starting a purchase", async () => {
+  render()
+  await presses.find((p) => p.label === "Growth")?.press()
+  expect(purchases).toHaveLength(0)
 })
-test("offline saved state blocks checkout, restore, manage and coverage controls", () => {
-  offline = true
-  expect(render()).toContain("Offline")
+test("business Starter compares only higher plans and never offers a second owner purchase", () => {
+  if (!billing) throw Error()
+  currentPlanId = "starter"
+  billing.catalog.data.ownerCoverage = {
+    enrolled: true,
+    reason: "covered",
+    planId: "starter",
+    businessLimit: 1,
+    coveredBusinessCount: 1,
+  }
+  const html = render()
+  expect(html).not.toContain("owner subscription")
   expect(
     presses
-      .filter((press) =>
-        /^(Starter|Growth|Pro|Restore|Manage)/.test(press.label),
-      )
-      .every((press) => press.disabled),
-  ).toBe(true)
+      .filter((p) => ["Free", "Starter", "Growth", "Pro"].includes(p.label))
+      .map((p) => p.label),
+  ).toEqual(["Growth", "Pro"])
+  expect(action()).toBeUndefined()
+  expect(presses.some((p) => p.label === "Manage in App Store")).toBe(true)
 })
-test("staff and admins have no owner purchase or restore controls", () => {
+test("unknown plan does not invent a Free tier or an upgrade", () => {
+  currentPlanId = null
+  expect(render()).toContain("Plan unavailable")
+  expect(action()).toBeUndefined()
+  expect(purchases).toHaveLength(0)
+})
+test("offline retains benefits but disables effects", () => {
+  offline = true
+  expect(render()).toContain("Offline")
+  expect(action()?.disabled).toBe(true)
+})
+test("staff and admin can read benefits without owner effects", () => {
   billing = null
-  for (const value of ["STAFF", "ADMIN"]) {
-    role = value
-    expect(render()).toContain("The owner manages subscriptions")
-    expect(presses).toHaveLength(0)
+  for (const r of ["STAFF", "ADMIN"]) {
+    role = r
+    presses.length = 0
+    const html = render()
+    expect(html).toContain("Staff do not need separate subscriptions")
+    expect(html).toContain("Monthly assistant questions")
+    expect(action()).toBeUndefined()
+    expect(presses.some((p) => /^(Use my|Restore|Manage)/.test(p.label))).toBe(
+      false,
+    )
   }
 })
-test("missing current policy blocks new purchase but keeps eligible restore available", async () => {
+test("missing policy or verified period blocks checkout", () => {
   policies = false
   render()
-  expect(offer("Starter")?.disabled).toBe(true)
-  expect(restore()?.disabled).toBe(false)
-  await restore()?.press()
-  expect(restoreCalls).toBe(1)
+  expect(action()?.disabled).toBe(true)
+  policies = true
+  if (!billing) throw Error()
+  billing.priceDescription = () => null
+  presses.length = 0
+  expect(render()).toContain("Price unavailable")
+  expect(action()?.disabled).toBe(true)
 })
-test("provider conflict blocks parallel purchase and does not open the wrong store", async () => {
-  if (!billing) throw new Error("fixture")
+test("provider conflict uses original provider maintenance without parallel checkout", async () => {
+  if (!billing) throw Error()
   billing.catalog.data.activeProvider = "PLAY_STORE"
-  expect(render()).toContain("another billing provider")
-  expect(offer("Starter")?.disabled).toBe(true)
-  await presses.find((press) => press.label.startsWith("Manage store"))?.press()
+  expect(render()).toContain("another provider")
+  expect(action()).toBeUndefined()
+  await presses.find((p) => p.label === "Manage in original store")?.press()
   expect(manageCalls).toBe(0)
-  expect(messages[0]).toContain("original billing provider")
+  expect(purchases).toHaveLength(0)
 })
-test("verification failure keeps recovery visible and prevents another checkout", () => {
-  if (!billing) throw new Error("fixture")
+test("verification failure never enables another purchase", () => {
+  if (!billing) throw Error()
   billing.verification.isError = true
-  billing.message =
-    "Your purchase is awaiting verification. Use Restore purchases."
+  billing.message = "Purchase awaiting verification"
   expect(render()).toContain("awaiting verification")
-  expect(offer("Starter")?.disabled).toBe(true)
-  expect(restore()?.disabled).toBe(false)
+  expect(action()?.disabled).toBe(true)
 })
-test("verified owner but uncovered business stays explicitly Free and offers are collapsed", () => {
-  if (!billing) throw new Error("fixture")
+test("purchased owner plan remains separate from explicit business activation", () => {
+  if (!billing) throw Error()
   billing.catalog.data.ownerCoverage = {
     enrolled: false,
     reason: "uncovered",
     planId: "free",
-    businessLimit: 3,
-    coveredBusinessCount: 1,
+    businessLimit: 1,
+    coveredBusinessCount: 0,
   }
   const html = render()
-  expect(html).toContain("Verified owner subscription")
-  expect(html).toContain("remains on Free until you explicitly cover it")
-  expect(html).toContain("Compare monthly plans")
-  expect(offer("Starter")).toBeUndefined()
+  expect(html).toContain("This business is on")
+  expect(presses.some((p) => p.label === "Use my Starter plan here")).toBe(true)
+  expect(action()).toBeUndefined()
+  expect(purchases).toHaveLength(0)
 })
-test("failed catalog refresh retains the snapshot but refuses coverage and new purchase", () => {
-  if (!billing) throw new Error("fixture")
+test("failed catalog preserves details and blocks activation", () => {
+  if (!billing) throw Error()
   billing.catalog.isError = true
   billing.catalog.data.ownerCoverage = {
     enrolled: false,
     reason: "uncovered",
     planId: "free",
-    businessLimit: 3,
-    coveredBusinessCount: 1,
+    businessLimit: 1,
+    coveredBusinessCount: 0,
   }
-  expect(render()).toContain("Any saved coverage is shown below")
-  expect(
-    presses.find((press) => press.label === "Cover this business")?.disabled,
-  ).toBe(true)
+  expect(render()).toContain("Subscription availability could not load")
+  expect(presses.find((p) => p.label === "Manage in App Store")?.disabled).toBe(
+    true,
+  )
+  expect(presses.some((p) => p.label.startsWith("Use my"))).toBe(false)
 })

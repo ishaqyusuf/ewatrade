@@ -41,6 +41,15 @@ import { AppState, LogBox, Platform } from "react-native"
 // console.errors it, which would raise a dev error banner on every launch.
 LogBox.ignoreLogs(["initConnection failed"])
 
+export type StoreBillingActionResult = {
+  status: "confirmed" | "unconfirmed" | "none" | "retired"
+  message: string
+}
+const retiredResult: StoreBillingActionResult = {
+  status: "retired",
+  message: "Billing session changed.",
+}
+
 function useStoreBillingController() {
   const auth = useAuthContext()
   const trpc = useTRPC()
@@ -95,54 +104,76 @@ function useStoreBillingController() {
     trpc.storeSubscriptions.releaseBusiness.mutationOptions(),
   )
   const coverageBusy = useRef(false)
+  const restoreBusy = useRef(false)
   const [coveragePending, setCoveragePending] = useState(false)
-  const changeCoverage = async (action: "enroll" | "release") => {
-    if (!isCurrent() || coverageBusy.current || processing.current.size > 0)
-      return
+  const changeCoverage = async (
+    action: "enroll" | "release",
+  ): Promise<StoreBillingActionResult> => {
+    if (!isCurrent()) return retiredResult
+    if (
+      coverageBusy.current ||
+      restoreBusy.current ||
+      processing.current.size > 0
+    )
+      return {
+        status: "unconfirmed",
+        message: "Another billing action is still processing.",
+      }
     coverageBusy.current = true
     setCoveragePending(true)
     try {
       const latest = await catalog.refetch()
-      if (!isCurrent() || processing.current.size > 0) return
+      if (!isCurrent()) return retiredResult
       const current = latest.isSuccess ? latest.data : null
       const coverage = current?.ownerCoverage
       if (
+        processing.current.size > 0 ||
         current?.billingScope !== "owner" ||
         !current.coverageAvailable ||
         !coverage ||
         !lifetime.businessId
-      ) {
-        setMessage("Business coverage is unavailable. Refresh and try again.")
-        return
-      }
+      )
+        throw new Error("Coverage unavailable")
       if (action === "release") {
-        if (!coverage.enrolled) return
+        if (!coverage.enrolled) throw new Error("Business is not enrolled")
         await release.mutateAsync({ tenantId: lifetime.businessId })
       } else {
         if (
           coverage.enrolled ||
           coverage.reason !== "uncovered" ||
           coverage.coveredBusinessCount >= coverage.businessLimit
-        ) {
-          setMessage(
-            "Your current plan cannot cover this business. Review its available business slots.",
-          )
-          return
-        }
+        )
+          throw new Error("Plan capacity unavailable")
         await enrollment.mutateAsync()
       }
-      if (!isCurrent()) return
-      // Coverage changes affect subscription and workspace feature projections.
+      if (!isCurrent()) return retiredResult
       await queryClient.invalidateQueries()
-      setMessage(
+      if (!isCurrent()) return retiredResult
+      // Promise settlement is not evidence: require a fresh same-scope projection.
+      const refreshed = await catalog.refetch()
+      if (!isCurrent()) return retiredResult
+      const after = refreshed.isSuccess ? refreshed.data.ownerCoverage : null
+      const confirmed =
+        refreshed.data?.billingScope === "owner" &&
+        after &&
+        (action === "release"
+          ? !after.enrolled && after.planId === "free"
+          : after.enrolled &&
+            after.reason === "covered" &&
+            after.planId !== "free")
+      if (!confirmed) throw new Error("Coverage postcondition not confirmed")
+      const message =
         action === "release"
-          ? "This business has been released from your owner plan. Its data is kept; store renewal is unchanged."
-          : "Business coverage has been updated. Review its current status.",
-      )
+          ? "This business is now on Free. Its records and existing staff are kept. Store renewal is unchanged."
+          : "Your plan is now active for this business."
+      setMessage(message)
+      return { status: "confirmed", message }
     } catch {
-      setMessage(
-        "Business coverage could not be confirmed. Refresh its status before trying again.",
-      )
+      if (!isCurrent()) return retiredResult
+      const message =
+        "Business coverage could not be confirmed. Refresh its status before trying again."
+      setMessage(message)
+      return { status: "unconfirmed", message }
     } finally {
       coverageBusy.current = false
       if (active.current) setCoveragePending(false)
@@ -198,6 +229,7 @@ function useStoreBillingController() {
           "Your store subscription has been verified. Review this business's current plan and coverage below.",
         )
       }
+      return result.storeFinished && result.refreshed
     } catch (error) {
       if (error instanceof StoreBillingSessionChanged) throw error
       setMessage(
@@ -245,7 +277,13 @@ function useStoreBillingController() {
     return playSubscriptionOffer(product.subscriptionOffers)?.label ?? null
   }
   const purchase = async (product: ProductSubscription) => {
-    if (!isCurrent() || verification.isPending || coverageBusy.current) return
+    if (
+      !isCurrent() ||
+      verification.isPending ||
+      coverageBusy.current ||
+      restoreBusy.current
+    )
+      return
     // Purchase authority must be fresh; a previously rendered button is not a
     // current account binding, checkout gate or product mapping.
     const latest = await catalog.refetch()
@@ -254,6 +292,13 @@ function useStoreBillingController() {
     const accountToken = currentCatalog?.accountToken
     if (
       !currentCatalog?.purchaseAvailable ||
+      Boolean(
+        currentCatalog.ownerCoverage &&
+          currentCatalog.ownerCoverage.businessLimit > 0 &&
+          ["covered", "uncovered", "over_business_limit"].includes(
+            currentCatalog.ownerCoverage.reason,
+          ),
+      ) ||
       !accountToken ||
       !currentCatalog.products.some(
         (item) => item.store === store && item.productId === product.id,
@@ -352,35 +397,69 @@ function useStoreBillingController() {
       setMessage("The store purchase could not open. Please try again.")
     }
   }
-  const restore = async () => {
-    if (!isCurrent() || coverageBusy.current) return
+  const restore = async (): Promise<StoreBillingActionResult> => {
+    if (!isCurrent()) return retiredResult
+    if (
+      coverageBusy.current ||
+      restoreBusy.current ||
+      processing.current.size > 0
+    )
+      return {
+        status: "unconfirmed",
+        message: "Another billing action is still processing.",
+      }
+    restoreBusy.current = true
     try {
+      let beforeEnrolled: boolean | undefined
+      let verified = 0
+      let incomplete = false
       const result = await restoreMappedStorePurchases({
         isCurrent,
         store,
         loadProducts: async () => {
           const latest = await catalog.refetch()
+          beforeEnrolled = latest.isSuccess
+            ? Boolean(latest.data.ownerCoverage?.enrolled)
+            : undefined
           return latest.isSuccess ? latest.data.products : null
         },
         listPurchases: getAvailablePurchases,
-        reconcile,
+        reconcile: async (purchase, products) => {
+          if (await reconcile(purchase, products)) verified++
+          else incomplete = true
+        },
       })
-      if (result === "catalog_unavailable")
-        setMessage(
-          "Subscription availability could not load. Check your connection and try again.",
+      if (!isCurrent()) return retiredResult
+      if (result === "restored" && verified > 0 && !incomplete) {
+        const fresh = await catalog.refetch()
+        if (!isCurrent()) return retiredResult
+        if (
+          !fresh.isSuccess ||
+          beforeEnrolled === undefined ||
+          Boolean(fresh.data.ownerCoverage?.enrolled) !== beforeEnrolled
         )
-      else if (result === "unmapped")
-        setMessage(
-          "Store subscriptions are not available for this business yet.",
-        )
-      else if (result === "none")
-        setMessage(
-          "No available EwaTrade subscriptions were found for the current store account.",
-        )
+          throw new Error("Restore state not confirmed")
+        const message =
+          "Purchase history verified. Business coverage was not changed."
+        setMessage(message)
+        return { status: "confirmed", message }
+      }
+      const message =
+        result === "none"
+          ? "No matching purchase was found. Check your original store account and try again."
+          : result === "catalog_unavailable" || result === "unmapped"
+            ? "Subscription availability could not load. Refresh and try Restore again."
+            : "Restore was not verified. Check your store purchase history and try again."
+      setMessage(message)
+      return { status: result === "none" ? "none" : "unconfirmed", message }
     } catch {
-      setMessage(
-        "Purchases could not be restored. Check the store account and try again.",
-      )
+      if (!isCurrent()) return retiredResult
+      const message =
+        "Purchases could not be restored. Check the store account and try again."
+      setMessage(message)
+      return { status: "unconfirmed", message }
+    } finally {
+      restoreBusy.current = false
     }
   }
   const reconcileRef = useRef(reconcile)
@@ -398,8 +477,9 @@ function useStoreBillingController() {
             return latest.isSuccess ? latest.data.products : null
           },
           listPurchases: getAvailablePurchases,
-          reconcile: (purchase, products) =>
-            reconcileRef.current(purchase, products),
+          reconcile: async (purchase, products) => {
+            await reconcileRef.current(purchase, products)
+          },
         })
       } catch {
         if (active)

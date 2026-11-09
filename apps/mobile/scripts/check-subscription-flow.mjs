@@ -92,7 +92,7 @@ const CONTRACTS = [
       "verified.entitlements.map",
       "SUBSCRIPTION_SCREEN_COPY",
       "Current plan",
-      "StoreSubscriptionPanel",
+      "useSubscriptionPlanPanel",
       "releaseScope.softwarePlanPurchases &&",
       '(Platform.OS === "android" || Platform.OS === "ios")',
       "usesNativeBilling ?",
@@ -118,7 +118,7 @@ const CONTRACTS = [
     markers: [
       "useStoreSubscription",
       "Restore purchases",
-      "Manage store subscriptions",
+      "Manage in",
       "Terms of service",
       "Privacy notice",
       "purchaseAvailable",

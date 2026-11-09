@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "id": "2026-11-09-native-subscription-benefits",
+  "tickets": ["A05"],
+  "summary": "Implement approved native plan benefits and higher-tier comparison; align Free storefront10 and paid full published catalog; require fresh confirmed UI recovery outcomes.",
+  "noAssistantImpact": "Billing remains form-only. No assistant tool, command, permission or schema is added. Existing catalog and storefront commands retain server-derived tenant scope, plan capacity and publication checks; canonical storefront cap values change through the existing plan reader. Purchase, Restore and business activation remain explicit native owner actions and cannot be granted by a prompt.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "updated",
+      "path": "docs/verification/2026-11-09-native-subscription-benefits.md"
+    },
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/mobile-owner-ledger.md"
+    },
+    {
+      "topic": "api",
+      "status": "local_only",
+      "path": ".brain/api/contracts.md"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "apps/mobile/src/components/mobile/subscription-plan-benefits-model.test.ts",
+      "executed": true,
+      "result": "Final nine-file suite74outertests374assertions, isolated28native29iOS11panel4coverage+disabledscope;97actualnativeJSXUIchecks53mappedscenarios0errors; scopedquick285/1818 plusQAtypes/Biome. Globaltypes/H01/H02 have documented peer blockers; no device/liveprovider/release acceptance."
+    }
+  ]
+}

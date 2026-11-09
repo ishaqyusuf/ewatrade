@@ -5,7 +5,7 @@
 export type RetailOpsPlanId = "free" | "starter" | "growth" | "pro"
 
 export type RetailOpsPlanLimits = {
-  /** Public storefront items; null means unlimited. */
+  /** Published storefront items; null means the full catalog within catalog capacity. */
   storefrontItems: number | null
   businesses: number
   offlineDevices: number
@@ -63,7 +63,7 @@ export const RETAIL_OPS_PLANS: RetailOpsPlan[] = [
     features: [],
     id: "free",
     limits: {
-      storefrontItems: 3,
+      storefrontItems: 10,
       businesses: 1,
       offlineDevices: 1,
       ordersPerMonth: 50,
@@ -80,7 +80,7 @@ export const RETAIL_OPS_PLANS: RetailOpsPlan[] = [
     features: PAID_FEATURES,
     id: "starter",
     limits: {
-      storefrontItems: 3,
+      storefrontItems: null,
       businesses: 1,
       offlineDevices: 1,
       ordersPerMonth: null,

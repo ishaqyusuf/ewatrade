@@ -3,6 +3,7 @@ import {
   loadPublicStorefrontPinnedItems,
   publicCatalogItemWhere,
 } from "./public-storefront"
+import { findRetailOpsPlan } from "./retail-ops-subscription-plans"
 import type { DbClient } from "./types"
 
 const row = (id: string) => ({
@@ -118,3 +119,31 @@ test("included plans only admit pins inside the cap, and nothing to load means n
   })
   expect(many.calls[0]?.take).toBe(32)
 })
+
+test.each(["free", "starter"] as const)(
+  "canonical %s storefront allowance admits exactly its published catalog scope",
+  async (id) => {
+    const plan = findRetailOpsPlan(id)
+    if (!plan) throw Error("missing plan")
+    const ids = Array.from({ length: 11 }, (_, i) => `public-${i + 1}`)
+    const { db, calls } = fixture(ids)
+    const items = await loadPublicStorefrontPinnedItems(db, {
+      ...input,
+      ids: ["public-10", "public-11"],
+      storefrontItems: plan.limits.storefrontItems,
+    })
+    expect(items.map((item) => item.id)).toEqual(
+      id === "free" ? ["public-10"] : ["public-10", "public-11"],
+    )
+    expect(calls[0]?.where).toEqual(
+      id === "free"
+        ? publicCatalogItemWhere("tenant", "store")
+        : {
+            AND: [
+              publicCatalogItemWhere("tenant", "store"),
+              { id: { in: ["public-10", "public-11"] } },
+            ],
+          },
+    )
+  },
+)
