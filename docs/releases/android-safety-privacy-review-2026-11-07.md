@@ -1,5 +1,14 @@
 # Android safety and privacy review — 7 November 2026
 
+9 November continuation: `d13bc50f9` adds locally verified adult-only live AI;
+eligible 13+ ordinary tools/history and automatic safety screening remain.
+The [focused automatic-safety review](../verification/2026-11-09-automatic-safety-provider-review.md)
+records actual raw-text/image payloads and unresolved background-processing
+consent/age interpretation. The one shared legal draft is updated in place,
+unapproved and unpublished. Play app/plans have the same 165 draft territories
+under `97124eaf9`; all 522 stored prices are unchanged. Neither source nor store
+availability establishes final signed/runtime/privacy acceptance.
+
 8 November continuation: paid-owner retention policy/source is now approved and
 implemented in `49df03a06`; hosted fulfillment remains open. Current API/Trigger
 configuration and exact-key DB observations are recorded in the

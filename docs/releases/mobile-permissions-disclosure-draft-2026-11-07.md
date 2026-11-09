@@ -204,6 +204,11 @@ Official cancellation/refund guidance checked7November:
 
 ## Proposed Privacy addition: AI assistance and uploaded files
 
+Live AI assistance is available to accounts declared 18 or older. Eligible
+accounts aged 13–17 can continue to use ordinary business tools and saved history
+under their normal permissions. Anonymous website help uses authored product,
+plan and registration guidance. Age declarations are not verified age assurance.
+
 When you use an AI feature, EwaTrade sends the information needed for that feature
 to the configured processing service. This can include your message, relevant
 conversation and business context, or the image or recording you choose to submit.
@@ -224,6 +229,22 @@ the next provider is tried. Do not describe voice as on-device or all media as
 OpenAI-only. Separate category suggestion and Storefront generation settings must
 also be reconciled where reachable. Do not publish every compiled adapter as an
 active recipient merely because it exists in source.
+
+The live-AI age rule does not turn off automatic safety screening. When enabled,
+OpenAI moderation can receive submitted text, including names, notes, addresses
+or message content, and normalized catalog images. Those checks are distinct
+from an AI conversation. This draft does not claim that every ordinary business
+function is provider-free or that minors' submitted information never reaches
+a provider.
+
+Authoring hold updated 9 November: the approved adult-only live-generation
+source is committed in `d13bc50f9` and verified locally, with the existing 13+
+registration view preserved. It is not yet present in accepted hosted/signed
+release evidence. Automatic-screening consent, applicable age-of-digital-consent
+handling and recipient/payload conditions require separate reconciliation; no
+automatic-moderation exception to provider terms is asserted. See the
+[source receipt](../verification/2026-11-09-live-ai-adult-access.md) and
+[automatic-screening review](../verification/2026-11-09-automatic-safety-provider-review.md).
 
 The source uses a 30-day assistant-attachment timestamp and bounded cleanup that
 confirms original-byte absence before clearing attachment content. Sent attachment
