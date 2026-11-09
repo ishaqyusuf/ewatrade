@@ -1,9 +1,12 @@
 # I03 configuration evidence audit — 9 November 2026
 
-Status: finite checklist/protocol review only. I03 remains In progress and the
-platform score remains **Apple2/6 (33.3%)**. No new deployment, native/provider/
-database call, grant, fixture, purchase, account switch, gateway or flag change.
-The coordinator owns the pending fresh-phone observation and Apple web sign-in.
+Status: **offline reconciliation recommends coordinator acceptance of I03 for the
+approved one-reviewer private target**. No concrete original configuration
+criterion remains unsupported under the explicit scope below. The coordinator
+owns the gate/ledger decision; this audit does not change I03's recorded state,
+the platform score **Apple2/6 (33.3%)**, or any goal status. No new deployment,
+native/provider/database call, grant, fixture, purchase, account switch, gateway
+or flag change was made by this reconciliation.
 
 ## Requirement authority and accepted evidence
 
@@ -21,16 +24,34 @@ The separately owner-approved
 for actual same-scope paid/Free reads. That narrow postcondition must be accounted
 for honestly rather than treating disabled Preview output as a Free result.
 
+Exact original requirement, `220e40277:docs/billing/apple-paid-launch-2026-11-07.md:55`:
+
+> Routing correction and fixture checks pass; secure API-key custody, exact environment, notification delivery, owner coverage/cutover and native linkage require target proof.
+
+At line57, I05 separately names purchase/Restore/lifecycle/switching and existing
+record/new-admission behavior. Neither whole-queue emptiness nor the later
+operator's two-minute baseline timing condition appears in the original I03 row.
+This is a criterion comparison, not a waiver of the timing evidence's limits.
+
 | I03 configuration assertion | Exact requirement / supporting record | Current evidence and conclusion |
 | --- | --- | --- |
 | Approved Apple verifier key custody and working signing/lookup | Original I03 secure API-key custody; hosted configuration and [signed candidate](2026-11-08-production-testflight-paid-candidate.md) | Existing approved key in private custody, sensitive API settings installed by reviewed helper without new credentials. Genuine signed original Sandbox purchase lookup/reconciliation succeeds under the corrected reviewer policy. Production authorization is not proved by Sandbox success; [credential evidence](2026-11-09-apple-production-auth-evidence.md) separates the historical401 and prelaunch platform limit. No key rotation or repeat canary is implied. |
-| Registered native identity and StoreKit/ExpoIap linkage | Original I03 native linkage; [entry-point receipt](2026-11-08-ios-billing-entrypoints.md) and signed candidate | Exact installed10/2d/EAS50f69a74 signed artifact, registered bundle/team, Production origins, StoreKit/ExpoIap/OpenIAP linkage, actual three monthly offers and native purchase entry pass. Native finish-return is a separate I05 observation, not another linkage gate. |
+| Registered native identity and StoreKit/ExpoIap linkage | Original I03 native linkage; [entry-point receipt](2026-11-08-ios-billing-entrypoints.md) and signed candidate | Exact installed10/2d/EAS50f69a74 signed artifact, registered bundle/team, Production origins, StoreKit/ExpoIap/OpenIAP linkage, actual three monthly offers and native purchase entry pass. The later [bounded finish-return pass](2026-11-09-build10-fresh-finish-observation.md) is separate I05 evidence, not another linkage gate or whole-queue claim. |
 | Product/environment mapping and closed public checkout | Original I03 exact environment; [controlled review design](2026-11-07-apple-review-sandbox.md), candidate configuration receipt | Three Apple product mappings, Preview Sandbox / Production Production settings, explicit public-checkout false and immutable reviewer1 policy accepted. Genuine purchase remains Sandbox in durable state; ordinary/Google/wrong-owner refusal has existing source/integration evidence. Do not infer public checkout activation or real revenue. |
 | Correct Apple notification destinations and verified receiver | Original I03 notification delivery; [callback receipt](2026-11-08-apple-build8-callback.md) | Both saved Apple destinations point to Production gateway after reload. Genuine previous TEST replay200 and fresh Apple Sandbox TEST SUCCESS establish signature/bundle/receiver delivery. Accepted receiver proof, not ordinary relay or lifecycle proof. |
-| Reviewer owner binding and owner-coverage cutover | Original I03 owner coverage/cutover; [purchase receipt](2026-11-08-apple-purchase-verification.md) | Initial pre-purchase/cancel API state was Free/no grant; original signed Starter recovered to the same immutable owner with Sandbox environment retained. Explicit enrollment and one Restore preserve original purchase/period/coverage, one owner slot, no duplicates. Accepted basic configuration/cutover. First-tap feedback and further transitions remain I05. |
-| Actual paid reader configuration across API / Dashboard / jobs | Approved reader activation's actual-runtime paid read; [hosted task](2026-11-09-billing-reader-job-check.md), [Settings server result](2026-11-09-dashboard-server-plan-result.md) | API/purchase reads accepted; actual hosted jobs e162/version20261109.2 returned Starter/owner_subscription; actual authenticated full-reload Settings b0 returned resolved/starter/owner_subscription at14:21:03.995Z. Accepted licensed paid parity. No independent optimized-shell proof is required by I03. |
-| Actual ordinary Sandbox gateway→Preview relay | Current I03 status notes leave it open; controlled review design requires isolation and fixed one-way forwarding | **Unexecuted, not accepted.** Recommend treating nonreviewer Sandbox traffic outside the current one-reviewer launch-critical configuration scope, with source/integration isolation proof. Current route may forward it to Preview, never grant Production Sandbox access. Scope reasoning below does not invent a positive dispatch or change the score. |
-| Actual Free reader postcondition | Approved reader activation: verify actual same-scope paid/Free reads | **Open for Settings/jobs.** API's genuine pre-purchase Free/no-grant case passes. Hosted Preview disabled result contains no plan; source/integration Free assertions are not actual hosted Free reads. Satisfy this narrow read postcondition once in a legitimate existing Free state; reuse the same genuine state/observation for I05 rather than repeating the lifecycle. |
+| Reviewer owner binding and owner-coverage cutover | Original I03 owner coverage/cutover; [purchase receipt](2026-11-08-apple-purchase-verification.md), [real coverage cycle](2026-11-09-coverage-release-free-reenroll.md) | Initial pre-purchase/cancel state was Free/no grant; original signed Starter recovered to the same immutable owner with Sandbox durability. Basic enrollment/Restore preserved the original purchase/period/coverage at their scoped reads. Later normal Release and one Cover restored Active Starter/covered1of1 in signed10 and canonical readers. No fresh post-restoration purchase/coverage-row census is claimed. First-tap cause and broader lifecycle remain I05. |
+| Actual paid reader configuration across API / Dashboard / jobs | Approved reader activation's actual-runtime paid read; [hosted task](2026-11-09-billing-reader-job-check.md), [Settings server result](2026-11-09-dashboard-server-plan-result.md) | API/purchase reads accepted; hosted jobs e162/version20261109.2 returned Starter/owner_subscription; authenticated Settings b0 returned resolved/starter/owner_subscription at14:21:03.995Z. Later normal restoration also produced an API-backed Starter card and actual Settings Starter/source read by17:30:23Z. No repeated paid jobs or optimized-shell proof is needed. |
+| Actual ordinary Sandbox gateway→Preview relay | Later status notes and controlled review design; isolation and fixed one-way forwarding | **UNEXECUTED / DEFERRED**, not a dispatch pass. Coordinator explicitly classified ordinary nonreviewer Sandbox dispatch outside the approved one-reviewer launch-critical configuration. Source/integration isolation remains relevant. The route may forward genuine ordinary Sandbox to Preview; it does not grant ordinary Sandbox Production entitlements. No TEST change or new canary is selected. |
+| Actual Free reader postcondition | Approved reader activation: actual same-scope paid/Free reads; [observed Free and restoration](2026-11-09-coverage-release-free-reenroll.md) | **Actual Free facts observed.** Fresh normal API-backed card and actual Settings server read showed Free; hosted Production task checked free/owner_billing_free/ownerPlanId=null at17:08:23.460Z with READ ONLY/fresh ACTIVE OWNER scope. These actual reads followed the corrected Free-observation latest bound17:07:42Z. Two-minute operator baseline remains inconclusive and original artifacts stay unchanged. Preview disabled still earns no Free credit; retained-lapse/populated-record behavior is not accepted by voluntary Release. |
+
+All five original I03 configuration assertions now have target evidence for the
+approved private reviewer context. The reader activation's additional narrow
+actual paid/Free postcondition also has actual runtime evidence. With the
+coordinator's explicit ordinary-dispatch scope classification, no further live
+check or source change is identified as necessary to recommend I03 acceptance.
+This does not authorize public checkout, accept Production transactions/auth,
+or complete I04/I05/I06. The coordinator must record the accepted scope and
+remaining limits when reconciling the global ledger.
 
 The audit does not reopen accepted passes because the Apple web console session
 later needs normal sign-in. That session is distinct from the accepted verifier-key
@@ -39,11 +60,12 @@ commercial/provider read is claimed here.
 
 ## Items that remain open elsewhere, without new I03 gates
 
-- I05: native finish-return; first-tap enrollment feedback; further covered/
-  uncovered/released and account/staff/business separation; renewal, failure/
+- I05: first-tap enrollment feedback; account/staff/business separation; renewal, failure/
   grace/recovery, cancellation/expiry and refund/revocation; retained data and new
   admission limits. The fresh build10 message protocol can accept its bounded
-  positive finish-return observation without global queue inventory.
+  positive finish-return observation without global queue inventory. That bounded
+  native finish-return and the normal basic coverage cycle are now observed;
+  wider lifecycle/retained populated-record assertions remain open.
 - I04/I06: effective paid policy/privacy and operational facts, declarations,
   candidate screenshots/review credentials and final submission/approval.
 - A proof-boundary note that Settings does not separately prove the optimized
@@ -52,11 +74,16 @@ commercial/provider read is claimed here.
 
 The Free-reader item above is only the declared runtime read result, not a second
 copy of every Free/retention/lifecycle requirement. The
-[named Release → Free → re-enroll proposal](2026-11-09-coverage-release-free-reenroll.md)
-is a legitimate coverage scenario that can share its Free window across I05 and
-the actual-reader postcondition. It is prepared, not executed; it does not simulate
-expiry, grace or refund. Do not change flags, transfer ownership, create fixtures
-or force expiry. No new owner question is issued before the pending finish case.
+[named Release → Free → re-enroll case](2026-11-09-coverage-release-free-reenroll.md)
+is a legitimate, separately reviewed coverage scenario whose actual Free window
+can serve I05's basic coverage transition and the narrow reader postcondition.
+The earlier activation approval alone excluded releasing coverage; it did not
+authorize that later action. Root separately sequenced the named Release and
+normal Cover, observed results and accepted actual read facts with the timing
+qualification. This is not simulated expiry, grace, refund or retained-lapse proof.
+The owner-priority DeviceHub interruption extended uncovered state, not the finite
+Free read window. No repeat Release or new probe is proposed to repair a missing
+timestamp. Original phase/intent/handle/result are preserved with the correction.
 
 ## Why existing genuine TEST cannot prove the current relay branch
 
@@ -103,7 +130,7 @@ prior TEST-forward canary proposal is **not selected and must not be implemented
 to manufacture an ordinary-transaction pass**. Current TEST acknowledgement stays
 unchanged; no new gateway/flag/deployment is proposed as the next action.
 
-Recommended classification for coordinator reconciliation:
+Coordinator's explicit scope classification, preserving the unexecuted scenario:
 
 - The approved private TestFlight/review scope names one immutable reviewer owner
   and the existing one-tester group; its Sandbox purchase/receiver/cutover have
@@ -123,18 +150,23 @@ Recommended classification for coordinator reconciliation:
   original notification-delivery requirement has genuine receiver and actual
   reviewer-purchase proof. Keep the optional ordinary-dispatch scenario deferred/
   unaccepted, rather than changing TEST behavior or adding a purchase just to
-  improve the score. Coordinator must record that scope classification; this
-  audit does not mark I03 accepted.
+  improve the score. Coordinator has supplied that classification and owns its
+  ledger entry; this audit recommends acceptance but does not mark I03 accepted.
 - If a later explicit scope promises ordinary nonreviewer Sandbox delivery, plan
   that named target's safe case then. Do not infer such a promise from a shipped
   relay helper or count source tests as an executed live ordinary transaction.
 
 The declared actual Free-reader observation remains a genuine configuration
-postcondition. Its legitimate reviewed coverage case is prepared separately. The
+postcondition and is now observed through the legitimate reviewed coverage case. The
 Production credential boundary is also explicit: saved Sandbox success is not a
 positive Production read, and documented first-release eligibility prevents a
 prelaunch401 from uniquely diagnosing invalid credentials. See the
 [authorization evidence review](2026-11-09-apple-production-auth-evidence.md).
+Positive Production API authorization stays unobserved/platform-limited, with the
+bounded check conditional on confirmed eligibility and coordinator review. This
+is explicit release follow-through, not an invalid-key diagnosis or a claim that
+Sandbox proves Production. The original I03 row does not require an impossible
+prelaunch Production transaction; public paid activation/rollout remains gated.
 
 ## Verification and Brain impact
 
@@ -154,6 +186,17 @@ Scope/coverage/credential follow-up: the three owned documents pass51tests/
 The new private mode0600 source-review audit is
 `/private/tmp/ewatrade-i03-followup-source-review-2026-11-09.evidence.json`.
 No gateway, coverage, credential or runtime call was executed by that follow-up.
+
+Final offline reconciliation re-read the exact original row from220e40277 and
+the saved actual Free/restoration/finish receipts. Original criteria, routing
+byte equality to b0, jobs/wrapper equality to e162, untouched original Free
+artifact hashes, 15 local links and owned diff checks pass. The unchanged core
+51-tests/254-assertions plus QA tooling evidence is reused; no source/runtime
+test, browser action, provider request or new goal was started for this read.
+Private mode0600 receipt:
+`/private/tmp/ewatrade-i03-final-offline-reconciliation-2026-11-09.evidence.json`.
+Restoration receipts are committed in c27fca5a3. Only this owned audit is updated
+by the reconciliation; root owns the global checklist and decision.
 
 Brain impact: local `.brain/features/native-store-billing.md`,
 `.brain/features/owner-wide-billing.md` and `.brain/tasks/in-progress.md`.
