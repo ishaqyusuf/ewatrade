@@ -1,8 +1,8 @@
 # Apple Sandbox tester account inspection — 9 November 2026
 
 Status: **new tester sign-in and read-only management access verified; original
-purchase control and store-account restoration remain unresolved**. Apple stays
-3/6; this is not an I05 lifecycle pass.
+store sign-in restored by owner confirmation; purchase control unresolved**.
+Apple stays 3/6; this is not an I05 lifecycle pass.
 
 ## Actual observations
 
@@ -36,8 +36,11 @@ census is claimed.
 
 The setup-only inspection has ended. Root handed the owner the normal Sandbox
 sign-out and original Media & Purchases restoration steps, leaving iCloud intact.
-**Restoration is pending owner confirmation and must not be reported complete.**
-No continuing tester-session hold or reopening of EwaTrade is implied.
+The owner subsequently replied **restored** to that exact handoff. Root then
+observed the iPhone Home Screen before the actual 18:29:38 UTC clock read.
+Restoration of the original account is owner-confirmed; the Home Screen alone is
+not an independent Apple-account identity audit. The account-only inspection is
+closed. No continuing tester-session hold or reopening of EwaTrade is implied.
 
 The existing [account-setup source review](2026-11-09-controlled-sandbox-lifecycle-account-setup.md)
 still applies: a second active chain on the same reviewer owner can complete at
