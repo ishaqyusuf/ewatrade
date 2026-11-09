@@ -1,25 +1,28 @@
 # Apple paid-launch acceptance and owner actions — 9 November 2026
 
 This is the source chat's consolidated handoff, not a release approval or a new
-questionnaire. Continue the existing pending requests; do not send duplicate login,
-reset, credentials, banking or provider-agreement questions. Canonical platform
+questionnaire. Do not repeat completed login, device or banking requests, and do
+not send the withdrawn AI-provider inquiries. Canonical platform
 progress remains **Apple I01–I06: 2/6 (33.3%)**. Android has its separate 1/8 ledger.
 
-## Latest checkpoint — Dashboard login completed
+## Latest checkpoint — actual Dashboard server read accepted
 
 The owner completed password sign-in. Billing chat verified the correct reviewer
 Owner account and EwaTrade Review / Main store in the separate signed-in Chrome
-tab. At the bounded 13:50Z window (14:50 Africa/Lagos), Dashboard showed Starter
-Active, one of one business slots, 0/100 items and 0/2 staff. The canonical owned
-READY Production deployment still matches e162. This accepts the authenticated
-API-backed paid view, not the independent Dashboard SSR reader: existing server
-layouts catch failures and the same navigation can render in their fallback.
+tab. Initial API-backed Starter display passed at14:50 Lagos. Following the normal
+reviewed b0 Preview/matching-smoke/Production rollout, one full reload at15:21 Lagos
+returned the actual Settings server result `resolved / starter / owner_subscription`.
+Dashboard/Marketing/API were owned READY Production exactb0 and API health passed.
+This closes the licensed reviewer's Settings canonical server paid-read subcase;
+the earlier ambiguous navigation is not the evidence used to accept it.
 
-Do not repeat login or ask for credentials. The single next phone request is a
-read-only Manage store subscriptions inspection, with no cancellation, purchase,
-Restore, release or Apple-account switch. No new rollout is authorized by this
-checkpoint. See the [authenticated-view receipt](../verification/2026-11-09-dashboard-authenticated-paid-view.md)
-and [exact remaining phone sequence](../verification/2026-11-09-build10-finish-and-lifecycle-sequence.md).
+The read-only Manage check is also completed: Apple's subscription screen opened,
+but the product was not listed, and the owner found no Sandbox section. This proves
+link opening only, not loss of the verified purchase, tester identity, cancellation
+or finishing. Do not ask for another purchase/account switch to recover it.
+Wi-Fi connection after USB removal passes; direct phone tapping remains blocked
+by a broader Mac coordinate-tool error. See the [actual server result](../verification/2026-11-09-dashboard-server-plan-result.md)
+and [remaining phone sequence](../verification/2026-11-09-build10-finish-and-lifecycle-sequence.md).
 
 ## Accepted facts to reuse
 
@@ -34,10 +37,10 @@ and [exact remaining phone sequence](../verification/2026-11-09-build10-finish-a
   idempotent Restore have candidate-specific evidence. Do not buy again merely
   to reproduce these passes. Native transaction finishing remains distinct.
 - Dashboard/Marketing/API are accepted Production source
-  `e1626301dd3aef0925ac9cda3b2140c9cfc04012`; both jobs projects promoted
-  `20261109.2`. The actual hosted read-only job observed the existing review
-  business as Starter with the correct owner plan. Preview correctly stayed off.
-  The mobile binary was excluded from that rollout.
+  `b0e29c66dc663e781a46989c3415beecd94c2694`. Both jobs retain e162/version
+  `20261109.2`, with actual hosted read-only Starter proof and Preview disabled.
+  Actual authenticated Settings server Starter/owner-subscription proof now passes
+  too. Mobile was excluded; final evidence59a330299 is not another deployment.
 - Reviewer identity, workspace, Sandbox tester, public support address and
   `admin@zeroesandone.com.ng` backup with a 12-hour initial response target are
   settled. The response target is not yet a verified monitored-service promise.
@@ -51,10 +54,10 @@ These passes do not close the broader I03/I04/I05/I06 gates.
 
 | When | Owner action | Coordinator work and acceptance condition |
 | --- | --- | --- |
-| Completed 9 November | Owner password sign-in and correct reviewer/business confirmed. No further login is requested. | Authenticated API-backed Starter view passes. Independent Dashboard SSR result remains open because the current visible page cannot distinguish a successful read from fallback. |
-| For the next physical session | Connect the iPhone if convenient; unlock and approve Trust only if the device asks. Keep build 10 installed. Enter Apple/device/Mac passwords or biometric confirmation directly when required. | Inspect available device/mirroring access first. Use the smallest remaining tap sequence; USB pairing is not proof of working screen control. Preserve existing signed acceptance and record any unsupported controls. |
+| Completed 9 November | Owner password sign-in and correct reviewer/business confirmed. No further login is requested. | Authenticated API-backed Starter view and actual full-reload Settings canonical server Starter/owner-subscription read pass at exactb0. |
+| Connection completed; later protected actions only | Wi-Fi after USB removal is verified. Keep build10 installed and Wi-Fi available; handle unlock, passwords/biometrics directly when a concrete remaining case needs them. | Device Hub displays the physical phone. Direct coordinate input fails even in Mac app sidebars; do not promise unattended navigation or ask the owner to enable UI Automation as a proven fix. |
 | Before lifecycle controls change state | Use the prepared Sandbox Manage/cancel-renewal or failure/refund controls only after the exact case and expected effects are identified. | Match genuine signed facts to durable period, coverage and Free fallback; distinguish cancellation, expiry, billing failure and revocation. Do not use a real-money charge, arbitrary receipt replay, synthetic paid grant or five accelerated minutes as proof of five actual days. |
-| When existing provider evidence is located | Continue the provider-agreement/retention-location handoff already pending in Android. Share the document location or approved console evidence, not API keys or a password. | Reconcile actual reachable text, image, audio, moderation and storage recipients against the final runtime. A contract's existence or `store:false` does not establish organization-wide zero retention. |
+| No provider inquiry requested | Owner directs no AI-provider contact; assess existing applicable terms/policies and actual flows. Review only a concrete proposed adjustment or unresolved material conflict. | Android owns this review and the approved18+live-AI adjustment; preserve eligible13+ ordinary functions/history. Resolve actual provider/account/flow facts and truthful retention disclosure without inventing bespoke-contract or ZDR launch prerequisites. |
 | Before positive paid-owner privacy processing | Review a prepared exact case, inventory, retained-category decisions, external processing and requester notice. | Source/schema deployment is not a completed privacy case. Do not delete the reviewer account or process an existing business as an acceptance shortcut. Existing account, provider and notice actions need their concrete scoped authority. |
 | Once all disclosure facts are ready | Review the complete immutable paid Terms/Privacy/Billing/Deletion/Support snapshot, version and digest. | Preserve the current approved snapshot/history until exact approval. Do not seek a blanket approval for an incomplete draft, backdate an approval or publish source assumptions as verified behavior. |
 | If the lower billing UI is included in the release | Review the exact revision in the existing billing Workshop chat. | Preserve the top plan card and Usage; only implement the approved lower-section revision. Preview states do not prove native/provider behavior. No new design choice is required to repeat existing billing backend passes. |
@@ -64,11 +67,11 @@ These passes do not close the broader I03/I04/I05/I06 gates.
 
 The billing deployment chat owns native finish/source investigation and remaining
 runtime acceptance. Root owns the shared legal/input reconciliation. Continue
-offline preparation and reuse unchanged signed/source evidence while the next
-physical-device handoff is pending. Do not start duplicate deployments or change
+offline preparation and reuse unchanged signed/source evidence while a concrete
+physical-device case is prepared. Do not start duplicate deployments or change
 runtime flags to make a test pass.
 
-Remaining evidence includes actual Dashboard SSR; native StoreKit finishing;
+Remaining evidence includes native StoreKit finishing;
 ordinary account/staff and owner/business separation; uncovered/covered/released
 coverage; renewal/cancellation, failed-renewal recovery and refund/revocation;
 retained records and new-admission limits after Free fallback; operational support;
@@ -88,26 +91,35 @@ contains proposed replacements; it is not an effective complete legal snapshot.
 Freeze the next complete snapshot only after reconciling verified subscription
 behavior, actual recipients/retention, Google SDK analytics/coarse-location
 declarations, separate web geocoding, paid-owner retention/deletion and monitored
-support. Preserve the existing 13+ account/Store and adult-declared free-form chat
-policy; no new minimum-age decision is requested. Android Age Signals source or
+support. Preserve existing13+ account/Store and adult-declared free-form chat
+policy. Owner separately approved adult-declared18+ live AI invocation at launch;
+source/release acceptance must precede an effective claim. Android Age Signals source or
 access does not establish iOS age assurance or authorize shared policy changes.
 
 The final digest must use the existing legal publication mechanism and the exact
 complete content/metadata. No effective text, version, approval metadata, digest,
 store declaration or legal publication is changed by this handoff.
 
-## USB and navigation limits
+## Wireless connection and navigation limits
 
-The available Maestro tooling supports iOS simulators, not physical iPhones.
-The earlier iPhone Mirroring session could capture the screen but its click
-bridge failed; later it needed a protected unlock. A USB cable does not repair
-that bridge or provide unattended payment/credential confirmation.
+Existing Xcode27.2 Device Hub found the paired physical iPhone15ProMax/iOS27.0.1
+and displayed its screen. After the owner unplugged USB, an exact-device read-only
+response succeeded with paired/localNetwork/tunnelconnected; Device Hub still
+showed Available. No new pairing, network settings or UI Automation toggle was
+needed. Raw UUID/serial/IP metadata stays private, not in this packet.
 
-Apple's Mirroring setup uses a nearby locked iPhone, Wi-Fi/Bluetooth and the same
-Apple Account. The owner still handles Trust/unlock and protected credentials.
-Use working approved controls if they become available, but do not promise that
-all physical UI acceptance can finish without owner taps.
-[Apple requirements](https://support.apple.com/en-us/120421) and
+Direct coordinate clicks fail with `-10005/noWindowsAvailable`, including on
+Device Hub's Mac sidebar and a separate System Settings sidebar. Accessibility
+menu-button actions work. Existing Codex Computer Use Accessibility and Screen
+Recording entries are enabled. Window raising, fresh target binding and one
+control-session reset did not fix the minimal repro. This isolates a broader Mac
+coordinate-tool failure before phone input; its internal cause is unconfirmed.
+No workspace application fix or native tap acceptance is claimed.
+
+Maestro still supports iOS simulators only; that is not a claim that Device Hub
+cannot control physical phones. Use working approved controls if available and
+keep protected credentials/payment confirmations owner-handled.
+[Apple Device Hub](https://developer.apple.com/videos/play/wwdc2026/260/) and
 [Maestro physical-iPhone limitation](https://maestro.dev/blog/maestro-cli-2-11-0).
 
 ## Verification and Brain impact

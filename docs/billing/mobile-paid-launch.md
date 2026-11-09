@@ -1,5 +1,37 @@
 # Shared Apple and Android paid launch
 
+## Dashboard server paid read accepted — 9 November 2026, 15:21 Lagos
+
+Normal Preview, exact matching existing-data smoke and Production completed for
+`b0e29c66dc663e781a46989c3415beecd94c2694`; canonical Dashboard, Marketing and API
+are owned READY Production and API health passed. Dashboard is the only runtime
+code change. The normal Git-connected pipeline also rebuilt API/Marketing because
+their strict dependency closure includes four impact-metadata records; no provider
+Git setting or qualification gate was bypassed. Jobs retain e162/20261109.2 and
+the installed private TestFlight build remains 10; neither was released again.
+
+After one full reload in the existing signed-in reviewer session, the Settings
+server wrapper returned `resolved / starter / owner_subscription` at
+14:21:03.995Z. Correct Owner identity, EwaTrade Review / Main store and the API-backed
+Starter card were also verified. This closes the licensed reviewer's Settings
+canonical server paid-read subcase. It does not establish the shell's separate
+optimized projection, Free fallback, native finishing or paid lifecycle behavior.
+The temporary source hold is released. Final evidence59a330299 is local-only;
+it is not another deployment. [Rollout and actual result](../verification/2026-11-09-dashboard-server-plan-result.md).
+**Apple2/6 and Android1/8 remain unchanged.** Earlier entries retain dated scope.
+
+Owner decisions relayed by Android9November: do not contact AI providers; assess
+applicable existing terms/policies against actual flows and propose concrete
+adjustments. No bespoke agreement or ZDR is a universal invented launch gate.
+Owner approved adult-declared18+ live AI invocation while preserving13+ ordinary
+features/history; implementation/release remains separate. Owner also approved
+excluding eight named territories from Play's173draft targets. App targeting and
+all three monthly plan sets now save/reload as the exact same165countries; all522
+stored prices remain unchanged, with495available and27retained/unavailable.
+Plans/app remain unsubmitted/inactive. [Exact territory receipt](../verification/2026-11-09-play-provider-territory-adjustment.md).
+This supersedes the earlier173country checkpoint below. These decisions do not
+by themselves change effective legal text, Apple availability or live flags.
+
 ## Play regional drafts saved — 9 November 2026
 
 All three existing Play products now have saved/reloaded monthly Draft base plans,
@@ -65,7 +97,7 @@ Commercial/domain detail lives in [owner-wide subscriptions](owner-wide-subscrip
 No credentials, receipts containing personal data, identity documents or secrets
 belong in this file.
 
-## Owner decisions — current as of 8 November 2026
+## Owner decisions — current as of 9 November 2026
 
 | Decision | Agreed direction |
 | --- | --- |
@@ -73,6 +105,7 @@ belong in this file.
 | Prices | Monthly Nigeria baseline Starter NGN5,000, Growth NGN15,000, Pro NGN30,000. Comparable Africa baseline, +20% reference elsewhere; actual localized store offers/taxes/price points control checkout. |
 | Geography | Broad international launch wherever the store, paid products and applicable country requirements support it. This supersedes the earlier Nigeria-first instruction and its unsubmitted Play targeting draft. Record exclusions and their concrete blockers; do not silently retain Nigeria-only or claim every country is accepted. |
 | Addresses | Manual native address entry at launch. Source cf831c187 removes automatic lookup and blocks Android location permissions; exact signed behavior remains to verify. Shared web geocoding is separate and must be disclosed accurately. |
+| AI eligibility and provider terms | Owner approved live AI invocation for adult-declared18+ accounts at launch, preserving eligible13+ ordinary functions and saved history. Implementation/live acceptance remains separate. Do not contact AI providers; work within applicable existing terms/policies, flag actual conflicts and propose adjustments. Do not impose a universal bespoke-contract or ZDR gate. |
 | Support | Reuse public support@ewatrade.com and the existing founders@ewatrade.com forwarding/operational contact. No duplicate mailboxes or separate platform support systems. Owner named admin@zeroesandone.com.ng as backup with a12-hour initial response target; monitored routing/delivery remains unverified. |
 | Grace/downgrade | Five days total requested; afterward keep existing records/staff usable and block new additions above current Free limits. Play uses actual configured grace/verified expiry. Apple needs its separately approved server/application courtesy implementation; do not shorten verified store access or invent grace from an outage. |
 | Publication | Publish publicly after store approval and all required release checks. This decision is settled; do not ask it again. It does not waive store checks, personal verification or binding-agreement boundaries. |
@@ -100,8 +133,8 @@ user to repeat it.
 | Phase | Current state | Next action |
 | --- | --- | --- |
 | 1. Shared contract and core source | Owner limits, coverage, versioned signup and retained-record downgrade implemented (0bd862763; verification daf00b5f0). Manual native addresses implemented cf831c187. | Reuse valid checks. Apple courtesy source and platform-specific runtime readiness are implemented with23billing tests/136assertions, scoped259/1679, API types and H01/H02 passing; signed acceptance remains open. Completed Play policy is unchanged. |
-| 2. Store products and configuration | Apple three monthly products/175price schedules saved; controlled reviewer API source now deployed at e1626301d, with original Sandbox Starter purchase, enrollment and one Restore durably verified. Public checkout stays closed. Play merchant profile linked, payout bank deferred; existing AAB36 remains in its internal-testing draft. All3monthly base plans are saved/reloaded Draft with5day grace/55dayhold,173available country sets each,519available prices plus3retained unavailable prices. Product mappings are documented, not installed. | Complete native finish/scope/lifecycle and Dashboard SSR/Free cases. For Play, finish approved merchant/license/security-access inputs and the reviewed registered-package/isolated-Preview test path before exact licensed acceptance or activation. Country-specific compliance remains open; draft country/pricing saves do not accept public territories. |
-| 3. Shared runtime, legal and operations | Production Dashboard/Marketing/API exact e1626301d READY after matching Preview smoke; SQL-backed API health200. Both jobs20261109.2 exact e162. Dashboard/jobs reader configuration is deployed; actual hosted reviewer Starter read passes in a read-only jobs transaction and Preview correctly stays disabled. Actual signed-in Dashboard SSR and Free fallback remain open. Public checkoutfalse/WEB unchanged; common legal/privacy and operations still unaccepted. | Complete the existing reviewer Dashboard sign-in and a source-backed SSR postcondition; do not infer proof from menu links or an API-backed plan card. Verify paid/Free scope, lifecycle, monitored support, retained-record deletion and actual recipient/retention facts without generating reminders or duplicating paid tests. |
+| 2. Store products and configuration | Apple three monthly products/175price schedules saved; controlled reviewer API runs at b0e29c66d, with original Sandbox Starter purchase, enrollment and one Restore durably verified. Public checkout stays closed. Play merchant profile linked, payout bank deferred; existing AAB36 remains in its internal-testing draft. App and3Draft monthly plans have equal165country sets,5day grace/55dayhold; all522stored prices unchanged (495available/27retained). Mappings are documented, not installed. | Complete native finish/scope/lifecycle and Free cases. For Play, finish approved merchant/license/security-access inputs and the reviewed registered-package/isolated-Preview test path before licensed acceptance or activation. Country-specific compliance remains open; draft settings do not accept public territories. |
+| 3. Shared runtime, legal and operations | Production Dashboard/Marketing/API exact b0e29c66d READY after matching Preview smoke; SQL-backed API health passed. Jobs retain20261109.2/e162 actual read-only reviewer Starter proof. Actual authenticated Settings server read now passes resolved/starter/owner_subscription after a full reload. Public checkoutfalse/WEB unchanged; Free fallback and common legal/privacy/operations remain open. | Reuse accepted paid reader evidence; no new login or repeated paid test. Verify Free scope, native/lifecycle, monitored support, retained-record deletion and actual recipient/retention/terms facts. Implement the owner-approved18+liveAI policy through its current owner; no provider inquiry or speculative privacy promise. |
 | 4. Signed acceptance | Android A01–A08:1/8; Apple I01–I06:2/6 currently accepted after fresh8November readback restored I01; products/prices I02 remain complete. Source/config tests do not close these gates. | Freeze exact candidates, inspect permissions/native linkage and run licensed purchase/restore/renewal/grace/refund/switching tests. Reuse platform-valid evidence only. |
 | 5. Submission and publication | Public release after approval/checks is authorized. Neither platform has paid-release acceptance yet. | Complete truthful store declarations/reviewer access, submit accepted candidates, follow review and publish through existing release authority. |
 
@@ -110,10 +143,11 @@ Changing a country draft or finishing source code does not close a signed gate.
 
 ## One shared outstanding-input list
 
-- Apple reviewer Dashboard sign-in is completed and the correct Owner/business
-  and API-backed Starter view are verified in ef22e41f4. Do not repeat login,
-  reset the password or request credentials. Independent SSR proof remains open;
-  the next single iPhone request is read-only Manage subscriptions inspection.
+- Apple reviewer Dashboard sign-in and both API-backed and actual Settings server
+  Starter reads are completed; final evidence59a330299. Do not repeat login,
+  reset the password or request credentials. Manage opened Apple's screen but the
+  product was absent, and the owner found no Sandbox section. Do not infer loss
+  of the verified purchase or ask for an account switch/new purchase to recover it.
   Physical-device and exact legal-review actions are consolidated in the
   [Apple owner-action packet](../releases/apple-paid-launch-owner-actions-2026-11-09.md).
 - Play organization payments profile is linked. Owner deferred payout-bank setup;
@@ -122,10 +156,11 @@ Changing a country draft or finishing source code does not close a signed gate.
 - Backup `admin@zeroesandone.com.ng` and a12-hour initial response target are
   recorded. Actual monitored routing/delivery is unverified; do not re-ask for the
   contact or commitment, publish a guarantee or create duplicate inboxes.
-- Provider-agreement/retention evidence location is already pending in Android;
-  reuse that handoff. Actual reachable recipient/retention facts and a complete
-  next-version paid legal snapshot remain open; an incomplete draft is not ready
-  for exact publication approval.
+- AI-provider inquiries are withdrawn: do not send them or repeat their approval
+  request. Android owns the existing-terms/actual-flows review and approved live-AI
+  eligibility adjustment. Actual recipient/account binding, truthful retention
+  facts and the complete next paid legal snapshot remain open; contract existence
+  alone cannot prove them, and bespoke agreements/ZDR are not universal gates.
 - Any reviewer workspace, sandbox identities or country-specific business facts
   must first be sought in existing configuration/evidence. Never invent an answer
   or ask both chats independently for the same fact.
