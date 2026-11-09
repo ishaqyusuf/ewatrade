@@ -1,5 +1,10 @@
 # License testing and Publisher API — 9 November 2026
 
+Later same-day owner-approved checkpoint: [Publisher identity and local key custody](2026-11-09-play-publisher-local-custody.md)
+records the created app-scoped identity and one secured key. Runtime upload,
+RTDN and paid acceptance remain separate. Earlier no-credential statements below
+describe this receipt's original license/API-only execution.
+
 The owner explicitly approved both prepared actions in the Android chat:
 finalize the existing one-person internal QA license-test selection with
 `RESPOND_NORMALLY`, and enable Google Play Android Developer API in the existing
