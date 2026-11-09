@@ -592,7 +592,7 @@
 .signup-footer {width:48%;max-width:none;margin:40px 0 0;padding:24px 48px 32px;border:0;font-size:12px;}
 .signup-progress ol {gap:16px;font-size:12px;flex-wrap:wrap;}
 .signup-age-choice {border:1px solid var(--border);border-radius:14px;padding:14px 18px;}
-.signup-age-choice:has(:checked) {background:#e7ebfa;border-color:#3d50c4;color:#2c3a99;}
+.signup-age-choice:has(:checked) {background:#e8ecfa;border-color:#3d50c4;color:#2c3a99;}
 .signup-preview.launch-v4 {position:fixed;right:0;top:0;width:52%;height:100dvh;overflow:hidden;display:flex;align-items:center;flex-direction:column;justify-content:center;gap:24px;padding:40px;background:radial-gradient(120% 120% at 88% 0%,#4569c4 0%,#3354a8 40%,#1c2e68 100%);color:#f4f7ff;}
 .signup-preview-copy {position:relative;text-align:center;}
 .signup-preview-copy h2 {font-family:SignupCal,sans-serif;font-size:clamp(36px,4vw,60px);line-height:1.02;letter-spacing:-.04em;margin:12px 0 16px;}
@@ -625,7 +625,7 @@
 @media(prefers-color-scheme:dark){
  .signup-shell {--background:#0c1017;--foreground:#edf1f7;--primary:#9dbbff;--primary-foreground:#0b1530;--muted:#1e2532;--muted-foreground:#9aa6b8;--border:#2a3342;--ring:#9dbbff;color-scheme:dark;}
  .signup-shell .signup-primary {background:#f5b12e;}
- .signup-age-choice:has(:checked) {background:#1b2842;border-color:#9dbbff;color:#edf1f7;}
+ .signup-age-choice:has(:checked) {background:#1f2b45;border-color:#9dbbff;color:#edf1f7;}
  .signup-header img {filter:brightness(0) invert(1);}
  .signup-select-menu {--foreground:#edf1f7;--popover:#1c2330;--popover-foreground:#edf1f7;--muted-foreground:#9aa6b8;--accent:#2a3342;--accent-foreground:#edf1f7;background:#1c2330;color:#edf1f7;border-color:#2a3342;color-scheme:dark;}
 }
