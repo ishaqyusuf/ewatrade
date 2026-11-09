@@ -1,5 +1,17 @@
 # Hosted owner-plan read check — 9 November 2026
 
+## Coverage restored later; no repeated jobs read
+
+After the owner's DeviceHub-first interruption, root performed one normal Cover
+and observed Active Starter/covered1of1 at18:28:48 Africa/Lagos. One later normal
+Dashboard full reload confirmed the API-backed Starter card and actual Settings
+server resolved/starter/owner_subscription by18:30:23 Africa/Lagos. No new jobs run,
+direct database or provider query was made. The existing paid jobs evidence below is
+reused; no post-restoration hosted-task result is claimed. The actual Free run
+and original phase/intent/handle remain unchanged, with its two-minute timing
+condition still inconclusive. See the
+[restoration receipt and limits](2026-11-09-coverage-release-free-reenroll.md).
+
 ## Later actual released-business Free read —9 November
 
 The existing unscheduled task ran once for the same original reviewer/business

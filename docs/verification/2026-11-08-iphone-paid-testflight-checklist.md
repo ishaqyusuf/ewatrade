@@ -15,9 +15,13 @@ The accepted actual Dashboard server read is now b0e29c66d; jobs retain
 e1626301d/version20261109.2 with accepted paid task-local evidence. The genuine
 [Release → Free → re-enroll case](2026-11-09-coverage-release-free-reenroll.md)
 now has actual Free observations from the API-backed card, Settings server and
-one hosted read-only jobs task. Re-enrollment/restoration remains pending: the
-owner prioritized DeviceHub diagnosis before further billing acceptance and did
-not confirm Cover performed. No further action or probe is requested here. Root's
+one hosted read-only jobs task. After the owner's DeviceHub-first interruption,
+root performed one normal Cover and physically observed Starter Active/covered,
+1of1 owner slots at18:28:48 Africa/Lagos. One later canonical Dashboard full reload
+confirmed the API-backed Starter card and actual server resolved/starter/
+owner_subscription by18:30:23 Africa/Lagos. No new purchase, Restore, jobs run,
+direct database or provider query. The [coverage receipt](2026-11-09-coverage-release-free-reenroll.md)
+records exact attribution, honest clock bounds and limits. Root's
 Release timestamp was corrected from an estimate to an interval; the operator's
 two-minute baseline precondition is inconclusive, not a pass. Original run/input
 evidence is preserved with the correction; no repeat run is requested.

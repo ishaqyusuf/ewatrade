@@ -6,6 +6,26 @@ Status: deployed and actual authenticated Settings server paid-read accepted at
 smoke/Production and API health passed. Mobile release excluded. Apple2/6 remains;
 this closes only the licensed reviewer's Settings canonical server-read subcase.
 
+## Later restored Starter read —9 November,18:28–18:30 Africa/Lagos
+
+After the DeviceHub-first interruption, root observed one normal Cover restore
+the original signed10 business to Active Starter/covered1of1 at17:28:48.083Z.
+Exactly one subsequent full reload of the existing canonical reviewer billing
+tab showed EwaTrade Review/Main store, the API-backed Active Starter card at
+NGN5,000/month, stores1of1, catalog0of100, staff0of2 and orders0/no limit.
+One actual server wrapper resolved/starter/owner_subscription. The read completed
+after the native restoration and before the exact post-read clock17:30:23Z
+(one-second resolution; before17:30:24Z), not an invented exact render time.
+
+This is actual normal reader agreement after restoration, with no raw HTTP body,
+new jobs run, direct database/provider query or fresh purchase/coverage-row census. Reuse accepted
+b0 runtime evidence; no new deployment identity measurement is claimed. Original
+Free evidence and its inconclusive two-minute timing condition are unchanged.
+The finite Free read window ended17:09:55Z; the later interruption did not extend
+it. Private mode0600 receipt:
+`/private/tmp/ewatrade-coverage-restored-readers-2026-11-09.evidence.json`.
+See the [coverage sequence](2026-11-09-coverage-release-free-reenroll.md).
+
 ## Later actual Free read —9 November,18:09 Africa/Lagos
 
 After the owner's separately reviewed Release, the same existing authenticated
@@ -22,7 +42,7 @@ separate actual hosted jobs Free/null read and original phase/run artifacts.
 Root later corrected its Release confirmation timestamp from an estimate to a
 clock interval. The two-minute operator baseline precondition is inconclusive;
 these actual Free reader facts do not repair that timing gap. No retry, new
-Release, database write, purchase or deployment. Restoration is still pending.
+Release, database write, purchase or deployment. At that checkpoint restoration was pending.
 The owner subsequently prioritized DeviceHub diagnosis; no restoration read or
 further billing action follows without root's later handoff and current-state review.
 Screenshot and actual DOM marker/identity context are saved privately at

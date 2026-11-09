@@ -1,21 +1,66 @@
 # Reviewed coverage Release → Free → re-enroll case — 9 November 2026
 
-Status: **actual Free reader facts observed; restoration paused by owner priority**. The owner
+Status: **actual Free reads and normal coverage restoration observed**. The owner
 performed the separately reviewed Release once. The normal API-backed Dashboard
 card, actual Settings server read and one hosted READ ONLY jobs result show Free.
 The operator's two-minute baseline precondition is **INCONCLUSIVE**, because root
 corrected an estimated confirmation timestamp after the task had run. Preserve
 the original phase/intent/handle/result and the separate correction; do not rerun
 the case to manufacture timing proof. No new purchase, Restore, deployment or
-mobile release. Apple stays2/6 (33.3%); wider I05 remains open.
+mobile release. The later restoration below completes the bounded coverage cycle;
+it does not resolve the timing condition. Apple stays2/6 (33.3%); wider I05 remains open.
+
+## Restored after DeviceHub-first interruption —9 November,18:28–18:30 Africa/Lagos
+
+The owner first prioritized DeviceHub diagnosis and did not confirm the earlier
+Cover request. Free probes had already ended17:09:55Z; the longer uncovered
+interval was an owner-priority interruption, not an extended active test hold.
+Root then verified foreground physical device controls, explicitly observed the
+original EwaTrade Review/Owner context and Free/uncovered0of1, and tapped Cover
+exactly once through the normal installed signed10 UI. No second mutation followed.
+
+At17:28:48.083Z (18:28:48 Africa/Lagos), root directly observed Active Starter,
+NGN5,000/month, covered business,1of1 owner slots and Release visible. Goods0of100,
+staff0of2 and orders with no limit were visible. No Apple checkout, new purchase,
+Restore, sign-out or business switch occurred in that sequence.
+
+One authorized full reload of the existing canonical Dashboard billing tab then
+showed the same EwaTrade Review/Main store, API-backed Active Starter at
+NGN5,000/month, stores1of1, catalog0of100, staff0of2 and orders0/no limit. The
+separate actual Settings wrapper was resolved/starter/owner_subscription. This
+read completed after root's17:28:48.083Z restoration and before the post-read
+clock17:30:23Z (one-second clock resolution; before17:30:24Z). No exact render
+timestamp is invented. No additional jobs run, direct database query or provider
+query was made.
+
+Private mode0600 evidence:
+`/private/tmp/ewatrade-coverage-restored-device-2026-11-09.png` (root's native image)
+and `/private/tmp/ewatrade-coverage-restored-readers-2026-11-09.evidence.json`
+(actual reader facts, attribution, honest time bounds and image hash).
+The last accepted web/API runtime b0 and installed native2d/signed10 receipts are
+reused; no fresh provider deployment metadata measurement is claimed.
+
+Normal coverage restoration and API-backed/Settings reader agreement are observed.
+No fresh purchase-ID/coverage-row census, exact new period, current ownerCatalog
+response or populated retained-data case was measured. Original Free phase/intent/
+handle/result remain byte-identical and the two-minute baseline condition remains
+inconclusive. No further probe is required merely to replace its missing timestamp.
+
+Restoration evidence checks passed for actual marker/card facts, honest clock
+bounds, private file modes/native image hash, unchanged original Free artifacts,
+15 relative links and owned diff. The prior identical four-document core result
+(51 tests/254 assertions plus QA tooling types) is reused after verifying its QA
+source is unchanged. No repeated device, jobs, native or provider test was run.
+
+### Earlier interruption checkpoint — restoration was pending
 
 After root requested the normal Cover step, the owner prioritized fixing DeviceHub
 before continuing acceptance and did not report Cover performed. Preserve the
 last observed business Free/uncovered0of1. The finite read window is complete;
 there is no continuing test hold or instruction to keep the owner waiting on
-documentation. No billing action, new probe or repeated Cover request follows
-this checkpoint. Root owns device diagnosis and must reassess actual subscription
-activity before any later normal re-enrollment. Restoration is not accepted.
+documentation. At that checkpoint this chat had no authorized billing action,
+new probe or repeated Cover request. Root owned device diagnosis and the later normal restoration
+recorded above. This paragraph retains the earlier pending state as history.
 
 ## Executed Free observations and timing correction
 
