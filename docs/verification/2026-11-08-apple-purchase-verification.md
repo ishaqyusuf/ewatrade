@@ -232,3 +232,19 @@ Brain impact: updated current BRAIN/task/native billing pointers, API contracts/
 permissions, and both reviewer-environment decisions. No schema/migration update
 is needed. Prevention: keep actual signed Sandbox capture/SDK proof paired with
 the prelaunch Production401 regression; a mocked404-only response missed this case.
+
+## Owner-reported app presentation — 9 November 2026
+
+Owner reports the app's Business coverage section says this business is not
+enrolled in the owner subscription and zero of one business slot is in use.
+This confirms the visible verified-owner / uncovered-business presentation after
+server recovery. Build identity and StoreKit finish were not reinspected in this
+check; enrollment, Restore and lifecycle acceptance remain pending. No new live
+read/write, purchase, restore or enrollment action was performed. Apple2/6 unchanged.
+
+At the owner's request, selected Owner ledger v9 revision
+`e33d8ec7-faa5-453c-a84b-f72d9ca5fb00` was opened in the shared Workshop at
+**Verified · business uncovered**. Actual viewer shows Picked/Implemented, Starter
+owner subscription,0of1slots, business stillFree and Cover this business. The tab
+is retained for review. This is the local simulated presentation of the same case;
+no new revision, selection, implementation or deployment occurred.
