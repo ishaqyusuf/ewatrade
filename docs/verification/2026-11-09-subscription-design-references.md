@@ -109,9 +109,19 @@ objective. Existing runtime storefront caps await the separately selected app wo
 
 Local-only Brain updated: `.brain/features/mobile-owner-ledger.md` and
 `.brain/tasks/subscription-benefits-alignment-2026-11-09.md`. No API, schema,
-permission, assistant authority or provider contract changed. Only this owned
-handoff/reference receipt is included in the local commit; unrelated billing and
-privacy work is preserved.
+permission, assistant authority or provider contract changed. The intended owned scope was this handoff/reference receipt.
+
+Commit `4059a33a3` also consumed two concurrently staged peer-owned documents:
+`docs/billing/mobile-paid-launch.md` and
+`docs/releases/apple-paid-launch-owner-actions-2026-11-09.md`. Their owner confirmed
+that both were intended, complete and separately validated, and explicitly asked
+that the mixed commit be preserved without amendment, reset, rewrite or duplicate
+commit. Their contents and ownership are preserved. The documentation source smoke
+below applies to this reference receipt; the peer owns its billing-doc validation.
+This scope clarification is committed with an exact owned path using `--only`.
+Future commits in this shared checkout must use explicit owned paths even after
+reviewing the staged index, because peer staging can change between inspection
+and commit.
 
 Documentation-only source smoke passed: 51 tests / 254 assertions across four
 existing files, plus QA tooling types. Scope was this owned receipt via `--files`;
