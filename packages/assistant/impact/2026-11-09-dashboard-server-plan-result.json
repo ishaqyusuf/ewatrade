@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "id": "2026-11-09-dashboard-server-plan-result",
+  "tickets": ["H02"],
+  "summary": "Retain the actual canonical server plan result on the existing authenticated Settings wrapper for diagnosing client/server billing disagreement; source preparation only.",
+  "noAssistantImpact": "Only fixed read-status, catalogue plan ID and subscription-source enums from the existing current-workspace server read are rendered as DOM attributes. No extra read, public endpoint, RPC, tool, credential, telemetry sink, identity, receipt, exception text, schema, mutation, permission, navigation fallback or provider setting changes. Client API/cache results cannot supply the marker. Mobile release remains excluded.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "path": "docs/verification/2026-11-09-dashboard-server-plan-result.md",
+      "status": "updated"
+    },
+    {
+      "topic": "feature",
+      "path": ".brain/features/owner-wide-billing.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "schema",
+      "status": "not_applicable",
+      "note": "No database, schema, migration, public procedure or domain-contract change."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "apps/dashboard/src/app/(shell)/settings/settings-plan-loading.test.tsx",
+      "executed": true,
+      "result": "Actual async layout boundary4tests/39assertions pass: exact canonical plan IDs and source, unchanged paid/Free navigation gates, one scoped read, failed fresh read without stale result/error text, no-session/workspace no read, launch fallback distinct from owner coverage."
+    },
+    {
+      "kind": "run",
+      "path": "docs/verification/2026-11-09-dashboard-server-plan-result.md",
+      "executed": false,
+      "result": "Normal Dashboard-only Preview/matching existing-data smoke/Production scope prepared for coordinator review. No deployment or live SSR probe performed; paid SSR acceptance remains open."
+    }
+  ]
+}
