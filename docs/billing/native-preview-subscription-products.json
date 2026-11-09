@@ -1,0 +1,32 @@
+[
+  {
+    "store": "app_store",
+    "productId": "com.ewatrade.owner.starter.monthly",
+    "planId": "starter"
+  },
+  {
+    "store": "app_store",
+    "productId": "com.ewatrade.owner.growth.monthly",
+    "planId": "growth"
+  },
+  {
+    "store": "app_store",
+    "productId": "com.ewatrade.owner.pro.monthly",
+    "planId": "pro"
+  },
+  {
+    "store": "play_store",
+    "productId": "com.ewatrade.owner.starter.monthly",
+    "planId": "starter"
+  },
+  {
+    "store": "play_store",
+    "productId": "com.ewatrade.owner.growth.monthly",
+    "planId": "growth"
+  },
+  {
+    "store": "play_store",
+    "productId": "com.ewatrade.owner.pro.monthly",
+    "planId": "pro"
+  }
+]
