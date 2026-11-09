@@ -138,3 +138,21 @@ QA tooling types and Biome; plan has no unsupported mappings. Full API types
 and H02 pass. H01 unchanged coverage evidence is reused because no procedure
 or capability rows changed. Whitespace checks pass. Root owns separate
 release-review evidence; this source correction is not deployment or acceptance.
+
+### Follow-up review and bounded lease evidence
+
+The independent Spec follow-up and coordinator readback accepted `218c92cca`'s
+P2 correction. The original single `acquire().release()` assertion under the
+default concurrency limit of two did not independently prove zero leaked slots;
+one leaked slot could still admit another. The unchanged workflow `finally`
+release supplied source evidence, not a stronger runtime assertion.
+
+The existing eight-combination HTTP regression now explicitly configures
+`concurrencyLimit: 1`. Its post-refusal acquisition fails if the workflow leaks
+its only slot. The named regression passes **1 test / 64 assertions** across
+the same eight combinations; Biome passes. Private log:
+`/private/tmp/ewatrade-adult-ai-http-lease-2026-11-09.log`. Only test configuration
+and this evidence changed; prior application types, source smoke and impact
+checks remain applicable and were not repeated. No application policy or
+release setting changed. The automatic-screening product decision is separately
+pending with the owner; no option has been implemented.

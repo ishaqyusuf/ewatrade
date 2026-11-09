@@ -313,6 +313,11 @@ describe("assistant chat admission", () => {
             repository: fake.repository,
           }),
           resolveModel: defaultAssistantChatDependencies().resolveModel,
+          guard: new AssistantStreamGuard({
+            windowMs: 60_000,
+            requestLimit: 10,
+            concurrencyLimit: 1,
+          }),
         })
         const response = await chat(server)
         expect(response.status).toBe(403)
