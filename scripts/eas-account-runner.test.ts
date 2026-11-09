@@ -31,6 +31,14 @@ for (const [
   validationOnly,
   artifactOnly,
 ] of [
+  [0, "android", "build", "preview_play_test"],
+  [1, "ios", "build", "preview_play_test"],
+  [1, "android", "update", "preview_play_test"],
+  [1, "android", "submit", "preview_play_test"],
+  [1, "android", "build", "production_play_test"],
+  [1, "android", "build", "preview_play_test_config"],
+  [1, "android", "build", "preview_play_test_attachment"],
+  [1, "android", "build", "preview_play_test_dirty"],
   [0, "android", "build", "preview", false, true],
   [1, "android", "build", "preview_attachment", false, true],
   [1, "android", "build", "preview_artifact_duplicate", false, true],
@@ -134,6 +142,7 @@ for (const [
     const preview = mismatch?.startsWith("preview") ?? false
     const productionTestFlight =
       mismatch?.startsWith("production_testflight") ?? false
+    const playTest = mismatch?.includes("play_test") ?? false
     const quickPreview = mismatch?.startsWith("preview_quick") ?? false
     await mkdir(path.join(root, "scripts"), { recursive: true })
     await writeFile(
@@ -215,6 +224,7 @@ for (const [
       `import { writeFileSync } from "node:fs"; export async function assertPreviewPublisherReady() {} export async function runPreviewBuildAndPublish(input) { const result = await input.runJson(input.command); if (result.code === 0) writeFileSync(${JSON.stringify(path.join(root, "preview-publication.txt"))}, input.expectedCommit); return result.code; }\n`,
     )
     for (const [label, relativePath] of [
+      ["play-preview", "scripts/check-play-preview.mjs"],
       ["testflight", "scripts/check-testflight-preview.mjs"],
       ["testflight-production", "scripts/check-testflight-production.mjs"],
       ["teen", "scripts/check-teen-release-readiness.mjs"],
@@ -241,7 +251,7 @@ for (const [
     const easBin = path.join(cli, "bin", "run")
     await writeFile(
       easBin,
-      `#!/usr/bin/env bun\nconst fs = require("node:fs"); const path = require("node:path"); const state = JSON.parse(fs.readFileSync(path.join(process.env.HOME, ".expo", "state.json"), "utf8")); fs.writeFileSync(process.env.EAS_TEST_CAPTURE, JSON.stringify({ home: process.env.HOME, username: state.auth.username, args: process.argv.slice(2), apiUrl: process.env.EXPO_PUBLIC_API_URL, localOnly: process.env.EXPO_PUBLIC_LOCAL_ONLY, profile: process.env.APP_ENV })); if (process.argv.includes("build:view")) console.log(JSON.stringify({ id: process.argv.find((arg) => /^[0-9a-f]{8}-/.test(arg)), status: "FINISHED", platform: process.env.EAS_TEST_BUILD_PLATFORM, buildProfile: process.env.EAS_TEST_BUILD_PROFILE || (process.env.IOS_TESTFLIGHT === "1" ? process.env.EAS_BUILD_PROFILE : "production"), distribution: "STORE", channel: process.env.EAS_TEST_BUILD_CHANNEL || (process.env.IOS_TESTFLIGHT === "1" ? process.env.EAS_BUILD_PROFILE : "production"), appBuildVersion: process.env.EAS_TEST_BUILD_VERSION, gitCommitHash: process.env.EAS_TEST_BUILD_COMMIT === "missing" ? undefined : process.env.EAS_TEST_BUILD_COMMIT, isForIosSimulator: false, project: { id: "532f9a55-f4f6-4d4e-b60b-ea6fa8807a3b", ownerAccount: { name: "cipron-startups" } }, artifacts: { buildUrl: "https://secret.example.test/artifact" } })); if (process.argv.includes("env:list")) console.log("EXPO_PUBLIC_API_URL=https://api.example.test\\nEXPO_PUBLIC_LEGAL_ORIGIN=https://ewatrade.com\\nEXPO_PUBLIC_LOGLY_ENABLED=false"); process.exitCode = Number(process.env.EAS_TEST_EXIT_CODE);\n`,
+      `#!/usr/bin/env bun\nconst fs = require("node:fs"); const path = require("node:path"); const state = JSON.parse(fs.readFileSync(path.join(process.env.HOME, ".expo", "state.json"), "utf8")); fs.writeFileSync(process.env.EAS_TEST_CAPTURE, JSON.stringify({ home: process.env.HOME, username: state.auth.username, args: process.argv.slice(2), apiUrl: process.env.EXPO_PUBLIC_API_URL, localOnly: process.env.EXPO_PUBLIC_LOCAL_ONLY, profile: process.env.APP_ENV, playTestFlag: process.env.ANDROID_PLAY_TEST })); if (process.argv.includes("build:view")) console.log(JSON.stringify({ id: process.argv.find((arg) => /^[0-9a-f]{8}-/.test(arg)), status: "FINISHED", platform: process.env.EAS_TEST_BUILD_PLATFORM, buildProfile: process.env.EAS_TEST_BUILD_PROFILE || (process.env.IOS_TESTFLIGHT === "1" ? process.env.EAS_BUILD_PROFILE : "production"), distribution: "STORE", channel: process.env.EAS_TEST_BUILD_CHANNEL || (process.env.IOS_TESTFLIGHT === "1" ? process.env.EAS_BUILD_PROFILE : "production"), appBuildVersion: process.env.EAS_TEST_BUILD_VERSION, gitCommitHash: process.env.EAS_TEST_BUILD_COMMIT === "missing" ? undefined : process.env.EAS_TEST_BUILD_COMMIT, isForIosSimulator: false, project: { id: "532f9a55-f4f6-4d4e-b60b-ea6fa8807a3b", ownerAccount: { name: "cipron-startups" } }, artifacts: { buildUrl: "https://secret.example.test/artifact" } })); if (process.argv.includes("env:list")) console.log("EXPO_PUBLIC_API_URL=https://api.example.test\\nEXPO_PUBLIC_LEGAL_ORIGIN=https://ewatrade.com\\nEXPO_PUBLIC_LOGLY_ENABLED=false"); process.exitCode = Number(process.env.EAS_TEST_EXIT_CODE);\n`,
     )
     await chmod(easBin, 0o755)
     await symlink(easBin, path.join(fakeBin, "eas"))
@@ -259,6 +269,7 @@ for (const [
         path.join(root, "scripts", "eas-account-runner.ts"),
         operation,
         development ? "--dev" : preview ? "--preview" : "--prod",
+        ...(playTest ? ["--android-play-test"] : []),
         ...(validationOnly ? ["--validation-only"] : []),
         ...(artifactOnly ? ["--artifact-only"] : []),
         ...(mismatch === "preview_artifact_duplicate"
@@ -313,33 +324,41 @@ for (const [
         EAS_TEST_CAPTURE: capturePath,
         EAS_TEST_AUTH_CAPTURE: authCapturePath,
         EAS_TEST_PREFLIGHT_CAPTURE: preflightCapturePath,
+
+        ...(mismatch === "preview"
+          ? { ANDROID_PLAY_TEST: "1", EAS_BUILD_PROFILE: "play-preview" }
+          : {}),
         EAS_TEST_PREFLIGHT_FAIL:
-          mismatch === "production_testflight_target"
-            ? "testflight-production"
-            : mismatch === "production_testflight_login"
-              ? "ios-login"
-              : mismatch === "production_testflight_identity"
-                ? "ios-identity"
-                : mismatch === "production_testflight_attachment"
-                  ? "attachment"
-                  : mismatch === "api" ||
-                      mismatch === "production_testflight_api"
-                    ? "api"
-                    : validationOnly && mismatch === undefined
-                      ? "teen"
-                      : mismatch === "attachment" ||
-                          mismatch === "preview_attachment" ||
-                          mismatch === "preview_quick_attachment"
-                        ? "attachment"
-                        : mismatch === "teen"
+          mismatch === "preview_play_test_config"
+            ? "play-preview"
+            : mismatch === "preview_play_test_attachment"
+              ? "attachment"
+              : mismatch === "production_testflight_target"
+                ? "testflight-production"
+                : mismatch === "production_testflight_login"
+                  ? "ios-login"
+                  : mismatch === "production_testflight_identity"
+                    ? "ios-identity"
+                    : mismatch === "production_testflight_attachment"
+                      ? "attachment"
+                      : mismatch === "api" ||
+                          mismatch === "production_testflight_api"
+                        ? "api"
+                        : validationOnly && mismatch === undefined
                           ? "teen"
-                          : mismatch === "ios_identity"
-                            ? "ios-identity"
-                            : expectedExitCode === 1 &&
-                                platform === "ios" &&
-                                mismatch === undefined
-                              ? "legal"
-                              : undefined,
+                          : mismatch === "attachment" ||
+                              mismatch === "preview_attachment" ||
+                              mismatch === "preview_quick_attachment"
+                            ? "attachment"
+                            : mismatch === "teen"
+                              ? "teen"
+                              : mismatch === "ios_identity"
+                                ? "ios-identity"
+                                : expectedExitCode === 1 &&
+                                    platform === "ios" &&
+                                    mismatch === undefined
+                                  ? "legal"
+                                  : undefined,
         EAS_TEST_DIRTY_AFTER_ATTACHMENT:
           mismatch === "dirty_after_login" ||
           mismatch === "production_testflight_after_login"
@@ -348,6 +367,7 @@ for (const [
         EAS_TEST_GIT_REVISION_MISMATCH:
           mismatch === "revision" ? "1" : undefined,
         EAS_TEST_GIT_DIRTY:
+          mismatch === "preview_play_test_dirty" ||
           mismatch === "dirty" ||
           mismatch === "production_testflight_dirty" ||
           quickPreview
@@ -380,10 +400,39 @@ for (const [
       stdout: "pipe",
       stderr: "pipe",
     })
+    const stdoutPromise = new Response(proc.stdout).text()
     const stderrPromise = new Response(proc.stderr).text()
     const exitCode = await proc.exited
     const stderr = await stderrPromise
+    await stdoutPromise
     expect(exitCode, stderr).toBe(expectedExitCode)
+    if (playTest) {
+      await expect(
+        readFile(path.join(root, "preview-publication.txt")),
+      ).rejects.toMatchObject({ code: "ENOENT" })
+      if (expectedExitCode === 1) {
+        if (platform !== "android" || operation !== "build" || !preview) {
+          for (const file of [
+            capturePath,
+            authCapturePath,
+            preflightCapturePath,
+          ])
+            await expect(readFile(file)).rejects.toMatchObject({
+              code: "ENOENT",
+            })
+        } else {
+          expect(await readFile(preflightCapturePath, "utf8")).toBe(
+            mismatch === "preview_play_test_attachment"
+              ? "play-preview\nattachment\n"
+              : "play-preview\n",
+          )
+          await expect(readFile(capturePath)).rejects.toMatchObject({
+            code: "ENOENT",
+          })
+        }
+        return
+      }
+    }
     if (productionTestFlight && expectedExitCode === 1) {
       if (platform !== "ios" || operation === "update") {
         expect(stderr).toContain("--ios-testflight requires")
@@ -586,6 +635,7 @@ for (const [
       apiUrl: string
       localOnly?: string
       profile: string
+      playTestFlag?: string
     }
     expect(capture.home).not.toBe(sharedHome)
     expect(capture.username).toBe("fixture-user")
@@ -599,6 +649,7 @@ for (const [
             : "https://api.example.test",
     )
     expect(capture.localOnly).toBeUndefined()
+    expect(capture.playTestFlag).toBe(playTest ? "1" : undefined)
     expect(capture.profile).toBe(
       development ? "dev" : preview ? "preview" : "production",
     )
@@ -645,15 +696,17 @@ for (const [
                   "--profile",
                   development
                     ? "development"
-                    : productionTestFlight
-                      ? "testflight-production"
-                      : mismatch === "preview_testflight"
-                        ? "testflight-preview"
-                        : mismatch === "preview_simulator"
-                          ? "preview-simulator"
-                          : preview
-                            ? "preview"
-                            : "production",
+                    : playTest
+                      ? "play-preview"
+                      : productionTestFlight
+                        ? "testflight-production"
+                        : mismatch === "preview_testflight"
+                          ? "testflight-preview"
+                          : mismatch === "preview_simulator"
+                            ? "preview-simulator"
+                            : preview
+                              ? "preview"
+                              : "production",
                   ...(operation === "submit" ? ["--id", exactBuildId] : []),
                   "--non-interactive",
                 ],
@@ -676,7 +729,7 @@ for (const [
         })
       else
         expect(await readFile(preflightCapturePath, "utf8")).toBe(
-          `${productionTestFlight ? "testflight-production\napi\nios-login\nios-identity\n" : validationOnly ? "api\n" : mismatch === "preview_testflight" ? "testflight\n" : preview ? "" : platform === "ios" ? "teen\napi\nlegal\nios-login\nios-identity\n" : "teen\napi\nlegal\n"}attachment\n`,
+          `${playTest ? "play-preview\n" : productionTestFlight ? "testflight-production\napi\nios-login\nios-identity\n" : validationOnly ? "api\n" : mismatch === "preview_testflight" ? "testflight\n" : preview ? "" : platform === "ios" ? "teen\napi\nlegal\nios-login\nios-identity\n" : "teen\napi\nlegal\n"}attachment\n`,
         )
     }
     if (operation === "update") {

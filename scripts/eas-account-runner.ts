@@ -100,10 +100,26 @@ const target = resolveTarget(operation, actionArgs)
 const buildPlatform = resolveBuildPlatform(operation, actionArgs)
 const iosSimulator = actionArgs.includes("--ios-simulator")
 const iosTestFlight = actionArgs.includes("--ios-testflight")
+const androidPlayTest = actionArgs.includes("--android-play-test")
 const testFlightProfile =
   target === "prod" ? "testflight-production" : "testflight-preview"
 const validationOnly = actionArgs.includes("--validation-only")
 const artifactOnly = actionArgs.includes("--artifact-only")
+if (
+  androidPlayTest &&
+  (operation !== "build" ||
+    target !== "preview" ||
+    buildPlatform !== "android" ||
+    iosSimulator ||
+    iosTestFlight ||
+    validationOnly ||
+    artifactOnly ||
+    actionArgs.filter((arg) => arg === "--android-play-test").length !== 1)
+) {
+  throw new Error(
+    "--android-play-test requires a Preview Android build only; submission, OTA and download publication are disabled.",
+  )
+}
 if (
   artifactOnly &&
   (operation !== "build" ||
@@ -216,12 +232,15 @@ env.DEV_PROFILE = target === "prod" ? "prod" : env.APP_ENV
 env.EXPO_TOKEN = undefined
 // Clear inherited opt-in flags for every ordinary build and publication.
 env.IOS_TESTFLIGHT = iosTestFlight ? "1" : undefined
-if (iosTestFlight) {
-  env.EAS_BUILD_PROFILE = testFlightProfile
+env.ANDROID_PLAY_TEST = androidPlayTest ? "1" : undefined
+if (env.EAS_BUILD_PROFILE === "play-preview" && !androidPlayTest)
+  env.EAS_BUILD_PROFILE = TARGET_PROFILES[target]
+if (iosTestFlight || androidPlayTest) {
+  env.EAS_BUILD_PROFILE = androidPlayTest ? "play-preview" : testFlightProfile
   const easConfig = JSON.parse(
     await readFile(path.join(APP_DIR, "eas.json"), "utf8"),
   )
-  const profileEnv = easConfig.build?.[testFlightProfile]?.env ?? {}
+  const profileEnv = easConfig.build?.[env.EAS_BUILD_PROFILE]?.env ?? {}
   // Match EAS precedence for this profile's reviewed public URL overrides.
   for (const key of [
     "EXPO_PUBLIC_API_URL",
@@ -230,6 +249,12 @@ if (iosTestFlight) {
     "EXPO_PUBLIC_LEGAL_ORIGIN",
     "EXPO_PUBLIC_DASHBOARD_URL",
     "EXPO_PUBLIC_CHAT_URL",
+    ...(androidPlayTest
+      ? [
+          "EXPO_PUBLIC_CUSTOMER_CHAT_HOST",
+          "EXPO_PUBLIC_AUTO_UPDATE_ON_FOREGROUND",
+        ]
+      : []),
   ]) {
     if (typeof profileEnv[key] === "string") env[key] = profileEnv[key]
   }
@@ -240,6 +265,15 @@ if (
   (["build", "update"].includes(operation) || iosTestFlight)
 ) {
   await assertPreviewMobileTarget(env)
+}
+
+if (androidPlayTest) {
+  const code = await runCommand(["bun", "scripts/check-play-preview.mjs"], {
+    cwd: REPO_DIR,
+    env,
+    stdio: "inherit",
+  })
+  if (code !== 0) process.exit(1)
 }
 
 if (iosTestFlight) {
@@ -385,7 +419,8 @@ const publishPreviewBuild =
   operation === "build" &&
   target === "preview" &&
   buildPlatform === "android" &&
-  !artifactOnly
+  !artifactOnly &&
+  !androidPlayTest
 const previewPublisher = publishPreviewBuild
   ? await import("./release-app-update")
   : null
@@ -880,11 +915,13 @@ function getActionCommand(
       "--platform",
       platform,
       "--profile",
-      iosTestFlight
-        ? testFlightProfile
-        : iosSimulator
-          ? "preview-simulator"
-          : TARGET_PROFILES[target],
+      androidPlayTest
+        ? "play-preview"
+        : iosTestFlight
+          ? testFlightProfile
+          : iosSimulator
+            ? "preview-simulator"
+            : TARGET_PROFILES[target],
     ]
   }
 
@@ -987,6 +1024,7 @@ function getForwardedArgs(args: string[]): string[] {
         "--prod",
         "--ios-simulator",
         "--ios-testflight",
+        "--android-play-test",
         "--validation-only",
         "--artifact-only",
       ].includes(arg)
@@ -1034,6 +1072,7 @@ function getUsage(): string {
     "Usage:",
     "  bun run eas:build --preview --platform android --artifact-only --expected-commit <full-sha> (signed artifact only; no download publication)",
     "  bun run eas:build --prod --platform android --validation-only --expected-commit <full-sha> (artifact only; no store submission)",
+    "  bun run eas:build --preview --platform android --android-play-test --expected-commit <full-sha> (private registered-package AAB only; no submit or OTA)",
     "  bun run eas:build --preview --platform ios --ios-testflight --expected-commit <full-sha>",
     "  bun run eas:build --prod --platform ios --ios-testflight --expected-commit <full-sha> (private TestFlight target; no OTA or public review)",
     "  bun run eas:submit --preview --platform ios --ios-testflight --id <build-id> --expected-version <version> --expected-commit <full-sha>",

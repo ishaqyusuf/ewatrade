@@ -66,7 +66,9 @@
         "EXPO_PUBLIC_CHAT_URL": "https://chat.ewatrade.com",
         "EXPO_PUBLIC_LEGAL_ORIGIN": "https://ewatrade.com"
       },
-      "ios": { "simulator": false }
+      "ios": {
+        "simulator": false
+      }
     },
     "testflight-preview": {
       "extends": "preview",
@@ -86,6 +88,31 @@
       },
       "environment": "preview",
       "credentialsSource": "local"
+    },
+    "play-preview": {
+      "extends": "preview",
+      "distribution": "store",
+      "environment": "preview",
+      "channel": "play-preview",
+      "credentialsSource": "local",
+      "android": {
+        "buildType": "app-bundle"
+      },
+      "env": {
+        "APP_VARIANT": "preview",
+        "EXPO_PUBLIC_APP_VARIANT": "preview",
+        "APP_ENV": "preview",
+        "DEV_PROFILE": "preview",
+        "ANDROID_PLAY_TEST": "1",
+        "EXPO_PUBLIC_API_URL": "https://preview-api.ewatrade.com",
+        "EXPO_PUBLIC_DASHBOARD_URL": "https://preview-dashboard.ewatrade.com",
+        "EXPO_PUBLIC_BASE_URL": "https://preview-dashboard.ewatrade.com",
+        "EXPO_PUBLIC_WEB_URL": "https://preview-dashboard.ewatrade.com",
+        "EXPO_PUBLIC_CHAT_URL": "https://preview-storefront.ewatrade.com",
+        "EXPO_PUBLIC_CUSTOMER_CHAT_HOST": "preview-storefront.ewatrade.com",
+        "EXPO_PUBLIC_LEGAL_ORIGIN": "https://ewatrade.com",
+        "EXPO_PUBLIC_AUTO_UPDATE_ON_FOREGROUND": "false"
+      }
     }
   },
   "submit": {

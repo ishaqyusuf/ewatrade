@@ -64,6 +64,10 @@ if (isTestFlight && !isTestFlightPreview && !isTestFlightProduction) {
     "TestFlight requires the Preview variant or the explicit Production TestFlight profile.",
   )
 }
+const { isPlayPreviewBuild } = require("./play-preview.cjs") as {
+  isPlayPreviewBuild: (env: NodeJS.ProcessEnv) => boolean
+}
+const isPlayPreview = isPlayPreviewBuild(process.env)
 const isDevelopmentBuild =
   normalizedAppVariant === "development" || normalizedAppVariant === "dev"
 const isPreviewBuild = normalizedAppVariant === "preview"
@@ -183,10 +187,11 @@ const config: ExpoConfig = {
   version: "1.0.0",
   orientation: "portrait",
   icon: variantConfig.icons.app,
-  scheme: variantConfig.scheme,
+  scheme: isPlayPreview ? "ewatrade-play-preview" : variantConfig.scheme,
   userInterfaceStyle: "automatic",
   newArchEnabled: true,
   updates: {
+    ...(isPlayPreview ? { enabled: false } : {}),
     url: `https://u.expo.dev/${PROJECT_ID}`,
     checkAutomatically: "NEVER",
   },
@@ -237,7 +242,7 @@ const config: ExpoConfig = {
     },
     // edgeToEdgeEnabled: false,
     predictiveBackGestureEnabled: false,
-    package: variantConfig.androidPackage,
+    package: isPlayPreview ? "com.ewatrade.app" : variantConfig.androidPackage,
     intentFilters: [
       ...(onboardingLinks?.host
         ? [
@@ -372,6 +377,7 @@ const config: ExpoConfig = {
   extra: {
     onboardingDashboardUrl: onboardingLinks?.dashboardUrl,
     appVariant: normalizedAppVariant,
+    ...(isPlayPreview ? { buildPurpose: "play-preview" } : {}),
     mobileAnalyticsEnvironment,
     autoUpdateOnForeground,
     autoUpdateForegroundCooldownMs: Number.isFinite(
