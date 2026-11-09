@@ -23,13 +23,13 @@ for honestly rather than treating disabled Preview output as a Free result.
 
 | I03 configuration assertion | Exact requirement / supporting record | Current evidence and conclusion |
 | --- | --- | --- |
-| Approved Apple verifier key custody and working signing/lookup | Original I03 secure API-key custody; hosted configuration and [signed candidate](2026-11-08-production-testflight-paid-candidate.md) | Existing approved key in private custody, sensitive API settings installed by reviewed helper without new credentials. Genuine signed original purchase lookup/reconciliation succeeds under the corrected reviewer policy. Accepted at its recorded target; no key rotation or repeat canary needed. |
+| Approved Apple verifier key custody and working signing/lookup | Original I03 secure API-key custody; hosted configuration and [signed candidate](2026-11-08-production-testflight-paid-candidate.md) | Existing approved key in private custody, sensitive API settings installed by reviewed helper without new credentials. Genuine signed original Sandbox purchase lookup/reconciliation succeeds under the corrected reviewer policy. Production authorization is not proved by Sandbox success; [credential evidence](2026-11-09-apple-production-auth-evidence.md) separates the historical401 and prelaunch platform limit. No key rotation or repeat canary is implied. |
 | Registered native identity and StoreKit/ExpoIap linkage | Original I03 native linkage; [entry-point receipt](2026-11-08-ios-billing-entrypoints.md) and signed candidate | Exact installed10/2d/EAS50f69a74 signed artifact, registered bundle/team, Production origins, StoreKit/ExpoIap/OpenIAP linkage, actual three monthly offers and native purchase entry pass. Native finish-return is a separate I05 observation, not another linkage gate. |
 | Product/environment mapping and closed public checkout | Original I03 exact environment; [controlled review design](2026-11-07-apple-review-sandbox.md), candidate configuration receipt | Three Apple product mappings, Preview Sandbox / Production Production settings, explicit public-checkout false and immutable reviewer1 policy accepted. Genuine purchase remains Sandbox in durable state; ordinary/Google/wrong-owner refusal has existing source/integration evidence. Do not infer public checkout activation or real revenue. |
 | Correct Apple notification destinations and verified receiver | Original I03 notification delivery; [callback receipt](2026-11-08-apple-build8-callback.md) | Both saved Apple destinations point to Production gateway after reload. Genuine previous TEST replay200 and fresh Apple Sandbox TEST SUCCESS establish signature/bundle/receiver delivery. Accepted receiver proof, not ordinary relay or lifecycle proof. |
 | Reviewer owner binding and owner-coverage cutover | Original I03 owner coverage/cutover; [purchase receipt](2026-11-08-apple-purchase-verification.md) | Initial pre-purchase/cancel API state was Free/no grant; original signed Starter recovered to the same immutable owner with Sandbox environment retained. Explicit enrollment and one Restore preserve original purchase/period/coverage, one owner slot, no duplicates. Accepted basic configuration/cutover. First-tap feedback and further transitions remain I05. |
 | Actual paid reader configuration across API / Dashboard / jobs | Approved reader activation's actual-runtime paid read; [hosted task](2026-11-09-billing-reader-job-check.md), [Settings server result](2026-11-09-dashboard-server-plan-result.md) | API/purchase reads accepted; actual hosted jobs e162/version20261109.2 returned Starter/owner_subscription; actual authenticated full-reload Settings b0 returned resolved/starter/owner_subscription at14:21:03.995Z. Accepted licensed paid parity. No independent optimized-shell proof is required by I03. |
-| Actual ordinary Sandbox gateway→Preview relay | Current I03 expressly leaves ordinary Sandbox relay open; controlled review design requires fixed one-way relay and positive peer acknowledgement | **Open.** Saved TEST bypasses this branch; sole saved non-TEST transaction is the reviewer and reconciles locally. No existing verified nonreviewer transaction target is established. No current-route no-grant TEST execution can close this claim. Review proposal below. |
+| Actual ordinary Sandbox gateway→Preview relay | Current I03 status notes leave it open; controlled review design requires isolation and fixed one-way forwarding | **Unexecuted, not accepted.** Recommend treating nonreviewer Sandbox traffic outside the current one-reviewer launch-critical configuration scope, with source/integration isolation proof. Current route may forward it to Preview, never grant Production Sandbox access. Scope reasoning below does not invent a positive dispatch or change the score. |
 | Actual Free reader postcondition | Approved reader activation: verify actual same-scope paid/Free reads | **Open for Settings/jobs.** API's genuine pre-purchase Free/no-grant case passes. Hosted Preview disabled result contains no plan; source/integration Free assertions are not actual hosted Free reads. Satisfy this narrow read postcondition once in a legitimate existing Free state; reuse the same genuine state/observation for I05 rather than repeating the lifecycle. |
 
 The audit does not reopen accepted passes because the Apple web console session
@@ -51,10 +51,12 @@ commercial/provider read is claimed here.
   assertion nor another full I05 lifecycle matrix is an I03 configuration gate.
 
 The Free-reader item above is only the declared runtime read result, not a second
-copy of every Free/retention/lifecycle requirement. Do not release the currently
-covered business, change flags, transfer ownership, create fixtures or force a
-Free result to pass it. An eventual genuine Free transition can provide one shared
-evidence window; no further action is issued by this audit.
+copy of every Free/retention/lifecycle requirement. The
+[named Release → Free → re-enroll proposal](2026-11-09-coverage-release-free-reenroll.md)
+is a legitimate coverage scenario that can share its Free window across I05 and
+the actual-reader postcondition. It is prepared, not executed; it does not simulate
+expiry, grace or refund. Do not change flags, transfer ownership, create fixtures
+or force expiry. No new owner question is issued before the pending finish case.
 
 ## Why existing genuine TEST cannot prove the current relay branch
 
@@ -94,56 +96,45 @@ locally with a Production profile could prove narrower operator-to-Preview
 transport but would not prove execution of the hosted Production gateway. Neither
 may be labelled an actual ordinary gateway-route pass.
 
-## Smallest no-grant connected proposal — review only, not implemented
+## Launch-critical scope versus unaccepted ordinary Sandbox traffic
 
-There is no executable current-route positive ordinary-relay/no-grant test using
-the existing TEST. Two honest choices remain: retain the gap until a legitimate
-safe ordinary target exists, or review a small durable TEST-forward canary on the
-existing verified webhook. The latter avoids a new purchase/account/fixture and
-would make future Apple TESTs useful for gateway transport diagnosis.
+Coordinator requested this scope review rather than a TEST behavior change. The
+prior TEST-forward canary proposal is **not selected and must not be implemented
+to manufacture an ordinary-transaction pass**. Current TEST acknowledgement stays
+unchanged; no new gateway/flag/deployment is proposed as the next action.
 
-Proposed future owned source paths: `apps/api/src/billing/store-notifications.ts`
-and its existing `apple-notification-delivery.test.ts`, plus normal impact/contract
-documentation. No verifier/helper, key, flag, callback URL or endpoint change.
-Within the existing kind=test branch only:
+Recommended classification for coordinator reconciliation:
 
-1. If the fully verified environment is Sandbox, configured store environment is
-   Production and existing forward flag is true, await the existing fixed relay.
-2. Only after the positive peer acknowledgement return received:true with a fixed
-   optional forwarded:true result. That observable distinguishes this path from
-   the existing receiver-only acknowledgement; include it in contract review.
-3. Other TEST paths keep the existing receiver-only response. Preview never
-   forwards; failures remain503/received:false. TEST never performs owner lookup,
-   purchase reconciliation or grants on either hop.
+- The approved private TestFlight/review scope names one immutable reviewer owner
+  and the existing one-tester group; its Sandbox purchase/receiver/cutover have
+  actual target evidence. Public paid transactions use Production, not an
+  ordinary user's Sandbox receipt.
+- Ordinary Production clients cannot choose the review exception. The configured
+  environment, immutable reviewer rule, full signature/bundle checks and existing
+  source/Development integration preserve denial of ordinary Sandbox grants in
+  Production. This is the relevant isolation configuration boundary.
+- Do not call the whole notification route inactive or always denied: the current
+  enabled relay may forward a genuine nonreviewer Sandbox event to isolated
+  Preview. No eligible ordinary target has been established; live real-transaction
+  dispatch remains explicitly unexecuted. Preview reconciliation can write if a
+  legitimate Preview binding exists, so arbitrary replay is not a no-grant test.
+- Under this limited merchant-launch/reviewer scope, unknown ordinary Sandbox
+  test traffic is not itself a customer Production entitlement prerequisite. The
+  original notification-delivery requirement has genuine receiver and actual
+  reviewer-purchase proof. Keep the optional ordinary-dispatch scenario deferred/
+  unaccepted, rather than changing TEST behavior or adding a purchase just to
+  improve the score. Coordinator must record that scope classification; this
+  audit does not mark I03 accepted.
+- If a later explicit scope promises ordinary nonreviewer Sandbox delivery, plan
+  that named target's safe case then. Do not infer such a promise from a shipped
+  relay helper or count source tests as an executed live ordinary transaction.
 
-Before any execution, coordinator must review that concrete behavior/implementation
-and its normal exact-candidate Preview/matching-smoke/Production scope. This audit
-authorizes no code edit or deployment. Focused actual-route tests would need to
-prove no DB/reconciliation, deferred positive acknowledgement, relay failure,
-disabled-forward receiver-only behavior, invalid envelope refusal and Preview
-no-loop; reuse unchanged helper/signature guards. No global tracing or test-only
-endpoint is proposed.
-
-Exact future case, only if that proposal is reviewed and deployed:
-
-| Field | Fixed proposal |
-| --- | --- |
-| Primary request | One POST to https://api.ewatrade.com/webhooks/store/apple |
-| Body | Only signedPayload, byte-identical to saved status.signedPayload in the2d genuine TEST capture above. Private hash/custody check; no payload/opaque token in logs, arguments, Git or public receipt. |
-| Headers / redirects | Content-Type application/json only; no auth/session cookies or new credential; no caller-selected destination or redirect following. |
-| Relay destination | Existing hard-coded https://preview-api.ewatrade.com/webhooks/store/apple; original signed envelope unchanged. |
-| Identity / runtime | Exact reviewed owned Ready Production and matching Preview candidates; reuse existing configured reviewer policy solely for full Sandbox verifier dispatch. No settings rewrite. |
-| Positive proof | Full signature/bundle/Sandbox verification at gateway; actual forwarded:true only after <=1KB HTTP200/received:true from Preview; Preview fully verifies TEST and acknowledges without reconciliation. Retain sanitized times/deployment IDs/result/private payload fingerprint. Existing request logs may corroborate both hops; no payload logging needed. |
-| Failure / stop | Missing marker, receiver-only ack, wrong runtime, failed verification or peer failure does not qualify. Record exact failure and stop; no new TEST request, changed signature checks, synthetic envelope, purchase, account switch or retry deployment. |
-| Explicit exclusion | No grant, fixture, new purchase, owner transfer, receipt/environment relabelling, provider-control action, Apple web login, native/mobile action or lifecycle claim. |
-
-This would prove the **hosted genuine-TEST gateway→Preview transport/ack path**
-through the same relay, not an observed real ordinary-owner non-TEST dispatch.
-Ordinary-owner selection remains covered by the existing source/integration seam.
-Coordinator must decide whether that composition meets the I03 configuration
-criterion; do not silently rename it an actual nonreviewer purchase event or mark
-I03 accepted before its actual remaining criteria are satisfied. The separate
-documented Free-reader postcondition remains accounted for above.
+The declared actual Free-reader observation remains a genuine configuration
+postcondition. Its legitimate reviewed coverage case is prepared separately. The
+Production credential boundary is also explicit: saved Sandbox success is not a
+positive Production read, and documented first-release eligibility prevents a
+prelaunch401 from uniquely diagnosing invalid credentials. See the
+[authorization evidence review](2026-11-09-apple-production-auth-evidence.md).
 
 ## Verification and Brain impact
 
@@ -157,6 +148,12 @@ saved custody metadata, local links and diff assertions pass. Private mode0600
 audit: `/private/tmp/ewatrade-i03-configuration-audit-2026-11-09.evidence.json`.
 These checks qualify this audit, not a relay execution. Existing routing/source/
 crypto/integration proofs are reused; no new fake event or repeated source matrix.
+
+Scope/coverage/credential follow-up: the three owned documents pass51tests/
+254assertions plus QA types and billing-source/phase/SDK/link/diff assertions.
+The new private mode0600 source-review audit is
+`/private/tmp/ewatrade-i03-followup-source-review-2026-11-09.evidence.json`.
+No gateway, coverage, credential or runtime call was executed by that follow-up.
 
 Brain impact: local `.brain/features/native-store-billing.md`,
 `.brain/features/owner-wide-billing.md` and `.brain/tasks/in-progress.md`.
