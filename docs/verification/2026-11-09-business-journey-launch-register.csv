@@ -1,0 +1,73 @@
+case_id,business,requirement_id,title,status,source_sha,runtime_identity,environment,case_version,evidence_ref,reviewed_at,reviewer,limitation
+J01,Jawdah poultry,J01,Owner and Store setup,NOT_ASSESSED,,,,1,,,,Initial evidence baseline; historical/source evidence not yet credited to launch candidate
+J02,Jawdah poultry,J02,Bird catalog,NOT_ASSESSED,,,,1,,,,Initial evidence baseline; historical/source evidence not yet credited to launch candidate
+J03,Jawdah poultry,J03,Egg and crate units,NOT_ASSESSED,,,,1,,,,Initial evidence baseline; historical/source evidence not yet credited to launch candidate
+J04,Jawdah poultry,J04,Repeated stock collections,NOT_ASSESSED,,,,1,,,,Initial evidence baseline; historical/source evidence not yet credited to launch candidate
+J05,Jawdah poultry,J05,Mortality and history,NOT_ASSESSED,,,,1,,,,Initial evidence baseline; historical/source evidence not yet credited to launch candidate
+J06,Jawdah poultry,J06,Cashier permissions,NOT_ASSESSED,,,,1,,,,Initial evidence baseline; historical/source evidence not yet credited to launch candidate
+J07,Jawdah poultry,J07,Money-first sale,NOT_ASSESSED,,,,1,,,,Initial evidence baseline; historical/source evidence not yet credited to launch candidate
+J08,Jawdah poultry,J08,Images and storefront policy,NOT_ASSESSED,,,,1,,,,Initial evidence baseline; historical/source evidence not yet credited to launch candidate
+J09,Jawdah poultry,J09,Four-crate customer request,NOT_ASSESSED,,,,1,,,,Initial evidence baseline; historical/source evidence not yet credited to launch candidate
+J10,Jawdah poultry,J10,Merchant review and delivery,NOT_ASSESSED,,,,1,,,,Initial evidence baseline; historical/source evidence not yet credited to launch candidate
+J11,Jawdah poultry,J11,Payment and balance,NOT_ASSESSED,,,,1,,,,Initial evidence baseline; historical/source evidence not yet credited to launch candidate
+J12,Jawdah poultry,J12,Cross-channel reconciliation,NOT_ASSESSED,,,,1,,,,Initial evidence baseline; historical/source evidence not yet credited to launch candidate
+L01,Laundry,L01,Laundry catalog and prices,NOT_ASSESSED,,,,1,,,,Initial evidence baseline; historical/source evidence not yet credited to launch candidate
+L02,Laundry,L02,Customer intake,NOT_ASSESSED,,,,1,,,,Initial evidence baseline; historical/source evidence not yet credited to launch candidate
+L03,Laundry,L03,Assistant save and durable receipt,NOT_ASSESSED,,,,1,,,,Initial evidence baseline; historical/source evidence not yet credited to launch candidate
+L04,Laundry,L04,WhatsApp intake and save,NOT_ASSESSED,,,,1,,,,Initial evidence baseline; historical/source evidence not yet credited to launch candidate
+L05,Laundry,L05,Public request and quote,NOT_ASSESSED,,,,1,,,,Initial evidence baseline; historical/source evidence not yet credited to launch candidate
+L06,Laundry,L06,Work assignment and progress,NOT_ASSESSED,,,,1,,,,Initial evidence baseline; historical/source evidence not yet credited to launch candidate
+L07,Laundry,L07,Activity and tracking,NOT_ASSESSED,,,,1,,,,Initial evidence baseline; historical/source evidence not yet credited to launch candidate
+L08,Laundry,L08,Complete while owing,NOT_ASSESSED,,,,1,,,,Initial evidence baseline; historical/source evidence not yet credited to launch candidate
+L09,Laundry,L09,Independent payment collection,NOT_ASSESSED,,,,1,,,,Initial evidence baseline; historical/source evidence not yet credited to launch candidate
+L10,Laundry,L10,Handoff and delivery,NOT_ASSESSED,,,,1,,,,Initial evidence baseline; historical/source evidence not yet credited to launch candidate
+L11,Laundry,L11,Cancellation correction and retry,NOT_ASSESSED,,,,1,,,,Initial evidence baseline; historical/source evidence not yet credited to launch candidate
+L12,Laundry,L12,Cross-channel reconciliation,NOT_ASSESSED,,,,1,,,,Initial evidence baseline; historical/source evidence not yet credited to launch candidate
+H01,Hypnos Man Collection,R01,Business and Store setup,NOT_ASSESSED,,,,1,,,,Initial evidence baseline; historical/source evidence not yet credited to launch candidate
+H02,Hypnos Man Collection,R02,Reviewed 50-product catalog,NOT_ASSESSED,,,,1,,,,Initial evidence baseline; historical/source evidence not yet credited to launch candidate
+H03,Hypnos Man Collection,R03,Variants brands and compatibility,NOT_ASSESSED,,,,1,,,,Initial evidence baseline; historical/source evidence not yet credited to launch candidate
+H04,Hypnos Man Collection,R04,Photo and item association,NOT_ASSESSED,,,,1,,,,Initial evidence baseline; historical/source evidence not yet credited to launch candidate
+H05,Hypnos Man Collection,R05,Resumable WhatsApp batches,NOT_ASSESSED,,,,1,,,,Initial evidence baseline; historical/source evidence not yet credited to launch candidate
+H06,Hypnos Man Collection,R06,Rich WhatsApp review and save,NOT_ASSESSED,,,,1,,,,Initial evidence baseline; historical/source evidence not yet credited to launch candidate
+H07,Hypnos Man Collection,R07,Saved product web and app links,NOT_ASSESSED,,,,1,,,,Initial evidence baseline; historical/source evidence not yet credited to launch candidate
+H08,Hypnos Man Collection,R08,Optional offering codes,NOT_ASSESSED,,,,1,,,,Initial evidence baseline; historical/source evidence not yet credited to launch candidate
+H09,Hypnos Man Collection,R09,Scan-to-sale lookup,NOT_ASSESSED,,,,1,,,,Initial evidence baseline; historical/source evidence not yet credited to launch candidate
+H10,Hypnos Man Collection,R10,Named expected shipment,NOT_ASSESSED,,,,1,,,,Initial evidence baseline; historical/source evidence not yet credited to launch candidate
+H11,Hypnos Man Collection,R11,Shipment item and purchase facts,NOT_ASSESSED,,,,1,,,,Initial evidence baseline; historical/source evidence not yet credited to launch candidate
+H12,Hypnos Man Collection,R12,Shipment currency conversion,NOT_ASSESSED,,,,1,,,,Initial evidence baseline; historical/source evidence not yet credited to launch candidate
+H13,Hypnos Man Collection,R13,Freight allocation,NOT_ASSESSED,,,,1,,,,Initial evidence baseline; historical/source evidence not yet credited to launch candidate
+H14,Hypnos Man Collection,R14,Actual partial and full receipt,NOT_ASSESSED,,,,1,,,,Initial evidence baseline; historical/source evidence not yet credited to launch candidate
+H15,Hypnos Man Collection,R15,Cost and future price changes,NOT_ASSESSED,,,,1,,,,Initial evidence baseline; historical/source evidence not yet credited to launch candidate
+H16,Hypnos Man Collection,R16,WhatsApp shipment lifecycle,NOT_ASSESSED,,,,1,,,,Initial evidence baseline; historical/source evidence not yet credited to launch candidate
+H17,Hypnos Man Collection,R17,Published business-site share,NOT_ASSESSED,,,,1,,,,Initial evidence baseline; historical/source evidence not yet credited to launch candidate
+H18,Hypnos Man Collection,R18,No-site public product and catalog,NOT_ASSESSED,,,,1,,,,Initial evidence baseline; historical/source evidence not yet credited to launch candidate
+H19,Hypnos Man Collection,R19,Central order and payment links,NOT_ASSESSED,,,,1,,,,Initial evidence baseline; historical/source evidence not yet credited to launch candidate
+H20,Hypnos Man Collection,R20,Website and customer-bot requests,NOT_ASSESSED,,,,1,,,,Initial evidence baseline; historical/source evidence not yet credited to launch candidate
+H21,Hypnos Man Collection,R21,Merchant notifications,NOT_ASSESSED,,,,1,,,,Initial evidence baseline; historical/source evidence not yet credited to launch candidate
+H22,Hypnos Man Collection,R22,Reviewed follow-up and payment,NOT_ASSESSED,,,,1,,,,Initial evidence baseline; historical/source evidence not yet credited to launch candidate
+H23,Hypnos Man Collection,R23,WhatsApp sale and stock,NOT_ASSESSED,,,,1,,,,Initial evidence baseline; historical/source evidence not yet credited to launch candidate
+H24,Hypnos Man Collection,R24,Cross-channel reconciliation,NOT_ASSESSED,,,,1,,,,Initial evidence baseline; historical/source evidence not yet credited to launch candidate
+A01,Alhaq Tech,R01,Business and Store setup,NOT_ASSESSED,,,,1,,,,Initial evidence baseline; historical/source evidence not yet credited to launch candidate
+A02,Alhaq Tech,R02,Reviewed 50-product catalog,NOT_ASSESSED,,,,1,,,,Initial evidence baseline; historical/source evidence not yet credited to launch candidate
+A03,Alhaq Tech,R03,Variants brands and compatibility,NOT_ASSESSED,,,,1,,,,Initial evidence baseline; historical/source evidence not yet credited to launch candidate
+A04,Alhaq Tech,R04,Photo and item association,NOT_ASSESSED,,,,1,,,,Initial evidence baseline; historical/source evidence not yet credited to launch candidate
+A05,Alhaq Tech,R05,Resumable WhatsApp batches,NOT_ASSESSED,,,,1,,,,Initial evidence baseline; historical/source evidence not yet credited to launch candidate
+A06,Alhaq Tech,R06,Rich WhatsApp review and save,NOT_ASSESSED,,,,1,,,,Initial evidence baseline; historical/source evidence not yet credited to launch candidate
+A07,Alhaq Tech,R07,Saved product web and app links,NOT_ASSESSED,,,,1,,,,Initial evidence baseline; historical/source evidence not yet credited to launch candidate
+A08,Alhaq Tech,R08,Optional offering codes,NOT_ASSESSED,,,,1,,,,Initial evidence baseline; historical/source evidence not yet credited to launch candidate
+A09,Alhaq Tech,R09,Scan-to-sale lookup,NOT_ASSESSED,,,,1,,,,Initial evidence baseline; historical/source evidence not yet credited to launch candidate
+A10,Alhaq Tech,R10,Named expected shipment,NOT_ASSESSED,,,,1,,,,Initial evidence baseline; historical/source evidence not yet credited to launch candidate
+A11,Alhaq Tech,R11,Shipment item and purchase facts,NOT_ASSESSED,,,,1,,,,Initial evidence baseline; historical/source evidence not yet credited to launch candidate
+A12,Alhaq Tech,R12,Shipment currency conversion,NOT_ASSESSED,,,,1,,,,Initial evidence baseline; historical/source evidence not yet credited to launch candidate
+A13,Alhaq Tech,R13,Freight allocation,NOT_ASSESSED,,,,1,,,,Initial evidence baseline; historical/source evidence not yet credited to launch candidate
+A14,Alhaq Tech,R14,Actual partial and full receipt,NOT_ASSESSED,,,,1,,,,Initial evidence baseline; historical/source evidence not yet credited to launch candidate
+A15,Alhaq Tech,R15,Cost and future price changes,NOT_ASSESSED,,,,1,,,,Initial evidence baseline; historical/source evidence not yet credited to launch candidate
+A16,Alhaq Tech,R16,WhatsApp shipment lifecycle,NOT_ASSESSED,,,,1,,,,Initial evidence baseline; historical/source evidence not yet credited to launch candidate
+A17,Alhaq Tech,R17,Published business-site share,NOT_ASSESSED,,,,1,,,,Initial evidence baseline; historical/source evidence not yet credited to launch candidate
+A18,Alhaq Tech,R18,No-site public product and catalog,NOT_ASSESSED,,,,1,,,,Initial evidence baseline; historical/source evidence not yet credited to launch candidate
+A19,Alhaq Tech,R19,Central order and payment links,NOT_ASSESSED,,,,1,,,,Initial evidence baseline; historical/source evidence not yet credited to launch candidate
+A20,Alhaq Tech,R20,Website and customer-bot requests,NOT_ASSESSED,,,,1,,,,Initial evidence baseline; historical/source evidence not yet credited to launch candidate
+A21,Alhaq Tech,R21,Merchant notifications,NOT_ASSESSED,,,,1,,,,Initial evidence baseline; historical/source evidence not yet credited to launch candidate
+A22,Alhaq Tech,R22,Reviewed follow-up and payment,NOT_ASSESSED,,,,1,,,,Initial evidence baseline; historical/source evidence not yet credited to launch candidate
+A23,Alhaq Tech,R23,WhatsApp sale and stock,NOT_ASSESSED,,,,1,,,,Initial evidence baseline; historical/source evidence not yet credited to launch candidate
+A24,Alhaq Tech,R24,Cross-channel reconciliation,NOT_ASSESSED,,,,1,,,,Initial evidence baseline; historical/source evidence not yet credited to launch candidate
