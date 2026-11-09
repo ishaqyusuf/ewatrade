@@ -103,3 +103,31 @@ manufactured. Documentation whitespace/local-link checks pass. This handoff adds
 no application code, API contract, permission or schema change. Local Brain task
 handoff note and current-task pointer record the two owners and scope; subsequent
 runtime/design evidence belongs to their chats.
+
+## Shared checkpoint after release hold — 9 November 2026
+
+The billing owner completed its bounded rollout and explicitly released the
+tracked-edit/commit hold. Accepted live source is e1626301d, with actual hosted
+jobs20261109.2 reviewer Starter read/no writes and Preview default-off refusal.
+Exact runtime identities, checks and limits are in the
+[hosted reader receipt](2026-11-09-billing-reader-job-check.md). Local evidence
+commit42da1dbe9 is not another deployment. Actual signed-in Dashboard SSR still
+needs the existing single login handoff; menu links or an API-backed card cannot
+prove the Dashboard's own DB reader because shell/settings catch plan-read errors.
+Native finish/scope/lifecycle, privacy/legal and review acceptance remain open.
+No human-paused work, new provider access, build or rollout is authorized merely
+by closing the temporary source freeze.
+
+Android's finished owned regional milestone then committed0d1fb464c: all3Draft
+monthly plans, exact agreed Nigeria prices,173available countries each,522stored
+prices with519available and3retained unavailable. No activation or configured
+runtime mapping; country compliance/merchant/licensed checks remain. See the
+[regional receipt](2026-11-09-play-regional-plans.md). Root updated only this
+handoff and the shared phase index, preserving both dedicated chats' runtime/
+design ownership. Apple2/6 and Android1/8 remain unchanged.
+
+Validation for this documentation milestone: reused the valid unchanged runtime
+receipts; explicit two-document fast scope has zero unknown mappings and passes
+51tests/254assertions plus QA tooling types. Local links and whitespace pass.
+This is scoped documentation verification, not another app/runtime acceptance.
+Brain impact is the local task-handoff note; no source/API/schema/permission change.

@@ -1,5 +1,29 @@
 # Shared Apple and Android paid launch
 
+## Play regional drafts saved — 9 November 2026
+
+All three existing Play products now have saved/reloaded monthly Draft base plans,
+five-day grace and automatic55-day hold. Nigeria is exactly NGN5,000/15,000/30,000;
+Africa uses the agreed baseline and other regions the20%higher NGN reference,
+subject to actual store conversion/tax/price points. No base plan is activated.
+
+Country alignment is verified for **173 named app targets and173 available
+base-plan countries each**. The stored catalog has522 named prices:519available
+(3×173) plus3retained but unavailable Central African Republic prices. China,
+Cuba, Iran and Sudan lack named paid prices in this account and are excluded from
+the unsubmitted app-country draft. Future countries and Rest of World remain off.
+Country-specific compliance is still open; these draft settings are not public
+availability, merchant readiness, licensed payment or rollout acceptance.
+
+The original price-save error no longer reproduces; its cause is not established.
+Google case6-1181000042003 was last read Open. Canonical artifacts are the
+[regional receipt](../verification/2026-11-09-play-regional-plans.md),
+[522-row price table](play-regional-prices-2026-11-09.csv) and
+[three product mappings](play-subscription-products.json), committed0d1fb464c.
+Mappings are prepared documentation, not installed runtime configuration.
+**Android1/8 and Apple2/6 remain unchanged.** Earlier checkpoints retain their
+dated scope; the phase table and current receipts carry the latest status.
+
 ## Starter enrollment and Restore confirmed — 9 November 2026
 
 The original TestFlight Starter Sandbox purchase is verified and saved. The owner
@@ -76,8 +100,8 @@ user to repeat it.
 | Phase | Current state | Next action |
 | --- | --- | --- |
 | 1. Shared contract and core source | Owner limits, coverage, versioned signup and retained-record downgrade implemented (0bd862763; verification daf00b5f0). Manual native addresses implemented cf831c187. | Reuse valid checks. Apple courtesy source and platform-specific runtime readiness are implemented with23billing tests/136assertions, scoped259/1679, API types and H01/H02 passing; signed acceptance remains open. Completed Play policy is unchanged. |
-| 2. Store products and configuration | Apple three ranked monthly products and175price schedules each are saved. Mapping/verifier/review source and reviewer-only authorization are live on Production API ate047ed676fff074a4ec8e0627ddc3e579b9a7448. Both Apple callback URLs point to the Production gateway; genuine fresh Sandbox TEST delivery succeeds. Public checkout stays closed; paid lifecycle remains unaccepted. Play organization merchant profile is linked; bank setup is deferred. Owner-approved AAB36 processed and saved to the existing internal-testing draft. Three Apple-matching Play products are created with0 active base plans; monthly base-plan save has an unresolved generic Console error. | Dedicated Apple reviewer identity and versioned Free workspace are prepared. Updated Apple Paid Applications Agreement is accepted/Active and reviewer password setup is confirmed. Apple reviewer login/contact are saved. Private signed1.0.0(10) is processed and installed with visible monthly products; owner password login is confirmed on unchanged login source. Original Starter purchase is recovered and durable in Sandbox; basic enrollment and one Restore now preserve Starter/one slot. Continue native store-finish, first-tap feedback, account/business switching and lifecycle checks. Signed money acceptance remains open. Finish required bank/merchant verification before paid launch; resolve the Console base-plan save error, finish exact localized monthly prices/five-day grace and merge actual Play mappings. Play177-country draft remains unsubmitted and is not paid-territory acceptance. |
-| 3. Shared runtime, legal and operations | Production Dashboard/Marketing/API ate047ed676fff074a4ec8e0627ddc3e579b9a7448 READY after matching Preview smoke; API SQL health200. Jobs remain6a4948c8; additive privacy schema synchronized by the normal2e1ee7e72 push. Reviewer-only API billing enabled, public checkoutfalse, WEB activation unchanged. Dashboard/jobs reader configuration and actual paid consistency, common legal/privacy and operations acceptance remain open. | Verify paid lifecycle/routing/operator delivery, paid legal publication, SDK/provider destinations and preserved-record deletion cases without repeating completed empty-data tests. Reuse password-recovery work. |
+| 2. Store products and configuration | Apple three monthly products/175price schedules saved; controlled reviewer API source now deployed at e1626301d, with original Sandbox Starter purchase, enrollment and one Restore durably verified. Public checkout stays closed. Play merchant profile linked, payout bank deferred; existing AAB36 remains in its internal-testing draft. All3monthly base plans are saved/reloaded Draft with5day grace/55dayhold,173available country sets each,519available prices plus3retained unavailable prices. Product mappings are documented, not installed. | Complete native finish/scope/lifecycle and Dashboard SSR/Free cases. For Play, finish approved merchant/license/security-access inputs and the reviewed registered-package/isolated-Preview test path before exact licensed acceptance or activation. Country-specific compliance remains open; draft country/pricing saves do not accept public territories. |
+| 3. Shared runtime, legal and operations | Production Dashboard/Marketing/API exact e1626301d READY after matching Preview smoke; SQL-backed API health200. Both jobs20261109.2 exact e162. Dashboard/jobs reader configuration is deployed; actual hosted reviewer Starter read passes in a read-only jobs transaction and Preview correctly stays disabled. Actual signed-in Dashboard SSR and Free fallback remain open. Public checkoutfalse/WEB unchanged; common legal/privacy and operations still unaccepted. | Complete the existing reviewer Dashboard sign-in and a source-backed SSR postcondition; do not infer proof from menu links or an API-backed plan card. Verify paid/Free scope, lifecycle, monitored support, retained-record deletion and actual recipient/retention facts without generating reminders or duplicating paid tests. |
 | 4. Signed acceptance | Android A01–A08:1/8; Apple I01–I06:2/6 currently accepted after fresh8November readback restored I01; products/prices I02 remain complete. Source/config tests do not close these gates. | Freeze exact candidates, inspect permissions/native linkage and run licensed purchase/restore/renewal/grace/refund/switching tests. Reuse platform-valid evidence only. |
 | 5. Submission and publication | Public release after approval/checks is authorized. Neither platform has paid-release acceptance yet. | Complete truthful store declarations/reviewer access, submit accepted candidates, follow review and publish through existing release authority. |
 
