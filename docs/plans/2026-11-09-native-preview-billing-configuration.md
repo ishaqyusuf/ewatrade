@@ -5,6 +5,11 @@ One shared configuration proposal for Android and Apple ordinary Preview testing
 no separate per-flag approval sequence. Actual deployment/build/purchase steps
 still require a final clean candidate and reviewed test case. Android1/8 remains.
 
+**Android authoring handoff:** the known project identities and read limits below
+are appended. This proposal is frozen for root/Apple finalization; Android will
+not make overlapping edits or execute settings from this document. Root owns the
+remaining shadow-inventory, final scope/test-case and execution review.
+
 ## Authoritative six-entry catalog replacement
 
 Vercel team `ishaqyusufs-projects` (`team_BV5rgKHJH4fMyFL1YfscZIZK`), API project
@@ -40,6 +45,28 @@ exactly equals the [Play source](../billing/play-subscription-products.json).
 No prices are part of this mapping. Apple/Play store prices, product IDs,
 territories and other product settings receive no provider write from it.
 
+## Root's observed Preview metadata
+
+Root's corrected, separate WEB-only read completed **19:28:41.153 UTC on
+9 November 2026**. The original identity-check failure/case is preserved. Root
+used the canonical verifier to establish both existing canonical Preview aliases
+as owned and READY. Both returned raw `target=null`, branch `preview` and provider
+source `b0e29c66dc663e781a46989c3415beecd94c2694`. Do not rewrite the raw target as
+the literal string `preview` or infer a newer deployed source from current HEAD.
+These are coordinator-reported metadata observations, not new reads by Android.
+
+| Exact project | Observed project settings | Limits |
+| --- | --- | --- |
+| API `ewatrade-api` / `prj_ykC8ltJlPgEuFN90CQhFpC5uC3Vh` | `APP_ENV=preview` on branch `preview`; `DEV_PROFILE=preview` and `STORE_BILLING_ENABLED=true` without branch qualifier. `OWNER_BILLING_ENABLED` and `APP_STORE_REVIEW_SANDBOX_ENABLED` were not in the project list. | Store environment, public-checkout flag, Apple bundle and catalog were Sensitive/present/unreadable; no value GET was made. Apple IAP key/issuer/private-key and database custody were names/presence only. No value equality or missing-effective-setting claim follows. |
+| Dashboard `ewatrade-dashboard` / `prj_KPSnNRftlTWRgW67OsnH2vUHzLYO` | `APP_ENV=preview` on branch `preview`; `BETTER_AUTH_URL` is the Preview Dashboard origin. `DEV_PROFILE`, owner/store/environment/reviewer/public-checkout settings were not in the project list. | `NEXT_PUBLIC_DASHBOARD_URL` was Sensitive on branch `preview`. Absence from this project list is not proof of absence from effective configuration. |
+
+The first shared-variable metadata page was **incomplete**, with no matched
+names. This does not prove shared settings absent. Retain project/branch/shared
+shadow-inventory uncertainty before applying desired values; a global Preview
+save may be overridden by a branch entry. Metadata does not establish the
+promoted process's effective flags or equality with the inspected local Preview
+database. No setting was changed by that read.
+
 ## Minimal ordinary Preview runtime settings
 
 The table specifies desired values, not a claim that current values are missing
@@ -69,9 +96,15 @@ The same owner/store/environment and reviewer-disabled reader settings are
 necessary in **Dashboard Preview** and the separate **Preview jobs project**
 before multi-runtime paid/Free acceptance. Root owns the final reader scope:
 
-- Dashboard: verify exact `ewatrade-dashboard` project identity and Preview
-  selection through the canonical release verifier. Reuse the verified Preview
-  profile; no product map or Publisher/Apple credential needs to be sent here.
+- Dashboard: exact `ewatrade-dashboard` project
+  `prj_KPSnNRftlTWRgW67OsnH2vUHzLYO`, in the same Vercel team above, Preview
+  only. Desired reader values are `DEV_PROFILE=preview`,
+  `OWNER_BILLING_ENABLED=true`, `STORE_BILLING_ENABLED=true`,
+  `STORE_BILLING_ENVIRONMENT=sandbox`, and
+  `APP_STORE_REVIEW_SANDBOX_ENABLED=false`. Use readable Config/encrypted
+  project variables after root resolves branch/shared shadows. Preserve the
+  observed `APP_ENV=preview` branch setting and existing origins. No product
+  map or Publisher/Apple credential needs to be sent here.
 - Jobs: only `proj_qxavabbrflnewutcortw` / `ewatrade-preview-fXYm`, provider
   environment `prod` within that isolated Preview project, never the Production
   project. Use normal selected-Preview sync, which sets `DEV_PROFILE=preview`,
@@ -81,9 +114,11 @@ before multi-runtime paid/Free acceptance. Root owns the final reader scope:
   list to `[]`. Keep schedule mode and unrelated provider flags unchanged.
 
 These reader additions are part of the same proposed operating change, not
-authority to write now. Before seeking execution approval, root must finish the
-current web identity/configuration audit and bind exact Dashboard identity,
-reader differences and final release procedure. That review is still open.
+authority to write now. The exact Dashboard identity is now bound by root's read;
+before execution approval, root must finish shadow inventory, resolve desired
+reader differences against actual readable/unreadable settings, and bind the final
+release procedure/test case. That finalization remains open. Keep desired values
+separate from current-value observations throughout review and execution.
 
 ## Effects, gates and execution order
 
@@ -123,3 +158,9 @@ The two-owned-path quick plan selects core with no unknowns. Its unchanged
 checkpoint is reused after checking relevant source differences. Fresh strict
 catalog/subset/hash/byte assertions, JSON Biome, four relative links and whitespace
 pass. Peer source changes are excluded; this is not whole-candidate acceptance.
+
+Handoff addition: the one-owned-document quick plan also has no unknowns;
+root's exact project/source/time/target and observation-limit bindings, unchanged
+catalog digest, four links and whitespace pass. The prior 51/254 and QA-tooling
+pass is reused after confirming the relevant sources remain unchanged. No
+connected read, schema work or runtime write was added for this handoff.
