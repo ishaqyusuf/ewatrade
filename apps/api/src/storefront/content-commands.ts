@@ -28,6 +28,7 @@ import {
   templateRegistry,
 } from "@ewatrade/storefront-templates"
 import { TRPCError } from "@trpc/server"
+import { requireAdultLiveAiForRequest } from "../assistant/live-ai-access"
 import {
   storefrontContentGenerateSchema,
   storefrontContentIdSchema,
@@ -183,6 +184,7 @@ export function requestStorefrontContent(
         code: "PRECONDITION_FAILED",
         message: "Live AI content generation is unavailable for QA data.",
       })
+    await requireAdultLiveAiForRequest(tx, actor.actorUserId)
     const config = await configuration(tx)
     if (!config || !isStorefrontDesignProviderConfigured(config))
       throw new TRPCError({

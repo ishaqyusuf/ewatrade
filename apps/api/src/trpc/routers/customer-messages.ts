@@ -3,6 +3,7 @@ import { customerMessageEvents } from "@ewatrade/customer-messages"
 import {
   accountPrivacyPrivateWritesAllowed,
   recordAssistantMessageUsage,
+  requireAdultLiveAiAccount,
   reserveAssistantBudget,
 } from "@ewatrade/db/assistant"
 import {
@@ -169,6 +170,8 @@ export const customerMessagesRouter = createTRPCRouter({
       return withCustomerMessageDraftLease(scope.actorUserId, async () => {
         const model = await resolveGeneralAssistantModel({
           dataClassification: access.store.tenant.dataClassification,
+          authorizeLiveAi: () =>
+            requireAdultLiveAiAccount(ctx.db, scope.actorUserId),
           readRuntimeConfiguration: async () =>
             (
               await ctx.db.systemConfiguration.findUnique({

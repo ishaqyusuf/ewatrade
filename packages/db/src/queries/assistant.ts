@@ -8,6 +8,12 @@ import {
 } from "../../generated/prisma/client"
 import { accountPrivacyPrivateWritesAllowed } from "./account-privacy-private-write"
 export { accountPrivacyPrivateWritesAllowed } from "./account-privacy-private-write"
+export {
+  AssistantLiveAiAccessError,
+  LIVE_AI_ADULT_MESSAGE,
+  LIVE_AI_ADULT_REQUIRED,
+  requireAdultLiveAiAccount,
+} from "./assistant-ai-access"
 import { claimAssistantAttachmentsForMessage } from "./assistant-attachments"
 import {
   type AssistantBudgetLimits,

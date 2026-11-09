@@ -9,11 +9,14 @@ import {
   setupWelcomeBackInstructions,
 } from "@ewatrade/assistant/setup/opening"
 import {
+  AssistantLiveAiAccessError,
   type AssistantScope,
   assistantBudgetScopeKey,
   readSetupDraft,
   recordAssistantMessageUsage,
+  requireAdultLiveAiAccount,
 } from "@ewatrade/db/assistant"
+import { TRPCError } from "@trpc/server"
 import { generateText } from "ai"
 import type { TRPCContext } from "../trpc/init"
 import {
@@ -28,20 +31,30 @@ export const SETUP_OPENING_TIMEOUT_MS = 8_000
 /** A reload inside this window is the same visit; after it, a new one. */
 export const SETUP_VISIT_GAP_MS = 30 * 60 * 1000
 
-export function resolveSetupModelForScope(
+export async function resolveSetupModelForScope(
   db: Db,
-  scope: { dataClassification: "LIVE" | "QA" },
+  scope: { userId: string; dataClassification: "LIVE" | "QA" },
 ) {
-  return resolveSetupAssistantModel({
-    dataClassification: scope.dataClassification,
-    readRuntimeConfiguration: async () =>
-      (
-        await db.systemConfiguration.findUnique({
-          where: { key: ASSISTANT_RUNTIME_CONFIGURATION_KEY },
-          select: { value: true },
-        })
-      )?.value,
-  })
+  try {
+    return await resolveSetupAssistantModel({
+      dataClassification: scope.dataClassification,
+      authorizeLiveAi: () => requireAdultLiveAiAccount(db, scope.userId),
+      readRuntimeConfiguration: async () =>
+        (
+          await db.systemConfiguration.findUnique({
+            where: { key: ASSISTANT_RUNTIME_CONFIGURATION_KEY },
+            select: { value: true },
+          })
+        )?.value,
+    })
+  } catch (error) {
+    if (
+      error instanceof TRPCError &&
+      error.cause instanceof AssistantLiveAiAccessError
+    )
+      return null
+    throw error
+  }
 }
 
 export type SetupMessageDraft = {

@@ -58,6 +58,7 @@ function fakeRepository(
     budgetScopeKey: null as string | null,
   }
   const repository: AssistantChatRepository = {
+    authorizeLiveAi: async () => {},
     readConversation: async (conversationId) => {
       if (conversationId !== "conv_1")
         throw new AssistantRecordError(

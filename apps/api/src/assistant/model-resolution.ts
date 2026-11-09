@@ -1,4 +1,8 @@
 import {
+  type LiveAiAuthorization,
+  authorizedLiveAiFetch,
+} from "@ewatrade/ai/dispatch-guard"
+import {
   type AssistantLanguageModel,
   createAssistantLanguageModel,
 } from "@ewatrade/ai/provider"
@@ -6,6 +10,8 @@ import { createRehearsalModel } from "@ewatrade/ai/rehearsal-model"
 import { resolveAssistantRuntimeConfiguration } from "@ewatrade/ai/runtime-config"
 import { respondGeneralRehearsal } from "@ewatrade/assistant/general/rehearsal"
 import { respondSetupRehearsal } from "@ewatrade/assistant/setup/rehearsal"
+import { AssistantLiveAiAccessError } from "@ewatrade/db/assistant"
+import { TRPCError } from "@trpc/server"
 
 export type ResolvedAssistantModel = AssistantLanguageModel & {
   rehearsal: boolean
@@ -15,6 +21,7 @@ type Environment = Readonly<Record<string, string | undefined>>
 
 type ResolveAssistantModelInput = {
   dataClassification: "LIVE" | "QA"
+  authorizeLiveAi: LiveAiAuthorization
   readRuntimeConfiguration: () => Promise<unknown>
   environment?: Environment
   createLiveModel?: typeof createAssistantLanguageModel
@@ -42,6 +49,20 @@ async function resolveAssistantModel(
       rehearsal: true,
     }
   }
+  const authorize = async () => {
+    try {
+      await input.authorizeLiveAi()
+    } catch (cause) {
+      if (cause instanceof AssistantLiveAiAccessError)
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: cause.message,
+          cause,
+        })
+      throw cause
+    }
+  }
+  await authorize()
   const configuration = resolveAssistantRuntimeConfiguration(
     await input.readRuntimeConfiguration(),
     environment,
@@ -55,7 +76,7 @@ async function resolveAssistantModel(
     return null
   const model = (input.createLiveModel ?? createAssistantLanguageModel)(
     configuration,
-    { environment },
+    { environment, fetchImpl: authorizedLiveAiFetch(authorize) },
   )
   return model ? { ...model, rehearsal: false } : null
 }

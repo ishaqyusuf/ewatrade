@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto"
+import { authorizedLiveAiFetch } from "@ewatrade/ai/dispatch-guard"
 import { storefrontContentPrompt } from "@ewatrade/ai/storefront-content"
 import {
   STOREFRONT_DESIGN_PROMPT_VERSION,
@@ -10,6 +11,10 @@ import {
   storefrontDesignPrompt,
 } from "@ewatrade/ai/storefront-design"
 import type { PrismaClient } from "@ewatrade/db"
+import {
+  AssistantLiveAiAccessError,
+  requireAdultLiveAiAccount,
+} from "@ewatrade/db/assistant"
 import { prisma } from "@ewatrade/db/client"
 import {
   getScopedSite,
@@ -287,6 +292,9 @@ export async function storefrontDesignHandler(
     const prompt = prepared.prompt
     if (new TextEncoder().encode(prompt).length > configuration.maxInputBytes)
       throw new StorefrontDesignPreflightError("DESIGN_INPUT_TOO_LARGE")
+    const authorizeLiveAi = () =>
+      requireAdultLiveAiAccount(db, initial.actorUserId)
+    await authorizeLiveAi()
     const began = await db.siteDesignRun.updateMany({
       where: {
         id: runId,
@@ -303,6 +311,7 @@ export async function storefrontDesignHandler(
     const result = await (dependencies.generate ?? generateStorefrontDesign)(
       configuration,
       prompt,
+      { fetchImpl: authorizedLiveAiFetch(authorizeLiveAi) },
     )
     tokens =
       Number.isSafeInteger(result.tokens) &&
@@ -334,7 +343,9 @@ export async function storefrontDesignHandler(
     }
     await finish(output, null)
   } catch (error) {
-    const knownBeforeCall = error instanceof StorefrontDesignPreflightError
+    const knownBeforeCall =
+      error instanceof StorefrontDesignPreflightError ||
+      (error instanceof AssistantLiveAiAccessError && !providerStarted)
     if (knownBeforeCall || !providerStarted) tokens = 0
     await finish(
       null,

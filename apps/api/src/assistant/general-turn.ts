@@ -10,6 +10,7 @@ import {
   completeAssistantRun,
   listAssistantMessages,
   newAssistantMessageId,
+  requireAdultLiveAiAccount,
   reserveAssistantBudget,
 } from "@ewatrade/db/assistant"
 import {
@@ -90,6 +91,7 @@ export async function createGeneralAssistantTurn(
     )
   const model = await resolveGeneralAssistantModel({
     dataClassification: scope.dataClassification,
+    authorizeLiveAi: () => requireAdultLiveAiAccount(ctx.db, scope.userId),
     readRuntimeConfiguration: async () =>
       (
         await ctx.db.systemConfiguration.findUnique({

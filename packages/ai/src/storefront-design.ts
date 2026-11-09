@@ -106,14 +106,18 @@ export function storefrontDesignPrompt(
 export async function generateStorefrontDesign(
   configuration: StorefrontGenerationConfiguration,
   prompt: string,
+  options: { fetchImpl?: typeof fetch } = {},
 ) {
   if (new TextEncoder().encode(prompt).length > configuration.maxInputBytes)
     throw new StorefrontDesignPreflightError("DESIGN_INPUT_TOO_LARGE")
-  const selected = createAssistantLanguageModel({
-    enabled: true,
-    provider: configuration.provider,
-    model: configuration.model,
-  })
+  const selected = createAssistantLanguageModel(
+    {
+      enabled: true,
+      provider: configuration.provider,
+      model: configuration.model,
+    },
+    options,
+  )
   if (!selected)
     throw new StorefrontDesignPreflightError("DESIGN_PROVIDER_UNCONFIGURED")
   const result = await generateText({

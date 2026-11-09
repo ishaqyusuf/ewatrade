@@ -318,7 +318,8 @@ export function AssistantFab({
           </button>
         </form>
         <p className="w-guide-foot">
-          AI answers · Verification details stay out of the AI conversation.
+          Website help · Live AI requires an 18+ account. Verification stays in
+          registration.
         </p>
       </PopoverContent>
     </Popover>

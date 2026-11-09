@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "id": "2026-11-09-live-ai-adult-access",
+  "tickets": ["H02"],
+  "summary": "Apply the owner's 18+ declaration policy to user-invoked live AI dispatch, including queued/fallback media and Storefront generation, while preserving 13+ ordinary functions/history and provider-free public registration help. Source only; no provider contact or release.",
+  "noAssistantImpact": "No new merchant capability, tool, domain command or router procedure is added. Existing live-AI invocation eligibility is narrowed before provider dispatch, using fresh server-derived account age; it is not a new assistant operation or account-wide restriction. Existing capability/role/Store/plan/privacy/confirmation authority and saved/manual operations remain. Automatic safety checks are unchanged and require their separate terms/payload review. Personal age declarations remain user-only; no model/header can grant age authority. H01 regenerated in APP_ENV=local is unchanged.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "path": ".brain/features/live-ai-adult-access.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "api",
+      "path": ".brain/api/permissions.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "schema",
+      "status": "not_applicable",
+      "note": "Reads the existing User.ageBand; no schema, enum, database write or migration."
+    },
+    {
+      "topic": "capability",
+      "status": "not_applicable",
+      "note": "H01 coverage snapshot regenerated in APP_ENV=local and byte-identical; existing capability and procedure rows retain the same permissions and rollout, with the global live-AI declaration admission documented in the feature/API policy."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "apps/api/src/assistant/model-resolution.test.ts",
+      "executed": true,
+      "result": "Final nine-file permission/transport/media run: 57 pass, 1 real-provider outage test skipped, 226 assertions; nonadult/missing/changed accounts refused before outbound traffic. Storefront owned subset separately 11 pass/84 assertions, including preserved unknown-outcome custody on late age refusal."
+    },
+    {
+      "kind": "test",
+      "path": "packages/jobs/src/handlers/assistant-adult-ai.test.ts",
+      "executed": true,
+      "result": "Actual isolated worker factory passes teen/unknown and fresh vision/audio refusal with zero network; provider-free QA retained. Existing lease/role seams are mocked and not certified by this test."
+    },
+    {
+      "kind": "run",
+      "path": "docs/verification/2026-11-09-live-ai-adult-access.md",
+      "executed": true,
+      "result": "Actual local public-help/registration view verified; API/jobs/AI/Marketing typechecks pass. Two unrelated Studio preview failures reproduced in original HEAD tests and retained as baseline limitations; no signed/hosted acceptance."
+    }
+  ]
+}

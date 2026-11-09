@@ -1,6 +1,9 @@
 import { ASSISTANT_RUNTIME_CONFIGURATION_KEY } from "@ewatrade/ai/runtime-config"
 import type { prisma } from "@ewatrade/db"
-import { AssistantRecordError } from "@ewatrade/db/assistant"
+import {
+  AssistantRecordError,
+  requireAdultLiveAiAccount,
+} from "@ewatrade/db/assistant"
 import type { OpenAPIHono } from "@hono/zod-openapi"
 import { TRPCError } from "@trpc/server"
 import { getHTTPStatusCodeFromError } from "@trpc/server/http"
@@ -57,6 +60,7 @@ export function defaultAssistantChatDependencies(): AssistantChatDependencies {
     resolveModel: ({ scope, repository }) =>
       resolveSetupAssistantModel({
         dataClassification: scope.dataClassification,
+        authorizeLiveAi: repository.authorizeLiveAi,
         readRuntimeConfiguration: repository.readRuntimeConfiguration,
       }),
     guard: new AssistantStreamGuard(),
@@ -69,6 +73,7 @@ export function resolveModel(
   db: typeof prisma,
   dataClassification: "LIVE" | "QA",
   purpose: "SETUP" | "GENERAL" = "SETUP",
+  actorUserId = "",
 ): Promise<ResolvedAssistantModel | null> {
   const readRuntimeConfiguration = async () =>
     (
@@ -80,10 +85,12 @@ export function resolveModel(
   return purpose === "GENERAL"
     ? resolveGeneralAssistantModel({
         dataClassification,
+        authorizeLiveAi: () => requireAdultLiveAiAccount(db, actorUserId),
         readRuntimeConfiguration,
       })
     : resolveSetupAssistantModel({
         dataClassification,
+        authorizeLiveAi: () => requireAdultLiveAiAccount(db, actorUserId),
         readRuntimeConfiguration,
       })
 }

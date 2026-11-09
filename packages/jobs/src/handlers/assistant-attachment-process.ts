@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs"
 import { resolve } from "node:path"
 import { pathToFileURL } from "node:url"
+import { authorizedLiveAiFetch } from "@ewatrade/ai/dispatch-guard"
 import {
   createOpenAIMediaAdapters,
   createRehearsalMediaAdapters,
@@ -22,8 +23,10 @@ import {
 } from "@ewatrade/assistant/setup/vision"
 import { processCatalogPhoto } from "@ewatrade/catalog/photo-processing"
 import {
+  AssistantLiveAiAccessError,
   assistantBudgetScopeKey,
   recordAssistantAttachmentUsage,
+  requireAdultLiveAiAccount,
   reserveAssistantMediaBudget,
 } from "@ewatrade/db/assistant"
 import {
@@ -180,7 +183,23 @@ export function defaultAssistantAttachmentDeps(
             })
           : null
       }
-      const media = createOpenAIMediaAdapters()
+      const authorizeLiveAi = async () => {
+        await assertAssistantAttachmentProcessingActive(
+          prisma,
+          attachment.id,
+          attachment.processingAttempts,
+        )
+        try {
+          await requireAdultLiveAiAccount(prisma, attachment.actorUserId)
+        } catch (error) {
+          if (error instanceof AssistantLiveAiAccessError)
+            throw new TranscriptionError(error.code, true)
+          throw error
+        }
+      }
+      await authorizeLiveAi()
+      const providerFetch = authorizedLiveAiFetch(authorizeLiveAi)
+      const media = createOpenAIMediaAdapters({ fetchImpl: providerFetch })
       if (attachment.kind !== "AUDIO") return media
       return {
         readImage:
@@ -189,6 +208,7 @@ export function defaultAssistantAttachmentDeps(
             throw new Error("MEDIA_UNAVAILABLE")
           }),
         transcribe: createFallbackTranscriber({
+          fetchImpl: providerFetch,
           observeAttempt: assistantVoiceObserver(attachment, analyticsOrigin),
           contentType: attachment.contentType,
           audioSeconds: Math.ceil((attachment.durationMs ?? 0) / 1000),
@@ -207,7 +227,10 @@ export function defaultAssistantAttachmentDeps(
                 attachment.id,
                 attachment.processingAttempts,
               )
-            } catch {
+              await requireAdultLiveAiAccount(prisma, attachment.actorUserId)
+            } catch (error) {
+              if (error instanceof AssistantLiveAiAccessError)
+                throw new TranscriptionError(error.code, true)
               throw new TranscriptionError("VOICE_CANCELLED", true)
             }
           },

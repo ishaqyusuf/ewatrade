@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./dispatch-guard": "./src/dispatch-guard.ts",
     "./media": "./src/media.ts",
     "./provider": "./src/provider.ts",
     "./rehearsal-model": "./src/rehearsal-model.ts",

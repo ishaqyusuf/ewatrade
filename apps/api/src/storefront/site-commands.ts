@@ -70,6 +70,7 @@ import {
   templateRegistry,
 } from "@ewatrade/storefront-templates"
 import { TRPCError } from "@trpc/server"
+import { requireAdultLiveAiForRequest } from "../assistant/live-ai-access"
 import {
   storefrontAcceptDesignSchema,
   storefrontDesignBriefRequestSchema,
@@ -850,6 +851,7 @@ export async function requestStorefrontGenerationInTransaction(
       code: "PRECONDITION_FAILED",
       message: "Design generation is unavailable for this business.",
     })
+  await requireAdultLiveAiForRequest(tx, actor.actorUserId)
   if (site.draftRevision !== input.expectedDraftRevision)
     throw new TRPCError({
       code: "CONFLICT",

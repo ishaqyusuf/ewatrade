@@ -1,5 +1,6 @@
 import { afterAll, expect, mock, test } from "bun:test"
 import type { PrismaClient } from "@ewatrade/db"
+import { AssistantLiveAiAccessError } from "@ewatrade/db/assistant"
 import { validateComposition } from "@ewatrade/storefront-contracts/manifest"
 import { getTemplateManifest } from "@ewatrade/storefront-templates"
 import * as catalogRepository from "../../../../packages/db/src/queries/public-storefront"
@@ -109,6 +110,7 @@ function memoryDatabase(
       maxInputBytes: 32000,
     } as Row | null,
     membershipRole: "OWNER",
+    accountAgeBand: "ADULT" as string | null,
     storeStatus: "ACTIVE",
     loseNextPublicationFence: false,
   }
@@ -205,6 +207,12 @@ function memoryDatabase(
           where,
         )
           ? { tenant: clone(tenant) }
+          : null,
+    },
+    user: {
+      findUnique: async ({ where = {} }: Args) =>
+        where.id === actor.actorUserId && state.accountAgeBand !== null
+          ? { ageBand: state.accountAgeBand }
           : null,
     },
     store: {
@@ -1013,6 +1021,65 @@ test("content rejects stale revisions, unknown/duplicate fields, extra authority
   ).rejects.toMatchObject({ code: "PRECONDITION_FAILED" })
 })
 
+test("minor or missing actors cannot reserve new live AI content", async () => {
+  for (const band of ["AGE_13_TO_15", "AGE_16_TO_17", "UNDECLARED", null]) {
+    const fixture = await contentFixture()
+    fixture.state().accountAgeBand = band
+    await expect(
+      contentCommands.requestStorefrontContent(
+        fixture.db,
+        fixture.actor,
+        fixture.input,
+      ),
+    ).rejects.toMatchObject({ code: "FORBIDDEN" })
+    expect(fixture.state().runs).toHaveLength(0)
+    expect(fixture.state().budgets).toHaveLength(0)
+  }
+})
+
+test("queued live AI rechecks account age before dispatch and releases only the reserved tokens", async () => {
+  const fixture = await contentFixture()
+  const queued = await contentCommands.requestStorefrontContent(
+    fixture.db,
+    fixture.actor,
+    fixture.input,
+  )
+  fixture.state().accountAgeBand = "AGE_16_TO_17"
+  let calls = 0
+  await storefrontDesignHandler(
+    { runId: queued.run.id },
+    {
+      db: fixture.db,
+      generate: async () => {
+        calls += 1
+        return contentResult(fixture)
+      },
+    },
+  )
+  expect(calls).toBe(0)
+  expect(fixture.state().runs[0]).toMatchObject({
+    status: "FAILED",
+    errorCode: "LIVE_AI_ADULT_REQUIRED",
+    providerStartedAt: null,
+  })
+  expect(fixture.state().budgets[0]).toMatchObject({ requests: 1, tokens: 0 })
+  expect(
+    (
+      await contentCommands.readStorefrontContent(fixture.db, fixture.actor, {
+        expectedSiteId: fixture.input.expectedSiteId,
+        runId: queued.run.id,
+      })
+    ).status,
+  ).toBe("FAILED")
+  const manual = await commands.saveStorefrontDraft(fixture.db, fixture.actor, {
+    expectedSiteId: fixture.input.expectedSiteId,
+    expectedRevision: 1,
+    composition: fixture.input.composition,
+  })
+  expect(manual).toMatchObject({ ok: true })
+  expect(fixture.state().budgets[0]).toMatchObject({ requests: 1, tokens: 0 })
+})
+
 test("content workers claim once, validate the exact fields and settle one content usage receipt", async () => {
   const fixture = await contentFixture()
   const queued = await contentCommands.requestStorefrontContent(
@@ -1137,6 +1204,34 @@ test("unknown provider outcomes hold the reservation and cannot be sent again", 
       })
     ).needsReconciliation,
   ).toBe(true)
+})
+
+test("late age refusal preserves an unknown provider outcome and its reservation", async () => {
+  const fixture = await contentFixture()
+  const queued = await contentCommands.requestStorefrontContent(
+    fixture.db,
+    fixture.actor,
+    fixture.input,
+  )
+  await storefrontDesignHandler(
+    { runId: queued.run.id },
+    {
+      db: fixture.db,
+      generate: async () => {
+        // An earlier SDK attempt could have reached the provider before a retry
+        // observes the changed declaration. Do not settle that outcome as free.
+        fixture.state().accountAgeBand = "AGE_16_TO_17"
+        throw new AssistantLiveAiAccessError()
+      },
+    },
+  )
+  expect(fixture.state().runs[0]).toMatchObject({
+    status: "FAILED",
+    errorCode: "PROVIDER_OUTCOME_UNKNOWN",
+    usageSettledAt: null,
+  })
+  expect(fixture.state().budgets[0]?.tokens).toBe(40000)
+  expect(fixture.state().usage).toHaveLength(0)
 })
 
 test("revoked worker authority and changed writing guidance stop before a provider call", async () => {

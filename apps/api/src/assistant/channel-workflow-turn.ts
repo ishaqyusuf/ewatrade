@@ -434,6 +434,7 @@ export async function createChannelWorkflowTurn(
       resolveModel: ({ scope, repository }) =>
         resolveSetupAssistantModel({
           dataClassification: scope.dataClassification,
+          authorizeLiveAi: repository.authorizeLiveAi,
           readRuntimeConfiguration: repository.readRuntimeConfiguration,
         }),
       guard,

@@ -11,6 +11,7 @@ import {
   readAssistantRun,
   readSetupDraft,
   removeSetupDraftEntities,
+  requireAdultLiveAiAccount,
   reserveAssistantBudget,
   upsertSetupDraftEntities,
 } from "@ewatrade/db/assistant"
@@ -32,6 +33,7 @@ type Bound<F extends (...args: never[]) => unknown> = (
  * the scope admitted for this request. Tests replace it with an in-memory fake.
  */
 export type AssistantChatRepository = {
+  authorizeLiveAi: () => Promise<void>
   readConversation: (
     conversationId: string,
   ) => ReturnType<typeof readAssistantConversation>
@@ -77,6 +79,7 @@ export function createAssistantChatRepository(
   scope: AssistantScope,
 ): AssistantChatRepository {
   return {
+    authorizeLiveAi: () => requireAdultLiveAiAccount(db, scope.userId),
     readConversation: (conversationId) =>
       readAssistantConversation(db, scope, conversationId),
     beginRun: (input) => beginAssistantRun(db, input),
