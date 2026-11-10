@@ -289,3 +289,50 @@ lock, authority, Finance, stock and idempotency guard. Reuse passed unpaid/Cance
 stale evidence and avoid repeating all successful phases. A diagnostic window
 needs its exact command, attributed fixture/cleanup and frozen instrumentation
 source. No broad Finance refactor, provider/hosted/release action or case promotion.
+
+### Narrow paid-path timing diagnostic
+
+A diagnostic-only temporary change used the existing instrumented PostgreSQL pool
+(max2, explicit external-pool disposal) and `withPerformanceTrace` around the real
+ACTION handler. The output projected only numeric wall time, failed status and
+fixed phase counts/durations/failures. It omitted trace ID, SQL, arguments,
+identifiers, customer content and private values. One partial four-line handover
+traversed the same two-page accepted-Next/final-confirm proof; successful-state
+matrices and provider/model calls were excluded.
+
+Frozen instrumentation graph4697files:
+`326f5b34f3befabcf71d5361334bccefa4f61c876d890a0186925001fb7e867c`.
+The diagnostic ended **0pass/1fail/2filtered,38assertions,170.49s**. Exact failure:
+Prisma`P2028`, `StockMovement.create` in `catalog-inventory.ts:717`,30,706ms against
+the unchanged30s transaction ceiling. No paid/Cashier/replay acceptance follows.
+
+| Numeric ACTION observation | Count | Accumulated duration |
+| --- | ---: | ---: |
+| Whole action |1|30,711.6ms |
+| SQL |145|30,646.4ms |
+| Pool acquisition |1|0.226ms |
+| Transaction SQL |3|695.8ms |
+| Locking SQL statements |10|2,100.7ms |
+| Native proposal review |1|2,766.7ms |
+| Proposal execution (failed) |1|17,602.8ms |
+
+Phases overlap and must not be summed. SQL timings include database execution and
+transport, not an isolated network measurement. Mean SQL duration was211ms;
+locking-statement mean210ms does not establish lock-wait duration. The result is
+consistent with roundtrip cost dominating the wall time; pool acquisition is not
+material. Roughly13.1s elapsed before the failing execution portion completed.
+
+Strict owned cleanup/externalCalls0 and zero-owned assertions passed. Phase5
+independently read the numeric private log and cleanup marker, verified326f5bgraph
+unchanged after exit, then independently compared BOTH exact pre-diagnostic
+backups byte-for-byte after restoration. The entire source graph returned to
+`a6419830bfe8496725bec0db273bc0b4945bb6045d3aee1342b49822dd7f3d74`/4697.
+No temporary DEBUG wiring was retained; unaffected source gates were not rerun.
+Private log: `/private/tmp/ewatrade-t10-paid-transaction-diagnostic.log`.
+
+Coordinator's next bounded choice is authentic linked tenant-context reuse only
+inside the same transaction in `inFreshGeneralTransaction`, with provenance,
+locks, current canonical checks and ordinary browser freshness preserved. This
+requires a minimal reviewed diff and focused reuse/refusal/count proof before any
+new connected window. No cache framework, Finance refactor, timeout increase,
+automatic retry, provider/hosted/release action or72-case promotion is authorized.
