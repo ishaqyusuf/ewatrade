@@ -5,9 +5,15 @@ import { CatalogFreeSaleLines } from "@/components/mobile/create-sale/catalog-fr
 import type { OfferingRow } from "@/components/mobile/create-sale/create-sale-model"
 import type { SaleStepViewProps } from "@/components/mobile/create-sale/create-sale-presentation"
 import {
+  SaleScanAddedBar,
+  SaleScanLayers,
+  SaleScanNoticeCard,
+} from "@/components/mobile/create-sale/sale-scan"
+import {
   saleItemsLabel,
   saleUnitCount,
 } from "@/components/mobile/create-sale/sale-unit-count"
+import { useSaleScan } from "@/components/mobile/create-sale/use-sale-scan"
 import { FloatingSearchCaption } from "@/components/mobile/floating-search-field"
 import { QaQuickFillButton } from "@/components/mobile/qa-quick-fill-button"
 import { saleOfferingTitle } from "@/components/mobile/sale-item-picker"
@@ -91,6 +97,7 @@ export function ClassicSaleItems({
   }
   const largeText = useLargeTextLayout()
   const scrollHide = useBottomSearchScroll()
+  const scan = useSaleScan(model)
   // Typing a price, description or quantity: the floating footer would cover
   // the fields below the focused one, so it steps aside until the keyboard
   // closes. Searching keeps it (the footer holds the search field).
@@ -221,6 +228,7 @@ export function ClassicSaleItems({
         showsVerticalScrollIndicator={false}
         ListHeaderComponent={
           <View className="gap-3 pb-1">
+            <SaleScanNoticeCard scan={scan} />
             {isOffline ? (
               <StatusBanner
                 icon="Wind"
@@ -348,6 +356,17 @@ export function ClassicSaleItems({
         placeholder={
           itemKind === "service" ? "Search services" : "Search items"
         }
+        searchFocusRequest={scan.focusRequest}
+        searchTrailingAction={
+          scan.available && itemKind !== "service"
+            ? {
+                accessibilityLabel: "Scan a barcode or QR code",
+                icon: "BarcodeScan",
+                onPress: scan.open,
+                testID: "sale-scan",
+              }
+            : undefined
+        }
         totalCount={0}
         value={productSearch}
       >
@@ -368,6 +387,8 @@ export function ClassicSaleItems({
           Proceed
         </ActionButton>
       </BottomSearchFooter>
+      <SaleScanAddedBar bottom={actionsHeight + 8} scan={scan} />
+      <SaleScanLayers scan={scan} />
     </View>
   )
 }

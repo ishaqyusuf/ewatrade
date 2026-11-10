@@ -1,4 +1,4 @@
-import { Icon } from "@/components/ui/icon"
+import { Icon, type IconKeys } from "@/components/ui/icon"
 import { Input } from "@/components/ui/input-2"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
@@ -19,7 +19,18 @@ type FloatingSearchFieldProps = {
   onChangeText: (value: string) => void
   onFocus: () => void
   placeholder: string
+  /** Changing this number focuses the field (e.g. "Search by name instead"). */
+  focusRequest?: number
+  /** One tool inside an empty pill, such as Scan; Clear replaces it once typed. */
+  trailingAction?: SearchTrailingAction
   value: string
+}
+
+export type SearchTrailingAction = {
+  accessibilityLabel: string
+  icon: IconKeys
+  onPress: () => void
+  testID?: string
 }
 
 /** The raised surface shared by the search pill, its caption and button. */
@@ -114,6 +125,8 @@ export function FloatingSearchField({
   onChangeText,
   onFocus,
   placeholder,
+  focusRequest,
+  trailingAction,
   value,
 }: FloatingSearchFieldProps) {
   const { colorScheme } = useColorScheme()
@@ -133,6 +146,11 @@ export function FloatingSearchField({
     return () => subscription.remove()
   }, [focused])
 
+  useEffect(() => {
+    if (focusRequest) inputRef.current?.focus()
+  }, [focusRequest])
+  const showTrailing = Boolean(trailingAction) && !value && editable
+
   return (
     <View
       style={{
@@ -142,7 +160,7 @@ export function FloatingSearchField({
         gap: 10,
         minHeight: largeText ? 64 : 52,
         paddingLeft: 18,
-        paddingRight: value && editable ? 7 : 18,
+        paddingRight: (value && editable) || showTrailing ? 7 : 18,
       }}
     >
       <Icon
@@ -184,6 +202,22 @@ export function FloatingSearchField({
           onPress={() => onChangeText("")}
         >
           <Icon className="size-xs text-foreground" name="X" />
+        </Pressable>
+      ) : null}
+      {showTrailing && trailingAction ? (
+        <Pressable
+          accessibilityLabel={trailingAction.accessibilityLabel}
+          accessibilityRole="button"
+          className="size-10 items-center justify-center rounded-full bg-accent"
+          haptic
+          hitSlop={6}
+          onPress={trailingAction.onPress}
+          testID={trailingAction.testID}
+        >
+          <Icon
+            className="size-[20px] text-accent-foreground"
+            name={trailingAction.icon}
+          />
         </Pressable>
       ) : null}
     </View>

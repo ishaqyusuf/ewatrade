@@ -82,6 +82,7 @@ const Delete = hugeIcon("Delete")
 const DoorOpen = hugeIcon("Door01Icon")
 const Download = hugeIcon("Download01Icon")
 const Upload = hugeIcon("Upload01Icon")
+const BarcodeScan = hugeIcon("BarcodeScanIcon")
 const Eye = hugeIcon("EyeIcon")
 const EyeOff = hugeIcon("ViewOffIcon")
 const Fence = hugeIcon("FenceIcon")
@@ -321,6 +322,7 @@ const appIcons = {
   DoorOpen,
   Download,
   Upload,
+  BarcodeScan,
   Eye,
   EyeOff,
   Fence,

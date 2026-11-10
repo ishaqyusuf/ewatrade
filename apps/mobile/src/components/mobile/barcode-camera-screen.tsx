@@ -30,9 +30,13 @@ const BARCODE_TYPES: BarcodeType[] = [
 export function BarcodeCameraScreen({
   onRead,
   onCancel,
+  cancelLabel = "Enter barcode manually",
+  instructions = "Point the camera at one barcode. The code fills automatically when it is read.",
 }: {
   onRead: (code: string) => void
   onCancel: () => void
+  cancelLabel?: string
+  instructions?: string
 }) {
   const [permission, requestPermission, refreshPermission] =
     useCameraPermissions()
@@ -131,10 +135,7 @@ export function BarcodeCameraScreen({
         className="flex-1"
         contentContainerClassName="gap-5 px-4 pt-4 pb-6"
       >
-        <Text className="text-sm text-muted-foreground">
-          Point the camera at one barcode. The code fills automatically when it
-          is read.
-        </Text>
+        <Text className="text-sm text-muted-foreground">{instructions}</Text>
         {error ? <StatusBanner tone="warning" message={error} /> : null}
         {!permission ? (
           <Text className="text-muted-foreground">Checking camera access…</Text>
@@ -215,7 +216,7 @@ export function BarcodeCameraScreen({
       <View style={{ paddingBottom: insets.bottom + 12 }}>
         <View className="border-t border-border px-4 pt-3">
           <ActionButton variant="outline" onPress={onCancel}>
-            Enter barcode manually
+            {cancelLabel}
           </ActionButton>
         </View>
       </View>

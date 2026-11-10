@@ -1,4 +1,7 @@
-import { FloatingSearchField } from "@/components/mobile/floating-search-field"
+import {
+  FloatingSearchField,
+  type SearchTrailingAction,
+} from "@/components/mobile/floating-search-field"
 import { useColors } from "@/hooks/use-color"
 import {
   DOCK_OPACITY_INPUT,
@@ -47,6 +50,9 @@ export type BottomSearchFooterProps = {
   onFocusChange?: (focused: boolean) => void
   onHeightChange?: (height: number) => void
   placeholder: string
+  /** See FloatingSearchField. */
+  searchFocusRequest?: number
+  searchTrailingAction?: SearchTrailingAction
   showDisabledOfflineSearch?: boolean
   searchVisible?: boolean
   totalCount: number
@@ -81,6 +87,8 @@ export function BottomSearchFooter({
   onFocusChange,
   onHeightChange,
   placeholder,
+  searchFocusRequest,
+  searchTrailingAction,
   searchVisible = true,
   showDisabledOfflineSearch = false,
   totalCount,
@@ -197,6 +205,8 @@ export function BottomSearchFooter({
                 onChangeText={onChangeText}
                 onFocus={() => setFocused(true)}
                 placeholder={placeholder}
+                focusRequest={searchFocusRequest}
+                trailingAction={searchTrailingAction}
                 value={value}
               />
             </View>
