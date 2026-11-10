@@ -216,7 +216,7 @@ not a72/72 prerequisite for assessing a small first pilot.
 | --- | --- | --- |
 |1|`1f3234316`: existing manual search escape during scanner loading; real hook/layer checks pass. Earlier lifetime repair remains valid.|Use manual search/code entry for a pilot. Camera decode and HTTPS native associations remain unproved; no further emulator recovery loop without new evidence.|
 |2|`6845ba652`: exact fractional arrivals validated before mutation; price rows preflighted and partial saves reported accurately; focused checks pass.|Actual shipment journey needs approved supplier/items/quantities/costs/freight/dated FX if shipments are in the pilot. Separate price commands are not an atomic batch.|
-|3|`c85d5ff4f`: exact native catalog choices/review pages, delivered-page proof, same-Order payment authority, canonical confirmation and bounded duplicate-read repairs; focused16tests/224assertions, strict API/DB types and metadata gates pass.|Paid four-line confirmation still failsP2028. Paid/Cashier/replay and T10 implementation remain unaccepted. No further speculative patch/connected loop;30s policy and practical priority require a coordinator decision.|
+|3|`c85d5ff4f`: exact native catalog choices/review pages, delivered-page proof, same-Order payment authority, canonical confirmation and bounded duplicate-read repairs; focused16tests/224assertions, strict API/DB types and metadata gates pass.|Paid four-line confirmation still failsP2028. Paid/Cashier/replay and T10 implementation remain unaccepted. Owner chose app pilot first; native paid stays disabled and deferred.|
 |4|`923c7e98f`: trusted share scope binds to the same listed active Store as the anonymous loader; focused checks pass.|Existing eligible media/contact/no-Site examples and consent save/refetch need real inputs/permission. No listing or public-media consent inferred.|
 |5|Evidence commits through`0b2cc8c15`, with the final isolated outcome supplied for reconciliation.|Own the stable register, actual target/candidate evidence and practical blocker list; source checks do not promote merchant cases.|
 
@@ -251,3 +251,24 @@ Brain impact: local `.brain/tasks/2026-11-10-business-phase-coordination.md`,
 `.brain/tasks/in-progress.md` and `.brain/tasks/2026-11-09-four-business-gap-tickets.md`.
 Phase3 additionally updated local WhatsApp feature, API contracts/permissions,
 native-review ADR and phase task. No schema/migration change.
+
+## Owner priority: app pilot first
+
+The owner answered the coordinator's priority question: **“App pilot first; native
+paid sales remain disabled (Recommended)”**. This defers further native paid-sale
+transaction work; it does not close R23, accept failed money behavior or change the
+30s policy. Phase3's checkpoint remains default-off and unimplemented in Workshop.
+
+For initial local readiness, the coordinator chooses the existing Jawdah Poultry QA
+dataset and manual entry. Start with Catalog/manual search, an unsaved draft and
+Cancel, existing saved Order details, and receiving-account admission. Reuse valid
+source evidence and consider only one coordinated existing-data web smoke. This
+preparation does not claim that a merchant or hosted/native pilot has been approved.
+
+Phase5 owns the exact existing profile/config/target inventory, meaningful smoke
+need and remaining acceptance list. The coordinator records a stable source before
+any candidate-sensitive run. No new product catalog, shipment, photo, public listing,
+sale/payment, provider send, native build or deployment is implied. Finished Phase1,
+2 and4 source remains finished; scanning, public sharing and shipments are included
+in a first pilot only when their real prerequisites are met. J06/J11 and release
+gates remain visible. Important inputs or release decisions return to this chat.

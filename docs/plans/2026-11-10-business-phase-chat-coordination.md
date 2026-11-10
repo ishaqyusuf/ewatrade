@@ -120,3 +120,10 @@ active. The coordinator's [current breakdown and practical remaining gates](../v
 distinguishes finished source from merchant, target, camera and paid-sale proof.
 The original fully-native objective is unfinished; no status, local commit or
 source test silently marks it complete or authorizes release.
+
+Owner priority now explicitly selects **app pilot first; native paid sales remain
+disabled**. Phase5 prepares the smallest existing-data/manual-entry app readiness
+scope, initially using existing Jawdah Poultry QA data. Phase3 does not resume the
+native paid query/transaction loop. R23 remains outstanding; no deployment, provider,
+new native artifact or merchant-data authority is added. All owner-facing updates
+and important decisions continue only in the coordinator chat.
