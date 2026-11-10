@@ -23,6 +23,16 @@ const nextConfig: NextConfig = {
   // Deliver marketing styles with the document to avoid render-blocking round trips.
   experimental: { inlineCss: true },
   logging: { incomingRequests: { ignore: onboardingRequestLogIgnore } },
+  async rewrites() {
+    return [
+      // Platform catalog photos (`/b/<slug>`): exactly the public photo route;
+      // the API re-checks review, listing and Store availability per request.
+      {
+        source: "/api/catalog/public/stores/:storeId/photos/:assetId",
+        destination: `${getApiOrigin()}/api/catalog/public/stores/:storeId/photos/:assetId`,
+      },
+    ]
+  },
   async headers() {
     return [
       { source: "/signup", headers: onboardingSignupResponseHeaders },

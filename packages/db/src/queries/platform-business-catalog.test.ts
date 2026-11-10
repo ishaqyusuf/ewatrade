@@ -189,3 +189,21 @@ test("a platform product link exists only for a listed product of the exact list
   ])
     expect(await getPlatformProductShare(db, scope, read(result))).toBeNull()
 })
+
+test("QA businesses render only under the server-decided local QA preview", async () => {
+  const live = fixture({ qa: true })
+  expect(
+    await getPlatformBusinessCatalog(live.db, { slug: "hypnos-qa" }, live.deps),
+  ).toEqual({ status: "unavailable" })
+  expect(live.tenantReads).toEqual([])
+  const local = fixture({ qa: true })
+  const result = await getPlatformBusinessCatalog(
+    local.db,
+    { slug: "hypnos-qa", localQaPreview: true },
+    local.deps,
+  )
+  expect(result.status).toBe("available")
+  expect(local.tenantReads[0]).toMatchObject({
+    where: { dataClassification: { in: ["LIVE", "QA"] } },
+  })
+})

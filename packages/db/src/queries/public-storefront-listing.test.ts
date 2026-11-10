@@ -645,4 +645,22 @@ test("the platform-listed projection narrows Prisma reads and raw listing SQL to
     expect(JSON.stringify(read.where)).toContain(JSON.stringify(listedWhere))
   expect(paid.raws.length).toBeGreaterThan(0)
   for (const raw of paid.raws) expect(raw.sql).toContain('"platformListed"')
+  // Photos of a site-less listed Store are reachable only through this projection.
+  const photoStore = (read: Record<string, unknown> | undefined) =>
+    (
+      (read?.select as Record<string, unknown>)?.photoAssets as {
+        where: { store: unknown }
+      }
+    ).where.store
+  expect(photoStore(included.reads[0])).toEqual({
+    status: "ACTIVE",
+    sites: { some: { status: "PUBLISHED" } },
+  })
+  expect(photoStore(paid.reads[0])).toEqual({
+    status: "ACTIVE",
+    OR: [
+      { sites: { some: { status: "PUBLISHED" } } },
+      { publicCatalogListedAt: { not: null } },
+    ],
+  })
 })

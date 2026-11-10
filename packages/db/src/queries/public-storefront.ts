@@ -288,7 +288,7 @@ export function publicCatalogPhotoPath(storeId: string, assetId: string) {
  * eligibility comes from the reader's item/offering filters. Only the asset ID leaves
  * the database; delivery re-checks everything and the page falls back to artwork.
  */
-function publicPhotoAssetSelect(storeId: string) {
+function publicPhotoAssetSelect(storeId: string, platformListed = false) {
   return {
     where: {
       ...catalogPublicPhotoProviderFilter(),
@@ -307,10 +307,20 @@ function publicPhotoAssetSelect(storeId: string) {
         isActive: true,
         qaPurgeStartedAt: null,
       },
-      store: {
-        status: "ACTIVE" as const,
-        sites: { some: { status: "PUBLISHED" as const } },
-      },
+      // The platform catalog reader only reaches owner-listed products, so it
+      // accepts a listed Store in place of a published Site.
+      store: platformListed
+        ? {
+            status: "ACTIVE" as const,
+            OR: [
+              { sites: { some: { status: "PUBLISHED" as const } } },
+              { publicCatalogListedAt: { not: null } },
+            ],
+          }
+        : {
+            status: "ACTIVE" as const,
+            sites: { some: { status: "PUBLISHED" as const } },
+          },
     },
     orderBy: [{ sortOrder: "asc" as const }, { id: "asc" as const }],
     take: 8,
@@ -326,7 +336,10 @@ function publicItemReader(
   projection: PublicItemProjection = {},
 ) {
   const select = {
-    photoAssets: publicPhotoAssetSelect(store.id),
+    photoAssets: publicPhotoAssetSelect(
+      store.id,
+      projection.platformListed === true,
+    ),
     storefrontPolicies: {
       where: { tenantId, storeId: store.id },
       take: 1,

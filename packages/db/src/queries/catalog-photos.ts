@@ -383,7 +383,23 @@ export async function getCatalogPublicPhotoTarget(
         isActive: true,
         qaPurgeStartedAt: null,
       },
-      store: { status: "ACTIVE", sites: { some: { status: "PUBLISHED" } } },
+      store: { status: "ACTIVE" },
+      // Served for a published Site, or for a product its owner listed on the
+      // platform catalog of a listed Store; never for other unlisted products.
+      OR: [
+        { store: { sites: { some: { status: "PUBLISHED" } } } },
+        {
+          store: { publicCatalogListedAt: { not: null } },
+          catalogItem: {
+            is: {
+              kind: "PRODUCT",
+              storefrontPolicies: {
+                some: { storeId: input.storeId, platformListed: true },
+              },
+            },
+          },
+        },
+      ],
       catalogItem: {
         is: {
           status: "ACTIVE",

@@ -41,6 +41,7 @@ import { useQuery } from "@tanstack/react-query"
 import { useId } from "react"
 import { CreateStoreModal } from "./create-store-modal"
 import { StoreContactRow } from "./store-contact-row"
+import { StorePublicListingRow } from "./store-public-listing-row"
 
 const storeViewOptions = [
   { value: "table", label: "Table", icon: LayoutTable01Icon },
@@ -210,6 +211,20 @@ export function StoresDirectory({
         >
           {stores.data.map((store) => (
             <StoreContactRow
+              key={store.id}
+              storeId={store.id}
+              storeName={store.name}
+            />
+          ))}
+        </SettingsSection>
+      ) : null}
+      {stores.data?.length ? (
+        <SettingsSection
+          title="Business page on ẸwáTrade"
+          description="List a store so customers can browse the products you choose to show. Turn on “Show on your business page” in each product's storefront settings."
+        >
+          {stores.data.map((store) => (
+            <StorePublicListingRow
               key={store.id}
               storeId={store.id}
               storeName={store.name}

@@ -26,6 +26,11 @@ export async function getPlatformBusinessCatalog(
     after?: string
     /** Server-authorized share scope; the listed Store must be exactly this one. */
     trustedStore?: { tenantId: string; storeId: string }
+    /**
+     * Server-decided local QA preview (see `isLocalPlatformCatalogPreview`):
+     * QA test businesses render only on the local marketing host.
+     */
+    localQaPreview?: boolean
   },
   deps = {
     resolveSiteHost: resolveStoreSiteHost,
@@ -33,12 +38,14 @@ export async function getPlatformBusinessCatalog(
   },
 ) {
   const { slug, query: options = {}, after, trustedStore } = input
-  if (!isValidStoreLink(slug) || slug.endsWith("-qa")) return unavailable
+  const localQaPreview = input.localQaPreview === true
+  if (!isValidStoreLink(slug) || (slug.endsWith("-qa") && !localQaPreview))
+    return unavailable
   const tenant = await db.tenant.findFirst({
     where: {
       slug,
       isActive: true,
-      dataClassification: "LIVE",
+      dataClassification: localQaPreview ? { in: ["LIVE", "QA"] } : "LIVE",
       ...(trustedStore ? { id: trustedStore.tenantId } : {}),
     },
     select: {
@@ -66,14 +73,14 @@ export async function getPlatformBusinessCatalog(
   const business = projectStorefrontBusiness(
     tenant,
     store,
-    false,
+    localQaPreview,
     await getRetailOpsOwnerPlanId(db, tenant.id),
   )
   if (!business) return unavailable
   const catalog = await deps.readCatalog(db, business, after, options, {
     platformListed: true,
   })
-  if (!catalog || catalog.isQaPreview) return unavailable
+  if (!catalog || (catalog.isQaPreview && !localQaPreview)) return unavailable
   // Explicit allowlist: no plan, chat, request or messaging internals.
   return {
     status: "available" as const,

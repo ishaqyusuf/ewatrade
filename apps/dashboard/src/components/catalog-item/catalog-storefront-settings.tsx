@@ -32,7 +32,11 @@ type Item = Pick<
   RouterOutputs["catalog"]["detail"]["overview"]["item"],
   "id" | "name" | "kind" | "status"
 >
-type Policy = { unavailable: boolean; allowBookAhead: boolean }
+type Policy = {
+  unavailable: boolean
+  allowBookAhead: boolean
+  platformListed: boolean
+}
 type Draft = Policy & { revision: number }
 type Attempt = { key: string; clientOperationId: string }
 
@@ -109,6 +113,7 @@ export function CatalogStorefrontSettingsView({
   }, [onBusy])
   const unavailableId = useId()
   const bookAheadId = useId()
+  const platformListedId = useId()
 
   const loaded = policy.isSuccess ? policy.data : null
   const values = draft ?? loaded
@@ -116,7 +121,8 @@ export function CatalogStorefrontSettingsView({
     loaded &&
       draft &&
       (draft.unavailable !== loaded.unavailable ||
-        draft.allowBookAhead !== loaded.allowBookAhead),
+        draft.allowBookAhead !== loaded.allowBookAhead ||
+        draft.platformListed !== loaded.platformListed),
   )
   const stale = save.isError && isStale(save.error)
   const ineligible =
@@ -133,6 +139,7 @@ export function CatalogStorefrontSettingsView({
     setDraft({
       unavailable: values.unavailable,
       allowBookAhead: values.allowBookAhead,
+      platformListed: values.platformListed,
       revision: draft?.revision ?? values.revision,
       ...next,
     })
@@ -143,6 +150,7 @@ export function CatalogStorefrontSettingsView({
     const key = JSON.stringify([
       draft.unavailable,
       draft.allowBookAhead,
+      draft.platformListed,
       draft.revision,
     ])
     const operation =
@@ -158,6 +166,9 @@ export function CatalogStorefrontSettingsView({
         catalogItemId: item.id,
         unavailable: draft.unavailable,
         allowBookAhead: draft.allowBookAhead,
+        ...(item.kind === "service"
+          ? {}
+          : { platformListed: draft.platformListed }),
         expectedRevision: draft.revision,
         clientOperationId: operation.clientOperationId,
       })
@@ -278,6 +289,27 @@ export function CatalogStorefrontSettingsView({
                   }
                 />
               </Field>
+              {item.kind === "service" ? null : (
+                <Field orientation="horizontal" data-disabled={disabled}>
+                  <FieldContent>
+                    <FieldLabel htmlFor={platformListedId}>
+                      Show on your business page
+                    </FieldLabel>
+                    <FieldDescription>
+                      Customers can find it on your ẸwáTrade business page once
+                      you list your Store publicly. Your website is not changed.
+                    </FieldDescription>
+                  </FieldContent>
+                  <Switch
+                    id={platformListedId}
+                    checked={values.platformListed}
+                    disabled={disabled}
+                    onCheckedChange={(checked) =>
+                      change({ platformListed: checked === true })
+                    }
+                  />
+                </Field>
+              )}
             </FieldGroup>
           </FieldSet>
         )}
