@@ -4,6 +4,10 @@
 `01a1c533-2099-78a0-9420-552b617d429c`; T9 and sole writer of the shared
 [register](2026-11-09-business-journey-launch-register.csv) and
 [run history](2026-11-09-four-business-acceptance-run.md).
+**Current T10 update:** owner selected exact v17 and authorized Phase3 product
+implementation; see the subsequent-authorization section. Earlier planning-only
+checkpoints below retain their historical scope. No native case has passed.
+
 Initial checkout: `main`, `2ecf668cc55775d9731a5afc95c5b5ccded55b47`, only
 pre-existing shared Agent Chat changes. No worktree or branch change.
 
@@ -71,7 +75,7 @@ reads follow native testing serially, with no consent toggles or invented data.
 | Hypnos/Alhaq | Owner supplies product/options/brands/units/prices/opening stock/codes/photos with public-use consent, roles and an approved supplier shipment/rates/freight | Keep 23 cases per business blocked; no invented catalog/consignment |
 | T2/T3 | Phase 1 supplies actual camera/recovery proof and exact selected revision implementation record; verified HTTPS association needs the approved rebuilt native artifact/public host | Custom scheme, hook fixtures and generic smoke do not prove camera/universal links |
 | T4/T8 | Source owners finish focused arrival/share repairs and supply scoped receipts; shipment writes await approved data, public save awaits scoped consent | Source proof never promotes merchant/native/publication outcomes |
-| T10/R23 | Owner reviews exact native sales design and separately authorizes implementation; then actual native conversation/order/stock/payment/retry proof | Plan/design only; no permission/manifest/release enablement |
+| T10/R23 | Owner selected v17 and authorized product implementation in Phase3; finish canonical native conversation/order/stock/payment/retry implementation and actual case proof | Product implementation authorized; hosted flags/provider/native release remain excluded |
 | Hosted launch | Owner selects candidate/runtime and authorizes applicable hosted/provider/native verification | All six existing passes stay local; no deployment implied |
 
 ## Verification and Brain impact
@@ -182,3 +186,18 @@ assistant package types, scopedquick285/1820 and H01/H02. The initial stale-test
 failure/missing import URL and later test-only type fix remain disclosed there.
 No additional bounded-source review blocker found. This review changes no case
 status or previous proof and creates no second native source hold.
+
+
+## Subsequent owner authorization — current T10 state
+
+The owner directly answered Phase3's exact-revision question: **“Select v17 and
+authorize T10 product implementation.”** Phase5 independently read that human
+reply in chat`01a1c533-0d6b-7220-9fe4-ed71b34ebc0f`, turn
+`01a1c541-5dbc-7d23-ab59-78f2307ce78f`, message
+`01a1c541-5e1a-7b83-8db3-ca940a2bb8a2`. This supersedes the earlier unselected/
+implementation-approval gate recorded above; those earlier checkpoints are history.
+Exact revision remains`d329aac5-7648-450c-a4bd-4218b4a1b36b`. Phase3 has claimed
+product implementation paths in Agent Chat`f9646959` and is continuing them.
+H23/A23 remain BLOCKED: authorization is not completed source or native case proof.
+No new hosted flag, provider/phone send, paid effect, build or release is implied.
+No second source hold exists while the authorized implementation proceeds.
