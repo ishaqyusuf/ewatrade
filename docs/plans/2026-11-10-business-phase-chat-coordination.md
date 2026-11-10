@@ -1,0 +1,90 @@
+# Five managed business phase chats
+
+10 November 2026. The owner requested continuation across all five phases and a
+managed chat for each. All five were created in the existing EwaTrade project,
+using its current local checkout. No worktree, branch change, model override,
+deployment or new provider authority was introduced.
+
+Coordinator: `01a1c511-a483-75b0-b017-0152cab33c12`, host `local`.
+Dispatch source: `2ecf668cc55775d9731a5afc95c5b5ccded55b47` on `main`.
+The existing modified `AGENT_CHAT.md` was preserved and excluded from this commit.
+
+## Chat registry and ownership
+
+| Phase | Managed chat ID (host local) | Assigned remainder |
+| --- | --- | --- |
+| 1 — Retail core, scanning and app links | `01a1c532-df8a-7aa3-9bdd-8a863c230a73` | T1–T3: existing shipment backend follow-through, actual scanner camera/recovery proof, exact Workshop implementation evidence, app/web link limitations. First use of the named EwaTrade QA emulator after resolving its serial. |
+| 2 — Shipment screens and landed-cost flow | `01a1c532-fad9-7f40-a027-1ae797f43268` | T4: approved existing dashboard/mobile shipment UI; focused repairs and remaining create/confirm/cost/price/arrival proof in an agreed data window. |
+| 3 — WhatsApp workflows and native sales design | `01a1c533-0d6b-7220-9fe4-ed71b34ebc0f` | T5–T7 local completeness and evidence; concrete T10.1 native catalog-sale Workshop design for review. T10 product implementation remains gated by the applicable exact selection and authorization. |
+| 4 — Public catalog and product sharing | `01a1c533-18e6-72f1-91fc-5146451a82b6` | T8: existing public-page/share/consent behavior; remaining save/refetch, media, WhatsApp-draft and eligible no-site link evidence. |
+| 5 — Four-business acceptance and coordination | `01a1c533-2099-78a0-9420-552b617d429c` | T9: sole shared acceptance-register writer; evidence reconciliation, connected test windows, J06/J11 and available poultry/laundry acceptance, explicit external/data gates. |
+
+Every chat received the takeover receipt, current gap tickets, existing source and
+design revisions, owned-source boundaries, required verification/commit workflow,
+and the restrictions below. All five reported active initial turns in the first
+bounded `wait_threads` snapshot. Phase 1 had already passed offline doctor and was
+diagnosing the zero-check Android runner; this is startup progress, not phase
+completion or native acceptance.
+
+## Shared-checkout coordination
+
+- Claim exact paths through the existing Agent Chat protocol before editing;
+  preserve other owners' staged/unstaged work. Include the phase/chat identity in
+  messages without impersonating Claude. Read the current claims/history as well
+  as actual unread messages; one recipient's acknowledgement is not a global lock.
+- Each phase owns its new `docs/verification/2026-11-10-business-phase-N.md` and
+  `.brain/tasks/2026-11-10-business-phase-N.md`. The coordinator retains aggregate
+  takeover/dispatch documentation and shared Brain task summaries.
+- Phase 5 alone edits the 72-case CSV and the shared four-business acceptance run.
+  Other phases supply evidence and defects to that owner. Phase 1 owns canonical
+  shipment repairs; Phase 2 owns shipment UI/shared draft helpers; Phase 3 owns
+  channel/general assistant composition. Shared command/receipt helper changes
+  require an explicit owner handoff, not concurrent edits.
+- Phase 5 coordinates connected nonproduction acceptance and source-stable test
+  windows. Confirm the source/target and active owners before a smoke window;
+  preserve the existing hard source-drift refusal. Documentation commits can
+  invalidate a receipt too. Do not infer a hold from an idle chat or this registry.
+- Phase 1 has first use of `EwaTrade_Assistant_QA` after verifying the actual
+  serial (previously `emulator-5556`). Other phases arrange a handoff; do not take
+  another project's emulator or run competing native smoke. Reuse shared services
+  and coordinate any required restart.
+- Commit only owned, checked changes. Do not push, merge, rewrite history, change
+  branches or create/reuse a worktree. Managed chats continue independently; this
+  registry is not an automation or an automatic approval mechanism.
+
+## Preserved boundaries
+
+The last scorecard is **6 local PASS / 1 FAIL / 47 BLOCKED / 18 NOT_ASSESSED**, with
+72 stable cases. A created chat, source check, synthetic hook test, old receipt or
+local dirty runtime does not promote a case. Hypnos/Alhaq merchant-approved
+catalog/price/stock/photo/shipment data and the real laundry price list remain
+dependencies. Ordinary `qa:smoke` must not create business fixtures or submit a
+sale/payment to pass. Full write acceptance must remain within the already
+authorized nonproduction scope; no new data authority is inferred here.
+
+No provider/customer/OTP send, real-phone test, hosted configuration, new paid
+effect, build/upload/OTA, Site publication or deployment is authorized by dispatch.
+Workshop work preserves the implemented baseline, stable direction, immutable
+history, existing selections and documented current review surface/mirror
+exceptions. Use exactly the standing Claude Opus 5.5/high author when available;
+otherwise the coordinating agent takes over directly and reports the fallback.
+
+T10 remains the owner's requested native-sale plan/design continuation. Native
+catalog sale source, permissions, proof renderer or release flags must not be
+silently enabled while its exact design/implementation gate is pending.
+
+## Current references
+
+- [Takeover source, checks and limitations](../verification/2026-11-10-five-phase-takeover.md)
+- [T10 native WhatsApp catalog-sale plan](2026-11-10-whatsapp-native-catalog-sales.md)
+- [Shared acceptance run](../verification/2026-11-09-four-business-acceptance-run.md)
+- [Stable 72-case register](../verification/2026-11-09-business-journey-launch-register.csv)
+- [Local Brain gap tickets](../../.brain/tasks/2026-11-09-four-business-gap-tickets.md)
+
+This is dispatch/ownership documentation. It claims neither additional business
+acceptance nor completion of the five phases.
+
+Dispatch validation: five distinct ready chat IDs and active startup turns were
+verified through the app tools. Local references and whitespace pass; the owned
+documentation quick check passed51tests/254assertions plus QA-tooling types, with
+zero unknown mappings. These checks validate dispatch documentation only.
