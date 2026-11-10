@@ -375,7 +375,7 @@ export function DockedBarcodeScanner({
           {error ||
             (unusable
               ? "That code isn't a product code. Try the item's barcode."
-              : "Point at a barcode. Keep scanning to add more.")}
+              : "Point at a barcode or QR code. Keep scanning to add more.")}
         </Text>
       </View>
     </View>
