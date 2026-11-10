@@ -66,13 +66,12 @@ test("WhatsApp drafts need a public E.164 number and carry the order and page li
   )
 })
 
-test("QA preview is local-only: every env marker local and the local marketing host", () => {
+test("QA preview is local-only: every env marker local and a local host", () => {
   const local = {
     NODE_ENV: "development",
     APP_ENV: "local",
     DEV_PROFILE: "local",
     EWATRADE_ENV_MODE: "local",
-    NEXT_PUBLIC_MARKETING_URL: "https://ewatrade.localhost",
   }
   expect(isLocalPlatformCatalogPreview("ewatrade.localhost", local)).toBe(true)
   expect(isLocalPlatformCatalogPreview(null, local)).toBe(false)
@@ -82,11 +81,12 @@ test("QA preview is local-only: every env marker local and the local marketing h
       APP_ENV: "preview",
     }),
   ).toBe(false)
+  expect(isLocalPlatformCatalogPreview("localhost:3097", local)).toBe(true)
+  expect(isLocalPlatformCatalogPreview("ewatrade.com", local)).toBe(false)
   expect(
-    isLocalPlatformCatalogPreview("ewatrade.com", {
+    isLocalPlatformCatalogPreview("ewatrade.localhost", {
       ...local,
-      NEXT_PUBLIC_MARKETING_URL: "https://ewatrade.com",
+      NODE_ENV: "production",
     }),
   ).toBe(false)
-  expect(isLocalPlatformCatalogPreview("shop.localhost", local)).toBe(false)
 })

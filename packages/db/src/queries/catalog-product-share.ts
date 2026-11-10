@@ -68,12 +68,14 @@ export async function resolveStoreSiteHost(
   scope: { tenantId: string; storeId: string },
   slug: string,
   loadContext = loadStorefrontContextForHost,
+  /** Local QA preview only: a QA test business's local Site counts too. */
+  allowQaPreview = false,
 ) {
   for (const host of await storeShareHosts(db, scope, slug)) {
     const current = await loadContext(db, host)
     if (
       current &&
-      !current.storefront.isQaPreview &&
+      (allowQaPreview || !current.storefront.isQaPreview) &&
       current.site.release.tenantId === scope.tenantId &&
       current.site.storeId === scope.storeId
     )

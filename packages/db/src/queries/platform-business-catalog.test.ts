@@ -67,14 +67,18 @@ function fixture(
     nextCursor: null,
     hasHiddenItems: false,
   } as unknown as Catalog
+  const siteHostCalls: unknown[][] = []
   const deps = {
-    resolveSiteHost: async () => options.siteHost ?? null,
+    resolveSiteHost: async (...args: unknown[]) => {
+      siteHostCalls.push(args)
+      return options.siteHost ?? null
+    },
     readCatalog: (async (...args: unknown[]) => {
       projections.push(args[4])
       return catalog
     }) as unknown as typeof readPublicStorefrontFromContext,
   }
-  return { db, deps, tenantReads, projections }
+  return { db, deps, tenantReads, projections, siteHostCalls }
 }
 
 test("only an opted-in Store of a LIVE active business is read, with the platform-listed projection", async () => {
@@ -206,4 +210,6 @@ test("QA businesses render only under the server-decided local QA preview", asyn
   expect(local.tenantReads[0]).toMatchObject({
     where: { dataClassification: { in: ["LIVE", "QA"] } },
   })
+  // A QA business's local Site still takes precedence in local preview.
+  expect(local.siteHostCalls[0]?.[4]).toBe(true)
 })

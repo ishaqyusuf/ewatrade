@@ -12,7 +12,7 @@ const first = (value: string | string[] | undefined) =>
 
 /** One read per request, shared by metadata and the page. Opt-in/listing is enforced in the query. */
 export const loadPlatformCatalog = cache(
-  (
+  async (
     slug: string,
     q?: string,
     category?: string,
@@ -23,6 +23,9 @@ export const loadPlatformCatalog = cache(
       slug,
       query: { q, category, item },
       after,
+      localQaPreview: isLocalPlatformCatalogPreview(
+        (await headers()).get("host"),
+      ),
     }),
 )
 

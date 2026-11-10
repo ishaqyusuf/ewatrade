@@ -11,6 +11,15 @@ import type { NextConfig } from "next"
 
 const appRoot = dirname(fileURLToPath(import.meta.url))
 
+/** Same resolution as the storefront host's photo proxy. */
+function getApiOrigin() {
+  return (
+    process.env.API_URL?.trim() ||
+    process.env.NEXT_PUBLIC_API_URL?.trim() ||
+    "http://localhost:3095"
+  ).replace(/\/$/, "")
+}
+
 // Builds read env before instrumentation runs, so map shared names here too.
 applyEwatradeSharedEnv()
 

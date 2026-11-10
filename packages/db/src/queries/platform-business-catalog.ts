@@ -68,6 +68,8 @@ export async function getPlatformBusinessCatalog(
     db,
     { tenantId: tenant.id, storeId: store.id },
     tenant.slug,
+    undefined,
+    localQaPreview,
   )
   if (siteHost) return { status: "site" as const, host: siteHost }
   const business = projectStorefrontBusiness(

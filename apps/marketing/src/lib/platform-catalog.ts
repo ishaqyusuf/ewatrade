@@ -126,26 +126,18 @@ export function platformWhatsAppUrl(input: {
 
 /**
  * Local-only QA preview, mirroring the storefront's rule: every environment
- * marker must say local and the request must be for the configured local
- * marketing host (for example `ewatrade.localhost`).
+ * marker must say local and the request host must be a local hostname.
  */
 export function isLocalPlatformCatalogPreview(
   host: string | null,
   env: Record<string, string | undefined> = process.env,
 ) {
-  if (
-    !host ||
-    env.NODE_ENV !== "development" ||
-    env.APP_ENV !== "local" ||
-    env.DEV_PROFILE !== "local" ||
-    env.EWATRADE_ENV_MODE !== "local"
-  )
-    return false
-  const configured = env.MARKETING_URL ?? env.NEXT_PUBLIC_MARKETING_URL
-  if (!configured) return false
-  const marketingHost = new URL(configured).hostname
-  return (
-    isLocalHostname(marketingHost) &&
-    stripPort(host.toLowerCase()) === marketingHost
+  return Boolean(
+    host &&
+      env.NODE_ENV === "development" &&
+      env.APP_ENV === "local" &&
+      env.DEV_PROFILE === "local" &&
+      env.EWATRADE_ENV_MODE === "local" &&
+      isLocalHostname(stripPort(host.toLowerCase())),
   )
 }
