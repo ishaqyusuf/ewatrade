@@ -8,6 +8,7 @@ import { RetainedEditorStack } from "@/components/mobile/retained-editor-stack"
 import { SetupAssistantEntry } from "@/components/mobile/setup-assistant/setup-assistant-entry"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { Icon } from "@/components/ui/icon"
+import { useModal } from "@/components/ui/modal"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { useAuthContext } from "@/hooks/use-auth"
@@ -16,11 +17,13 @@ import {
   findCatalogOptionSuggestion,
   getCatalogOptionValueHint,
 } from "@ewatrade/utils/business-catalog-guidance"
+import type { CatalogCategorySuggestion } from "@ewatrade/utils/catalog-category-suggestions"
 import { VariableContextProvider } from "nativewind"
 import { useRef, useState } from "react"
 import { Keyboard, ScrollView, View } from "react-native"
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller"
 import { ClassicCategoryEditor } from "./catalog-category-editor"
+import { CatalogCategorySuggestionSheet } from "./catalog-category-suggestion-sheet"
 import { CatalogSetupHelperPicker } from "./catalog-helper-picker"
 import { CatalogIllustrationBrowser } from "./catalog-illustration-browser"
 import { catalogIllustrationCategoryKey } from "./catalog-illustration-library"
@@ -45,6 +48,11 @@ export function CatalogSetupView({ model }: { model: CatalogSetupModel }) {
   const [categoryQuery, setCategoryQuery] = useState("")
   const [categorySearchFocused, setCategorySearchFocused] = useState(false)
   const [illustrationsOpen, setIllustrationsOpen] = useState(false)
+  // Review item first offers an unused best-match category.
+  const categorySheet = useModal()
+  const [sheetSuggestion, setSheetSuggestion] =
+    useState<CatalogCategorySuggestion | null>(null)
+  const afterCategorySheet = useRef<(() => void) | null>(null)
   const [editors, setEditors] = useState<Array<{ key: CatalogEditorKey }>>([])
   // Editor Done bars ride above the keyboard, so focused fields clear them.
   const [editorFooterHeights, setEditorFooterHeights] = useState<
@@ -99,8 +107,28 @@ export function CatalogSetupView({ model }: { model: CatalogSetupModel }) {
     hideVariantComposer()
     Keyboard.dismiss()
     if (key === "pricing") model.openPricingDetails()
-    if (key === "category") setCategoryQuery("")
+    if (key === "category") {
+      setCategoryQuery("")
+      model.requestCategorySuggestions()
+    }
     setEditors((current) => [...current, { key }])
+  }
+  const reviewItem = () => {
+    if (model.locked) return
+    const suggestion = model.categorySuggestions[0]
+    if (kind !== "product" || model.category.trim() || !suggestion) {
+      openEditor("review")
+      return
+    }
+    hideVariantComposer()
+    Keyboard.dismiss()
+    afterCategorySheet.current = null
+    setSheetSuggestion(suggestion)
+    categorySheet.present()
+  }
+  const closeCategorySheet = (then: () => void) => {
+    afterCategorySheet.current = then
+    categorySheet.dismiss()
   }
   const backEditor = () => {
     hideVariantComposer()
@@ -448,7 +476,7 @@ export function CatalogSetupView({ model }: { model: CatalogSetupModel }) {
               disabled={!model.canSave}
               isLoading={isSaving}
               loadingLabel="Saving item"
-              onPress={model.hasAttempt ? submit : () => openEditor("review")}
+              onPress={model.hasAttempt ? submit : reviewItem}
               trailingIcon="ArrowRight"
             >
               {isOffline
@@ -599,6 +627,29 @@ export function CatalogSetupView({ model }: { model: CatalogSetupModel }) {
             <CatalogSetupConfirmation model={model} />
           </>
         )}
+        <CatalogCategorySuggestionSheet
+          disabled={model.locked}
+          modalRef={categorySheet.ref}
+          suggestion={sheetSuggestion}
+          onUse={() => {
+            const suggestion = sheetSuggestion
+            closeCategorySheet(() =>
+              // A stale suggestion opens the picker instead of saving it.
+              openEditor(
+                suggestion && model.applyCategorySuggestion(suggestion)
+                  ? "review"
+                  : "category",
+              ),
+            )
+          }}
+          onIgnore={() => closeCategorySheet(() => openEditor("review"))}
+          onDismiss={() => {
+            setSheetSuggestion(null)
+            const run = afterCategorySheet.current
+            afterCategorySheet.current = null
+            run?.()
+          }}
+        />
       </View>
     </VariableContextProvider>
   )
