@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "id": "2026-11-10-platform-share-store-binding",
+  "tickets": ["H02"],
+  "summary": "Bind no-site platform product shares to the same first-listed Store selected by the anonymous business-slug route. Refuse a share from a different authorized Store rather than returning an indistinguishable URL with another Store's product availability, price or public contact.",
+  "noAssistantImpact": "This narrows existing public/share read eligibility only. It adds no assistant command, business write, permission, capability, channel or provider effect. Owner/Admin listing forms remain form_only; product share continues through existing catalog productShare reads and current tenant/Store authorization. Public URLs, listing consent, projections, Site host verification and rollouts are unchanged.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/tasks/2026-11-10-business-phase-4.md",
+      "note": "Phase4 source repair, assistant exclusion and acceptance dependencies."
+    },
+    {
+      "topic": "feature",
+      "status": "updated",
+      "path": "docs/verification/2026-11-10-business-phase-4.md",
+      "note": "Reproduction, focused checks, unchanged-source proof reuse and remaining connected/consent/media gates."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/platform-business-catalog.test.ts",
+      "executed": true,
+      "result": "Inert real-query reproduction failed for a scoped second Store while anonymous resolution used the first listed Store. After binding canonical selection, the final combined query/host/marketing suites pass 21 tests / 75 assertions, including ordinary canonical scope, mismatch refusal before Site/catalog reads and the actual getPlatformProductShare chain. Whole DB types (8GB heap), scoped quick285/1820, Biome and H01 pass. Regression execution has no DB/provider call."
+    }
+  ]
+}

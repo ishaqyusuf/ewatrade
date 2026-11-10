@@ -24,7 +24,7 @@ export async function getPlatformBusinessCatalog(
     slug: string
     query?: PublicStorefrontQuery
     after?: string
-    /** Server-authorized share scope; the listed Store must be exactly this one. */
+    /** Server-authorized share scope; the slug's public Store must be exactly this one. */
     trustedStore?: { tenantId: string; storeId: string }
     /**
      * Server-decided local QA preview (see `isLocalPlatformCatalogPreview`):
@@ -54,7 +54,6 @@ export async function getPlatformBusinessCatalog(
         where: {
           status: "ACTIVE",
           publicCatalogListedAt: { not: null },
-          ...(trustedStore ? { id: trustedStore.storeId } : {}),
         },
         orderBy: [{ publicCatalogListedAt: "asc" }, { id: "asc" }],
         take: 1,
@@ -64,6 +63,10 @@ export async function getPlatformBusinessCatalog(
   })
   const store = tenant?.stores[0]
   if (!tenant || !store) return unavailable
+  // The public URL carries only the business slug. A scoped share must resolve
+  // the same Store as that anonymous route, never select a different Store's
+  // prices/contact while generating an indistinguishable public link.
+  if (trustedStore && store.id !== trustedStore.storeId) return unavailable
   const siteHost = await deps.resolveSiteHost(
     db,
     { tenantId: tenant.id, storeId: store.id },

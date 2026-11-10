@@ -11,7 +11,12 @@ type Catalog = NonNullable<
 >
 
 function fixture(
-  options: { listed?: boolean; siteHost?: string; qa?: boolean } = {},
+  options: {
+    listed?: boolean
+    siteHost?: string
+    qa?: boolean
+    firstListedStoreId?: string
+  } = {},
 ) {
   const tenantReads: Record<string, unknown>[] = []
   const projections: unknown[] = []
@@ -19,6 +24,9 @@ function fixture(
     tenant: {
       findFirst: async (query: Record<string, unknown>) => {
         tenantReads.push(query)
+        const selection = query.select as {
+          stores?: { where: { id?: string } }
+        }
         return {
           id: "tenant",
           name: "Hypnos Man Collection",
@@ -32,7 +40,10 @@ function fixture(
               ? []
               : [
                   {
-                    id: "store",
+                    id:
+                      selection.stores?.where.id ??
+                      options.firstListedStoreId ??
+                      "store",
                     description: "Perfumes and menswear",
                     currencyCode: "NGN",
                     countryCode: "NG",
@@ -147,17 +158,75 @@ test("a QA catalog is never served on the platform", async () => {
   ).toEqual({ status: "unavailable" })
 })
 
-test("a trusted share scope pins both the tenant and the exact listed Store", async () => {
+test("a trusted share pins the tenant and uses the anonymous route's Store selection", async () => {
   const { db, deps, tenantReads } = fixture()
-  await getPlatformBusinessCatalog(
+  const result = await getPlatformBusinessCatalog(
     db,
     { slug: "hypnos", trustedStore: { tenantId: "tenant", storeId: "store" } },
     deps,
   )
+  expect(result.status).toBe("available")
   expect(tenantReads[0]).toMatchObject({
     where: { slug: "hypnos", id: "tenant" },
-    select: { stores: { where: { id: "store" } } },
+    select: {
+      stores: {
+        where: { status: "ACTIVE", publicCatalogListedAt: { not: null } },
+        orderBy: [{ publicCatalogListedAt: "asc" }, { id: "asc" }],
+        take: 1,
+      },
+    },
   })
+  const selection = tenantReads[0]?.select as {
+    stores: { where: Record<string, unknown> }
+  }
+  expect(selection.stores.where).not.toHaveProperty("id")
+})
+
+test("a scoped share cannot select a different Store from the anonymous slug route", async () => {
+  const { db, deps, projections, siteHostCalls } = fixture({
+    firstListedStoreId: "first-listed-store",
+  })
+  const publicResult = await getPlatformBusinessCatalog(
+    db,
+    { slug: "hypnos" },
+    deps,
+  )
+  expect(publicResult.status).toBe("available")
+  expect(siteHostCalls[0]?.[1]).toEqual({
+    tenantId: "tenant",
+    storeId: "first-listed-store",
+  })
+  projections.length = 0
+  siteHostCalls.length = 0
+  expect(
+    await getPlatformBusinessCatalog(
+      db,
+      {
+        slug: "hypnos",
+        trustedStore: { tenantId: "tenant", storeId: "store" },
+      },
+      deps,
+    ),
+  ).toEqual({ status: "unavailable" })
+  expect(projections).toEqual([])
+  expect(siteHostCalls).toEqual([])
+  const readCatalog: typeof getPlatformBusinessCatalog = (client, input) =>
+    getPlatformBusinessCatalog(client, input, {
+      ...deps,
+      readCatalog: async (...args) => {
+        const result = await deps.readCatalog(...args)
+        return result
+          ? { ...result, highlightedItem: result.items[0] ?? null }
+          : null
+      },
+    })
+  expect(
+    await getPlatformProductShare(
+      db,
+      { tenantId: "tenant", storeId: "store", itemId: "oud" },
+      readCatalog,
+    ),
+  ).toBeNull()
 })
 
 test("a platform product link exists only for a listed product of the exact listed Store", async () => {
