@@ -309,6 +309,16 @@ planned("finance", "E01", [
 formOnly("finance", "Opening the Book is a guided setup with fiscal choices.", [
   "finance.setup",
 ])
+formOnly(
+  "finance",
+  "Shipment drafts, line mapping, reopening and closing need the full shipment form.",
+  [
+    "finance.shipments.update",
+    "finance.shipments.reopen",
+    "finance.shipments.mapLine",
+    "finance.shipments.close",
+  ],
+)
 planned("finance", "E03", ["finance.*Money*", "finance.moneyMovement"])
 planned("finance", "E04", ["finance.*Expense*", "finance.*Bill*"])
 planned("finance", "H04", ["finance.expenseReceipts.*"])

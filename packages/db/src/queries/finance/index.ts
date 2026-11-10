@@ -195,13 +195,19 @@ export {
 export { prepareReviewedFinancePurchaseRecordingInTransaction } from "./purchases"
 export {
   adjustFinanceShipmentLineCost,
+  adjustFinanceShipmentLineCostInTransaction,
   closeFinanceShipment,
   confirmFinanceShipment,
+  createExpectedFinanceShipmentInTransaction,
   createFinanceShipment,
   getFinanceShipment,
   listFinanceShipments,
   mapFinanceShipmentLine,
+  prepareFinanceShipmentArrivalInTransaction,
+  readFinanceShipmentInTransaction,
   receiveFinanceShipment,
+  receiveFinanceShipmentInTransaction,
+  reviewFinanceShipmentDraftInTransaction,
   reopenFinanceShipment,
   updateFinanceShipmentDraft,
 } from "./shipments"

@@ -4,7 +4,7 @@ import {
   conversationAppLink,
   generalConversationTargetSchema,
 } from "./conversation-links"
-import { whatsAppCapabilityEnabled } from "./policy"
+import { whatsAppAheadOfApp, whatsAppCapabilityEnabled } from "./policy"
 
 /** Complete review adapters exist for these actions only; metadata cannot add one. */
 export const nativeWhatsAppReviewActions = [
@@ -20,6 +20,12 @@ export const nativeWhatsAppReviewActions = [
   "payment_record",
   "product_price_update",
   "order_attachment_add",
+  "service_intake",
+  "service_job_line_transition",
+  "service_job_assign",
+  "shipment_create",
+  "shipment_receive",
+  "shipment_cost_adjust",
 ] as const
 
 export const capabilityActionHandoffReasonSchema = z.enum([
@@ -57,13 +63,19 @@ export function classifyCapabilityAction(
   environment: Record<string, string | undefined> = process.env,
 ): CapabilityActionChannelClassification {
   if (capability.mode !== "write") return { kind: "unavailable" }
-  if (capability.rollout === "planned") return { kind: "planned" }
-  if (!capability.clients.includes("dashboard")) return { kind: "unavailable" }
-  if (capability.domain === "staff" || capability.id.startsWith("settings."))
-    return { kind: "app_review", reason: "sensitive_app_review" }
   const hasCompleteReview = nativeWhatsAppReviewActions.some(
     (action) => action === capability.action,
   )
+  // The app has no review for these yet, so chat review or nothing.
+  if (capability.rollout === "planned")
+    return whatsAppAheadOfApp(capability) &&
+      hasCompleteReview &&
+      whatsAppCapabilityEnabled(capability, environment)
+      ? { kind: "native_review" }
+      : { kind: "planned" }
+  if (!capability.clients.includes("dashboard")) return { kind: "unavailable" }
+  if (capability.domain === "staff" || capability.id.startsWith("settings."))
+    return { kind: "app_review", reason: "sensitive_app_review" }
   if (hasCompleteReview && whatsAppCapabilityEnabled(capability, environment))
     return { kind: "native_review" }
   return {

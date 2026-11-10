@@ -97,7 +97,21 @@ export const stagedNativeReviewActions = [
   "payment_record",
   "product_price_update",
   "order_attachment_add",
+  "service_intake",
+  "service_job_line_transition",
+  "service_job_assign",
+  "shipment_create",
+  "shipment_receive",
+  "shipment_cost_adjust",
 ] as const
+/** Planned in the app but released to WhatsApp alone by its own channel rollout. */
+export function whatsAppAheadOfApp(capability: Capability) {
+  return (
+    capability.rollout === "planned" &&
+    capability.whatsapp?.aheadOfApp === true &&
+    capability.whatsapp.mode === "native"
+  )
+}
 export function stagedNativeReviewReleased(
   action: string | undefined,
   env: Environment = process.env,
@@ -124,7 +138,10 @@ export function whatsAppCapabilityEnabled(
     !capability.clients.includes("whatsapp") ||
     !capability.whatsapp ||
     capability.whatsapp.mode !== "native" ||
-    !["source", "pilot", "enabled"].includes(capability.rollout) ||
+    !(
+      ["source", "pilot", "enabled"].includes(capability.rollout) ||
+      whatsAppAheadOfApp(capability)
+    ) ||
     capability.whatsapp.rollout === "planned" ||
     !(capability.mode === "read" ? policy.reads : policy.writes)
   )

@@ -25,13 +25,13 @@ Tickets refer to the Brain plan `.brain/plans/2026-10-09-assistant-business-oper
 | `services.work.original.read` | 1 | read | `readOriginalServiceWork` | OWNER, ADMIN, MANAGER | read | dashboard, mobile | planned | `serviceAssistantWork.original` |
 | `services.work.rework` | 1 | write (`service_work_rework`) | `draftAction` | OWNER, ADMIN, MANAGER | Owner/Admin only | dashboard, mobile | planned | `services.createRework` |
 | `services.work.handoff` | 1 | write (`service_work_handoff`) | `draftAction` | OWNER, ADMIN, MANAGER | Owner/Admin only | dashboard, mobile | planned | `services.handoff` |
-| `services.work.assign` | 1 | write (`service_job_assign`) | `draftAction` | OWNER, ADMIN, MANAGER | Owner/Admin only | dashboard, mobile | planned | `services.assignJob` |
+| `services.work.assign` | 1 | write (`service_job_assign`) | `draftAction` | OWNER, ADMIN, MANAGER | Owner/Admin only | dashboard, mobile, whatsapp | planned | `services.assignJob` |
 | `services.work.reschedule` | 1 | write (`service_job_reschedule`) | `draftAction` | OWNER, ADMIN, MANAGER | Owner/Admin only | dashboard, mobile | planned | `services.rescheduleJob` |
-| `services.work.transition` | 1 | write (`service_job_line_transition`) | `draftAction` | OWNER, ADMIN, MANAGER | Owner/Admin only | dashboard, mobile | planned | `services.transitionLine` |
+| `services.work.transition` | 1 | write (`service_job_line_transition`) | `draftAction` | OWNER, ADMIN, MANAGER | Owner/Admin only | dashboard, mobile, whatsapp | planned | `services.transitionLine` |
 | `services.work.note` | 1 | write (`service_work_note`) | `draftAction` | OWNER, ADMIN, MANAGER | Owner/Admin only | dashboard, mobile | planned | `services.addNote` |
 | `services.work.exception` | 1 | write (`service_work_exception`) | `draftAction` | OWNER, ADMIN, MANAGER | Owner/Admin only | dashboard, mobile | planned | `services.recordException` |
-| `services.work.context.read` | 1 | read | `readServiceWorkContext` | OWNER, ADMIN, MANAGER | read | dashboard, mobile | planned | `serviceAssistantWork.editorContext` |
-| `services.work.review` | 1 | read | `reviewServiceWork` | OWNER, ADMIN, MANAGER | read | dashboard, mobile | planned | `serviceAssistantWork.review` |
+| `services.work.context.read` | 1 | read | `readServiceWorkContext` | OWNER, ADMIN, MANAGER | read | dashboard, mobile, whatsapp | planned | `serviceAssistantWork.editorContext` |
+| `services.work.review` | 1 | read | `reviewServiceWork` | OWNER, ADMIN, MANAGER | read | dashboard, mobile, whatsapp | planned | `serviceAssistantWork.review` |
 | `services.quote.approve` | 1 | write (`commerce_quote_approve`) | `draftAction` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | Owner/Admin only | dashboard, mobile | planned | `serviceCommerce.approveQuoteVersion` |
 | `services.quote.reject` | 1 | write (`commerce_quote_reject`) | `draftAction` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | Owner/Admin only | dashboard, mobile | planned | `serviceCommerce.rejectQuoteVersion` |
 | `services.quote.review` | 1 | read | `reviewQuoteDecision` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | read | dashboard, mobile | planned | `serviceCommerce.assistantQuoteDecisionReview` |
@@ -52,14 +52,14 @@ Tickets refer to the Brain plan `.brain/plans/2026-10-09-assistant-business-oper
 | `finance.supplier_aging.report` | 1 | read | `readSupplierAgingReport` | OWNER, ADMIN | Owner/Admin only | dashboard, mobile | planned | `businessReporting.supplierAging` |
 | `finance.posted_profit.report` | 1 | read | `readPostedProfitReport` | OWNER, ADMIN | Owner/Admin only | dashboard, mobile | planned | `businessReporting.postedProfit` |
 | `inventory.stock.report` | 1 | read | `readStockReport` | OWNER, ADMIN, MANAGER | stock | dashboard, mobile | planned | `businessReporting.stock` |
-| `services.intake.options.read` | 1 | read | `readServiceIntakeOptions` | OWNER, ADMIN, MANAGER | read, read, read, Owner/Admin only | dashboard, mobile | planned | `catalog.listItemsPage`, `services.getSettings`, `services.assignees`, `serviceAssistantIntake.options` |
+| `services.intake.options.read` | 1 | read | `readServiceIntakeOptions` | OWNER, ADMIN, MANAGER | read, read, read, Owner/Admin only | dashboard, mobile, whatsapp | planned | `catalog.listItemsPage`, `services.getSettings`, `services.assignees`, `serviceAssistantIntake.options` |
 | `services.requests.read` | 1 | read | `readServiceRequests` | OWNER, ADMIN, MANAGER | Owner/Admin only | dashboard, mobile | planned | `serviceAssistantRequests.listPage` |
 | `services.request.original.read` | 1 | read | `readOriginalServiceRequest` | OWNER, ADMIN, MANAGER | Owner/Admin only | dashboard, mobile | planned | `serviceAssistantRequests.original` |
 | `services.message.share` | 1 | write (`service_message_share`) | `draftAction` | OWNER, ADMIN, MANAGER | Owner/Admin only | dashboard, mobile | planned | `serviceCommunications.recordManualMessage` |
 | `services.message.context.read` | 1 | read | `readServiceMessageContext` | OWNER, ADMIN, MANAGER | Owner/Admin only | dashboard, mobile | planned | `serviceCommunications.manualMessageEditorContext` |
 | `services.message.original.read` | 1 | read | `readOriginalServiceMessage` | OWNER, ADMIN, MANAGER | Owner/Admin only | dashboard, mobile | planned | `serviceCommunications.manualMessageOriginal` |
 | `services.messages.read` | 1 | read | `readServiceMessages` | OWNER, ADMIN, MANAGER | Owner/Admin only | dashboard | planned | `serviceCommunications.listMessages` |
-| `services.intake.create` | 1 | write (`service_intake`) | `draftAction` | OWNER, ADMIN, MANAGER | Owner/Admin only | dashboard, mobile | planned | `services.createAndConfirmIntake` |
+| `services.intake.create` | 1 | write (`service_intake`) | `draftAction` | OWNER, ADMIN, MANAGER | Owner/Admin only | dashboard, mobile, whatsapp | planned | `services.createAndConfirmIntake` |
 | `finance.cash_count.record` | 1 | write (`cash_count_record`) | `draftAction` | OWNER, ADMIN | Owner/Admin only | dashboard, mobile | planned | `finance.recordCashCount` |
 | `finance.cash_accounts.read` | 1 | read | `readCashAccounts` | OWNER, ADMIN | Owner/Admin only | dashboard, mobile | planned | `finance.moneyAccounts` |
 | `finance.cash_counts.read` | 1 | read | `readCashCounts` | OWNER, ADMIN | Owner/Admin only | dashboard, mobile | planned | `finance.cashCounts` |

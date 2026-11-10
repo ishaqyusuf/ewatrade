@@ -40,7 +40,12 @@ type CapabilityBase = {
   scope: "store" | "tenant" | "book"
   clients: readonly CapabilityClient[]
   rollout: CapabilityRollout
-  whatsapp?: { mode: "native" | "app_review"; rollout: CapabilityRollout }
+  whatsapp?: {
+    mode: "native" | "app_review"
+    rollout: CapabilityRollout
+    /** Released to WhatsApp through `rollout` while the app keeps it planned. */
+    aheadOfApp?: true
+  }
   /** Model-facing name; unchanged when IDs are versioned. */
   tool: string
   /** Canonical procedures this capability reuses, as `router.procedure`. */

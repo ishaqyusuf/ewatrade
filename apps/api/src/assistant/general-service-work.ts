@@ -1,15 +1,15 @@
+import { generalMoney } from "@ewatrade/assistant/general/contracts"
 import {
+  type ServiceWorkLifecycleAction,
   serviceWorkLifecycleAction,
   serviceWorkLifecycleReceipt,
-  type ServiceWorkLifecycleAction,
 } from "@ewatrade/assistant/general/service-work"
-import {
-  prepareReviewedServiceWorkInTransaction,
-  type ServiceWorkReviewInput,
-} from "@ewatrade/db/service-work-review"
 import { CatalogError } from "@ewatrade/db/queries"
 import { ServiceIntakeReviewError } from "@ewatrade/db/service-intake-review"
-import { generalMoney } from "@ewatrade/assistant/general/contracts"
+import {
+  type ServiceWorkReviewInput,
+  prepareReviewedServiceWorkInTransaction,
+} from "@ewatrade/db/service-work-review"
 import { TRPCError } from "@trpc/server"
 import type { GeneralTransactionContext } from "./general-actions"
 import { requireGeneralScope } from "./general-context"
@@ -90,6 +90,35 @@ function receipt(
     detail: `${review.orderNumber} · ${review.line?.offeringName ?? "Service Job"}. Saved work history retained.`,
   })
 }
+type Review = Awaited<ReturnType<typeof current>>["review"]
+export function serviceWorkReviewLines(review: Review) {
+  return [
+    `${review.orderNumber} · ${review.customerName ?? "Service customer"}`,
+    ...(review.line
+      ? [
+          `${review.line.offeringName} · ${review.line.variantName} · ${review.line.quantity}. Current work: ${review.line.status}. Authorization: ${review.line.authorizationStatus}.`,
+          `Next work state: ${review.nextStatus}.`,
+        ]
+      : []),
+    ...(review.assignee
+      ? [
+          `Assign to ${review.assignee.name ?? "selected saved staff member"}. Assignment history is retained.`,
+        ]
+      : []),
+    ...(review.promisedAt
+      ? [
+          `Current promise: ${review.currentPromise ?? "None"}. New promise: ${review.promisedAt}.`,
+          `${review.replacedReminderCount} outstanding due reminder(s) will be replaced or cancelled.`,
+          review.reminder
+            ? `Customer ${review.reminder.channel} reminder scheduled for ${review.reminder.scheduledFor}; provider delivery is separate.`
+            : "No new customer reminder will be created.",
+        ]
+      : []),
+    ...(review.reason ? [`Reason: ${review.reason}`] : []),
+    `Order balance: ${generalMoney(review.balanceDueMinor, review.currencyCode)}.`,
+    "No payment or handoff is recorded. Work history retains the original event identity.",
+  ]
+}
 /** Root registers these source-only handlers after reviewing capability and receipt contracts. */
 export const serviceWorkLifecycle = {
   stale:
@@ -106,35 +135,7 @@ export const serviceWorkLifecycle = {
     payload: ServiceWorkLifecycleAction,
   ) {
     const { review, target } = await current(ctx, payload)
-    return {
-      target,
-      lines: [
-        `${review.orderNumber} · ${review.customerName ?? "Service customer"}`,
-        ...(review.line
-          ? [
-              `${review.line.offeringName} · ${review.line.variantName} · ${review.line.quantity}. Current work: ${review.line.status}. Authorization: ${review.line.authorizationStatus}.`,
-              `Next work state: ${review.nextStatus}.`,
-            ]
-          : []),
-        ...(review.assignee
-          ? [
-              `Assign to ${review.assignee.name ?? "selected saved staff member"}. Assignment history is retained.`,
-            ]
-          : []),
-        ...(review.promisedAt
-          ? [
-              `Current promise: ${review.currentPromise ?? "None"}. New promise: ${review.promisedAt}.`,
-              `${review.replacedReminderCount} outstanding due reminder(s) will be replaced or cancelled.`,
-              review.reminder
-                ? `Customer ${review.reminder.channel} reminder scheduled for ${review.reminder.scheduledFor}; provider delivery is separate.`
-                : "No new customer reminder will be created.",
-            ]
-          : []),
-        ...(review.reason ? [`Reason: ${review.reason}`] : []),
-        `Order balance: ${generalMoney(review.balanceDueMinor, review.currencyCode)}.`,
-        "No payment or handoff is recorded. Work history retains the original event identity.",
-      ],
-    }
+    return { target, lines: serviceWorkReviewLines(review) }
   },
   async prepareExecution(
     ctx: GeneralTransactionContext,

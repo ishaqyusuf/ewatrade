@@ -16,6 +16,7 @@ import {
   simpleTransferStep,
 } from "@ewatrade/assistant/general/contracts"
 import { isSimpleProductCreate } from "@ewatrade/assistant/general/product-create"
+import { parseExactDecimal } from "@ewatrade/utils/exact-decimal"
 import type { GeneralContext } from "./general-context"
 import type { generalProposalWithReview } from "./general-proposals"
 import {
@@ -51,7 +52,41 @@ function allStrings(value: unknown): string[] {
 const linesOnlyReviewActions: ReadonlySet<GeneralAction["action"]> = new Set([
   "payment_record",
   "order_attachment_add",
+  "service_intake",
+  "service_job_line_transition",
+  "service_job_assign",
+  "shipment_create",
+  "shipment_receive",
+  "shipment_cost_adjust",
 ])
+const shipmentCreateLastLine =
+  "Confirming expects the shipment. Nothing is added to stock and no bill or payment is recorded until it arrives."
+const shipmentReceiveLastLine =
+  "Adds the stock and posts one unpaid supplier bill at landed cost. No payment is recorded."
+/** The shipment command's own decimal normalization, so 3.20 reads as 3.2. */
+function exact(value: string) {
+  try {
+    return parseExactDecimal(value, { allowZero: true })
+  } catch {
+    return value
+  }
+}
+const serviceIntakeLastLine =
+  "No customer message, stock movement or service handoff. Payment is a recorded receipt, not a provider charge."
+const serviceWorkLastLine =
+  "No payment or handoff is recorded. Work history retains the original event identity."
+/** Job, customer, balance and the fixed no-payment line every work review ends with. */
+function serviceWorkFrame(
+  lines: readonly string[],
+  reason: string | undefined,
+) {
+  return (
+    /^\S.* · \S/.test(lines[0] ?? "") &&
+    lines.filter((line) => line.startsWith("Order balance: ")).length === 1 &&
+    (!reason || lines.includes(`Reason: ${reason}`)) &&
+    lines.at(-1) === serviceWorkLastLine
+  )
+}
 function completeFacts(
   proposal: GeneralProposal,
   currencyCode: string,
@@ -291,6 +326,119 @@ function completeFacts(
         lines.at(-1) ===
           "Adds it to the order's Notes & photos. The order's items, totals and payments do not change."
       )
+    case "service_intake": {
+      // Customer, every line with its price and work, total, payment and balance, promise, effects.
+      const count = payload.lines.length
+      const payment = lines[count + 2] ?? ""
+      return (
+        lines.length >= count + 7 &&
+        /^Customer: \S/.test(lines[0] ?? "") &&
+        has(payload.customerName) &&
+        has(payload.customerPhone) &&
+        lines
+          .slice(1, count + 1)
+          .every((line) =>
+            /^\S.*: \S+ × .+ = .+ · (?:tracked Job Line|charge-only Order line) · authorization \S.*\.$/.test(
+              line,
+            ),
+          ) &&
+        /^Subtotal .+ · service charge .+ · total .+\.$/.test(
+          lines[count + 1] ?? "",
+        ) &&
+        payment.startsWith(
+          `Initial recorded payment ${generalMoney(payload.initialPaymentMinor ?? 0, currencyCode)}`,
+        ) &&
+        / · balance .+\.$/.test(payment) &&
+        lines.some((line) => line.startsWith("Assignee: ")) &&
+        lines.some((line) => line.startsWith("Promised time: ")) &&
+        lines.at(-1) === serviceIntakeLastLine
+      )
+    }
+    case "service_job_line_transition":
+      // The exact line, its current state and the next one.
+      return (
+        serviceWorkFrame(lines, payload.reason) &&
+        /^\S.* · \S.* · \S+\. Current work: \S+\. Authorization: \S+\.$/.test(
+          lines[1] ?? "",
+        ) &&
+        lines[2] === `Next work state: ${payload.toStatus}.` &&
+        !lines.some((line) => line.startsWith("Assign to "))
+      )
+    case "service_job_assign":
+      // The job and the named person; no work state changes.
+      return (
+        serviceWorkFrame(lines, payload.reason) &&
+        lines.filter((line) =>
+          /^Assign to \S.*\. Assignment history is retained\.$/.test(line),
+        ).length === 1 &&
+        !lines.some((line) => line.startsWith("Next work state: "))
+      )
+    case "shipment_create": {
+      // Every line's quantity, price, freight share and landed cost, the rates, freight and total.
+      const count = payload.lines.length
+      return (
+        lines.length === count + 5 &&
+        / · from \S/.test(lines[0] ?? "") &&
+        payload.lines.every((line, index) => {
+          const row = lines[index + 1] ?? ""
+          return (
+            row.includes(
+              ` · ${exact(line.expectedQuantity)} at ${line.sourceCurrencyCode} ${exact(line.sourceUnitPrice)} · `,
+            ) &&
+            row.includes(" freight = ") &&
+            / each(?: · new item, .+)?$/.test(row)
+          )
+        }) &&
+        (lines[count + 1] ?? "").startsWith("Rates: ") &&
+        payload.rates.every((rate) =>
+          (lines[count + 1] ?? "").includes(
+            `1 ${rate.currencyCode} = ${rate.rate} `,
+          ),
+        ) &&
+        (lines[count + 2] ?? "").startsWith(
+          `Freight ${payload.freightCurrencyCode} ${exact(payload.freightAmount)} = `,
+        ) &&
+        (lines[count + 2] ?? "").endsWith(", split by value.") &&
+        /^Landed total .+\.$/.test(lines[count + 3] ?? "") &&
+        lines.at(-1) === shipmentCreateLastLine
+      )
+    }
+    case "shipment_receive": {
+      // What arrived of what was expected, stock before → after, the unpaid bill and what is left.
+      const count = payload.lines.length
+      return (
+        lines.length === count * 2 + 4 &&
+        / · from \S/.test(lines[0] ?? "") &&
+        payload.lines.every((line, index) => {
+          const row = lines[index * 2 + 1] ?? ""
+          return (
+            row.includes(` · ${exact(line.quantity)} of `) &&
+            row.includes(" still expected · ") &&
+            /^Stock \S+ → \S+ \S/.test(lines[index * 2 + 2] ?? "")
+          )
+        }) &&
+        /^Bill to .+: .+ · unpaid\.$/.test(lines[count * 2 + 1] ?? "") &&
+        /^(?:Still expected: .+|Nothing else is expected)\.$/.test(
+          lines[count * 2 + 2] ?? "",
+        ) &&
+        lines.at(-1) === shipmentReceiveLastLine
+      )
+    }
+    case "shipment_cost_adjust":
+      // The line still expected, the cost and reason, landed before → after, and what keeps its cost.
+      return (
+        lines.length === 5 &&
+        / · from \S/.test(lines[0] ?? "") &&
+        / still expected$/.test(lines[1] ?? "") &&
+        (lines[2] ?? "").startsWith(
+          BigInt(payload.amountMinor) < BigInt(0) ? "−" : "+",
+        ) &&
+        (lines[2] ?? "").includes(` ${payload.reason} · `) &&
+        /^Landed .+ → .+ each for what is still expected\.$/.test(
+          lines[3] ?? "",
+        ) &&
+        (lines[4] ?? "").endsWith("Past sales don't change.")
+      )
     default:
       return false
   }
@@ -308,12 +456,20 @@ const titles: Partial<Record<GeneralAction["action"], string>> = {
   payment_record: "🧾 Review payment already received",
   product_price_update: "🧾 Review price change",
   order_attachment_add: "🧾 Review addition to order",
+  service_intake: "🧾 Review job",
+  service_job_line_transition: "🧾 Review work update",
+  service_job_assign: "🧾 Review work assignment",
+  shipment_create: "🧾 Review shipment",
+  shipment_receive: "🧾 Receive shipment",
+  shipment_cost_adjust: "🧾 Cost change",
 }
 /** Fixed channel wording for effects the canonical lines leave implicit. */
 const channelNotes: Partial<Record<GeneralAction["action"], string>> = {
   stock_receive: "Adds stock only. No bill or payment is recorded.",
   payment_record:
     "Records money already received for this order. No bill or other payment is recorded.",
+  service_intake:
+    "Creates the job with its work queued. Nothing is sent to the customer.",
 }
 /** Exact current canonical app review in, token-free channel projection out. Does not grant authority. */
 export function projectChannelProposalReview(

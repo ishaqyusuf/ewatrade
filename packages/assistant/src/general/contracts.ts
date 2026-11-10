@@ -139,6 +139,11 @@ import { generalMoneyAccountsSchema } from "./money-accounts-answer"
 import { purchasePaymentReverseAction } from "./purchase-payment-reversal"
 import { purchaseRecognitionReverseAction } from "./purchase-recognition-reversal"
 import { purchaseRecordAction } from "./purchase-recording"
+import {
+  shipmentCostAdjustAction,
+  shipmentCreateAction,
+  shipmentReceiveAction,
+} from "./shipments"
 import { generalReviewPresentationSchema } from "./review-presentation"
 export {
   type GeneralMoneyAccounts,
@@ -455,6 +460,9 @@ export const generalActionSchema = z.discriminatedUnion("action", [
   expenseAction,
   billPaymentAction,
   purchaseRecordAction,
+  shipmentCreateAction,
+  shipmentReceiveAction,
+  shipmentCostAdjustAction,
   purchaseRegistrationAction,
   purchaseRecognitionAction,
   supplierCreateAction,
@@ -529,6 +537,7 @@ const generalRecordReceiptSchema = z
   .object({
     kind: z.enum([
       "finance_purchase_bill",
+      "finance_shipment",
       "staff_invitation",
       "staff_status",
       "staff_access",
@@ -567,6 +576,7 @@ const generalRecordReceiptSchema = z
         "finance_supplier",
         "finance_purchase_bill",
         "finance_purchase_registration",
+        "finance_shipment",
       ].includes(value.kind) || Boolean(value.bookId),
     {
       message: "A finance receipt requires its Finance Book.",
@@ -857,6 +867,12 @@ export function generalActionSummary(
       return `Recognize purchase ${action.stage.toLowerCase()} · ${action.reference}`
     case "purchase_record":
       return `Record received purchase · ${action.description}`
+    case "shipment_create":
+      return `Expect shipment · ${action.name}`
+    case "shipment_receive":
+      return `Receive shipment arrival · ${action.lines.length} line(s)`
+    case "shipment_cost_adjust":
+      return `Shipment cost change · ${action.reason}`
     case "purchase_register":
       return `Register purchase agreement · ${action.description}`
     case "supplier_entry_reverse":

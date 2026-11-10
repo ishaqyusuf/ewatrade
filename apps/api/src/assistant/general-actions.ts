@@ -96,6 +96,11 @@ import { purchasePaymentReverse } from "./general-purchase-payment-reversal"
 import { purchaseRecognize } from "./general-purchase-recognition"
 import { purchaseRecognitionReverse } from "./general-purchase-recognition-reversal"
 import { purchaseRecord } from "./general-purchase-recording"
+import {
+  shipmentCostAdjust,
+  shipmentCreate,
+  shipmentReceive,
+} from "./general-shipments"
 import { purchaseRegister } from "./general-purchase-registration"
 import { quoteApprovalDecision } from "./general-quote-decision"
 import { serviceLineAction } from "./general-service-fulfillment"
@@ -1081,6 +1086,9 @@ const adapters: {
   expense_record: expenseRecord,
   bill_payment: billPayment,
   purchase_record: purchaseRecord,
+  shipment_create: shipmentCreate,
+  shipment_receive: shipmentReceive,
+  shipment_cost_adjust: shipmentCostAdjust,
   purchase_register: purchaseRegister,
   purchase_recognize: purchaseRecognize,
   supplier_create: supplierCreate,

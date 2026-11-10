@@ -509,7 +509,10 @@ export async function generalProposalWithReview(
   // A rolled-back capability keeps its history but offers no approval.
   if (
     proposal.status === "PENDING" &&
-    !generalCapabilityEnabled(capabilityForAction(proposal.payload.action))
+    !generalCapabilityEnabled(
+      capabilityForAction(proposal.payload.action),
+      isLinkedAssistantIdentity(ctx.session) ? "whatsapp" : undefined,
+    )
   )
     return {
       ...proposal,

@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "id": "2026-11-10-whatsapp-laundry-jobs",
+  "tickets": ["H02"],
+  "summary": "WhatsApp laundry intake and job work (Phase 3 T6; Workshop ewatrade/assistant/conversations scenes w-job, w-job-ask, w-job-work, w-job-blocked, w-job-stale). service_intake, service_job_line_transition and service_job_assign plus their reads (intake options, work context, work review) gain the whatsapp client with whatsapp { mode: native, rollout: source, aheadOfApp: true }. Capability rollout stays planned, so the dashboard and mobile assistant are unchanged; aheadOfApp lets only a linked WhatsApp session pass the general rollout gate, and only where whatsAppCapabilityEnabled already allows it (local source, or a released capability ID). The three writes also join stagedNativeReviewActions, so outside local development they stay off until named in ASSISTANT_WHATSAPP_NATIVE_REVIEW_ACTIONS. Chat review reuses the canonical adapters' exact review lines; strict guards in channel-proposal-review require the customer, every priced line, total, recorded payment and balance, promise and the no-message line for intake, and the exact line, current and next state, reason and balance (or the one named assignee) for work. Anything missing or reshaped falls back. Confirm runs the same canonical commands (services.createAndConfirmIntake, services.transitionLine, services.assignJob) through the existing proposal executor; a job changed after review is refused as stale. Local only; no deployment.",
+  "capabilities": [
+    { "id": "services.intake.create", "change": "changed", "rollout": "planned", "note": "WhatsApp native chat review ahead of the app; app rollout unchanged." },
+    { "id": "services.intake.options.read", "change": "changed", "rollout": "planned", "note": "Readable in WhatsApp to resolve saved services and staff for intake." },
+    { "id": "services.work.transition", "change": "changed", "rollout": "planned", "note": "WhatsApp native chat review of one line's next work state." },
+    { "id": "services.work.assign", "change": "changed", "rollout": "planned", "note": "WhatsApp native chat review of the named assignee." },
+    { "id": "services.work.context.read", "change": "changed", "rollout": "planned", "note": "Readable in WhatsApp to resolve the saved job, line and eligible staff." },
+    { "id": "services.work.review", "change": "changed", "rollout": "planned", "note": "Pure review read available in WhatsApp before drafting." }
+  ],
+  "procedures": [],
+  "docs": [
+    { "topic": "feature", "status": "local_only", "path": ".brain/features/whatsapp-assistant-system-design.md" },
+    { "topic": "capability", "status": "local_only", "path": ".brain/features/whatsapp-assistant-system-design.md" }
+  ],
+  "evidence": [
+    { "kind": "test", "path": "apps/api/src/assistant/channel-proposal-review.test.ts", "executed": true, "result": "10 pass, 84 expects, including laundry intake and work review guards." },
+    { "kind": "test", "path": "packages/assistant/src/channels/capability-action-handoff.test.ts", "executed": true, "result": "Pass with the ahead-of-app classification." }
+  ]
+}

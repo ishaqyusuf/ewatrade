@@ -15,6 +15,8 @@ import {
   type GeneralTransactionContext,
   generalActionAdapter,
 } from "./general-actions"
+import { serviceIntakeReviewLines } from "./general-service-intake"
+import { serviceWorkReviewLines } from "./general-service-work"
 import { simpleSaleRecord } from "./general-simple-sale"
 import { proposalDigest } from "./proposal-security"
 import { stockReceivePresentation } from "./review-presentations"
@@ -584,4 +586,131 @@ test("stock_receive shows quantity, unit, stock before → after and cost; clipp
       presentation: stockReceivePresentation(preview, longReason),
     }).kind,
   ).toBe("app_review")
+})
+
+test("service_intake shows the customer, every priced line, total, payment and balance", () => {
+  const payload = generalActionSchema.parse({
+    action: "service_intake",
+    customerName: "Amina Bello",
+    lines: [
+      { offeringId: "jalabia-wash", quantity: "5" },
+      { offeringId: "trousers-iron", quantity: "3" },
+    ],
+    dueCommitmentAt: "2026-11-12T15:00:00.000Z",
+    initialPaymentMinor: 100000,
+    initialPaymentMethod: "cash",
+  })
+  if (payload.action !== "service_intake") throw Error("Intake expected")
+  const line = (
+    itemName: string,
+    variantName: string,
+    quantity: string,
+    unitPriceMinor: number,
+  ) => ({
+    itemName,
+    variantName,
+    offeringName: variantName,
+    quantity,
+    unitPriceMinor,
+    totalMinor: unitPriceMinor * Number(quantity),
+    workPolicy: "TRACKED",
+    authorizationPolicy: "NOT_REQUIRED",
+  })
+  const lines = serviceIntakeReviewLines(
+    {
+      storeId: "store",
+      currencyCode: "NGN",
+      customer: { name: "Amina Bello", phone: null, email: null },
+      lines: [
+        line("Jalabia", "Wash & iron", "5", 40000),
+        line("Trousers", "Iron only", "3", 25000),
+      ],
+      subtotalMinor: 275000,
+      serviceChargeMinor: 0,
+      totalMinor: 275000,
+      initialPaymentMinor: 100000,
+      balanceMinor: 175000,
+      assignee: null,
+      dueCommitmentAt: "2026-11-12T15:00:00.000Z",
+      trackedLineCount: 2,
+    } as unknown as Parameters<typeof serviceIntakeReviewLines>[0],
+    payload,
+  )
+  const text = body(projected(payload, { lines }))
+  expect(text).toContain("🧾 Review job")
+  expect(text).toContain("Customer: Amina Bello.")
+  expect(text).toContain("Jalabia · Wash & iron · Wash & iron: 5 × ₦400.00")
+  expect(text).toContain("total ₦2,750.00")
+  expect(text).toContain("Initial recorded payment ₦1,000.00 · cash")
+  expect(text).toContain("balance ₦1,750.00")
+  expect(text).toContain("Promised time: 2026-11-12T15:00:00.000Z.")
+  expect(text).toContain("Nothing is sent to the customer.")
+  for (const changed of [
+    lines.filter((entry) => !entry.startsWith("Trousers")),
+    lines.filter((entry) => !entry.startsWith("Subtotal")),
+    lines.map((entry) => entry.replace("₦1,000.00", "₦0.00")),
+    lines.map((entry) => entry.replace("Amina Bello", "Amina")),
+    lines.slice(0, -1),
+  ])
+    expect(projected(payload, { lines: changed }).kind).toBe("app_review")
+})
+
+test("service work shows the exact line and next state, or the named assignee", () => {
+  const review = {
+    orderNumber: "J-318",
+    customerName: "Amina Bello",
+    line: {
+      offeringName: "Jalabia",
+      variantName: "Wash & iron",
+      quantity: "5",
+      status: "IN_PROGRESS",
+      authorizationStatus: "NOT_REQUIRED",
+    },
+    nextStatus: "blocked",
+    assignee: null,
+    promisedAt: null,
+    reason: "One jalabia has an ink stain",
+    balanceDueMinor: 275000,
+    currencyCode: "NGN",
+  }
+  const blocked = generalActionSchema.parse({
+    action: "service_job_line_transition",
+    jobId: "job",
+    lineId: "line",
+    toStatus: "blocked",
+    reason: "One jalabia has an ink stain",
+  })
+  const lines = serviceWorkReviewLines(
+    review as unknown as Parameters<typeof serviceWorkReviewLines>[0],
+  )
+  const text = body(projected(blocked, { lines }))
+  expect(text).toContain("🧾 Review work update")
+  expect(text).toContain("J-318 · Amina Bello")
+  expect(text).toContain("Current work: IN_PROGRESS")
+  expect(text).toContain("Next work state: blocked.")
+  expect(text).toContain("Reason: One jalabia has an ink stain")
+  for (const changed of [
+    lines.map((entry) => entry.replace("blocked.", "ready_for_handoff.")),
+    lines.filter((entry) => !entry.startsWith("Reason")),
+    lines.filter((entry) => !entry.startsWith("Order balance")),
+  ])
+    expect(projected(blocked, { lines: changed }).kind).toBe("app_review")
+
+  const assign = generalActionSchema.parse({
+    action: "service_job_assign",
+    jobId: "job",
+    assigneeUserId: "musa",
+  })
+  const assigned = serviceWorkReviewLines({
+    ...review,
+    line: null,
+    nextStatus: null,
+    reason: null,
+    assignee: { name: "Musa Garba" },
+  } as unknown as Parameters<typeof serviceWorkReviewLines>[0])
+  const assignText = body(projected(assign, { lines: assigned }))
+  expect(assignText).toContain("🧾 Review work assignment")
+  expect(assignText).toContain("Assign to Musa Garba.")
+  // A transition line in an assignment review is not what was asked.
+  expect(projected(assign, { lines }).kind).toBe("app_review")
 })

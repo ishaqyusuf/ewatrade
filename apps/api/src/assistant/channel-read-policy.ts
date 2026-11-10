@@ -29,7 +29,7 @@ export function assertLinkedAssistantRead(
     capability.mode !== "read" ||
     input.type !== "query" ||
     !capability.clients.includes("whatsapp") ||
-    !generalCapabilityEnabled(capability) ||
+    !generalCapabilityEnabled(capability, "whatsapp") ||
     !whatsAppCapabilityEnabled(capability, environment) ||
     !capability.policy.roles.includes(input.role as CapabilityRole) ||
     (!capability.procedures.includes(input.path) && !supportRead)

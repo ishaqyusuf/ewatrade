@@ -67,6 +67,7 @@ import { parseGeneralReadContinuation } from "@ewatrade/assistant/general/read-c
 import type { ReadRecordTarget } from "@ewatrade/assistant/general/read-record-target"
 import { generalSearchRecordsAnswer } from "@ewatrade/assistant/general/search-answer"
 import { serviceIntakeDraftInstructions } from "@ewatrade/assistant/general/service-intake"
+import { shipmentDraftInstructions } from "@ewatrade/assistant/general/shipments"
 import {
   serviceManualMessageContextInput,
   serviceManualMessageOriginalInput,
@@ -2532,6 +2533,46 @@ export function createGeneralTools(
           return { ...page, bookId }
         }),
     }),
+    readShipments: tool({
+      description:
+        "Find incoming shipments in the current Store. With shipmentId, read one shipment's lines: what is expected, received and still to come, the mapped stock item and landed cost each. Without it, list up to 10 by newest, optionally by status. Omit bookId on the first read to use the business Finance Book. Never ask for or invent internal IDs.",
+      inputSchema: z
+        .object({
+          bookId: z.string().min(1).max(128).optional(),
+          shipmentId: z.string().min(1).max(128).optional(),
+          status: z
+            .enum([
+              "DRAFT",
+              "EXPECTED",
+              "PARTIALLY_RECEIVED",
+              "RECEIVED",
+              "CLOSED_SHORT",
+              "CANCELLED",
+            ])
+            .optional(),
+        })
+        .strict(),
+      execute: (input) =>
+        wrap("readShipments", async (fresh) => {
+          const caller = createGeneralDomainCaller(fresh).finance
+          const bookId = input.bookId ?? (await caller.book())?.id
+          if (!bookId) throw Error("Set up Finance first.")
+          if (input.shipmentId)
+            return {
+              bookId,
+              shipment: await caller.shipments.detail({
+                bookId,
+                shipmentId: input.shipmentId,
+              }),
+            }
+          const page = await caller.shipments.list({
+            bookId,
+            status: input.status,
+            limit: 10,
+          })
+          return { bookId, ...page }
+        }),
+    }),
     readSupplierStatement: tool({
       description:
         "Read an exact supplier's recorded payable and advance balances separately, plus up to 10 statement entries. Continuations must preserve bookId, supplierId and snapshotSequence and use nextCursor. Complete snapshot balances are not page sums. Do not infer money transfer, physical receipt, invoice recognition or ownership from settlement entries.",
@@ -2773,6 +2814,11 @@ export function createGeneralTools(
         staffRemovalDraftInstructions,
         staffAccessDraftInstructions,
         serviceIntakeDraftInstructions,
+        ...(["shipment_create", "shipment_receive", "shipment_cost_adjust"].some(
+          (action) => availableWriteActions.has(action),
+        )
+          ? [shipmentDraftInstructions]
+          : []),
         ...serviceWorkInstructions,
         ...quoteDecisionInstructions,
       ].join("\n\n"),

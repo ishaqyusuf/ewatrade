@@ -171,6 +171,10 @@ const domainAccess: Record<CapabilityId, (tenant: TenantContext) => void> = {
   "finance.bills.read": (tenant) => assertFinanceAccess(tenant),
   "finance.purchase.recognize": (tenant) => assertFinanceAccess(tenant),
   "finance.purchase.record": (tenant) => assertFinanceAccess(tenant),
+  "finance.shipment.create": (tenant) => assertFinanceAccess(tenant),
+  "finance.shipment.receive": (tenant) => assertFinanceAccess(tenant),
+  "finance.shipment.cost": (tenant) => assertFinanceAccess(tenant),
+  "finance.shipments.read": (tenant) => assertFinanceAccess(tenant),
   "finance.purchase.register": (tenant) => assertFinanceAccess(tenant),
   "finance.supplier.advance": (tenant) => assertFinanceAccess(tenant),
   "finance.supplier.advance.allocate": (tenant) => assertFinanceAccess(tenant),
@@ -401,7 +405,10 @@ export function assertCapability(
 ) {
   requireGeneralScope(ctx)
   if (
-    !generalCapabilityEnabled(capability) ||
+    !generalCapabilityEnabled(
+      capability,
+      isLinkedAssistantIdentity(ctx.session) ? "whatsapp" : undefined,
+    ) ||
     (isLinkedAssistantIdentity(ctx.session) &&
       !whatsAppCapabilityEnabled(capability))
   )
