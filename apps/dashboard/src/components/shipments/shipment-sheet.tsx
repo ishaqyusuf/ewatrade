@@ -27,6 +27,8 @@ import {
   SHIPMENT_RECEIPT_CATEGORY,
   shipmentAdjustmentMinor,
   shipmentArrivalQuantity,
+  shipmentArrivalTime,
+  shipmentLocalDate,
   shipmentMajorToMinor,
   shipmentPriceChanges,
   shipmentRoundedMinor,
@@ -795,7 +797,7 @@ function ArrivalStep({
   )
   const [quantities, setQuantities] = useState<Record<string, string>>({})
   const [receivedAt, setReceivedAt] = useState(() =>
-    new Date().toISOString().slice(0, 10),
+    shipmentLocalDate(new Date()),
   )
   const [mapping, setMapping] = useState<Record<string, string>>({})
   const [error, setError] = useState<string | null>(null)
@@ -877,7 +879,7 @@ function ArrivalStep({
         bookId: d.bookId,
         clientCommandId: crypto.randomUUID(),
         shipmentId: d.id,
-        receivedAt: new Date(receivedAt),
+        receivedAt: shipmentArrivalTime(receivedAt, new Date()),
         lines,
       })
       await refresh()

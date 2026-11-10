@@ -3,6 +3,8 @@ import {
   shipmentAdjustmentMinor,
   shipmentArrivalQuantity,
   shipmentArrivalStep,
+  shipmentArrivalTime,
+  shipmentLocalDate,
   shipmentMajorToMinor,
   shipmentPriceChanges,
   shipmentRateCurrencies,
@@ -189,5 +191,14 @@ describe("shipment UI helpers", () => {
       { offeringId: "drinker-staff-unit", label: "Bucket · Large" },
       { offeringId: "drinker-unit", label: "Poultry drinker 5L" },
     ])
+  })
+
+  test("arrival time keeps today's clock and the picked calendar day", () => {
+    const now = new Date(2026, 10, 10, 15, 42)
+    expect(shipmentLocalDate(now)).toBe("2026-11-10")
+    expect(shipmentArrivalTime("2026-11-10", now)).toBe(now)
+    const earlier = shipmentArrivalTime("2026-11-08", now)
+    expect(shipmentLocalDate(earlier)).toBe("2026-11-08")
+    expect(earlier.getHours()).toBe(12)
   })
 })

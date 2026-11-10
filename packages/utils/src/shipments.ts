@@ -235,3 +235,19 @@ export function shipmentUnstockedChoices(
   }
   return result.sort((a, b) => a.label.localeCompare(b.label))
 }
+
+/** yyyy-mm-dd for the device's own calendar day. */
+export function shipmentLocalDate(now: Date) {
+  const pad = (n: number) => String(n).padStart(2, "0")
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
+}
+
+/**
+ * When an arrival happened: now for today's date, otherwise local midday of
+ * the picked day, so it never shifts to the neighbouring date in UTC.
+ */
+export function shipmentArrivalTime(date: string, now: Date) {
+  if (date === shipmentLocalDate(now)) return now
+  const [year = 0, month = 1, day = 1] = date.split("-").map(Number)
+  return new Date(year, month - 1, day, 12)
+}
