@@ -48,6 +48,16 @@ afterAll(async () => {
       "ASSISTANT_WHATSAPP_NATIVE_REVIEW_ACTIONS",
     )
   else process.env.ASSISTANT_WHATSAPP_NATIVE_REVIEW_ACTIONS = released
+  if (enabled && fixture.db) {
+    // The shared fixture does not know Service work; remove it first.
+    const where = { where: { tenantId: fixture.tenantId } }
+    await fixture.db.serviceWorkEvent.deleteMany(where)
+    await fixture.db.serviceJob.deleteMany(where)
+    await fixture.db.serviceIntake.deleteMany(where)
+    await fixture.db.commercialOrderPayment.deleteMany(where)
+    await fixture.db.commercialOrder.deleteMany(where)
+    await fixture.db.customer.deleteMany(where)
+  }
   await fixture.cleanup()
 }, 90_000)
 
