@@ -1,0 +1,43 @@
+{
+  "version": 1,
+  "id": "2026-11-10-shipment-ui-input",
+  "tickets": ["H02"],
+  "summary": "Repair dashboard/mobile shipment arrival exact-decimal input and selling-price preflight/retry handling within the selected Record sheet flow. Reuse canonical receive and revisioned Catalog pricing; no domain authority or rollout change.",
+  "noAssistantImpact": "Client-only validation and presentation of existing finance.shipments.receive/catalog.updatePrice commands. No new capability/procedure/tool, server policy, assistant prompt authority, WhatsApp rollout or live release is added. Native T7/planned app support remains separately owned and unpromoted.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/shipment-ui.md",
+      "note": "Selected design, exact arrival/price form behavior, canonical authority and source-only evidence limits."
+    },
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/tasks/2026-11-10-business-phase-2.md",
+      "note": "Phase 2 continuation and remaining merchant-data/connected acceptance dependency."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "apps/dashboard/src/components/shipments/shipment-steps.test.ts",
+      "executed": true,
+      "result": "Exact nine mounted screen cases pass in isolated inert child; original source had eight regression failures and one whole-unit control pass."
+    },
+    {
+      "kind": "test",
+      "path": "packages/utils/src/shipments.test.ts",
+      "executed": true,
+      "result": "Shared arrival precision/validation/stepper and price preflight/deduplication regressions pass; combined helper, draft and screen wrapper suites pass 13 outer tests / 60 assertions."
+    },
+    {
+      "kind": "review",
+      "path": "docs/verification/2026-11-10-business-phase-2.md",
+      "executed": true,
+      "result": "Recorded selected baseline, exact safe repairs, command wiring and preserved acceptance boundaries; no connected business writes or new device claim."
+    }
+  ]
+}

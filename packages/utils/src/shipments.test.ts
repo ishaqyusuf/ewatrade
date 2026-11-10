@@ -1,7 +1,10 @@
 import { describe, expect, test } from "bun:test"
 import {
   shipmentAdjustmentMinor,
+  shipmentArrivalQuantity,
+  shipmentArrivalStep,
   shipmentMajorToMinor,
+  shipmentPriceChanges,
   shipmentRateCurrencies,
   shipmentUnreceivedUnitMinor,
 } from "./shipments"
@@ -60,5 +63,85 @@ describe("shipment UI helpers", () => {
     expect(shipmentMajorToMinor("4,600")).toBe("460000")
     expect(shipmentMajorToMinor("4600.5")).toBe("460050")
     expect(shipmentMajorToMinor("abc")).toBeNull()
+  })
+  test("arrival previews keep fractional remainders exact", () => {
+    expect(shipmentArrivalQuantity("0.1", "0.3")).toEqual({
+      ok: true,
+      quantity: "0.1",
+      remaining: "0.2",
+    })
+    expect(shipmentArrivalQuantity("0.500000", "0.5")).toEqual({
+      ok: true,
+      quantity: "0.5",
+      remaining: "0",
+    })
+    expect(shipmentArrivalQuantity("", "2.5")).toEqual({
+      ok: true,
+      quantity: "0",
+      remaining: "2.5",
+    })
+    expect(shipmentArrivalQuantity("0.000001", "0.5").ok).toBe(true)
+  })
+
+  test("arrival refuses malformed, negative, overprecise and excessive quantities", () => {
+    for (const value of ["1.", ".5", "bad", "-1", "1e2", "NaN", "0.0000001"])
+      expect(shipmentArrivalQuantity(value, "2.5")).toEqual({
+        ok: false,
+        error: "invalid",
+      })
+    expect(shipmentArrivalQuantity("2.500001", "2.5")).toEqual({
+      ok: false,
+      error: "over",
+    })
+  })
+
+  test("arrival stepper reaches the last fraction without binary floating point", () => {
+    expect(shipmentArrivalStep("0", "0.5", 1)).toBe("0.5")
+    expect(shipmentArrivalStep("2", "2.5", 1)).toBe("2.5")
+    expect(shipmentArrivalStep("2.5", "2.5", -1)).toBe("1.5")
+    expect(shipmentArrivalStep("0.5", "2.5", -1)).toBe("0")
+    expect(shipmentArrivalStep("0.1", "2.5", 1)).toBe("1.1")
+    expect(shipmentArrivalStep("1.", "2.5", 1)).toBe("1")
+  })
+
+  test("selling-price preflight refuses invalid later rows before any command", () => {
+    const row = {
+      name: "One",
+      value: "2",
+      offering: { id: "offering", revision: 4, priceMinor: 100 },
+    }
+    expect(
+      shipmentPriceChanges([row, { ...row, name: "Two", value: "bad" }]),
+    ).toEqual({
+      ok: false,
+      error: "Enter a valid selling price for Two (up to 1,000,000).",
+    })
+    expect(shipmentPriceChanges([{ ...row, value: "1000000.01" }]).ok).toBe(
+      false,
+    )
+    expect(shipmentPriceChanges([{ ...row, value: "2.001" }]).ok).toBe(false)
+    expect(shipmentPriceChanges([{ ...row, offering: null }]).ok).toBe(false)
+    expect(shipmentPriceChanges([{ ...row, value: "1" }]).ok).toBe(false)
+    expect(shipmentPriceChanges([{ ...row, value: "" }]).ok).toBe(false)
+    expect(shipmentPriceChanges([{ ...row, value: "0" }])).toEqual({
+      ok: true,
+      changes: [{ offeringId: "offering", expectedRevision: 4, priceMinor: 0 }],
+    })
+  })
+
+  test("selling-price preflight deduplicates shared offerings and refuses conflicting entries", () => {
+    const row = {
+      name: "One",
+      value: "2",
+      offering: { id: "offering", revision: 4, priceMinor: 100 },
+    }
+    expect(shipmentPriceChanges([row, row])).toEqual({
+      ok: true,
+      changes: [
+        { offeringId: "offering", expectedRevision: 4, priceMinor: 200 },
+      ],
+    })
+    expect(shipmentPriceChanges([row, { ...row, value: "3" }]).ok).toBe(false)
+    expect(shipmentPriceChanges([{ ...row, value: "1" }, row]).ok).toBe(false)
   })
 })

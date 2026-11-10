@@ -1,4 +1,10 @@
-import { compareExactDecimals, parseExactDecimal } from "./exact-decimal"
+import {
+  EXACT_QUANTITY_MAX_SCALE,
+  addExactDecimals,
+  compareExactDecimals,
+  parseExactDecimal,
+  subtractExactDecimals,
+} from "./exact-decimal"
 
 export type ShipmentStatus =
   | "DRAFT"
@@ -93,4 +99,88 @@ export function shipmentMajorToMinor(value: string) {
     BigInt(match[1]) * BigInt(100) +
     BigInt((match[2] ?? "").padEnd(2, "0"))
   ).toString()
+}
+
+/** Unfinished/invalid form input must never reach exact arithmetic or a receipt. */
+export function shipmentArrivalQuantity(
+  value: string,
+  outstandingQuantity: string,
+) {
+  try {
+    const quantity = parseExactDecimal(value.trim() || "0", {
+      maxScale: EXACT_QUANTITY_MAX_SCALE,
+    })
+    if (compareExactDecimals(quantity, outstandingQuantity) > 0)
+      return { ok: false as const, error: "over" as const }
+    return {
+      ok: true as const,
+      quantity,
+      remaining: subtractExactDecimals(outstandingQuantity, quantity),
+    }
+  } catch {
+    return { ok: false as const, error: "invalid" as const }
+  }
+}
+
+/** Keep the stepper exact, including the last fraction of an inventory unit. */
+export function shipmentArrivalStep(
+  value: string,
+  outstandingQuantity: string,
+  by: 1 | -1,
+) {
+  const current = shipmentArrivalQuantity(value, outstandingQuantity)
+  const next = addExactDecimals(current.ok ? current.quantity : "0", String(by))
+  if (compareExactDecimals(next, "0") < 0) return "0"
+  return compareExactDecimals(next, outstandingQuantity) > 0
+    ? outstandingQuantity
+    : next
+}
+
+/** Preflight all entered prices before the first revisioned Catalog command. */
+export function shipmentPriceChanges(
+  rows: Array<{
+    name: string
+    value: string
+    offering: { id: string; revision: number; priceMinor: number } | null
+  }>,
+) {
+  const changes = new Map<
+    string,
+    { offeringId: string; expectedRevision: number; priceMinor: number }
+  >()
+  for (const { name, value, offering } of rows) {
+    if (!value.trim()) continue
+    const minor = shipmentMajorToMinor(value)
+    if (minor === null || BigInt(minor) > BigInt(100_000_000))
+      return {
+        ok: false as const,
+        error: `Enter a valid selling price for ${name} (up to 1,000,000).`,
+      }
+    if (!offering)
+      return {
+        ok: false as const,
+        error: `Choose a fixed-price Catalog offering for ${name}.`,
+      }
+    const priceMinor = Number(minor)
+    const existing = changes.get(offering.id)
+    if (existing && existing.priceMinor !== priceMinor)
+      return {
+        ok: false as const,
+        error: `Use the same selling price for repeated item ${name}.`,
+      }
+    // Retain unchanged entries until all repeated rows have been checked.
+    changes.set(offering.id, {
+      offeringId: offering.id,
+      expectedRevision: offering.revision,
+      priceMinor,
+    })
+  }
+  const changed = [...changes.values()].filter(
+    (change) =>
+      rows.find((row) => row.offering?.id === change.offeringId)?.offering
+        ?.priceMinor !== change.priceMinor,
+  )
+  return changed.length
+    ? { ok: true as const, changes: changed }
+    : { ok: false as const, error: "Enter at least one new price." }
 }

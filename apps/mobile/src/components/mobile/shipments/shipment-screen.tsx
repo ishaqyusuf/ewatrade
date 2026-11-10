@@ -13,7 +13,10 @@ import {
   SHIPMENT_RECEIPT_CATEGORY,
   SHIPMENT_STATUS_LABELS,
   shipmentAdjustmentMinor,
+  shipmentArrivalQuantity,
+  shipmentArrivalStep,
   shipmentMajorToMinor,
+  shipmentPriceChanges,
   shipmentUnreceivedUnitMinor,
 } from "@ewatrade/utils/shipments"
 import { useMutation, useQuery } from "@tanstack/react-query"
@@ -547,26 +550,32 @@ function PricesView({
 
   async function save() {
     setError(null)
-    const changes = rows.flatMap(({ line, offering }) => {
-      const minor = shipmentMajorToMinor(prices[line.id] ?? "")
-      return offering && minor && Number(minor) !== offering.priceMinor
-        ? [{ offering, minor }]
-        : []
-    })
-    if (!changes.length) return setError("Enter at least one new price.")
+    const built = shipmentPriceChanges(
+      rows.map(({ line, offering }) => ({
+        name: lineName(line),
+        value: prices[line.id] ?? "",
+        offering,
+      })),
+    )
+    if (!built.ok) return setError(built.error)
     setSaving(true)
+    let saved = 0
     try {
-      for (const { offering, minor } of changes)
+      for (const change of built.changes) {
         await update.mutateAsync({
-          offeringId: offering.id,
-          expectedRevision: offering.revision,
-          priceMinor: Number(minor),
+          ...change,
           reason: `New price from shipment ${d.name}`,
         })
+        saved += 1
+      }
       await refresh()
       onBack()
     } catch (failure) {
-      setError(errorText(failure))
+      // Each price is its own Catalog command; recover current revisions before retry.
+      await refresh()
+      setError(
+        `${saved ? `${saved} ${saved === 1 ? "price was" : "prices were"} saved. ` : ""}${errorText(failure)}`,
+      )
     } finally {
       setSaving(false)
     }
@@ -596,6 +605,7 @@ function PricesView({
             {offering ? (
               <FormField
                 label="New price"
+                accessibilityLabel={`New price: ${lineName(line)}`}
                 keyboardType="decimal-pad"
                 leadingText="₦"
                 value={prices[line.id] ?? ""}
@@ -646,14 +656,24 @@ function ArrivalView({
       { retry: false },
     ),
   )
-  const [quantities, setQuantities] = useState<Record<string, number>>({})
+  const [quantities, setQuantities] = useState<Record<string, string>>({})
   const [error, setError] = useState<string | null>(null)
   const receive = useMutation(trpc.finance.shipments.receive.mutationOptions())
   const mapLine = useMutation(trpc.finance.shipments.mapLine.mutationOptions())
   const open = d.lines.filter(hasLeft)
-  const total = open.reduce((t, l) => t + (quantities[l.id] ?? 0), 0)
-  const max = (line: ShipmentLine) =>
-    Math.floor(Number(line.outstandingQuantity))
+  const arrivals = open.map((line) => ({
+    line,
+    arrival: shipmentArrivalQuantity(
+      quantities[line.id] ?? "",
+      line.outstandingQuantity,
+    ),
+  }))
+  const invalid = arrivals.some(({ arrival }) => !arrival.ok)
+  const total = arrivals.reduce(
+    (t, { arrival }) =>
+      arrival.ok ? addExactDecimals(t, arrival.quantity) : t,
+    "0",
+  )
 
   async function chooseStock(line: ShipmentLine, balanceSourceId: string) {
     const choice = choices.find((c) => c.balanceSourceId === balanceSourceId)
@@ -678,16 +698,22 @@ function ArrivalView({
   async function save() {
     setError(null)
     const lines: Parameters<typeof receive.mutateAsync>[0]["lines"] = []
-    for (const line of open) {
-      const quantity = quantities[line.id] ?? 0
-      if (!quantity) continue
+    for (const { line, arrival } of arrivals) {
+      if (!arrival.ok)
+        return setError(
+          arrival.error === "over"
+            ? `Only ${line.outstandingQuantity} ${lineName(line)} are still to come.`
+            : `Enter a valid quantity for ${lineName(line)} (up to 6 decimal places).`,
+        )
+      const quantity = arrival.quantity
+      if (quantity === "0") continue
       const row = balances.data?.rows.find(
         (r) => r.balanceSourceId === line.balanceSourceId,
       )
       if (!row) return setError(`Choose the stock item for ${lineName(line)}.`)
       lines.push({
         lineId: line.id,
-        quantity: String(quantity),
+        quantity,
         expectedBalanceRevision: row.revision,
         expectedConfigurationVersionId: row.configurationVersionId,
         categories: [{ name: SHIPMENT_RECEIPT_CATEGORY }],
@@ -720,7 +746,9 @@ function ArrivalView({
         onPress={() =>
           setQuantities(
             Object.fromEntries(
-              open.filter((l) => l.balanceSourceId).map((l) => [l.id, max(l)]),
+              open
+                .filter((l) => l.balanceSourceId)
+                .map((l) => [l.id, l.outstandingQuantity]),
             ),
           )
         }
@@ -730,11 +758,16 @@ function ArrivalView({
         </Text>
       </Pressable>
       {open.map((line) => {
-        const now = quantities[line.id] ?? 0
-        const step = (by: number) =>
+        const now = quantities[line.id] ?? ""
+        const arrival = shipmentArrivalQuantity(now, line.outstandingQuantity)
+        const step = (by: 1 | -1) =>
           setQuantities((q) => ({
             ...q,
-            [line.id]: Math.max(0, Math.min(max(line), now + by)),
+            [line.id]: shipmentArrivalStep(
+              q[line.id] ?? "",
+              line.outstandingQuantity,
+              by,
+            ),
           }))
         return (
           <View key={line.id} className="gap-3 rounded-[20px] bg-card p-4">
@@ -744,31 +777,36 @@ function ArrivalView({
               before
             </Text>
             {line.balanceSourceId ? (
-              <View className="flex-row items-center justify-between">
-                <Text className="text-sm text-muted-foreground">
-                  Arrived now
-                </Text>
-                <View className="flex-row items-center gap-2">
-                  <ActionButton
-                    variant="outline"
-                    accessibilityLabel={`Fewer ${lineName(line)}`}
-                    disabled={now <= 0}
-                    onPress={() => step(-1)}
-                  >
-                    −
-                  </ActionButton>
-                  <Text className="min-w-10 text-center text-lg font-bold">
-                    {now}
-                  </Text>
-                  <ActionButton
-                    variant="outline"
-                    accessibilityLabel={`More ${lineName(line)}`}
-                    disabled={now >= max(line)}
-                    onPress={() => step(1)}
-                  >
-                    +
-                  </ActionButton>
+              <View className="flex-row items-end gap-2">
+                <ActionButton
+                  variant="outline"
+                  className="w-12 shrink-0 px-0"
+                  accessibilityLabel={`Fewer ${lineName(line)}`}
+                  disabled={!arrival.ok || arrival.quantity === "0"}
+                  onPress={() => step(-1)}
+                >
+                  −
+                </ActionButton>
+                <View className="min-w-0 flex-1">
+                  <FormField
+                    label="Arrived now"
+                    accessibilityLabel={`Arrived now: ${lineName(line)}`}
+                    keyboardType="decimal-pad"
+                    value={now}
+                    onChangeText={(value) =>
+                      setQuantities((q) => ({ ...q, [line.id]: value }))
+                    }
+                  />
                 </View>
+                <ActionButton
+                  variant="outline"
+                  className="w-12 shrink-0 px-0"
+                  accessibilityLabel={`More ${lineName(line)}`}
+                  disabled={arrival.ok && arrival.remaining === "0"}
+                  onPress={() => step(1)}
+                >
+                  +
+                </ActionButton>
               </View>
             ) : (
               <View className="gap-2">
@@ -790,9 +828,11 @@ function ArrivalView({
               </View>
             )}
             <Text className="text-sm">
-              {max(line) - now
-                ? `${max(line) - now} still to come after this`
-                : "All in after this"}
+              {!arrival.ok
+                ? "Check the arrived quantity."
+                : arrival.remaining === "0"
+                  ? "All in after this"
+                  : `${arrival.remaining} still to come after this`}
             </Text>
           </View>
         )
@@ -804,10 +844,10 @@ function ArrivalView({
       {error ? <StatusBanner message={error} tone="destructive" /> : null}
       <ActionButton
         isLoading={receive.isPending}
-        disabled={!total}
+        disabled={mapLine.isPending || (total === "0" && !invalid)}
         onPress={() => void save()}
       >
-        {total ? `Receive ${total} items` : "Pick what arrived"}
+        {total !== "0" ? `Receive ${total} items` : "Pick what arrived"}
       </ActionButton>
       <ActionButton variant="outline" onPress={onBack}>
         Back

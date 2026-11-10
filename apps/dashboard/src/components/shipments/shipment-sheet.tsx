@@ -26,7 +26,9 @@ import {
 import {
   SHIPMENT_RECEIPT_CATEGORY,
   shipmentAdjustmentMinor,
+  shipmentArrivalQuantity,
   shipmentMajorToMinor,
+  shipmentPriceChanges,
   shipmentUnreceivedUnitMinor,
 } from "@ewatrade/utils/shipments"
 import { useMutation, useQuery } from "@tanstack/react-query"
@@ -500,6 +502,7 @@ function LandedCostStep({
         <p>Choose an item from Costs.</p>
       </SheetFrame>
     )
+  const adjustedLineId = line.id
   const unitNow = shipmentUnreceivedUnitMinor(
     line.unreceivedCostMinor,
     line.outstandingQuantity,
@@ -531,7 +534,7 @@ function LandedCostStep({
         clientCommandId: crypto.randomUUID(),
         shipmentId: d.id,
         expectedRevision: d.revision,
-        lineId: line.id,
+        lineId: adjustedLineId,
         amountMinor: delta,
         reason: reason.trim(),
       })
@@ -646,26 +649,32 @@ function SellingPricesStep({
 
   async function save() {
     setError(null)
-    const changes = rows.flatMap(({ line, offering }) => {
-      const minor = shipmentMajorToMinor(prices[line.id] ?? "")
-      return offering && minor && Number(minor) !== offering.priceMinor
-        ? [{ offering, minor, line }]
-        : []
-    })
-    if (!changes.length) return setError("Enter at least one new price.")
+    const built = shipmentPriceChanges(
+      rows.map(({ line, offering }) => ({
+        name: lineName(line),
+        value: prices[line.id] ?? "",
+        offering,
+      })),
+    )
+    if (!built.ok) return setError(built.error)
     setSaving(true)
+    let saved = 0
     try {
-      for (const { offering, minor } of changes)
+      for (const change of built.changes) {
         await update.mutateAsync({
-          offeringId: offering.id,
-          expectedRevision: offering.revision,
-          priceMinor: Number(minor),
+          ...change,
           reason: `New price from shipment ${d.name}`,
         })
+        saved += 1
+      }
       await refresh()
       onBack()
     } catch (failure) {
-      setError(errorText(failure))
+      // Each price is its own Catalog command; recover current revisions before retry.
+      await refresh()
+      setError(
+        `${saved ? `${saved} ${saved === 1 ? "price was" : "prices were"} saved. ` : ""}${errorText(failure)}`,
+      )
     } finally {
       setSaving(false)
     }
@@ -792,9 +801,17 @@ function ArrivalStep({
   const open = d.lines.filter(
     (l) => compareExactDecimals(l.outstandingQuantity, "0") > 0,
   )
-  const picked = open.filter((l) => Number(quantities[l.id] ?? 0) > 0)
-  const total = picked.reduce(
-    (t, l) => addExactDecimals(t, quantities[l.id] ?? "0"),
+  const arrivals = open.map((line) => ({
+    line,
+    arrival: shipmentArrivalQuantity(
+      quantities[line.id] ?? "",
+      line.outstandingQuantity,
+    ),
+  }))
+  const invalid = arrivals.some(({ arrival }) => !arrival.ok)
+  const total = arrivals.reduce(
+    (t, { arrival }) =>
+      arrival.ok ? addExactDecimals(t, arrival.quantity) : t,
     "0",
   )
 
@@ -821,13 +838,16 @@ function ArrivalStep({
 
   async function save() {
     setError(null)
-    const lines = []
-    for (const line of picked) {
-      const quantity = (quantities[line.id] ?? "").trim()
-      if (compareExactDecimals(quantity, line.outstandingQuantity) > 0)
+    const lines: Parameters<typeof receive.mutateAsync>[0]["lines"] = []
+    for (const { line, arrival } of arrivals) {
+      if (!arrival.ok)
         return setError(
-          `Only ${line.outstandingQuantity} ${lineName(line)} are still to come.`,
+          arrival.error === "over"
+            ? `Only ${line.outstandingQuantity} ${lineName(line)} are still to come.`
+            : `Enter a valid quantity for ${lineName(line)} (up to 6 decimal places).`,
         )
+      const quantity = arrival.quantity
+      if (quantity === "0") continue
       const row = balances.data?.rows.find(
         (r) => r.balanceSourceId === line.balanceSourceId,
       )
@@ -878,7 +898,11 @@ function ArrivalStep({
             Cancel
           </Button>
           <Button
-            disabled={receive.isPending || total === "0"}
+            disabled={
+              receive.isPending ||
+              mapLine.isPending ||
+              (total === "0" && !invalid)
+            }
             onClick={() => void save()}
           >
             {receive.isPending
@@ -926,13 +950,11 @@ function ArrivalStep({
           <TableBody>
             {open.map((line) => {
               const now = quantities[line.id] ?? ""
-              const after =
-                compareExactDecimals(now || "0", line.outstandingQuantity) <=
-                  0 && /^\d+(\.\d+)?$/.test(now || "0")
-                  ? (
-                      Number(line.outstandingQuantity) - Number(now || 0)
-                    ).toString()
-                  : "?"
+              const arrival = shipmentArrivalQuantity(
+                now,
+                line.outstandingQuantity,
+              )
+              const after = arrival.ok ? arrival.remaining : "?"
               return (
                 <TableRow key={line.id}>
                   <TableCell>
