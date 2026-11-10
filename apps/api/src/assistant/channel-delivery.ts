@@ -30,7 +30,9 @@ type DeliveryImage = {
   dataClassification: "LIVE" | "QA"
 }
 /** The owner's original photo, read only from this chat's private storage. */
-async function readDeliveryImage(image: DeliveryImage) {
+async function readDeliveryImage(
+  image: DeliveryImage,
+): Promise<{ bytes: Uint8Array; contentType: "image/jpeg" | "image/png" } | null> {
   const row = await prisma.assistantAttachment.findFirst({
     where: {
       id: image.attachmentId,
@@ -40,17 +42,16 @@ async function readDeliveryImage(image: DeliveryImage) {
       status: "READY",
     },
   })
+  const contentType = row?.contentType
   if (
     !row?.storagePath ||
-    (row.contentType !== "image/jpeg" && row.contentType !== "image/png")
+    (contentType !== "image/jpeg" && contentType !== "image/png")
   )
     return null
   const bytes = await setupAttachmentStorage(image.dataClassification)
     .read({ target: setupAttachmentTarget(row) })
     .catch(() => null)
-  return bytes
-    ? { bytes: Uint8Array.from(bytes), contentType: row.contentType }
-    : null
+  return bytes ? { bytes: Uint8Array.from(bytes), contentType } : null
 }
 
 export function defaultChannelDeliveryDependencies() {
