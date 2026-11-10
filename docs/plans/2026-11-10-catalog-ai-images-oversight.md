@@ -14,11 +14,24 @@ source-selection wizard and one/four-output assumption.
   business scope, permissions or authorize tool use.
 - Every normally selected/uploaded image exposes AI refine for that image.
   Clicking it starts refinement directly; no second choose-photo step.
-- Review three candidate images, explicitly use selected results, and apply via
-  the ordinary Catalog save command. Preserve the original and existing images.
+- Generate exactly one image and add it directly to the draft image list. Each
+  refinement also delivers one image version. Use the ordinary Catalog image save
+  command for existing items; new items keep images in their item draft.
+- New item and Product/Service overview open the same full-screen Images editor.
+  Item details, Category and Customer choices stay in the parent item form.
+- Mobile photo sources match current implementation: Take photo, Choose and My
+  images. Camera/library actions launch their respective native sources in the
+  eventual implementation. Web shows Upload photo and My images.
+- Every image opens a full-screen gallery with image navigation and version
+  history. A successful refinement becomes the default in the same image slot;
+  the original remains available. View or restore it, refine any viewed version
+  again, or delete a refinement. Deleting an ancestor also explicitly removes its
+  dependent refinements after confirmation; the original cannot be removed by
+  that action. Deleting a delivered refinement does not refund its allowance.
 - Per-business/Tenant free allowance: initial proposed value 30, configurable as
   lifetime or monthly from Oversight. Each successfully delivered candidate uses
-  one unit even if discarded. Failed/undeliverable outputs use no customer unit;
+  one unit, including a refinement, even if later discarded. Failed or
+  undeliverable outputs use no customer unit;
   their actual provider costs still count in operational analytics.
 - Lifetime does not renew. Monthly is UTC calendar-month based. Period/limit
   changes preserve immutable delivery history and outstanding reservations.
@@ -33,15 +46,23 @@ source-selection wizard and one/four-output assumption.
 ## Exact review artifacts
 
 Merchant Workshop keeps `ewatrade/dashboard/web-app/catalog/ai-images`,
-direction `02`, now **Inline image actions**, v10:
-`1103c3c2-175b-4ae9-98af-3cd1b39fbb79`.
+direction `02`, **Inline image actions**, now v12:
+`c39c38d2-7a2e-4f16-a4c3-4e84c8d8ab37`.
 
-- [Web](https://workshop.localhost/ewatrade/dashboard/web-app/catalog/ai-images/directions/02?rev=1103c3c2-175b-4ae9-98af-3cd1b39fbb79&screen=web.html)
-- [Mobile](https://workshop.localhost/ewatrade/dashboard/web-app/catalog/ai-images/directions/02?rev=1103c3c2-175b-4ae9-98af-3cd1b39fbb79&screen=mobile.html)
+- [Web](https://workshop.localhost/ewatrade/dashboard/web-app/catalog/ai-images/directions/02?rev=c39c38d2-7a2e-4f16-a4c3-4e84c8d8ab37&screen=web.html)
+- [Mobile](https://workshop.localhost/ewatrade/dashboard/web-app/catalog/ai-images/directions/02?rev=c39c38d2-7a2e-4f16-a4c3-4e84c8d8ab37&screen=mobile.html)
+
+v11/v12 replace the earlier three-candidate selection step with direct delivery
+of one image and a preserved version lineage. Both entry points use one editor
+renderer. Photo selection and AI completion are local stock-sample simulations;
+the preview never opens a real camera/library or invokes a provider. Source
+buttons are disabled during pending generation and at the eight-image limit.
+v12 fixes preview-control synchronization and singular image summary text.
 
 The complete implemented Catalog item-forms direction01 revision
 `6ea1c5cf-b867-41f6-8944-22d1144407bf` supplies the form and current dashboard
-tokens. Normal item fields, sections and save interactions remain in the study.
+tokens. Normal fields, sections and save actions remain in the parent form,
+accessible through the preview Entry control and Back navigation.
 The owner rejected generation v4; it remains immutable history. v5's font-import
 parsing defect is corrected in v6. v7 adds reviewed accessibility labels and
 preview-state synchronization. Prior directions01/03 are retained. No selection
@@ -61,11 +82,13 @@ No generation UI implementation or exact-revision selection is inferred from
 the owner's choice of layout reference.
 
 Oversight extends its existing implemented
-`oversight/plans/payment-notifications`, direction `01`, v5:
-`32753a69-fbb8-48a5-bc5f-ba78aab76dc0`.
-[Review the AI tab](https://workshop.localhost/oversight/plans/payment-notifications/directions/01?rev=32753a69-fbb8-48a5-bc5f-ba78aab76dc0&screen=index.html).
+`oversight/plans/payment-notifications`, direction `01`, now v7:
+`c4d1c853-48aa-4449-9d94-bb64fececf81`.
+[Review the AI tab](https://workshop.localhost/oversight/plans/payment-notifications/directions/01?rev=c4d1c853-48aa-4449-9d94-bb64fececf81&screen=index.html).
 Full prior payment-notification interactions and selected implemented revision
 `c48516ad-f623-4eaa-b814-cf5cf95ab3d9` are preserved; the new AI tab is unselected.
+v6/v7 align output policy and
+sample request counts to one output per request. Earlier revisions stay archived.
 
 Requested exact Claude Opus5.5/high launch returned `Not logged in`, with zero
 API usage and no usable author output. Codex took over under the standing owner
@@ -87,7 +110,9 @@ write, schema or UI. Unrelated source and staged changes were preserved.
 
 Candidate contract lives in Oversight
 `.brain/features/ewatrade-ai-usage-controls.md`; it is not a deployed transport.
-The main request's current checkout owns EwaTrade implementation. The final
+The main request's current checkout owns EwaTrade implementation. The owner
+follow-up was delivered to that chat: fixed outputCounts `[1]`, preserve
+forecast work and hold implementation pending acceptance. The final
 versioned wire schemas and fixed read/control capabilities must be agreed before
 cross-project integration. Reuse existing authenticated owner/project checks,
 independent read/write keys, optimistic revision and durable audited commands.
