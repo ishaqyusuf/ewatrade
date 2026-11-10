@@ -12,6 +12,8 @@ export default function FirstProductSetupModalRoute() {
     kind?: string
     name?: string
     price?: string
+    barcode?: string
+    from?: string
   }>()
   const initialKind =
     params.kind === "product" || params.kind === "service"
@@ -34,13 +36,17 @@ export default function FirstProductSetupModalRoute() {
         initialKind={initialKind}
         initialName={params.name}
         initialPrice={params.price}
+        initialBarcode={params.barcode}
         onComplete={(completion) =>
-          showOperationSuccess(navigation, {
-            kind: completion.kind,
-            name: completion.name,
-            status: "created",
-            usage: completion.usage,
-          })
+          // From a sale scan: go straight back so the sale scans the new item in.
+          params.from === "sale"
+            ? navigation.goBack()
+            : showOperationSuccess(navigation, {
+                kind: completion.kind,
+                name: completion.name,
+                status: "created",
+                usage: completion.usage,
+              })
         }
       />
     </WorkflowModalScreen>

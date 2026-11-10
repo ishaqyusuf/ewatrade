@@ -100,6 +100,7 @@ export function useCatalogSetup({
   initialKind,
   initialName,
   initialPrice,
+  initialBarcode,
   onComplete,
 }: SimpleCatalogItemScreenProps) {
   const trpc = useTRPC()
@@ -667,9 +668,12 @@ export function useCatalogSetup({
     unitPrices: {},
   })
 
+  // A code scanned at a sale belongs on the single default option.
+  const seededBarcode = initialBarcode?.trim() ?? ""
   const variantDraft = (key: string): CatalogVariantDraft =>
     variantDrafts[key] ?? {
       ...makeDefaultVariantDraft(),
+      ...(key === "default" && seededBarcode ? { barcode: seededBarcode } : {}),
     }
 
   const hasStructuralDraft = () =>
@@ -1204,7 +1208,8 @@ export function useCatalogSetup({
         category.trim() ||
         Object.values(variantDrafts).some(
           (draft) => draft.sku.trim() || draft.barcode.trim(),
-        )
+        ) ||
+        (!showAdvanced && variantDraft("default").barcode.trim())
       ) {
         submitAdvanced(kind, trimmedName, priceMinor)
         return
@@ -2051,6 +2056,7 @@ export function useCatalogSetup({
     composerText,
     setComposerText: guardEdit(setComposerText),
     variantDrafts,
+    seededBarcode,
     setVariantDrafts: guardEdit(setVariantDrafts),
     additionalUnits,
     unitEditorDraft,

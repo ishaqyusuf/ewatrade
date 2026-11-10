@@ -19,9 +19,20 @@ const BarcodeCameraScreen = lazy(() =>
 )
 
 /** Unknown code, QR link or a failed check, with the manual route first. */
-export function SaleScanNoticeCard({ scan }: { scan: SaleScan }) {
+export function SaleScanNoticeCard({
+  scan,
+  onLink,
+  onCreate,
+}: {
+  scan: SaleScan
+  /** Catalog editors only: attach an unknown code to an item. */
+  onLink?: (code: string) => void
+  onCreate?: (code: string) => void
+}) {
   if (!scan.notice) return null
   const copy = saleScanNoticeCopy(scan.notice)
+  const unknownCode =
+    scan.notice.kind === "unknown" ? scan.notice.code : undefined
   return (
     <View
       accessibilityLiveRegion="polite"
@@ -33,6 +44,24 @@ export function SaleScanNoticeCard({ scan }: { scan: SaleScan }) {
         </Text>
         <Text className="text-sm text-muted-foreground">{copy.message}</Text>
       </View>
+      {unknownCode && (onLink || onCreate) ? (
+        <View className="flex-row flex-wrap gap-2">
+          {onLink ? (
+            <ActionButton icon="Link" onPress={() => onLink(unknownCode)}>
+              Link to an item
+            </ActionButton>
+          ) : null}
+          {onCreate ? (
+            <ActionButton
+              icon="Plus"
+              onPress={() => onCreate(unknownCode)}
+              variant="secondary"
+            >
+              Create new item
+            </ActionButton>
+          ) : null}
+        </View>
+      ) : null}
       <View className="flex-row flex-wrap gap-2">
         <ActionButton icon="Search" onPress={scan.searchByName}>
           Search by name

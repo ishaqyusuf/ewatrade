@@ -8,7 +8,12 @@ import {
 const updatedAt = new Date("2026-10-10T00:00:00.000Z")
 const scope = { tenantId: "tenant", storeId: "store", actorUserId: "actor" }
 function fixture(
-  options: { stale?: boolean; race?: boolean; duplicate?: boolean } = {},
+  options: {
+    stale?: boolean
+    race?: boolean
+    duplicate?: boolean
+    taken?: boolean
+  } = {},
 ) {
   const writes: Array<{ table: string; args: unknown }> = []
   const db = {
@@ -65,6 +70,14 @@ function fixture(
       },
     },
     productUnitOffering: {
+      findFirst: async (args: unknown) => {
+        expect(args).toMatchObject({
+          where: { tenantId: "tenant", NOT: { id: "unit" } },
+        })
+        return options.taken
+          ? { offering: { name: "Crate", catalogItem: { name: "Eggs" } } }
+          : null
+      },
       updateMany: async (args: unknown) => {
         if (options.duplicate)
           throw new Prisma.PrismaClientKnownRequestError("duplicate", {
@@ -204,4 +217,20 @@ test("stale or raced offering cannot change identifiers; duplicates propagate fo
   await expect(
     updateProductIdentifiersInTransaction(db, input),
   ).rejects.toMatchObject({ code: "DUPLICATE_CATALOG_KEY" })
+})
+
+test("a barcode already on another item is refused with that item's name", async () => {
+  const { db, writes } = fixture({ taken: true })
+  await expect(
+    updateProductIdentifiersInTransaction(db, {
+      tenantId: "tenant",
+      offeringId: "offering",
+      expectedRevision: 3,
+      barcode: "0061234567890",
+    }),
+  ).rejects.toMatchObject({
+    code: "DUPLICATE_CATALOG_KEY",
+    message: "Barcode 0061234567890 is already on Eggs (Crate).",
+  })
+  expect(writes).toHaveLength(0)
 })

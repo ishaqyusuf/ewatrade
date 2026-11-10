@@ -1,5 +1,6 @@
 import { ActionButton } from "@/components/mobile/action-button"
 import { BottomSearchFooter } from "@/components/mobile/bottom-search-footer"
+import { OfferingBarcodeScreen } from "@/components/mobile/catalog-item/offering-barcode-editor"
 import { catalogAvatarTint } from "@/components/mobile/catalog/catalog-shelf-model"
 import { CatalogFreeSaleLines } from "@/components/mobile/create-sale/catalog-free-sale-lines"
 import type { OfferingRow } from "@/components/mobile/create-sale/create-sale-model"
@@ -14,6 +15,7 @@ import {
   saleUnitCount,
 } from "@/components/mobile/create-sale/sale-unit-count"
 import { useSaleScan } from "@/components/mobile/create-sale/use-sale-scan"
+import { useSaleScanLink } from "@/components/mobile/create-sale/use-sale-scan-link"
 import { FloatingSearchCaption } from "@/components/mobile/floating-search-field"
 import { QaQuickFillButton } from "@/components/mobile/qa-quick-fill-button"
 import { saleOfferingTitle } from "@/components/mobile/sale-item-picker"
@@ -98,6 +100,7 @@ export function ClassicSaleItems({
   const largeText = useLargeTextLayout()
   const scrollHide = useBottomSearchScroll()
   const scan = useSaleScan(model)
+  const link = useSaleScanLink(model, scan)
   // Typing a price, description or quantity: the floating footer would cover
   // the fields below the focused one, so it steps aside until the keyboard
   // closes. Searching keeps it (the footer holds the search field).
@@ -228,7 +231,24 @@ export function ClassicSaleItems({
         showsVerticalScrollIndicator={false}
         ListHeaderComponent={
           <View className="gap-3 pb-1">
-            <SaleScanNoticeCard scan={scan} />
+            <SaleScanNoticeCard
+              scan={scan}
+              onCreate={link.canLink ? link.create : undefined}
+              onLink={link.canLink ? link.start : undefined}
+            />
+            {link.code ? (
+              <StatusBanner
+                actionLabel="Cancel"
+                icon="Link"
+                message={
+                  link.error ||
+                  "Tap Add on the item this barcode belongs to. You will confirm before it is saved."
+                }
+                onActionPress={link.cancel}
+                title={`Link barcode ${link.code}`}
+                tone={link.error ? "warning" : "default"}
+              />
+            ) : null}
             {isOffline ? (
               <StatusBanner
                 icon="Wind"
@@ -327,7 +347,11 @@ export function ClassicSaleItems({
               first={entry.first}
               last={entry.last}
               offering={entry.offering}
-              onAdd={() => addOffering(entry.offering)}
+              onAdd={() =>
+                link.code
+                  ? void link.pick(entry.offering)
+                  : addOffering(entry.offering)
+              }
             />
           )
         }
@@ -389,6 +413,18 @@ export function ClassicSaleItems({
       </BottomSearchFooter>
       <SaleScanAddedBar bottom={actionsHeight + 8} scan={scan} />
       <SaleScanLayers scan={scan} />
+      {link.code && link.target ? (
+        <OfferingBarcodeScreen
+          allowRemove={false}
+          catalogItemId={link.target.row.catalogItemId}
+          initialBarcode={link.code}
+          onClose={link.closeTarget}
+          onSaved={link.saved}
+          option={link.target.option}
+          saveLabel="Save and add to sale"
+          title="Link barcode"
+        />
+      ) : null}
     </View>
   )
 }

@@ -47,6 +47,7 @@ export function BarcodeCameraScreen({
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState("")
   const [choices, setChoices] = useState<string[]>([])
+  const [torch, setTorch] = useState(false)
   const camera = useRef<CameraView>(null)
   const active = useRef(true)
   const accepted = useRef(false)
@@ -183,6 +184,7 @@ export function BarcodeCameraScreen({
               style={{ flex: 1 }}
               facing="back"
               mode="picture"
+              enableTorch={torch}
               barcodeScannerSettings={{ barcodeTypes: BARCODE_TYPES }}
               onBarcodeScanned={
                 busy
@@ -200,6 +202,17 @@ export function BarcodeCameraScreen({
               }}
             />
           </View>
+        ) : null}
+        {permission?.granted && !choices.length && foreground ? (
+          <ActionButton
+            icon={torch ? "FlashOff" : "Flashlight"}
+            variant="outline"
+            disabled={!ready}
+            accessibilityState={{ checked: torch }}
+            onPress={() => setTorch((on) => !on)}
+          >
+            {torch ? "Turn off flashlight" : "Turn on flashlight"}
+          </ActionButton>
         ) : null}
         {permission?.granted && !choices.length && Platform.OS === "android" ? (
           <ActionButton

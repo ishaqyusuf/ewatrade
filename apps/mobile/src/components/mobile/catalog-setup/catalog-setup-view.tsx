@@ -374,6 +374,14 @@ export function CatalogSetupView({ model }: { model: CatalogSetupModel }) {
               <StatusBanner tone="warning" message={model.optionIssue} />
             ) : null}
 
+            {model.seededBarcode && !showAdvanced ? (
+              <StatusBanner
+                icon="BarcodeScan"
+                message="This item is saved with the scanned barcode, then added to the sale."
+                title={`Barcode ${model.seededBarcode}`}
+                tone="default"
+              />
+            ) : null}
             {submitError ? (
               <StatusBanner
                 icon="AlertCircle"

@@ -11,6 +11,7 @@ import {
   CatalogItemThumb,
   CatalogSavedPhotos,
 } from "@/components/mobile/catalog-item/catalog-saved-photos"
+import { ProductBarcodes } from "@/components/mobile/catalog-item/offering-barcode-editor"
 import { ProductUsageEditor } from "@/components/mobile/catalog-item/product-usage-editor"
 import { flattenSaleOfferings } from "@/components/mobile/create-sale/create-sale-model"
 import { EmptyState } from "@/components/mobile/empty-state"
@@ -394,6 +395,23 @@ export function ClassicCatalogItemOverview({
           itemId={item.id}
           updatedAt={item.product.updatedAt}
           usage={item.product.usage}
+        />
+      ) : null}
+      {product && canEditImages ? (
+        <ProductBarcodes
+          catalogItemId={item.id}
+          options={offerings.flatMap(({ offering, variant }) =>
+            offering.productUnit
+              ? [
+                  {
+                    offeringId: offering.id,
+                    name: offering.name,
+                    variantName: variant.name,
+                    barcode: offering.productUnit.barcode ?? null,
+                  },
+                ]
+              : [],
+          )}
         />
       ) : null}
       {editingImages ? null : (

@@ -187,6 +187,26 @@ export async function updateProductIdentifiersInTransaction(
       "INVALID_OFFERING",
       "These identifiers are already saved.",
     )
+  // Name the other item so the merchant knows where the code already lives.
+  const taken = patch.barcode
+    ? await tx.productUnitOffering.findFirst({
+        where: {
+          tenantId: input.tenantId,
+          barcode: patch.barcode,
+          NOT: { id: unit.id },
+        },
+        select: {
+          offering: {
+            select: { name: true, catalogItem: { select: { name: true } } },
+          },
+        },
+      })
+    : null
+  if (taken)
+    throw new CatalogError(
+      "DUPLICATE_CATALOG_KEY",
+      `Barcode ${patch.barcode} is already on ${taken.offering.catalogItem.name} (${taken.offering.name}).`,
+    )
   const saved = await tx.sellableOffering.updateMany({
     where: {
       id: current.id,

@@ -17,6 +17,8 @@ export type SimpleCatalogItemScreenProps = {
   initialName?: string
   /** Major-unit text as the price field takes it, e.g. "4500". */
   initialPrice?: string
+  /** A scanned code to save on the first option (from an unknown sale scan). */
+  initialBarcode?: string
   onComplete?: (completion: CatalogItemCompletion) => void
 }
 
