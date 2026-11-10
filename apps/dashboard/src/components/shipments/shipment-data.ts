@@ -33,39 +33,36 @@ export function useStoreStockChoices(storeId: string) {
   const items = useQuery(
     trpc.catalog.listItems.queryOptions({ kind: "product", status: "active" }),
   )
+  const balances = useQuery(
+    trpc.inventory.balanceReport.queryOptions(
+      { storeId: storeId ?? "" },
+      { enabled: Boolean(storeId), retry: false },
+    ),
+  )
+  // Only the Store's own balances; T1 refuses staff-custody or transit stock.
   const choices = useMemo(() => {
-    const result: StockChoice[] = []
-    for (const item of items.data ?? []) {
-      for (const balance of item.product?.stockBalances ?? []) {
-        if (balance.storeId !== storeId) continue
-        const variant = item.variants.find((v) => v.id === balance.variantId)
-        const offering = variant?.offerings.find(
-          (o) =>
-            o.productUnit?.inventoryUnitId === balance.inventoryUnitId &&
-            o.fixedPriceMinor !== null,
-        )
-        const variantText =
-          balance.variantName && balance.variantName !== item.name
-            ? ` · ${balance.variantName}`
-            : ""
-        result.push({
-          balanceSourceId: balance.id,
-          inventoryUnitId: balance.inventoryUnitId,
-          label: `${item.name}${variantText} · ${balance.inventoryUnitName}`,
-          offering:
-            offering && offering.fixedPriceMinor !== null
-              ? {
-                  id: offering.id,
-                  revision: offering.revision,
-                  priceMinor: offering.fixedPriceMinor,
-                }
-              : null,
-        })
-      }
-    }
-    return result.sort((a, b) => a.label.localeCompare(b.label))
-  }, [items.data, storeId])
-  return { choices, query: items }
+    const offerings = new Map<string, StockChoice["offering"]>()
+    for (const item of items.data ?? [])
+      for (const variant of item.variants)
+        for (const o of variant.offerings)
+          if (o.productUnit && o.fixedPriceMinor !== null)
+            offerings.set(`${variant.id}:${o.productUnit.inventoryUnitId}`, {
+              id: o.id,
+              revision: o.revision,
+              priceMinor: o.fixedPriceMinor,
+            })
+    return (balances.data?.rows ?? [])
+      .filter((row) => row.custodyType === "STORE")
+      .map((row) => ({
+        balanceSourceId: row.balanceSourceId,
+        inventoryUnitId: row.inventoryUnitId,
+        label: `${row.productName}${row.variantName && row.variantName !== row.productName ? ` · ${row.variantName}` : ""} · ${row.inventoryUnitName}`,
+        offering:
+          offerings.get(`${row.variantId}:${row.inventoryUnitId}`) ?? null,
+      }))
+      .sort((a, b) => a.label.localeCompare(b.label))
+  }, [items.data, balances.data])
+  return { choices, query: items, balances }
 }
 
 export function useRefreshShipments() {

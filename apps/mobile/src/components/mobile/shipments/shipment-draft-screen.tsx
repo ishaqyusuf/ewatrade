@@ -389,9 +389,7 @@ export function ShipmentDraftScreen({
 
   return (
     <FinanceFormBody>
-      <Text className="text-xl font-bold">
-        {detail ? "Edit shipment" : "New shipment"}
-      </Text>
+      {detail ? <Text className="text-xl font-bold">Edit shipment</Text> : null}
       <FormField
         label="Name"
         placeholder="China consignment · Nov"
