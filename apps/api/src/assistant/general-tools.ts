@@ -12,6 +12,7 @@ import {
   capabilityActionHandoffSchema,
   classifyCapabilityAction,
 } from "@ewatrade/assistant/channels/capability-action-handoff"
+import { nativeOrderChoiceIssues } from "@ewatrade/assistant/channels/order-review"
 import {
   plannedReportAppInstruction,
   plannedReportAppLink,
@@ -67,7 +68,6 @@ import { parseGeneralReadContinuation } from "@ewatrade/assistant/general/read-c
 import type { ReadRecordTarget } from "@ewatrade/assistant/general/read-record-target"
 import { generalSearchRecordsAnswer } from "@ewatrade/assistant/general/search-answer"
 import { serviceIntakeDraftInstructions } from "@ewatrade/assistant/general/service-intake"
-import { shipmentDraftInstructions } from "@ewatrade/assistant/general/shipments"
 import {
   serviceManualMessageContextInput,
   serviceManualMessageOriginalInput,
@@ -77,6 +77,7 @@ import {
   serviceRequestPageInput,
 } from "@ewatrade/assistant/general/service-request-read"
 import { serviceWorkOriginalTargetSchema } from "@ewatrade/assistant/general/service-work-original"
+import { shipmentDraftInstructions } from "@ewatrade/assistant/general/shipments"
 import {
   canonicalStatedMoneyDraft,
   statedMoneyFromCanonical,
@@ -188,6 +189,7 @@ import {
   generalLowStockAnswers,
   generalRunningLowAnswers,
 } from "./general-low-stock-answers"
+import { isNativeCatalogOrder } from "./general-native-order"
 import { generalOfferingStockAnswer } from "./general-offering-stock-answer"
 import { generalOperationalAnswers } from "./general-operational-answers"
 import {
@@ -1335,12 +1337,7 @@ export function createGeneralTools(
             preparation: request,
           })
           if (updateCurrent) {
-            if (!correction)
-              throw new TRPCError({
-                code: "CONFLICT",
-                message: "Open the current draft to correct it.",
-              })
-            const current = await correction.read(fresh)
+            const current = await readCorrection(fresh)
             if (
               current.status !== "editing" ||
               current.payload.action !== "order_create"
@@ -1349,7 +1346,15 @@ export function createGeneralTools(
                 code: "CONFLICT",
                 message: "Select the current order draft before correcting it.",
               })
-            const result = await correction.edit(fresh, {
+            const editor =
+              correctionMode === "native" ? nativeCorrection : correction
+            correctionMode = null
+            if (!editor)
+              throw new TRPCError({
+                code: "CONFLICT",
+                message: "Select Edit on the intended draft first.",
+              })
+            const result = await editor.edit(fresh, {
               ...current.payload,
               preparation: request,
             })
@@ -1358,6 +1363,19 @@ export function createGeneralTools(
               revision: result.revision,
               payloadHash: proposalDigest(result.payload),
             })
+            if (
+              isNativeCatalogOrder(fresh) &&
+              result.payload.action === "order_create"
+            )
+              return {
+                status: "needs_user_review",
+                issues: [
+                  ...orderPreparationIssues(result.payload),
+                  ...nativeOrderChoiceIssues(result.payload),
+                ],
+                instruction:
+                  "Keep this same draft. Ask only unresolved facts; if complete, say Review the sale below. Never save from model input.",
+              }
             return {
               status: "card_ready",
               instruction:
@@ -1381,6 +1399,19 @@ export function createGeneralTools(
             revision: result.revision,
             payloadHash: proposalDigest(result.payload),
           })
+          if (
+            isNativeCatalogOrder(fresh) &&
+            result.payload.action === "order_create"
+          )
+            return {
+              status: "needs_user_review",
+              issues: [
+                ...orderPreparationIssues(result.payload),
+                ...nativeOrderChoiceIssues(result.payload),
+              ],
+              instruction:
+                "Keep this same draft. Ask only unresolved facts; if complete, say Review the sale below. Never save from model input.",
+            }
           return {
             status: "card_ready",
             instruction:
@@ -2814,9 +2845,11 @@ export function createGeneralTools(
         staffRemovalDraftInstructions,
         staffAccessDraftInstructions,
         serviceIntakeDraftInstructions,
-        ...(["shipment_create", "shipment_receive", "shipment_cost_adjust"].some(
-          (action) => availableWriteActions.has(action),
-        )
+        ...([
+          "shipment_create",
+          "shipment_receive",
+          "shipment_cost_adjust",
+        ].some((action) => availableWriteActions.has(action))
           ? [shipmentDraftInstructions]
           : []),
         ...serviceWorkInstructions,

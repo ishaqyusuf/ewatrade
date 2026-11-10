@@ -61,6 +61,7 @@ function fixture(
     pendingRecovery?: boolean
     refuse?: boolean
     receipt?: GeneralProposal["receipt"]
+    serverOutput?: boolean
   } = {},
 ) {
   const session = {
@@ -131,22 +132,35 @@ function fixture(
     calls.push("lease")
     return inbox as unknown as Awaited<ReturnType<typeof deps.lease>>
   }
+  const resolved = {
+    scope: { userId: "actor", tenantId: "tenant", storeId: "store" },
+    conversation: { id: "conversation", purpose: "GENERAL" },
+  } as unknown as Awaited<ReturnType<typeof deps.resolve>>
   deps.resolve = async (tx) => {
     expect(tx).toBe(fresh.db)
-    return {
-      scope: { userId: "actor", tenantId: "tenant", storeId: "store" },
-      conversation: { id: "conversation", purpose: "GENERAL" },
-    } as unknown as Awaited<ReturnType<typeof deps.resolve>>
+    if (options.serverOutput && !options.refuse)
+      throw Error("Redundant middle resolution")
+    return resolved
   }
   deps.authority = async (tx) => {
     expect(tx).toBe(fresh.db)
     return "c".repeat(64)
   }
   deps.writesEnabled = () => options.enabled !== false
-  deps.consume = async (tx) => {
+  deps.consume = async (
+    tx,
+    _input,
+    _now,
+    onResolved?: (resolved: Awaited<ReturnType<typeof deps.resolve>>) => void,
+  ) => {
     expect(tx).toBe(fresh.db)
     calls.push("consume")
     if (options.refuse) throw new AssistantWhatsAppError("CONFLICT")
+    if (options.serverOutput) {
+      expect(onResolved).toBeFunction()
+      onResolved?.(resolved)
+      calls.push("resolved-output")
+    }
     return {
       reviewId: "review",
       proposalId: "proposal",
@@ -341,6 +355,34 @@ test("payment-link confirmation stages separate forwardable messages under the s
     if (previousOrigin === undefined)
       Reflect.deleteProperty(process.env, "PAYMENT_LINK_PUBLIC_ORIGIN")
     else process.env.PAYMENT_LINK_PUBLIC_ORIGIN = previousOrigin
+    if (previous === undefined)
+      Reflect.deleteProperty(process.env, "ASSISTANT_APPROVAL_SIGNING_KEY")
+    else process.env.ASSISTANT_APPROVAL_SIGNING_KEY = previous
+  }
+})
+
+test("successful pending/replay actions reuse authenticated consume output; refusal emits none", async () => {
+  const previous = process.env.ASSISTANT_APPROVAL_SIGNING_KEY
+  process.env.ASSISTANT_APPROVAL_SIGNING_KEY =
+    "synthetic-action-output-key-0000000000000"
+  try {
+    for (const consumed of [false, true]) {
+      const f = fixture({ consumed, serverOutput: true })
+      expect(
+        await processAssistantWhatsAppAction(f.ctx, lease, f.deps),
+      ).toEqual({ status: "completed", outboxId: "outbox" })
+      expect(f.calls).toContain("resolved-output")
+      expect(f.writes[0]?.content).toBe(
+        "Saved in EwaTrade.\n\nCustomer created\n\nAmina · saved customer contact",
+      )
+      expect(JSON.stringify(f.writes)).not.toContain("resolved-output")
+    }
+    const refused = fixture({ refuse: true, serverOutput: true })
+    await processAssistantWhatsAppAction(refused.ctx, lease, refused.deps)
+    expect(refused.calls).not.toContain("resolved-output")
+    expect(refused.calls).not.toContain("decide")
+    expect(refused.writes[0]?.content).toBe(WHATSAPP_ACTION_INVALID_REPLY)
+  } finally {
     if (previous === undefined)
       Reflect.deleteProperty(process.env, "ASSISTANT_APPROVAL_SIGNING_KEY")
     else process.env.ASSISTANT_APPROVAL_SIGNING_KEY = previous

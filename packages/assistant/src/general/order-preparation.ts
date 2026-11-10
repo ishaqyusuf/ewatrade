@@ -61,7 +61,7 @@ export const orderPreparationRequestSchema = z
           .strict(),
       )
       .min(1)
-      .max(20),
+      .max(30),
     extraCharges: z
       .array(
         z
@@ -73,6 +73,8 @@ export const orderPreparationRequestSchema = z
       )
       .max(10)
       .optional(),
+    customerChoice: z.enum(["saved", "walk_in"]).optional(),
+    paymentChoice: z.enum(["unpaid", "partial", "full"]).optional(),
     customerName: z
       .string()
       .trim()
@@ -142,7 +144,7 @@ export const orderPreparationDraftSchema = z
     currencyCode: z.string().length(3),
     request: orderPreparationRequestSchema,
     paymentAccountSuggested: z.boolean().optional(),
-    lines: z.array(orderPreparationLineSchema).max(20),
+    lines: z.array(orderPreparationLineSchema).max(30),
     totalMinor: z.number().int().nonnegative().safe().nullable(),
     issues: z.array(z.string().max(500)).max(30),
   })

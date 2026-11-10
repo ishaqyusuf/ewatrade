@@ -129,17 +129,24 @@ export async function inFreshGeneralTransaction<T>(
         code: "UNAUTHORIZED",
         message: "Sign in again before confirming.",
       })
-    const tenantContext = await getActiveTenantForUser(db, {
-      userId: scope.userId,
-      tenantSlug: ctx.tenantSlug,
-      storeId: scope.storeId,
-    })
-    const age = await getCustomerAccountAgeStatus(db, scope.userId)
+    // The locked linked resolver already ran these canonical admission checks
+    // in this transaction. Reuse that result, never the outer request context.
+    const tenantContext = linked
+      ? linked.tenantContext
+      : await getActiveTenantForUser(db, {
+          userId: scope.userId,
+          tenantSlug: ctx.tenantSlug,
+          storeId: scope.storeId,
+        })
+    const age = linked
+      ? null
+      : await getCustomerAccountAgeStatus(db, scope.userId)
     if (
       !tenantContext ||
-      !age.eligible ||
-      (await isAccountPrivacyAccessBlocked(db, scope.userId)) ||
-      (await isLegalSignupSessionBlocked(db, scope.userId))
+      (!linked &&
+        (!age?.eligible ||
+          (await isAccountPrivacyAccessBlocked(db, scope.userId)) ||
+          (await isLegalSignupSessionBlocked(db, scope.userId))))
     )
       throw new TRPCError({
         code: "FORBIDDEN",

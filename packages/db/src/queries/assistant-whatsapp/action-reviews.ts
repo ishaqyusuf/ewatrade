@@ -12,6 +12,7 @@ import {
   resolveAssistantWhatsAppConversation,
 } from "./conversations"
 import { assistantWhatsAppAuthorityDigest } from "./execution"
+import { assertCompleteNativeOrderReview } from "./order-review-pages"
 
 const identity = z.string().min(1).max(128)
 const hashSchema = z.string().regex(/^[a-f0-9]{64}$/)
@@ -305,6 +306,9 @@ export async function consumeAssistantWhatsAppActionReviewInTransaction(
   tx: Prisma.TransactionClient,
   input: ConsumeInput,
   now = new Date(),
+  onResolved?: (
+    resolved: Awaited<ReturnType<typeof resolveAssistantWhatsAppConversation>>,
+  ) => void,
 ) {
   const digest = hashSchema.parse(input.decisionDigest)
   decisionSchema.parse(input.decision)
@@ -392,6 +396,9 @@ export async function consumeAssistantWhatsAppActionReviewInTransaction(
   if (locked.state === "CONSUMED") {
     if (locked.decision !== input.decision)
       throw new AssistantWhatsAppError("CONFLICT")
+    // Internal synchronous output only: the current resolver ran under the
+    // identity UPDATE lock. No caller-supplied context is accepted.
+    onResolved?.(resolved)
     return { ...reference, alreadyConsumed: true as const }
   }
   if (locked.state !== "PENDING") throw new AssistantWhatsAppError("CONFLICT")
@@ -441,6 +448,8 @@ export async function consumeAssistantWhatsAppActionReviewInTransaction(
       (await assistantWhatsAppAuthorityDigest(tx, resolved))
   )
     throw new AssistantWhatsAppError("CONFLICT")
+  if (proposal.action === "order_create" && input.decision === "confirm")
+    await assertCompleteNativeOrderReview(tx, resolved, proposal, locked, now)
   const claimed = await tx.assistantWhatsAppActionReview.updateMany({
     where: { id: locked.id, state: "PENDING" },
     data: {
@@ -450,6 +459,7 @@ export async function consumeAssistantWhatsAppActionReviewInTransaction(
     },
   })
   if (claimed.count !== 1) throw new AssistantWhatsAppError("CONFLICT")
+  onResolved?.(resolved)
   return { ...reference, alreadyConsumed: false as const }
 }
 

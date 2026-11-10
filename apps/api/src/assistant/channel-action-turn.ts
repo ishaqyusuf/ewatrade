@@ -93,28 +93,42 @@ export async function processAssistantWhatsAppAction(
         inbox.identityId
       )
         throw new AssistantWhatsAppError("UNAUTHORIZED")
-      const resolved = await deps.resolve(fresh.db, principal)
-      const authorityDigest = await deps.authority(fresh.db, resolved)
       const parsed = whatsAppActionReviewIngressContentSchema.safeParse(
         inbox.content,
       )
       const malformed =
         invalidContent.safeParse(inbox.content).success || !parsed.success
       const enabled = deps.writesEnabled()
+      let consumed: Awaited<ReturnType<typeof deps.consume>> | undefined
+      let resolvedOutput: Awaited<ReturnType<typeof deps.resolve>> | undefined
+      if (!refusal && !malformed && parsed.success && enabled) {
+        consumed = await deps.consume(
+          fresh.db,
+          {
+            principal,
+            decisionDigest: parsed.data.decisionDigest,
+            decision: parsed.data.decision,
+            quotedProviderMessageId: parsed.data.replyToMessageId,
+            ingressId: inbox.id,
+          },
+          undefined,
+          (current) => {
+            resolvedOutput = current
+          },
+        )
+      }
+      // Live success supplies its authenticated post-lock output. Refusals and
+      // legacy internal test adapters retain the ordinary current resolver.
+      const resolved =
+        resolvedOutput ?? (await deps.resolve(fresh.db, principal))
+      const authorityDigest = await deps.authority(fresh.db, resolved)
       let body =
         !enabled && !malformed && !refusal
           ? WHATSAPP_ACTION_DISABLED_REPLY
           : WHATSAPP_ACTION_INVALID_REPLY
       let resultRef: z.infer<typeof outcomeSchema> | undefined
       let bodies: string[] | undefined
-      if (!refusal && !malformed && parsed.success && enabled) {
-        const consumed = await deps.consume(fresh.db, {
-          principal,
-          decisionDigest: parsed.data.decisionDigest,
-          decision: parsed.data.decision,
-          quotedProviderMessageId: parsed.data.replyToMessageId,
-          ingressId: inbox.id,
-        })
+      if (consumed && parsed.success) {
         const row = await fresh.db.assistantActionProposal.findFirst({
           where: {
             id: consumed.proposalId,

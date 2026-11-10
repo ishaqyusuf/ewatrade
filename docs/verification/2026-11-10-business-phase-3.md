@@ -1,9 +1,35 @@
-# Phase 3 — WhatsApp workflows and native-sale design
+# Phase 3 — WhatsApp workflows and native-sale implementation
 
 10 November 2026. Chat `01a1c533-0d6b-7220-9fe4-ed71b34ebc0f`, main checkout.
 Dispatch baseline `2ecf668cc55775d9731a5afc95c5b5ccded55b47`; coordinator documentation
 advanced HEAD to `585842939c3fd7e355b47290f717af787193f921` during this work.
 No branch/worktree change, push, deployment or provider action.
+
+## Current T10 checkpoint — supersedes the planning snapshot below
+
+The owner selected exact Library01 v17 `d329aac5-7648-450c-a4bd-4218b4a1b36b`
+and authorized T10 product implementation. Selection was recorded before source
+edits. Source now implements native exact choice and full stock/payment facts,
+restricted same-Order initial payment, immutable complete-page delivery/Next proof,
+final canonical revalidation and original receipt recovery behind default-off
+release entries. See the [current implementation evidence](2026-11-10-whatsapp-native-catalog-sale.md).
+
+Actual Cancel/stale no-effect checks pass. Paid/Cashier source acceptance remains
+open: guarded paid runs reached the unchanged30-second transaction limit. Measured
+bounded duplicate-read/context/output repairs pass focused source checks, and the
+one isolated partial-payment probe still failed P2028 at30,751ms/30,000ms. Strict
+cleanup/externalCalls0 and frozen-graph equality pass. No further retry is open. No
+merchant72case, native/device, hosted, provider or deployment acceptance is claimed.
+The canonical NGN1m ceiling remains; complete native page count is dynamic rather
+than fixed to the design's seven compact pages. Private Site remains unchanged.
+
+The sections below preserve the earlier committed planning/design audit and its
+then-current evidence. Statements that v17 is unselected, implementation is pending,
+order_create is app-only or no synthetic fixture has run describe that earlier
+checkpoint only. They do not describe the current implementation. Later guarded
+synthetic QA fixtures, failures and cleanup are recorded in the current receipt.
+
+## Historical planning/design snapshot
 
 ## Delivery and remaining acceptance
 

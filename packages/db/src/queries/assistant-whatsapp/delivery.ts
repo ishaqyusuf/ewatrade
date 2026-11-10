@@ -42,6 +42,7 @@ import {
   renderWhatsAppNotice,
   whatsAppNoticeContentSchema,
 } from "@ewatrade/assistant/channels/notice"
+import { orderReviewPageButtonId } from "@ewatrade/assistant/channels/order-review"
 import {
   assistantWhatsAppUserAllowed,
   whatsAppCapabilityEnabled,
@@ -97,6 +98,7 @@ import {
   validateAssistantWhatsAppMediaPrompt,
   validateAssistantWhatsAppVoiceReview,
 } from "./media-review"
+import { nativeOrderReviewPageInfo } from "./order-review-pages"
 import { assistantWhatsAppReadPaginationButtons } from "./read-pagination"
 import { assistantWhatsAppReplyChoiceButtons } from "./reply-choices"
 import { reserveAssistantWhatsAppTransportInTransaction } from "./usage"
@@ -174,6 +176,7 @@ export function assistantWhatsAppActionReviewDispatch(
     >
     authorityDigest: string
     role: string
+    orderPage?: { index: number; count: number }
   },
   now = new Date(),
   environment: Record<string, string | undefined> = process.env,
@@ -245,6 +248,51 @@ export function assistantWhatsAppActionReviewDispatch(
         review.cancelDigest
     )
       return
+    if (proposal.action === "order_create") {
+      const page = input.orderPage
+      if (!page || page.index < 0 || page.index >= page.count) return
+      if (page.index < page.count - 1) {
+        const text = [
+          body,
+          "Nothing is saved while you read these pages.",
+          `Reply to this message with Next sale page ${review.reviewOutboxId}`,
+          ...(page.index
+            ? [`Or reply Previous sale page ${review.reviewOutboxId}`]
+            : []),
+          `Or reply Edit ${cancelCode}`,
+          `Or reply Cancel ${cancelCode}`,
+        ].join("\n\n")
+        if (text.length > 3000) return
+        return {
+          body: text,
+          buttons:
+            text.length <= 1024
+              ? [
+                  {
+                    id: orderReviewPageButtonId(review.reviewOutboxId, "next"),
+                    title: "Next",
+                  },
+                  page.index
+                    ? {
+                        id: orderReviewPageButtonId(
+                          review.reviewOutboxId,
+                          "previous",
+                        ),
+                        title: "Previous",
+                      }
+                    : {
+                        id: whatsAppActionButtonId(cancelCode, "edit"),
+                        title: "Edit",
+                      },
+                  {
+                    id: whatsAppActionButtonId(cancelCode, "cancel"),
+                    title: "Cancel",
+                  },
+                ]
+              : undefined,
+        }
+      }
+    }
     const rendered = appendWhatsAppActionReviewInstructions(
       {
         kind: "review",
@@ -822,6 +870,7 @@ export function beginAssistantWhatsAppDelivery(
               {
                 status: reference.status,
                 receipt: receipt?.success ? receipt.data : null,
+                payload: { action: review.proposal.action },
               },
               link?.href,
               {
@@ -1024,10 +1073,23 @@ export function beginAssistantWhatsAppDelivery(
               review.proposal.actorUserId !== resolved.scope.userId
             )
               return cancel("cancelled", "SAVED_REVIEW_CHANGED")
+            const orderPage =
+              review.proposal.action === "order_create"
+                ? await nativeOrderReviewPageInfo(
+                    tx,
+                    resolved,
+                    review.proposal,
+                    row.id,
+                    now,
+                  )
+                : undefined
+            if (orderPage && orderPage.state.pages[orderPage.index] !== body)
+              return cancel("cancelled", "SAVED_REVIEW_CHANGED")
             const dispatch = assistantWhatsAppActionReviewDispatch(
               {
                 body,
                 review,
+                orderPage,
                 proposal: review.proposal,
                 binding: resolved.binding,
                 authorityDigest: row.authorityDigest,

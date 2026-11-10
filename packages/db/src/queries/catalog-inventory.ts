@@ -1,5 +1,5 @@
-import { reservationCommitImpact } from "./reservation-commit-impact"
 import { createHash } from "node:crypto"
+import { reservationCommitImpact } from "./reservation-commit-impact"
 
 import {
   EXACT_CANONICAL_MAX_SCALE,
@@ -275,6 +275,12 @@ export async function getConfiguredCatalogOfferingAvailability(
       })
   return {
     availableBalanceQuantity,
+    onHandQuantity: resolved.balance.onHandQuantity.toString(),
+    reservedQuantity: resolved.balance.reservedQuantity.toString(),
+    factor: resolved.usesSharedPool
+      ? resolved.enteredUnit.factor.toString()
+      : "1",
+    transactionScale: resolved.enteredUnit.transactionScale,
     balanceUnitName:
       resolved.configuration.units.find(
         (unit) => unit.id === resolved.balance.inventoryUnitId,
@@ -671,7 +677,8 @@ export async function commitCatalogStockReservationInTransaction(
       "Only an active uncommitted Stock Reservation can be committed.",
     )
 
-  const { resultingOnHand, resultingReserved } = reservationCommitImpact(reservation)
+  const { resultingOnHand, resultingReserved } =
+    reservationCommitImpact(reservation)
   await options.beforeCommit?.()
   const effectiveAt = new Date()
   const updated = await tx.stockBalanceSource.updateMany({

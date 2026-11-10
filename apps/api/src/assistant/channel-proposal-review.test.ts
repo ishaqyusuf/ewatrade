@@ -4,6 +4,7 @@ import {
   type GeneralAction,
   type GeneralReviewPresentation,
   generalActionSchema,
+  generalMoney,
   simpleSaleAction,
 } from "@ewatrade/assistant/general/contracts"
 import { customerCreatePresentation } from "./catalog-review-presentations"
@@ -713,4 +714,72 @@ test("service work shows the exact line and next state, or the named assignee", 
   expect(assignText).toContain("Assign to Musa Garba.")
   // A transition line in an assignment review is not what was asked.
   expect(projected(assign, { lines }).kind).toBe("app_review")
+})
+
+test("native catalog sale projects all thirty exact lines; incomplete stock/payment facts never get approval", () => {
+  const { row: base, proposal: original } = customer()
+  const payload = generalActionSchema.parse({
+    action: "order_create",
+    customerChoice: "walk_in",
+    paymentChoice: "unpaid",
+    fulfillNow: false,
+    lines: Array.from({ length: 30 }, (_, i) => ({
+      offeringId: `offering-${i}`,
+      quantity: "1",
+      expectedFixedPriceMinor: 1000,
+      expectedConfigurationVersionId: "config",
+    })),
+  })
+  const review = [
+    ...Array.from({ length: 30 }, (_, i) => [
+      `${i + 1}. Synthetic rice · Piece`,
+      `${1} × ${generalMoney(1000, "NGN")} = ${generalMoney(1000, "NGN")}`,
+      `Stock: on hand 100 → 100; reserved 0 → ${i + 1}; available 100 → ${99 - i} Piece`,
+    ]).flat(),
+    "Customer: Walk-in",
+    `Total: ${generalMoney(30000, "NGN")}`,
+    `Received: ${generalMoney(0, "NGN")} · unpaid`,
+    "Received into: none · no payment recorded",
+    `Balance: ${generalMoney(30000, "NGN")}`,
+    "Handover: collect later; on-hand stays unchanged and product stock is reserved",
+    "Nothing is saved until you confirm.",
+  ]
+  const row = {
+    ...base,
+    action: payload.action,
+    payloadHash: proposalDigest(payload),
+  }
+  const proposal = { ...original, payload, presentation: undefined, review }
+  const projected = projectChannelProposalReview(row, proposal, scope, now)
+  expect(projected.kind).toBe("review")
+  if (projected.kind !== "review")
+    throw Error("Expected complete native review")
+  expect(projected.review.reviewLines).toHaveLength(97)
+  expect(projected.pages?.join("\n")).toContain("30. Synthetic rice")
+  expect(projected.pages?.at(-1)).toContain(
+    `Balance: ${generalMoney(30000, "NGN")}`,
+  )
+  for (const changed of [
+    review.filter((_, i) => i !== 2),
+    review.map((line, i) => (i === 2 ? "Stock unchanged" : line)),
+    review.map((line) =>
+      line.startsWith("Handover:") ? "Handover: handed over now" : line,
+    ),
+  ])
+    expect(
+      projectChannelProposalReview(
+        row,
+        { ...proposal, review: changed },
+        scope,
+        now,
+      ).kind,
+    ).toBe("app_review")
+  expect(
+    projectChannelProposalReview(
+      row,
+      { ...proposal, question: "Which account?" },
+      scope,
+      now,
+    ).kind,
+  ).toBe("app_review")
 })

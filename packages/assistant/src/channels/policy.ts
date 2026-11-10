@@ -93,6 +93,7 @@ export function whatsAppChannelPolicy(env: Environment = process.env) {
  * so releasing a capability for web review never switches it to chat confirmation.
  */
 export const stagedNativeReviewActions = [
+  "order_create",
   "stock_receive",
   "payment_record",
   "product_price_update",

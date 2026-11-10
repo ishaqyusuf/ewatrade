@@ -5,6 +5,10 @@ import {
   whatsAppProposalSourceSchema,
 } from "@ewatrade/assistant/channels/action-review"
 import {
+  nativeOrderChoiceIssues,
+  renderNativeOrderReviewPages,
+} from "@ewatrade/assistant/channels/order-review"
+import {
   type GeneralAction,
   type GeneralProposal,
   generalMoney,
@@ -36,7 +40,7 @@ export type ChannelProposalSource = {
   expiresAt: Date
 }
 export type ChannelProposalReviewProjection =
-  | { kind: "review"; review: WhatsAppActionReview }
+  | { kind: "review"; review: WhatsAppActionReview; pages?: string[] }
   | { kind: "app_review"; reason: "unavailable" | "incomplete" }
 const fallback = (
   reason: "unavailable" | "incomplete",
@@ -51,6 +55,7 @@ function allStrings(value: unknown): string[] {
 /** Canonical adapters for these reviews emit exact text lines and no card presentation. */
 const linesOnlyReviewActions: ReadonlySet<GeneralAction["action"]> = new Set([
   "payment_record",
+  "order_create",
   "order_attachment_add",
   "service_intake",
   "service_job_line_transition",
@@ -134,6 +139,51 @@ function completeFacts(
   )
     return false
   switch (payload.action) {
+    case "order_create": {
+      const count = payload.lines.length
+      if (
+        nativeOrderChoiceIssues(payload).length ||
+        presentation ||
+        lines.length !==
+          count * 3 +
+            7 +
+            (payload.notes ? 1 : 0) +
+            (payload.initialPayment?.note ? 1 : 0)
+      )
+        return false
+      const money = (n: number) => generalMoney(n, currencyCode)
+      return (
+        payload.lines.every(
+          (line, index) =>
+            !("custom" in line) &&
+            (lines[index * 3] ?? "").startsWith(`${index + 1}. `) &&
+            (lines[index * 3 + 1] ?? "").startsWith(
+              line.expectedFixedPriceMinor !== undefined
+                ? `${line.quantity} × ${money(line.expectedFixedPriceMinor)} = `
+                : `${line.quantity} · agreed item total ${money(line.enteredTotalMinor ?? 0)}`,
+            ) &&
+            /^Stock: on hand [0-9.]+ → [0-9.]+; reserved [0-9.]+ → [0-9.]+; available [0-9.]+ → [0-9.]+ .+/.test(
+              lines[index * 3 + 2] ?? "",
+            ),
+        ) &&
+        (lines[count * 3] ?? "").startsWith("Customer: ") &&
+        (payload.customerChoice !== "walk_in" ||
+          lines[count * 3] === "Customer: Walk-in") &&
+        (lines[count * 3 + 1] ?? "").startsWith("Total: ") &&
+        (lines[count * 3 + 2] ?? "").startsWith(
+          `Received: ${money(payload.initialPayment?.amountMinor ?? 0)} · `,
+        ) &&
+        (lines[count * 3 + 3] ?? "").startsWith("Received into: ") &&
+        (lines[count * 3 + 4] ?? "").startsWith("Balance: ") &&
+        lines[count * 3 + 5] ===
+          `Handover: ${payload.fulfillNow ? "handed over now; product stock is deducted" : "collect later; on-hand stays unchanged and product stock is reserved"}` &&
+        lines[count * 3 + 6] === "Nothing is saved until you confirm." &&
+        (!payload.initialPayment?.note ||
+          lines[count * 3 + 7] ===
+            `Payment note: ${payload.initialPayment.note}`) &&
+        (!payload.notes || lines.at(-1) === `Note: ${payload.notes}`)
+      )
+    }
     case "payment_links_create":
       return (
         presentation !== undefined &&
@@ -453,6 +503,7 @@ const titles: Partial<Record<GeneralAction["action"], string>> = {
   money_in_record: "Record owner funds already received",
   sale_record: "Record simple sale",
   stock_receive: "🧾 Review stock received",
+  order_create: "🧾 Review sale",
   payment_record: "🧾 Review payment already received",
   product_price_update: "🧾 Review price change",
   order_attachment_add: "🧾 Review addition to order",
@@ -521,6 +572,14 @@ export function projectChannelProposalReview(
     complete: true,
     requiresPresentation: !linesOnlyReviewActions.has(proposal.payload.action),
     expiresAt: proposal.expiresAt,
+  }
+  if (proposal.payload.action === "order_create") {
+    const pages = renderNativeOrderReviewPages({
+      ...review,
+      lines: review.reviewLines,
+      itemCount: proposal.payload.lines.length,
+    })
+    return pages ? { kind: "review", review, pages } : fallback("incomplete")
   }
   return renderWhatsAppActionReviewBody(review, { now }).kind === "review"
     ? { kind: "review", review }

@@ -139,12 +139,12 @@ import { generalMoneyAccountsSchema } from "./money-accounts-answer"
 import { purchasePaymentReverseAction } from "./purchase-payment-reversal"
 import { purchaseRecognitionReverseAction } from "./purchase-recognition-reversal"
 import { purchaseRecordAction } from "./purchase-recording"
+import { generalReviewPresentationSchema } from "./review-presentation"
 import {
   shipmentCostAdjustAction,
   shipmentCreateAction,
   shipmentReceiveAction,
 } from "./shipments"
-import { generalReviewPresentationSchema } from "./review-presentation"
 export {
   type GeneralMoneyAccounts,
   generalMoneyAccountsAnswer,
@@ -246,6 +246,8 @@ export const generalActionSchema = z.discriminatedUnion("action", [
   z
     .object({
       action: z.literal("order_create"),
+      customerChoice: z.enum(["saved", "walk_in"]).optional(),
+      paymentChoice: z.enum(["unpaid", "partial", "full"]).optional(),
       fulfillNow: z.boolean().optional(),
       customerName: z.string().trim().min(1).max(160).optional(),
       preparation: orderPreparationRequestSchema.optional(),

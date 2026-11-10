@@ -72,7 +72,6 @@ export function createAssistantWhatsAppActionFixture(label: string) {
   )
   let db: PrismaClient
   let principal: WhatsAppConversationPrincipal
-  let savedSequence = 0
   const rawDecisionCodes: string[] = []
 
   async function setup() {
@@ -352,7 +351,11 @@ export function createAssistantWhatsAppActionFixture(label: string) {
     await db.$transaction(async (tx) => {
       const resolved = await resolveAssistantWhatsAppConversation(tx, principal)
       await stampAssistantWhatsAppExecution(tx, claimed.lease, resolved)
-      const sequence = ++savedSequence
+      const current = await tx.assistantConversation.findUniqueOrThrow({
+        where: { id: conversationId },
+        select: { lastSequence: true },
+      })
+      const sequence = current.lastSequence + 1
       const message = await tx.assistantMessage.create({
         data: {
           id: randomUUID(),
@@ -444,7 +447,9 @@ export function createAssistantWhatsAppActionFixture(label: string) {
       expect(JSON.stringify(proof).includes(code)).toBe(false)
     }
     const delivery = await fakeAcceptedDelivery(outbox.id)
-    expect(delivery.body).toContain(`Confirm ${confirmCode}`)
+    if (review.pages && review.pages.length > 1)
+      expect(delivery.body).not.toContain("Confirm ")
+    else expect(delivery.body).toContain(`Confirm ${confirmCode}`)
     expect(delivery.body).toContain(`Cancel ${cancelCode}`)
     return { source, proof, outbox, confirmCode, cancelCode, ...delivery }
   }
@@ -527,7 +532,6 @@ export function createAssistantWhatsAppActionFixture(label: string) {
     })
     principal = await selectAssistantWhatsAppConversation(db, principal, next)
     conversationId = next
-    savedSequence = 0
     return principal
   }
   return {

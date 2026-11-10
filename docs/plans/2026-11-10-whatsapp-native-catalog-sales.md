@@ -1,6 +1,9 @@
 # T10 — Fully native WhatsApp catalog sales
 
-10 November 2026. **Planned, not implemented or released.** Owner chose “Plan fully
+10 November 2026. **v17 selected; product implementation authorized and in progress.**
+The owner explicitly replied “Select v17 and authorize T10 product implementation”.
+Exact revision: `d329aac5-7648-450c-a4bd-4218b4a1b36b`. No release/provider action is
+authorized. The original planning record follows. Owner chose “Plan fully
 native WhatsApp sales” during the five-phase takeover. This adds a Phase 3 ticket
 for R23 (H23/A23), with R24 reconciliation coverage; it does not relax either case
 or change the 72-case denominator. An app-review handoff does not satisfy R23.
@@ -10,7 +13,7 @@ saved products/options/units, collect customer and payment facts, show the entir
 review, Edit/Cancel/Confirm, then one durable Order receipt. The same canonical
 Order, stock and payment records must appear in dashboard/mobile.
 
-## Current source and the missing pieces
+## Original source audit and the missing pieces
 
 Source reviewed at `4666bc03f` (plus the unchanged preceding source):
 
@@ -228,3 +231,46 @@ zero unknown mappings and whitespace checks; H02 reports no gated source change.
 No application/runtime, database, model, provider or UI test was needed for this
 planning-only addition. Earlier executed source/UI evidence remains in the
 [five-phase takeover receipt](../verification/2026-11-10-five-phase-takeover.md).
+
+
+## Authorized implementation checkpoint — 10 November 2026
+
+Workshop selected the exact v17 revision before product edits. T10.2–T10.5 are
+authorized; T10.6 operating acceptance stays separate. Source adds optional explicit
+customer/payment choices to the existing Order draft, exact stock/payment facts and
+read-only native pages using existing private proof JSON storage. No schema change.
+Current `order_create` parent authority admits the bounded item/customer collector
+and the same Order's initial payment; dashboard preparation's manager gate and
+standalone customer/payment/Finance permissions remain intact.
+
+Every intermediate page permits navigation/Edit/Cancel; only a fully acknowledged,
+accepted-delivery chain reaches final Confirm. Confirmation rechecks current linked
+authority, immutable proposal/source/stock/account facts and canonical Order rules.
+Unsupported material text refuses intact rather than truncating or splitting orders.
+The native write remains default-off under its exact native-review action setting;
+hosted release additionally needs its exact released capability entry.
+
+Implementation preserves the existing NGN1m equivalent minor-unit Order ceiling.
+The design's synthetic NGN2.34m sample therefore exceeds current canonical support;
+30-line source rendering uses a valid lower-total sample. Actual native pages are
+sized dynamically around full Business/Store/revision/expiry/item/stock facts, so
+their count can differ from the seven compact design pages. Neither difference
+reduces complete review or silently changes canonical money limits.
+
+Current source/checks/remaining operating gates are recorded in the
+[native catalog-sale receipt](../verification/2026-11-10-whatsapp-native-catalog-sale.md).
+Historical planning-only statements above describe the pre-authorization checkpoint.
+
+### Guarded source checkpoint and remaining paid gate
+
+The authorized T10.2–T10.5 source is implemented behind default-off release entries;
+its paid/Cashier/replay acceptance is unfinished. Exact review/pageproof/authority/
+receipt source checks and strict API/DB types pass. Actual isolated partial4line
+confirmation still fails P2028 at30,751ms/30,000ms after bounded duplicate-read,
+fresh same-transaction context and server-output composition reductions. Cleanup
+passes with zero external calls. No further query-trimming/automaticretry/timeout
+increase or Finance expansion is part of this source checkpoint. Coordinator owns
+the policy/worker-budget review and next acceptance step. The selected exactv17
+remains selected without a T10 implementation record until required proof succeeds.
+Full history and limitations:../verification/2026-11-10-whatsapp-native-catalog-sale.md.
+Accepted roadmap remains T10.1 only,1/6(16.7%); no merchant72case promotion.

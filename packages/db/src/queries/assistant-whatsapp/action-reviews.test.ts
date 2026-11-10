@@ -1,12 +1,17 @@
-import { expect, test } from "bun:test"
+import { expect, spyOn, test } from "bun:test"
+import { createHash } from "node:crypto"
+import type { Prisma } from "../../../generated/prisma/client"
 import {
   type WhatsAppActionReviewMaterial,
   assistantWhatsAppActionDecisionDigest,
   assistantWhatsAppActionPayloadDigest,
   assistantWhatsAppActionReviewMatchesCurrentKey,
+  consumeAssistantWhatsAppActionReviewInTransaction,
   deriveAssistantWhatsAppActionReviewCode,
   whatsAppActionReviewIngressContentSchema,
 } from "./action-reviews"
+import * as conversations from "./conversations"
+import * as execution from "./execution"
 
 const key = "synthetic-test-signing-key-of-at-least-32-bytes"
 const material = {
@@ -244,4 +249,160 @@ test("verified queued action retains digest and quoted review only, never raw co
         ...extra,
       }).success,
     ).toBe(false)
+})
+
+test("canonical consume outputs its post-lock resolution only after pending/replay success", async () => {
+  const previousKey = process.env.ASSISTANT_APPROVAL_SIGNING_KEY
+  const previousVersion = process.env.ASSISTANT_APPROVAL_SIGNING_KEY_VERSION
+  process.env.ASSISTANT_APPROVAL_SIGNING_KEY = key
+  process.env.ASSISTANT_APPROVAL_SIGNING_KEY_VERSION = "v1"
+  const resolved = {
+    scope: { userId: "actor", tenantId: "tenant", storeId: "store" },
+    binding: {
+      id: material.bindingId,
+      identityGeneration: material.identityGeneration,
+      grantGeneration: material.grantGeneration,
+      selectionGeneration: material.selectionGeneration,
+    },
+    conversation: { id: "conversation", purpose: "GENERAL" },
+  } as unknown as Awaited<
+    ReturnType<typeof conversations.resolveAssistantWhatsAppConversation>
+  >
+  const resolver = spyOn(
+    conversations,
+    "resolveAssistantWhatsAppConversation",
+  ).mockResolvedValue(resolved)
+  const authority = spyOn(
+    execution,
+    "assistantWhatsAppAuthorityDigest",
+  ).mockResolvedValue(material.authorityDigest)
+  const now = new Date("2026-10-15T16:30:00.000Z")
+  const payload = { action: "customer_create", name: "Amina" }
+  const body = "Complete saved customer review"
+  const facts = {
+    ...material,
+    payloadHash: assistantWhatsAppActionPayloadDigest(payload),
+    reviewDigest: createHash("sha256").update(body).digest("hex"),
+  }
+  const code = deriveAssistantWhatsAppActionReviewCode(facts, "confirm", key)
+  const decisionDigest = assistantWhatsAppActionDecisionDigest(code, "confirm")
+  const principal = {
+    kind: "linked_whatsapp",
+    phoneNumberId: "phone",
+    senderId: "sender",
+    bindingId: facts.bindingId,
+    grantId: "grant",
+    identityGeneration: facts.identityGeneration,
+    grantGeneration: facts.grantGeneration,
+    selectionGeneration: facts.selectionGeneration,
+  } as const
+  try {
+    for (const mode of ["pending", "replay", "refusal"] as const) {
+      let claimed = false
+      let outputs = 0
+      const review = {
+        ...facts,
+        id: "review",
+        confirmDigest: decisionDigest,
+        cancelDigest: assistantWhatsAppActionDecisionDigest(
+          deriveAssistantWhatsAppActionReviewCode(facts, "cancel", key),
+          "cancel",
+        ),
+        state: mode === "replay" ? "CONSUMED" : "PENDING",
+        decision: mode === "replay" ? "confirm" : null,
+        resultRef: null,
+      }
+      const tx = {
+        $queryRaw: async () => [],
+        assistantWhatsAppActionReview: {
+          findFirst: async () => review,
+          findUniqueOrThrow: async () => review,
+          updateMany: async () => {
+            claimed = true
+            return { count: 1 }
+          },
+        },
+        assistantWhatsAppInbox: {
+          findFirst: async () => ({
+            id: "ingress",
+            content: {
+              type: "action",
+              decision: "confirm",
+              decisionDigest,
+              replyToMessageId: "wamid.review",
+            },
+            providerOccurredAt: now,
+          }),
+        },
+        assistantWhatsAppOutbox: {
+          findFirst: async () => ({
+            renderKind: "action_review",
+            inbox: { bindingId: facts.bindingId },
+            sentAt: new Date("2026-10-15T16:00:00.000Z"),
+            content: mode === "refusal" ? "Different content" : body,
+            contentDigest: facts.reviewDigest,
+          }),
+        },
+        assistantActionProposal: {
+          findFirst: async () => ({
+            id: facts.proposalId,
+            action: "customer_create",
+            status: "PENDING",
+            expiresAt: facts.expiresAt,
+            revision: facts.proposalRevision,
+            payload,
+            payloadHash: facts.payloadHash,
+            targetRevision: facts.targetRevision,
+          }),
+        },
+      } as unknown as Prisma.TransactionClient
+      const run = () =>
+        consumeAssistantWhatsAppActionReviewInTransaction(
+          tx,
+          {
+            principal,
+            decisionDigest,
+            decision: "confirm",
+            quotedProviderMessageId: "wamid.review",
+            ingressId: "ingress",
+          },
+          now,
+          (current) => {
+            expect(Object.is(current, resolved)).toBe(true)
+            if (mode === "pending") expect(claimed).toBe(true)
+            outputs++
+          },
+        )
+      if (mode === "refusal") {
+        await expect(run()).rejects.toThrow()
+        expect(outputs).toBe(0)
+        expect(claimed).toBe(false)
+      } else {
+        const result = await run()
+        expect(outputs).toBe(1)
+        expect(result.alreadyConsumed).toBe(mode === "replay")
+        expect(Object.keys(result).sort()).toEqual([
+          "alreadyConsumed",
+          "decision",
+          "proposalId",
+          "resultRef",
+          "reviewId",
+          "revision",
+        ])
+      }
+    }
+    expect(resolver).toHaveBeenCalledTimes(3)
+  } finally {
+    resolver.mockRestore()
+    authority.mockRestore()
+    if (previousKey === undefined)
+      Reflect.deleteProperty(process.env, "ASSISTANT_APPROVAL_SIGNING_KEY")
+    else process.env.ASSISTANT_APPROVAL_SIGNING_KEY = previousKey
+    if (previousVersion === undefined)
+      Reflect.deleteProperty(
+        process.env,
+        "ASSISTANT_APPROVAL_SIGNING_KEY_VERSION",
+      )
+    else process.env.ASSISTANT_APPROVAL_SIGNING_KEY_VERSION = previousVersion
+  }
 })

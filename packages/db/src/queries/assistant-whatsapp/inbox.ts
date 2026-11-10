@@ -19,6 +19,7 @@ import {
   parseWhatsAppVoiceButton,
   parseWhatsAppVoiceChoice,
 } from "@ewatrade/assistant/channels/media"
+import { parseOrderReviewPageIntent } from "@ewatrade/assistant/channels/order-review"
 import { assistantWhatsAppUserAllowed } from "@ewatrade/assistant/channels/policy"
 import { parseWhatsAppReadPageIntent } from "@ewatrade/assistant/channels/read-pagination"
 import { parseWhatsAppReplyChoiceIntent } from "@ewatrade/assistant/channels/reply-choices"
@@ -194,8 +195,10 @@ export async function acceptAssistantWhatsAppIngress(
   const photoButton =
     isWhatsAppPhotoButton(event.quickActionId) ||
     isWhatsAppPhotoOrderRow(event.quickActionId)
+  const orderPage =
+    event.flowResponse || photoButton ? null : parseOrderReviewPageIntent(event)
   const readPage =
-    event.flowResponse || photoButton
+    event.flowResponse || photoButton || orderPage
       ? null
       : parseWhatsAppReadPageIntent(event)
   const replyChoice =
@@ -203,7 +206,7 @@ export async function acceptAssistantWhatsAppIngress(
       ? null
       : parseWhatsAppReplyChoiceIntent(event)
   const action =
-    voiceIntent || photoButton || readPage || replyChoice
+    voiceIntent || photoButton || orderPage || readPage || replyChoice
       ? null
       : assistantWhatsAppIngressActionContent(event)
   const voiceChoice = voiceButton
@@ -238,6 +241,7 @@ export async function acceptAssistantWhatsAppIngress(
       : { type: "invalid_native_flow" as const }
     : null
   const content = flow ??
+    orderPage ??
     (readPage
       ? readPage.kind === "read_page"
         ? { type: "read_page" as const, command: readPage }

@@ -1,5 +1,8 @@
 import { expect, test } from "bun:test"
-import { renderWhatsAppActionResult } from "./action-result"
+import {
+  renderWhatsAppActionResult,
+  renderWhatsAppActionResultChunks,
+} from "./action-result"
 import { presentWhatsAppMessage } from "./presentation"
 
 const completed = (receipt: Record<string, unknown>) => ({
@@ -95,4 +98,33 @@ test("a money receipt never claims money was sent, moved or transferred", () => 
   expect(text).toBe(
     "Payment recorded in EwaTrade. Open the saved chat for the complete original receipt.\nhttps://dash.ewatrade.com/assistant/c/saved-chat",
   )
+})
+
+test("native Order cancellation and saved receipt share exact canonical rendering and trusted navigation", () => {
+  expect(
+    renderWhatsAppActionResultChunks({
+      status: "CANCELLED",
+      receipt: null,
+      payload: { action: "order_create" },
+    }),
+  ).toEqual([
+    "Draft cancelled. No order, stock change or payment was recorded.",
+  ])
+  const proposal = completed({
+    kind: "order",
+    recordId: "saved-order",
+    orderId: "saved-order",
+    title: "Order created",
+    detail: "S-1 · total ₦20.00 · received ₦4.00 · remaining ₦16.00",
+  })
+  expect(
+    renderWhatsAppActionResultChunks(proposal, undefined, {
+      appOrigin: "https://dash.ewatrade.com",
+    })[0],
+  ).toContain("https://dash.ewatrade.com/sales/orders/saved-order")
+  expect(
+    renderWhatsAppActionResultChunks(proposal, undefined, {
+      appOrigin: "https://dash.ewatrade.com?token=secret",
+    })[0],
+  ).not.toContain("secret")
 })

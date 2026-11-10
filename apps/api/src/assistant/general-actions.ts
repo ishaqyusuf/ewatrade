@@ -1,3 +1,4 @@
+import { nativeOrderChoiceIssues } from "@ewatrade/assistant/channels/order-review"
 import {
   generalActionSummary,
   generalMoney,
@@ -63,6 +64,7 @@ import {
   type GeneralContext,
   assertGeneralAction,
   assertGeneralCompositeDependency,
+  assertGeneralOrderInitialPayment,
   requireGeneralScope,
 } from "./general-context"
 import { customerAllocationRelease } from "./general-customer-allocation-release"
@@ -71,6 +73,10 @@ import { customerReceipt } from "./general-customer-receipt"
 import { expenseRecord } from "./general-expense"
 import { heldCreditRefund } from "./general-held-credit-refund"
 import { moneyMovement } from "./general-money-movement"
+import {
+  isNativeCatalogOrder,
+  nativeCatalogOrderReview,
+} from "./general-native-order"
 import {
   orderCancel,
   orderMetadataUpdate,
@@ -96,11 +102,6 @@ import { purchasePaymentReverse } from "./general-purchase-payment-reversal"
 import { purchaseRecognize } from "./general-purchase-recognition"
 import { purchaseRecognitionReverse } from "./general-purchase-recognition-reversal"
 import { purchaseRecord } from "./general-purchase-recording"
-import {
-  shipmentCostAdjust,
-  shipmentCreate,
-  shipmentReceive,
-} from "./general-shipments"
 import { purchaseRegister } from "./general-purchase-registration"
 import { quoteApprovalDecision } from "./general-quote-decision"
 import { serviceLineAction } from "./general-service-fulfillment"
@@ -109,6 +110,11 @@ import { serviceMessageShare } from "./general-service-message"
 import { serviceWorkLifecycle } from "./general-service-work"
 import { serviceWorkCompletion } from "./general-service-work-completion"
 import { serviceWorkRecords } from "./general-service-work-records"
+import {
+  shipmentCostAdjust,
+  shipmentCreate,
+  shipmentReceive,
+} from "./general-shipments"
 import { simpleExpenseRecord } from "./general-simple-expense"
 import { simpleMoneyInRecord } from "./general-simple-money-in"
 import { simpleSaleRecord } from "./general-simple-sale"
@@ -221,7 +227,7 @@ const currency = (ctx: GeneralTransactionContext) =>
  * With Finance set up, every drafted payment names an available account that
  * takes its method, so the money shows up in that account's balance.
  */
-async function paymentAccountName(
+export async function paymentAccountName(
   ctx: GeneralTransactionContext,
   payment: { moneyAccountId?: string; method: OrderPaymentMethod },
 ) {
@@ -649,10 +655,30 @@ export const orderCreate: GeneralActionAdapter<Action<"order_create">> = {
             description: charge.name,
           })
       }
-      const payment = payload.preparation.payment
+      const native = isNativeCatalogOrder(ctx)
+      const previousPayment =
+        native && payload.preparation.paymentChoice !== "unpaid"
+          ? payload.initialPayment
+          : undefined
+      const payment =
+        payload.preparation.payment || previousPayment
+          ? {
+              ...payload.preparation.payment,
+              method:
+                payload.preparation.payment?.method ?? previousPayment?.method,
+              moneyAccountId:
+                payload.preparation.payment?.moneyAccountId ??
+                previousPayment?.moneyAccountId,
+            }
+          : undefined
       const amountMinor = payment?.amount
         ? majorAmountToMinor(payment.amount)
-        : prepared.totalMinor
+        : isNativeCatalogOrder(ctx)
+          ? (previousPayment?.amountMinor ??
+            (payload.preparation.paymentChoice === "full"
+              ? prepared.totalMinor
+              : null))
+          : prepared.totalMinor
       let moneyAccountId = payment?.moneyAccountId
       if (
         payment?.method &&
@@ -661,7 +687,7 @@ export const orderCreate: GeneralActionAdapter<Action<"order_create">> = {
         amountMinor > 0
       ) {
         try {
-          assertGeneralAction(ctx, "payment_record")
+          assertGeneralOrderInitialPayment(ctx)
           const { book, accounts } = await listOrderPaymentAccounts(ctx.db, {
             tenantId: requireGeneralScope(ctx).tenantId,
             currencyCode: currency(ctx),
@@ -697,18 +723,44 @@ export const orderCreate: GeneralActionAdapter<Action<"order_create">> = {
         ...payload,
         prepared,
         lines,
-        customerId: prepared.customer?.id,
-        customerName: prepared.customer?.name,
-        notes: payload.preparation.notes,
+        customerChoice:
+          payload.preparation.customerChoice ?? payload.customerChoice,
+        paymentChoice:
+          isNativeCatalogOrder(ctx) &&
+          previousPayment &&
+          amountMinor === previousPayment.amountMinor &&
+          prepared.totalMinor !== null
+            ? amountMinor < prepared.totalMinor
+              ? "partial"
+              : "full"
+            : (payload.preparation.paymentChoice ?? payload.paymentChoice),
+        customerId:
+          prepared.customer?.id ??
+          (native &&
+          !payload.preparation.customerName &&
+          payload.preparation.customerChoice !== "walk_in"
+            ? payload.customerId
+            : undefined),
+        customerName:
+          prepared.customer?.name ??
+          (native &&
+          !payload.preparation.customerName &&
+          payload.preparation.customerChoice !== "walk_in"
+            ? payload.customerName
+            : undefined),
+        notes:
+          payload.preparation.notes ?? (native ? payload.notes : undefined),
         fulfillNow:
-          (payload.preparation.delivered &&
-            !payload.preparation.stockAlreadyRecorded &&
-            !payload.preparation.partialDelivery &&
-            !payload.preparation.lines.some(
-              (line) => line.deliveredQuantity !== undefined,
-            ) &&
-            !payload.preparation.occurredAt) ||
-          undefined,
+          native && payload.preparation.delivered === undefined
+            ? payload.fulfillNow
+            : (payload.preparation.delivered &&
+                !payload.preparation.stockAlreadyRecorded &&
+                !payload.preparation.partialDelivery &&
+                !payload.preparation.lines.some(
+                  (line) => line.deliveredQuantity !== undefined,
+                ) &&
+                !payload.preparation.occurredAt) ||
+              (payload.preparation.delivered === false ? false : undefined),
         initialPayment:
           payment?.method &&
           amountMinor !== null &&
@@ -758,6 +810,10 @@ export const orderCreate: GeneralActionAdapter<Action<"order_create">> = {
       const error = generalOrderDescriptionError(payload)
       if (error) throw new TRPCError({ code: "BAD_REQUEST", message: error })
     }
+    if (isNativeCatalogOrder(ctx)) {
+      if (!lock && nativeOrderChoiceIssues(payload).length) return null
+      return (await nativeCatalogOrderReview(ctx, payload, lock)).target
+    }
     if (
       payload.customerId &&
       !(await ctx.db.customer.findFirst({
@@ -776,7 +832,7 @@ export const orderCreate: GeneralActionAdapter<Action<"order_create">> = {
       currency(ctx),
     )
     if (payload.initialPayment) {
-      assertGeneralAction(ctx, "payment_record")
+      assertGeneralOrderInitialPayment(ctx)
       await paymentAccountName(ctx, payload.initialPayment)
       if (payload.initialPayment.amountMinor > review.totalMinor)
         throw conflict("Initial payment exceeds the order total.")
@@ -802,7 +858,10 @@ export const orderCreate: GeneralActionAdapter<Action<"order_create">> = {
     return null
   },
   async review(ctx, payload) {
-    const issues = orderPreparationIssues(payload)
+    const issues = [
+      ...orderPreparationIssues(payload),
+      ...(isNativeCatalogOrder(ctx) ? nativeOrderChoiceIssues(payload) : []),
+    ]
     if (issues.length) {
       const rows = payload.prepared?.lines ?? []
       return {
@@ -851,11 +910,12 @@ export const orderCreate: GeneralActionAdapter<Action<"order_create">> = {
       currency(ctx),
     )
     if (payload.initialPayment) {
-      assertGeneralAction(ctx, "payment_record")
+      assertGeneralOrderInitialPayment(ctx)
       await paymentAccountName(ctx, payload.initialPayment)
       if (payload.initialPayment.amountMinor > review.totalMinor)
         throw conflict("Initial payment exceeds the order total.")
     }
+    if (isNativeCatalogOrder(ctx)) return nativeCatalogOrderReview(ctx, payload)
     const customer = payload.customerId
       ? await ctx.db.customer.findFirst({
           where: { id: payload.customerId, tenantId: scope.tenantId },
@@ -924,7 +984,7 @@ export const orderCreate: GeneralActionAdapter<Action<"order_create">> = {
   unavailable:
     "Sale details changed or are unavailable. Edit quantities and save again, or use the sale form.",
   async execute(ctx, payload, key) {
-    if (payload.initialPayment) assertGeneralAction(ctx, "payment_record")
+    if (payload.initialPayment) assertGeneralOrderInitialPayment(ctx)
     return executeCanonicalOrder(ctx, payload, key)
   },
 }
@@ -985,6 +1045,8 @@ async function executeCanonicalOrder(
     action: _,
     preparation: _preparation,
     prepared: _prepared,
+    customerChoice: _customerChoice,
+    paymentChoice: _paymentChoice,
     ...input
   } = payload
   const customer = payload.customerId

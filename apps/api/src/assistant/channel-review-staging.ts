@@ -1,9 +1,14 @@
 import { renderWhatsAppActionReviewBody } from "@ewatrade/assistant/channels/action-review"
 import {
+  orderReviewPageReferenceSchema,
+  renderNativeOrderReviewPages,
+} from "@ewatrade/assistant/channels/order-review"
+import {
   generalActionSchema,
   generalStoredPartSchema,
 } from "@ewatrade/assistant/general/contracts"
 import type { PrismaClient } from "@ewatrade/db"
+import { nativeOrderReviewSessionToken } from "@ewatrade/db/assistant-whatsapp"
 import type { WhatsAppInboxLease } from "@ewatrade/db/assistant-whatsapp"
 import { createLinkedAssistantContext } from "./channel-principal"
 import { buildChannelProposalReview } from "./channel-proposal-review"
@@ -79,14 +84,60 @@ export async function prepareAssistantWhatsAppReview(
   assertGeneralAction(ctx, generalActionSchema.parse(row.payload).action)
   const projection = await buildChannelProposalReview(ctx, row, now.getTime())
   if (projection.kind !== "review") return undefined
+  const priorOrderReview =
+    row.action === "order_create"
+      ? await db.onboardingSession.findUnique({
+          where: {
+            token: nativeOrderReviewSessionToken(
+              binding.id,
+              row.id,
+              row.revision,
+            ),
+          },
+          select: { expiresAt: true },
+        })
+      : null
   const expiresAt = new Date(
     Math.min(
       Date.parse(projection.review.expiresAt),
       (run.completedAt ?? run.startedAt).getTime() + 5 * 60_000,
       inbox.expiresAt.getTime(),
+      priorOrderReview?.expiresAt.getTime() ?? Number.POSITIVE_INFINITY,
     ),
   )
   const review = { ...projection.review, expiresAt: expiresAt.toISOString() }
+  if (row.action === "order_create") {
+    const payload = generalActionSchema.parse(row.payload)
+    if (payload.action !== "order_create") return undefined
+    const pages = renderNativeOrderReviewPages({
+      ...review,
+      lines: review.reviewLines,
+      itemCount: payload.lines.length,
+    })
+    const requested = run.assistantMessage.parts.flatMap((part) => {
+      const parsed = orderReviewPageReferenceSchema.safeParse(part)
+      return parsed.success ? [parsed.data.data] : []
+    })
+    const index = requested[0]?.index ?? 0
+    if (
+      !pages ||
+      requested.length > 1 ||
+      (requested[0] &&
+        (requested[0].source.proposalId !== source.proposalId ||
+          requested[0].source.revision !== source.revision ||
+          requested[0].source.payloadHash !== source.payloadHash)) ||
+      !pages[index]
+    )
+      return undefined
+    return {
+      source,
+      targetRevision: row.targetRevision,
+      body: pages[index],
+      pages,
+      pageIndex: index,
+      expiresAt,
+    }
+  }
   const rendered = renderWhatsAppActionReviewBody(review, {
     now: now.getTime(),
   })

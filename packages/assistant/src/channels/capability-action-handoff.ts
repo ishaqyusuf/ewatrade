@@ -12,6 +12,7 @@ export const nativeWhatsAppReviewActions = [
   "customer_update",
   "product_create",
   "sale_record",
+  "order_create",
   "expense_record_simple",
   "money_in_record",
   "money_transfer_simple",

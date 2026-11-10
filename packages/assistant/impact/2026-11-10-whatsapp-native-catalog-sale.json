@@ -1,0 +1,84 @@
+{
+  "version": 1,
+  "id": "2026-11-10-whatsapp-native-catalog-sale",
+  "tickets": ["H02", "H23", "A23"],
+  "summary": "Owner-selected conversations Library01 v17 T10: staged default-off native catalog Order collection, exact stock/customer/payment review and immutable delivered-page/quoted-Next/final-Confirm proof over existing private JSON storage. Current same-Order authority permits an eligible initial receipt and bounded preparation without granting standalone payment, Customer administration or Finance access. Canonical money limits, Order/Inventory/payment idempotency, actor/Store authority and exact result validation remain. No schema, hosted enablement, provider send or deployment.",
+  "capabilities": [
+    {
+      "id": "sales.order.create",
+      "change": "unchanged",
+      "rollout": "source",
+      "note": "The generated app capability row is unchanged (same core role, procedure and rollout); WhatsApp native mode now has exact complete review and immutable page proofs, default-off behind independent action/capability entries. H02 does not display per-channel mode in that row; explicit channel tests cover this behavior."
+    },
+    {
+      "id": "sales.order.prepare",
+      "change": "changed",
+      "rollout": "source",
+      "note": "WhatsApp collector is subordinate to fresh order_create authority; dashboard manager gate and standalone customer-directory grants remain. Explicit choices and same-draft corrections preserve collected money and handover."
+    }
+  ],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "updated",
+      "path": "docs/verification/2026-11-10-whatsapp-native-catalog-sale.md"
+    },
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/whatsapp-assistant.md"
+    },
+    {
+      "topic": "api",
+      "status": "local_only",
+      "path": ".brain/api/contracts.md"
+    },
+    {
+      "topic": "permissions",
+      "status": "local_only",
+      "path": ".brain/api/permissions.md"
+    },
+    {
+      "topic": "capability",
+      "status": "updated",
+      "path": "packages/assistant/src/capabilities/COVERAGE.md"
+    },
+    {
+      "topic": "decision",
+      "status": "local_only",
+      "path": ".brain/decisions/2026-11-10-whatsapp-native-order-review-pages.md"
+    },
+    {
+      "topic": "schema",
+      "status": "not_applicable",
+      "note": "Reuse existing bounded private OnboardingSession JSON proof storage; no Prisma/schema/migration change."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/assistant/src/channels/order-review.test.ts",
+      "executed": true,
+      "result": "Final focused choice/rendering/page-proof/30-line97-fact projection/gate/receipt/dispatch suite32tests378assertions pass; exact release and no clipping checks. Native transport/device acceptance remains separate."
+    },
+    {
+      "kind": "test",
+      "path": "apps/api/src/assistant/channel-catalog-sale-confirmation.integration.test.ts",
+      "executed": true,
+      "result": "Actual Cancel/stale case passes. Paid runs and final isolated partial4line probe fail P2028 at unchanged30s limit; last0pass/1fail/2filtered/38assertions169.22s, StockOperation.findUnique30751ms. Strictcleanup/externalCalls0/frozen equality pass; temporary diagnostics removed. Paid/Cashier/replay UNACCEPTED; selectedv17 has no T10 implementation receipt or live/merchant promotion."
+    },
+    {
+      "kind": "test",
+      "path": "apps/api/src/assistant/general-native-order.test.ts",
+      "executed": true,
+      "result": "Real-adapter query counter RED price reads3 then GREEN1, account reads2 to1 and legacy per-line existence4 to0; stock discovery plus locked fresh revalidation retained. Affected regression/projection/pageproof15tests115assertions pass. No transaction timeout change."
+    },
+    {
+      "kind": "test",
+      "path": "apps/api/src/assistant/general-proposals-fresh-context.test.ts",
+      "executed": true,
+      "result": "Real-function same-transaction fresh context and successful-consume server-output regressions plus native read counter16tests224assertions pass. Current/revoked/browser authority/lock order, pending/replay/refusal output and original receipt guarded. API/DB strict types0/0(8GB), ownedBiome pass. No outer/model context reuse, cache framework, Finance or timeout change."
+    }
+  ]
+}

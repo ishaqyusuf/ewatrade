@@ -117,7 +117,7 @@ export function parseWhatsAppActionButton(
     replyToMessageId: quoted,
   }
 }
-function exactPlainText(value: string) {
+export function exactPlainText(value: string) {
   // Never silently alter material facts to fit the channel. Existing clipped display facts need app review.
   return (
     !value.includes("…") &&

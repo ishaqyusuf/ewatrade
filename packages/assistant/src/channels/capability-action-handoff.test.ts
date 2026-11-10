@@ -228,12 +228,16 @@ test("laundry and shipments need both exact channel releases while app support s
     (entry) => entry.id === "sales.order.create",
   )
   if (!catalogSale) throw Error("Expected catalog sale")
+  expect(classifyCapabilityAction(catalogSale, environment)).toEqual({
+    kind: "app_review",
+    reason: "channel_confirmation_unavailable",
+  })
   expect(
     classifyCapabilityAction(catalogSale, {
       ...environment,
       ASSISTANT_WHATSAPP_NATIVE_REVIEW_ACTIONS: "order_create",
     }),
-  ).toEqual({ kind: "app_review", reason: "complete_app_review" })
+  ).toEqual({ kind: "native_review" })
 })
 
 test("source/disabled native confirmations hand off without granting execution and metadata cannot invent an adapter", () => {
@@ -344,8 +348,9 @@ test("malformed saved metadata drops without failing old answers and cannot carr
   }
 })
 
-test("the four added native reviews keep the release gate: production without release hands off to the app", () => {
+test("native catalog sale and the four added native reviews keep the release gate: production without release hands off to the app", () => {
   for (const action of [
+    "order_create",
     "stock_receive",
     "payment_record",
     "product_price_update",

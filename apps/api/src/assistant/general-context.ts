@@ -462,6 +462,11 @@ function assertCapabilityDomainAuthority(
   scope: ReturnType<typeof requireGeneralScope>,
 ) {
   const tenant = ctx.tenantContext
+  if (capability.id === "sales.order.prepare") {
+    if (isLinkedAssistantIdentity(ctx.session))
+      return assertGeneralAction(ctx, "order_create")
+    assertCanManageSalesOperations(tenant.membership.role)
+  }
   const role = normalizeRole(tenant.membership.role)
   if (!role || !capability.policy.roles.includes(role as CapabilityRole))
     throw new TRPCError({
@@ -529,7 +534,7 @@ export function canDraftGeneralCapability(
 export function assertGeneralAction(
   ctx: GeneralScopeContext,
   action: GeneralActionName,
-) {
+): ReturnType<typeof requireGeneralScope> {
   return assertCapability(ctx, capabilityForAction(action))
 }
 export function assertGeneralActionAuthority(
@@ -563,4 +568,17 @@ export function assertGeneralCompositeDependency(
       message: "The assistant can't do this yet.",
     })
   return assertCapabilityAuthority(ctx, capability)
+}
+
+/** Same-Order initial receipt only. Never authorizes a standalone payment action. */
+export function assertGeneralOrderInitialPayment(ctx: GeneralScopeContext) {
+  const order = capabilityForAction("order_create")
+  if (
+    isLinkedAssistantIdentity(ctx.session) &&
+    whatsAppCapabilityEnabled(order)
+  ) {
+    // Current parent capability, domain, role, plan and exact Store grant.
+    return assertGeneralAction(ctx, "order_create")
+  }
+  return assertGeneralAction(ctx, "payment_record")
 }

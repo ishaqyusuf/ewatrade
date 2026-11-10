@@ -18,10 +18,11 @@ import type { Prisma, PrismaClient } from "../../../generated/prisma/client"
 import { runInOwnSerializableTransaction } from "../own-transaction"
 import { issueAssistantWhatsAppActionReviewInTransaction } from "./action-reviews"
 import { AssistantWhatsAppError } from "./authority"
-import type {
-  WhatsAppConversationPrincipal,
+import {
+  type WhatsAppConversationPrincipal,
   resolveAssistantWhatsAppConversation,
 } from "./conversations"
+import { stageNativeOrderReviewPage } from "./order-review-pages"
 import {
   assistantReviewShortOutboxId,
   assistantReviewTokenFromBody,
@@ -37,6 +38,8 @@ export type AssistantWhatsAppStagedReview = {
   source: { proposalId: string; revision: number; payloadHash: string }
   targetRevision: string | null
   body: string
+  pages?: string[]
+  pageIndex?: number
   expiresAt: Date
 }
 export type AssistantWhatsAppStagedWebReview = {
@@ -383,6 +386,21 @@ export async function stageAssistantWhatsAppOutboxInTransaction(
     const staged = await db.assistantWhatsAppOutbox.findFirstOrThrow({
       where: { inboxId: inbox.id, responseRevision: 1, chunkIndex: 0 },
     })
+    if (review.pages) {
+      const proposal = await db.assistantActionProposal.findUniqueOrThrow({
+        where: { id: review.source.proposalId },
+      })
+      const resolved = await resolveAssistantWhatsAppConversation(db, principal)
+      await stageNativeOrderReviewPage(db, {
+        resolved,
+        proposal,
+        outboxId: staged.id,
+        pages: review.pages,
+        index: review.pageIndex ?? 0,
+        expiresAt: review.expiresAt,
+        authorityDigest,
+      })
+    }
     await issueAssistantWhatsAppActionReviewInTransaction(db, {
       principal,
       proposal: {

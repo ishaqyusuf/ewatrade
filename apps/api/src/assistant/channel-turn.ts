@@ -27,6 +27,7 @@ import {
   assistantWhatsAppMenuCapabilities,
 } from "./channel-help"
 import { prepareAssistantWhatsAppMediaTurn } from "./channel-media-turn"
+import { processAssistantWhatsAppOrderReviewPageTurn } from "./channel-order-review-page-turn"
 import { createLinkedAssistantContext } from "./channel-principal"
 import { processAssistantWhatsAppEditRequest } from "./channel-proposal-edit"
 import { processAssistantWhatsAppReadPageTurn } from "./channel-read-page-turn"
@@ -114,7 +115,11 @@ export function defaultChannelTurnDependencies() {
       ),
     createTurn: createGeneralAssistantTurn,
     flow: processAssistantWhatsAppFlowTurn,
-    readPage: processAssistantWhatsAppReadPageTurn,
+    readPage: async (
+      ...args: Parameters<typeof processAssistantWhatsAppReadPageTurn>
+    ) =>
+      (await processAssistantWhatsAppOrderReviewPageTurn(...args)) ||
+      processAssistantWhatsAppReadPageTurn(...args),
     replyChoice: processAssistantWhatsAppReplyChoiceTurn,
     typing: startAssistantWhatsAppTyping,
     createWorkflowTurn: createChannelWorkflowTurn,

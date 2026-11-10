@@ -95,6 +95,7 @@ function moneyReceipt(receipt: unknown) {
 }
 /** What stayed safe after a cancel; the "Draft cancelled." prefix carries the heading. */
 const cancelSafetyLines: Record<string, string> = {
+  order_create: "No order, stock change or payment was recorded.",
   stock_receive: "Stock is unchanged.",
   payment_record: "Nothing was recorded.",
   product_price_update: "The price is unchanged.",
@@ -138,6 +139,22 @@ export function renderWhatsAppActionResultChunks(
   options: { paymentOrigin?: string; appOrigin?: string } = {},
 ) {
   const receipt = generalReceiptSchema.safeParse(proposal.receipt)
+  if (
+    proposal.status === "COMPLETED" &&
+    receipt.success &&
+    receipt.data.kind === "order"
+  ) {
+    const origin = options.appOrigin
+      ? trustedAssistantAppOrigin(options.appOrigin)
+      : undefined
+    const body = renderWhatsAppActionResult(proposal, appLink)
+    const orderId = receipt.data.orderId ?? receipt.data.recordId
+    return [
+      origin && orderId
+        ? `${body}\n\nOpen saved order: ${new URL(`/sales/orders/${encodeURIComponent(orderId)}`, origin).href}`
+        : body,
+    ]
+  }
   if (
     proposal.status !== "COMPLETED" ||
     !receipt.success ||

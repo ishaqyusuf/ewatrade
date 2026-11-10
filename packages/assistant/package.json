@@ -74,6 +74,7 @@
     "./channels/read-record-links": "./src/channels/read-record-links.ts",
     "./channels/conversation-links": "./src/channels/conversation-links.ts",
     "./channels/review-links": "./src/channels/review-links.ts",
+    "./channels/order-review": "./src/channels/order-review.ts",
     "./channels/action-review": "./src/channels/action-review.ts",
     "./channels/action-result": "./src/channels/action-result.ts",
     "./channels/media": "./src/channels/media.ts",
