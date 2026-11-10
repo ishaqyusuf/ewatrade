@@ -89,6 +89,7 @@ describe("admin mobile navigation", () => {
       "customers",
       "service-work",
       "finance",
+      "shipments",
       "order-reminders",
       "receipt-settings",
       "returns-refunds",
@@ -152,6 +153,7 @@ describe("admin mobile navigation", () => {
         .map((item) => item.id)
     const free = ids(getPlan("free").features)
     expect(free).not.toContain("finance")
+    expect(free).not.toContain("shipments")
     expect(free).not.toContain("receipt-settings")
     expect(free).not.toContain("team")
     expect(free).not.toContain("order-reminders")

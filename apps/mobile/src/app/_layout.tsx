@@ -293,6 +293,8 @@ const InitialLayout = ({
           />
           <Stack.Screen name="finance-counts-modal" options={modalOptions} />
           <Stack.Screen name="finance-count/[countId]" options={modalOptions} />
+          <Stack.Screen name="shipments-modal" options={modalOptions} />
+          <Stack.Screen name="shipment/[shipmentId]" options={modalOptions} />
           <Stack.Screen
             name="finance-account/[accountId]"
             options={modalOptions}

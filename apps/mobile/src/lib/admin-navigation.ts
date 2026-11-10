@@ -26,6 +26,7 @@ export type AdminMoreItemId =
   | "analytics"
   | "payments-received"
   | "finance"
+  | "shipments"
   | "order-reminders"
   | "receipt-settings"
   | "returns-refunds"
@@ -133,6 +134,7 @@ const PLAN_FEATURE_BY_ITEM: Partial<
   Record<AdminMoreItemId, RetailOpsPlanFeature>
 > = {
   finance: "finance",
+  shipments: "finance",
   "order-reminders": "orderReminders",
   "receipt-settings": "invoices",
   team: "staff",
@@ -213,6 +215,13 @@ export function buildAdminMoreSections({
       icon: "ReceiptText",
       id: "finance",
       label: "Spending & finance",
+    })
+    storeItems.push({
+      action: { href: "/shipments-modal" as LinkProps["href"], kind: "route" },
+      disabled: !availability.hasProductItems,
+      icon: "Truck",
+      id: "shipments",
+      label: "Shipments",
     })
     storeItems.push({
       action: {
