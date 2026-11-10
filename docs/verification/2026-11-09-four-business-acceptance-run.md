@@ -10,16 +10,16 @@ has the status, evidence and limitation for each case.
 
 ## Scorecard
 
-Current, 10 November 2026, after runtime runs 1–2, all of T1–T8 landing, and the
+Current, 10 November 2026, after runtime runs 1–3, all of T1–T8 landing, and the
 owner's instruction to keep data-dependent retail cases blocked:
 
 | Business | Passed | Fail | Blocked | Not assessed |
 | --- | ---: | ---: | ---: | ---: |
-| Jawdah poultry | 4/12 | 1 | 0 | 7 |
+| Jawdah poultry | 6/12 | 1 | 0 | 5 |
 | Laundry | 0/12 | 0 | 1 | 11 |
 | Hypnos Man Collection | 0/24 | 0 | 23 | 1 |
 | Alhaq Tech | 0/24 | 0 | 23 | 1 |
-| **Total** | **4/72 (5.6%)** | **1** | **47** | **20** |
+| **Total** | **6/72 (8.3%)** | **1** | **47** | **18** |
 
 Earlier on 10 November the count was 5/72 passed; J06 moved from PASS to FAIL in
 run 2. All passes are local-window passes (see runtime runs 1–2). The hosted launch
@@ -233,3 +233,31 @@ edit it.
 
 J12 still needs the mobile, WhatsApp, stale-review and cross-tenant checks. No
 customer message was sent; both "message customer" prompts were dismissed.
+
+## Runtime run 3: Jawdah storefront
+
+10 November 2026, same local window. API at `ba4fca6a3` (clean tree). Storefront
+ran with the test OTP adapter; every page carried the "Local QA preview · no
+messages are sent" banner.
+
+- **New-business store link (J08, R17 finding).** Signup says the free store link
+  works as soon as setup finishes. In fact no Site existed and the link showed
+  "This shop isn't available". It worked only after the owner started a
+  Storefront draft (Commerce studio 1.2.0) and published it.
+- **Starter-plan ordering (finding).** On Starter, the published shop lists items
+  and prices but has no bag or ordering, because `customerRequestsAllowed` is
+  false. J09–J11 therefore ran on the existing **Jawdah Poultry QA** tenant,
+  which has a QA Growth entitlement and a published Commerce studio site.
+- **J08 (partial).** On the fresh tenant, the two registered synthetic QA PNGs
+  were uploaded and the second was made primary. The public page shows that
+  primary and both thumbnails, and the photo endpoint returns 200. The
+  unavailable/book-ahead policy was not rerun.
+- **J09 PASS.** 4 Small Crates = ₦18,000. The customer logged in with a test OTP
+  and the bag was kept. Delivery was chosen and request **R-ARCHEP** saved with
+  its reference page. Copy issue: the page says you can order "part of a Crate,
+  up to 2 decimal places".
+- **J10 PASS.** The request reached the merchant's Website requests inbox and the
+  bell. Confirm stays disabled until a destination is entered. "Ask for details"
+  reached the customer's request page and their reply came back. Destination +
+  ₦1,500 fee gave ₦19,500. Confirm created exactly **ORD-062**: Not paid, 4
+  Crates reserved. No WhatsApp message was sent.
