@@ -23,6 +23,7 @@ import { getSaleOfferingStockLabel } from "@/components/mobile/sale-item-picker-
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { Icon } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
+import { Skeleton, SkeletonGroup } from "@/components/ui/skeleton"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
 import { useBottomSearchScroll } from "@/hooks/use-bottom-search-scroll"
@@ -291,8 +292,18 @@ export function ClassicSaleItems({
             )}
           </View>
         }
+        // Items already in the sale stay visible; the rest load below them.
+        ListFooterComponent={
+          choicesLoading && !search && entries.length && !choices.length ? (
+            <View className="pt-[18px]">
+              <SaleChoicesSkeleton />
+            </View>
+          ) : null
+        }
         ListEmptyComponent={
-          catalogFreeLines.length && !search ? null : (
+          choicesLoading && !search ? (
+            <SaleChoicesSkeleton />
+          ) : catalogFreeLines.length && !search ? null : (
             <View className="items-center gap-1.5 rounded-[20px] border border-dashed border-border px-4 py-6">
               <Icon
                 className="size-[22px] text-muted-foreground"
@@ -426,6 +437,35 @@ export function ClassicSaleItems({
         />
       ) : null}
     </View>
+  )
+}
+
+/** Placeholder rows shaped like SaleChoiceRow while the catalog loads. */
+function SaleChoicesSkeleton() {
+  return (
+    <SkeletonGroup accessibilityLabel="Loading items">
+      <View className="gap-2 pb-2">
+        <Skeleton height={14} radius={4} width={96} />
+      </View>
+      <View className="rounded-[20px] bg-card px-3.5">
+        {[0.62, 0.48, 0.7, 0.55, 0.4].map((width, index, rows) => (
+          <View
+            key={width}
+            className={cn(
+              "min-h-[62px] flex-row items-center gap-2.5 py-3",
+              index < rows.length - 1 && "border-b border-border",
+            )}
+          >
+            <Skeleton height={42} radius={13} width={42} />
+            <View className="min-w-0 flex-1 gap-1.5">
+              <Skeleton height={14} radius={4} width={`${width * 100}%`} />
+              <Skeleton height={12} radius={4} width="38%" />
+            </View>
+            <Skeleton height={36} radius={18} width={64} />
+          </View>
+        ))}
+      </View>
+    </SkeletonGroup>
   )
 }
 
