@@ -51,17 +51,17 @@ The strongest reusable evidence is the Jawdah storefront journey (J08–J11):
 ORD-061, ₦19,500 paid, zero balance, 28–29 October. A rerun on the candidate
 should pass it quickly if nothing has regressed.
 
-## Blocked cases and what unblocks them
+## Source dependencies and runtime gates
 
 | Cases | Unblocked by | State at 10 Nov |
 | --- | --- | --- |
-| L04, L12 | T6 WhatsApp laundry intake (Phase 3) | Landed `1e6672a17`; now NOT_ASSESSED |
-| R04, R05, R06 (H and A) | T5 rich WhatsApp product setup | Landed `082595e9a`; now NOT_ASSESSED |
-| R07 | T3 saved-product app/web links | Landed `ed975340c`; now NOT_ASSESSED |
-| R09 | T2 QR and scan-to-sale | Landed `0734a5f80`; now NOT_ASSESSED |
+| L04, L12 | T6 WhatsApp laundry intake (Phase 3) | Landed `1e6672a17`; NOT_ASSESSED pending actual channel/role proof |
+| R04, R05, R06 (H and A) | T5 rich WhatsApp product setup | Landed `082595e9a`; Hypnos/Alhaq cases remain BLOCKED on merchant-approved data and actual runtime proof |
+| R07 | T3 saved-product app/web links | Landed `ed975340c`; Hypnos/Alhaq cases remain BLOCKED on merchant-approved data and actual runtime proof |
+| R09 | T2 QR and scan-to-sale | Landed `0734a5f80`; Hypnos/Alhaq cases remain BLOCKED on merchant-approved data and actual runtime proof |
 | R10–R15 | T1 shipment backend + T4 shipment UI | Both landed (T4 `27a53202f`, `623e90e8d`); still blocked on merchant shipment data |
 | R16 | T7 WhatsApp shipment lifecycle | Landed `1e6672a17`, `6b092d7ca`; still blocked on merchant shipment data |
-| R18, R19 | T8 no-site public catalog | Landed `92db83673`; now NOT_ASSESSED |
+| R18, R19 | T8 no-site public catalog | Landed `92db83673`; Hypnos/Alhaq cases remain BLOCKED on merchant-approved data and actual runtime proof |
 | R23 | **T10 fully native catalog sale**, owner requested plan 10 Nov | Planned; still blocked |
 | R24 | T1/T4/T7 and R23 | Still blocked |
 
@@ -285,3 +285,35 @@ J06 stays FAIL and the aggregate stays 6/72 local passes. Earlier run failures a
 historical evidence are retained. Source types/quick smoke/H01/H02 and standard
 existing-data web smoke passed; scope and source fingerprints are in the linked
 [takeover receipt](2026-11-10-five-phase-takeover.md).
+
+
+## Managed phase 5 continuation — 10 November
+
+Original local-window authorization was recovered from the prior phase 5 human
+message, 9 November at16:38:11UTC: “Authorize local window.” This covers local
+nonproduction runtime/UI acceptance; the current no-fixture-for-smoke, merchant-data,
+provider/send, public-consent and release boundaries remain.
+
+Five explicit participant holds pinned HEAD`585842939` and documented peer source
+fingerprints for the bounded native run. The window began11:27:33UTC and was
+released early at11:31:40UTC after the Android smoke failed its configured catalog
+assertion. Initialization and QA sign-in progressed, but the failed, runtime-unverified
+receipt earns no acceptance credit. Previous failed runs/history remain intact.
+
+The earlier dependency table described source-unblocked retail rows as NOT_ASSESSED;
+that wording is corrected above to match the authoritative register's merchant-data
+BLOCKED state. No CSV status or stable ID was changed by that correction.
+
+See the [phase 5 receipt and remaining-action packet](2026-11-10-business-phase-5.md)
+for exact scope, independent checks, coordinated windows and outstanding gates.
+J06 stays FAIL until saved cashier payment acceptance; T10/R23 remains blocked
+until actual native implementation and case proof. Score stays6/72local passes.
+
+Existing-record follow-through at11:32:26UTC: Acceptance ORD-001 is still
+COMPLETED/PAID ₦23,500, payments₦10,000+₦13,500 and stock498/198/60 with zero
+reservations. QA ORD-062 is CONFIRMED/PENDING ₦19,500, paid0 and an active existing
+manual link with no reports. Actual local OWNER dashboard shows matching totals,
+four reserved Crates and the service charge; a Create payment link draft was
+canceled. No existing public URL was recovered or token reconstructed. No new
+link/report/payment/fulfilment/customer send occurred. J11/J12 remain NOT_ASSESSED;
+these are persisted-state/read-only observations, not case completion.
