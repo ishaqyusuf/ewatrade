@@ -18,6 +18,7 @@ import {
   type SetupEntitySource,
   type SetupOpenQuestion,
   type SetupProductPayload,
+  WHATSAPP_PRODUCT_STAGE_MAX,
   WHATSAPP_PRODUCT_WORKFLOW_LIMIT,
   deriveSetupEntityState,
   isProductWorkflowDraftKey,
@@ -86,6 +87,12 @@ export type SetupKnownAttachment = {
  * Keeps an existing product's key (by key, then same name) and gives new products the
  * next free product key. Undefined when more products would be held than allowed.
  */
+function productName(payload: unknown) {
+  return payload && typeof payload === "object" && "name" in payload
+    ? String(payload.name).trim().toLowerCase()
+    : ""
+}
+
 export function productDraftKeys(
   items: ReadonlyArray<{ key?: string; name: string }>,
   current: ReadonlyArray<{ key: string; payload: unknown }>,
@@ -996,17 +1003,35 @@ export function createSetupAssistantTools(deps: SetupToolDependencies) {
             status: "failed" as const,
             warnings: ["Stage exactly one product."],
           }
+        const stageMax = Math.min(productLimit, WHATSAPP_PRODUCT_STAGE_MAX)
         if (
           deps.productOnly &&
-          (items.length > productLimit ||
+          (items.length > stageMax ||
             items.some((item) => item.kind !== "product"))
         )
           return {
             status: "failed" as const,
-            warnings: [`Stage up to ${productLimit} products only.`],
+            warnings: [`Stage up to ${stageMax} products at a time.`],
           }
         const warnings: string[] = []
         const current = await deps.readDraft()
+        if (deps.productOnly && productLimit > 1) {
+          // A product this chat already saved is final; it is never staged again.
+          const saved = new Set(
+            current
+              .filter((entity) => entity.state === "COMMITTED")
+              .map((entity) => productName(entity.payload)),
+          )
+          const fresh = items.filter((item) => {
+            if (!saved.has(item.name.trim().toLowerCase())) return true
+            warnings.push(
+              `${item.name} is already saved in this chat. It won't be added again.`,
+            )
+            return false
+          })
+          if (!fresh.length) return { status: "failed" as const, warnings }
+          items = fresh
+        }
         if (deps.productOnly && productLimit === 1)
           items = items.map((item) => ({ ...item, key: "product" }))
         else if (deps.productOnly) {

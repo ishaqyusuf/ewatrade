@@ -103,7 +103,10 @@ const refused = (
   message = WHATSAPP_MEDIA_FAILED,
 ): WhatsAppMediaIngestResult => ({ state: "refused", code, message })
 
-/** Channel photos are original attachments in GENERAL; image reading is deferred. */
+/**
+ * Channel photos are original attachments, never read: GENERAL files them on
+ * records and a Product chat saves each with the product the owner names.
+ */
 export function whatsAppAttachmentKindAllowedForPurpose(
   kind: SetupAttachmentKind,
   purpose: "GENERAL" | "SETUP" | "PRODUCT_CREATE",
@@ -111,8 +114,9 @@ export function whatsAppAttachmentKindAllowedForPurpose(
   return (
     assistantAttachmentKindAllowedForPurpose(kind, purpose) &&
     (kind === "AUDIO" ||
-      (purpose !== "PRODUCT_CREATE" &&
-        (kind !== "IMAGE" || purpose === "GENERAL")))
+      (purpose === "PRODUCT_CREATE"
+        ? kind === "IMAGE"
+        : kind !== "IMAGE" || purpose === "GENERAL"))
   )
 }
 
@@ -457,7 +461,7 @@ export async function createDefaultWhatsAppMediaIngestDependencies(
         scope.dataClassification,
         process.env,
         undefined,
-        purpose === "GENERAL",
+        purpose === "GENERAL" || purpose === "PRODUCT_CREATE",
       )
       return policy.kind === "IMAGE" ? available.photos : available.files
     },

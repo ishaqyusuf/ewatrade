@@ -3,11 +3,13 @@ import { z } from "zod"
 import { generalMoney } from "../general/contracts"
 import { readRecordOriginSchema } from "../general/read-record-target"
 import {
+  WHATSAPP_PRODUCT_WORKFLOW_LIMIT,
   deriveSetupEntityState,
   isProductWorkflowDraftKey,
   setupEntityPayloadSchema,
   setupOpenQuestionSchema,
 } from "../setup/contracts"
+import { setupProductVariants } from "../setup/variants"
 import { trustedAssistantAppOrigin } from "./conversation-links"
 import { chunkWhatsAppFormattedReply, whatsAppModelText } from "./presentation"
 import { chunkWhatsAppReply, whatsAppPlainText } from "./render"
@@ -259,7 +261,7 @@ function entityLines(
         lines.push(`Entered stock: ${stock.quantity} ${stock.unitName}`)
     }
     if (payload.photoAttachmentId)
-      lines.push("Saved product photo: review the original in EwaTrade.")
+      lines.push("Photo: the one you sent, saved with the product.")
   } else if (payload.kind === "service") {
     lines.push(
       `Pricing: ${payload.pricing}`,
@@ -322,7 +324,7 @@ export function renderWhatsAppWorkflowReply(
     reply.origin.tenantId !== options.currentScope.tenantId ||
     reply.origin.storeId !== options.currentScope.storeId ||
     (reply.purpose === "PRODUCT_CREATE" &&
-      (reply.entities.length > WHATSAPP_WORKFLOW_ACTION_MAX_SELECTION ||
+      (reply.entities.length > WHATSAPP_PRODUCT_WORKFLOW_LIMIT ||
         reply.entities.some(
           (entity) =>
             !isProductWorkflowDraftKey(entity.key) || entity.kind !== "PRODUCT",
@@ -378,13 +380,26 @@ export function renderWhatsAppWorkflowReply(
         ...detail,
       )
   } else {
+    // A Product chat lists only what is still a draft, after its saved count.
+    const saved =
+      reply.purpose === "PRODUCT_CREATE"
+        ? reply.entities.filter((entity) => entity.state === "COMMITTED").length
+        : 0
+    const listed =
+      reply.purpose === "PRODUCT_CREATE"
+        ? reply.entities.filter((entity) => entity.state !== "COMMITTED")
+        : reply.entities
+    if (saved)
+      lines.push(
+        `${saved} of ${WHATSAPP_PRODUCT_WORKFLOW_LIMIT} products saved in this chat.`,
+      )
     const page = request?.kind === "list" ? request.page : 1
     const start = (page - 1) * 4
-    const selected = reply.entities.slice(start, start + 4)
+    const selected = listed.slice(start, start + 4)
     lines.push(
       selected.length
         ? `Saved drafts · page ${page}:`
-        : reply.entities.length
+        : listed.length
           ? "That draft page is unavailable."
           : "No saved draft records yet.",
     )
@@ -396,7 +411,7 @@ export function renderWhatsAppWorkflowReply(
         `${payload.data.name} · ${entity.kind} · ${entity.state}\nDraft key: ${entity.key}${entity.errorCode ? `\nApp follow-up required: ${entity.errorCode}` : ""}`,
       )
     }
-    if (start + 4 < reply.entities.length)
+    if (start + 4 < listed.length)
       lines.push(`More saved drafts: Draft list page ${page + 1}`)
   }
   if (reply.requiresForm)
@@ -511,7 +526,7 @@ export function whatsAppWorkflowDraftChatReady(
     return (
       payload.kind === "product" &&
       isProductWorkflowDraftKey(entity.key) &&
-      simpleProduct(payload)
+      whatsAppProductChatShape(payload)
     )
   if (payload.kind === "money_account") return false
   if (payload.kind === "customer") return !payload.opening
@@ -520,12 +535,38 @@ export function whatsAppWorkflowDraftChatReady(
     return !(payload.pricing === "quote" && payload.priceMinor !== undefined)
   return simpleProduct(payload)
 }
-function simpleProduct(
-  payload: Extract<
-    z.infer<typeof setupEntityPayloadSchema>,
-    { kind: "product" }
-  >,
-) {
+type ProductPayload = Extract<
+  z.infer<typeof setupEntityPayloadSchema>,
+  { kind: "product" }
+>
+/** One Product review shows at most this many option rows; larger products finish in the app. */
+export const WHATSAPP_PRODUCT_VARIANT_MAX = 10
+/** Packs a Product review can show per row; more finish in the app. */
+export const WHATSAPP_PRODUCT_PACK_MAX = 3
+const exactStock = (value: string | undefined) =>
+  value === undefined ||
+  (isExactDecimal(value, { maxScale: 2 }) && !value.startsWith("-"))
+/**
+ * A WhatsApp Product draft the chat can review and save exactly: options, packs
+ * and one sent photo are allowed within these bounds. Library pictures stay in
+ * the app, where the owner can see them.
+ */
+export function whatsAppProductChatShape(payload: ProductPayload) {
+  if (
+    payload.illustrationId ||
+    (payload.sellingUnits?.length ?? 0) > WHATSAPP_PRODUCT_PACK_MAX ||
+    !exactStock(payload.openingStock)
+  )
+    return false
+  if (!payload.options?.length && !payload.variants?.length) return true
+  const rows = setupProductVariants(payload)
+  return (
+    rows.length > 0 &&
+    rows.length <= WHATSAPP_PRODUCT_VARIANT_MAX &&
+    rows.every((row) => exactStock(row.openingStock))
+  )
+}
+function simpleProduct(payload: ProductPayload) {
   return !(
     payload.illustrationId ||
     payload.photoAttachmentId ||

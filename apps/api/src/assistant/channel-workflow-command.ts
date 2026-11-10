@@ -1,3 +1,4 @@
+import { whatsAppProductChatShape } from "@ewatrade/assistant/channels/workflow"
 import {
   type WhatsAppWorkflowActionSource,
   whatsAppWorkflowActionSourceSchema,
@@ -37,7 +38,6 @@ import { isExactDecimal } from "@ewatrade/utils/exact-decimal"
 import { z } from "zod"
 import { isLinkedAssistantIdentity } from "./channel-principal"
 import type { GeneralTransactionContext } from "./general-actions"
-import { catalogCommandForProductConversation } from "./product-command"
 import { catalogCommandForSetupEntity } from "./setup-commit"
 import { requireSetupAssistantScope } from "./setup-context"
 import { WorkflowTurnError } from "./workflow-turn-contract"
@@ -50,6 +50,8 @@ export type WorkflowCommandProjectionInput = {
   entity: Entity
   workflowContext: unknown
   scope: AssistantScope
+  /** The private Catalog copy of the photo this Product draft names, when it is ready. */
+  photoAssetId?: string
 }
 type CustomerCommand = Parameters<typeof createCustomerInTransaction>[1]
 export type PreparedReviewedWorkflowCommand =
@@ -125,6 +127,7 @@ export function prepareReviewedWorkflowCommand(
   )
     return refuse()
   if (
+    source.purpose === "SETUP" &&
     value.kind === "product" &&
     (value.photoAttachmentId ||
       value.options?.length ||
@@ -137,7 +140,12 @@ export function prepareReviewedWorkflowCommand(
     return refuse()
   let command: CreateCatalogItemInput
   if (source.purpose === "PRODUCT_CREATE") {
-    if (!isProductWorkflowDraftKey(entity.key) || value.kind !== "product")
+    if (
+      !isProductWorkflowDraftKey(entity.key) ||
+      value.kind !== "product" ||
+      !whatsAppProductChatShape(value) ||
+      (input.photoAssetId !== undefined && !value.photoAttachmentId)
+    )
       return refuse()
     const context = productWorkflowContextSchema.safeParse(
       input.workflowContext,
@@ -150,12 +158,21 @@ export function prepareReviewedWorkflowCommand(
       context.data.snapshot.illustrationId
     )
       return refuse()
+    // Same canonical Catalog command as Setup: options become variants, packs
+    // become units, and the reviewed photo replaces any library picture.
+    const { illustrationId: _picture, ...base } = catalogCommandForSetupEntity(
+      entity.id,
+      value,
+      {
+        actorUserId: scope.userId,
+        storeId: scope.storeId,
+        tenantId: scope.tenantId,
+      },
+    )
     command = {
-      ...catalogCommandForProductConversation(
-        scope,
-        entity,
-        input.workflowContext,
-      ),
+      ...base,
+      category: base.category ?? (context.data.snapshot.category || undefined),
+      ...(input.photoAssetId ? { photoAssetIds: [input.photoAssetId] } : {}),
       // The canonical Product repository overrides this identity at execution too.
       clientOperationId: productClientOperationId(
         source.conversationId,
@@ -205,21 +222,69 @@ export async function assertReviewedWorkflowProductHasNoMatches(
     )
 }
 
+/** One private Catalog copy per draft and sent photo; a changed photo gets its own. */
+export function channelProductPhotoOperation(
+  entityId: string,
+  attachmentId: string,
+) {
+  return `${entityId}-${attachmentId}`
+}
+/**
+ * The ready, unattached Catalog copy of the photo a reviewed Product draft names.
+ * Review and execution both bind it into the command digest, so a photo that
+ * appears or disappears in between refuses the stale confirmation.
+ */
+export async function readyChannelProductPhoto(
+  tx: Prisma.TransactionClient,
+  scope: AssistantScope,
+  entity: Entity,
+): Promise<string | undefined> {
+  const payload = setupEntityPayloadSchema.safeParse(entity.payload)
+  if (!payload.success || payload.data.kind !== "product") return undefined
+  const attachmentId = payload.data.photoAttachmentId
+  if (!attachmentId) return undefined
+  const asset = await tx.catalogPhotoAsset.findFirst({
+    where: {
+      tenantId: scope.tenantId,
+      clientOperationId: `setup-photo-${channelProductPhotoOperation(entity.id, attachmentId)}`,
+      catalogItemId: null,
+      uploadedAt: { not: null },
+      storagePath: { not: null },
+      state: { in: ["PENDING_REVIEW", "APPROVED"] },
+      expiresAt: { gt: new Date() },
+    },
+    select: { id: true },
+  })
+  return asset?.id
+}
+
 /** DB review repository receives only a digest of the actual canonical command, never an executable payload. */
 export async function projectCommand(
   tx: Prisma.TransactionClient,
   input: WorkflowCommandProjectionInput,
 ) {
-  const prepared = prepareReviewedWorkflowCommand(input)
+  const photoAssetId =
+    input.source.purpose === "PRODUCT_CREATE"
+      ? await readyChannelProductPhoto(tx, input.scope, input.entity)
+      : undefined
+  const prepared = prepareReviewedWorkflowCommand({ ...input, photoAssetId })
   await assertReviewedWorkflowProductHasNoMatches(
     input.source,
     prepared,
     (query) => tx.catalogItem.count(query),
   )
+  const payload = setupEntityPayloadSchema.safeParse(input.entity.payload)
+  const sentPhoto =
+    input.source.purpose === "PRODUCT_CREATE" &&
+    payload.data?.kind === "product" &&
+    Boolean(payload.data.photoAttachmentId)
   return {
     commandHash: digest(prepared.command),
     ...(prepared.kind === "catalog" && prepared.categoryLabel
       ? { categoryLabel: prepared.categoryLabel }
+      : {}),
+    ...(sentPhoto
+      ? { photo: photoAssetId ? ("added" as const) : ("skipped" as const) }
       : {}),
   }
 }
@@ -230,6 +295,8 @@ export function prepareReviewedWorkflowSelection(input: {
   scope: AssistantScope
   conversation: Conversation
   draft: Draft
+  /** Ready private photo copies by draft record id, read inside the same transaction. */
+  photos?: ReadonlyMap<string, string>
 }) {
   const source = whatsAppWorkflowActionSourceSchema.parse(input.source)
   const { scope, conversation, draft } = input
@@ -263,14 +330,16 @@ export function prepareReviewedWorkflowSelection(input: {
     const payload = setupEntityPayloadSchema.safeParse(entity.payload)
     if (!payload.success || digest(payload.data) !== selected.payloadHash)
       return refuse()
+    const photoAssetId = input.photos?.get(entity.id)
     const prepared = prepareReviewedWorkflowCommand({
       source,
       entity,
       workflowContext: conversation.workflowContext,
       scope,
+      ...(photoAssetId ? { photoAssetId } : {}),
     })
     if (digest(prepared.command) !== selected.commandHash) return refuse()
-    return { entity, prepared }
+    return { entity, prepared, photoAssetId }
   })
 }
 
@@ -284,6 +353,8 @@ export type ReviewedWorkflowSelectionResult = {
     kind: "PRODUCT" | "SERVICE" | "CUSTOMER"
     recordId: string
     name: string
+    /** Catalog photo attached in this transaction; queued for review after commit. */
+    photoAssetId?: string
   }>
 }
 
@@ -328,11 +399,21 @@ export async function executeReviewedWorkflowSelectionInTransaction(
     source.conversationId,
   )
   const draft = await readSetupDraft(tx, source.draftId)
+  const photos = new Map<string, string>()
+  if (source.purpose === "PRODUCT_CREATE")
+    for (const selection of source.selection) {
+      const entity = draft.entities.find((row) => row.id === selection.entityId)
+      const assetId = entity
+        ? await readyChannelProductPhoto(tx, scope, entity)
+        : undefined
+      if (assetId) photos.set(selection.entityId, assetId)
+    }
   const selected = prepareReviewedWorkflowSelection({
     source,
     scope,
     conversation,
     draft,
+    photos,
   })
   if (source.purpose === "PRODUCT_CREATE") {
     // All-or-nothing: each reviewed product goes through the canonical Product
@@ -367,6 +448,7 @@ export async function executeReviewedWorkflowSelectionInTransaction(
             entity,
             workflowContext,
             scope,
+            ...(item.photoAssetId ? { photoAssetId: item.photoAssetId } : {}),
           })
           if (
             command.kind !== "catalog" ||
@@ -382,6 +464,7 @@ export async function executeReviewedWorkflowSelectionInTransaction(
         kind: "PRODUCT",
         recordId: result.recordId,
         name: result.name,
+        ...(item.photoAssetId ? { photoAssetId: item.photoAssetId } : {}),
       })
     }
     return {

@@ -127,16 +127,25 @@ export function defaultAssistantAttachmentDeps(
           return null
         }
       }
-      const conversation =
+      const [conversation, source] =
         row?.kind === "IMAGE"
-          ? await prisma.assistantConversation.findUnique({
-              where: { id: row.conversationId },
-              select: { purpose: true },
-            })
-          : null
+          ? await Promise.all([
+              prisma.assistantConversation.findUnique({
+                where: { id: row.conversationId },
+                select: { purpose: true },
+              }),
+              prisma.assistantAttachment.findUnique({
+                where: { id: row.id },
+                select: { clientRequestId: true },
+              }),
+            ])
+          : [null, null]
       return row
         ? {
-            attachmentOnly: conversation?.purpose === "GENERAL",
+            // WhatsApp photos stay originals in every chat: never read by a model.
+            attachmentOnly:
+              conversation?.purpose === "GENERAL" ||
+              Boolean(source?.clientRequestId?.startsWith("whatsapp-media:")),
             id: row.id,
             tenantId: row.tenantId,
             conversationId: row.conversationId,

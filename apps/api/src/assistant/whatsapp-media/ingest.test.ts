@@ -310,9 +310,14 @@ test("deferred Setup image reading refuses before bytes or persistence while ori
   expect(h.calls()).toBe(0)
   expect(h.row()).toBeNull()
   expect(whatsAppAttachmentKindAllowedForPurpose("IMAGE", "GENERAL")).toBe(true)
+  // A Product chat keeps original photos only, to save with the named product.
   expect(
     whatsAppAttachmentKindAllowedForPurpose("IMAGE", "PRODUCT_CREATE"),
-  ).toBe(false)
+  ).toBe(true)
+  for (const kind of ["PDF", "SPREADSHEET", "TEXT"] as const)
+    expect(
+      whatsAppAttachmentKindAllowedForPurpose(kind, "PRODUCT_CREATE"),
+    ).toBe(false)
   for (const kind of ["PDF", "SPREADSHEET", "TEXT"] as const)
     expect(whatsAppAttachmentKindAllowedForPurpose(kind, "SETUP")).toBe(true)
   expect(

@@ -336,6 +336,8 @@ export async function createWorkflowAssistantTurn(
     const modelHistory = withAttachmentText(
       history as unknown as Parameters<typeof withAttachmentText>[0],
       sentAttachments,
+      // WhatsApp Product photos are originals only: facts come from the owner.
+      { attachmentOnlyImages: productMode && options.channel === "whatsapp" },
     ) as unknown as SetupUIMessage[]
     const modelMessages = await convertToModelMessages(
       modelHistory.map(({ role, parts }) => ({ role, parts })),

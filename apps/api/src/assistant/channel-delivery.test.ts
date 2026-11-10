@@ -282,3 +282,48 @@ test("public enrollment permits an admitted nonpilot but never bypasses canonica
     else process.env.ASSISTANT_WHATSAPP_ROLLOUT_MODE = previous
   }
 })
+
+test("a Product photo card sends the private original with its caption, or nothing", async () => {
+  const image = {
+    attachmentId: "photo",
+    conversationId: "chat",
+    tenantId: "tenant",
+    dataClassification: "LIVE" as const,
+    caption: "*1. Oud Royal* · with your photo",
+  }
+  const { deps, outcomes, sends } = fixture()
+  const begin = deps.begin
+  deps.begin = async (...args) => {
+    const claim = await begin(...args)
+    return claim.kind === "started"
+      ? { ...claim, presentationFamily: "review" as const, image }
+      : claim
+  }
+  const images: unknown[] = []
+  deps.readImage = async () => ({
+    bytes: new Uint8Array([1, 2]),
+    contentType: "image/jpeg" as const,
+  })
+  deps.sendImage = async (input) => {
+    images.push(input)
+    return { messageId: "wamid.photo" }
+  }
+  expect(await processAssistantChannelDelivery("out", deps)).toEqual({
+    status: "sent",
+  })
+  expect(sends).toEqual([])
+  expect(images).toMatchObject([
+    {
+      to: "2348000000001",
+      contentType: "image/jpeg",
+      caption: "*1. Oud Royal* · with your photo",
+    },
+  ])
+  // An unreadable original is a definite failure: no text stands in for it.
+  deps.readImage = async () => null
+  expect(await processAssistantChannelDelivery("out", deps)).toEqual({
+    status: "failed",
+  })
+  expect(outcomes.at(-1)).toEqual({ kind: "rejected" })
+  expect(sends).toEqual([])
+})

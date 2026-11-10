@@ -1,5 +1,8 @@
 import { parseWhatsAppTypedAction } from "@ewatrade/assistant/channels/action-review"
-import { whatsAppVoiceChoiceContentSchema } from "@ewatrade/assistant/channels/media"
+import {
+  whatsAppMediaContentSchema,
+  whatsAppVoiceChoiceContentSchema,
+} from "@ewatrade/assistant/channels/media"
 import { whatsAppChannelPolicy } from "@ewatrade/assistant/channels/policy"
 import { whatsAppWorkflowEnabled } from "@ewatrade/assistant/channels/workflow"
 import { SETUP_ATTACHMENT_PART } from "@ewatrade/assistant/setup/attachments"
@@ -66,6 +69,41 @@ export function assertChannelProductVoiceInput(
       400,
       "BAD_REQUEST",
       "Use the exact reviewed voice transcript. Send Product photos and files through the saved EwaTrade workflow.",
+    )
+}
+
+/** A Product chat photo: one READY original image, optionally with its caption. */
+export async function assertChannelProductPhotoInput(
+  db: Pick<GeneralTransactionContext["db"], "assistantAttachment">,
+  input: ReturnType<typeof workflowTurnInputSchema.parse>,
+  admitted: { conversationId: string; userMessageId: string },
+) {
+  const attachments = input.message.parts.filter(
+    (part) => part.type === SETUP_ATTACHMENT_PART,
+  )
+  const [attachment] = attachments
+  const photo =
+    attachments.length === 1 &&
+    attachment?.type === SETUP_ATTACHMENT_PART &&
+    input.message.parts.every(
+      (part) => part.type === "text" || part === attachment,
+    ) &&
+    input.message.id === admitted.userMessageId
+      ? await db.assistantAttachment.findFirst({
+          where: {
+            id: attachment.data.attachmentId,
+            conversationId: admitted.conversationId,
+            kind: "IMAGE",
+            status: "READY",
+          },
+          select: { id: true },
+        })
+      : null
+  if (!photo)
+    throw new WorkflowTurnError(
+      400,
+      "BAD_REQUEST",
+      "Send one product photo at a time, with the product name as its caption.",
     )
 }
 
@@ -398,6 +436,14 @@ export async function createChannelWorkflowTurn(
         const inbox = await fresh.db.assistantWhatsAppInbox.findUniqueOrThrow({
           where: { id: lease.inboxId },
         })
+        // A sent photo is the owner's original image in this exact chat.
+        if (whatsAppMediaContentSchema.safeParse(inbox.content).success) {
+          await assertChannelProductPhotoInput(fresh.db, parsed.data, {
+            conversationId: fresh.assistantConversationId ?? "",
+            userMessageId: inbox.userMessageId,
+          })
+          return
+        }
         const choice = whatsAppVoiceChoiceContentSchema.safeParse(inbox.content)
         if (!choice.success || choice.data.choice.decision === "cancel")
           throw new WorkflowTurnError(

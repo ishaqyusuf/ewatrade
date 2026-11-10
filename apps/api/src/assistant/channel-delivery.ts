@@ -18,6 +18,40 @@ import {
   nextAssistantWhatsAppOutbox,
 } from "@ewatrade/db/assistant-whatsapp"
 import { enqueueAssistantWhatsAppDelivery } from "@ewatrade/jobs/assistant-whatsapp"
+import {
+  setupAttachmentStorage,
+  setupAttachmentTarget,
+} from "./attachment-storage"
+
+type DeliveryImage = {
+  attachmentId: string
+  conversationId: string
+  tenantId: string
+  dataClassification: "LIVE" | "QA"
+}
+/** The owner's original photo, read only from this chat's private storage. */
+async function readDeliveryImage(image: DeliveryImage) {
+  const row = await prisma.assistantAttachment.findFirst({
+    where: {
+      id: image.attachmentId,
+      conversationId: image.conversationId,
+      tenantId: image.tenantId,
+      kind: "IMAGE",
+      status: "READY",
+    },
+  })
+  if (
+    !row?.storagePath ||
+    (row.contentType !== "image/jpeg" && row.contentType !== "image/png")
+  )
+    return null
+  const bytes = await setupAttachmentStorage(image.dataClassification)
+    .read({ target: setupAttachmentTarget(row) })
+    .catch(() => null)
+  return bytes
+    ? { bytes: Uint8Array.from(bytes), contentType: row.contentType }
+    : null
+}
 
 export function defaultChannelDeliveryDependencies() {
   const provider = new DirectMetaWhatsAppProvider({
@@ -52,13 +86,18 @@ export function defaultChannelDeliveryDependencies() {
       provider.sendButtons(input),
     sendList: (input: Parameters<typeof provider.sendList>[0]) =>
       provider.sendList(input),
+    sendImage: (input: Parameters<typeof provider.sendImage>[0]) =>
+      provider.sendImage(input),
+    readImage: readDeliveryImage,
     next: (id: string) => nextAssistantWhatsAppOutbox(prisma, id),
   }
 }
 export type ChannelDeliveryDependencies = Omit<
   ReturnType<typeof defaultChannelDeliveryDependencies>,
-  "sendButtons" | "sendList"
+  "sendButtons" | "sendList" | "sendImage" | "readImage"
 > & {
+  sendImage?: ReturnType<typeof defaultChannelDeliveryDependencies>["sendImage"]
+  readImage?: ReturnType<typeof defaultChannelDeliveryDependencies>["readImage"]
   sendButtons?: ReturnType<
     typeof defaultChannelDeliveryDependencies
   >["sendButtons"]
@@ -111,24 +150,47 @@ export async function processAssistantChannelDelivery(
       }),
       callbackData: claim.callbackData,
     }
-    // A native list only when it is available; otherwise the saved text body.
-    const list = claim.list
-    const sendList = list ? deps.sendList : undefined
-    sent =
-      list && sendList
-        ? await sendList({
-            ...input,
-            body: presentWhatsAppMessage(list.body, {
-              family: claim.presentationFamily,
-              maxUnits: 1024,
-            }),
-            button: list.button,
-            sectionTitle: list.sectionTitle,
-            rows: list.rows,
-          })
-        : claim.buttons?.length && deps.sendButtons
-          ? await deps.sendButtons({ ...input, buttons: claim.buttons })
-          : await deps.send(input)
+    // A Product photo card: the original image, or nothing at all.
+    if (claim.image) {
+      const photo =
+        deps.readImage && deps.sendImage
+          ? await deps.readImage(claim.image)
+          : null
+      if (!photo || !deps.sendImage)
+        throw new WhatsAppProviderSendError(
+          "PROVIDER_REJECTED",
+          "DEFINITE_FAILURE",
+        )
+      sent = await deps.sendImage({
+        accessToken: input.accessToken,
+        phoneNumberId: input.phoneNumberId,
+        to: input.to,
+        bytes: photo.bytes,
+        contentType: photo.contentType,
+        // Captions are the exact reviewed product lines; no presentation header.
+        caption: claim.image.caption,
+        callbackData: input.callbackData,
+      })
+    } else {
+      // A native list only when it is available; otherwise the saved text body.
+      const list = claim.list
+      const sendList = list ? deps.sendList : undefined
+      sent =
+        list && sendList
+          ? await sendList({
+              ...input,
+              body: presentWhatsAppMessage(list.body, {
+                family: claim.presentationFamily,
+                maxUnits: 1024,
+              }),
+              button: list.button,
+              sectionTitle: list.sectionTitle,
+              rows: list.rows,
+            })
+          : claim.buttons?.length && deps.sendButtons
+            ? await deps.sendButtons({ ...input, buttons: claim.buttons })
+            : await deps.send(input)
+    }
   } catch (error) {
     const outcome =
       error instanceof WhatsAppProviderSendError &&

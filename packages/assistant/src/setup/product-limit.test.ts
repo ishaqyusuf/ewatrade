@@ -124,3 +124,30 @@ test("product draft keys keep existing keys and refuse more than the limit", () 
     productDraftKeys([{ name: "Rice" }], [{ key: "other", payload: {} }], 3),
   ).toBeUndefined()
 })
+
+test("a WhatsApp Product chat never stages a product it already saved", async () => {
+  const tools = productTools(50)
+  await tools.run({ items: [oil, beans] })
+  const saved = tools.rows().find((row) => row.key === "product")
+  if (!saved) throw Error("Expected the first product draft")
+  ;(saved as { state: string }).state = "COMMITTED"
+  const again = await tools.run({ items: [{ ...oil, price: "9000" }, rice] })
+  expect(again.warnings).toContain(
+    "Groundnut Oil 3L is already saved in this chat. It won't be added again.",
+  )
+  expect(tools.rows().map((row) => row.key)).toEqual([
+    "product",
+    "product-2",
+    "product-3",
+  ])
+  expect((await tools.run({ items: [{ ...oil, price: "9000" }] })).status).toBe(
+    "failed",
+  )
+  const eleven = Array.from({ length: 11 }, (_, index) => ({
+    ...rice,
+    name: `Rice ${index}`,
+  }))
+  expect((await tools.run({ items: eleven })).warnings).toEqual([
+    "Stage up to 10 products at a time.",
+  ])
+})

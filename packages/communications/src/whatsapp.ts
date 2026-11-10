@@ -91,10 +91,22 @@ export type WhatsAppListSendInput = {
   to: string
 }
 
+export type WhatsAppImageSendInput = {
+  to: string
+  bytes: Uint8Array
+  contentType: "image/jpeg" | "image/png"
+  caption: string
+  callbackData?: string
+}
+
 export interface WhatsAppProvider {
   readonly key: string
   sendFlow?(
     input: WhatsAppCredentials & WhatsAppFlowSendInput,
+  ): Promise<{ messageId: string }>
+  /** Uploads private image bytes, then sends them with a caption; no public URL. */
+  sendImage?(
+    input: WhatsAppCredentials & WhatsAppImageSendInput,
   ): Promise<{ messageId: string }>
   /** Read receipt + transient native typing; no outbound message is created. */
   sendTyping?(
@@ -348,6 +360,54 @@ export class DirectMetaWhatsAppProvider implements WhatsAppProvider {
         "OUTCOME_UNKNOWN",
       )
     }
+  }
+
+  async sendImage(input: WhatsAppCredentials & WhatsAppImageSendInput) {
+    if (
+      !/^\d+$/.test(input.phoneNumberId) ||
+      !input.bytes.byteLength ||
+      input.bytes.byteLength > 5 * 1024 * 1024 ||
+      input.caption.length > 1024 ||
+      (input.callbackData !== undefined &&
+        !/^[a-zA-Z0-9:_-]{1,128}$/.test(input.callbackData))
+    )
+      throw new WhatsAppProviderSendError(
+        "PROVIDER_REJECTED",
+        "DEFINITE_FAILURE",
+      )
+    const form = new FormData()
+    form.set("messaging_product", "whatsapp")
+    form.set("type", input.contentType)
+    form.set(
+      "file",
+      new Blob([Uint8Array.from(input.bytes)], { type: input.contentType }),
+      input.contentType === "image/png" ? "photo.png" : "photo.jpg",
+    )
+    // Nothing is sent to the chat until the upload succeeds.
+    const uploaded = await this.#fetch(
+      `${META_GRAPH_URL}/${input.phoneNumberId}/media`,
+      {
+        body: form,
+        headers: { Authorization: `Bearer ${input.accessToken}` },
+        method: "POST",
+      },
+    ).catch(() => null)
+    const media = (await uploaded?.json().catch(() => null)) as {
+      id?: unknown
+    } | null
+    if (!uploaded?.ok || typeof media?.id !== "string" || !media.id)
+      throw new WhatsAppProviderSendError(
+        "PROVIDER_REJECTED",
+        "DEFINITE_FAILURE",
+      )
+    return this.#send(input, {
+      ...(input.callbackData
+        ? { biz_opaque_callback_data: input.callbackData }
+        : {}),
+      image: { id: media.id, caption: input.caption },
+      to: input.to,
+      type: "image",
+    })
   }
 
   /** Best-effort caller; never changes the existing message/OTP transport. */

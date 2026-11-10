@@ -11,6 +11,7 @@ import {
   type WhatsAppWorkflowActionReview,
   parseWhatsAppWorkflowReviewSelection,
   renderWhatsAppWorkflowActionReviewBody,
+  whatsAppProductPhotoCards,
   whatsAppWorkflowActionButtonTitles,
   whatsAppWorkflowActionSourceSchema,
   whatsAppWorkflowReviewAppOnly,
@@ -171,7 +172,7 @@ test("one ready draft uses a singular title", () => {
   ])
 })
 
-test("a Product reply holds up to three products and suggests reviewing them together", () => {
+test("a Product reply suggests reviewing up to three drafts together", () => {
   const productReply: WhatsAppWorkflowReply = {
     ...setup,
     purpose: "PRODUCT_CREATE",
@@ -192,7 +193,7 @@ test("a Product reply holds up to three products and suggests reviewing them tog
   ])
   expect(rendered.chunks.join("\n")).not.toContain("Money accounts")
   for (const entities of [
-    [...productReply.entities, product("product-4", "Extra")],
+    [...productReply.entities, product("product-51", "Extra")],
     [product("product:other", "Other")],
   ])
     expect(
@@ -386,7 +387,7 @@ test("Setup review lists money accounts on their own line with the app link, nev
   ).toBeUndefined()
 })
 
-test("the app's Product prompt is unchanged; WhatsApp may stage up to three", () => {
+test("the app's Product prompt is unchanged; WhatsApp may hold up to 50", () => {
   const app = productAssistantInstructions({ currencyCode: "NGN" })
   expect(app).toStartWith("You help the owner add exactly one product.")
   expect(
@@ -394,8 +395,162 @@ test("the app's Product prompt is unchanged; WhatsApp may stage up to three", ()
   ).toBe(app)
   const channel = productAssistantInstructions(
     { currencyCode: "NGN" },
-    { maxProducts: 3 },
+    { maxProducts: 50 },
   )
-  expect(channel).toContain("up to 3 products")
-  expect(channel).toContain("product, product-2 and product-3")
+  expect(channel).toContain("up to 50 products")
+  expect(channel).toContain("up to product-50")
+  expect(channel).toContain("Saved products are final")
+  expect(channel).toContain("originals that nobody reads")
+})
+
+test("a Product chat lists only open drafts after its saved count", () => {
+  const entities = [
+    { ...product("product", "Groundnut Oil 3L"), state: "COMMITTED" },
+    product("product-2", "Brown Beans", 190000),
+  ]
+  const rendered = renderWhatsAppWorkflowReply(
+    {
+      ...setup,
+      purpose: "PRODUCT_CREATE",
+      conversationId: "saved-product",
+      entities,
+    },
+    options,
+  )
+  const body = rendered.chunks.join("\n")
+  expect(body).toContain("1 of 50 products saved in this chat.")
+  expect(body).toContain("Brown Beans")
+  expect(body).not.toContain("Groundnut Oil 3L")
+})
+
+function richReview(
+  payload: WhatsAppWorkflowActionReview["records"][number]["payload"],
+  photo?: "added" | "skipped",
+): WhatsAppWorkflowActionReview {
+  const review = productReview(1)
+  const [record] = review.records
+  if (!record) throw Error("missing record")
+  return {
+    ...review,
+    records: [{ ...record, payload, ...(photo ? { photo } : {}) }],
+  }
+}
+
+test("Product mode reviews options, packs and the sent photo row by row", () => {
+  const rendered = renderWhatsAppWorkflowActionReviewBody(
+    richReview(
+      {
+        kind: "product",
+        name: "Oud Royal",
+        unitName: "bottle",
+        illustrationId: null,
+        photoAttachmentId: "photo-1",
+        options: [{ name: "Volume", values: ["50ml", "100ml"] }],
+        variants: [
+          {
+            selections: [{ optionName: "Volume", value: "50ml" }],
+            priceMinor: 4500000,
+            openingStock: "6",
+          },
+          {
+            selections: [{ optionName: "Volume", value: "100ml" }],
+            priceMinor: 8000000,
+            openingStock: "4",
+          },
+        ],
+      },
+      "added",
+    ),
+    { now },
+  )
+  expect(rendered.kind).toBe("review")
+  expect(rendered.body).toContain("*Oud Royal* · with your photo")
+  expect(rendered.body).toContain("- 50ml · ₦45,000 per bottle · 6 in stock")
+  expect(rendered.body).toContain("- 100ml · ₦80,000 per bottle · 4 in stock")
+})
+
+test("Product mode shows pack prices and a photo that cannot be added", () => {
+  const rendered = renderWhatsAppWorkflowActionReviewBody(
+    richReview(
+      {
+        kind: "product",
+        name: "Oraimo 20W Charger",
+        unitName: "piece",
+        priceMinor: 650000,
+        openingStock: "40",
+        illustrationId: null,
+        photoAttachmentId: "photo-2",
+        sellingUnits: [
+          { name: "carton", containsQuantity: "20", priceMinor: 12000000 },
+        ],
+      },
+      "skipped",
+    ),
+    { now },
+  )
+  expect(rendered.kind).toBe("review")
+  expect(rendered.body).toContain(
+    "*Oraimo 20W Charger* · ₦6,500 per piece · ₦120,000 per carton of 20 · 40 in stock · photo can't be added here",
+  )
+})
+
+test("Product mode refuses an unbound photo and more than 10 option rows", () => {
+  const photo = richReview({
+    kind: "product",
+    name: "Silver Ring",
+    unitName: "piece",
+    priceMinor: 1500000,
+    illustrationId: null,
+    photoAttachmentId: "photo-3",
+  })
+  expect(renderWhatsAppWorkflowActionReviewBody(photo, { now }).kind).toBe(
+    "app_review",
+  )
+  const big = richReview({
+    kind: "product",
+    name: "Classic Watch",
+    unitName: "piece",
+    priceMinor: 2500000,
+    illustrationId: null,
+    options: [
+      {
+        name: "Colour",
+        values: ["Black", "Gold", "Silver", "Rose", "Blue", "Green"],
+      },
+      { name: "Strap", values: ["S", "M", "L"] },
+    ],
+  })
+  expect(renderWhatsAppWorkflowActionReviewBody(big, { now }).kind).toBe(
+    "app_review",
+  )
+})
+
+test("photo cards caption each product whose photo will be saved, in review order", () => {
+  const review = richReview(
+    {
+      kind: "product",
+      name: "Silver Ring",
+      unitName: "piece",
+      priceMinor: 1500000,
+      openingStock: "5",
+      illustrationId: null,
+      photoAttachmentId: "photo-ring",
+    },
+    "added",
+  )
+  expect(whatsAppProductPhotoCards(review)).toEqual([
+    {
+      attachmentId: "photo-ring",
+      caption:
+        "*Silver Ring* · ₦15,000 per piece · 5 in stock · with your photo",
+    },
+  ])
+  const [record] = review.records
+  if (!record) throw Error("missing record")
+  expect(
+    whatsAppProductPhotoCards({
+      ...review,
+      records: [{ ...record, photo: "skipped" }],
+    }),
+  ).toEqual([])
 })

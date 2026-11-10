@@ -61,7 +61,11 @@ import {
   renderWhatsAppWorkflowActionResult,
   whatsAppWorkflowActionResultContentSchema,
 } from "@ewatrade/assistant/channels/workflow-action-result"
-import { WHATSAPP_WORKFLOW_ACTION_REVIEW_VERSION } from "@ewatrade/assistant/channels/workflow-action-review"
+import {
+  WHATSAPP_PRODUCT_PHOTO_KIND,
+  WHATSAPP_WORKFLOW_ACTION_REVIEW_VERSION,
+  whatsAppProductPhotoContentSchema,
+} from "@ewatrade/assistant/channels/workflow-action-review"
 import { generalReceiptSchema } from "@ewatrade/assistant/general/contracts"
 import { evaluateQaProviderPolicy } from "@ewatrade/utils/qa-provider-policy"
 import type {
@@ -374,6 +378,11 @@ export function beginAssistantWhatsAppDelivery(
     let providerList:
       | Awaited<ReturnType<typeof validateAssistantWhatsAppMediaPrompt>>["list"]
       | undefined
+    // A Product review's own photo echo: the owner's original image and its caption.
+    let providerImage:
+      | { attachmentId: string; conversationId: string; caption: string }
+      | undefined
+    let imageClassification: "LIVE" | "QA" = "QA"
     // Only the fixed outage notice may leave a terminally FAILED turn.
     let failedTurnNotice = false
     if (!body || hash(body) !== row.contentDigest)
@@ -913,6 +922,59 @@ export function beginAssistantWhatsAppDelivery(
             if (!outcome)
               return cancel("cancelled", "CANONICAL_RESULT_UNAVAILABLE")
             providerBody = outcome.body
+          } else if (row.renderKind === WHATSAPP_PRODUCT_PHOTO_KIND) {
+            const photo = whatsAppProductPhotoContentSchema.safeParse(
+              (() => {
+                try {
+                  return JSON.parse(body)
+                } catch {
+                  return null
+                }
+              })(),
+            )
+            const review = await tx.assistantWhatsAppOutbox.findFirst({
+              where: {
+                inboxId: row.inboxId,
+                responseRevision: row.responseRevision,
+                chunkIndex: 0,
+                renderKind: "workflow_action_review",
+              },
+              select: { workflowReview: { select: { expiresAt: true } } },
+            })
+            const attachment = photo.success
+              ? await tx.assistantAttachment.findFirst({
+                  where: {
+                    id: photo.data.attachmentId,
+                    conversationId: resolved.conversation.id,
+                    kind: "IMAGE",
+                    status: "READY",
+                    storagePath: { not: null },
+                  },
+                  select: { id: true },
+                })
+              : null
+            if (
+              row.rendererVersion !== WHATSAPP_WORKFLOW_ACTION_REVIEW_VERSION ||
+              row.chunkCount !== 1 ||
+              row.chunkIndex >= 0 ||
+              resolved.conversation.purpose !== "PRODUCT_CREATE" ||
+              !photo.success ||
+              !attachment ||
+              !review?.workflowReview
+            )
+              return cancel("cancelled", "SAVED_REVIEW_CHANGED")
+            providerBody = photo.data.caption
+            imageClassification =
+              resolved.tenantContext.tenant.dataClassification
+            providerImage = {
+              attachmentId: attachment.id,
+              conversationId: resolved.conversation.id,
+              caption: photo.data.caption,
+            }
+            dispatchBefore = Math.min(
+              dispatchBefore,
+              review.workflowReview.expiresAt.getTime(),
+            )
           } else if (row.renderKind === "workflow_action_review") {
             if (
               row.rendererVersion !== WHATSAPP_WORKFLOW_ACTION_REVIEW_VERSION ||
@@ -1085,19 +1147,26 @@ export function beginAssistantWhatsAppDelivery(
       if (!(error instanceof AssistantWhatsAppError)) throw error
       return cancel("cancelled", "AUTHORITY_CHANGED")
     }
-    const earlierChunk = await tx.assistantWhatsAppOutbox.findFirst({
+    const earlierChunks = await tx.assistantWhatsAppOutbox.findMany({
       where: {
         inboxId: row.inboxId,
         responseRevision: row.responseRevision,
         chunkIndex: { lt: row.chunkIndex },
         state: { notIn: ["SENT", "DELIVERED", "READ"] },
       },
-      select: { state: true },
+      select: { state: true, renderKind: true },
     })
-    if (earlierChunk)
-      return ["FAILED", "CANCELLED", "EXPIRED"].includes(earlierChunk.state)
-        ? cancel("cancelled", "PRIOR_CHUNK_NOT_SENT")
-        : { kind: "busy" as const }
+    const ended = (state: string) =>
+      ["FAILED", "CANCELLED", "EXPIRED"].includes(state)
+    // A photo echo that could not be sent never blocks the review after it.
+    if (earlierChunks.some((chunk) => !ended(chunk.state)))
+      return { kind: "busy" as const }
+    if (
+      earlierChunks.some(
+        (chunk) => chunk.renderKind !== WHATSAPP_PRODUCT_PHOTO_KIND,
+      )
+    )
+      return cancel("cancelled", "PRIOR_CHUNK_NOT_SENT")
     const head = await tx.assistantWhatsAppOutbox.findFirst({
       where: { inbox: association, state: { in: [...pending] } },
       orderBy: [
@@ -1163,9 +1232,12 @@ export function beginAssistantWhatsAppDelivery(
       presentationFamily:
         row.renderKind === "control"
           ? "menu"
-          : ["action_review", "workflow_action_review", "web_review"].includes(
-                row.renderKind,
-              )
+          : [
+                "action_review",
+                "workflow_action_review",
+                WHATSAPP_PRODUCT_PHOTO_KIND,
+                "web_review",
+              ].includes(row.renderKind)
             ? "review"
             : [
                   "action_result",
@@ -1191,6 +1263,15 @@ export function beginAssistantWhatsAppDelivery(
       ...presentation,
       ...(providerButtons ? { buttons: providerButtons } : {}),
       ...(providerList ? { list: providerList } : {}),
+      ...(providerImage
+        ? {
+            image: {
+              ...providerImage,
+              tenantId: usageScope.tenantId,
+              dataClassification: imageClassification,
+            },
+          }
+        : {}),
       phoneNumberId: row.phoneNumberId,
       senderId: identity.senderId,
       userId: identity.userId,

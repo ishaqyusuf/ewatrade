@@ -874,8 +874,10 @@ export async function commitProductConversationInTransaction(
   const pending = draft.entities.filter(
     (row) => row.id !== committedId && row.state !== "COMMITTED",
   )
-  // The conversation finishes once every product it holds is saved.
-  if (!pending.length)
+  const saved = draft.entities.length - pending.length
+  // The app's chat finishes once its product is saved. A channel chat stays open
+  // for the next products until it holds its full number of saved products.
+  if (!pending.length && (!channel || saved >= channel.allowedKeys.length))
     await tx.assistantConversation.update({
       where: { id: conversation.id },
       data: {

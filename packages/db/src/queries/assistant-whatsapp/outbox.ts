@@ -8,8 +8,10 @@ import {
 import { renderWhatsAppFinalReply } from "@ewatrade/assistant/channels/render"
 import { WHATSAPP_WEB_REVIEW_VERSION } from "@ewatrade/assistant/channels/review-links"
 import {
+  WHATSAPP_PRODUCT_PHOTO_KIND,
   WHATSAPP_WORKFLOW_ACTION_REVIEW_VERSION,
   type WhatsAppWorkflowActionSource,
+  whatsAppProductPhotoContentSchema,
 } from "@ewatrade/assistant/channels/workflow-action-review"
 import { generalStoredPartSchema } from "@ewatrade/assistant/general/contracts"
 import type { Prisma, PrismaClient } from "../../../generated/prisma/client"
@@ -47,6 +49,8 @@ export type AssistantWhatsAppStagedWorkflowReview = {
   body: string
   expiresAt: Date
   projectCommand: WhatsAppWorkflowCommandProjector
+  /** Product photo cards, sent in order before the review. */
+  photos?: ReadonlyArray<{ attachmentId: string; caption: string }>
 }
 
 type ResolvedConversation = Awaited<
@@ -279,29 +283,56 @@ export async function stageAssistantWhatsAppOutboxInTransaction(
       : undefined
   if (rendered.kind === "web_review" && !signedReviewToken)
     throw new AssistantWhatsAppError("UNAVAILABLE")
-  const chunks = rendered.chunks.map((content, chunkIndex) => ({
-    ...(signedReviewToken
-      ? {
-          id: assistantReviewShortOutboxId(
-            createAssistantReviewShortLocator(signedReviewToken),
-          ),
-        }
-      : {}),
-    inboxId: inbox.id,
-    phoneNumberId: inbox.phoneNumberId,
-    runId: run.id,
-    messageId: run.assistantMessageId,
-    responseRevision: 1,
-    chunkIndex,
-    chunkCount: rendered.chunks.length,
-    rendererVersion: rendered.version,
-    renderKind: rendered.kind,
-    authorityDigest,
-    content,
-    contentDigest: createHash("sha256").update(content).digest("hex"),
-    expiresAt:
-      exactWebReview && webReview ? webReview.expiresAt : inbox.expiresAt,
-  }))
+  const photos =
+    rendered.kind === "workflow_action_review"
+      ? (workflowReview?.photos ?? []).slice(0, 3)
+      : []
+  const chunks = [
+    // Photo cards go first, at -n…-1, so chunk 0 stays the exact review.
+    ...photos.map((photo, index) => {
+      const content = JSON.stringify(
+        whatsAppProductPhotoContentSchema.parse(photo),
+      )
+      return {
+        inboxId: inbox.id,
+        phoneNumberId: inbox.phoneNumberId,
+        runId: run.id,
+        messageId: run.assistantMessageId,
+        responseRevision: 1,
+        chunkIndex: index - photos.length,
+        chunkCount: 1,
+        rendererVersion: WHATSAPP_WORKFLOW_ACTION_REVIEW_VERSION,
+        renderKind: WHATSAPP_PRODUCT_PHOTO_KIND,
+        authorityDigest,
+        content,
+        contentDigest: createHash("sha256").update(content).digest("hex"),
+        expiresAt: inbox.expiresAt,
+      }
+    }),
+    ...rendered.chunks.map((content, chunkIndex) => ({
+      ...(signedReviewToken
+        ? {
+            id: assistantReviewShortOutboxId(
+              createAssistantReviewShortLocator(signedReviewToken),
+            ),
+          }
+        : {}),
+      inboxId: inbox.id,
+      phoneNumberId: inbox.phoneNumberId,
+      runId: run.id,
+      messageId: run.assistantMessageId,
+      responseRevision: 1,
+      chunkIndex,
+      chunkCount: rendered.chunks.length,
+      rendererVersion: rendered.version,
+      renderKind: rendered.kind,
+      authorityDigest,
+      content,
+      contentDigest: createHash("sha256").update(content).digest("hex"),
+      expiresAt:
+        exactWebReview && webReview ? webReview.expiresAt : inbox.expiresAt,
+    })),
+  ]
   const prior = await db.assistantWhatsAppOutbox.findMany({
     where: { inboxId: inbox.id, responseRevision: 1 },
     orderBy: { chunkIndex: "asc" },

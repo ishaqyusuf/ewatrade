@@ -1,6 +1,7 @@
 import {
   parseWhatsAppWorkflowReviewSelection,
   renderWhatsAppWorkflowActionReviewBody,
+  whatsAppProductPhotoCards,
   whatsAppWorkflowActionSourceSchema,
   whatsAppWorkflowReviewAppOnly,
 } from "@ewatrade/assistant/channels/workflow-action-review"
@@ -23,8 +24,12 @@ import {
 import type { PrismaClient } from "@ewatrade/db/types"
 import { z } from "zod"
 import { createLinkedAssistantContext } from "./channel-principal"
-import { projectCommand } from "./channel-workflow-command"
+import {
+  channelProductPhotoOperation,
+  projectCommand,
+} from "./channel-workflow-command"
 import { requireSetupAssistantScope } from "./setup-context"
+import { prepareSetupProductPhoto } from "./setup-photo"
 
 /** Only exact user-selected keys from the original committed turn become a native workflow review. */
 export async function prepareAssistantWhatsAppWorkflowReview(
@@ -142,6 +147,23 @@ export async function prepareAssistantWhatsAppWorkflowReview(
   for (const selected of source.selection) {
     const entity = entities.find((row) => row?.id === selected.entityId)
     if (!entity) return undefined
+    const payload = setupEntityPayloadSchema.parse(entity.payload)
+    // A sent photo becomes a private, unattached Catalog copy before review, so
+    // the review and the save bind the same copy. QA businesses skip photos.
+    if (
+      product &&
+      payload.kind === "product" &&
+      payload.photoAttachmentId &&
+      !entity.committedRecordId
+    )
+      await prepareSetupProductPhoto(db, scope, {
+        entityId: channelProductPhotoOperation(
+          entity.id,
+          payload.photoAttachmentId,
+        ),
+        conversationId: conversation.id,
+        attachmentId: payload.photoAttachmentId,
+      })
     const projection = await projectCommand(db, {
       source,
       entity,
@@ -160,6 +182,7 @@ export async function prepareAssistantWhatsAppWorkflowReview(
       ...(projection.categoryLabel
         ? { categoryLabel: projection.categoryLabel }
         : {}),
+      ...(projection.photo ? { photo: projection.photo } : {}),
     })
   }
   const expiresAt = new Date(
@@ -180,22 +203,28 @@ export async function prepareAssistantWhatsAppWorkflowReview(
       currentScope: { tenantId: scope.tenantId, storeId: scope.storeId },
     },
   )
-  const rendered = renderWhatsAppWorkflowActionReviewBody(
-    {
-      source,
-      records,
-      ...(appOnly ? { appOnly } : {}),
-      businessName: ctx.tenantContext.tenant.name,
-      storeName: ctx.tenantContext.activeStore?.name ?? "",
-      currencyCode:
-        ctx.tenantContext.activeStore?.currencyCode ??
-        ctx.tenantContext.tenant.currencyCode,
-      expiresAt: expiresAt.toISOString(),
-      ...(product ? { productSnapshot: product.snapshot } : {}),
-    },
-    { now: now.getTime() },
-  )
+  const reviewInput = {
+    source,
+    records,
+    ...(appOnly ? { appOnly } : {}),
+    businessName: ctx.tenantContext.tenant.name,
+    storeName: ctx.tenantContext.activeStore?.name ?? "",
+    currencyCode:
+      ctx.tenantContext.activeStore?.currencyCode ??
+      ctx.tenantContext.tenant.currencyCode,
+    expiresAt: expiresAt.toISOString(),
+    ...(product ? { productSnapshot: product.snapshot } : {}),
+  }
+  const rendered = renderWhatsAppWorkflowActionReviewBody(reviewInput, {
+    now: now.getTime(),
+  })
   return rendered.kind === "review"
-    ? { source, body: rendered.body, expiresAt, projectCommand }
+    ? {
+        source,
+        body: rendered.body,
+        expiresAt,
+        projectCommand,
+        photos: whatsAppProductPhotoCards(reviewInput),
+      }
     : undefined
 }

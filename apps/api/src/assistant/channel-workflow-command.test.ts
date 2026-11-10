@@ -428,3 +428,74 @@ test("money accounts, customer openings, rich/media products and incomplete serv
       }),
     ).toThrow("needs review")
 })
+
+test("WhatsApp Product saves reviewed options, packs and the bound photo copy", () => {
+  const rich = entity(
+    {
+      kind: "product",
+      name: "Jalabiya Classic",
+      unitName: "piece",
+      priceMinor: 2800000,
+      photoAttachmentId: "private-photo",
+      options: [{ name: "Size", values: ["M", "L", "XL"] }],
+      variants: [
+        {
+          selections: [{ optionName: "Size", value: "M" }],
+          openingStock: "4",
+        },
+        {
+          selections: [{ optionName: "Size", value: "L" }],
+          openingStock: "6",
+        },
+        {
+          selections: [{ optionName: "Size", value: "XL" }],
+          openingStock: "3",
+        },
+      ],
+    },
+    "PRODUCT",
+    "product-2",
+  )
+  const source = sourceFor(rich, "PRODUCT_CREATE", workflowContext)
+  const withPhoto = prepareReviewedWorkflowCommand({
+    source,
+    entity: rich,
+    workflowContext,
+    scope,
+    photoAssetId: "catalog-photo",
+  })
+  if (withPhoto.kind !== "catalog" || withPhoto.command.kind !== "product")
+    throw Error("Expected product")
+  expect(withPhoto.command.variants).toHaveLength(3)
+  expect(withPhoto.command.photoAssetIds).toEqual(["catalog-photo"])
+  expect(withPhoto.command.illustrationId).toBeUndefined()
+  expect(withPhoto.command.clientOperationId).toBe(
+    "product-conversation-product-2",
+  )
+  // A photo copy that appears or disappears changes the reviewed digest.
+  const without = prepareReviewedWorkflowCommand({
+    source,
+    entity: rich,
+    workflowContext,
+    scope,
+  })
+  expect(digest(without.command)).not.toBe(digest(withPhoto.command))
+  // Setup still keeps rich products in the app, and a copy needs a sent photo.
+  expect(() =>
+    prepareReviewedWorkflowCommand({
+      source: sourceFor(product),
+      entity: rich,
+      workflowContext: null,
+      scope,
+    }),
+  ).toThrow("needs review")
+  expect(() =>
+    prepareReviewedWorkflowCommand({
+      source: sourceFor(product, "PRODUCT_CREATE", workflowContext),
+      entity: product,
+      workflowContext,
+      scope,
+      photoAssetId: "catalog-photo",
+    }),
+  ).toThrow("needs review")
+})

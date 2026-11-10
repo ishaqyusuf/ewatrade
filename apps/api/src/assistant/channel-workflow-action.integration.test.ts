@@ -19,7 +19,6 @@ import {
 import {
   type WhatsAppConversationPrincipal,
   type WhatsAppWorkflowReviewMaterial,
-  acceptAssistantWhatsAppIngress,
   claimAssistantWhatsAppInbox,
   deriveAssistantWhatsAppWorkflowReviewCode,
   nextAssistantWhatsAppInbox,
@@ -577,7 +576,7 @@ suite(
       await assertNoDecisionCodes()
     }, 300_000)
 
-    test("Product closes its canonical chat yet delivers and replays only the same saved receipt without normal TURN authority", async () => {
+    test("Product keeps its chat open for the next products and replays only the same saved receipt", async () => {
       await select(productId, "PRODUCT_CREATE")
       const seeded = await runWorkflow(
         `${names.nativeProduct}, 300, 2 pieces`,
@@ -590,13 +589,14 @@ suite(
       expect(state.entities[0]?.key).toBe("product")
       const exact = await review(["product"], productId)
       const confirmed = await confirm(exact)
+      // The chat holds up to 50 saved products, so it stays open after a save.
       expect(
         (
           await fixture.db.assistantConversation.findUniqueOrThrow({
             where: { id: productId },
           })
         ).status,
-      ).toBe("COMPLETED")
+      ).toBe("ACTIVE")
       expect((await draft(productId)).entities[0]).toMatchObject({
         key: "product",
         state: "COMMITTED",
@@ -610,27 +610,6 @@ suite(
       const runs = await fixture.db.assistantRun.count({
         where: { conversationId: productId },
       })
-      await expect(
-        createLinkedAssistantContext(
-          fixture.db,
-          principal,
-          `${fixture.marker}-terminal-turn`,
-        ),
-      ).rejects.toThrow()
-      expect(
-        await acceptAssistantWhatsAppIngress(
-          fixture.db,
-          {
-            phoneNumberId: principal.phoneNumberId,
-            senderId: principal.senderId,
-            providerMessageId: `${fixture.marker}-no-terminal-turn`,
-            timestamp: String(Math.floor(Date.now() / 1000)),
-            type: "text",
-            text: "Create another product without a new chat",
-          },
-          [fixture.userId],
-        ),
-      ).toMatchObject({ kind: "ignored" })
       const duplicate = await confirm(exact, true)
       expect(duplicate.inbox.id).not.toBe(confirmed.inbox.id)
       expect(duplicate.inbox.content).toEqual(confirmed.inbox.content)
@@ -652,6 +631,65 @@ suite(
           })
         ).consumedByIngressId,
       ).toBe(confirmed.inbox.id)
+      await assertNoDecisionCodes()
+    }, 300_000)
+
+    test("Product saves a reviewed draft with sizes and a sent photo, and says when the photo cannot be added", async () => {
+      const conversation = await freshProductConversation()
+      await select(conversation.id, "PRODUCT_CREATE")
+      const name = `Synthetic jalabiya ${randomUUID()}`
+      const seeded = await runWorkflow(
+        `${name}, 280, 3 pieces`,
+        conversation.id,
+      )
+      for (const row of seeded.outputs)
+        await fixture.fakeAcceptedDelivery(row.id)
+      const seededDraft = await draft(conversation.id)
+      const [entity] = seededDraft.entities
+      if (!entity) throw Error("Expected the seeded product draft")
+      // The owner confirmed sizes M and L with their own stock and sent a photo.
+      await fixture.db.setupDraftEntity.update({
+        where: { id: entity.id },
+        data: {
+          payload: {
+            ...setupEntityPayloadSchema.parse(entity.payload),
+            openingStock: undefined,
+            photoAttachmentId: `synthetic-photo-${randomUUID()}`,
+            options: [{ name: "Size", values: ["M", "L"] }],
+            variants: [
+              {
+                selections: [{ optionName: "Size", value: "M" }],
+                openingStock: "4",
+              },
+              {
+                selections: [{ optionName: "Size", value: "L" }],
+                openingStock: "6",
+              },
+            ],
+          },
+        },
+      })
+      await fixture.db.setupDraft.update({
+        where: { id: seededDraft.id },
+        data: { revision: { increment: 1 } },
+      })
+      const exact = await review(["product"], conversation.id)
+      const reviewBody = exact.outputs
+        .map((row) => row.content ?? "")
+        .join("\n")
+      expect(reviewBody).toContain("photo can't be added here")
+      expect(reviewBody).toContain("- M · ₦280 per Piece · 4 in stock")
+      expect(reviewBody).toContain("- L · ₦280 per Piece · 6 in stock")
+      await confirm(exact)
+      const saved = await fixture.db.catalogItem.findFirstOrThrow({
+        where: { tenantId: fixture.tenantId, name },
+        select: { id: true, _count: { select: { variants: true } } },
+      })
+      expect(saved._count.variants).toBe(2)
+      expect((await draft(conversation.id)).entities[0]).toMatchObject({
+        state: "COMMITTED",
+        committedRecordId: saved.id,
+      })
       await assertNoDecisionCodes()
     }, 300_000)
 

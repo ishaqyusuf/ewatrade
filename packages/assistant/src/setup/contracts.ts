@@ -9,15 +9,16 @@ export const SETUP_ASSISTANT_PROMPT_VERSION = "ewatrade-setup-assistant-v14"
 export const SETUP_DRAFT_MAX_ENTITIES = 200
 /**
  * Product-mode draft keys. The app's own Product chat stages only the first; a linked
- * WhatsApp Product conversation may stage up to all three, one review saves them together.
+ * WhatsApp Product conversation holds up to 50, saved a few at a time by review.
  */
-export const PRODUCT_WORKFLOW_DRAFT_KEYS = [
+export const PRODUCT_WORKFLOW_DRAFT_KEYS: readonly string[] = [
   "product",
-  "product-2",
-  "product-3",
-] as const
+  ...Array.from({ length: 49 }, (_, index) => `product-${index + 2}`),
+]
 export const WHATSAPP_PRODUCT_WORKFLOW_LIMIT =
   PRODUCT_WORKFLOW_DRAFT_KEYS.length
+/** New products one WhatsApp message may stage; each review still saves up to 3. */
+export const WHATSAPP_PRODUCT_STAGE_MAX = 10
 export function isProductWorkflowDraftKey(key: string) {
   return (PRODUCT_WORKFLOW_DRAFT_KEYS as readonly string[]).includes(key)
 }

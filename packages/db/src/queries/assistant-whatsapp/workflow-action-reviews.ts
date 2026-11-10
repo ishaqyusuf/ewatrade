@@ -222,7 +222,12 @@ export type WhatsAppWorkflowCommandProjector = (
     workflowContext: unknown
     scope: { userId: string; tenantId: string; storeId: string }
   },
-) => Promise<{ commandHash: string; categoryLabel?: string }>
+) => Promise<{
+  commandHash: string
+  categoryLabel?: string
+  /** Whether a sent Product photo is bound to the reviewed command. */
+  photo?: "added" | "skipped"
+}>
 
 async function lockIdentity(
   tx: Prisma.TransactionClient,
@@ -299,6 +304,7 @@ async function currentSource(
       errorCode: (typeof draft.entities)[number]["errorCode"]
       committedRecordId: (typeof draft.entities)[number]["committedRecordId"]
       categoryLabel?: string
+      photo?: "added" | "skipped"
     }
   > = []
   for (const selected of source.selection) {
@@ -339,6 +345,7 @@ async function currentSource(
       ...(projection?.categoryLabel
         ? { categoryLabel: projection.categoryLabel }
         : {}),
+      ...(projection?.photo ? { photo: projection.photo } : {}),
     })
   }
   const product =

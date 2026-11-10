@@ -118,3 +118,53 @@ test("empty or non-string success identities remain unknown rather than evidence
     })
   }
 })
+
+test("a product photo is uploaded privately first, then sent by media id with its caption", async () => {
+  const calls: Array<{ url: string; body: unknown }> = []
+  const mockedFetch: typeof fetch = Object.assign(
+    async (url: string | URL | Request, init?: RequestInit) => {
+      calls.push({ url: String(url), body: init?.body })
+      return String(url).endsWith("/media")
+        ? new Response(JSON.stringify({ id: "media-1" }), { status: 200 })
+        : new Response(JSON.stringify({ messages: [{ id: "wamid.photo" }] }), {
+            status: 200,
+          })
+    },
+    { preconnect: () => undefined },
+  )
+  const provider = new DirectMetaWhatsAppProvider({ fetch: mockedFetch })
+  const sent = await provider.sendImage({
+    accessToken: "private-access-token",
+    phoneNumberId: "123",
+    to: "2348000000000",
+    bytes: new Uint8Array([1, 2, 3]),
+    contentType: "image/jpeg",
+    caption: "*1. Oud Royal*",
+  })
+  expect(sent).toEqual({ messageId: "wamid.photo" })
+  expect(calls.map((call) => call.url)).toEqual([
+    "https://graph.facebook.com/v21.0/123/media",
+    "https://graph.facebook.com/v21.0/123/messages",
+  ])
+  expect(calls[0]?.body).toBeInstanceOf(FormData)
+  expect(JSON.parse(String(calls[1]?.body))).toMatchObject({
+    type: "image",
+    image: { id: "media-1", caption: "*1. Oud Royal*" },
+  })
+  // A failed upload sends nothing to the chat.
+  const refused = new DirectMetaWhatsAppProvider({
+    fetch: Object.assign(async () => new Response("{}", { status: 400 }), {
+      preconnect: () => undefined,
+    }),
+  })
+  await expect(
+    refused.sendImage({
+      accessToken: "private-access-token",
+      phoneNumberId: "123",
+      to: "2348000000000",
+      bytes: new Uint8Array([1]),
+      contentType: "image/png",
+      caption: "x",
+    }),
+  ).rejects.toMatchObject({ outcome: "DEFINITE_FAILURE" })
+})

@@ -3,7 +3,6 @@ import { z } from "zod"
 import { generalMoney } from "../general/contracts"
 import { readRecordOriginSchema } from "../general/read-record-target"
 import {
-  productCreationReady,
   productFormSnapshotSchema,
   productRequiresForm,
 } from "../product/contracts"
@@ -14,6 +13,7 @@ import {
   setupEntityPayloadSchema,
   setupOpenQuestionSchema,
 } from "../setup/contracts"
+import { setupProductVariants } from "../setup/variants"
 import {
   WHATSAPP_ACTION_INSTRUCTION_RESERVE_UNITS,
   WHATSAPP_ACTION_REVIEW_MAX_UNITS,
@@ -23,6 +23,7 @@ import {
 import { whatsAppPlainText } from "./render"
 import {
   WHATSAPP_WORKFLOW_ACTION_MAX_SELECTION,
+  whatsAppProductChatShape,
   whatsAppWorkflowPurposeSchema,
 } from "./workflow"
 export {
@@ -35,7 +36,7 @@ export {
 } from "./workflow"
 
 export const WHATSAPP_WORKFLOW_ACTION_REVIEW_VERSION =
-  "whatsapp-workflow-action-review-v3"
+  "whatsapp-workflow-action-review-v4"
 const id = z.string().min(1).max(128)
 const key = z.string().min(1).max(140)
 const hash = z.string().regex(/^[a-f0-9]{64}$/)
@@ -128,6 +129,11 @@ export const whatsAppWorkflowActionReviewSchema = z
             committedRecordId: z.string().nullable(),
             /** Actual category label from the canonical prepared command, never a model label. */
             categoryLabel: z.string().min(1).max(400).optional(),
+            /**
+             * Product photo the owner sent: "added" when the private Catalog copy is
+             * bound to the reviewed command, "skipped" when it cannot be added.
+             */
+            photo: z.enum(["added", "skipped"]).optional(),
           })
           .strict(),
       )
@@ -221,6 +227,40 @@ export function parseWhatsAppWorkflowActionButton(
         replyToMessageId,
       )
     : { kind: "invalid_workflow_action" }
+}
+
+/**
+ * Photo cards: before a Product review, each sent photo comes back to the owner
+ * with its product's lines as the caption, so the mapping is seen, not described.
+ * Outbox rows of this kind hold only the attachment id and caption.
+ */
+export const WHATSAPP_PRODUCT_PHOTO_KIND = "workflow_product_photo"
+export const whatsAppProductPhotoContentSchema = z
+  .object({
+    attachmentId: z.string().min(1).max(64),
+    caption: z.string().min(1).max(1024),
+  })
+  .strict()
+/** One caption per reviewed product whose sent photo will be saved with it. */
+export function whatsAppProductPhotoCards(
+  review: WhatsAppWorkflowActionReview,
+) {
+  if (review.source.purpose !== "PRODUCT_CREATE") return []
+  const numbered = review.records.length > 1
+  return review.records.flatMap((record, index) => {
+    const attachmentId =
+      record.payload.kind === "product"
+        ? record.payload.photoAttachmentId
+        : undefined
+    if (!attachmentId || record.photo !== "added") return []
+    const lines = productRecordLines(
+      record,
+      review.currencyCode,
+      numbered ? index + 1 : null,
+    )
+    const caption = lines?.join("\n")
+    return caption && caption.length <= 1024 ? [{ attachmentId, caption }] : []
+  })
 }
 
 export type WhatsAppWorkflowRenderedActionReview =
@@ -343,6 +383,89 @@ function simpleRecordLines(
   ]
   return lines.every(exact) ? lines : null
 }
+/** Options, packs and the sent photo of a WhatsApp Product draft, one row per option. */
+function productRecordLines(
+  record: WhatsAppWorkflowActionReview["records"][number],
+  currency: string,
+  number: number | null,
+) {
+  const payload = record.payload
+  if (
+    payload.kind !== "product" ||
+    record.errorCode ||
+    record.committedRecordId ||
+    record.openQuestions.some((question) => question.required) ||
+    deriveSetupEntityState(payload, record.openQuestions).state !==
+      "PROPOSED" ||
+    !whatsAppProductChatShape(payload) ||
+    (payload.categoryKey && !record.categoryLabel) ||
+    Boolean(payload.photoAttachmentId) !== Boolean(record.photo)
+  )
+    return null
+  const unit = payload.unitName
+  const price = (minor: number | undefined, per: string) =>
+    minor === undefined ? null : `${reviewMoney(minor, currency)} per ${per}`
+  const packs = (
+    rows: Array<{
+      name: string
+      containsQuantity: string
+      priceMinor?: number
+    }>,
+  ) =>
+    rows.map((pack) =>
+      pack.priceMinor === undefined
+        ? `${pack.name} of ${pack.containsQuantity} ${unit}, no price`
+        : `${reviewMoney(pack.priceMinor, currency)} per ${pack.name} of ${pack.containsQuantity}`,
+    )
+  // The price names the counting unit once; stock repeats it only when no price does.
+  const stock = (value: string | undefined, priceMinor: number | undefined) =>
+    value === undefined
+      ? "no opening stock"
+      : priceMinor === undefined
+        ? `${value} ${unit} in stock`
+        : `${value} in stock`
+  const photo =
+    record.photo === "added"
+      ? "with your photo"
+      : record.photo === "skipped"
+        ? "photo can't be added here"
+        : null
+  const head = `${number === null ? "" : `${number}. `}${mark(payload.name, "*")}`
+  const lines: string[] = []
+  const options = payload.options?.length || payload.variants?.length
+  const [single] = setupProductVariants(payload)
+  if (!options)
+    lines.push(
+      [
+        head,
+        price(payload.priceMinor, unit) ?? "no selling price",
+        ...packs(single?.sellingUnits ?? []),
+        stock(payload.openingStock, payload.priceMinor),
+        photo,
+      ]
+        .filter(Boolean)
+        .join(" · "),
+    )
+  else {
+    lines.push([head, photo].filter(Boolean).join(" · "))
+    for (const row of setupProductVariants(payload))
+      lines.push(
+        `- ${[
+          row.label,
+          price(row.priceMinor, unit) ?? "no selling price",
+          ...packs(row.sellingUnits),
+          stock(row.openingStock, row.priceMinor),
+        ].join(" · ")}`,
+      )
+  }
+  const usage = usageLabel[payload.usage ?? "FOR_SALE"]
+  if (usage) lines.push(`- ${usage}`)
+  if (record.categoryLabel) lines.push(`- Category: ${record.categoryLabel}`)
+  if (payload.description) lines.push(`- Description: ${payload.description}`)
+  for (const question of record.openQuestions)
+    lines.push(`- Optional, later: ${question.question}`)
+  return lines.every(exact) ? lines : null
+}
 const kindNoun = {
   product: "product",
   service: "service",
@@ -402,7 +525,6 @@ export function renderWhatsAppWorkflowActionReviewBody(
       review.records.some(
         (record) =>
           record.payload.kind !== "product" ||
-          !productCreationReady(record.payload, snapshot) ||
           (snapshot.category && !record.categoryLabel),
       )
     )
@@ -421,11 +543,20 @@ export function renderWhatsAppWorkflowActionReviewBody(
       source.state !== record.state
     )
       return appReview()
-    const facts = simpleRecordLines(
-      record,
-      review.currencyCode,
-      numbered ? index + 1 : null,
-    )
+    const facts =
+      review.source.purpose === "PRODUCT_CREATE"
+        ? productRecordLines(
+            record,
+            review.currencyCode,
+            numbered ? index + 1 : null,
+          )
+        : record.photo
+          ? null
+          : simpleRecordLines(
+              record,
+              review.currencyCode,
+              numbered ? index + 1 : null,
+            )
     if (!facts) return appReview()
     lines.push(...facts)
   }

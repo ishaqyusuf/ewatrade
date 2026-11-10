@@ -28,6 +28,7 @@ import {
   CustomerDirectoryError,
   FinanceError,
 } from "@ewatrade/db/queries"
+import { enqueueCatalogPhotoReview } from "@ewatrade/jobs/catalog-photo-review"
 import { TRPCError } from "@trpc/server"
 import { isLinkedAssistantIdentity } from "./channel-principal"
 import {
@@ -174,6 +175,7 @@ export const defaultChannelWorkflowActionDependencies = () => ({
   execute: executeReviewedWorkflowSelectionInTransaction,
   projectCommand,
   writesEnabled: assistantWhatsAppWorkflowWritesEnabled,
+  enqueuePhotoReview: enqueueCatalogPhotoReview,
 })
 
 /** Exact reviewed workflow action, canonical records, receipt and reply intent share one transaction. */
@@ -209,8 +211,11 @@ export async function processAssistantWhatsAppWorkflowAction(
       })
     })
   }
+  // Photos attached by a committed save; their review starts after the commit.
+  let attachedPhotos: string[] = []
   const execute = (refusal = false) =>
     transact(async ({ db, principal, resolved, fresh }) => {
+      attachedPhotos = []
       const inbox = await deps.lease(db, lease)
       if (
         inbox.kind !== "ACTION" ||
@@ -267,6 +272,9 @@ export async function processAssistantWhatsAppWorkflowAction(
             })
           else {
             const saved = await deps.execute(fresh, consumed.source)
+            attachedPhotos = saved.records.flatMap((record) =>
+              record.photoAssetId ? [record.photoAssetId] : [],
+            )
             resultRef = whatsAppWorkflowActionResultSchema.parse({
               version: "workflow-result-v1",
               purpose: saved.purpose,
@@ -333,7 +341,10 @@ export async function processAssistantWhatsAppWorkflowAction(
       return { status: "completed" as const, outboxId: outbox.id }
     })
   try {
-    return await execute()
+    const result = await execute()
+    for (const assetId of attachedPhotos)
+      await deps.enqueuePhotoReview(assetId).catch(() => undefined)
+    return result
   } catch (error) {
     if (
       !(error instanceof AssistantWhatsAppError) &&
