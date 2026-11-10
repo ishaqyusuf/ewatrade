@@ -1,0 +1,48 @@
+{
+  "version": 1,
+  "id": "2026-11-10-five-phase-staff-reads",
+  "tickets": ["H02"],
+  "summary": "Continue the five-phase business delivery by repairing J06 cashier receiving-account reads and T2 scoped-staff scanner identification. Admit exactly orders.paymentAccounts and catalog.findByCode queries through the existing assigned-Store middleware; preserve domain guards, query-only admission and administrative refusal.",
+  "noAssistantImpact": "These explicit sale-form queries retain their existing planned/form_only assistant classifications. No assistant tool, manifest, channel adapter, action permission, review, rollout or provider boundary changes. The generated report records only the two changed staff read admission cells.",
+  "capabilities": [],
+  "procedures": [
+    {
+      "path": "catalog.findByCode",
+      "status": "form_only",
+      "reason": "Exact tenant-scoped sale lookup now admitted for actively assigned staff; remains explicit form selection with no assistant scan tool."
+    },
+    {
+      "path": "orders.paymentAccounts",
+      "status": "planned",
+      "reason": "Receiving-account names/settings for sales staff, without Finance balances; no new assistant support."
+    }
+  ],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "updated",
+      "path": "docs/verification/2026-11-10-five-phase-takeover.md",
+      "note": "Recovered all five phase handoffs, exact first repair and remaining acceptance."
+    },
+    {
+      "topic": "permissions",
+      "status": "local_only",
+      "path": ".brain/api/permissions.md",
+      "note": "Exact query-only admission with assignment/revocation and domain scope retained."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "apps/api/src/utils/staff-request-access.test.ts",
+      "executed": true,
+      "result": "Red before repair; policy plus actual middleware suites pass 24 tests / 129 assertions after repair, including foreign Store, revoked assignment, unknown and mutation refusal."
+    },
+    {
+      "kind": "review",
+      "path": "docs/verification/2026-11-10-five-phase-takeover.md",
+      "executed": true,
+      "result": "Canonical receiving-account projection contains names/settings, not balances; query guards remain unchanged. Actual local cashier browser displays Shop cash, order page and direct reload; unsaved draft closed with no order/payment submission."
+    }
+  ]
+}

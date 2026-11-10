@@ -36,6 +36,32 @@ function context() {
     },
   } as unknown as TRPCContext
 }
+test("cashiers can load receiving accounts and identify sale items at their assigned Store", async () => {
+  const ctx = context()
+  if (!ctx.tenantContext?.staffAccess) throw Error("Missing inert context")
+  ctx.tenantContext.membership.role = "CASHIER"
+  ctx.tenantContext.staffAccess.businessRole = "CASHIER"
+  ctx.tenantContext.staffAccess.assignments = [
+    { storeId: "a", role: "CASHIER", status: "ACTIVE" },
+  ]
+  for (const [path, input] of [
+    ["orders.paymentAccounts", undefined],
+    ["catalog.findByCode", { code: "0012345678905" }],
+  ] as const) {
+    expect(await scopeStaffRequest(ctx, path, "query", input)).toEqual(input)
+    await expect(
+      scopeStaffRequest(ctx, path, "mutation", input),
+    ).rejects.toMatchObject({ code: "FORBIDDEN" })
+    await expect(
+      scopeStaffRequest(ctx, path, "query", { ...input, storeId: "foreign" }),
+    ).rejects.toMatchObject({ code: "FORBIDDEN" })
+  }
+  ctx.tenantContext.staffAccess.assignments = []
+  for (const path of ["orders.paymentAccounts", "catalog.findByCode"])
+    await expect(
+      scopeStaffRequest(ctx, path, "query", undefined),
+    ).rejects.toMatchObject({ code: "FORBIDDEN" })
+})
 test("omitted query scope becomes the active Store instead of all-business data", async () => {
   expect(
     await scopeStaffRequest(context(), "orders.listPage", "query", {}),

@@ -1,0 +1,100 @@
+# Five-phase business feature takeover — 10 November 2026
+
+Codex took over the owner's **Business feature inventory and prioritization**
+work in chat `01a1c511-a483-75b0-b017-0152cab33c12`. The original Claude parent
+(`d84112c9-01e5-4630-addc-816ec58a72a5`) and its Phase 1/5 transcripts were read,
+alongside each phase's committed handoff in the
+[gap tickets](../../.brain/tasks/2026-11-09-four-business-gap-tickets.md).
+This continues the same five phases and approved designs in the main checkout.
+No worktree, branch change, deployment or provider action is included.
+
+## Recovered checklist
+
+| Phase | Existing delivery | Remaining acceptance |
+| --- | --- | --- |
+| 1: T1–T3 | Shipment commands `cdcad01bb`; code lookup `0734a5f80`; app links `ed975340c`; sale scan UI `34f44bd25` and focus repair `c1365947a` | Scanner camera/found/repeat/ambiguous/unknown/link/denied run; exact Workshop implementation receipt; verified HTTPS app/universal links require a rebuilt native artifact and public association host. Prior custom-scheme emulator proof remains scoped. |
+| 2: T4 | Dashboard `27a53202f`, mobile `623e90e8d`, final Store-source fix `f2e296168`; approved Workshop direction 01 implemented | UI create/confirm/adjust/price/partial receive against approved shipment data; earlier list/form/refusal checks and T1 integration evidence remain valid in their scope. |
+| 3: T5–T7 | Products `082595e9a`; laundry/shipments `1e6672a17`; integrations `6b092d7ca`, `b37a2ac4f`; Workshop implementation recorded | Exact changed-case Workshop/Site parity, design deviations and target runtime acceptance remain review work. Native review actions remain off outside local unless explicitly configured; no real phone send is authorized here. |
+| 4: T8 | Host-aware sharing `040643915`; opt-in listing `92db83673`; pages/settings `a99965941`; local preview `4a882e82d`; Workshop recorded | Dashboard listing-switch verification, product photos/WhatsApp buttons and existing no-site payment/tracking examples. Preserve consent, private audience and approved direction 01. |
+| 5: T9 | Historical/local runs through `ee74dbc2a`; six local passes | J06 repair follow-through; J11 existing payment-link journey; remaining poultry/laundry checks; merchant-approved Hypnos/Alhaq catalog and shipment data; R23 exact-choice WhatsApp sale scope decision; selected hosted candidate/provider/native gates. |
+
+The scorecard remains **6/72 local passes, 1 failed, 47 blocked, 18 not assessed**.
+This is not hosted launch acceptance. Merchant-data cases stay blocked per the
+owner's existing instruction; no invented retail product list or shipment is used.
+[Current case register](2026-11-09-business-journey-launch-register.csv) and
+[acceptance run](2026-11-09-four-business-acceptance-run.md) remain authoritative.
+
+## First repair: scoped cashier reads
+
+The real `scopeStaffRequest` middleware refused `orders.paymentAccounts`, although
+cashiers can record payments and the canonical query deliberately returns receiving
+account names/settings without balances. The new `catalog.findByCode` scanner
+query was also absent from the exact staff procedure map. Owner-only router tests
+had not exposed scoped-staff admission.
+
+Two new regression tests failed before the repair: the exact query policy returned
+`null`, and the cashier middleware threw `FORBIDDEN`. Adding only those two paths
+to query reads makes the same tests pass. The shared middleware still requires
+active Store assignment, refuses foreign Store input and revoked grants, preserves
+leading-zero codes and undefined no-input requests, and permits neither a mutation
+nor an unknown/similarly named procedure. Domain guards and tenant/currency-derived
+receiving-account projection are unchanged. No Finance administration is opened.
+
+The normal validated H01 generator changes exactly two staff-admission cells in
+`COVERAGE.md` from Owner/Admin only to read. Scanner classification stays
+`form_only`; receiving accounts stay `planned` for assistant support. No manifest,
+channel tool, rollout or live capability was added.
+
+## Focused verification
+
+Run ID: `2026-11-10-five-phase-takeover`. Initial source `39ada60cd`; a peer's
+Android documentation commit advanced HEAD to `fdea9c2d6` during this work.
+Peer changes and the pre-existing `AGENT_CHAT.md` diff are excluded from the commit.
+
+- Offline QA doctor passed. Local API/database/QA and dashboard doctor passed;
+  these do not certify source SHA, native runtime or release readiness.
+- Before repair: two regression failures, 22 passes. After repair: **24 tests /
+  129 assertions**, no failures, across the exact staff policy and middleware suites.
+- Full API TypeScript check passed. Changed source/test Biome passed.
+- Actual local browser, existing **Jawdah Poultry Acceptance / CASHIER**:
+  ORD-001's Details and full page rendered the correct saved order; direct reload
+  rendered it again. The previously reported full-page hang was not reproduced.
+  New order → Paid in full displayed **Received into: Shop cash**, instead of
+  "Payment accounts could not load". The unsaved draft was closed; the list still
+  contained one order. No order/payment was submitted, no fixture was created and
+  no customer message was sent. This proves account-choice admission, not saved
+  cashier payment acceptance; J06 remains FAIL pending that remaining proof.
+- Scoped `test:quick --files` for the six owned tracked paths passed **285 tests /
+  1,820 assertions**, QA tooling types and Biome, with zero unknown mappings.
+  This excludes concurrent work and does not typecheck other application graphs.
+- H01 initially failed because the real staff-admission change made its snapshot
+  stale. Validated regeneration changed exactly the two expected admission cells;
+  the actual local-profile H01 check then passed. H02 passed: one permission record,
+  zero capability changes and two explicitly named procedure changes.
+- Standard existing-data `qa:smoke --target local --surface web` passed using the
+  existing Jawdah Poultry QA / Snail QA7Oct configuration (catalog → unsaved order
+  draft total → cancellation). The first sandbox attempt exited before a browser
+  page existed; the same command passed outside the sandbox. No provider/deployment
+  retry occurred. Receipt:
+  `.scratch/qa-release/smoke-fdea9c2d6df782c209edb144243cd164133bda61-local-web.json`.
+  Its `clean:false` and `runtimeVerified:false` flags are retained: local dirty-source
+  development evidence cannot qualify a hosted candidate.
+
+Remaining money/permission/concurrency, native compatibility, target release and
+human approval requirements are retained. Earlier phase test receipts are reused
+for unchanged source; this takeover does not multiply those checks.
+
+Brain impact: local `.brain/features/staff-store-access.md`,
+`.brain/api/permissions.md`, `.brain/tasks/2026-11-09-four-business-gap-tickets.md`
+and `.brain/tasks/in-progress.md`. These are ignored project memory, not claimed
+as files checked by CI.
+
+## Source fingerprints at verification
+
+SHA-256 (source was dirty over `fdea9c2d6`; committed result follows in Git):
+
+- `apps/api/src/utils/staff-procedure-policy.ts`: `b2eacd6d3a637cd6664b9713ed7d2c338bb7ba7a20e63d86ec714f64dd0c3f9c`
+- `apps/api/src/utils/staff-procedure-policy.test.ts`: `30aa3650e6f4ffe56e76a464262bb419cd9f0d4d877c4c01240a036b7c1f1eb4`
+- `apps/api/src/utils/staff-request-access.test.ts`: `178d6559b042572aca655b239d007a8310d6ca1c1a3442d1436f8396bbe93582`
+- `packages/assistant/src/capabilities/COVERAGE.md`: `8afb08762ac9cb17c4c410ad4d6ee8e4562d0884465250661927b5e7ad03f651`
+- `bun.lock`: `05bbb4dda2da05b9a80add9e9608e2d2b47f4943c3a0872929c7efe9c58c3348`

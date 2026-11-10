@@ -46,6 +46,8 @@ const reads = new Set([
   "tenant.storeContext",
   "tenant.featureAvailability",
   "catalog.getItem",
+  // Exact code identification for New sale; the router retains Catalog read scope.
+  "catalog.findByCode",
   "catalog.productShare",
   "catalog.listItems",
   "catalog.count",
@@ -85,6 +87,8 @@ const reads = new Set([
   "orders.listTotals",
   "orders.payments",
   "orders.paymentTotals",
+  // Receiving-account names/settings only; no Finance balances or administration.
+  "orders.paymentAccounts",
   "inventory.offeringAvailability",
   "inventory.configuredOfferingAvailability",
   // Storefront requests: repository rechecks the member's current Store scope.

@@ -4,6 +4,24 @@ import {
   staffProcedureStoreInput,
 } from "./staff-procedure-policy"
 
+test("sale account and scanner reads admit only their exact queries without Finance administration", () => {
+  for (const path of ["orders.paymentAccounts", "catalog.findByCode"]) {
+    expect(staffProcedureAction(path, "query")).toBe("read")
+    expect(staffProcedureAction(path, "mutation")).toBeNull()
+    expect(staffProcedureAction(path, "subscription")).toBeNull()
+    expect(staffProcedureAction(`${path}Unsafe`, "query")).toBeNull()
+    expect(staffProcedureStoreInput.has(path)).toBe(false)
+  }
+  for (const path of [
+    "finance.book",
+    "finance.accounts",
+    "finance.fiscalCalendar",
+    "catalog.createSimpleItem",
+    "retailOps.staffDirectoryPage",
+  ])
+    expect(staffProcedureAction(path, "query")).toBeNull()
+})
+
 test("product sharing admits only the audited Catalog read, never publication or mutation", () => {
   expect(staffProcedureAction("catalog.productShare", "query")).toBe("read")
   expect(staffProcedureAction("catalog.productShare", "mutation")).toBeNull()

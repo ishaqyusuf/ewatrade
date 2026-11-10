@@ -476,7 +476,7 @@ track conversational evaluation separately from these source test links.
 | `catalog.detail.activity` | query | read | catalog | supported | catalog.history.read |
 | `catalog.detail.orders` | query | read | catalog | supported | catalog.history.read |
 | `catalog.detail.overview` | query | read | catalog | supported | catalog.item.read |
-| `catalog.findByCode` | query | Owner/Admin only | catalog | form_only | Exact Business-scoped barcode/SKU identification feeds explicit New sale selection; no assistant scan tool, sale or stock write is registered by this lookup. |
+| `catalog.findByCode` | query | read | catalog | form_only | Exact Business-scoped barcode/SKU identification feeds explicit New sale selection; no assistant scan tool, sale or stock write is registered by this lookup. |
 | `catalog.getItem` | query | read | catalog | form_only | Generic item editor payload; assistant uses active-Store detail.overview with stock permission filtering. |
 | `catalog.listDirectoryPage` | query | read | catalog | supported | catalog.page |
 | `catalog.listItems` | query | read | catalog | excluded | Unbounded legacy list; assistant uses stable listItemsPage continuation. |
@@ -713,7 +713,7 @@ track conversational evaluation separately from these source test links.
 | `orders.lookupOpenPage` | query | read | sales | supported | sales.orders.lookup |
 | `orders.metadataReview` | query | reconciliation | sales | supported | sales.order.metadata.update |
 | `orders.operationalSummary` | query | read | sales | supported | sales.orders.summary |
-| `orders.paymentAccounts` | query | Owner/Admin only | sales | planned | D03 |
+| `orders.paymentAccounts` | query | read | sales | planned | D03 |
 | `orders.payments` | query | read | sales | planned | B05 |
 | `orders.paymentTotals` | query | read | sales | planned | B05 |
 | `orders.pendingChangeApprovals` | query | Owner/Admin only | sales | planned | D03 |
