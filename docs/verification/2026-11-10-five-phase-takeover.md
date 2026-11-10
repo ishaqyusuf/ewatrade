@@ -322,4 +322,3 @@ are excluded. The existing shared `AGENT_CHAT.md` work remains uncommitted and
 outside the selected candidate. Release and schema changes still require explicit
 owner authorization; choosing app-first priority did not grant it. This proposal
 does not accept J06/J11 or replace their outstanding money/report/retry proof.
-
