@@ -5,6 +5,56 @@ Mobile release remains excluded. This document prepares the smallest conditional
 native artifact step; it authorizes no build, upload, installation, OTA,
 configuration change or account creation.
 
+## 10 November readiness follow-through
+
+Root's [type-repair checkpoint](../verification/2026-11-10-mobile-candidate-type-repairs.md)
+is committed at `39ada60cdcf39c20de579c13c157581c8a92a4de`. The full mobile compiler
+passed, existing draft/onboarding/TestFlight checks passed 16 tests / 110 assertions,
+and the scoped source smoke passed 285 / 1,820 plus QA-tooling types/Biome/H02.
+All four repaired source files emit byte-identical JavaScript. These checks do
+not accept a signed artifact or unrelated shipment feature behavior.
+
+The initial clean `50a78fc5f` source snapshot changed during assessment; the later
+39ada checkpoint had only the operational chat log modified. Android's subsequent
+readiness check and root's fresh status then observed staff-policy API changes,
+which later landed in `7f06ca525`. Root's actual H01 check then passed with that
+commit's refreshed staff-admission report. Further native sale-scanner source,
+fixture and test work was still uncommitted at the later source check. Preserve
+that work. No source hold has been acknowledged and no exact build candidate is
+pinned. Earlier WIP examples
+below describe the initial proposal, not a current claim that onboarding remains
+uncommitted.
+
+The existing Preview-only `check-expo-env-attachment.mjs` ran against the normal
+cached EAS session with live read verification and passed. The selected project
+configuration and reviewed Preview variable attachments match its local contract;
+the Preview Sentry opt-in is absent. No login, setting change, retry or build
+was performed. This is attachment evidence, not a measured app/backend process,
+backend database binding or immutable artifact environment.
+
+At **10:55:34 UTC on 10 November**, local provisioning/public-certificate metadata
+was decoded after the macOS CMS reads were blocked by the execution sandbox.
+The same bounded read succeeded with normal sandbox escalation; no alternative
+certificate trust check or private-key export was used. It confirms:
+
+- Profile SHA256 `4ff1c25b300fc5b777da351821c9d68d0fd44b99d494f11196596b3217baee28`.
+- Registered team and exact app identifier match; debug entitlement is false,
+  with store-distribution shape and the local distribution file present.
+- The profile and its one public developer certificate expire
+  **27 September 2027 at 13:29:07 UTC** and are not expired.
+
+The P12 password/private key was not exported or inspected. Public-certificate
+matching against that P12 remains unverified; no claim of complete signing or
+final artifact compatibility follows. No credential was created, rotated or changed.
+
+Private mode0600 evidence:
+`/private/tmp/ewatrade-ios-preview-env-attachment-2026-11-10.evidence.json` and
+`/private/tmp/ewatrade-ios-signing-metadata-2026-11-10.evidence.json`.
+The [dormant Paystack save](../verification/2026-11-10-paystack-preview-configuration.md)
+remains separately bounded to all activation switches off; it neither applies
+the ordinary native Preview proposal nor authorizes rollout. No cloud build,
+submission, install, OTA, purchase, deployment or billing activation occurred.
+
 ## Why a native artifact is a concrete prerequisite
 
 The [exact7 inspection](../verification/2026-11-09-preview7-static-billing-prerequisites.md)
@@ -98,7 +148,16 @@ receipt identities, existing profile/source/auth guards, links and diff. Reuse
 the immediately preceding offline doctor,10 retrieval-guard cases and unchanged
 core51tests/254assertions plus QA-tooling types only for their actual scope; none
 is future-build or device acceptance. Source freeze, full candidate SHA,
-effective environment, signing freshness and rollback availability remain open.
+effective backend settings, P12 pairing, final artifact qualification and rollback
+availability remain open. The 10 November attachment/profile metadata above
+narrows only those individual gaps.
+
+The 10 November one-owned-document plan maps to core with zero unknowns. Exact
+private metadata/expiry/identity/limit assertions, relative links and whitespace
+pass. Core51/254 and QA-tooling evidence from39ada60cd are reused after confirming
+their relevant sources remain unchanged; no redundant suite or provider read was
+run just to record these observations. The local follow-through Brain update is
+`.brain/tasks/apple-billing-workshop-handoff-2026-11-08.md`.
 
 Brain impact: local .brain/features/native-store-billing.md,
 .brain/features/owner-wide-billing.md and .brain/tasks/in-progress.md.
