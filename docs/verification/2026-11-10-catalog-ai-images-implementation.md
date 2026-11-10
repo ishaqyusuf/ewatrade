@@ -138,3 +138,13 @@ Workshop gallery/history checks are synthetic design evidence only.
 Brain impact check updates local feature, API/contracts/permissions, schema,
 relationships/migrations, decision and task status; `.brain` is ignored and not
 force-added. The tracked receipt and H02 record carry the reviewable CI context.
+
+## Commit and Workshop receipt
+
+EwaTrade source: `588bc82f4`. Workshop implementation record
+`5f77901f-38e8-45bb-8632-e0022952c18e` points at exact merchant v13 and records
+source/platform/provider limits above. Oversight source: `7be1ba7`, followed by
+copy-only `9a56b5f39` labeling rate-derived amounts “Estimated provider cost”.
+That copy change reuses its valid source checks and received a diff/whitespace
+review. No new provider call, activation, hosted write, native build or deployment.
+Shared `AGENT_CHAT.md` history remains outside this feature's commits.
