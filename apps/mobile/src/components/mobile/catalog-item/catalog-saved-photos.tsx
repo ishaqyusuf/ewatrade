@@ -28,6 +28,7 @@ import {
   catalogIllustrationCategoryKey,
 } from "../catalog-setup/catalog-illustration-library"
 import { useCatalogImageDraft } from "../catalog-setup/use-catalog-image-draft"
+import { DockedPhotoCamera } from "../docked-photo-camera"
 import type { CatalogItem } from "./catalog-item-presentation"
 import {
   type CatalogGalleryEntry,
@@ -787,6 +788,7 @@ function SavedPhotoEditor({
           else void selectPhoto(choice)
         }}
       />
+      <DockedPhotoCamera {...draft.camera} />
       <CatalogPhotoGalleryPicker
         open={galleryOpen}
         storeId={storeId}

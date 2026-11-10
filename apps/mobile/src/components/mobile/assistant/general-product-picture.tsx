@@ -15,6 +15,7 @@ import {
   CatalogIllustrationPreview,
 } from "../catalog-setup/catalog-illustration-library"
 import { useCatalogImageDraft } from "../catalog-setup/use-catalog-image-draft"
+import { DockedPhotoCamera } from "../docked-photo-camera"
 
 type ProductDraft = Extract<GeneralAction, { action: "product_create" }>
 
@@ -89,6 +90,7 @@ export function useProductPicture(initial: GeneralAction, disabled: boolean) {
     uploading,
     error: error ?? draft.error,
     select: draft.select,
+    camera: draft.camera,
     choose(id: string) {
       draft.remove()
       setKeptPhoto(undefined)
@@ -222,6 +224,7 @@ export function GeneralProductPictureField({
           ) : null}
         </View>
       </View>
+      <DockedPhotoCamera {...picture.camera} />
       {library ? (
         <CatalogIllustrationLibrary
           kind="product"

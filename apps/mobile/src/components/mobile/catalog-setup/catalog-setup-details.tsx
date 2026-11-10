@@ -17,6 +17,7 @@ import {
   catalogGalleryLabel,
 } from "../catalog-item/catalog-photo-gallery-picker"
 import { SavedPhotoPreview } from "../catalog-item/saved-photo-preview"
+import { DockedPhotoCamera } from "../docked-photo-camera"
 import { CatalogIllustrationPreview } from "./catalog-illustration-library"
 import { catalogIllustrationCategoryKey } from "./catalog-illustration-library"
 import {
@@ -578,6 +579,7 @@ function ClassicPhotosEditor({
           Uploads when you save. It stays private until its image check passes.
         </Text>
       ) : null}
+      <DockedPhotoCamera {...model.imageDraft.camera} />
       {model.storeId ? (
         <CatalogPhotoGalleryPicker
           open={galleryOpen}

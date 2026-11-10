@@ -34,6 +34,7 @@ import {
   type CatalogImageDraft,
   useCatalogImageDraft,
 } from "../catalog-setup/use-catalog-image-draft"
+import { DockedPhotoCamera } from "../docked-photo-camera"
 import { SavedPhotoPreview } from "./saved-photo-preview"
 
 export type CatalogGalleryEntry =
@@ -562,6 +563,7 @@ function GalleryPicker({
           void draft.select(source)
         }}
       />
+      <DockedPhotoCamera {...draft.camera} />
       <ImageDetailsSheet
         storeId={storeId}
         entry={details}

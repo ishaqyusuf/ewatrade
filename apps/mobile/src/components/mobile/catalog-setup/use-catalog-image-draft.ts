@@ -32,6 +32,7 @@ export function useCatalogImageDraft(input: {
   const [reused, setReused] = useState<CatalogReusedImage | null>(null)
   const [selecting, setSelecting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [cameraOpen, setCameraOpen] = useState(false)
   const generation = useRef(0)
   const picking = useRef(false)
   const current = useRef(input)
@@ -43,6 +44,7 @@ export function useCatalogImageDraft(input: {
     generation.current += 1
     setSelecting(false)
     picking.current = false
+    setCameraOpen(false)
     setImage(null)
     setIllustrationId(null)
     setReused(null)
@@ -52,7 +54,11 @@ export function useCatalogImageDraft(input: {
     }
   }, [input.scopeKey])
 
-  async function select(source: CatalogImageDraft["source"]) {
+  /** Validates one picked or captured image, then makes it the draft. */
+  async function take(
+    source: CatalogImageDraft["source"],
+    load: () => Promise<ImagePicker.ImagePickerAsset | null>,
+  ) {
     if (!current.current.canEdit() || picking.current) return
     const operation = ++generation.current
     const scope = current.current.scopeKey
@@ -65,27 +71,8 @@ export function useCatalogImageDraft(input: {
     setSelecting(true)
     setError(null)
     try {
-      if (source === "camera") {
-        const permission = await ImagePicker.requestCameraPermissionsAsync()
-        if (!isCurrent()) return
-        if (!permission.granted) {
-          setError(
-            "Camera access is off. Choose a photo instead, or enable camera access in Settings.",
-          )
-          return
-        }
-      }
-      const options: ImagePicker.ImagePickerOptions = {
-        mediaTypes: ["images"],
-        allowsEditing: false,
-        quality: 0.8,
-      }
-      const result =
-        source === "camera"
-          ? await ImagePicker.launchCameraAsync(options)
-          : await ImagePicker.launchImageLibraryAsync(options)
-      if (!isCurrent() || result.canceled) return
-      const asset = result.assets[0]
+      const asset = await load()
+      if (!isCurrent() || !asset) return
       const sizeBytes = asset.fileSize ?? new File(asset.uri).size
       const mimeType = asset.mimeType
       if (
@@ -125,7 +112,7 @@ export function useCatalogImageDraft(input: {
       if (isCurrent())
         setError(
           source === "camera"
-            ? "The camera could not open. Try again or choose a photo."
+            ? "The photo could not be saved. Try again or choose a photo."
             : "Photos could not open. Check photo access and try again.",
         )
     } finally {
@@ -134,6 +121,24 @@ export function useCatalogImageDraft(input: {
         setSelecting(false)
       }
     }
+  }
+
+  /** The camera source opens the docked camera; its shot arrives in camera.onCapture. */
+  async function select(source: CatalogImageDraft["source"]) {
+    if (!current.current.canEdit() || picking.current) return
+    if (source === "camera") {
+      setError(null)
+      setCameraOpen(true)
+      return
+    }
+    await take("photos", async () => {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        allowsEditing: false,
+        quality: 0.8,
+      })
+      return result.canceled ? null : (result.assets[0] ?? null)
+    })
   }
 
   return {
@@ -162,6 +167,24 @@ export function useCatalogImageDraft(input: {
     selecting,
     error,
     select,
+    /** Props for the DockedPhotoCamera that select("camera") opens. */
+    camera: {
+      open: cameraOpen,
+      onClose: () => setCameraOpen(false),
+      onCapture: (photo: { uri: string; mimeType: string }) => {
+        setCameraOpen(false)
+        void take("camera", async () => ({
+          uri: photo.uri,
+          mimeType: photo.mimeType,
+          width: 0,
+          height: 0,
+        }))
+      },
+      onChoosePhoto: () => {
+        setCameraOpen(false)
+        void select("photos")
+      },
+    },
     remove: () => {
       if (!current.current.canEdit() || picking.current) return
       setImage(null)
