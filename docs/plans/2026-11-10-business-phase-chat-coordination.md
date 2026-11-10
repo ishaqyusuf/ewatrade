@@ -102,3 +102,21 @@ focused money/permission/concurrency checks remain required. No hosted flag,
 provider send, new paid effect, build/upload/OTA or release is authorized. H23/A23
 remain BLOCKED and the 72-case statuses remain6/1/47/18 until actual case proof.
 Phase5 records the same supersession in commit `2426fe6f2`; no new hold is implied.
+
+## Current operating checkpoint
+
+The owner receives updates and important decisions only in the coordinator chat.
+Managed chats send evidence and recommendations to the coordinator and do not ask
+the owner to follow them individually. Routine implementation choices favor the
+smallest practical change; reuse valid focused checks and keep actual money,
+permission, concurrency and release requirements visible.
+
+Focused source milestones are committed: Phase1 `1f3234316`, Phase2 `6845ba652`,
+Phase4 `923c7e98f`. Phase3 checkpoint `c85d5ff4f` is guarded and default-off;
+paid four-line native confirmation still fails the30s transaction deadline.
+Workshop v17 remains selected without a T10 implementation receipt. Phase5 owns
+the attempts/cleanup ledger; no further speculative patch or connected rerun is
+active. The coordinator's [current breakdown and practical remaining gates](../verification/2026-11-10-five-phase-takeover.md#managed-phase-source-checkpoint-and-practical-remainder)
+distinguishes finished source from merchant, target, camera and paid-sale proof.
+The original fully-native objective is unfinished; no status, local commit or
+source test silently marks it complete or authorizes release.

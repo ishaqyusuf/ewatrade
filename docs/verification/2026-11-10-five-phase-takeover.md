@@ -1,9 +1,11 @@
 # Five-phase business feature takeover — 10 November 2026
 
-**Current T10 update:** the owner subsequently selected exact Workshop v17 and
-authorized product implementation in Phase3. The earlier plan-only checkpoints
-below remain history; see the subsequent authorization section. No native catalog
-sale case or hosted release is accepted by that authorization.
+**Current checkpoint:** Phase3 committed guarded native-sale source in
+`c85d5ff4f`; paid confirmation still fails the required30s transaction limit.
+Native sales remain default-off, with no T10 Workshop implementation receipt or
+paid/Cashier/replay acceptance. Phases1,2,4 have committed focused source repairs.
+The earlier plan-only checkpoints below remain history; current scope and remaining
+work are recorded at the end. No hosted release is accepted.
 
 Codex took over the owner's **Business feature inventory and prioritization**
 work in chat `01a1c511-a483-75b0-b017-0152cab33c12`. The original Claude parent
@@ -202,3 +204,50 @@ unselected/product-code gate is superseded. Review/provider/release boundaries,
 merchant data and all 72 case statuses remain distinct. Phase5's verified
 record is `2426fe6f2`; H23/A23 remain blocked pending actual native canonical
 Order/stock/payment/replay evidence. Nothing is deployed by this update.
+
+## Managed-phase source checkpoint and practical remainder
+
+The owner requires all progress and important questions in the coordinator chat;
+managed chats are implementation/evidence workers, not additional owner inboxes.
+Routine decisions stay with the coordinator. The72-case register is coverage,
+not a72/72 prerequisite for assessing a small first pilot.
+
+| Phase | Committed source/checkpoint | Practical remainder |
+| --- | --- | --- |
+|1|`1f3234316`: existing manual search escape during scanner loading; real hook/layer checks pass. Earlier lifetime repair remains valid.|Use manual search/code entry for a pilot. Camera decode and HTTPS native associations remain unproved; no further emulator recovery loop without new evidence.|
+|2|`6845ba652`: exact fractional arrivals validated before mutation; price rows preflighted and partial saves reported accurately; focused checks pass.|Actual shipment journey needs approved supplier/items/quantities/costs/freight/dated FX if shipments are in the pilot. Separate price commands are not an atomic batch.|
+|3|`c85d5ff4f`: exact native catalog choices/review pages, delivered-page proof, same-Order payment authority, canonical confirmation and bounded duplicate-read repairs; focused16tests/224assertions, strict API/DB types and metadata gates pass.|Paid four-line confirmation still failsP2028. Paid/Cashier/replay and T10 implementation remain unaccepted. No further speculative patch/connected loop;30s policy and practical priority require a coordinator decision.|
+|4|`923c7e98f`: trusted share scope binds to the same listed active Store as the anonymous loader; focused checks pass.|Existing eligible media/contact/no-Site examples and consent save/refetch need real inputs/permission. No listing or public-media consent inferred.|
+|5|Evidence commits through`0b2cc8c15`, with the final isolated outcome supplied for reconciliation.|Own the stable register, actual target/candidate evidence and practical blocker list; source checks do not promote merchant cases.|
+
+The final isolated partial four-line paid probe failed0pass/1fail/2filtered/
+38assertions in169.22s (169.36souter): `StockOperation.findUnique` at30,751ms.
+ACTION wall30,755ms,142SQL/30,565ms, pool0.178ms; review2,856ms and failing execution
+19,230ms. SQL includes database and transport time; phases overlap and failed
+workloads stop at different operations, so counts are not completed-command
+performance comparisons. Strict owned cleanup, zero-owned assertions,
+externalCalls0 and frozen-source equality pass. Temporary diagnostics were restored
+byte-for-byte and omitted from the commit. Cancellation/stale no-effect proof is
+reused from the earlier passing case. [Exact source, attempts and limits](2026-11-10-whatsapp-native-catalog-sale.md).
+
+Independent coordinator review found no blocking source issue in the reviewed
+guarded implementation, but explicitly does not accept its paid behavior. The
+repository requires bounded30s interactive transactions; the WhatsApp job and
+turn lease are180s. Neither policy was changed, and longer per-attempt work cannot
+be considered independently of retry/lease budgets. No timeout exception, provider
+action, live flag, native artifact or deployment is authorized by this checkpoint.
+
+Practical market recommendation: assess a small app/manual-entry pilot with an
+approved dataset and selected target; do not advertise native paid WhatsApp or
+verified scanning. Full50-product stress catalogs and rare-code coverage can wait.
+Hypnos/Alhaq products/options/units/NGN prices/opening stock remain owner inputs;
+photos/public consent and shipment data are needed only for the selected scope.
+J06 saved cashier payment and J11 public payment/report/retry remain real acceptance
+items, not permission to manufacture fixtures or payments during UI smoke. The
+original fully-native requirement remains outstanding; app handoff does not satisfy
+R23. All72statuses remain6PASS/1FAIL/47BLOCKED/18NOT_ASSESSED.
+
+Brain impact: local `.brain/tasks/2026-11-10-business-phase-coordination.md`,
+`.brain/tasks/in-progress.md` and `.brain/tasks/2026-11-09-four-business-gap-tickets.md`.
+Phase3 additionally updated local WhatsApp feature, API contracts/permissions,
+native-review ADR and phase task. No schema/migration change.
