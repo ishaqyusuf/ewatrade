@@ -78,6 +78,7 @@ type MutationInput = {
 }
 const calls: Array<{ path: string; input: MutationInput }> = []
 let dashboardStep = "arrival"
+let unmapped = false
 let priceFailure: string | null = null
 let refreshes = 0
 type Offering = { id: string; revision: number; priceMinor: number }
@@ -153,11 +154,18 @@ const data = {
     refreshes += 1
     visiblePrices = { ...serverPrices }
   },
+  useStoreBalanceFor: () => async () => ({
+    balanceSourceId: "balance-new",
+    inventoryUnitId: "unit-new",
+  }),
   useStoreStockChoices: () => ({
     choices: detail.lines.map((line) => ({
       balanceSourceId: line.balanceSourceId,
       offering: visiblePrices[`offering-${line.id}`],
     })),
+    unstocked: unmapped
+      ? [{ offeringId: "offering-new", label: "New item" }]
+      : [],
   }),
 }
 port("apps/dashboard/src/components/shipments/shipment-data", data)
@@ -245,8 +253,10 @@ async function mount(
   surface: "dashboard" | "mobile",
   quantities = ["0.5"],
   step: "arrival" | "prices" = "arrival",
+  options: { unmapped?: boolean } = {},
 ) {
   controls.clear()
+  unmapped = options.unmapped ?? false
   calls.length = 0
   dashboardStep = step
   refreshes = 0
@@ -260,7 +270,10 @@ async function mount(
   visiblePrices = { ...serverPrices }
   detail = {
     ...detail,
-    lines: quantities.map((quantity, i) => line(i ? "two" : "one", quantity)),
+    lines: quantities.map((quantity, i) => ({
+      ...line(i ? "two" : "one", quantity),
+      ...(unmapped ? { balanceSourceId: null, stockItem: null } : {}),
+    })),
   }
   const document = new DOMParser().parseFromString(
     "<html><body/></html>",
@@ -475,6 +488,25 @@ test("both price screens refresh revisions after a partial save before retry", a
       ])
       expect(serverPrices["offering-one"]?.priceMinor).toBe(200)
       expect(serverPrices["offering-two"]?.priceMinor).toBe(300)
+    } finally {
+      await ui.close()
+    }
+  }
+})
+test("a just-added product with no Store stock maps through its zero balance", async () => {
+  for (const surface of ["dashboard", "mobile"] as const) {
+    const ui = await mount(surface, ["2"], "arrival", { unmapped: true })
+    try {
+      if (surface === "dashboard")
+        await ui.enter("Stock item for one", "offering:offering-new")
+      else await ui.press("New item · no stock here yet")
+      expect(calls).toHaveLength(1)
+      expect(calls[0]?.path).toBe("mapLine")
+      expect(calls[0]?.input).toMatchObject({
+        lineId: "one",
+        balanceSourceId: "balance-new",
+        enteredInventoryUnitId: "unit-new",
+      })
     } finally {
       await ui.close()
     }

@@ -15,6 +15,7 @@ const CASES = [
   "ordinary whole-unit arrivals still submit on both surfaces",
   "both price screens validate every entry before any Catalog write",
   "both price screens refresh revisions after a partial save before retry",
+  "a just-added product with no Store stock maps through its zero balance",
 ]
 test("actual shipment steps validate exact quantities and every price before submission", async () => {
   const fixture = new URL("./shipment-steps.fixture.tsx", import.meta.url)
