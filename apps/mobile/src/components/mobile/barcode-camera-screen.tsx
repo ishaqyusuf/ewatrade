@@ -3,6 +3,8 @@ import { StatusBanner } from "@/components/mobile/status-banner"
 import { Icon } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
+import { useColorScheme } from "@/hooks/use-color"
+import { GREEN_TILL_THEME } from "@/lib/green-till-theme"
 import { barcodeScanValue, distinctScannedBarcodes } from "@/lib/barcode-scan"
 import {
   type BarcodeType,
@@ -267,6 +269,9 @@ export function DockedBarcodeScanner({
   const [torch, setTorch] = useState(false)
   const [error, setError] = useState("")
   const lastSeen = useRef(new Map<string, number>())
+  const { colorScheme } = useColorScheme()
+  // Icon reads only base theme tokens, so the light-on-camera colour is passed.
+  const onCamera = GREEN_TILL_THEME[colorScheme].cream
   useEffect(() => {
     const listener = AppState.addEventListener("change", (state) => {
       setForeground(state === "active")
@@ -336,7 +341,8 @@ export function DockedBarcodeScanner({
           onPress={() => setTorch((on) => !on)}
         >
           <Icon
-            className="size-[22px] text-cream"
+            className="size-[22px]"
+            color={onCamera}
             name={torch ? "FlashOff" : "Flashlight"}
           />
         </Pressable>
@@ -347,7 +353,7 @@ export function DockedBarcodeScanner({
           haptic
           onPress={onClose}
         >
-          <Icon className="size-[22px] text-cream" name="X" />
+          <Icon className="size-[22px]" color={onCamera} name="X" />
         </Pressable>
       </View>
       <View
