@@ -80,6 +80,7 @@ type WorkflowModalScreenProps = {
     | "/finance-reports-modal"
     | "/finance-counts-modal"
     | "/sales-rep-home"
+    | "/shipments-modal"
   closeLabel: string
   hideHeader?: boolean
   keyboardBottomOffset?: number

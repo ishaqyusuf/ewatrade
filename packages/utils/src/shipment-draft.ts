@@ -178,7 +178,18 @@ export function buildShipmentDraftInput(
   if (!draft.name.trim()) return fail("Name the shipment.")
   if (!isShipmentDecimal(draft.freightAmount))
     return fail("Enter the shipping charge, or 0.")
-  const lines = []
+  const lines: Array<
+    Pick<
+      ShipmentDraftLine,
+      "expectedQuantity" | "sourceCurrencyCode" | "sourceUnitPrice"
+    > & {
+      description: string
+      balanceSourceId?: string
+      enteredInventoryUnitId?: string
+      proposedName?: string
+      freightOverrideMinor?: string
+    }
+  > = []
   for (const line of draft.lines) {
     const choice = context.choices.find(
       (c) => c.balanceSourceId === line.balanceSourceId,

@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "id": "2026-11-10-mobile-candidate-type-repairs",
+  "tickets": ["H02"],
+  "summary": "Complete type declarations for the already-implemented onboarding record link, shipment modal close route, arrival lines and shared shipment draft lines. The four source files emit byte-identical JavaScript before and after. No runtime permission, RPC, validation, route destination, assistant capability or rollout changes.",
+  "noAssistantImpact": "Type-only annotations align existing values with the existing helper and mutation contracts. No assistant tool, command, client support, prompt authority, business effect or financial operation is added.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/tasks/apple-billing-workshop-handoff-2026-11-08.md",
+      "note": "Record source-only candidate checks, type errors and original release limits."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/utils/src/shipment-draft.test.ts",
+      "executed": true,
+      "result": "Shipment draft, onboarding links and existing TestFlight profile suites pass 16 tests / 110 assertions."
+    },
+    {
+      "kind": "review",
+      "path": "docs/verification/2026-11-10-mobile-candidate-type-repairs.md",
+      "executed": true,
+      "result": "Original four compiler diagnostics reproduced and all four owned files independently verified to emit byte-identical JavaScript; no native/runtime acceptance inferred."
+    }
+  ]
+}

@@ -677,7 +677,7 @@ function ArrivalView({
 
   async function save() {
     setError(null)
-    const lines = []
+    const lines: Parameters<typeof receive.mutateAsync>[0]["lines"] = []
     for (const line of open) {
       const quantity = quantities[line.id] ?? 0
       if (!quantity) continue

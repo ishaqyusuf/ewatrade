@@ -45,6 +45,7 @@ const { getOnboardingLinkConfig } = require("./onboarding-link-config.cjs") as {
     dashboardUrl: string
     host: string | null
     paths: string[]
+    recordPathPrefix: string
   } | null
 }
 const onboardingLinks = getOnboardingLinkConfig(
