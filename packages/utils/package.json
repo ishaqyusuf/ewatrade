@@ -4,6 +4,8 @@
   "private": true,
   "main": "src/index.ts",
   "exports": {
+    "./catalog-image-editor": "./src/catalog-image-editor.ts",
+    "./catalog-ai-images": "./src/catalog-ai-images.ts",
     "./payment-report-notification-policy": "./src/payment-report-notification-policy.ts",
     "./catalog-options": "./src/catalog-options.ts",
     "./catalog-attention": "./src/catalog-attention.ts",
@@ -67,6 +69,7 @@
     "lint": "biome check .",
     "typecheck": "tsc --noEmit"
   },
+  "dependencies": { "zod": "catalog:" },
   "devDependencies": {
     "@types/bun": "latest",
     "typescript": "catalog:"

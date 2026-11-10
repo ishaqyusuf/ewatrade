@@ -185,9 +185,11 @@ planned("catalog", "B03", [
   "catalog.*UnitDefinition*",
 ])
 // catalog.archiveOffering/archiveVariant are supported by catalog.archive.
-formOnly("catalog", "Photo capture and upload belong to the product form.", [
-  "catalog.photos.*",
-])
+formOnly(
+  "catalog",
+  "Photo capture, upload, AI generation and refinement belong to the product form; model tools cannot spend generation allowance.",
+  ["catalog.photos.*", "catalog.aiImages.*"],
+)
 formOnly(
   "catalog",
   "Explicit native Catalog sheet/menu commands; assistant model tools cannot invoke these writes. Assistant edits use the narrow price, details, identifier and availability capabilities.",

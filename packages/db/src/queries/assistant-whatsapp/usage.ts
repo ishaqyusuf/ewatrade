@@ -2,6 +2,10 @@ import {
   WHATSAPP_TRANSPORT_LIMITS,
   WHATSAPP_USAGE_RETENTION_AFTER_WINDOW_MS,
 } from "@ewatrade/assistant/channels/policy"
+import {
+  catalogAiPolicySchema,
+  emptyCatalogAiPolicy,
+} from "@ewatrade/utils/catalog-ai-images"
 import type { Prisma, PrismaClient } from "../../../generated/prisma/client"
 
 /** Domain calls already hold fresh scope. Quotas are server policy, never caller-selected allowances. */
@@ -67,6 +71,36 @@ export async function reserveAssistantWhatsAppTransportInTransaction(
       if (!retryAt || window.endsAt > retryAt) retryAt = window.endsAt
   }
   if (retryAt) return { allowed: false as const, retryAt }
+  if (kind === "deliveryAttempts") {
+    const monthStartedAt = new Date(
+      Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1),
+    )
+    const monthEndsAt = new Date(
+      Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1),
+    )
+    const row = await tx.systemConfiguration.findUnique({
+      where: { key: "catalog-ai-images:v1" },
+      select: { value: true },
+    })
+    const policy = row
+      ? catalogAiPolicySchema.parse(row.value)
+      : emptyCatalogAiPolicy()
+    const monthly = await tx.assistantWhatsAppMonthlyUsage.findUnique({
+      where: {
+        tenantId_monthStartedAt: { tenantId: scope.tenantId, monthStartedAt },
+      },
+    })
+    if ((monthly?.attempts ?? 0) >= policy.whatsapp.monthlyMessages)
+      return { allowed: false as const, retryAt: monthEndsAt }
+    // Existing Tenant lock makes this check/increment atomic across all actors.
+    await tx.assistantWhatsAppMonthlyUsage.upsert({
+      where: {
+        tenantId_monthStartedAt: { tenantId: scope.tenantId, monthStartedAt },
+      },
+      create: { tenantId: scope.tenantId, monthStartedAt, attempts: 1 },
+      update: { attempts: { increment: 1 } },
+    })
+  }
   for (const window of windows)
     await tx.assistantWhatsAppUsageBucket.upsert({
       where: {

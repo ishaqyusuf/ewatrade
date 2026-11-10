@@ -402,6 +402,7 @@ export function CatalogItemForm({
   )
   const [priceChangeReason, setPriceChangeReason] = useState("")
   const [savedPhotosOpen, setSavedPhotosOpen] = useState(false)
+  const [draftImagesOpen, setDraftImagesOpen] = useState(false)
   const [onHandQuantity, setOnHandQuantity] = useState("0")
   const loadedItem = useRef<string | null>(null)
   useEffect(() => {
@@ -1668,26 +1669,13 @@ export function CatalogItemForm({
       )
     if (id === "images")
       return (
-        <CatalogDetailEditor
-          active={stack.active}
-          editor="images"
-          title="Images"
-          description="A photo or illustration describes the Product or Service. Saving it does not publish a storefront or attach private job evidence."
-          onBack={stack.back}
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => setDraftImagesOpen(true)}
         >
-          <CatalogImageEditor
-            photo={photo}
-            gallery={{ storeId, itemName: form.name.trim(), stores }}
-            illustrationId={illustrationId}
-            onIllustrationChange={setIllustrationId}
-            businessProfileKey={businessProfileKey}
-            category={category}
-            kind={itemKind}
-            disabled={
-              suggestionsDisabled || Boolean(createAdvancedMutation.variables)
-            }
-          />
-        </CatalogDetailEditor>
+          Open images editor
+        </Button>
       )
     if (id === "description")
       return (
@@ -2355,7 +2343,11 @@ export function CatalogItemForm({
                 ? document
                     .getElementById("catalog-item-name")
                     ?.scrollIntoView({ block: "center", behavior: "smooth" })
-                : sections.reveal(id)
+                : id === "images"
+                  ? editItem
+                    ? setSavedPhotosOpen(true)
+                    : setDraftImagesOpen(true)
+                  : sections.reveal(id)
             }
           />
           <div className="min-w-0">
@@ -2559,7 +2551,13 @@ export function CatalogItemForm({
                 </p>
                 <CatalogSections
                   value={sections.open}
-                  onValueChange={sections.setOpen}
+                  onValueChange={(next) => {
+                    if (next.includes("images")) {
+                      if (editItem) setSavedPhotosOpen(true)
+                      else setDraftImagesOpen(true)
+                    }
+                    sections.setOpen(next.filter((id) => id !== "images"))
+                  }}
                 >
                   {sectionOrder.map((id) => (
                     <CatalogSection key={id} id={id} {...sectionMeta[id]}>
@@ -2591,6 +2589,24 @@ export function CatalogItemForm({
             ? createPortal(footerAction, footerHost)
             : footerAction}
       </form>
+      {!editItem ? (
+        <CatalogImageEditor
+          open={draftImagesOpen}
+          onOpenChange={setDraftImagesOpen}
+          contextKey={clientOperationId.current}
+          description={form.description}
+          photo={photo}
+          gallery={{ storeId, itemName: form.name.trim(), stores }}
+          illustrationId={illustrationId}
+          onIllustrationChange={setIllustrationId}
+          businessProfileKey={businessProfileKey}
+          category={category}
+          kind={itemKind}
+          disabled={
+            suggestionsDisabled || Boolean(createAdvancedMutation.variables)
+          }
+        />
+      ) : null}
     </>
   )
 }

@@ -1,4 +1,5 @@
 import { assertCanReadCatalog } from "../../catalog/reference-access"
+import { catalogAiImagesRouter } from "./catalog-ai-images"
 export { assertCanReadCatalog } from "../../catalog/reference-access"
 import {
   type EwaTradeRole,
@@ -349,6 +350,7 @@ export const catalogRouter = createTRPCRouter({
     }),
   detail: catalogDetailRouter,
   photos: catalogPhotosRouter,
+  aiImages: catalogAiImagesRouter,
   categories: catalogCategoriesRouter,
   archiveOffering: protectedProcedure
     .input(catalogArchiveOfferingSchema)

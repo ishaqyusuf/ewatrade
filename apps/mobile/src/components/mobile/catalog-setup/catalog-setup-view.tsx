@@ -570,7 +570,9 @@ export function CatalogSetupView({ model }: { model: CatalogSetupModel }) {
                   >
                     <ActionButton
                       disabled={
-                        entry.key === "images" && model.imageDraft.selecting
+                        entry.key === "images" &&
+                        (model.imageDraft.selecting ||
+                          model.imageDraft.mediaBusy)
                       }
                       onPress={backEditor}
                     >

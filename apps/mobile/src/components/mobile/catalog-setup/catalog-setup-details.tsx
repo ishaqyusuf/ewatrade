@@ -12,6 +12,7 @@ import { getCatalogIllustrations } from "@ewatrade/utils/catalog-illustrations"
 import { Image } from "expo-image"
 import { useState } from "react"
 import { Text as NativeText, View } from "react-native"
+import { CatalogImagesEditor } from "../catalog-item/catalog-images-editor"
 import {
   CatalogPhotoGalleryPicker,
   catalogGalleryLabel,
@@ -137,6 +138,7 @@ function ClassicDetailRows({
     model.imageDraft.illustrationId ||
       model.imageDraft.image ||
       model.imageDraft.reused ||
+      model.imageDraft.assetIds.length ||
       model.imageUrl,
   )
   const rows: Array<{
@@ -154,9 +156,11 @@ function ClassicDetailRows({
       value: hasImage
         ? model.imageDraft.illustrationId
           ? "Illustration selected"
-          : model.imageDraft.reused
-            ? "1 photo · from My images"
-            : "1 photo · uploads when you save"
+          : model.imageDraft.assetIds.length
+            ? `${model.imageDraft.assetIds.length} image${model.imageDraft.assetIds.length === 1 ? "" : "s"}`
+            : model.imageDraft.reused
+              ? "1 photo · from My images"
+              : "1 photo · uploads when you save"
         : "Add a photo or illustration",
       set: hasImage,
       icon: "Image",
@@ -372,295 +376,36 @@ export function CatalogSetupDetailRows({
 
 function CatalogImageEditor({
   model,
-  onOpenIllustrations,
-}: {
-  model: CatalogSetupModel
-  onOpenIllustrations: () => void
-}) {
-  const [failedUrl, setFailedUrl] = useState<string | null>(null)
-  const { image, selecting, remove } = model.imageDraft
-  const uri = image?.uri ?? model.imageUrl.trim()
-  const disabled =
-    model.locked || model.isOffline || !model.storeReady || selecting
-  const removeImage = () => {
-    remove()
-    model.setImageUrl("")
-    setFailedUrl(null)
-  }
-  return (
-    <ClassicPhotosEditor
-      model={model}
-      disabled={disabled}
-      failed={Boolean(uri && failedUrl === uri)}
-      onFailed={() => setFailedUrl(uri)}
-      onOpenIllustrations={onOpenIllustrations}
-      onRemove={removeImage}
-      uri={uri}
-    />
-  )
-}
-
-/** Photos (01 Live Card, owner revision 9 Oct 2026). */
-function ClassicPhotosEditor({
-  model,
-  disabled,
-  failed,
-  onFailed,
-  onOpenIllustrations,
-  onRemove,
-  uri,
-}: {
-  model: CatalogSetupModel
-  disabled: boolean
-  failed: boolean
-  onFailed: () => void
-  onOpenIllustrations: () => void
-  onRemove: () => void
-  uri: string
-}) {
-  const { colorScheme } = useColorScheme()
-  const colors = useColors()
-  const palette = GREEN_TILL_THEME[colorScheme]
-  const { illustrationId, reused, selecting, error, select } = model.imageDraft
-  const [galleryOpen, setGalleryOpen] = useState(false)
-  const kind = model.kind === "service" ? "service" : "product"
-  const strip = getCatalogIllustrations({
-    kind,
-    businessProfileKey: model.businessProfileKey,
-    categoryKey: catalogIllustrationCategoryKey(model.category),
-  })
-    .filter((entry) => entry.recommended)
-    .slice(0, 4)
-  const hasImage = Boolean(illustrationId || reused || uri)
-  const tile = { aspectRatio: 1, borderRadius: 16, width: "31.4%" } as const
-  return (
-    <View className="gap-3.5">
+}: { model: CatalogSetupModel; onOpenIllustrations: () => void }) {
+  if (!model.storeId)
+    return (
       <Text className="text-xs text-muted-foreground">
-        Show what customers will receive. Choosing another image replaces this
-        one.
+        Choose a Store before adding images.
       </Text>
-      <View className="flex-row flex-wrap gap-2.5">
-        {hasImage ? (
-          <View
-            style={[
-              tile,
-              {
-                alignItems: "center",
-                backgroundColor: illustrationId ? palette.mint : colors.muted,
-                justifyContent: "center",
-                overflow: "hidden",
-              },
-            ]}
-          >
-            {illustrationId ? (
-              <CatalogIllustrationPreview id={illustrationId} size={78} />
-            ) : reused ? (
-              <SavedPhotoPreview
-                assetId={reused.assetId}
-                storeId={reused.storeId}
-                name={reused.name}
-                variant="thumbnail"
-              />
-            ) : (
-              <Image
-                source={{ uri }}
-                style={{ height: "100%", width: "100%" }}
-                contentFit="cover"
-                accessibilityLabel={`Selected ${kind} image`}
-                onError={onFailed}
-              />
-            )}
-            <View
-              style={{
-                backgroundColor: palette.overlayChip,
-                borderRadius: 999,
-                bottom: 6,
-                left: 6,
-                paddingHorizontal: 7,
-                paddingVertical: 2,
-                position: "absolute",
-              }}
-            >
-              <NativeText
-                style={{
-                  color: palette.overlayForeground,
-                  fontSize: 16,
-                  fontWeight: "800",
-                }}
-              >
-                Cover
-              </NativeText>
-            </View>
-            <Pressable
-              accessibilityLabel={
-                illustrationId ? "Remove illustration" : "Remove photo"
-              }
-              accessibilityRole="button"
-              disabled={disabled}
-              hitSlop={10}
-              onPress={onRemove}
-              style={{
-                alignItems: "center",
-                backgroundColor: palette.overlayChip,
-                borderRadius: 999,
-                height: 24,
-                justifyContent: "center",
-                position: "absolute",
-                right: 6,
-                top: 6,
-                width: 24,
-              }}
-            >
-              <Icon
-                className="size-[12px]"
-                color={palette.overlayForeground}
-                name="X"
-              />
-            </Pressable>
-          </View>
-        ) : null}
-        {(
-          [
-            ["camera", "Take photo", "Camera"],
-            ["photos", "Choose", "Image"],
-            ["gallery", "My images", "LayoutGrid"],
-          ] as const
-        ).map(([source, label, icon]) => (
-          <Pressable
-            key={source}
-            accessibilityLabel={
-              source === "camera"
-                ? "Take a photo"
-                : source === "photos"
-                  ? "Choose a photo"
-                  : "Choose from My images"
-            }
-            accessibilityRole="button"
-            disabled={disabled}
-            haptic
-            onPress={() =>
-              source === "gallery" ? setGalleryOpen(true) : void select(source)
-            }
-            style={[
-              tile,
-              {
-                alignItems: "center",
-                backgroundColor: colors.card,
-                borderColor: colors.border,
-                borderStyle: "dashed",
-                borderWidth: 1.5,
-                gap: 4,
-                justifyContent: "center",
-                opacity: disabled ? 0.5 : 1,
-              },
-            ]}
-          >
-            <Icon className="size-[22px]" color={colors.primary} name={icon} />
-            <NativeText
-              style={{ color: colors.primary, fontSize: 16, fontWeight: "800" }}
-            >
-              {label}
-            </NativeText>
-          </Pressable>
-        ))}
-      </View>
-      {selecting ? (
-        <StatusBanner tone="default" message="Choosing your image…" />
-      ) : null}
-      {error ? <StatusBanner tone="warning" message={error} /> : null}
-      {failed ? (
-        <StatusBanner
-          tone="warning"
-          message="The preview could not load. Choose another photo."
-        />
-      ) : null}
-      {reused ? (
-        <Text className="text-xs text-muted-foreground">
-          From My images · {reused.name}. Added to this item when you save.
-        </Text>
-      ) : uri && !illustrationId ? (
-        <Text className="text-xs text-muted-foreground">
-          Uploads when you save. It stays private until its image check passes.
-        </Text>
-      ) : null}
-      <DockedPhotoCamera {...model.imageDraft.camera} />
-      {model.storeId ? (
-        <CatalogPhotoGalleryPicker
-          open={galleryOpen}
-          storeId={model.storeId}
-          item={{ id: "", name: model.name.trim() || "this item" }}
-          stores={model.stores}
-          available={1}
-          pickedAssetIds={reused ? [reused.assetId] : []}
-          onClose={() => setGalleryOpen(false)}
-          onAdd={([entry]) => {
-            if (!entry) return
-            model.imageDraft.chooseReused({
-              assetId: entry.assetId,
-              storeId: entry.storeId,
-              name: catalogGalleryLabel(entry, ""),
-            })
-            model.setImageUrl("")
-          }}
-        />
-      ) : null}
-      <View className="mt-2 flex-row items-baseline justify-between">
-        <Text className="text-base font-extrabold text-foreground">
-          Or use an illustration
-        </Text>
-        <Pressable
-          accessibilityLabel="See all illustrations"
-          accessibilityRole="button"
-          className="min-h-11 justify-center px-1"
-          disabled={disabled}
-          haptic
-          onPress={onOpenIllustrations}
-        >
-          <Text className="text-xs font-bold text-primary">See all</Text>
-        </Pressable>
-      </View>
-      <View className="gap-2.5 rounded-[20px] bg-card p-3.5 shadow-sm">
-        <Text className="text-xs text-muted-foreground">
-          Simple images for your business. Good when you have no photo yet.
-        </Text>
-        <View className="flex-row gap-2">
-          {strip.map(({ illustration }) => {
-            const on = illustrationId === illustration.id
-            return (
-              <Pressable
-                key={illustration.id}
-                accessibilityLabel={`Choose ${illustration.label}`}
-                accessibilityRole="radio"
-                accessibilityState={{ selected: on }}
-                disabled={disabled}
-                haptic
-                onPress={() => {
-                  model.imageDraft.chooseIllustration(illustration.id)
-                  model.setImageUrl("")
-                }}
-                style={{
-                  alignItems: "center",
-                  aspectRatio: 1,
-                  backgroundColor: palette.mint,
-                  borderColor: on ? colors.primary : "transparent",
-                  borderRadius: 14,
-                  borderWidth: 2,
-                  flex: 1,
-                  justifyContent: "center",
-                }}
-              >
-                <CatalogIllustrationPreview id={illustration.id} size={48} />
-              </Pressable>
-            )
-          })}
-        </View>
-      </View>
-      <StatusBanner
-        icon="Info"
-        tone="primary"
-        message={`Only the ${kind} should be in the photo. Photos are checked before customers see them, and choosing one never publishes your item.`}
-      />
-    </View>
+    )
+  return (
+    <CatalogImagesEditor
+      storeId={model.storeId}
+      contextKey={model.imageContextKey}
+      facts={{
+        kind: model.kind === "service" ? "SERVICE" : "PRODUCT",
+        name: model.name,
+        description: model.description,
+        category: model.category,
+      }}
+      assetIds={model.imageDraft.assetIds}
+      onChange={(ids) => {
+        model.imageDraft.chooseAssetIds(ids)
+        model.setImageUrl("")
+      }}
+      disabled={model.locked || model.isOffline || !model.storeReady}
+      onBusyChange={model.imageDraft.setMediaBusy}
+      illustrationId={model.imageDraft.illustrationId}
+      onIllustrationChange={(id) => {
+        if (id) model.imageDraft.chooseIllustration(id)
+        else if (model.imageDraft.illustrationId) model.imageDraft.remove()
+      }}
+    />
   )
 }
 

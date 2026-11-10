@@ -700,6 +700,7 @@
       "name": "@ewatrade/oversight",
       "dependencies": {
         "@ewatrade/db": "workspace:*",
+        "@ewatrade/utils": "workspace:*",
         "hono": "4.13.9",
         "zod": "catalog:",
       },
@@ -883,6 +884,9 @@
     "packages/utils": {
       "name": "@ewatrade/utils",
       "version": "1.0.0",
+      "dependencies": {
+        "zod": "catalog:",
+      },
       "devDependencies": {
         "@types/bun": "latest",
         "typescript": "catalog:",

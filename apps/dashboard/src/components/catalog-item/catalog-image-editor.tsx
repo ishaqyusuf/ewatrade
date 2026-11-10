@@ -1,26 +1,25 @@
 "use client"
-
+import { SheetFrame } from "@/components/sheets/sheet-frame"
 import type { useCatalogPhoto } from "@/hooks/use-catalog-photo"
-import { Button, Field, FieldLabel, Input } from "@ewatrade/ui"
-import { findCatalogIllustration } from "@ewatrade/utils/catalog-illustrations"
-import { useId, useState } from "react"
-import { CatalogIllustrationPicker } from "./catalog-illustration-picker"
-import { CatalogIllustrationPreview } from "./catalog-illustration-preview"
-import {
-  CatalogPhotoGalleryDialog,
-  catalogGalleryLabel,
-} from "./catalog-photo-gallery-dialog"
+import { Button, Sheet } from "@ewatrade/ui"
+import { useState } from "react"
+import { useCatalogThemeClass } from "./catalog-appearance"
+import { CatalogImagesEditor } from "./catalog-images-editor"
 
+/** New items use the same image editor as saved-item Images. Uploaded private
+ * assets stay in the owning form draft and attach through its normal save. */
 export function CatalogImageEditor({
   photo,
   disabled,
   illustrationId,
   onIllustrationChange,
-  businessProfileKey,
   category,
   kind,
-  allowPhoto = true,
   gallery,
+  contextKey,
+  description = "",
+  open,
+  onOpenChange,
 }: {
   photo: ReturnType<typeof useCatalogPhoto>
   disabled: boolean
@@ -30,129 +29,70 @@ export function CatalogImageEditor({
   category?: string | null
   kind: "product" | "service"
   allowPhoto?: boolean
-  /** Offer My images (approved photos on other items) for a new item. */
   gallery?: {
     storeId: string
     itemName: string
     stores: Array<{ id: string; name: string }>
   }
+  contextKey: string
+  description?: string
+  open: boolean
+  onOpenChange(open: boolean): void
 }) {
-  const id = useId()
-  const [galleryOpen, setGalleryOpen] = useState(false)
-  const illustration = findCatalogIllustration(illustrationId)
-  return (
-    <div className="space-y-5">
-      {illustration ? (
-        <div className="space-y-3 rounded-xl border bg-muted/30 p-4">
-          <CatalogIllustrationPreview illustrationId={illustration.id} />
-          <p className="text-sm font-medium">{illustration.label}</p>
-          <Button
-            type="button"
-            variant="outline"
-            disabled={disabled || photo.uploading}
-            onClick={() => onIllustrationChange(null)}
-          >
-            Remove illustration
-          </Button>
-        </div>
-      ) : photo.preview ? (
-        <div className="space-y-3">
-          <img
-            src={photo.preview}
-            alt="Selected catalog item"
-            className="h-60 w-full rounded-xl border bg-muted object-contain"
-          />
-          <p className="break-words text-sm text-muted-foreground">
-            {photo.reused
-              ? `From My images · ${photo.reused.name}`
-              : photo.file?.name}
-          </p>
-          <Button
-            type="button"
-            variant="outline"
-            disabled={disabled || photo.uploading}
-            onClick={() => photo.select(null)}
-          >
-            Remove photo
-          </Button>
-        </div>
-      ) : (
-        <div className="flex min-h-52 items-center justify-center rounded-xl border border-dashed bg-muted/30 p-6 text-center text-muted-foreground">
-          No image yet. You can add one later.
-        </div>
-      )}
-      {allowPhoto ? (
-        <Field>
-          <FieldLabel htmlFor={id}>
-            {photo.file ? "Replace photo" : "Choose a photo"}
-          </FieldLabel>
-          <Input
-            id={id}
-            type="file"
-            accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
-            disabled={disabled || photo.uploading}
-            onChange={(event) => {
-              const selected = event.currentTarget.files?.[0]
-              if (selected && photo.select(selected)) onIllustrationChange(null)
-              event.currentTarget.value = ""
-            }}
-          />
-        </Field>
-      ) : null}
-      {allowPhoto && gallery ? (
-        <>
-          <Button
-            type="button"
-            variant="outline"
-            disabled={disabled || photo.uploading}
-            onClick={() => setGalleryOpen(true)}
-          >
-            Choose from My images
-          </Button>
-          <CatalogPhotoGalleryDialog
-            open={galleryOpen}
-            onOpenChange={setGalleryOpen}
-            storeId={gallery.storeId}
-            item={{ id: "", name: gallery.itemName || "this item" }}
-            stores={gallery.stores}
-            available={1}
-            pickedAssetIds={photo.reused ? [photo.reused.assetId] : []}
-            onAdd={([entry]) => {
-              if (
-                entry &&
-                photo.reuse({
-                  assetId: entry.assetId,
-                  storeId: entry.storeId,
-                  name: catalogGalleryLabel(entry, ""),
-                })
-              )
-                onIllustrationChange(null)
-            }}
-          />
-        </>
-      ) : null}
+  const theme = useCatalogThemeClass()
+  const [mediaBusy, setMediaBusy] = useState(false)
+  if (!gallery?.storeId)
+    return (
       <p className="text-sm text-muted-foreground">
-        Your photo uploads when you save. It remains private until its image
-        check passes. JPG, PNG, WebP or HEIC, up to 10 MB.
+        Choose a Store before adding images.
       </p>
-      <CatalogIllustrationPicker
-        businessProfileKey={businessProfileKey}
-        category={category}
-        kind={kind}
-        selectedId={illustrationId}
-        disabled={disabled || photo.uploading}
-        onSelect={(id) => {
-          if (photo.select(null)) onIllustrationChange(id)
+    )
+  return (
+    <Sheet
+      open={open}
+      onOpenChange={(next) => {
+        if (!mediaBusy) onOpenChange(next)
+      }}
+    >
+      <SheetFrame
+        title="Images"
+        description={gallery.itemName || "New item"}
+        popupClassName={theme}
+        closeDisabled={mediaBusy}
+        back={{
+          label: "Back to item",
+          onClick: () => {
+            if (!mediaBusy) onOpenChange(false)
+          },
         }}
-      />
-      {photo.uploading ? (
-        <output className="text-sm">Uploading your photo…</output>
-      ) : null}
-      {photo.error ? (
-        <p role="alert" className="text-sm text-destructive">
-          {photo.error}
-        </p>
-      ) : null}
-    </div>
+        footer={
+          <Button
+            type="button"
+            className="rounded-full"
+            disabled={mediaBusy}
+            onClick={() => onOpenChange(false)}
+          >
+            Done
+          </Button>
+        }
+      >
+        <CatalogImagesEditor
+          storeId={gallery.storeId}
+          contextKey={contextKey}
+          facts={{
+            kind: kind === "service" ? "SERVICE" : "PRODUCT",
+            name: gallery.itemName,
+            description,
+            category: category ?? "",
+          }}
+          assetIds={photo.assetIds}
+          onChange={photo.restore}
+          disabled={disabled}
+          onBusyChange={setMediaBusy}
+          illustrationId={illustrationId}
+          onIllustrationChange={onIllustrationChange}
+        />
+      </SheetFrame>
+    </Sheet>
   )
 }

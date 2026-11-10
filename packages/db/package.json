@@ -5,6 +5,7 @@
   "type": "module",
   "files": ["src", "generated", "prisma", "prisma.config.ts"],
   "exports": {
+    "./catalog-ai-images": "./src/queries/catalog-ai-images/index.ts",
     "./storefront-customer-scope": "./src/queries/storefront-customer-scope.ts",
     "./payment-report-notifications": "./src/queries/payment-report-notifications/index.ts",
     "./owner-billing": "./src/queries/owner-billing/index.ts",

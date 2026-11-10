@@ -205,3 +205,18 @@ test("saved response lookup is a read-only POST for scoped staff, with no wildca
   ).toBeNull()
   expect(staffProcedureStoreInput.has("assistant.responseLink")).toBe(false)
 })
+
+test("Catalog AI admits only exact Catalog-authorized methods", () => {
+  for (const name of ["state", "sources", "versions"]) {
+    const path = `catalog.aiImages.${name}`
+    expect(staffProcedureAction(path, "query")).toBe("catalog")
+    expect(staffProcedureAction(path, "mutation")).toBeNull()
+    expect(staffProcedureAction(`${path}Unsafe`, "query")).toBeNull()
+  }
+  for (const name of ["start", "deleteRefinement"]) {
+    const path = `catalog.aiImages.${name}`
+    expect(staffProcedureAction(path, "mutation")).toBe("catalog")
+    expect(staffProcedureAction(path, "query")).toBeNull()
+    expect(staffProcedureAction(`${path}Unsafe`, "mutation")).toBeNull()
+  }
+})

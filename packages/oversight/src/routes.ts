@@ -7,6 +7,7 @@ import {
 } from "@ewatrade/db/oversight"
 import { Hono } from "hono"
 import { z } from "zod"
+import { createCatalogAiOversightRoutes } from "./catalog-ai-images"
 import { createPaymentNotificationOversightRoutes } from "./payment-notifications"
 import { validOversightKey } from "./verify-key"
 export function createOversightRoutes(
@@ -14,6 +15,13 @@ export function createOversightRoutes(
   options: { allowNotificationPolicyWrites?: boolean } = {},
 ) {
   const oversightRoutes = new Hono()
+  oversightRoutes.route(
+    "/ai-images",
+    createCatalogAiOversightRoutes(
+      getDb,
+      options.allowNotificationPolicyWrites,
+    ),
+  )
   oversightRoutes.route(
     "/payment-notifications",
     createPaymentNotificationOversightRoutes(

@@ -107,6 +107,7 @@ export function useCatalogPhoto(storeId: string) {
   const operation = useRef<string | null>(null)
   const asset = useRef<string | null>(null)
   const restoredAssets = useRef<string[]>([])
+  const [assetIds, setAssetIds] = useState<string[]>([])
   const busy = useRef(false)
   useEffect(() => {
     current.current.mounted = true
@@ -132,6 +133,7 @@ export function useCatalogPhoto(storeId: string) {
     setFile(next)
     setReused(null)
     restoredAssets.current = []
+    setAssetIds([])
     setError(null)
     asset.current = null
     operation.current = next ? crypto.randomUUID() : null
@@ -211,6 +213,7 @@ export function useCatalogPhoto(storeId: string) {
     }
   }
   return {
+    assetIds,
     file,
     reused,
     /** Pick a My images photo instead of a file. */
@@ -219,6 +222,7 @@ export function useCatalogPhoto(storeId: string) {
       setFile(null)
       setReused(source)
       restoredAssets.current = []
+      setAssetIds([])
       setError(null)
       asset.current = null
       operation.current = null
@@ -226,13 +230,21 @@ export function useCatalogPhoto(storeId: string) {
     },
     preview: reused
       ? `/api/catalog/photos/${encodeURIComponent(reused.assetId)}/preview?storeId=${encodeURIComponent(reused.storeId)}`
-      : preview,
+      : (preview ??
+        (assetIds[0]
+          ? `/api/catalog/photos/${encodeURIComponent(assetIds[0])}/preview?storeId=${encodeURIComponent(storeId)}`
+          : null)),
     error,
     uploading,
     select,
     upload,
     restore: (ids: string[]) => {
-      restoredAssets.current = ids
+      restoredAssets.current = [...ids]
+      setAssetIds([...ids])
+      setFile(null)
+      setReused(null)
+      asset.current = null
+      operation.current = null
     },
     hasPhoto: Boolean(file || reused || restoredAssets.current.length),
   }

@@ -12,12 +12,14 @@ export function SavedPhotoPreview({
   storeId,
   name,
   variant = "display",
+  contentFit = "cover",
 }: {
   assetId: string
   storeId: string
   name: string
   /** Thumbnails (320px) for grids; display for the large item photo. */
   variant?: "display" | "thumbnail"
+  contentFit?: "cover" | "contain"
 }) {
   const session = getSession()
   const [failed, setFailed] = useState(false)
@@ -49,7 +51,7 @@ export function SavedPhotoPreview({
         },
       }}
       style={{ height: "100%", width: "100%" }}
-      contentFit="cover"
+      contentFit={contentFit}
       cachePolicy="none"
       accessibilityLabel={name}
       onError={() => setFailed(true)}

@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./catalog-ai-images": "./src/catalog-ai-images.ts",
     ".": "./src/index.ts",
     "./catalog-photo-review": "./src/catalog-photo-review.ts",
     "./assistant-whatsapp": "./src/assistant-whatsapp.ts",

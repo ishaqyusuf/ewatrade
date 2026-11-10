@@ -1,0 +1,94 @@
+// One request produces exactly one private Catalog photo; this row is also the
+// immutable customer allowance ledger. Deleting a version never deletes usage.
+model CatalogAiImageJob {
+  id                   String   @id @default(cuid())
+  tenantId             String
+  storeId              String
+  actorUserId          String
+  clientOperationId    String
+  contextKey           String
+  payloadHash          String
+  catalogItemId        String?
+  sourceAssetId        String?
+  rootAssetId          String?
+  mode                 String
+  facts                Json
+  note                 String
+  policySnapshot       Json
+  state                String   @default("QUEUED")
+  policyRevision       Int
+  model                String
+  reservedCostMicros   Int
+  costMicros           Int?
+  usage                Json?
+  providerRequestId    String?
+  outputAssetId        String?  @unique
+  dispatchToken        String?
+  dispatchedAt         DateTime?
+  appliedAt            DateTime?
+  deliveredAt          DateTime?
+  completedAt          DateTime?
+  reconciliation       Json?
+  failureCode          String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  tenant               Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store                Store    @relation(fields: [tenantId, storeId], references: [tenantId, id], onDelete: Cascade)
+
+  @@unique([tenantId, clientOperationId])
+  @@index([tenantId, createdAt, state])
+  @@index([tenantId, storeId, actorUserId, contextKey])
+  @@index([state, createdAt])
+}
+
+// CatalogPhotoAsset owns immutable bytes, moderation and cleanup. Version edges
+// retain provenance while the ordinary replace command owns visible item order.
+model CatalogAiImageVersion {
+  assetId       String   @id
+  tenantId      String
+  storeId       String
+  rootAssetId   String
+  sourceAssetId String?
+  jobId         String   @unique
+  removedAt     DateTime?
+  createdAt     DateTime @default(now())
+  tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store         Store    @relation(fields: [tenantId, storeId], references: [tenantId, id], onDelete: Cascade)
+
+  @@index([tenantId, storeId, rootAssetId, createdAt])
+}
+
+// Replays return their original result. Revisions and prior rates/prices remain
+// inspectable without saving any API credential in configuration.
+model CatalogAiPolicyCommand {
+  id        String   @id
+  actorId   String
+  digest    String
+  reason    String
+  revision  Int      @unique
+  result    Json
+  createdAt DateTime @default(now())
+}
+
+// Extends the existing WhatsApp transport usage boundary. Business-wide monthly
+// attempts survive actor/chat deletion and cannot be reset by image policy edits.
+model AssistantWhatsAppMonthlyUsage {
+  tenantId String
+  monthStartedAt DateTime
+  attempts Int @default(0)
+  updatedAt DateTime @updatedAt
+  tenant Tenant @relation(fields:[tenantId],references:[id],onDelete:Cascade)
+  @@id([tenantId,monthStartedAt])
+}
+
+// No Tenant/User FK or prompt: settled costs and unknown provider liabilities
+// must survive a business's privacy deletion and cannot reset the spend cap.
+model CatalogAiProviderCost {
+  id String @id
+  reservedCostMicros Int
+  costMicros Int?
+  providerRequestId String?
+  reconciliation Json?
+  createdAt DateTime @default(now())
+  @@index([createdAt])
+}

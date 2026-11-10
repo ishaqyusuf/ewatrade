@@ -11,6 +11,8 @@ model Store {
   staffStoreAssignments StaffStoreAssignment[]
   assistantConversations AssistantConversation[]
   catalogItemIllustrations                          CatalogItemIllustration[]
+  catalogAiImageJobs CatalogAiImageJob[]
+  catalogAiImageVersions CatalogAiImageVersion[]
   catalogPhotoAssets                                CatalogPhotoAsset[]
   financeBills                                      FinanceBill[]
   financeJournalEntries                             FinanceJournalEntry[]

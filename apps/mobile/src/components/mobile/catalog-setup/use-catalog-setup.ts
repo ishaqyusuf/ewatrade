@@ -653,6 +653,9 @@ export function useCatalogSetup({
         ...input,
         storeId: defaultStoreId,
         illustrationId: imageDraft.illustrationId ?? undefined,
+        ...(imageDraft.assetIds.length
+          ? { photoAssetIds: [...imageDraft.assetIds] }
+          : {}),
       },
     })
 
@@ -1216,7 +1219,7 @@ export function useCatalogSetup({
       return
     }
 
-    if (imageDraft.selecting || imageUrl.trim()) {
+    if (imageDraft.selecting || imageDraft.mediaBusy || imageUrl.trim()) {
       setSubmitError(
         "Finish choosing a photo. Hosted image links are unavailable; choose a photo from this device.",
       )
@@ -1272,6 +1275,7 @@ export function useCatalogSetup({
         imageDraft.illustrationId ||
         imageDraft.image ||
         imageDraft.reused ||
+        imageDraft.assetIds.length ||
         imageUrl.trim() ||
         category.trim() ||
         Object.values(variantDrafts).some(
@@ -1967,6 +1971,7 @@ export function useCatalogSetup({
         imageDraft.illustrationId ||
         imageDraft.image ||
         imageDraft.reused ||
+        imageDraft.assetIds.length ||
         category ||
         optionGroups.length ||
         additionalUnits.length ||
@@ -1991,14 +1996,15 @@ export function useCatalogSetup({
         unitName,
       })
     : { canSave: false, hint: "Choose an item or service." }
-  const saveReadiness = imageDraft.selecting
-    ? { canSave: false, hint: "Finish choosing your image." }
-    : imageUrl.trim()
-      ? {
-          canSave: false,
-          hint: "Choose a photo from this device instead of a hosted image link.",
-        }
-      : itemSaveReadiness
+  const saveReadiness =
+    imageDraft.selecting || imageDraft.mediaBusy
+      ? { canSave: false, hint: "Finish choosing your image." }
+      : imageUrl.trim()
+        ? {
+            canSave: false,
+            hint: "Choose a photo from this device instead of a hosted image link.",
+          }
+        : itemSaveReadiness
 
   const canUndoFill = Boolean(qaSnapshotRef.current)
 
@@ -2093,6 +2099,7 @@ export function useCatalogSetup({
     setDescription: guardEdit(setDescription),
     imageUrl,
     imageDraft,
+    imageContextKey: clientOperationIdRef.current,
     setImageUrl: guardEdit(setImageUrl),
     category,
     setCategory: (value: string) => {

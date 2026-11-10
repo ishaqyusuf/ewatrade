@@ -1,0 +1,115 @@
+{
+  "version": 1,
+  "id": "2026-11-10-catalog-ai-images",
+  "tickets": ["H01", "H02"],
+  "summary": "Implement explicit form-only Catalog AI images, durable scoped allowance/cost accounting, native/web gallery and Oversight controls.",
+  "capabilities": [],
+  "procedures": [
+    {
+      "path": "catalog.aiImages.deleteRefinement",
+      "status": "form_only",
+      "reason": "Explicit Catalog media form controls only; fresh scope, reviewed image lineage and budget checks remain server-owned. No assistant tool or autonomous provider spend."
+    },
+    {
+      "path": "catalog.aiImages.sources",
+      "status": "form_only",
+      "reason": "Explicit Catalog media form controls only; fresh scope, reviewed image lineage and budget checks remain server-owned. No assistant tool or autonomous provider spend."
+    },
+    {
+      "path": "catalog.aiImages.start",
+      "status": "form_only",
+      "reason": "Explicit Catalog media form controls only; fresh scope, reviewed image lineage and budget checks remain server-owned. No assistant tool or autonomous provider spend."
+    },
+    {
+      "path": "catalog.aiImages.state",
+      "status": "form_only",
+      "reason": "Explicit Catalog media form controls only; fresh scope, reviewed image lineage and budget checks remain server-owned. No assistant tool or autonomous provider spend."
+    },
+    {
+      "path": "catalog.aiImages.versions",
+      "status": "form_only",
+      "reason": "Explicit Catalog media form controls only; fresh scope, reviewed image lineage and budget checks remain server-owned. No assistant tool or autonomous provider spend."
+    },
+    {
+      "path": "catalog.photos.addToGallery",
+      "status": "form_only",
+      "reason": "Explicit Catalog media form controls only; fresh scope, reviewed image lineage and budget checks remain server-owned. No assistant tool or autonomous provider spend."
+    },
+    {
+      "path": "catalog.photos.createIntent",
+      "status": "form_only",
+      "reason": "Explicit Catalog media form controls only; fresh scope, reviewed image lineage and budget checks remain server-owned. No assistant tool or autonomous provider spend."
+    },
+    {
+      "path": "catalog.photos.gallery",
+      "status": "form_only",
+      "reason": "Explicit Catalog media form controls only; fresh scope, reviewed image lineage and budget checks remain server-owned. No assistant tool or autonomous provider spend."
+    },
+    {
+      "path": "catalog.photos.getMetadata",
+      "status": "form_only",
+      "reason": "Explicit Catalog media form controls only; fresh scope, reviewed image lineage and budget checks remain server-owned. No assistant tool or autonomous provider spend."
+    },
+    {
+      "path": "catalog.photos.remove",
+      "status": "form_only",
+      "reason": "Explicit Catalog media form controls only; fresh scope, reviewed image lineage and budget checks remain server-owned. No assistant tool or autonomous provider spend."
+    },
+    {
+      "path": "catalog.photos.replace",
+      "status": "form_only",
+      "reason": "Explicit Catalog media form controls only; fresh scope, reviewed image lineage and budget checks remain server-owned. No assistant tool or autonomous provider spend."
+    },
+    {
+      "path": "catalog.photos.reuse",
+      "status": "form_only",
+      "reason": "Explicit Catalog media form controls only; fresh scope, reviewed image lineage and budget checks remain server-owned. No assistant tool or autonomous provider spend."
+    },
+    {
+      "path": "catalog.photos.updateGalleryDetails",
+      "status": "form_only",
+      "reason": "Explicit Catalog media form controls only; fresh scope, reviewed image lineage and budget checks remain server-owned. No assistant tool or autonomous provider spend."
+    }
+  ],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "updated",
+      "path": "docs/verification/2026-11-10-catalog-ai-images-implementation.md"
+    },
+    {
+      "topic": "api",
+      "status": "updated",
+      "path": "docs/verification/2026-11-10-catalog-ai-images-implementation.md"
+    },
+    {
+      "topic": "schema",
+      "status": "updated",
+      "path": "docs/verification/2026-11-10-catalog-ai-images-implementation.md"
+    },
+    {
+      "topic": "permissions",
+      "status": "updated",
+      "path": "docs/verification/2026-11-10-catalog-ai-images-implementation.md"
+    },
+    {
+      "topic": "capability",
+      "status": "updated",
+      "path": "packages/assistant/src/capabilities/COVERAGE.md"
+    },
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/catalog-ai-image-generation.md"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "run",
+      "path": "docs/verification/2026-11-10-catalog-ai-images-implementation.md",
+      "executed": true,
+      "result": "Focused contracts/provider/editor/auth, real PG quota and WhatsApp concurrency, H01 coverage, scoped source types and signed-in local editor verification; limits recorded explicitly."
+    }
+  ],
+  "noAssistantImpact": "AI image creation/refinement and photo editing remain explicit form-only actions. No assistant capability is added, no model receives provider or spending authority; five exact protected procedures are classified and existing photo exclusions are extended."
+}

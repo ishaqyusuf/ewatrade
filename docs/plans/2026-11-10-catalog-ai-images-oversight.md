@@ -2,11 +2,13 @@
 
 10 November 2026, Africa/Lagos. Owner requested implementation, with the exact
 web/mobile Workshop reviewed and accepted before product UI implementation.
-This checkpoint delivers the revised design and backend preparation; generation
-is not implemented or live. It supersedes the October proposal's required brief,
+Implementation is now present in the current checkout. See the verified
+[source implementation receipt](../verification/2026-11-10-catalog-ai-images-implementation.md).
+Generation remains default-off and is not deployed or provider-accepted.
+The earlier design checkpoint below is retained as history. It supersedes the October proposal's required brief,
 source-selection wizard and one/four-output assumption.
 
-## Accepted requirements and pending visual approval
+## Accepted requirements
 
 - Generate with AI uses the existing Product or Service name, description and
   allowlisted public visual attributes. No repeated required description.
@@ -43,7 +45,7 @@ source-selection wizard and one/four-output assumption.
 - No provider top-up, purchase, hosted setting, deployment or native release is
   authorized by design review. Paid sample generation has not been performed.
 
-## Exact review artifacts
+## Historical review artifacts
 
 Merchant Workshop keeps `ewatrade/dashboard/web-app/catalog/ai-images`,
 direction `02`, **Inline image actions**, now v12:
@@ -133,7 +135,7 @@ adapter is claimed. A manual observation needs account/currency/as-of/provenance
 Forecasts require reconciled liabilities and complete account history, include
 failed-attempt costs, and remain labeled estimates. Missing data is not zero.
 
-## Remaining implementation after exact design approval
+## Original implementation sequence (completed in source)
 
 1. Agree versioned contracts, current model/capabilities, policy defaults and
    privacy/source/fidelity admission. Prices remain unset until approved.
@@ -153,3 +155,22 @@ failed-attempt costs, and remain labeled estimates. Missing data is not zero.
 No EwaTrade schema/API/auth/permission change occurs in this checkpoint. Brain
 impact: feature status, this delivery's plan and in-progress task entry. Tracked
 documentation preserves the review contract because `.brain` is Git-ignored.
+
+## Current accepted implementation — 10 November 2026
+
+The owner's “implement” authorizes the selected merchant direction02, now v13
+`f6a38263-326e-4e69-8c94-46d39a386e1a`, which adds the subsequent allowance-copy
+correction to accepted v12. Lifetime displays only “30 generations left”; monthly
+displays “30 generations left this month”. Oversight retains the explicit type.
+Merchant and Oversight v7 are selected. Prior unselected/pending notes above are
+historical, not the current authority.
+
+All seven source slices are implemented: strict contracts, durable allowance and
+cost ledgers, provider adapter, recoverable jobs, Oversight controls/analytics,
+shared web/mobile Images editors, and focused source verification/documentation.
+Source completion is separate from paid provider fidelity, physical native and
+release acceptance. The Oversight implementation is committed as `7be1ba7`.
+No paid generation, hosted configuration or release was performed. Automatic
+prepaid balance and account runway remain unavailable without a supported balance
+source and complete account-wide costs. Customer prices are configuration
+metadata; purchasing credits/billing collection is not introduced here.

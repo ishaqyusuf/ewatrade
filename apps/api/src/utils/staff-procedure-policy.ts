@@ -165,6 +165,8 @@ const reconciliation = new Set([
   "orders.authorizeChargeOnlyServiceLine",
 ])
 const catalog = new Set([
+  "catalog.aiImages.start",
+  "catalog.aiImages.deleteRefinement",
   "catalog.photos.replace",
   "catalog.photos.remove",
   "catalog.photos.createIntent",
@@ -209,7 +211,16 @@ export function staffProcedureAction(
     ].includes(path)
   )
     return "read"
-  if (path === "catalog.photos.getMetadata") return "catalog"
+  if (
+    type === "query" &&
+    [
+      "catalog.photos.getMetadata",
+      "catalog.aiImages.state",
+      "catalog.aiImages.sources",
+      "catalog.aiImages.versions",
+    ].includes(path)
+  )
+    return "catalog"
   if (type === "query" && reads.has(path)) return "read"
   if (type === "query" && stockReads.has(path)) return "stock"
   if (orders.has(path)) return "orders"

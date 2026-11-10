@@ -16,6 +16,10 @@ import {
   Prisma,
   type PrismaClient,
 } from "../../generated/prisma/client"
+import {
+  catalogAiAttachableAssetIds,
+  markCatalogAiAppliedInTransaction,
+} from "./catalog-ai-images/lineage-attachment"
 
 export class CatalogPhotoError extends Error {
   constructor(
@@ -574,6 +578,11 @@ export async function attachCatalogPhotoAssets(
   })
   if (!item)
     throw new CatalogPhotoError("PHOTO_NOT_FOUND", "Catalog item not found.")
+  const aiAttachable = await catalogAiAttachableAssetIds(
+    tx,
+    input,
+    input.assetIds,
+  )
   if (
     assets.some(
       (asset) =>
@@ -583,7 +592,7 @@ export async function attachCatalogPhotoAssets(
         asset.expiresAt <= new Date() ||
         asset.catalogItemId ||
         // My images uploads are copied onto Items, never moved.
-        asset.galleryAddedAt,
+        (asset.galleryAddedAt && !aiAttachable.has(asset.id)),
     )
   ) {
     throw new CatalogPhotoError(
@@ -599,8 +608,10 @@ export async function attachCatalogPhotoAssets(
         catalogItemId: item.id,
         sortOrder,
         attachedAt,
+        galleryAddedAt: null,
       },
     })
+  await markCatalogAiAppliedInTransaction(tx, input, input.assetIds, item.id)
 }
 
 export async function assertCatalogPhotoCreationReplay(

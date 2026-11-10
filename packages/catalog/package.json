@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./image-generation-openai": "./src/image-generation-openai.ts",
     "./photo-contracts": "./src/photo-contracts.ts",
     "./photo-client": "./src/photo-client.ts",
     "./photo-storage": "./src/photo-storage.ts",

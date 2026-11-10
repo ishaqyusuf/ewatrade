@@ -15,6 +15,7 @@ import {
   recoverAssistantWhatsAppDeliveries,
   recoverAssistantWhatsAppTurns,
 } from "../assistant-whatsapp"
+import { recoverCatalogAiImages } from "../catalog-ai-images"
 import { isCommercialOrderDigestWindow } from "../handlers/commercial-order-reminder-digest"
 import { runManualPaymentAlertSweep } from "../manual-payment-alerts"
 import { runManualPaymentOutcomeSweep } from "../manual-payment-outcomes"
@@ -102,6 +103,7 @@ export const SCHEDULED_CADENCES = {
   "schedules.every-5-minutes": {
     cron: "*/5 * * * *",
     steps: [
+      sweep("catalog.ai-image.recovery", recoverCatalogAiImages),
       sweep("storefront.release-source-check", () =>
         runStorefrontReleaseChecks(),
       ),

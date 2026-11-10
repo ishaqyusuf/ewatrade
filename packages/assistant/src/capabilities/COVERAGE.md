@@ -6,10 +6,10 @@ Tickets refer to the Brain plan `.brain/plans/2026-10-09-assistant-business-oper
 
 ## Summary
 
-- Router procedures: 814 (618 merchant, 196 public/account/internal)
+- Router procedures: 819 (623 merchant, 196 public/account/internal)
 - Merchant supported by a capability: 185
 - Merchant planned: 142
-- Merchant form-only: 228
+- Merchant form-only: 233
 - Merchant excluded: 63
 - Capabilities: 169 (88 read, 81 write)
 
@@ -462,6 +462,11 @@ track conversational evaluation separately from these source test links.
 | `businessReporting.stock` | query | stock | inventory | supported | inventory.stock.report |
 | `businessReporting.supplierAging` | query | Owner/Admin only | finance | supported | finance.supplier_aging.report |
 | `catalog.addServiceChoice` | mutation | catalog | catalog | form_only | Explicit native Catalog sheet/menu commands; assistant model tools cannot invoke these writes. Assistant edits use the narrow price, details, identifier and availability capabilities. |
+| `catalog.aiImages.deleteRefinement` | mutation | catalog | catalog | form_only | Photo capture, upload, AI generation and refinement belong to the product form; model tools cannot spend generation allowance. |
+| `catalog.aiImages.sources` | query | catalog | catalog | form_only | Photo capture, upload, AI generation and refinement belong to the product form; model tools cannot spend generation allowance. |
+| `catalog.aiImages.start` | mutation | catalog | catalog | form_only | Photo capture, upload, AI generation and refinement belong to the product form; model tools cannot spend generation allowance. |
+| `catalog.aiImages.state` | query | catalog | catalog | form_only | Photo capture, upload, AI generation and refinement belong to the product form; model tools cannot spend generation allowance. |
+| `catalog.aiImages.versions` | query | catalog | catalog | form_only | Photo capture, upload, AI generation and refinement belong to the product form; model tools cannot spend generation allowance. |
 | `catalog.archiveOffering` | mutation | catalog | catalog | supported | catalog.archive |
 | `catalog.archiveVariant` | mutation | catalog | catalog | supported | catalog.archive |
 | `catalog.attentionSummary` | query | read | catalog | form_only | Catalog page type and problem counts behind its filters; the assistant counts products with catalog.count and pages them with listItemsPage. |
@@ -484,14 +489,14 @@ track conversational evaluation separately from these source test links.
 | `catalog.listItemsPage` | query | read | services | supported | services.intake.options.read, catalog.page, sales.order.prepare, services.job.prepare |
 | `catalog.listUnitConfigurations` | query | read | catalog | planned | B03 |
 | `catalog.listUnitDefinitions` | query | read | catalog | planned | B03 |
-| `catalog.photos.addToGallery` | mutation | Owner/Admin only | catalog | form_only | Photo capture and upload belong to the product form. |
-| `catalog.photos.createIntent` | mutation | catalog | catalog | form_only | Photo capture and upload belong to the product form. |
-| `catalog.photos.gallery` | query | Owner/Admin only | catalog | form_only | Photo capture and upload belong to the product form. |
-| `catalog.photos.getMetadata` | query | catalog | catalog | form_only | Photo capture and upload belong to the product form. |
-| `catalog.photos.remove` | mutation | catalog | catalog | form_only | Photo capture and upload belong to the product form. |
-| `catalog.photos.replace` | mutation | catalog | catalog | form_only | Photo capture and upload belong to the product form. |
-| `catalog.photos.reuse` | mutation | Owner/Admin only | catalog | form_only | Photo capture and upload belong to the product form. |
-| `catalog.photos.updateGalleryDetails` | mutation | Owner/Admin only | catalog | form_only | Photo capture and upload belong to the product form. |
+| `catalog.photos.addToGallery` | mutation | Owner/Admin only | catalog | form_only | Photo capture, upload, AI generation and refinement belong to the product form; model tools cannot spend generation allowance. |
+| `catalog.photos.createIntent` | mutation | catalog | catalog | form_only | Photo capture, upload, AI generation and refinement belong to the product form; model tools cannot spend generation allowance. |
+| `catalog.photos.gallery` | query | Owner/Admin only | catalog | form_only | Photo capture, upload, AI generation and refinement belong to the product form; model tools cannot spend generation allowance. |
+| `catalog.photos.getMetadata` | query | catalog | catalog | form_only | Photo capture, upload, AI generation and refinement belong to the product form; model tools cannot spend generation allowance. |
+| `catalog.photos.remove` | mutation | catalog | catalog | form_only | Photo capture, upload, AI generation and refinement belong to the product form; model tools cannot spend generation allowance. |
+| `catalog.photos.replace` | mutation | catalog | catalog | form_only | Photo capture, upload, AI generation and refinement belong to the product form; model tools cannot spend generation allowance. |
+| `catalog.photos.reuse` | mutation | Owner/Admin only | catalog | form_only | Photo capture, upload, AI generation and refinement belong to the product form; model tools cannot spend generation allowance. |
+| `catalog.photos.updateGalleryDetails` | mutation | Owner/Admin only | catalog | form_only | Photo capture, upload, AI generation and refinement belong to the product form; model tools cannot spend generation allowance. |
 | `catalog.productShare` | query | read | catalog | form_only | Dashboard Product Share reads an already public product link for explicit browser Share/Copy; no publishing, provider or model authority. |
 | `catalog.publishUnitConfiguration` | mutation | catalog | catalog | supported | catalog.units.publish |
 | `catalog.searchProductCategories` | query | read | catalog | supported | catalog.categories.suggest |

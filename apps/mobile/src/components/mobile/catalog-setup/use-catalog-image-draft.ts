@@ -27,6 +27,8 @@ export function useCatalogImageDraft(input: {
   canEdit: () => boolean
   scopeKey: string
 }) {
+  const [assetIds, setAssetIds] = useState<string[]>([])
+  const [mediaBusy, setMediaBusy] = useState(false)
   const [image, setImage] = useState<CatalogImageDraft | null>(null)
   const [illustrationId, setIllustrationId] = useState<string | null>(null)
   const [reused, setReused] = useState<CatalogReusedImage | null>(null)
@@ -46,6 +48,8 @@ export function useCatalogImageDraft(input: {
     picking.current = false
     setCameraOpen(false)
     setImage(null)
+    setAssetIds([])
+    setMediaBusy(false)
     setIllustrationId(null)
     setReused(null)
     setError(null)
@@ -100,6 +104,7 @@ export function useCatalogImageDraft(input: {
       }
       setIllustrationId(null)
       setReused(null)
+      setAssetIds([])
       setImage({
         id: Crypto.randomUUID(),
         uri: asset.uri,
@@ -142,6 +147,17 @@ export function useCatalogImageDraft(input: {
   }
 
   return {
+    assetIds,
+    mediaBusy,
+    setMediaBusy,
+    chooseAssetIds: (ids: string[]) => {
+      if (!current.current.canEdit() || picking.current) return
+      setAssetIds([...ids])
+      setImage(null)
+      setReused(null)
+      setIllustrationId(null)
+      setError(null)
+    },
     image,
     illustrationId,
     reused,
@@ -149,6 +165,7 @@ export function useCatalogImageDraft(input: {
       if (!current.current.canEdit() || picking.current) return
       setImage(null)
       setIllustrationId(null)
+      setAssetIds([])
       setReused(source)
       setError(null)
     },
@@ -161,6 +178,7 @@ export function useCatalogImageDraft(input: {
         return
       setImage(null)
       setReused(null)
+      setAssetIds([])
       setIllustrationId(id)
       setError(null)
     },
@@ -188,6 +206,7 @@ export function useCatalogImageDraft(input: {
     remove: () => {
       if (!current.current.canEdit() || picking.current) return
       setImage(null)
+      setAssetIds([])
       setIllustrationId(null)
       setReused(null)
       setError(null)

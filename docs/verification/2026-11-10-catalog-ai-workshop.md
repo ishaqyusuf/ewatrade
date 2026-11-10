@@ -1,4 +1,9 @@
-# Catalog AI Workshop review checkpoint
+# Catalog AI Workshop review history
+
+The owner subsequently approved implementation. Current selected merchant v13
+and source verification are recorded in
+[implementation receipt](2026-11-10-catalog-ai-images-implementation.md).
+The pending/unimplemented statements below describe earlier checkpoints.
 
 10 November 2026. Scope: static Workshop previews and cross-project preparation,
 not feature/native/provider/release acceptance. Exact contract and revision links:
