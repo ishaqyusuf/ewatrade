@@ -113,7 +113,16 @@ export function SaleScanLayers({ scan }: { scan: SaleScan }) {
           >
             <Suspense
               fallback={
-                <StatusBanner message="Opening camera…" tone="default" />
+                <View className="gap-4 px-4 pt-4">
+                  <StatusBanner message="Opening camera…" tone="default" />
+                  <ActionButton
+                    icon="Search"
+                    onPress={scan.searchByName}
+                    variant="outline"
+                  >
+                    Search by name instead
+                  </ActionButton>
+                </View>
               }
             >
               <BarcodeCameraScreen

@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "id": "2026-11-10-scanner-loading-fallback",
+  "tickets": ["H02"],
+  "summary": "Keep the existing Search by name action available in the native sale scanner's Suspense loading state. It invokes the same scanner cancellation and search-focus callback while the lazy camera is pending.",
+  "noAssistantImpact": "A mobile local-draft recovery control only. Existing form_only scanner classification, Catalog read commands, permissions, sale confirmation, assistant/channel support and rollouts are unchanged. No sale, payment, stock, native dependency or provider effect is added.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "updated",
+      "path": "docs/verification/2026-11-10-business-phase-1.md"
+    },
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/tasks/2026-11-10-business-phase-1.md"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "apps/mobile/src/components/mobile/create-sale/use-sale-scan.test.ts",
+      "executed": true,
+      "result": "Actual SaleScanLayers and useSaleScan mounted with inert native UI/transport ports and a suspended camera. Before repair: seven controls pass, loading fallback fails because only Opening camera is present. After repair: all eight child cases / 21 assertions pass; exact JUnit wrapper and model pass 4 tests / 24 outer assertions. Fallback closes scanning, requests search focus and adds no item. Owned source smoke285/1820 plus QA tooling types/Biome pass. Source execution only, not camera/device proof."
+    }
+  ]
+}

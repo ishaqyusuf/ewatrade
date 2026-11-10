@@ -199,3 +199,46 @@ claim that this phase authored those records. Final scanner/lock fingerprints
 match the table above; unchanged source checks were reused for this evidence-only
 append. Source milestone `1093df64e` is committed; this final evidence append is a
 separate local documentation milestone. No push or deployment is authorized.
+
+## Loading-camera manual-search repair — narrowed follow-through
+
+The coordinator relayed the owner's smaller market-ready target: one ordinary
+scan and a safe manual-search fallback, without another emulator matrix or
+recovery loop. Source review found a concrete gap matching the observed
+**Opening camera…** state: its Suspense fallback contained only that notice.
+The explicit manual-search action was inside the camera module that had not yet
+resolved. The existing header close was available, but the named search recovery
+was not.
+
+`SaleScanLayers` now renders the existing **Search by name instead** ActionButton
+while the camera is loading. It calls the unchanged `scan.searchByName`, which
+cancels the scanner session, closes scanning and requests focus on the existing
+floating search footer. No new input, loading framework, camera retry, permission,
+catalog command, sale submission or assistant capability is introduced.
+
+The existing isolated mounted fixture now also renders the actual scanner layer
+with the actual hook and an inert suspended camera/native UI port. Before the
+repair, seven controls passed and this regression failed: only Opening camera
+was rendered. After repair, **eight child cases / 21 assertions pass**. The new
+case invokes the rendered action and verifies closed scanning, one search-focus
+request, no failure notice and no item addition. This is actual React/source
+execution, not a device keyboard or camera decode pass. Existing ordinary found
+lookup and cancellation controls remain in the same fixture.
+
+The useful source repair is finished independently of unproven camera/shared-code
+scenarios. Recommend retaining ordinary manual sale entry as the usable path and
+not claiming scanner readiness until a representative decode is observed on a
+responsive authorized device. The full 72-case matrix is not a condition for this
+small source slice. No device/connected test, provider action, repeated app type
+matrix or additional host recovery was performed for this follow-through.
+
+Ready-milestone verification: the exact-JUnit wrapper and unchanged scan model
+pass **4 tests / 24 outer assertions**, proving all eight child cases ran without
+skips/failures. One five-owned-path quick smoke passes **285 tests / 1,820
+assertions**, QA tooling types and changed-file Biome, with zero unknown mappings;
+it excludes concurrent T10 source. Scoped mobile ESLint reports zero errors and
+one pre-existing chooser-effect dependency warning on the unchanged effect.
+Whitespace review passes. No whole-app type or repeated device matrix was needed
+for this existing-control/callback addition; previous unchanged evidence is reused.
+Assistant impact is recorded in `2026-11-10-scanner-loading-fallback.json` with
+unchanged form-only classification and no capability/procedure rows added.

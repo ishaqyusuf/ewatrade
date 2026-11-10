@@ -13,6 +13,7 @@ const CASES = [
   "the current lookup still adds exactly one identified offering",
   "a shared-code selection failure cannot restore a notice after closing",
   "a current shared-code selection failure stays visible",
+  "manual search stays usable while the camera is loading",
 ]
 test("actual sale scanner discards canceled dependent reads and stale failure notices", async () => {
   const fixture = new URL("./use-sale-scan.fixture.tsx", import.meta.url)

@@ -1,6 +1,6 @@
 import { expect, mock, test } from "bun:test"
 import { DOMParser } from "@xmldom/xmldom"
-import { act, createElement } from "react"
+import { type ReactNode, act, createElement } from "react"
 import type { CreateSaleViewModel } from "./create-sale-presentation"
 
 // Exercise the actual hook with real React state/effects and inert transport.
@@ -37,6 +37,45 @@ port("components/mobile/create-sale/create-sale-model", {
 })
 const { useSaleScan } = await import("./use-sale-scan")
 
+// Mount the actual scanner layer with inert native UI ports. A suspended camera
+// exercises its real Suspense fallback without a device or camera import.
+type Children = { children?: ReactNode }
+const container = ({ children }: Children) =>
+  createElement("div", null, children)
+const presses = new Map<string, () => void>()
+port("components/mobile/action-button", {
+  ActionButton: ({ children, onPress }: Children & { onPress: () => void }) => {
+    presses.set(String(children), onPress)
+    return createElement("button", { type: "button" }, children)
+  },
+})
+port("components/mobile/appearances/workflow-chrome", {
+  MobileWorkflowChrome: container,
+})
+port("components/mobile/status-banner", {
+  StatusBanner: ({ message }: { message: string }) =>
+    createElement("div", null, message),
+})
+const modal = { ref: { current: null }, present() {}, dismiss() {} }
+port("components/ui/modal", {
+  // The shared-code chooser is closed in this scenario, just as on the device.
+  Modal: () => null,
+  useModal: () => modal,
+})
+port("components/ui/icon", { Icon: () => null })
+port("components/ui/pressable", { Pressable: container })
+port("components/ui/text", { Text: container })
+port("components/ui/view", { View: container })
+mock.module("@gorhom/bottom-sheet", () => ({ BottomSheetView: container }))
+mock.module("react-native", () => ({ Modal: container }))
+const cameraLoad = new Promise<never>(() => {})
+port("components/mobile/barcode-camera-screen", {
+  BarcodeCameraScreen: () => {
+    throw cameraLoad
+  },
+})
+const { SaleScanLayers } = await import("./sale-scan")
+
 function deferred<T>() {
   let resolve!: (value: T) => void
   let reject!: (error: unknown) => void
@@ -46,7 +85,7 @@ function deferred<T>() {
   })
   return { promise, resolve, reject }
 }
-async function mount() {
+async function mount(layers = false) {
   const document = new DOMParser().parseFromString(
     "<html><body/></html>",
     "text/html",
@@ -97,11 +136,12 @@ async function mount() {
   } as unknown as CreateSaleViewModel
   function Probe() {
     latest = useSaleScan(model)
-    return null
+    return layers ? createElement(SaleScanLayers, { scan: latest }) : null
   }
   await act(async () => root.render(createElement(Probe)))
   return {
     added,
+    host,
     get scan() {
       if (!latest) throw Error("Hook not mounted")
       return latest
@@ -193,4 +233,27 @@ test("a current shared-code selection failure stays visible", async () => {
   expect(ui.scan.notice).toEqual({ kind: "failed" })
   expect(ui.added).toEqual([])
   await ui.unmount()
+})
+
+test("manual search stays usable while the camera is loading", async () => {
+  fetch = async () => {
+    throw Error("The loading fallback must not read or add an item")
+  }
+  const ui = await mount(true)
+  try {
+    await act(async () => ui.scan.open())
+    expect(ui.host.textContent).toContain("Opening camera…")
+    const label = "Search by name instead"
+    expect(ui.host.textContent).toContain(label)
+    const press = presses.get(label)
+    if (!press) throw Error("Loading camera has no manual-search action")
+    await act(async () => press())
+    expect(ui.scan.scanning).toBe(false)
+    expect(ui.scan.focusRequest).toBe(1)
+    expect(ui.scan.notice).toBeNull()
+    expect(ui.added).toEqual([])
+    expect(ui.host.textContent).not.toContain("Opening camera…")
+  } finally {
+    await ui.unmount()
+  }
 })
