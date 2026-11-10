@@ -33,11 +33,11 @@ source-selection wizard and one/four-output assumption.
 ## Exact review artifacts
 
 Merchant Workshop keeps `ewatrade/dashboard/web-app/catalog/ai-images`,
-direction `02`, now **Inline image actions**, v7:
-`d8c42fed-5dd9-4d29-9edb-ed48ff349f94`.
+direction `02`, now **Inline image actions**, v10:
+`1103c3c2-175b-4ae9-98af-3cd1b39fbb79`.
 
-- [Web](https://workshop.localhost/ewatrade/dashboard/web-app/catalog/ai-images/directions/02?rev=d8c42fed-5dd9-4d29-9edb-ed48ff349f94&screen=web.html)
-- [Mobile](https://workshop.localhost/ewatrade/dashboard/web-app/catalog/ai-images/directions/02?rev=d8c42fed-5dd9-4d29-9edb-ed48ff349f94&screen=mobile.html)
+- [Web](https://workshop.localhost/ewatrade/dashboard/web-app/catalog/ai-images/directions/02?rev=1103c3c2-175b-4ae9-98af-3cd1b39fbb79&screen=web.html)
+- [Mobile](https://workshop.localhost/ewatrade/dashboard/web-app/catalog/ai-images/directions/02?rev=1103c3c2-175b-4ae9-98af-3cd1b39fbb79&screen=mobile.html)
 
 The complete implemented Catalog item-forms direction01 revision
 `6ea1c5cf-b867-41f6-8944-22d1144407bf` supplies the form and current dashboard
@@ -46,6 +46,19 @@ The owner rejected generation v4; it remains immutable history. v5's font-import
 parsing defect is corrected in v6. v7 adds reviewed accessibility labels and
 preview-state synchronization. Prior directions01/03 are retained. No selection
 has been recorded for the generation extension.
+
+Owner's subsequent layout reference is the Opus mobile study
+`f9f8714e-0bfd-46f5-b03a-69cabfc93d12/02-create-sale/v3/index.html`.
+v10 reuses its actual shared phone CSS with mobile selector scoping, native system
+font/tokens, 360×760 frame, 44px corner radius, status bar, card/header/footer
+proportions and home indicator. Source reference files and provenance are bundled
+in the new immutable revision. Default overview now shows the mobile display;
+the existing web screen and complete Catalog form/AI actions remain available.
+v8/v9 layering attempts remain in history; v10 fixes specificity so the status
+bar/home indicator render above the existing Catalog sheet. This is reference
+adaptation by Codex under the same fallback ownership, not new Opus authorship.
+No generation UI implementation or exact-revision selection is inferred from
+the owner's choice of layout reference.
 
 Oversight extends its existing implemented
 `oversight/plans/payment-notifications`, direction `01`, v5:

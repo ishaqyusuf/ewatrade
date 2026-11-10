@@ -43,6 +43,17 @@ not feature/native/provider/release acceptance. Exact contract and revision link
 
 ## Explicit limits
 
+Layout-reference follow-up: merchantv10
+`1103c3c2-175b-4ae9-98af-3cd1b39fbb79` reuses exact shared phone source from the
+owner-specified Opus revision `f9f8714e-0bfd-46f5-b03a-69cabfc93d12`. Browser
+inspection confirms360×760,44px radius, native system font, gray background,
+visible status bar above the Catalog sheet and preserved inline AI actions.
+Changed preview JS parses; actual final mobile render was inspected and saved
+to `/private/tmp/ewatrade-ai-opus-mobile-final.jpg`. The source/reference revisions
+were not edited. Prior valid51/254 documentation checks and v7 interaction
+evidence are reused; no repeated app types, provider runs, theme/device matrix
+or feature acceptance is claimed for this presentation-only adaptation.
+
 Owner UI acceptance remains pending. Neither new Workshop revision is selected
 or marked implemented. No app UI/API/job/provider/allowance ledger has been added
 to EwaTrade. No paid generation, key change, hosted policy write, financial
