@@ -3,6 +3,7 @@ import { Icon } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { useDebounce } from "@/hooks/use-debounce"
+import { cn } from "@/lib/utils"
 import { useTRPC } from "@/trpc/client"
 import { useQuery } from "@tanstack/react-query"
 import { useState } from "react"
@@ -57,8 +58,46 @@ export function ClassicCategoryEditor({
     setParentId(key)
     setAfter(undefined)
   }
+  // The name's suggestions lead the picker, best match first.
+  const suggestions = model.kind === "product" ? model.categorySuggestions : []
   return (
     <View className="gap-3">
+      {suggestions.length > 0 && !searching ? (
+        <View className="rounded-[18px] bg-card px-3.5">
+          {suggestions.map((suggestion, index) => (
+            <Pressable
+              key={suggestion.key}
+              accessibilityRole="radio"
+              accessibilityLabel={`Use ${index === 0 ? "best match " : ""}${suggestion.category}`}
+              accessibilityState={{
+                selected: model.category === suggestion.category,
+                disabled: !enabled,
+              }}
+              disabled={!enabled}
+              className={cn(
+                "min-h-[58px] flex-row items-center gap-2 py-2",
+                index > 0 && "border-t border-border",
+              )}
+              onPress={() => {
+                if (!model.applyCategorySuggestion(suggestion))
+                  model.setCategory(suggestion.category)
+              }}
+            >
+              <View className="min-w-0 flex-1">
+                <Text className="text-xs font-bold text-primary">
+                  {index === 0 ? "Best match" : "Also suggested"}
+                </Text>
+                <Text className="text-sm font-bold text-foreground">
+                  {suggestion.category.split(" / ").join(" › ")}
+                </Text>
+              </View>
+              {model.category === suggestion.category ? (
+                <Icon name="Check" className="size-4 text-primary" />
+              ) : null}
+            </Pressable>
+          ))}
+        </View>
+      ) : null}
       <SearchFold folded={searchFocused || searching}>
         <View className="gap-2 rounded-[18px] bg-card p-3.5">
           <Text className="text-base font-bold text-foreground">
