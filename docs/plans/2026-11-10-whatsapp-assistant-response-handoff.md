@@ -3,6 +3,17 @@
 Date: 10 November 2026. Source baseline: `6d5295eb4` on the existing `main` checkout.
 Status: proposed product and engineering plan; implementation has not started.
 
+## Workshop review prepared on 10 November 2026
+
+Owner requested design review of response links/compact previews before product
+implementation. The existing WhatsApp Hybrid direction now has a proposed
+[v42 review revision](https://workshop.localhost/ewatrade/assistant/whatsapp-system/directions/03?rev=a8810486-c7b7-454d-9f7b-375f9710d843&screen=index.html).
+[Start at the first-three-products case](https://workshop.localhost/preview/a8810486-c7b7-454d-9f7b-375f9710d843/index.html#sc=rd-products).
+The [delivery record](../verification/2026-11-10-whatsapp-response-preview-workshop.md)
+tracks exact case versions, preserved history and actual prototype checks. This
+revision is unselected and unimplemented; historical Hybrid selection is unchanged.
+H1 design delivery does not complete owner review or any runtime slice below.
+
 ## Recommended behavior
 
 Keep WhatsApp useful for quick questions and short exchanges. For a result that
