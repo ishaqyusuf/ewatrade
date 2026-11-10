@@ -2,6 +2,9 @@
 
 Status: source and test catalog prepared; hosted checkout is not accepted or live.
 Use Paystack only. Keep the approved regional prices; USD settlement is deferred.
+
+The owner-approved test key/catalog and eight other settings are now saved only to
+the API Preview branch, all activation disabled. [Configuration evidence](../verification/2026-11-10-paystack-preview-configuration.md). Source/shared H01 is repaired; deployment, effective runtime and hosted payment acceptance remain separate.
 This is a concrete setup plan, not permission to deploy or activate a provider.
 
 ## What the owner needs to do
@@ -73,8 +76,8 @@ it does not fabricate paid receipts or grant access from callback parameters.
 - Include the committed receiver/QA/error fixes in a coherent candidate and clear
   its shared assistant/release gates. Run the existing Preview release and matched
   existing-data smoke; no unrelated mobile build or Production change is implied.
-- Install the scoped existing EwaTrade test key and six verified test products
-  privately into the API Preview target. Keep generic payment credentials separate.
+- The scoped existing EwaTrade test key and six verified test products are saved
+  privately in the API Preview branch only. Keep generic payment credentials separate.
   Confirm provider merchant 2096714, test domain, monthly NGN amount and unlimited
   invoices before opening a checkout. None of this secret data goes into Git/chat.
 - Coordinate owner/store reader settings with the Apple release owner. Paystack

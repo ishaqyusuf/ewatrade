@@ -1,5 +1,7 @@
 # Paystack website readiness — 10 November 2026
 
+Later checkpoint: [owner-approved dormant Preview configuration saved](2026-11-10-paystack-preview-configuration.md). All ten settings are restricted to API Preview branch preview and activation stays off; the source/read-only observations below retain their original scope. Root resolved the historical shared H01 failure in e706c8241.
+
 Status: source/readiness work; no deployment, hosted setting, Paystack financial
 setting, charge, subscription, refund, paid grant or coverage was created here.
 Normal QA login creates its existing authentication/audit state; it is not a new
