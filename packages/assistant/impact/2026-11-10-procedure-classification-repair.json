@@ -1,0 +1,133 @@
+{
+  "version": 1,
+  "id": "2026-11-10-procedure-classification-repair",
+  "tickets": ["H01", "H02"],
+  "summary": "Repair three H01 omissions with exact form_only classifications for the committed scan-to-sale lookup and Owner/Admin Store public-listing forms. Regenerate the validated router report, including existing 1e6672a17 shipment declarations absent from the old report: four planned capabilities and ten shipment procedures. This records committed source, not new assistant authority, changed rollout, runtime behavior or deployment.",
+  "capabilities": [
+    {
+      "id": "finance.shipment.create",
+      "change": "added",
+      "rollout": "planned",
+      "note": "Added to generated coverage only; already declared in committed manifest 1e6672a17. No manifest or live rollout change."
+    },
+    {
+      "id": "finance.shipment.receive",
+      "change": "added",
+      "rollout": "planned",
+      "note": "Added to generated coverage only; already declared in committed manifest 1e6672a17. No manifest or live rollout change."
+    },
+    {
+      "id": "finance.shipment.cost",
+      "change": "added",
+      "rollout": "planned",
+      "note": "Added to generated coverage only; already declared in committed manifest 1e6672a17. No manifest or live rollout change."
+    },
+    {
+      "id": "finance.shipments.read",
+      "change": "added",
+      "rollout": "planned",
+      "note": "Added to generated coverage only; already declared in committed manifest 1e6672a17. No manifest or live rollout change."
+    }
+  ],
+  "procedures": [
+    {
+      "path": "catalog.findByCode",
+      "status": "form_only",
+      "reason": "Exact tenant-scoped barcode/SKU identification serves explicit New sale selection, not an assistant scan tool."
+    },
+    {
+      "path": "stores.publicListing",
+      "status": "form_only",
+      "reason": "Owner/Admin Store public-listing form read; no registered assistant command."
+    },
+    {
+      "path": "stores.updatePublicListing",
+      "status": "form_only",
+      "reason": "Owner/Admin explicit public-listing opt-in uses Store management; no assistant publication-setting write."
+    },
+    {
+      "path": "finance.shipments.adjustLineCost",
+      "status": "supported",
+      "reason": "Coverage catch-up for existing committed planned shipment capability; no manifest/runtime change in this slice."
+    },
+    {
+      "path": "finance.shipments.confirm",
+      "status": "supported",
+      "reason": "Coverage catch-up for existing committed planned shipment capability; no manifest/runtime change in this slice."
+    },
+    {
+      "path": "finance.shipments.create",
+      "status": "supported",
+      "reason": "Coverage catch-up for existing committed planned shipment capability; no manifest/runtime change in this slice."
+    },
+    {
+      "path": "finance.shipments.detail",
+      "status": "supported",
+      "reason": "Coverage catch-up for existing committed planned shipment capability; no manifest/runtime change in this slice."
+    },
+    {
+      "path": "finance.shipments.list",
+      "status": "supported",
+      "reason": "Coverage catch-up for existing committed planned shipment capability; no manifest/runtime change in this slice."
+    },
+    {
+      "path": "finance.shipments.receive",
+      "status": "supported",
+      "reason": "Coverage catch-up for existing committed planned shipment capability; no manifest/runtime change in this slice."
+    },
+    {
+      "path": "finance.shipments.close",
+      "status": "form_only",
+      "reason": "Existing committed classification: full shipment form handles drafts, mapping, reopening and closing."
+    },
+    {
+      "path": "finance.shipments.mapLine",
+      "status": "form_only",
+      "reason": "Existing committed classification: full shipment form handles drafts, mapping, reopening and closing."
+    },
+    {
+      "path": "finance.shipments.reopen",
+      "status": "form_only",
+      "reason": "Existing committed classification: full shipment form handles drafts, mapping, reopening and closing."
+    },
+    {
+      "path": "finance.shipments.update",
+      "status": "form_only",
+      "reason": "Existing committed classification: full shipment form handles drafts, mapping, reopening and closing."
+    }
+  ],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/tasks/apple-billing-workshop-handoff-2026-11-08.md",
+      "note": "Classification catch-up and source-only acceptance limits recorded."
+    },
+    {
+      "topic": "capability",
+      "status": "updated",
+      "path": "packages/assistant/src/capabilities/COVERAGE.md",
+      "note": "Generated only after actual router/manifest classification validation; existing planned shipment declarations preserved."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "run",
+      "path": "apps/api/scripts/assistant-coverage.ts",
+      "executed": true,
+      "result": "Actual local-profile H01 check passes after regeneration; prior check independently reported exactly three unclassified procedures."
+    },
+    {
+      "kind": "test",
+      "path": "packages/assistant/src/capabilities/coverage.test.ts",
+      "executed": true,
+      "result": "Coverage and impact suites pass 19 tests / 39 assertions; no router or manifest change."
+    },
+    {
+      "kind": "review",
+      "path": "docs/verification/2026-11-10-procedure-classification-repair.md",
+      "executed": true,
+      "result": "Exact source routes, unchanged manifest/rules ownership and generated diff reviewed. No feature activation or native acceptance inferred."
+    }
+  ]
+}

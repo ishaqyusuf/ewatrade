@@ -6,12 +6,12 @@ Tickets refer to the Brain plan `.brain/plans/2026-10-09-assistant-business-oper
 
 ## Summary
 
-- Router procedures: 800 (604 merchant, 196 public/account/internal)
-- Merchant supported by a capability: 179
+- Router procedures: 813 (617 merchant, 196 public/account/internal)
+- Merchant supported by a capability: 185
 - Merchant planned: 142
-- Merchant form-only: 221
+- Merchant form-only: 228
 - Merchant excluded: 62
-- Capabilities: 165 (87 read, 78 write)
+- Capabilities: 169 (88 read, 81 write)
 
 ## Capabilities
 
@@ -76,6 +76,10 @@ Tickets refer to the Brain plan `.brain/plans/2026-10-09-assistant-business-oper
 | `staff.directory.read` | 1 | read | `readStaffDirectory` | OWNER, ADMIN, MANAGER | Owner/Admin only | dashboard, mobile | planned | `retailOps.staffDirectoryPage` |
 | `staff.member.read` | 1 | read | `readStaffMember` | OWNER, ADMIN, MANAGER | Owner/Admin only | dashboard, mobile | planned | `retailOps.staffDirectoryMember` |
 | `finance.purchase.record` | 1 | write (`purchase_record`) | `draftAction` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `finance.recordPurchase` |
+| `finance.shipment.create` | 1 | write (`shipment_create`) | `draftAction` | OWNER, ADMIN | Owner/Admin only, Owner/Admin only | dashboard, whatsapp | planned | `finance.shipments.create`, `finance.shipments.confirm` |
+| `finance.shipment.receive` | 1 | write (`shipment_receive`) | `draftAction` | OWNER, ADMIN | Owner/Admin only | dashboard, whatsapp | planned | `finance.shipments.receive` |
+| `finance.shipment.cost` | 1 | write (`shipment_cost_adjust`) | `draftAction` | OWNER, ADMIN | Owner/Admin only | dashboard, whatsapp | planned | `finance.shipments.adjustLineCost` |
+| `finance.shipments.read` | 1 | read | `readShipments` | OWNER, ADMIN | Owner/Admin only, Owner/Admin only | dashboard, whatsapp | planned | `finance.shipments.list`, `finance.shipments.detail` |
 | `finance.supplier.opening` | 1 | write (`supplier_opening`) | `draftAction` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `finance.recordSupplierOpening` |
 | `finance.supplier.entry.reverse` | 1 | write (`supplier_entry_reverse`) | `draftAction` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `finance.reverseSupplierEntry` |
 | `finance.purchase.fact.reverse` | 1 | write (`purchase_recognition_reverse`) | `draftAction` | OWNER, ADMIN | Owner/Admin only | dashboard, whatsapp | source | `finance.reversePurchaseRecognition` |
@@ -255,6 +259,10 @@ track conversational evaluation separately from these source test links.
 | `staff.directory.read` | Find staff named Amina<br>How many active staff memberships do we have? | [packages/assistant/evaluations/fixtures/native-staff-directory.fixture.tsx](../../../../packages/assistant/evaluations/fixtures/native-staff-directory.fixture.tsx)<br>[packages/db/src/queries/staff-directory.test.ts](../../../../packages/db/src/queries/staff-directory.test.ts)<br>[apps/api/src/assistant/general-staff-reads.test.ts](../../../../apps/api/src/assistant/general-staff-reads.test.ts) |
 | `staff.member.read` | Show the staff membership we selected | [packages/assistant/evaluations/fixtures/native-staff-member.fixture.tsx](../../../../packages/assistant/evaluations/fixtures/native-staff-member.fixture.tsx)<br>[packages/db/src/queries/staff-directory.test.ts](../../../../packages/db/src/queries/staff-directory.test.ts)<br>[apps/api/src/assistant/general-staff-reads.test.ts](../../../../apps/api/src/assistant/general-staff-reads.test.ts) |
 | `finance.purchase.record` | Record the supplier invoice for goods we received and own | [packages/assistant/src/general/purchase-recording.test.ts](../../../../packages/assistant/src/general/purchase-recording.test.ts)<br>[packages/db/src/queries/finance/purchase-recording-review.test.ts](../../../../packages/db/src/queries/finance/purchase-recording-review.test.ts) |
+| `finance.shipment.create` | New shipment from Shenzhen Hongda: 200 chargers at $3.20, freight $400, $1 = ₦1,580 | [apps/api/src/assistant/channel-proposal-review.test.ts](../../../../apps/api/src/assistant/channel-proposal-review.test.ts)<br>[apps/api/src/assistant/general-shipments.test.ts](../../../../apps/api/src/assistant/general-shipments.test.ts) |
+| `finance.shipment.receive` | SH-014 arrived: 180 chargers, 100 power banks | [apps/api/src/assistant/channel-proposal-review.test.ts](../../../../apps/api/src/assistant/channel-proposal-review.test.ts)<br>[apps/api/src/assistant/general-shipments.test.ts](../../../../apps/api/src/assistant/general-shipments.test.ts) |
+| `finance.shipment.cost` | SH-014 paid 6000 customs for the chargers still coming | [apps/api/src/assistant/channel-proposal-review.test.ts](../../../../apps/api/src/assistant/channel-proposal-review.test.ts)<br>[apps/api/src/assistant/general-shipments.test.ts](../../../../apps/api/src/assistant/general-shipments.test.ts) |
+| `finance.shipments.read` | What is still expected on SH-014? | [apps/api/src/assistant/channel-proposal-review.test.ts](../../../../apps/api/src/assistant/channel-proposal-review.test.ts)<br>[apps/api/src/assistant/general-shipments.test.ts](../../../../apps/api/src/assistant/general-shipments.test.ts) |
 | `finance.supplier.opening` | Record the payable or advance that existed at the bookkeeping start | [packages/assistant/src/general/supplier-opening.test.ts](../../../../packages/assistant/src/general/supplier-opening.test.ts)<br>[packages/db/src/queries/finance/supplier-opening-review.test.ts](../../../../packages/db/src/queries/finance/supplier-opening-review.test.ts) |
 | `finance.supplier.entry.reverse` | Correct this original supplier opening or paid advance entry | [packages/assistant/src/general/supplier-entry-reversal.test.ts](../../../../packages/assistant/src/general/supplier-entry-reversal.test.ts)<br>[packages/db/src/queries/finance/supplier-entry-reversal-review.test.ts](../../../../packages/db/src/queries/finance/supplier-entry-reversal-review.test.ts) |
 | `finance.purchase.fact.reverse` | Correct the original unpaid invoice fact on this purchase agreement | [packages/assistant/src/general/purchase-recognition-reversal.test.ts](../../../../packages/assistant/src/general/purchase-recognition-reversal.test.ts)<br>[packages/db/src/queries/finance/purchase-recognition-reversal-review.test.ts](../../../../packages/db/src/queries/finance/purchase-recognition-reversal-review.test.ts) |
@@ -468,6 +476,7 @@ track conversational evaluation separately from these source test links.
 | `catalog.detail.activity` | query | read | catalog | supported | catalog.history.read |
 | `catalog.detail.orders` | query | read | catalog | supported | catalog.history.read |
 | `catalog.detail.overview` | query | read | catalog | supported | catalog.item.read |
+| `catalog.findByCode` | query | Owner/Admin only | catalog | form_only | Exact Business-scoped barcode/SKU identification feeds explicit New sale selection; no assistant scan tool, sale or stock write is registered by this lookup. |
 | `catalog.getItem` | query | read | catalog | form_only | Generic item editor payload; assistant uses active-Store detail.overview with stock permission filtering. |
 | `catalog.listDirectoryPage` | query | read | catalog | supported | catalog.page |
 | `catalog.listItems` | query | read | catalog | excluded | Unbounded legacy list; assistant uses stable listItemsPage continuation. |
@@ -615,6 +624,16 @@ track conversational evaluation separately from these source test links.
 | `finance.reversePurchaseRecognition` | mutation | Owner/Admin only | finance | supported | finance.purchase.fact.reverse |
 | `finance.reverseSupplierEntry` | mutation | Owner/Admin only | finance | supported | finance.supplier.entry.reverse |
 | `finance.setup` | mutation | Owner/Admin only | finance | form_only | Opening the Book is a guided setup with fiscal choices. |
+| `finance.shipments.adjustLineCost` | mutation | Owner/Admin only | finance | supported | finance.shipment.cost |
+| `finance.shipments.close` | mutation | Owner/Admin only | finance | form_only | Shipment drafts, line mapping, reopening and closing need the full shipment form. |
+| `finance.shipments.confirm` | mutation | Owner/Admin only | finance | supported | finance.shipment.create |
+| `finance.shipments.create` | mutation | Owner/Admin only | finance | supported | finance.shipment.create |
+| `finance.shipments.detail` | query | Owner/Admin only | finance | supported | finance.shipments.read |
+| `finance.shipments.list` | query | Owner/Admin only | finance | supported | finance.shipments.read |
+| `finance.shipments.mapLine` | mutation | Owner/Admin only | finance | form_only | Shipment drafts, line mapping, reopening and closing need the full shipment form. |
+| `finance.shipments.receive` | mutation | Owner/Admin only | finance | supported | finance.shipment.receive |
+| `finance.shipments.reopen` | mutation | Owner/Admin only | finance | form_only | Shipment drafts, line mapping, reopening and closing need the full shipment form. |
+| `finance.shipments.update` | mutation | Owner/Admin only | finance | form_only | Shipment drafts, line mapping, reopening and closing need the full shipment form. |
 | `finance.supplierDirectory` | query | Owner/Admin only | finance | excluded | Dashboard list projections for Finance pages; the assistant answers these amounts through supplier statements, customer statements and money account balances. |
 | `finance.supplierOpeningBalance` | query | Owner/Admin only | finance | planned | E05 |
 | `finance.supplierPayableAging` | query | Owner/Admin only | finance | planned | G01 |
@@ -984,8 +1003,10 @@ track conversational evaluation separately from these source test links.
 | `storefrontRequests.services` | query | Owner/Admin only | sales | form_only | Website requests inbox: staff review of customer-submitted storefront order and service requests. Confirmation composes the canonical Commercial Order writer with the authenticated staff actor; quotes reuse canonical service quote commands. Customer intent comes only from the storefront form; no model authority. |
 | `stores.contact` | query | Owner/Admin only | platform | form_only | Owner/Admin Store contact settings require explicit form review and current saved contact fields; no assistant configuration mutation or message send. |
 | `stores.orderVisibility` | query | read | sales | supported | settings.store.read |
+| `stores.publicListing` | query | Owner/Admin only | platform | form_only | Owner/Admin public-listing settings use Store management with an explicit opt-in; no assistant listing read or publication-setting mutation is registered. |
 | `stores.updateContact` | mutation | Owner/Admin only | platform | form_only | Owner/Admin Store contact settings require explicit form review and current saved contact fields; no assistant configuration mutation or message send. |
 | `stores.updateOrderVisibility` | mutation | Owner/Admin only | sales | supported | settings.store.change |
+| `stores.updatePublicListing` | mutation | Owner/Admin only | platform | form_only | Owner/Admin public-listing settings use Store management with an explicit opt-in; no assistant listing read or publication-setting mutation is registered. |
 | `storeSubscriptions.catalog` | query | Owner/Admin only | platform | form_only | Subscription purchase and verification use the billing checkout. |
 | `storeSubscriptions.enrollBusiness` | mutation | Owner/Admin only | platform | form_only | Subscription purchase and verification use the billing checkout. |
 | `storeSubscriptions.releaseBusiness` | mutation | Owner/Admin only | platform | form_only | Subscription purchase and verification use the billing checkout. |

@@ -55,6 +55,11 @@ formOnly(
 )
 formOnly(
   "platform",
+  "Owner/Admin public-listing settings use Store management with an explicit opt-in; no assistant listing read or publication-setting mutation is registered.",
+  ["stores.publicListing", "stores.updatePublicListing"],
+)
+formOnly(
+  "platform",
   "Subscription purchase and verification use the billing checkout.",
   [
     "retailOps.subscription",
@@ -86,6 +91,11 @@ formOnly(
 )
 
 // Catalog
+formOnly(
+  "catalog",
+  "Exact Business-scoped barcode/SKU identification feeds explicit New sale selection; no assistant scan tool, sale or stock write is registered by this lookup.",
+  ["catalog.findByCode"],
+)
 formOnly(
   "catalog",
   "Store-scoped storefront availability and book-ahead settings use the Catalog form with a reviewed revision. They never alter inventory or grant publication, booking or payment authority.",
