@@ -10,17 +10,24 @@ has the status, evidence and limitation for each case.
 
 ## Scorecard
 
+Current, 10 November 2026, after runtime run 1 and the T1/T2/T3/T5/T8 commits:
+
 | Business | Passed | Fail | Blocked | Not assessed |
 | --- | ---: | ---: | ---: | ---: |
-| Jawdah poultry | 0/12 | 0 | 0 | 12 |
+| Jawdah poultry | 5/12 | 0 | 0 | 7 |
 | Laundry | 0/12 | 0 | 2 | 10 |
-| Hypnos Man Collection | 0/24 | 0 | 16 | 8 |
-| Alhaq Tech | 0/24 | 0 | 16 | 8 |
-| **Total** | **0/72 (0%)** | **0** | **34** | **38** |
+| Hypnos Man Collection | 0/24 | 0 | 9 | 15 |
+| Alhaq Tech | 0/24 | 0 | 9 | 15 |
+| **Total** | **5/72 (6.9%)** | **0** | **20** | **47** |
 
-The previous attempt was the 9 November baseline at `7c585d5dd`: 72
-NOT_ASSESSED. This attempt replaces it in the register. The audit keeps the
-baseline wording.
+The five passes are local-window passes (see runtime run 1). The hosted launch
+environment is still unselected, so they do not cover hosted or provider gates.
+
+Earlier attempts, kept for history:
+
+- 9 November document review at `8da2b012f`: 0/72 passed, 34 blocked, 38 not
+  assessed.
+- 9 November baseline at `7c585d5dd`: 72 NOT_ASSESSED.
 
 ## Why nothing passes yet
 
@@ -44,17 +51,17 @@ should pass it quickly if nothing has regressed.
 
 ## Blocked cases and what unblocks them
 
-| Cases | Unblocked by |
-| --- | --- |
-| L04, L12 | T6 WhatsApp laundry intake (Phase 3) |
-| R04, R05, R06 (H and A) | T5 rich WhatsApp product setup (Phase 3) |
-| R07 | T3 saved-product app/web links (Phase 1) |
-| R09 | T2 QR and scan-to-sale (Phase 1) |
-| R10–R15 | T1 shipment backend (Phase 1) + T4 shipment UI (Phase 2) |
-| R16 | T7 WhatsApp shipment lifecycle |
-| R18, R19 | T8 no-site public catalog (Phase 4); R19 needs it for the no-site mode |
-| R23 | **No ticket.** See decision 1 below |
-| R24 | T1/T4/T7 and R23 |
+| Cases | Unblocked by | State at 10 Nov |
+| --- | --- | --- |
+| L04, L12 | T6 WhatsApp laundry intake (Phase 3) | Still blocked; T6 awaits owner approval of its design cases |
+| R04, R05, R06 (H and A) | T5 rich WhatsApp product setup | Landed `082595e9a`; now NOT_ASSESSED |
+| R07 | T3 saved-product app/web links | Landed `ed975340c`; now NOT_ASSESSED |
+| R09 | T2 QR and scan-to-sale | Landed `0734a5f80`; now NOT_ASSESSED |
+| R10–R15 | T1 shipment backend + T4 shipment UI | T1 landed (`36e095785`, `cdcad01bb`); still blocked on T4 |
+| R16 | T7 WhatsApp shipment lifecycle | Still blocked; T7 awaits owner approval |
+| R18, R19 | T8 no-site public catalog | Landed `92db83673`; now NOT_ASSESSED |
+| R23 | **No ticket.** See decision 1 below | Still blocked |
+| R24 | T1/T4/T7 and R23 | Still blocked |
 
 ## Decisions and risks for the owner
 
@@ -67,10 +74,15 @@ should pass it quickly if nothing has regressed.
    (`packages/db/src/queries/staff-store-access.ts`). On a hosted launch
    environment, staff invitations refuse. That would block J01, J06, R01 and the
    role checks in J12/L12/R24.
-3. **Owner instruction of 2 November** (`.brain/qa/pending-ui-test-ledger.md`):
-   no UI, browser or device testing until the owner says to proceed. The runtime
-   checks below need that go-ahead as well as a data window.
-4. **Merchant data.** R02/R03 need the merchant-approved Hypnos and Alhaq product
+3. **Testing go-ahead.** The owner instruction of 2 November
+   (`.brain/qa/pending-ui-test-ledger.md`) paused UI, browser and device testing.
+   On 9 November the owner authorized a local nonproduction data window that
+   includes UI testing. Hosted and provider runs still need separate approval.
+4. **Returning owner login (found in run 1).** A new owner signs up with an email
+   code and never sets a password, but dashboard `/login` only accepts a
+   password. That owner can get back in only through "Forgot password". Either
+   offer code login on `/login`, or confirm the reset path is the intended one.
+5. **Merchant data.** R02/R03 need the merchant-approved Hypnos and Alhaq product
    lists (names, options, prices, opening stock). L01 needs the real laundry
    price list. The spec forbids inventing these.
 
@@ -104,6 +116,39 @@ approval. No-site catalog (R18, R19) needs a business with no published site.
 
 ## Phase 1–4 watch
 
-At this review, no Phase 1–4 feature commit had landed after `8da2b012f`. When
-T1–T8 commits land, the matching BLOCKED rows move to NOT_ASSESSED. They can
-pass only after the runtime checks above, on a selected candidate.
+By 10 November: T1 backend, T2, T3, T5 and T8 had landed; T4, T6 and T7 had not.
+The matching BLOCKED rows moved to NOT_ASSESSED. They still need the runtime
+checks above before they can pass.
+
+## Runtime run 1: Jawdah dashboard
+
+9–10 November 2026, owner-authorized local nonproduction window. A fresh tenant
+was created through normal signup: **Jawdah Poultry Acceptance**, Main store,
+NG/NGN, Starter plan. It has an owner and one invited cashier. Test credentials
+are kept only in the ignored `.scratch/four-business-acceptance/` folder.
+
+Runtime: the shared API on 3095 had been serving code from 5 November, so it was
+restarted three times with `NODE_ENV=development APP_ENV=local`:
+
+- at `040643915`, for J01–J04;
+- at `0734a5f80`, for J05 and the J06 sale;
+- at `ed975340c` (clean tree), for the J06 API probes.
+
+During the first window the API hot-reloaded uncommitted Phase 1–4 edits, and
+some reloads failed with missing-module errors. One loss save failed silently
+during that window and was redone after the restart. The dashboard ran
+`next dev`.
+
+| Case | Result | What was observed |
+| --- | --- | --- |
+| J01 | Partial; not passed | Signup by email code saved NG/NGN and an OWNER membership. Cashier invite → QA link → password setup → active. Cashier password login returns 200, and a wrong password returns 401. **Gap:** the owner never set a password, and `/login` only accepts a password, so a returning owner has to use the reset email. That email could not be checked locally. Mobile login was not run. |
+| J02 | PASS | Layers ₦5,000 / 500 Bird and Broilers ₦8,000 / 200 Bird saved and still correct after reload. |
+| J03 | PASS | Eggs ₦250/Egg plus a Crate of 30 Eggs at ₦7,500, sharing one stock pool; opening stock 60. The sale form priced 1 Crate at ₦7,500. |
+| J04 | PASS | Collections of 20 and then 10 eggs, both tagged Made or collected / Row 1 / Morning collection. The second collection picked the saved categories from suggestions. Eggs went 60 → 90, confirmed in the history page and the database. |
+| J05 | PASS | Saving without a reason was refused ("Pick what happened."). A loss of 2 with reasons Died and Row 1 was saved once, and Layers went 500 → 498. Retry protection comes from the unique `(tenantId, clientOperationId)` key and the save button being disabled while saving. A deliberate network replay was not run. |
+| J06 | PASS | The cashier created ORD-001: 1 Crate + 2 Broilers = ₦23,500, linked to a customer, unpaid. The cashier's menu hides Catalog, Inventory, Staff and Finance, and their URLs redirect. The API also refuses with 403 FORBIDDEN on `inventory.balanceReport`, `inventory.operationHistory`, `inventory.auditExport`, `finance.fiscalCalendar`, `catalog.createSimpleItem` and `retailOps.staffDirectoryPage`. |
+
+ORD-001 is still unfulfilled and unpaid. It is the starting point for J12:
+fulfilling it should leave Layers 498, Broilers 198 and Eggs 60.
+
+The "message customer" prompt was dismissed and nothing was sent.
