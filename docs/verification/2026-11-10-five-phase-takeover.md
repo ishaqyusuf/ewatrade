@@ -1,5 +1,10 @@
 # Five-phase business feature takeover — 10 November 2026
 
+**Current T10 update:** the owner subsequently selected exact Workshop v17 and
+authorized product implementation in Phase3. The earlier plan-only checkpoints
+below remain history; see the subsequent authorization section. No native catalog
+sale case or hosted release is accepted by that authorization.
+
 Codex took over the owner's **Business feature inventory and prioritization**
 work in chat `01a1c511-a483-75b0-b017-0152cab33c12`. The original Claude parent
 (`d84112c9-01e5-4630-addc-816ec58a72a5`) and its Phase 1/5 transcripts were read,
@@ -185,3 +190,15 @@ native review (including bounded larger Orders), explicit confirmation, scoped
 initial-payment authority, atomic stock/money and retry recovery. Six implementation
 slices and ten outcome checks are reviewable. No source implementation/design
 publication or release was performed for this planning addition; all72statuses stay.
+
+## Subsequent T10 authorization
+
+The coordinator verified the direct human reply in Phase3 message
+`01a1c541-5e1a-7b83-8db3-ca940a2bb8a2`: “Select v17 and authorize T10 product
+implementation.” It selects conversations **01 Library v17**, exact revision
+`d329aac5-7648-450c-a4bd-4218b4a1b36b`. Phase3 is implementing the existing
+[T10 plan](../plans/2026-11-10-whatsapp-native-catalog-sales.md); the earlier
+unselected/product-code gate is superseded. Review/provider/release boundaries,
+merchant data and all 72 case statuses remain distinct. Phase5's verified
+record is `2426fe6f2`; H23/A23 remain blocked pending actual native canonical
+Order/stock/payment/replay evidence. Nothing is deployed by this update.

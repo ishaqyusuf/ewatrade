@@ -15,7 +15,7 @@ The existing modified `AGENT_CHAT.md` was preserved and excluded from this commi
 | --- | --- | --- |
 | 1 — Retail core, scanning and app links | `01a1c532-df8a-7aa3-9bdd-8a863c230a73` | T1–T3: existing shipment backend follow-through, actual scanner camera/recovery proof, exact Workshop implementation evidence, app/web link limitations. First use of the named EwaTrade QA emulator after resolving its serial. |
 | 2 — Shipment screens and landed-cost flow | `01a1c532-fad9-7f40-a027-1ae797f43268` | T4: approved existing dashboard/mobile shipment UI; focused repairs and remaining create/confirm/cost/price/arrival proof in an agreed data window. |
-| 3 — WhatsApp workflows and native sales design | `01a1c533-0d6b-7220-9fe4-ed71b34ebc0f` | T5–T7 local completeness and evidence; concrete T10.1 native catalog-sale Workshop design for review. T10 product implementation remains gated by the applicable exact selection and authorization. |
+| 3 — WhatsApp workflows and native sales design | `01a1c533-0d6b-7220-9fe4-ed71b34ebc0f` | T5–T7 local completeness and evidence; T10 native catalog-sale implementation against owner-selected v17 (subsequent authorization below). At dispatch this was design-only. |
 | 4 — Public catalog and product sharing | `01a1c533-18e6-72f1-91fc-5146451a82b6` | T8: existing public-page/share/consent behavior; remaining save/refetch, media, WhatsApp-draft and eligible no-site link evidence. |
 | 5 — Four-business acceptance and coordination | `01a1c533-2099-78a0-9420-552b617d429c` | T9: sole shared acceptance-register writer; evidence reconciliation, connected test windows, J06/J11 and available poultry/laundry acceptance, explicit external/data gates. |
 
@@ -69,9 +69,9 @@ history, existing selections and documented current review surface/mirror
 exceptions. Use exactly the standing Claude Opus 5.5/high author when available;
 otherwise the coordinating agent takes over directly and reports the fallback.
 
-T10 remains the owner's requested native-sale plan/design continuation. Native
-catalog sale source, permissions, proof renderer or release flags must not be
-silently enabled while its exact design/implementation gate is pending.
+At dispatch, T10 was the owner's requested native-sale plan/design continuation.
+The later direct owner selection and product implementation authorization below
+supersede that product-code gate. Runtime/provider/release authority stays separate.
 
 ## Current references
 
@@ -88,3 +88,17 @@ Dispatch validation: five distinct ready chat IDs and active startup turns were
 verified through the app tools. Local references and whitespace pass; the owned
 documentation quick check passed51tests/254assertions plus QA-tooling types, with
 zero unknown mappings. These checks validate dispatch documentation only.
+
+## Subsequent T10 authorization — 10 November 2026
+
+The coordinator independently read the owner's direct reply in Phase3 chat
+`01a1c533-0d6b-7220-9fe4-ed71b34ebc0f`: **“Select v17 and authorize T10 product
+implementation.”** Human message `01a1c541-5e1a-7b83-8db3-ca940a2bb8a2`, turn
+`01a1c541-5dbc-7d23-ab59-78f2307ce78f`, answers the exact-revision question for
+`d329aac5-7648-450c-a4bd-4218b4a1b36b`. Phase3 owns the now-authorized T10 product
+implementation; its initial design-only dispatch instruction is historical.
+Canonical authority, complete delivered-page proof, current confirmation and
+focused money/permission/concurrency checks remain required. No hosted flag,
+provider send, new paid effect, build/upload/OTA or release is authorized. H23/A23
+remain BLOCKED and the 72-case statuses remain6/1/47/18 until actual case proof.
+Phase5 records the same supersession in commit `2426fe6f2`; no new hold is implied.
