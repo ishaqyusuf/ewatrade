@@ -137,11 +137,14 @@ export function useSaleScan(model: CreateSaleViewModel) {
       if (result.status === "found") await apply(result.match, current)
       else if (result.status === "ambiguous")
         setChoices({ code: result.code, matches: result.matches })
-      else
+      else {
+        // An unknown code is asked about in a sheet, so the camera closes.
+        if (result.status === "unknown") setScanning(false)
         setNotice({
           kind: result.status,
           code: "code" in result ? result.code : undefined,
         })
+      }
     } catch {
       if (session.current === current) setNotice({ kind: "failed" })
     }

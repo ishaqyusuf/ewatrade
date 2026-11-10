@@ -1,15 +1,19 @@
 import { ActionButton } from "@/components/mobile/action-button"
 import { BottomSearchFooter } from "@/components/mobile/bottom-search-footer"
-import { OfferingBarcodeScreen } from "@/components/mobile/catalog-item/offering-barcode-editor"
 import { catalogAvatarTint } from "@/components/mobile/catalog/catalog-shelf-model"
 import { CatalogFreeSaleLines } from "@/components/mobile/create-sale/catalog-free-sale-lines"
 import type { OfferingRow } from "@/components/mobile/create-sale/create-sale-model"
 import type { SaleStepViewProps } from "@/components/mobile/create-sale/create-sale-presentation"
+import { LinkBarcodeScreen } from "@/components/mobile/create-sale/link-barcode-screen"
 import {
-  SaleScanAddedBar,
   SaleScanLayers,
   SaleScanNoticeCard,
 } from "@/components/mobile/create-sale/sale-scan"
+import {
+  SaleScanAddedBar,
+  SaleScanLinkedToast,
+  SaleScanUnknownSheet,
+} from "@/components/mobile/create-sale/sale-scan-overlays"
 import {
   saleItemsLabel,
   saleUnitCount,
@@ -241,24 +245,7 @@ export function ClassicSaleItems({
         showsVerticalScrollIndicator={false}
         ListHeaderComponent={
           <View className="gap-3 pb-1">
-            <SaleScanNoticeCard
-              scan={scan}
-              onCreate={link.canLink ? link.create : undefined}
-              onLink={link.canLink ? link.start : undefined}
-            />
-            {link.code ? (
-              <StatusBanner
-                actionLabel="Cancel"
-                icon="Link"
-                message={
-                  link.error ||
-                  "Tap Add on the item this barcode belongs to. You will confirm before it is saved."
-                }
-                onActionPress={link.cancel}
-                title={`Link barcode ${link.code}`}
-                tone={link.error ? "warning" : "default"}
-              />
-            ) : null}
+            <SaleScanNoticeCard scan={scan} />
             {isOffline ? (
               <StatusBanner
                 icon="Wind"
@@ -367,11 +354,7 @@ export function ClassicSaleItems({
               first={entry.first}
               last={entry.last}
               offering={entry.offering}
-              onAdd={() =>
-                link.code
-                  ? void link.pick(entry.offering)
-                  : addOffering(entry.offering)
-              }
+              onAdd={() => addOffering(entry.offering)}
             />
           )
         }
@@ -440,16 +423,16 @@ export function ClassicSaleItems({
         scan={scan}
       />
       <SaleScanLayers scan={scan} />
-      {link.code && link.target ? (
-        <OfferingBarcodeScreen
-          allowRemove={false}
-          catalogItemId={link.target.row.catalogItemId}
-          initialBarcode={link.code}
-          onClose={link.closeTarget}
-          onSaved={link.saved}
-          option={link.target.option}
-          saveLabel="Save and add to sale"
-          title="Link barcode"
+      <SaleScanLinkedToast
+        bottom={scan.scanning ? 22 : actionsHeight + 8}
+        name={link.linked}
+      />
+      <SaleScanUnknownSheet link={link} scan={scan} />
+      {link.code ? (
+        <LinkBarcodeScreen
+          code={link.code}
+          onClose={link.cancel}
+          onLinked={link.done}
         />
       ) : null}
     </View>

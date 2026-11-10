@@ -4,8 +4,8 @@ import { Icon } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { useColorScheme } from "@/hooks/use-color"
-import { GREEN_TILL_THEME } from "@/lib/green-till-theme"
 import { barcodeScanValue, distinctScannedBarcodes } from "@/lib/barcode-scan"
+import { GREEN_TILL_THEME } from "@/lib/green-till-theme"
 import {
   type BarcodeType,
   CameraView,
@@ -279,14 +279,25 @@ export function DockedBarcodeScanner({
     })
     return () => listener.remove()
   }, [refreshPermission])
+  const [unusable, setUnusable] = useState(false)
+  useEffect(() => {
+    if (!unusable) return
+    const timer = setTimeout(() => setUnusable(false), 2_500)
+    return () => clearTimeout(timer)
+  }, [unusable])
   const seen = (data: string) => {
     if (paused || AppState.currentState !== "active") return
-    const code = barcodeScanValue(data)
-    if (!code) return
     const now = Date.now()
-    const before = lastSeen.current.get(code)
-    lastSeen.current.set(code, now)
+    const before = lastSeen.current.get(data)
+    lastSeen.current.set(data, now)
     if (before !== undefined && now - before < RESCAN_GAP_MS) return
+    const code = barcodeScanValue(data)
+    // e.g. a multi-line text QR: say so instead of ignoring it silently.
+    if (!code) {
+      setUnusable(true)
+      return
+    }
+    setUnusable(false)
     void Haptics.selectionAsync().catch(() => {})
     onRead(code)
   }
@@ -361,7 +372,10 @@ export function DockedBarcodeScanner({
         pointerEvents="none"
       >
         <Text className="rounded-full bg-overlay px-3.5 py-1.5 text-xs font-bold text-cream">
-          {error || "Point at a barcode. Keep scanning to add more."}
+          {error ||
+            (unusable
+              ? "That code isn't a product code. Try the item's barcode."
+              : "Point at a barcode. Keep scanning to add more.")}
         </Text>
       </View>
     </View>

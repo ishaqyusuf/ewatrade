@@ -17,20 +17,10 @@ const DockedBarcodeScanner = lazy(() =>
 )
 
 /** Unknown code, QR link or a failed check, with the manual route first. */
-export function SaleScanNoticeCard({
-  scan,
-  onLink,
-  onCreate,
-}: {
-  scan: SaleScan
-  /** Catalog editors only: attach an unknown code to an item. */
-  onLink?: (code: string) => void
-  onCreate?: (code: string) => void
-}) {
-  if (!scan.notice) return null
+export function SaleScanNoticeCard({ scan }: { scan: SaleScan }) {
+  // An unknown code is asked about in its own sheet instead.
+  if (!scan.notice || scan.notice.kind === "unknown") return null
   const copy = saleScanNoticeCopy(scan.notice)
-  const unknownCode =
-    scan.notice.kind === "unknown" ? scan.notice.code : undefined
   return (
     <View
       accessibilityLiveRegion="polite"
@@ -42,24 +32,6 @@ export function SaleScanNoticeCard({
         </Text>
         <Text className="text-sm text-muted-foreground">{copy.message}</Text>
       </View>
-      {unknownCode && (onLink || onCreate) ? (
-        <View className="flex-row flex-wrap gap-2">
-          {onLink ? (
-            <ActionButton icon="Link" onPress={() => onLink(unknownCode)}>
-              Link to an item
-            </ActionButton>
-          ) : null}
-          {onCreate ? (
-            <ActionButton
-              icon="Plus"
-              onPress={() => onCreate(unknownCode)}
-              variant="secondary"
-            >
-              Create new item
-            </ActionButton>
-          ) : null}
-        </View>
-      ) : null}
       <View className="flex-row flex-wrap gap-2">
         <ActionButton icon="Search" onPress={scan.searchByName}>
           Search by name
@@ -74,43 +46,6 @@ export function SaleScanNoticeCard({
           </ActionButton>
         ) : null}
       </View>
-    </View>
-  )
-}
-
-/**
- * Short confirmation with Undo: above the search footer, or at the top edge
- * while the docked scanner is open.
- */
-export function SaleScanAddedBar({
-  scan,
-  bottom,
-}: {
-  scan: SaleScan
-  bottom?: number
-}) {
-  if (!scan.added) return null
-  const { name, previous, quantity } = scan.added
-  return (
-    <View
-      accessibilityLiveRegion="polite"
-      className="absolute inset-x-3 flex-row items-center gap-2.5 rounded-2xl bg-foreground px-4 py-3"
-      pointerEvents="box-none"
-      style={bottom === undefined ? { top: 8 } : { bottom }}
-    >
-      <Icon className="size-[18px] text-gold" name="Check" />
-      <Text className="min-w-0 flex-1 text-sm font-bold text-background">
-        {previous === null ? `Added ${name}` : `${name} is now ${quantity}`}
-      </Text>
-      <Pressable
-        accessibilityLabel={`Undo adding ${name}`}
-        accessibilityRole="button"
-        haptic
-        hitSlop={8}
-        onPress={scan.undo}
-      >
-        <Text className="text-sm font-extrabold text-gold">Undo</Text>
-      </Pressable>
     </View>
   )
 }

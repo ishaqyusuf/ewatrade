@@ -31,15 +31,17 @@ ui("components/ui/view", ["View"])
 ui("components/mobile/appearances/classic/create-sale", [
   "ClassicSelectedOrderLine",
 ])
-ui("components/mobile/catalog-item/offering-barcode-editor", [
-  "OfferingBarcodeScreen",
-])
 ui("components/ui/skeleton", ["Skeleton", "SkeletonGroup"])
 ui("components/mobile/create-sale/sale-scan", [
-  "SaleScanAddedBar",
   "SaleScanLayers",
   "SaleScanNoticeCard",
 ])
+ui("components/mobile/create-sale/sale-scan-overlays", [
+  "SaleScanAddedBar",
+  "SaleScanLinkedToast",
+  "SaleScanUnknownSheet",
+])
+ui("components/mobile/create-sale/link-barcode-screen", ["LinkBarcodeScreen"])
 // Scanning and linking are outside this scroll probe (camera and router).
 mock.module(
   new URL("components/mobile/create-sale/use-sale-scan", source).pathname,
