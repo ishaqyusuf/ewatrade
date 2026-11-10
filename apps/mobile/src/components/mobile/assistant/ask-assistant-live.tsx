@@ -327,7 +327,7 @@ export function AskAssistantLive() {
                   list.current?.scrollToIndex({
                     index,
                     animated: false,
-                    viewPosition: 0.25,
+                    viewPosition: 0,
                   }),
                 )
                 return

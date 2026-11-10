@@ -217,7 +217,7 @@ export function GeneralThread({
     const frame = requestAnimationFrame(() => {
       const element = document.getElementById(`general-message-${responseId}`)
       if (element) {
-        element.scrollIntoView({ block: "center", behavior: "instant" })
+        element.scrollIntoView({ block: "start", behavior: "instant" })
         element.focus({ preventScroll: true })
         responseFocused.current = responseId
       }

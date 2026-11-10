@@ -3,7 +3,8 @@
 10 November 2026. Local implementation of the owner-selected Hybrid03 v42,
 revision `a8810486-c7b7-454d-9f7b-375f9710d843`, at
 [WhatsApp Workshop](https://workshop.localhost/ewatrade/assistant/whatsapp-system).
-Selection was recorded before implementation. Existing main checkout; no worktree,
+Selection was recorded before implementation. Source commit: `423d2b06cd0c5d74716c746dbf1029842e651b7b`; final landing-position
+fix and acceptance record are in the follow-up commit. Existing main checkout; no worktree,
 push, deployment, provider action, OTP, native build or WhatsApp send.
 
 ## Implemented source
@@ -62,19 +63,29 @@ Run ID: `2026-11-10-whatsapp-response-links`. Commands run against this checkout
   10.1 seconds. Unrelated concurrent work was excluded. This is source smoke.
 - Biome and whitespace: passed on owned source files.
 - API, database, assistant, web and native TypeScript checks: all passed. H01
-  coverage snapshot check passed; H02 reviewed impact record passed.
-- Existing read-only local web `qa:smoke`: failed, zero checks/runtime unverified;
-  first sandboxed attempt and one browser-permission retry. No business write or
-  fixture was submitted. The existing browser-driver diagnostic passed all 35
-  tests against its intercepted fixture; that is driver evidence, not app smoke.
-- Actual local browser: signed-out response link retained its exact destination
-  through QA sign-in; existing saved assistant chat/cards loaded. New response
-  lookup produced the explicit retry state. The running named API returns 404
-  for `assistant.responseLink`; read-only process inspection confirmed the
-  existing `bun run --hot src/local.ts` stack, while source router/coverage contains
-  the procedure. Do not count this as a successful response crossover. The shared
-  stack was not killed or restarted. Refreshing that stack and rerunning focused
-  local crossover/smoke remain pending.
+  coverage snapshot check passed; H02 reviewed impact record passed over the
+  complete feature range (`bun assistant:impact --base 423d2b06c^`).
+- Initial local web `qa:smoke` attempts failed before acceptance. After the owner
+  explicitly approved restarting only the API through `bun run dev --local -f api`,
+  local API/database/dashboard/QA readiness passed and the new anonymous response
+  lookup returned401 instead of404. No other service was restarted.
+- Final existing-data local web `qa:smoke`: **passed**, four checks (QA login/exact
+  profile; populated catalog; sale draft item/total; cancel without submitting).
+  Receipt: `.scratch/qa-release/smoke-423d2b06cd0c5d74716c746dbf1029842e651b7b-local-web.json`,
+ 20:40:46–20:41:06UTC. Local `runtimeVerified:false` is expected here; this is not
+  deployed-candidate or release acceptance. The source-identical sales/catalog
+  smoke remains valid after the two assistant-only landing-position changes.
+- Existing browser-driver diagnostic: all35 intercepted-fixture tests passed.
+  This validates the driver, separately from the successful app smoke above.
+- Actual local browser: signed-out link retained its exact destination through
+  QA sign-in. After approved API refresh, an existing saved answer opened in its
+  canonical conversation with the exact requested message ID and keyboard focus,
+  original cards/as-of and source marker. The visual check found that centering
+  a tall answer hid its headline; web `scrollIntoView(block:start)` and native
+  `scrollToIndex(viewPosition:0)` now land at its start. The final web screenshot
+  confirmed the source marker, headline and first cards visible. Removed-response
+  lookup presents the generic unavailable state and safe navigation. No new AI
+  request, order/payment submission or business fixture was created.
 
 No signed Android/iPhone universal-link, cold-start/login/offline/scope-switch
 acceptance or real WhatsApp display/provider compatibility was established.
