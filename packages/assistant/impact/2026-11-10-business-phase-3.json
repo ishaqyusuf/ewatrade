@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "id": "2026-11-10-business-phase-3",
+  "tickets": ["H02"],
+  "summary": "Phase3 T5-T7 follow-through repairs a stale exact planned-capability test list for three already-committed T7 shipment writes and verifies the existing six laundry/shipment ahead-of-app channel gates, exact dual release entries and disabled-write refusal. T10 remains planning/design only: existing catalog-sale app review is explicitly retained. No manifest, role, route, canonical command, renderer, schema, rollout or live availability change.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/tasks/2026-11-10-business-phase-3.md"
+    },
+    {
+      "topic": "capability",
+      "status": "local_only",
+      "path": ".brain/tasks/2026-11-10-business-phase-3.md"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/assistant/src/channels/capability-action-handoff.test.ts",
+      "executed": true,
+      "result": "7 tests / 164 assertions pass; stale planned-list expectation failed before repair. Six ahead-of-app writes require exact release settings, and catalog order_create remains app review."
+    },
+    {
+      "kind": "test",
+      "path": "apps/api/src/assistant/channel-proposal-review.test.ts",
+      "executed": true,
+      "result": "Unchanged canonical projection suite plus general-shipments.test.ts pass 13 tests / 110 assertions using an unusable loopback DB sentinel, with no connected test or provider send."
+    }
+  ]
+}

@@ -52,8 +52,13 @@ collection, bounded authority and release integration over the existing domains.
    never guess combinations, silently substitute a productless sale or invent stock.
 2. Keep one resumable canonical `order_create` draft through corrections. Identify
    a saved customer only after an exact/confirmed selection; otherwise explicitly
-   agree Walk-in or use the existing permitted Order contact-snapshot behavior.
-   Saving a new business-wide customer is a separately authorized operation.
+   agree Walk-in. Source follow-through found that the canonical Order command
+   calls `ensureOrderCustomerInTransaction` for a supplied name/contact and can
+   create or link a business-wide directory Customer. Do not describe that path
+   as snapshot-only. The initial native slice uses a confirmed saved `customerId`
+   or explicit Walk-in with no free-text customer identity fields. A new Customer
+   needs its separate permitted review/confirmation before resuming this sale;
+   a refusal leaves the sale draft unsaved and its known facts intact.
 3. Collect unpaid / part paid / fully paid, the stated amount and payment method.
    For money already received, resolve an eligible existing receiving account using
    the canonical tenant/currency read. Ask when ambiguous; show any valid canonical
@@ -61,7 +66,8 @@ collection, bounded authority and release integration over the existing domains.
 4. Show exact item + option + selling unit, quantity, line price and total;
    customer, total, received, balance and receiving account; and the exact stock
    consequence. “Handed over now” uses canonical `fulfillNow`; otherwise use the
-   app's existing outstanding/reservation behavior. Do not promise stock deduction
+   app's existing outstanding/reservation behavior: on-hand stays unchanged,
+   reserved increases and available decreases. Do not promise stock deduction
    for an unfulfilled Order. Recording received money initiates no provider charge.
 5. Edit rotates the proposal revision and invalidates every previous Confirm.
    Cancel writes no Order/stock/payment. Confirmation comes only from the current
@@ -163,7 +169,57 @@ nonproduction data window and cleanup; ordinary `qa:smoke` creates no business
 fixture or sale/payment. Do not run connected tests or send WhatsApp messages merely
 to validate this planning document. No estimate or rollout date is asserted.
 
-## Plan validation
+## T10.1 review revision — 10 November 2026
+
+Continued the existing implemented **01 Library**, preserving its shared kit,
+every baseline scene, the selected v14 `ce2df6f7-63ff-4e87-a573-3fda97f00f08`
+and all three previous implementation receipts. The current review candidate is
+**v17 `d329aac5-7648-450c-a4bd-4218b4a1b36b`**, unselected and unimplemented:
+[exact revision](https://workshop.localhost/ewatrade/assistant/conversations/directions/01?rev=d329aac5-7648-450c-a4bd-4218b4a1b36b).
+Earlier v15/v16 authoring checkpoints remain immutable history. No private Site
+was republished. Codex authored under the standing fallback after the exact
+Claude Opus 5.5/high probe failed authentication; no other Claude model was used.
+
+The extension adds **13 proposed cases / 122 states** to the existing collection.
+These are synthetic design replays, not merchant fixtures, captured product
+output, native transaction proof or a new runtime state machine. Config controls
+can inspect any state; that inspection is not a runtime approval path.
+
+| Case | Exact review concern |
+| --- | --- |
+| `w-catalog-sale` (v2) | Saved item/option/unit and confirmed customer; explicit full-payment statement |
+| `w-catalog-sale-payment` | Unpaid, partial, full; method and eligible existing receiving account |
+| `w-catalog-sale-handover` | Handed-over stock deduction versus deferred reservation |
+| `w-catalog-sale-edit` | Same draft; changed quantity retains stated received money; old Confirm refused |
+| `w-catalog-sale-pages` | All 30 exact lines on six item pages and one full summary; one Order |
+| `w-catalog-sale-page-retry` | Missing-page retry and old-page refusal; no early Confirm |
+| `w-catalog-sale-stale` | Price, stock and selling-unit changes require fresh review |
+| `w-catalog-sale-access` (v2) | Store/access/expiry changes and bare-yes refusal |
+| `w-catalog-sale-recovery` | Duplicate Confirm, pre/post-commit failure and original receipt recovery |
+| `w-catalog-sale-cashier` | Proposed same-sale initial payment; no standalone payment or Finance grant |
+| `w-catalog-sale-customer` (v2) | Explicit Walk-in or separate named Customer review before sale |
+| `w-catalog-sale-unit` | Exact leading-zero code and allowed fractional unit precision |
+| `w-catalog-sale-unavailable` | Unknown/unsaved option, missing price, overpayment, ineligible account and >30 lines |
+
+The source proof audit confirms `AssistantWhatsAppActionReview.reviewOutboxId`
+and `reviewDigest` bind one accepted sent review. The consume path checks its
+exact content digest, quoted provider message, accepted delivery attempt, current
+principal generations, proposal revision and expiry. Read-answer pagination is
+read authority; it does not prove a complete write review. T10.3 must propose the
+minimum durable page-set representation before any schema change: immutable
+page count/order/digests bound to the proposal/revision/hash, each accepted send,
+and current bound Next acknowledgments. Reopen/Previous are read-only; Edit,
+expiry or changed authority invalidates the whole set. The final summary cannot
+issue approval before all current required pages are delivered and acknowledged.
+No schema design is claimed as implemented or preapproved by this document.
+
+T10.1's remaining gate is owner selection of this exact revision **and** explicit
+authorization to implement T10.2–T10.5. T10.6 still requires the separate guarded
+acceptance window, merchant data and target approval. H23/A23/R24 stay blocked;
+the 72-case denominator is unchanged. Focused check and rendered-review evidence:
+[Phase 3 receipt](../verification/2026-11-10-business-phase-3.md).
+
+## Original plan validation
 
 Source paths, local links and the two R23 register associations were checked.
 All 72 case IDs/statuses and the 6/1/47/18 scorecard remain unchanged. Scoped

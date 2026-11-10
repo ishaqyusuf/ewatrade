@@ -106,7 +106,7 @@ test("current native actions and other eligible writes receive explicit honest c
   expect(app.every((capability) => capability.rollout !== "planned")).toBe(true)
 })
 
-test("planned services, staff, settings, finance and inventory actions remain planned even with all channel flags", () => {
+test("the exact app-planned write inventory stays planned without a native review release", () => {
   const plannedIds = [
     "catalog.archive",
     "customers.allocation.release",
@@ -118,6 +118,9 @@ test("planned services, staff, settings, finance and inventory actions remain pl
     "finance.cash_count.record",
     "finance.expense.void",
     "finance.purchase.record",
+    "finance.shipment.cost",
+    "finance.shipment.create",
+    "finance.shipment.receive",
     "finance.supplier.entry.reverse",
     "finance.supplier.opening",
     "inventory.custody.move",
@@ -152,6 +155,85 @@ test("planned services, staff, settings, finance and inventory actions remain pl
     expect(classifyCapabilityAction(capability, environment)).toEqual({
       kind: "planned",
     })
+})
+
+test("laundry and shipments need both exact channel releases while app support stays planned", () => {
+  const expected = [
+    ["services.intake.create", "service_intake"],
+    ["services.work.transition", "service_job_line_transition"],
+    ["services.work.assign", "service_job_assign"],
+    ["finance.shipment.create", "shipment_create"],
+    ["finance.shipment.receive", "shipment_receive"],
+    ["finance.shipment.cost", "shipment_cost_adjust"],
+  ] as const
+  for (const [id, action] of expected) {
+    const capability: Capability | undefined = writeCapabilities.find(
+      (entry) => entry.id === id,
+    )
+    if (!capability) throw Error(`Expected ${id}`)
+    expect(capability.action).toBe(action)
+    expect(capability.rollout).toBe("planned")
+    expect(capability.whatsapp).toEqual({
+      mode: "native",
+      rollout: "source",
+      aheadOfApp: true,
+    })
+    expect(classifyCapabilityAction(capability, environment)).toEqual({
+      kind: "planned",
+    })
+    expect(
+      classifyCapabilityAction(capability, {
+        ...environment,
+        ASSISTANT_WHATSAPP_NATIVE_REVIEW_ACTIONS: action,
+      }),
+    ).toEqual({ kind: "native_review" })
+    const production = {
+      ...environment,
+      APP_ENV: "production",
+      NODE_ENV: "production",
+      ASSISTANT_WHATSAPP_ROLLOUT_MODE: "public",
+    }
+    for (const released of [
+      {},
+      { ASSISTANT_WHATSAPP_RELEASED_CAPABILITY_IDS: id },
+      { ASSISTANT_WHATSAPP_NATIVE_REVIEW_ACTIONS: action },
+      {
+        ASSISTANT_WHATSAPP_RELEASED_CAPABILITY_IDS: id,
+        ASSISTANT_WHATSAPP_NATIVE_REVIEW_ACTIONS: `${action}_other`,
+      },
+      {
+        ASSISTANT_WHATSAPP_RELEASED_CAPABILITY_IDS: `${id}.other`,
+        ASSISTANT_WHATSAPP_NATIVE_REVIEW_ACTIONS: action,
+      },
+    ])
+      expect(
+        classifyCapabilityAction(capability, { ...production, ...released }),
+      ).toEqual({ kind: "planned" })
+    const admitted = {
+      ...production,
+      ASSISTANT_WHATSAPP_RELEASED_CAPABILITY_IDS: id,
+      ASSISTANT_WHATSAPP_NATIVE_REVIEW_ACTIONS: action,
+    }
+    expect(classifyCapabilityAction(capability, admitted)).toEqual({
+      kind: "native_review",
+    })
+    expect(
+      classifyCapabilityAction(capability, {
+        ...admitted,
+        ASSISTANT_WHATSAPP_WRITES_ENABLED: "false",
+      }),
+    ).toEqual({ kind: "planned" })
+  }
+  const catalogSale = writeCapabilities.find(
+    (entry) => entry.id === "sales.order.create",
+  )
+  if (!catalogSale) throw Error("Expected catalog sale")
+  expect(
+    classifyCapabilityAction(catalogSale, {
+      ...environment,
+      ASSISTANT_WHATSAPP_NATIVE_REVIEW_ACTIONS: "order_create",
+    }),
+  ).toEqual({ kind: "app_review", reason: "complete_app_review" })
 })
 
 test("source/disabled native confirmations hand off without granting execution and metadata cannot invent an adapter", () => {
