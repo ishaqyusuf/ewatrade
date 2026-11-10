@@ -8,6 +8,7 @@ import {
   shipmentRateCurrencies,
   shipmentRoundedMinor,
   shipmentUnreceivedUnitMinor,
+  shipmentUnstockedChoices,
 } from "./shipments"
 
 describe("shipment UI helpers", () => {
@@ -154,5 +155,39 @@ describe("shipment UI helpers", () => {
     expect(shipmentRoundedMinor("440000")).toBe("440000")
     expect(shipmentRoundedMinor(-120000)).toBe("-120000")
     expect(shipmentRoundedMinor("-0.4")).toBe("0")
+  })
+
+  test("offers a just-added product that has no stock in the Store yet", () => {
+    const item = (name: string, productId: string, variant = name) => ({
+      name,
+      product: { id: productId },
+      variants: [
+        {
+          name: variant,
+          offerings: [
+            { id: `${productId}-service`, productUnit: null },
+            { id: `${productId}-unit`, productUnit: { inventoryUnitId: "u" } },
+          ],
+        },
+      ],
+    })
+    const rows = [
+      { productId: "feed", custodyType: "STORE" },
+      { productId: "drinker-staff", custodyType: "STAFF" },
+    ]
+    expect(
+      shipmentUnstockedChoices(
+        [
+          item("Layer feed 25kg", "feed"),
+          item("Poultry drinker 5L", "drinker"),
+          item("Bucket", "drinker-staff", "Large"),
+          { name: "Vet visit", product: null, variants: [] },
+        ],
+        rows,
+      ),
+    ).toEqual([
+      { offeringId: "drinker-staff-unit", label: "Bucket · Large" },
+      { offeringId: "drinker-unit", label: "Poultry drinker 5L" },
+    ])
   })
 })

@@ -3,7 +3,10 @@
 import { useTRPC } from "@/trpc/client"
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
 import { formatFinanceMoney } from "@ewatrade/utils/finance-money"
-import { shipmentRoundedMinor } from "@ewatrade/utils/shipments"
+import {
+  shipmentRoundedMinor,
+  shipmentUnstockedChoices,
+} from "@ewatrade/utils/shipments"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { useMemo } from "react"
 
@@ -64,7 +67,31 @@ export function useStoreStockChoices(storeId: string) {
       }))
       .sort((a, b) => a.label.localeCompare(b.label))
   }, [items.data, balances.data])
-  return { choices, query: items, balances }
+  // Catalog products with no stock in this Store yet, such as one just added
+  // for a shipment line; choosing one creates its zero Store balance first.
+  const unstocked = useMemo(
+    () => shipmentUnstockedChoices(items.data ?? [], balances.data?.rows ?? []),
+    [items.data, balances.data],
+  )
+  return { choices, unstocked, query: items, balances }
+}
+
+/** The Store balance a line maps to, creating the zero balance for a new product. */
+export function useStoreBalanceFor(storeId: string | undefined) {
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  return async (offeringId: string) => {
+    const availability = await queryClient.fetchQuery(
+      trpc.inventory.offeringAvailability.queryOptions(
+        { offeringId, ...(storeId ? { storeId } : {}) },
+        { staleTime: 0 },
+      ),
+    )
+    return {
+      balanceSourceId: availability.balanceSourceId,
+      inventoryUnitId: availability.balanceUnitId,
+    }
+  }
 }
 
 export function useRefreshShipments() {

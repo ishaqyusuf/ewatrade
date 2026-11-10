@@ -197,3 +197,41 @@ export function shipmentPriceChanges(
     ? { ok: true as const, changes: changed }
     : { ok: false as const, error: "Enter at least one new price." }
 }
+
+/**
+ * Catalog products with no stock balance in the Store yet, such as one just
+ * added for a shipment line. A shipment line can only arrive once it maps to
+ * a Store balance, so these are offered with the Store's stocked items.
+ */
+export function shipmentUnstockedChoices(
+  items: Array<{
+    name: string
+    product: { id: string } | null
+    variants: Array<{
+      name: string
+      offerings: Array<{ id: string; productUnit: unknown }>
+    }>
+  }>,
+  storeRows: Array<{ productId: string; custodyType: string }>,
+) {
+  const stocked = new Set(
+    storeRows
+      .filter((row) => row.custodyType === "STORE")
+      .map((row) => row.productId),
+  )
+  const result: Array<{ offeringId: string; label: string }> = []
+  for (const item of items) {
+    if (!item.product || stocked.has(item.product.id)) continue
+    for (const variant of item.variants) {
+      const offering = variant.offerings.find((o) => o.productUnit)
+      if (!offering) continue
+      const variantText =
+        variant.name && variant.name !== item.name ? ` · ${variant.name}` : ""
+      result.push({
+        offeringId: offering.id,
+        label: `${item.name}${variantText}`,
+      })
+    }
+  }
+  return result.sort((a, b) => a.label.localeCompare(b.label))
+}

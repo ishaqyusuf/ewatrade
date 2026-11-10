@@ -41,6 +41,7 @@ import {
   money,
   useCurrentStoreId,
   useRefreshShipments,
+  useStoreBalanceFor,
   useStoreStockChoices,
 } from "./shipment-data"
 import { type DraftView, ShipmentDraftScreen } from "./shipment-draft-screen"
@@ -652,7 +653,8 @@ function ArrivalView({
 }) {
   const trpc = useTRPC()
   const refresh = useRefreshShipments()
-  const { choices } = useStoreStockChoices(d.storeId)
+  const { choices, unstocked } = useStoreStockChoices(d.storeId)
+  const storeBalanceFor = useStoreBalanceFor(d.storeId)
   const balances = useQuery(
     trpc.inventory.balanceReport.queryOptions(
       { storeId: d.storeId },
@@ -678,19 +680,21 @@ function ArrivalView({
     "0",
   )
 
-  async function chooseStock(line: ShipmentLine, balanceSourceId: string) {
-    const choice = choices.find((c) => c.balanceSourceId === balanceSourceId)
-    if (!choice) return
+  async function chooseStock(line: ShipmentLine, value: string) {
     setError(null)
     try {
+      const target = value.startsWith("offering:")
+        ? await storeBalanceFor(value.slice("offering:".length))
+        : choices.find((c) => c.balanceSourceId === value)
+      if (!target) return
       await mapLine.mutateAsync({
         bookId: d.bookId,
         clientCommandId: commandId(),
         shipmentId: d.id,
         expectedRevision: d.revision,
         lineId: line.id,
-        balanceSourceId,
-        enteredInventoryUnitId: choice.inventoryUnitId,
+        balanceSourceId: target.balanceSourceId,
+        enteredInventoryUnitId: target.inventoryUnitId,
       })
       await refresh()
     } catch (failure) {
@@ -816,18 +820,29 @@ function ArrivalView({
                 <Text className="text-sm">
                   New product: add it in Catalog, then choose it here.
                 </Text>
-                {choices.slice(0, 8).map((c) => (
-                  <Pressable
-                    key={c.balanceSourceId}
-                    accessibilityRole="button"
-                    haptic
-                    disabled={mapLine.isPending}
-                    className="rounded-xl border border-border px-4 py-3"
-                    onPress={() => void chooseStock(line, c.balanceSourceId)}
-                  >
-                    <Text>{c.label}</Text>
-                  </Pressable>
-                ))}
+                {[
+                  ...unstocked.map((c) => ({
+                    key: `offering:${c.offeringId}`,
+                    label: `${c.label} · no stock here yet`,
+                  })),
+                  ...choices.map((c) => ({
+                    key: c.balanceSourceId,
+                    label: c.label,
+                  })),
+                ]
+                  .slice(0, 10)
+                  .map((c) => (
+                    <Pressable
+                      key={c.key}
+                      accessibilityRole="button"
+                      haptic
+                      disabled={mapLine.isPending}
+                      className="rounded-xl border border-border px-4 py-3"
+                      onPress={() => void chooseStock(line, c.key)}
+                    >
+                      <Text>{c.label}</Text>
+                    </Pressable>
+                  ))}
               </View>
             )}
             <Text className="text-sm">

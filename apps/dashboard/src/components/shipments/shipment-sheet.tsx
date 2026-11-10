@@ -42,6 +42,7 @@ import {
   lineName,
   money,
   useRefreshShipments,
+  useStoreBalanceFor,
   useStoreStockChoices,
 } from "./shipment-data"
 import { ShipmentCostTable, ShipmentDraftForm } from "./shipment-draft-form"
@@ -788,7 +789,8 @@ function ArrivalStep({
 }) {
   const trpc = useTRPC()
   const refresh = useRefreshShipments()
-  const { choices } = useStoreStockChoices(store.id)
+  const { choices, unstocked } = useStoreStockChoices(store.id)
+  const storeBalanceFor = useStoreBalanceFor(store.id)
   const balances = useQuery(
     trpc.inventory.balanceReport.queryOptions({ storeId: store.id }),
   )
@@ -817,20 +819,23 @@ function ArrivalStep({
     "0",
   )
 
-  async function chooseStock(line: ShipmentLine, balanceSourceId: string) {
-    const choice = choices.find((c) => c.balanceSourceId === balanceSourceId)
-    if (!choice) return
-    setMapping((m) => ({ ...m, [line.id]: balanceSourceId }))
+  async function chooseStock(line: ShipmentLine, value: string) {
+    if (!value) return
+    setMapping((m) => ({ ...m, [line.id]: value }))
     setError(null)
     try {
+      const target = value.startsWith("offering:")
+        ? await storeBalanceFor(value.slice("offering:".length))
+        : choices.find((c) => c.balanceSourceId === value)
+      if (!target) return
       await mapLine.mutateAsync({
         bookId: d.bookId,
         clientCommandId: crypto.randomUUID(),
         shipmentId: d.id,
         expectedRevision: d.revision,
         lineId: line.id,
-        balanceSourceId,
-        enteredInventoryUnitId: choice.inventoryUnitId,
+        balanceSourceId: target.balanceSourceId,
+        enteredInventoryUnitId: target.inventoryUnitId,
       })
       await refresh()
     } catch (failure) {
@@ -972,14 +977,28 @@ function ArrivalStep({
                         <option value="">
                           Choose its stock item (add it in Catalog first)
                         </option>
-                        {choices.map((c) => (
-                          <option
-                            key={c.balanceSourceId}
-                            value={c.balanceSourceId}
-                          >
-                            {c.label}
-                          </option>
-                        ))}
+                        {unstocked.length ? (
+                          <optgroup label="In Catalog, no stock here yet">
+                            {unstocked.map((c) => (
+                              <option
+                                key={c.offeringId}
+                                value={`offering:${c.offeringId}`}
+                              >
+                                {c.label}
+                              </option>
+                            ))}
+                          </optgroup>
+                        ) : null}
+                        <optgroup label="In stock here">
+                          {choices.map((c) => (
+                            <option
+                              key={c.balanceSourceId}
+                              value={c.balanceSourceId}
+                            >
+                              {c.label}
+                            </option>
+                          ))}
+                        </optgroup>
                       </Select>
                     )}
                   </TableCell>
