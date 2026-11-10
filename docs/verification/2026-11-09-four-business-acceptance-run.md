@@ -334,3 +334,14 @@ externalCalls0 passed; frozen source equality verified. Minimal redundant-read
 repair is ongoing. [Exact attempts and practical pilot stance](2026-11-10-business-phase-5.md#t10-guarded-source-integration-ledger).
 H23/A23 and all other72statuses remain unchanged. No source-only pass or
 synthetic test is promoted into merchant/native/provider acceptance.
+
+
+Final Phase3 checkpoint `c85d5ff4f` is committed but incomplete/default-off. The
+post-context/output-composition isolated partial paid check still failed at
+`stockOperation.findUnique`,30,751ms against30,000ms (Bun169.22s; outer169.36s).
+Cleanup/externalCalls0 and owned restoration passed; no paid/Cashier/replay or
+merchant/native/provider acceptance follows. The coordinator stopped the patch/
+connected loop. [Latest source checkpoint and compact practical blockers](2026-11-10-business-phase-5.md#final-incomplete-source-checkpoint-and-practical-blockers)
+distinguish finished source from the real local paid gate, merchant consent/data
+and target dependencies. All72statuses stay unchanged;72/72 is not the only useful
+pilot-readiness outcome.

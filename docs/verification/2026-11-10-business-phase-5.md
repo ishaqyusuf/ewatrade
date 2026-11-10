@@ -8,6 +8,10 @@
 implementation; see the subsequent-authorization section. Earlier planning-only
 checkpoints below retain their historical scope. No native case has passed.
 
+**Latest acceptance state:** incomplete guarded source checkpoint `c85d5ff4f`;
+paid partial confirmation still fails the unchanged30s limit. No active window
+or patch/retry loop. The practical remaining blockers are listed at the end.
+
 Initial checkout: `main`, `2ecf668cc55775d9731a5afc95c5b5ccded55b47`, only
 pre-existing shared Agent Chat changes. No worktree or branch change.
 
@@ -336,3 +340,68 @@ locks, current canonical checks and ordinary browser freshness preserved. This
 requires a minimal reviewed diff and focused reuse/refusal/count proof before any
 new connected window. No cache framework, Finance refactor, timeout increase,
 automatic retry, provider/hosted/release action or72-case promotion is authorized.
+
+
+## Final incomplete source checkpoint and practical blockers
+
+Phase3 committed **`c85d5ff4f93ed2247971677b0479433d188f55de`**,44owned files,
+on main. [Current source evidence](2026-11-10-whatsapp-native-catalog-sale.md) and
+[Phase3 historical/current receipt](2026-11-10-business-phase-3.md) explicitly keep
+the checkpoint incomplete and native rollout default-off. Exact v17 remains
+selected, its three older implementation records remain, and **no T10 Workshop
+implementation receipt** was added. Paid/Cashier/replay acceptance is unaccepted.
+
+The subsequent authentic same-transaction linked-context reuse and internal
+consume output callback preserve the root fresh resolver, post-UPDATE fresh
+resolver, lock order, current canonical authority and ordinary browser checks.
+The callback is server output after successful consume only; no caller-trusted
+context, DTO expansion, persistent cache, Finance or timeout change. Coordinator
+source review and focused success/replay/refusal/context checks were reused.
+Required evidence:16tests/224assertions, explicit API/DB type exits0/0,39owned
+TS/JSON Biome, postcommit CI H02pass; unchanged owned quick285/1820 and inventory
+checks reused rather than repeated. These are source gates, not launch proof.
+
+One isolated partial four-line check used complete two-page Next/final-confirm
+proof and assertions for the saved Order4000minor/paid400minor, one400minor
+PAYMENT and stock100→96/reserved0 if it completed. It **failed** Prisma`P2028` at
+`stockOperation.findUnique`,30,751ms/30,000ms. Bun summary:0pass/1fail/2filtered,
+38assertions,169.22s; outer wall report169.36s is retained separately.
+ACTION30,755.3ms; SQL142calls/30,565.1ms; pool0.178ms; locking10/2,118.6ms;
+native review2,855.7ms; failed execution19,230.2ms. Phases overlap; counts truncated
+at different failure boundaries cannot be subtracted to measure complete-workload
+savings. Private numeric log: `/private/tmp/ewatrade-t10-paid-isolated-after-reuse.log`.
+
+Phase5 independently read the numeric log and cleanup PASS/externalCalls0 marker.
+The source owner verified frozen`ed32ab8451726a855e0e71c665292632852bea055513be1fbe50872dc0eec79a`/4698
+unchanged before restoration. Phase5's later verifier saw the intentional two-file
+restoration, not an accepted ed32 post-run comparison; that run equality is
+owner-provided evidence. Both exact pre-isolated backups were independently
+byte-compared after restoration. Product graph immediately restored to
+`157b50037652f172cd11f30c2a9d79bfc74e77dc008ac30f30b1ed619e08cb27`/4698; the
+subsequent owned impact-evidence-only update produced final graph
+`8f5d963fefdc845ecde8c0536817456b030f5b68ddf38f8d0af209b93c0cdb0c`/4698,
+which Phase5 independently verified and the source owner verified postcommit.
+No temporary instrumentation remains. No extra DB audit or unaffected gate rerun.
+
+Coordinator stopped the patch/connected loop and owns the next practical decision.
+No test window, retry, source expansion, timeout increase or provider/release action
+is active. The local paid-path failure is observed; hosted behavior is untested.
+All72case IDs/statuses remain6historical local PASS/1FAIL/47BLOCKED/18NOT_ASSESSED.
+
+| Practical item | Current position / next dependency |
+| --- | --- |
+| T10 paid confirmation | Actual local30s failure remains. Keep guarded source default-off and paid/Cashier/replay unaccepted; coordinator chooses the next transaction/worker/target acceptance approach. |
+| Finished source | Phase1 manual-search loading escape, Phase2 exact arrivals/price-save repair and Phase4 canonical public-Store share binding stay finished. Do not reopen them for broad coverage. |
+| First pilot data/consent | Select one business and a small approved product/options/unit/NGN-price/opening-stock set. Owned photos/public consent only for public display; real laundry price/quote rows plus due/staff roles. Shipment supplier costs/qty/freight/dated FX only if imports are in the pilot. Full50-product stress catalogs/rare collisions are later coverage. |
+| Native/channel readiness | Manual search/code entry is the practical fallback. Camera decode and HTTPS association remain unproved; the latter needs an approved artifact/public host. Native paid WhatsApp must not be advertised as accepted. |
+| Target acceptance | Select the candidate and intended runtime/channel scope. T8 consent save/refetch and eligible media/no-site link examples need actual consent/data. Saved cashier payment and existing public-payment/report/retry remain focused pilot checks, without inventing another fixture project. Hosted/provider/release approval remains separate. |
+
+A narrower app/manual-entry pilot can be assessed with its approved small dataset
+and actual target;72/72 is not a prerequisite for that recommendation. It does
+not make the blocked native paid feature available. Important owner choices and
+questions remain solely in the coordinating chat.
+
+Coordinator policy review additionally confirms the explicit30s coding standard
+and180s worker job/turn lease; no automatic timeout exception is authorized. An
+app/manual-entry pilot is a separate prioritization option. The original fully
+native WhatsApp request remains outstanding while its paid path is unaccepted.
