@@ -22,13 +22,13 @@ mock.module("@react-navigation/native", () => ({
   },
 }))
 type AlertButton = { text: string; onPress?: () => void }
+// The discard sheet's two choices, recorded as the screen would offer them.
 const alerts: Array<{ title: string; buttons: AlertButton[] }> = []
-mock.module("react-native", () => ({
-  Alert: {
-    alert: (title: string, _message: string, buttons: AlertButton[]) =>
-      alerts.push({ title, buttons }),
-  },
-}))
+const askDiscard = (proceed: () => void) =>
+  alerts.push({
+    title: "Discard this sale?",
+    buttons: [{ text: "Keep editing" }, { text: "Discard", onPress: proceed }],
+  })
 const { useSaleBackSteps } = await import("./use-sale-back-steps")
 
 type Step = "items" | "customer" | "review"
@@ -83,15 +83,18 @@ async function mount(initial: Model) {
   let model = initial
   let stepBack: (() => void) | undefined
   function Probe() {
-    stepBack = useSaleBackSteps({
-      hasSaleLines: false,
-      ...model,
-      setStep: (step) => {
-        changes.push({ step })
-        model = { ...model, step }
+    stepBack = useSaleBackSteps(
+      {
+        hasSaleLines: false,
+        ...model,
+        setStep: (step) => {
+          changes.push({ step })
+          model = { ...model, step }
+        },
+        setError: (error) => changes.push({ error }),
       },
-      setError: (error) => changes.push({ error }),
-    })
+      askDiscard,
+    )
     return null
   }
   const render = async () => act(async () => root.render(createElement(Probe)))

@@ -17,6 +17,7 @@ import { CreateSaleItems } from "./create-sale-items"
 import type { CreateSaleViewModel } from "./create-sale-presentation"
 import { CreateSaleReview } from "./create-sale-review"
 import { CreateSaleSheets } from "./create-sale-sheets"
+import { DiscardSaleSheet, useDiscardSaleSheet } from "./discard-sale-sheet"
 import { SaleStepTransition } from "./sale-step-transition"
 import {
   saleActivityCategory,
@@ -86,7 +87,8 @@ export function CreateSaleView({
     liveSaleActivityLifetime,
   )
   // System back and swipe follow the steps, like the visible back.
-  const stepBack = useSaleBackSteps(saleModel)
+  const discardSheet = useDiscardSaleSheet()
+  const stepBack = useSaleBackSteps(saleModel, discardSheet.ask)
   // The user's own account pick is noted for the activity report.
   const model: CreateSaleViewModel = {
     ...saleModel,
@@ -154,6 +156,7 @@ export function CreateSaleView({
           )}
         </SaleStepTransition>
         <CreateSaleSheets {...props} />
+        <DiscardSaleSheet state={discardSheet} />
       </View>
     </VariableContextProvider>
   )

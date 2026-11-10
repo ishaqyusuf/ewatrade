@@ -1,7 +1,6 @@
 import { previousSaleStep, saleRemovalDecision } from "@/lib/sale-step-motion"
 import { useNavigation, usePreventRemove } from "@react-navigation/native"
 import { useEffect, useRef } from "react"
-import { Alert } from "react-native"
 import type { SaleStep } from "./create-sale-model"
 
 type SaleBackModel = {
@@ -21,7 +20,11 @@ type SaleBackModel = {
  * reads the sale's latest state, so a retained callback can't step a sale
  * that has since completed, and nothing changes after unmount.
  */
-export function useSaleBackSteps(model: SaleBackModel) {
+export function useSaleBackSteps(
+  model: SaleBackModel,
+  /** Shows the discard confirmation; `proceed` leaves and drops the lines. */
+  askDiscard: (proceed: () => void) => void,
+) {
   const navigation = useNavigation()
   const latest = useRef(model)
   latest.current = model
@@ -61,20 +64,9 @@ export function useSaleBackSteps(model: SaleBackModel) {
       const decision = decide(data.action.type)
       if (decision === "previous-step") stepBack()
       else if (decision === "confirm-discard")
-        Alert.alert(
-          "Discard this sale?",
-          "The items you added will be removed.",
-          [
-            { style: "cancel", text: "Keep editing" },
-            {
-              onPress: () => {
-                if (mounted.current) navigation.dispatch(data.action)
-              },
-              style: "destructive",
-              text: "Discard",
-            },
-          ],
-        )
+        askDiscard(() => {
+          if (mounted.current) navigation.dispatch(data.action)
+        })
       else navigation.dispatch(data.action)
     },
   )
