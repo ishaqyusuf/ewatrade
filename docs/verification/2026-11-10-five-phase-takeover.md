@@ -16,7 +16,7 @@ No worktree, branch change, deployment or provider action is included.
 | 2: T4 | Dashboard `27a53202f`, mobile `623e90e8d`, final Store-source fix `f2e296168`; approved Workshop direction 01 implemented | UI create/confirm/adjust/price/partial receive against approved shipment data; earlier list/form/refusal checks and T1 integration evidence remain valid in their scope. |
 | 3: T5–T7 | Products `082595e9a`; laundry/shipments `1e6672a17`; integrations `6b092d7ca`, `b37a2ac4f`; Workshop implementation recorded | Retain approved conversations v13/v14 and the documented implementation deviations. Target runtime acceptance remains open; the newer current-review-surface and earlier local-only Site instructions are recorded below. Native review actions remain off outside local unless explicitly configured; no real phone send is authorized here. |
 | 4: T8 | Host-aware sharing `040643915`; opt-in listing `92db83673`; pages/settings `a99965941`; local preview `4a882e82d`; Workshop recorded | Store/product listing controls now read-verified below; save/refetch consent changes, product photos/WhatsApp buttons and existing no-site payment/tracking examples remain. Preserve consent, private audience and approved direction 01. |
-| 5: T9 | Historical/local runs through `ee74dbc2a`; six local passes | J06 repair follow-through; J11 existing payment-link journey; remaining poultry/laundry checks; merchant-approved Hypnos/Alhaq catalog and shipment data; R23 exact-choice WhatsApp sale scope decision; selected hosted candidate/provider/native gates. |
+| 5: T9 | Historical/local runs through `ee74dbc2a`; six local passes | J06 repair follow-through; J11 existing payment-link journey; remaining poultry/laundry checks; merchant-approved Hypnos/Alhaq catalog and shipment data; T10 fully native WhatsApp catalog-sale plan (owner choice, implementation pending); selected hosted candidate/provider/native gates. |
 
 The scorecard remains **6/72 local passes, 1 failed, 47 blocked, 18 not assessed**.
 This is not hosted launch acceptance. Merchant-data cases stay blocked per the
@@ -174,3 +174,14 @@ that device check. Actual camera decode/permission/found/repeated/ambiguous/unkn
 link checks remain open; the hook fixtures do not substitute for them.
 Scoped mobile ESLint passed. Source review/whitespace checks passed; ordinary
 unchanged types/source gates were not repeated merely for documentation updates.
+
+
+## R23 scope decision: T10 native catalog-sale plan
+
+Owner chose “Plan fully native WhatsApp sales.” [T10](../plans/2026-11-10-whatsapp-native-catalog-sales.md)
+now fills the previously unticketed R23 gap in Phase3, without replacing current
+app review or changing any runtime. It specifies exact canonical choices, complete
+native review (including bounded larger Orders), explicit confirmation, scoped
+initial-payment authority, atomic stock/money and retry recovery. Six implementation
+slices and ten outcome checks are reviewable. No source implementation/design
+publication or release was performed for this planning addition; all72statuses stay.

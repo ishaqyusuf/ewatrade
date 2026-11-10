@@ -62,15 +62,18 @@ should pass it quickly if nothing has regressed.
 | R10–R15 | T1 shipment backend + T4 shipment UI | Both landed (T4 `27a53202f`, `623e90e8d`); still blocked on merchant shipment data |
 | R16 | T7 WhatsApp shipment lifecycle | Landed `1e6672a17`, `6b092d7ca`; still blocked on merchant shipment data |
 | R18, R19 | T8 no-site public catalog | Landed `92db83673`; now NOT_ASSESSED |
-| R23 | **No ticket.** See decision 1 below | Still blocked |
+| R23 | **T10 fully native catalog sale**, owner requested plan 10 Nov | Planned; still blocked |
 | R24 | T1/T4/T7 and R23 | Still blocked |
 
 ## Decisions and risks for the owner
 
-1. **R23 is not covered by any ticket.** On WhatsApp, the catalog sale
-   (`sales.order.create`) is `app_review`. The native sale (`record_simple`) is
-   money-first and has no stock effect. Either app review counts for R23, or a
-   ticket is needed for a native exact-choice WhatsApp sale.
+1. **R23 scope resolved: T10 planned.** On 10 November the owner chose “Plan fully
+   native WhatsApp sales.” App review does not satisfy R23. Existing
+   `sales.order.create` remains `app_review`; money-first `record_simple` does not
+   supply catalog stock effects. The [T10 plan](../plans/2026-11-10-whatsapp-native-catalog-sales.md)
+   covers exact choices, review/edit/confirm, stock/payment, permission parity and
+   retry receipts. No native catalog-sale source or target release exists yet;
+   H23/A23 remain blocked.
 2. **Hosted staff gate.** `STAFF_STORE_ACCESS_ROLLOUT_READY` is true only for
    local/dev/preview APP_ENV with NODE_ENV=development
    (`packages/db/src/queries/staff-store-access.ts`). On a hosted launch

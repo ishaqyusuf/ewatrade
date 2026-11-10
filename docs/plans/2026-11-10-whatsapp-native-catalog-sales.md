@@ -1,0 +1,174 @@
+# T10 — Fully native WhatsApp catalog sales
+
+10 November 2026. **Planned, not implemented or released.** Owner chose “Plan fully
+native WhatsApp sales” during the five-phase takeover. This adds a Phase 3 ticket
+for R23 (H23/A23), with R24 reconciliation coverage; it does not relax either case
+or change the 72-case denominator. An app-review handoff does not satisfy R23.
+
+The requested result is a counter sale completed inside WhatsApp: identify exact
+saved products/options/units, collect customer and payment facts, show the entire
+review, Edit/Cancel/Confirm, then one durable Order receipt. The same canonical
+Order, stock and payment records must appear in dashboard/mobile.
+
+## Current source and the missing pieces
+
+Source reviewed at `4666bc03f` (plus the unchanged preceding source):
+
+- `packages/assistant/src/capabilities/manifest.ts`: `sales.order.create` uses
+  `order_create`, includes WhatsApp, but its WhatsApp mode is `app_review`.
+  `sales.order.record_simple` is native `sale_record`, a money-first quick sale;
+  it cannot substitute for a catalog sale with offering/stock identity.
+- `apps/api/src/assistant/general-actions.ts`: `orderCreate` already prepares,
+  validates, reviews and executes the catalog Order. Exact offering, quantity,
+  configuration version and fixed-price/entered-total checks exist. Initial
+  payment is composed through canonical `createCommercialOrderInTransaction`;
+  its payment command ID is derived from the same stable Order idempotency key.
+- `packages/assistant/src/general/contracts.ts`: `order_create` supports up to
+  30 lines, `fulfillNow`, customer and an optional explicit positive initial
+  payment. Preserve these canonical types instead of adding WhatsApp sale types.
+- `apps/api/src/assistant/channel-proposal-review.ts`: the native complete-facts
+  verifier has no `order_create` case and defaults to refusal. Merely changing
+  the manifest therefore cannot safely enable native catalog sales.
+- `packages/assistant/src/channels/action-review.ts`: a complete native review
+  has a 3,000-unit maximum and a 500-unit instruction reserve. Facts must not be
+  clipped to fit. Large Orders need a deliberately designed bounded native review.
+- `packages/assistant/src/channels/policy.ts`: newer native reviews require the
+  exact `ASSISTANT_WHATSAPP_NATIVE_REVIEW_ACTIONS` release entry. `order_create`
+  is not yet in that staged action list.
+- Catalog Order creation permits broader sales roles than `payment_record`.
+  The current `orderCreate` adapter checks `payment_record` at prepare/review/
+  validate/execute for initial payments. Native cashier unpaid vs. paid admission
+  must be resolved explicitly; no blanket Finance or standalone-payment grant.
+
+No missing Order/stock/payment ledger is inferred. This is channel review,
+collection, bounded authority and release integration over the existing domains.
+
+## Required conversation
+
+1. Resolve the linked active actor, business and Store before ordinary model input.
+   Use current saved choices/prices; grouped questions ask only unresolved facts.
+   “Two black XL jalabiyas” must select an exact saved offering/unit. Ambiguous
+   sizes, brands, units, unavailable items and missing prices require clarification;
+   never guess combinations, silently substitute a productless sale or invent stock.
+2. Keep one resumable canonical `order_create` draft through corrections. Identify
+   a saved customer only after an exact/confirmed selection; otherwise explicitly
+   agree Walk-in or use the existing permitted Order contact-snapshot behavior.
+   Saving a new business-wide customer is a separately authorized operation.
+3. Collect unpaid / part paid / fully paid, the stated amount and payment method.
+   For money already received, resolve an eligible existing receiving account using
+   the canonical tenant/currency read. Ask when ambiguous; show any valid canonical
+   single-account suggestion. Do not create a Finance Book/account implicitly.
+4. Show exact item + option + selling unit, quantity, line price and total;
+   customer, total, received, balance and receiving account; and the exact stock
+   consequence. “Handed over now” uses canonical `fulfillNow`; otherwise use the
+   app's existing outstanding/reservation behavior. Do not promise stock deduction
+   for an unfulfilled Order. Recording received money initiates no provider charge.
+5. Edit rotates the proposal revision and invalidates every previous Confirm.
+   Cancel writes no Order/stock/payment. Confirmation comes only from the current
+   deterministic, quoted action control or its supported exact typed fallback;
+   bare “yes”, a model decision or a form submission cannot save the sale.
+6. Confirm revalidates current authority, scope, entitlements, exact prices/unit
+   configuration, stock and account/Book eligibility inside the canonical locked
+   transaction. A change refuses the old review and returns an editable fresh draft.
+7. Return the same saved Order reference, exact total/received/balance and a scoped
+   record link under retry. An Open link is useful after saving; opening the app
+   cannot be required to complete a supported native sale. Customer sending and
+   subsequent payments/returns remain their existing separate reviewed actions.
+
+## Native review size and identity
+
+Support the existing contract's 1–30 sale lines without silently splitting one
+sale into multiple Orders. A complete review that fits the current envelope uses
+one native review. Longer material facts need deterministic native pages tied to
+one immutable proposal ID/revision/payload hash, not a model-written summary.
+Show page count and progress, retain all exact line facts, and expose Confirm only
+on the final summary after the complete current review was delivered/viewed through
+the supported controls. Reopen/Next/Previous is read-only and cannot create a sale.
+
+Before implementing this, inspect the existing durable action proof/outbox model
+for a suitable review-page delivery binding. Reuse it if it can represent every
+required fact; otherwise propose the minimum schema extension and its migration
+before editing schema. A single-message proof must never authorize undisplayed
+pages. Old-version page controls expire with Edit, scope/authority change or expiry.
+Transport failure after save recovers the existing receipt; failure while delivering
+review pages never grants an early Confirm. Payloads beyond canonical limits remain
+explicitly unsupported; they do not pass R23. The legacy app fallback remains safe
+for unsupported shapes while the new native review is under construction.
+
+## Permission decision to implement and review
+
+Keep the canonical role/Store rules. Owner/Admin/eligible Manager sales and payments
+use current authority. An assigned Cashier/Operator may only perform the sale work
+allowed by the equivalent app/canonical Order command at that Store. Revoked,
+suspended, foreign-Store and unsupported roles refuse before effects.
+
+For an initial payment that the canonical Order command already permits but the
+standalone assistant `payment_record` capability does not, add a **narrow reviewed
+initial-payment authorization seam owned by `order_create`**. Bind it to the same
+Order payload, stated positive amount/method, eligible existing account and one
+idempotency key. Test it through the real linked-channel principal and canonical
+transaction. Do not clone/elevate the principal, reuse the simple-sale bootstrap
+exception, broaden `payment_record` roles, enable Finance administration or allow
+later unrelated payment commands. If parity cannot be established, retain refusal
+and an explicit open acceptance item; do not claim native cashier payment support.
+
+## Implementation slices and ownership
+
+| Slice | Existing files / work | Done when |
+| --- | --- | --- |
+| T10.1 Review the conversation | Existing `assistant/conversations` library, approved T5–T7 context and current implemented sale scenes; retain old `whatsapp-system` history | Immutable revision covers exact sale, missing/ambiguous choice, edit/cancel, all payment states, handover, paged review, stale/scope/retry/receipt; owner selects the exact revision before product changes |
+| T10.2 Canonical draft + admission | `general-actions.ts`, `general-context.ts`, `general-proposals.ts`, `general/contracts.ts`, existing order-preparation tools | Missing facts remain one draft; current initial-payment/role parity is independently proved without broadening standalone permissions |
+| T10.3 Native review + proof | `channel-proposal-review.ts`, `channels/action-review.ts`, `channel-action-turn.ts`, existing durable channel proof/outbox repositories | Complete exact review, bounded page/confirmation binding, deterministic Edit/Cancel and stale-action refusal; no generic completeness bypass |
+| T10.4 Declare source support | `capabilities/manifest.ts`, `channels/policy.ts`, exact handoff/policy tests, generated `COVERAGE.md`, H02 record | Only `order_create` gains staged native source support; all unrelated gates/classifications remain; target release entry stays unset |
+| T10.5 Prove records + recovery | Existing channel confirmation fixture and canonical Order/stock/payment suites; add one focused catalog-sale integration suite | One Order and the expected canonical stock/payment/history changes; exact replay/concurrency/refusal/cleanup evidence |
+| T10.6 Operating acceptance | T9 register H23/A23, R24 dependencies and exact design/source/target receipt | Authorized nonproduction native journey passes with merchant-approved data; hosted/provider proof only after its separate approval |
+
+The established Workshop default author remains Claude Opus 5.5/high; if unavailable,
+the coordinating Codex agent takes over under the standing fallback. This plan
+creates no author session and publishes no design/Site. The current owner-directed
+conversations review surface, local-only mirror exceptions and older immutable case
+history must be reconciled from the existing feature record before authoring;
+never replace the surrounding design or silently republish a private Site.
+
+## Focused acceptance checklist
+
+- [ ] Unpaid exact-choice sale: one Order, correct full balance and canonical
+  fulfilled/unfulfilled stock consequence; no payment or journal invented.
+- [ ] Partial and full payment: stated amount, eligible receiving account, exact
+  remaining balance and expected canonical money/history, atomically with Order.
+- [ ] Saved customer, explicitly agreed Walk-in and ambiguous/new contact follow
+  current customer permissions; no silent customer merge or identity creation.
+- [ ] Exact variant/unit/price, leading-zero code where supplied, fractional
+  quantity at allowed precision; unknown/ambiguous/unavailable/changed price/stock
+  cannot confirm stale or invented facts.
+- [ ] Complete single-page and maximum-contract paged review: no clipped line,
+  skipped-page approval, stale page control or amount substitution.
+- [ ] Edit, Cancel, expiry, scope switch and revoked member refuse old controls
+  with no Order/stock/payment; current fresh review succeeds.
+- [ ] Two confirmations, webhook retry, transaction race and post-commit outbox
+  failure yield one canonical Order/effect set and the same recoverable receipt.
+- [ ] Cashier/Operator allowed operation plus privileged/foreign-Store refusals;
+  no new standalone payment/Finance/account-creation access.
+- [ ] Refetch exact original Order in dashboard/mobile and reconcile inventory,
+  amounts, receipt/history and original actor; transport success alone is no pass.
+- [ ] Exact selected design, source commit, focused checks, actual environment,
+  human approval and target release recorded independently; H23/A23 remain blocked
+  until this evidence exists.
+
+Reuse existing simple-sale/review/permission/idempotency proof where unchanged;
+exercise the new catalog/stock/initial-payment/page-binding seams directly. Follow
+`docs/testing.md`: offline doctor, owned-path quick plan/check, actual H01/H02,
+relevant types and narrow pure tests. Integration tests require their guarded
+nonproduction data window and cleanup; ordinary `qa:smoke` creates no business
+fixture or sale/payment. Do not run connected tests or send WhatsApp messages merely
+to validate this planning document. No estimate or rollout date is asserted.
+
+## Plan validation
+
+Source paths, local links and the two R23 register associations were checked.
+All 72 case IDs/statuses and the 6/1/47/18 scorecard remain unchanged. Scoped
+documentation quick checks pass **51 tests / 254 assertions**, QA-tooling types,
+zero unknown mappings and whitespace checks; H02 reports no gated source change.
+No application/runtime, database, model, provider or UI test was needed for this
+planning-only addition. Earlier executed source/UI evidence remains in the
+[five-phase takeover receipt](../verification/2026-11-10-five-phase-takeover.md).
