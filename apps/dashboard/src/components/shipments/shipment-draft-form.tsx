@@ -4,7 +4,6 @@ import { FormFeedback } from "@/components/forms/form-feedback"
 import { SheetFrame } from "@/components/sheets/sheet-frame"
 import type { ShipmentStep } from "@/hooks/use-shipment-params"
 import { useTRPC } from "@/trpc/client"
-import type { RouterInputs } from "@ewatrade/api/trpc/routers/_app"
 import {
   Button,
   ControlField,
@@ -18,9 +17,20 @@ import {
   TableRow,
 } from "@ewatrade/ui"
 import {
+  type ShipmentDraft,
+  type ShipmentDraftLine,
+  buildShipmentDraftInput,
+  emptyShipmentDraft,
+  emptyShipmentLine,
+  isShipmentDecimal,
+  shipmentDraftCurrencies,
+  shipmentDraftFromDetail,
+  shipmentHandFreightLeftMinor,
+  shipmentMissingRates,
+} from "@ewatrade/utils/shipment-draft"
+import {
   SHIPMENT_SOURCE_CURRENCIES,
   shipmentMajorToMinor,
-  shipmentRateCurrencies,
 } from "@ewatrade/utils/shipments"
 import { Delete02Icon, PlusSignIcon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
@@ -34,91 +44,10 @@ import {
   useStoreStockChoices,
 } from "./shipment-data"
 
-type DraftLine = {
-  key: string
-  balanceSourceId: string
-  enteredInventoryUnitId: string
-  proposedName: string
-  expectedQuantity: string
-  sourceCurrencyCode: string
-  sourceUnitPrice: string
-  freightOverride: string
-}
-type Draft = {
-  supplierId: string
-  name: string
-  reference: string
-  expectedAt: string
-  freightAmount: string
-  freightCurrencyCode: string
-  rates: Record<string, { rate: string; rateDate: string; source: string }>
-  split: "value" | "hand"
-  lines: DraftLine[]
-}
+type Draft = ShipmentDraft
+type DraftLine = ShipmentDraftLine
 
 const today = () => new Date().toISOString().slice(0, 10)
-const isoDate = (value: Date | string | null) =>
-  value ? new Date(value).toISOString().slice(0, 10) : ""
-const DECIMAL = /^\d{1,20}(\.\d{1,18})?$/
-const minorText = (minor: string) => (Number(minor) / 100).toString()
-
-function emptyLine(): DraftLine {
-  return {
-    key: crypto.randomUUID(),
-    balanceSourceId: "",
-    enteredInventoryUnitId: "",
-    proposedName: "",
-    expectedQuantity: "",
-    sourceCurrencyCode: "CNY",
-    sourceUnitPrice: "",
-    freightOverride: "",
-  }
-}
-
-function fromDetail(detail: ShipmentDetail | null): Draft {
-  if (!detail)
-    return {
-      supplierId: "",
-      name: "",
-      reference: "",
-      expectedAt: "",
-      freightAmount: "0",
-      freightCurrencyCode: "NGN",
-      rates: {},
-      split: "value",
-      lines: [emptyLine()],
-    }
-  return {
-    supplierId: detail.supplierId,
-    name: detail.name,
-    reference: detail.reference ?? "",
-    expectedAt: isoDate(detail.expectedAt),
-    freightAmount: detail.freightAmount,
-    freightCurrencyCode: detail.freightCurrencyCode,
-    rates: Object.fromEntries(
-      detail.rates.map((r) => [
-        r.currencyCode,
-        { rate: r.rate, rateDate: isoDate(r.rateDate), source: r.source },
-      ]),
-    ),
-    split: detail.lines.some((l) => l.freightOverrideMinor !== null)
-      ? "hand"
-      : "value",
-    lines: detail.lines.map((line) => ({
-      key: line.id,
-      balanceSourceId: line.balanceSourceId ?? "",
-      enteredInventoryUnitId: line.enteredInventoryUnitId ?? "",
-      proposedName: line.proposedName ?? "",
-      expectedQuantity: line.expectedQuantity,
-      sourceCurrencyCode: line.sourceCurrencyCode,
-      sourceUnitPrice: line.sourceUnitPrice,
-      freightOverride:
-        line.freightOverrideMinor === null
-          ? minorText(line.freightMinor)
-          : minorText(line.freightOverrideMinor),
-    })),
-  }
-}
 
 /** Create or edit a draft: details and items, then rates, then the freight split. */
 export function ShipmentDraftForm({
@@ -140,7 +69,11 @@ export function ShipmentDraftForm({
 }) {
   const trpc = useTRPC()
   const refresh = useRefreshShipments()
-  const [draft, setDraft] = useState(() => fromDetail(detail))
+  const [draft, setDraft] = useState(() =>
+    detail
+      ? shipmentDraftFromDetail(detail)
+      : emptyShipmentDraft(crypto.randomUUID()),
+  )
   const [error, setError] = useState<string | null>(null)
   const [tried, setTried] = useState(false)
   const { choices } = useStoreStockChoices(storeId)
@@ -150,14 +83,8 @@ export function ShipmentDraftForm({
   const create = useMutation(trpc.finance.shipments.create.mutationOptions())
   const update = useMutation(trpc.finance.shipments.update.mutationOptions())
   const saving = create.isPending || update.isPending
-  const currencies = shipmentRateCurrencies(
-    draft.lines,
-    draft.freightCurrencyCode,
-    bookCurrencyCode,
-  )
-  const missingRates = currencies.filter(
-    (code) => !DECIMAL.test(draft.rates[code]?.rate.trim() ?? ""),
-  )
+  const currencies = shipmentDraftCurrencies(draft, bookCurrencyCode)
+  const missingRates = shipmentMissingRates(draft, bookCurrencyCode)
 
   const set = (patch: Partial<Draft>) => setDraft((d) => ({ ...d, ...patch }))
   const setLine = (key: string, patch: Partial<DraftLine>) =>
@@ -175,70 +102,6 @@ export function ShipmentDraftForm({
       return { ...d, rates: { ...d.rates, [code]: { ...current, ...patch } } }
     })
 
-  function payload(): RouterInputs["finance"]["shipments"]["create"] | string {
-    if (!draft.supplierId) return "Choose the supplier."
-    if (!draft.name.trim()) return "Name the shipment."
-    if (!DECIMAL.test(draft.freightAmount.trim()))
-      return "Enter the shipping charge, or 0."
-    const lines: RouterInputs["finance"]["shipments"]["create"]["lines"] = []
-    for (const line of draft.lines) {
-      const choice = choices.find(
-        (c) => c.balanceSourceId === line.balanceSourceId,
-      )
-      const name = choice?.label ?? line.proposedName.trim()
-      if (!name) return "Choose a stock item or name each new product."
-      if (
-        !DECIMAL.test(line.expectedQuantity.trim()) ||
-        !Number(line.expectedQuantity)
-      )
-        return `Enter how many ${name} you expect.`
-      if (!DECIMAL.test(line.sourceUnitPrice.trim()))
-        return `Enter the supplier price for ${name}.`
-      const override =
-        draft.split === "hand"
-          ? shipmentMajorToMinor(line.freightOverride || "0")
-          : null
-      if (draft.split === "hand" && override === null)
-        return `Enter the freight share for ${name}.`
-      lines.push({
-        description: name,
-        ...(choice
-          ? {
-              balanceSourceId: choice.balanceSourceId,
-              enteredInventoryUnitId: choice.inventoryUnitId,
-            }
-          : { proposedName: line.proposedName.trim() }),
-        expectedQuantity: line.expectedQuantity.trim(),
-        sourceCurrencyCode: line.sourceCurrencyCode,
-        sourceUnitPrice: line.sourceUnitPrice.trim(),
-        ...(override === null ? {} : { freightOverrideMinor: override }),
-      })
-    }
-    if (missingRates.length)
-      return `Enter a rate for ${missingRates.join(" and ")}.`
-    for (const code of currencies)
-      if (!draft.rates[code]?.source.trim())
-        return `Say where the ${code} rate came from.`
-    return {
-      bookId,
-      clientCommandId: crypto.randomUUID(),
-      supplierId: draft.supplierId,
-      storeId,
-      name: draft.name.trim(),
-      ...(draft.reference.trim() ? { reference: draft.reference.trim() } : {}),
-      ...(draft.expectedAt ? { expectedAt: new Date(draft.expectedAt) } : {}),
-      freightAmount: draft.freightAmount.trim(),
-      freightCurrencyCode: draft.freightCurrencyCode,
-      rates: currencies.map((code) => ({
-        currencyCode: code,
-        rate: draft.rates[code]?.rate.trim() ?? "",
-        rateDate: new Date(draft.rates[code]?.rateDate || today()),
-        source: draft.rates[code]?.source.trim() ?? "",
-      })),
-      lines,
-    }
-  }
-
   async function save() {
     setError(null)
     setTried(true)
@@ -246,11 +109,19 @@ export function ShipmentDraftForm({
       onStep("rates")
       return
     }
-    const input = payload()
-    if (typeof input === "string") {
-      setError(input)
+    const built = buildShipmentDraftInput(draft, {
+      bookId,
+      storeId,
+      bookCurrencyCode,
+      clientCommandId: crypto.randomUUID(),
+      choices,
+      today: today(),
+    })
+    if (!built.ok) {
+      setError(built.error)
       return
     }
+    const input = built.input
     try {
       const result = detail
         ? await update.mutateAsync({
@@ -307,7 +178,7 @@ export function ShipmentDraftForm({
           )}
           {currencies.map((code) => {
             const rate = draft.rates[code]
-            const bad = tried && !DECIMAL.test(rate?.rate.trim() ?? "")
+            const bad = tried && !isShipmentDecimal(rate?.rate ?? "")
             return (
               <fieldset
                 key={code}
@@ -356,13 +227,7 @@ export function ShipmentDraftForm({
     )
 
   if (step === "costs" && detail) {
-    const freightMinor = BigInt(detail.totals.freightMinor)
-    const handMinor = draft.lines.reduce(
-      (sum, l) =>
-        sum + BigInt(shipmentMajorToMinor(l.freightOverride || "0") ?? "0"),
-      BigInt(0),
-    )
-    const left = freightMinor - handMinor
+    const left = shipmentHandFreightLeftMinor(draft, detail.totals.freightMinor)
     return (
       <SheetFrame
         title="Costs"
@@ -603,7 +468,14 @@ export function ShipmentDraftForm({
             <Button
               variant="outline"
               disabled={draft.lines.length >= 50}
-              onClick={() => set({ lines: [...draft.lines, emptyLine()] })}
+              onClick={() =>
+                set({
+                  lines: [
+                    ...draft.lines,
+                    emptyShipmentLine(crypto.randomUUID()),
+                  ],
+                })
+              }
             >
               <HugeiconsIcon icon={PlusSignIcon} data-icon="inline-start" />
               Add item

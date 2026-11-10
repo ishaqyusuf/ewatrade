@@ -42,6 +42,7 @@
     "./inventory-categories": "./src/inventory-categories.ts",
     "./exact-decimal": "./src/exact-decimal.ts",
     "./shipments": "./src/shipments.ts",
+    "./shipment-draft": "./src/shipment-draft.ts",
     "./insurance-documents": "./src/insurance-documents.ts",
     "./qa-profiles": "./src/qa-profiles.ts",
     "./qa-accelerator": "./src/qa-accelerator.ts",
