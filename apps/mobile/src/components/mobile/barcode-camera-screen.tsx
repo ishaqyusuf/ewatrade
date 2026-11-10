@@ -340,23 +340,27 @@ export function DockedBarcodeScanner({
         className="absolute inset-x-0 top-0 flex-row items-start justify-between p-3"
         pointerEvents="box-none"
       >
-        <Pressable
-          accessibilityLabel={
-            torch ? "Turn off flashlight" : "Turn on flashlight"
-          }
-          accessibilityRole="switch"
-          accessibilityState={{ checked: torch }}
-          className={round}
-          disabled={!permission?.granted}
-          haptic
-          onPress={() => setTorch((on) => !on)}
-        >
-          <Icon
-            className="size-[22px]"
-            color={onCamera}
-            name={torch ? "FlashOff" : "Flashlight"}
-          />
-        </Pressable>
+        {permission?.granted ? (
+          <Pressable
+            accessibilityLabel={
+              torch ? "Turn off flashlight" : "Turn on flashlight"
+            }
+            accessibilityRole="switch"
+            accessibilityState={{ checked: torch }}
+            className={round}
+            disabled={!permission?.granted}
+            haptic
+            onPress={() => setTorch((on) => !on)}
+          >
+            <Icon
+              className="size-[22px]"
+              color={onCamera}
+              name={torch ? "FlashOff" : "Flashlight"}
+            />
+          </Pressable>
+        ) : (
+          <View />
+        )}
         <Pressable
           accessibilityLabel="Close scanner"
           accessibilityRole="button"
@@ -367,17 +371,19 @@ export function DockedBarcodeScanner({
           <Icon className="size-[22px]" color={onCamera} name="X" />
         </Pressable>
       </View>
-      <View
-        className="absolute inset-x-0 bottom-0 items-center px-4 pb-4"
-        pointerEvents="none"
-      >
-        <Text className="rounded-full bg-overlay px-3.5 py-1.5 text-xs font-bold text-cream">
-          {error ||
-            (unusable
-              ? "That code isn't a product code. Try the item's barcode."
-              : "Point at a barcode or QR code. Keep scanning to add more.")}
-        </Text>
-      </View>
+      {permission?.granted || error ? (
+        <View
+          className="absolute inset-x-0 bottom-0 items-center px-4 pb-4"
+          pointerEvents="none"
+        >
+          <Text className="rounded-full bg-overlay px-3.5 py-1.5 text-xs font-bold text-cream">
+            {error ||
+              (unusable
+                ? "That code isn't a product code. Try the item's barcode."
+                : "Point at a barcode or QR code. Keep scanning to add more.")}
+          </Text>
+        </View>
+      ) : null}
     </View>
   )
 }
