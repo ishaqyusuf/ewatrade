@@ -104,7 +104,7 @@ test("actual General renderer styles authoritative facts and suppresses conflict
     { type: "text", text: "I sold 100 pieces." },
     { type: "data-general-answer", data: answer },
   ])
-  expect(rendered.version).toBe("whatsapp-reply-v3")
+  expect(rendered.version).toBe("whatsapp-reply-v4")
   const text = rendered.chunks.join("\n")
   expect(text).toContain("📋 *Egg stock*\n\n*90 pieces*")
   expect(text).toContain("*Scope:* Main Store")

@@ -36,6 +36,7 @@ export function onboardingAppAssociations(env: AssociationEnvironment) {
     `${basePath}/api/early-access/verify`,
     // Saved-Product links open the installed app; see /open/catalog-item.
     `${basePath}/open/catalog-item/*`,
+    `${basePath}/open/assistant-response/*`,
   ]
   const packageName = `com.ewatrade.${suffix}`
   const appID = env.EWATRADE_APPLE_APP_SITE_ASSOCIATION_APP_IDS?.trim()

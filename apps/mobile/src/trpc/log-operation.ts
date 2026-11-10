@@ -8,6 +8,9 @@ export function shouldLogMobileTrpcOperation(
     !options.path.startsWith("auth.") &&
     !options.path.startsWith("customerMessages.") &&
     !options.path.startsWith("assistantChannels.") &&
+    !["assistant.responseLink", "assistant.conversation"].includes(
+      options.path,
+    ) &&
     (environment === "development" ||
       (options.direction === "down" && options.result instanceof Error))
   )

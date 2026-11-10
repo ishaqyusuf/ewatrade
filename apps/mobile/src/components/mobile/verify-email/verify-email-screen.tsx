@@ -3,6 +3,7 @@ import { OtpInput } from "@/components/mobile/otp-input"
 import { OtpKeypad } from "@/components/mobile/otp-keypad"
 import { Toast } from "@/components/ui/toast"
 import { useAuthContext } from "@/hooks/use-auth"
+import { assistantResponseLoginDestination } from "@/lib/assistant-response-link"
 import { clearPendingOnboarding } from "@/lib/onboarding-continuation-store"
 import { getStoredQaAuthorization } from "@/lib/qa-authorization-store"
 import { useOnboardingStore } from "@/store/onboardingStore"
@@ -171,7 +172,9 @@ export function VerifyEmailScreen() {
         },
         token: session.token,
       },
-      returnTo?.startsWith("/(customer)/") ? returnTo : "/",
+      returnTo?.startsWith("/(customer)/")
+        ? returnTo
+        : (assistantResponseLoginDestination(returnTo) ?? "/"),
     )
   }
   const requestPhoneMutation = useMutation(

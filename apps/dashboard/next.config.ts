@@ -85,6 +85,9 @@ export const nextConfig: NextConfig = {
         ...onboardingRequestLogIgnore,
         /(?:^|\/)(?:assistant-review|r\/[^/?]+)(?:\/?\?|\/?$)/,
         /(?:^|\/)(?:pay|p)\/[^/?]+/,
+        /\/open\/assistant-response\/[^/?]+/,
+        /\/assistant\/c\/[^/?]+\?[^#]*messageId=/,
+        /\/login\?(?:[^#]*&)?next=(?:%2[fF]|\/)open(?:%2[fF]|\/)assistant-response(?:%2[fF]|\/)/,
         /\/login\?(?:[^#]*&)?next=(?:%2[fF]|\/)(?:pay|p)(?:%2[fF]|\/)/,
       ],
     },
@@ -99,6 +102,8 @@ export const nextConfig: NextConfig = {
       { source: "/signup", headers: onboardingSignupResponseHeaders },
       { source: "/assistant-review", headers: reviewHeaders },
       { source: "/r/:handle", headers: reviewHeaders },
+      { source: "/open/assistant-response/:messageId", headers: reviewHeaders },
+      { source: "/assistant/c/:id", headers: reviewHeaders },
     ]
   },
   pageExtensions: isInternalQaBuild()
@@ -133,6 +138,7 @@ export const nextConfig: NextConfig = {
     "@ewatrade/events",
     "@ewatrade/catalog",
     "@ewatrade/api",
+    "@ewatrade/assistant",
     "@ewatrade/db",
     "@ewatrade/errors",
     "@ewatrade/observability",

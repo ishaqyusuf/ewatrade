@@ -62,3 +62,25 @@ test("payment links and payment login returns are omitted from application reque
   expect(hidden("/inventory")).toBe(false)
   expect(hidden("/login?next=%2Finventory")).toBe(false)
 })
+
+test("saved response navigation keeps private headers and omits locators from request logs", async () => {
+  const hidden = (path: string) =>
+    nextConfig.logging.incomingRequests.ignore.some((pattern) =>
+      pattern.test(path),
+    )
+  for (const path of [
+    "/open/assistant-response/saved_message",
+    "/assistant/c/chat?messageId=saved_message",
+    "/login?next=%2Fopen%2Fassistant-response%2Fsaved_message",
+  ])
+    expect(hidden(path)).toBe(true)
+  const headers = await nextConfig.headers()
+  expect(headers).toContainEqual({
+    source: "/open/assistant-response/:messageId",
+    headers: expect.arrayContaining([
+      { key: "Cache-Control", value: "private, no-store, max-age=0" },
+      { key: "Referrer-Policy", value: "no-referrer" },
+    ]),
+  })
+  expect(nextConfig.transpilePackages).toContain("@ewatrade/assistant")
+})

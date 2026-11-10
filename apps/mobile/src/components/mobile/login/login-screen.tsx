@@ -22,6 +22,7 @@ import { useAuthContext } from "@/hooks/use-auth"
 import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
 import { useMobileAppleAuth } from "@/hooks/use-mobile-apple-auth"
 import { useMobileGoogleAuth } from "@/hooks/use-mobile-google-auth"
+import { assistantResponseLoginDestination } from "@/lib/assistant-response-link"
 import { useOnboardingStore } from "@/store/onboardingStore"
 import { useTRPC } from "@/trpc/client"
 import { getCountry, toInternationalPhone } from "@ewatrade/utils/countries"
@@ -90,7 +91,7 @@ export function LoginScreen() {
     typeof params.returnTo === "string" &&
     params.returnTo.startsWith("/(customer)/")
       ? params.returnTo
-      : undefined
+      : assistantResponseLoginDestination(params.returnTo)
   const appleAuth = useMobileAppleAuth({
     mode: "login",
     onError: setError,

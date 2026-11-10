@@ -88,6 +88,7 @@ export function AskAssistantLive() {
   const [composerHeight, setComposerHeight] = useState(0)
   const input = useRef<TextInput>(null)
   const atBottom = useRef(true)
+  const focusedResponse = useRef<string | null>(null)
   const disabled =
     vm.offline ||
     vm.scopeChanged ||
@@ -218,8 +219,8 @@ export function AskAssistantLive() {
   }, [vm.offline, vm.scopeChanged])
   // A chat opens at its newest message and follows it as the thread loads.
   useEffect(() => {
-    if (vm.conversationId) atBottom.current = true
-  }, [vm.conversationId])
+    if (vm.conversationId) atBottom.current = !vm.responseMessageId
+  }, [vm.conversationId, vm.responseMessageId])
   const messages = vm.scopeChanged
     ? []
     : vm.offline
@@ -285,6 +286,14 @@ export function AskAssistantLive() {
         <FlatList
           ref={list}
           data={messages}
+          initialNumToRender={vm.responseMessageId ? 42 : 10}
+          onScrollToIndexFailed={({ index, averageItemLength }) => {
+            focusedResponse.current = null
+            list.current?.scrollToOffset({
+              offset: averageItemLength * index,
+              animated: false,
+            })
+          }}
           keyExtractor={(item) => item.id}
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={{
@@ -306,6 +315,24 @@ export function AskAssistantLive() {
           // the top. The native scroll view scrolls to its real end once the
           // new content is laid out.
           onContentSizeChange={() => {
+            const responseId = vm.data?.responseMessage?.id
+            if (responseId && focusedResponse.current !== responseId) {
+              const index = messages.findIndex(
+                (message) => message.id === responseId,
+              )
+              if (index >= 0) {
+                atBottom.current = false
+                focusedResponse.current = responseId
+                requestAnimationFrame(() =>
+                  list.current?.scrollToIndex({
+                    index,
+                    animated: false,
+                    viewPosition: 0.25,
+                  }),
+                )
+                return
+              }
+            }
             // The home reads from the top; only a thread follows its end.
             if (atBottom.current && !home)
               requestAnimationFrame(() =>
@@ -427,6 +454,16 @@ export function AskAssistantLive() {
               item.role === "assistant" ? generalAnswers(item.parts) : []
             return (
               <View className="gap-3">
+                {item.id === vm.data?.responseMessage?.latestStartId ? (
+                  <Text className="border-t border-border pt-3 text-xs text-muted-foreground">
+                    Recent messages
+                  </Text>
+                ) : null}
+                {item.id === vm.data?.responseMessage?.id ? (
+                  <Text className="text-xs text-muted-foreground">
+                    Saved response from WhatsApp
+                  </Text>
+                ) : null}
                 <AssistantDayMarker times={times} ids={ids} index={index} />
                 {item.role === "user"
                   ? item.parts.flatMap((part) =>

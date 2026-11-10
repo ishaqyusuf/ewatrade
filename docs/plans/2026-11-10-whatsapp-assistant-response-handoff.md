@@ -1,5 +1,16 @@
 # WhatsApp assistant response handoff and alternate delivery plan
 
+## 10 November implementation checkpoint
+
+Owner approved Hybrid03v42 (`a8810486-c7b7-454d-9f7b-375f9710d843`) and asked to
+implement compact previews/response links. Owner also explicitly ended all updates
+to the ChatGPT review Site. Local source is implemented; exact crossover acceptance
+is pending a refresh of the existing shared API and focused smoke. Source checks
+and differences from illustrative preview content are in the
+[implementation receipt](../verification/2026-11-10-whatsapp-response-links-implementation.md).
+Quota/fallback delivery slices remain planned. No rollout is authorized here.
+
+
 Date: 10 November 2026. Source baseline: `6d5295eb4` on the existing `main` checkout.
 Status: proposed product and engineering plan; implementation has not started.
 

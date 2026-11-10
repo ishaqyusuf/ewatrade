@@ -20,6 +20,44 @@ const conversationId = z
     "Choose a saved conversation identity",
   )
 
+/** A navigation identity, never a credential or permission grant. */
+export const assistantResponseMessageId = z
+  .string()
+  .regex(/^[A-Za-z0-9_-]{1,128}$/)
+
+export function assistantResponsePath(messageId: string) {
+  return `/open/assistant-response/${assistantResponseMessageId.parse(messageId)}`
+}
+
+export function assistantResponseConversationPath(input: {
+  conversationId: string
+  messageId: string
+}) {
+  const chat = conversationId.parse(input.conversationId)
+  const message = assistantResponseMessageId.parse(input.messageId)
+  return `/assistant/c/${encodeURIComponent(chat)}?messageId=${message}`
+}
+
+export function assistantResponseAppLink(
+  messageId: unknown,
+  options: {
+    trustedAppOrigin: string
+    currentScope: ReadRecordOrigin
+    conversation: unknown
+  },
+): { href: string; label: string } | undefined {
+  const message = assistantResponseMessageId.safeParse(messageId)
+  const chat = conversationAppLink(options.conversation, options)
+  if (!message.success || !chat) return
+  return {
+    href: new URL(
+      assistantResponsePath(message.data),
+      new URL(chat.href).origin,
+    ).href,
+    label: "View full response",
+  }
+}
+
 /** Navigation identity only. The canonical conversation reader owns authorization. */
 export const generalConversationTargetSchema = z
   .object({

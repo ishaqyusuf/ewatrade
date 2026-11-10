@@ -6,11 +6,11 @@ Tickets refer to the Brain plan `.brain/plans/2026-10-09-assistant-business-oper
 
 ## Summary
 
-- Router procedures: 813 (617 merchant, 196 public/account/internal)
+- Router procedures: 814 (618 merchant, 196 public/account/internal)
 - Merchant supported by a capability: 185
 - Merchant planned: 142
 - Merchant form-only: 228
-- Merchant excluded: 62
+- Merchant excluded: 63
 - Capabilities: 169 (88 read, 81 write)
 
 ## Capabilities
@@ -415,6 +415,7 @@ track conversational evaluation separately from these source test links.
 | `assistant.editProposal` | mutation | read | assistant | excluded | Assistant transport or a dedicated assistant flow. |
 | `assistant.editReviewLink` | mutation | read | assistant | excluded | Assistant transport or a dedicated assistant flow. |
 | `assistant.pendingProposals` | query | Owner/Admin only | assistant | excluded | Assistant transport or a dedicated assistant flow. |
+| `assistant.responseLink` | mutation | read | assistant | excluded | Assistant transport or a dedicated assistant flow. |
 | `assistant.reviewLink` | mutation | read | assistant | excluded | Assistant transport or a dedicated assistant flow. |
 | `assistant.saleOptions` | query | Owner/Admin only | sales | supported | sales.order.record_simple |
 | `assistant.simpleExpenseOptions` | query | Owner/Admin only | assistant | excluded | Assistant transport or a dedicated assistant flow. |

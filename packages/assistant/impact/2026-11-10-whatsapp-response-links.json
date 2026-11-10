@@ -1,0 +1,54 @@
+{
+  "version": 1,
+  "id": "2026-11-10-whatsapp-response-links",
+  "tickets": ["H01", "H02"],
+  "summary": "Implement selected v42 compact read previews and authenticated exact saved-response navigation using canonical General messages, scope readers and web/native UI. Navigation has no model/write authority. Local source verified; shared runtime crossover and signed native/live delivery remain unaccepted. Owner ended ChatGPT review Site updates.",
+  "capabilities": [],
+  "procedures": [
+    {
+      "path": "assistant.responseLink",
+      "status": "excluded",
+      "reason": "Read-only transport POST for actor-owned response navigation; current original business/Store and scoped staff access are rechecked. No model tool, content return or workspace mutation."
+    }
+  ],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/whatsapp-assistant.md"
+    },
+    {
+      "topic": "api",
+      "status": "local_only",
+      "path": ".brain/api/contracts.md"
+    },
+    {
+      "topic": "permissions",
+      "status": "local_only",
+      "path": ".brain/api/permissions.md"
+    },
+    {
+      "topic": "decision",
+      "status": "local_only",
+      "path": ".brain/decisions/2026-11-10-whatsapp-response-navigation.md"
+    },
+    {
+      "topic": "capability",
+      "status": "updated",
+      "path": "packages/assistant/src/capabilities/COVERAGE.md"
+    },
+    {
+      "topic": "schema",
+      "status": "not_applicable",
+      "note": "This response-link slice uses existing AssistantMessage/AssistantRun and outbox fields; no schema or migration change. Concurrent catalog image schema work is owned separately and is not covered by this record or verification."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "run",
+      "path": "docs/verification/2026-11-10-whatsapp-response-links-implementation.md",
+      "executed": true,
+      "result": "69 focused tests/369 assertions;285 owned source smoke/1820 assertions. Runtime qa:smoke failed; actual response lookup404 pending shared-stack refresh. No deployment, native build or Site update."
+    }
+  ]
+}

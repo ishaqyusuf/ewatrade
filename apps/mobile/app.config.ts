@@ -46,6 +46,7 @@ const { getOnboardingLinkConfig } = require("./onboarding-link-config.cjs") as {
     host: string | null
     paths: string[]
     recordPathPrefix: string
+    responsePathPrefix: string
   } | null
 }
 const onboardingLinks = getOnboardingLinkConfig(
@@ -261,6 +262,11 @@ const config: ExpoConfig = {
                   scheme: "https",
                   host: onboardingLinks.host ?? undefined,
                   pathPrefix: onboardingLinks.recordPathPrefix,
+                },
+                {
+                  scheme: "https",
+                  host: onboardingLinks.host ?? undefined,
+                  pathPrefix: onboardingLinks.responsePathPrefix,
                 },
               ],
             },

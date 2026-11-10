@@ -6,8 +6,10 @@ import {
 } from "../general/contracts"
 import type { ReadRecordOrigin } from "../general/read-record-target"
 import { capabilityActionHandoffLink } from "./capability-action-handoff"
+import { compactWhatsAppReadPreview } from "./compact-preview"
 import {
   type GeneralConversationTarget,
+  assistantResponseAppLink,
   conversationAppLink,
 } from "./conversation-links"
 import {
@@ -21,11 +23,12 @@ import {
 } from "./presentation"
 import { plannedReportAppLink, readRecordAppLink } from "./read-record-links"
 
-export const WHATSAPP_RENDER_VERSION = "whatsapp-reply-v3"
+export const WHATSAPP_RENDER_VERSION = "whatsapp-reply-v4"
 export function supportedWhatsAppReplyRenderer(version: string) {
   return [
     "whatsapp-reply-v1",
     "whatsapp-reply-v2",
+    "whatsapp-reply-v3",
     WHATSAPP_RENDER_VERSION,
   ].includes(version)
 }
@@ -80,6 +83,7 @@ type ReadLinkOptions = {
   trustedAppOrigin?: string
   currentScope?: ReadRecordOrigin
   conversation?: GeneralConversationTarget
+  messageId?: string
   includeContext?: boolean
 }
 /** The owner's line: the short summary when the read wrote one, else its detail. */
@@ -258,6 +262,32 @@ export function renderWhatsAppFinalReply(
     if (parsed.data.type === "data-general-answer")
       answers.push(parsed.data.data)
     else texts.push(whatsAppModelText(parsed.data.text))
+  }
+  const responseLink =
+    options.trustedAppOrigin && options.currentScope
+      ? assistantResponseAppLink(options.messageId, {
+          trustedAppOrigin: options.trustedAppOrigin,
+          currentScope: options.currentScope,
+          conversation: options.conversation,
+        })
+      : undefined
+  const compact = responseLink ? compactWhatsAppReadPreview(answers) : null
+  if (compact && responseLink) {
+    const content = `${scopeLabel ? `${whatsAppBold(scopeLabel)}\n\n` : ""}${compact}\n\n${responseLink.label}:\n${responseLink.href}`
+    // A malformed/oversized name never splits a fact or manufactures a partial URL.
+    if (content.length <= WHATSAPP_REPLY_CHUNK_UNITS)
+      return {
+        version: WHATSAPP_RENDER_VERSION,
+        kind: "reply",
+        chunks: [content],
+      }
+    return {
+      version: WHATSAPP_RENDER_VERSION,
+      kind: "app_review",
+      chunks: [
+        `${scopeLabel ? `${whatsAppBold(scopeLabel)}\n\n` : ""}Your full response is saved in EwaTrade.\n\n${responseLink.label}:\n${responseLink.href}`,
+      ],
+    }
   }
   // Server-built facts supersede model narration; all precise money remains authoritative strings.
   const formattedAnswers = answers.map((answer, index) =>

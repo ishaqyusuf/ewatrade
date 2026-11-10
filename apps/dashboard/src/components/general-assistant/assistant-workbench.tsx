@@ -50,6 +50,7 @@ export function AssistantWorkbench() {
   const vm = useGeneralAssistant({
     initialConversationId: routeTarget,
     blankStart: true,
+    responseMessageId: search.get("messageId"),
   })
   const router = useRouter()
   const { enabled, navigationDisabled } = generalChatFlags(vm)

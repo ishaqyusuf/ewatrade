@@ -1,4 +1,5 @@
 import { isDevelopmentAppVariant } from "@/lib/app-variant"
+import { resolveAssistantResponseLink } from "@/lib/assistant-response-link"
 import {
   initializeCustomerConversationStore,
   setPendingCustomerTransfer,
@@ -14,6 +15,7 @@ import {
   savePendingOnboarding,
 } from "@/lib/onboarding-continuation-store"
 import { resolveSavedRecordLink } from "@/lib/saved-record-link"
+import Constants from "expo-constants"
 
 let continuationAttempt = 0
 
@@ -47,6 +49,14 @@ export async function redirectSystemPath({
   } catch {
     dashboardUrl = undefined
   }
+  const response = resolveAssistantResponseLink(
+    path,
+    dashboardUrl,
+    typeof Constants.expoConfig?.scheme === "string"
+      ? Constants.expoConfig.scheme
+      : "ewatrade",
+  )
+  if (response) return response
   const savedRecord = resolveSavedRecordLink(path, dashboardUrl)
   if (savedRecord) return savedRecord
   const qaPath = resolveCustomerConversationQaPath(path, __DEV__)

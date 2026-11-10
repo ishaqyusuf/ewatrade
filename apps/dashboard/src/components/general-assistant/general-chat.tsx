@@ -50,7 +50,7 @@ import {
 import { HugeiconsIcon } from "@hugeicons/react"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import Link from "next/link"
-import { Fragment, type ReactNode, useEffect, useState } from "react"
+import { Fragment, type ReactNode, useEffect, useRef, useState } from "react"
 import { Streamdown } from "streamdown"
 import { StickToBottom } from "use-stick-to-bottom"
 import { AssistantComposer } from "./assistant-composer"
@@ -201,6 +201,29 @@ export function GeneralThread({
       : null,
   )
   const [highlight, setHighlight] = useState<string | null>(null)
+  const responseFocused = useRef<string | null>(null)
+  const responseId = vm.data?.responseMessage?.id
+  const visibleMessages =
+    vm.responseMessageId && responseId !== vm.responseMessageId
+      ? []
+      : vm.chat.messages
+  useEffect(() => {
+    if (
+      !responseId ||
+      !visibleMessages.some((message) => message.id === responseId) ||
+      responseFocused.current === responseId
+    )
+      return
+    const frame = requestAnimationFrame(() => {
+      const element = document.getElementById(`general-message-${responseId}`)
+      if (element) {
+        element.scrollIntoView({ block: "center", behavior: "instant" })
+        element.focus({ preventScroll: true })
+        responseFocused.current = responseId
+      }
+    })
+    return () => cancelAnimationFrame(frame)
+  }, [responseId, visibleMessages])
   const { enabled, disabled, exhausted, currencyCode } = generalChatFlags(vm)
   const last = vm.chat.messages.at(-1)
   // Cards show under the reply that drafted them; see placeProposals.
@@ -326,7 +349,7 @@ export function GeneralThread({
     <>
       <StickToBottom
         className="relative min-h-0 min-w-0 flex-1 overflow-y-auto"
-        initial="instant"
+        initial={vm.responseMessageId ? false : "instant"}
         resize="smooth"
         role="log"
       >
@@ -427,14 +450,21 @@ export function GeneralThread({
               <GeneralSuggestions vm={vm} />
             </div>
           ) : null}
-          {vm.chat.messages.map((message) => {
+          {visibleMessages.map((message) => {
             const text = generalPlainText(message.parts)
+            const divider =
+              message.id === vm.data?.responseMessage?.latestStartId ? (
+                <p className="border-t pt-4 text-xs text-muted-foreground">
+                  Recent messages
+                </p>
+              ) : null
             if (message.role === "user") {
               const files = message.parts.flatMap((part) =>
                 part.type === "data-setup-attachment" ? [part.data] : [],
               )
               return (
                 <Fragment key={message.id}>
+                  {divider}
                   <div className="flex flex-col items-end gap-1.5">
                     {files.map((file) => (
                       <GeneralSentFile key={file.attachmentId} file={file} />
@@ -458,7 +488,17 @@ export function GeneralThread({
             const streaming = vm.busy && message.id === last?.id
             return (
               <Fragment key={message.id}>
-                <div className="flex min-w-0 flex-col gap-2 text-foreground">
+                {divider}
+                <div
+                  id={`general-message-${message.id}`}
+                  tabIndex={-1}
+                  className="flex min-w-0 scroll-mt-6 flex-col gap-2 text-foreground focus:outline-none"
+                >
+                  {message.id === responseId ? (
+                    <p className="text-xs text-muted-foreground">
+                      Saved response from WhatsApp
+                    </p>
+                  ) : null}
                   {text ? (
                     <Streamdown
                       className={cn(

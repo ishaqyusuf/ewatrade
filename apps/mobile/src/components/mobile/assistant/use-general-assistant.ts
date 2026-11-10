@@ -47,11 +47,14 @@ export function useGeneralAssistant() {
     query?: string | string[]
     draft?: string | string[]
     conversationId?: string | string[]
+    messageId?: string
   }>()
   const requested = assistantRouteConversation(params.conversationId)
-  const requestedKey = JSON.stringify(requested)
+  const requestedKey = JSON.stringify([requested, params.messageId ?? null])
   const [releasedRoute, setReleasedRoute] = useState<string | null>(null)
   const exactRoute = requested.kind !== "none" && releasedRoute !== requestedKey
+  const responseMessageId =
+    exactRoute && typeof params.messageId === "string" ? params.messageId : null
   const [routeStartedAt, setRouteStartedAt] = useState(Date.now)
   const auth = useAuthContext()
   const trpc = useTRPC()
@@ -127,7 +130,10 @@ export function useGeneralAssistant() {
   )
   const state = useQuery(
     trpc.assistant.conversation.queryOptions(
-      { conversationId: conversationId ?? "" },
+      {
+        conversationId: conversationId ?? "",
+        ...(responseMessageId ? { messageId: responseMessageId } : {}),
+      },
       {
         enabled:
           canWork() && availability.data?.enabled === true && !!conversationId,
@@ -153,7 +159,9 @@ export function useGeneralAssistant() {
         state.data,
         requested.conversationId,
         assistantScope(origin),
-      ))
+      ) &&
+      (!responseMessageId ||
+        state.data?.responseMessage?.id === responseMessageId))
   const routeUnavailable = exactRoute && !exactRouteReady
   const server = useMemo(
     () => (exactRouteReady ? readGeneralSnapshot(state.data) : null),
@@ -592,6 +600,7 @@ export function useGeneralAssistant() {
     setNotice(null)
   }
   return {
+    responseMessageId,
     composerConversationId:
       offline || scopeChanged || routeUnavailable || sessionUnavailable
         ? null

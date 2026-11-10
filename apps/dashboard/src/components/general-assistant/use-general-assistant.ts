@@ -35,6 +35,7 @@ export function useGeneralAssistant({
   autoStart = false,
   initialConversationId = null,
   blankStart = false,
+  responseMessageId: requestedResponseMessageId = null,
 }: {
   /** Visibility controls idle reads; pending commands and recovery keep their owner. */
   active?: boolean
@@ -46,6 +47,7 @@ export function useGeneralAssistant({
    * creates the conversation (the assistant page's /assistant).
    */
   blankStart?: boolean
+  responseMessageId?: string | null
 } = {}) {
   const workflow = useDashboardWorkflow()
   const typed = useRef(false)
@@ -109,17 +111,41 @@ export function useGeneralAssistant({
       retry: false,
     }),
   )
+  const responseMessageId =
+    conversationId === initialConversationId ? requestedResponseMessageId : null
   const state = useQuery(
     trpc.assistant.conversation.queryOptions(
-      { conversationId: conversationId ?? "" },
+      {
+        conversationId: conversationId ?? "",
+        ...(responseMessageId ? { messageId: responseMessageId } : {}),
+      },
       {
         enabled: enabled && readActive && !!conversationId,
         retry: false,
         refetchOnWindowFocus: false,
+        ...(responseMessageId
+          ? { staleTime: 0, refetchOnMount: "always" as const }
+          : {}),
       },
     ),
   )
-  const data = useMemo(() => readGeneralSnapshot(state.data), [state.data])
+  const data = useMemo(() => {
+    if (
+      responseMessageId &&
+      (!state.isSuccess ||
+        state.isError ||
+        !state.isFetchedAfterMount ||
+        state.data?.responseMessage?.id !== responseMessageId)
+    )
+      return null
+    return readGeneralSnapshot(state.data)
+  }, [
+    state.data,
+    state.isSuccess,
+    state.isError,
+    state.isFetchedAfterMount,
+    responseMessageId,
+  ])
   const start = useMutation(trpc.assistant.start.mutationOptions())
   const decide = useMutation(trpc.assistant.decideProposal.mutationOptions())
   const edit = useMutation(trpc.assistant.editProposal.mutationOptions())
@@ -601,6 +627,7 @@ export function useGeneralAssistant({
     setNotice(null)
   }
   return {
+    responseMessageId,
     uploadStartedConversation: fileStartedConversation.current,
     initialFiles,
     consumeInitialFiles: () => setInitialFiles([]),

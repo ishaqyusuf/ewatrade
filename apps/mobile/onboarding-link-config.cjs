@@ -35,6 +35,7 @@ function getOnboardingLinkConfig(variant, configured) {
     paths: [`${base}/signup`, `${base}/api/early-access/verify`],
     // Saved-Product links from WhatsApp/assistant (dashboard redirects on web).
     recordPathPrefix: `${base}/open/catalog-item/`,
+    responsePathPrefix: `${base}/open/assistant-response/`,
   }
 }
 

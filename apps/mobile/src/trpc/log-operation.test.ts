@@ -130,3 +130,14 @@ describe("mobile tRPC operation logging", () => {
     ).toBe(false)
   })
 })
+
+test("saved response and focused chat payloads stay out of client logs", () => {
+  for (const path of ["assistant.responseLink", "assistant.conversation"])
+    for (const direction of ["up", "down"] as const)
+      expect(
+        shouldLogMobileTrpcOperation(
+          { path, direction, result: new Error("private") },
+          "development",
+        ),
+      ).toBe(false)
+})

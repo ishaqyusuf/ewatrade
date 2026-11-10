@@ -201,6 +201,7 @@ export async function stageAssistantWhatsAppOutboxInTransaction(
   if (!run.assistantMessageId || !run.assistantMessage)
     throw new AssistantWhatsAppError("UNAUTHORIZED")
   const ordinary = renderWhatsAppFinalReply(run.assistantMessage.parts, {
+    messageId: run.assistantMessageId,
     scopeLabel,
     currentScope: navigationScope,
     conversation:
@@ -221,6 +222,48 @@ export async function stageAssistantWhatsAppOutboxInTransaction(
           : []
       })
     : []
+  const prior = await db.assistantWhatsAppOutbox.findMany({
+    where: { inboxId: inbox.id, responseRevision: 1 },
+    orderBy: { chunkIndex: "asc" },
+  })
+  // Settled ordinary replies are immutable across renderer upgrades. Recovery
+  // validates their provenance/integrity, never rewrites or requeues them.
+  if (
+    prior.length &&
+    !workflow &&
+    !review &&
+    !webReview &&
+    !references.length &&
+    prior.every((row) =>
+      ["whatsapp-reply-v1", "whatsapp-reply-v2", "whatsapp-reply-v3"].includes(
+        row.rendererVersion,
+      ),
+    )
+  ) {
+    const first = prior[0]
+    if (!first) throw new AssistantWhatsAppError("CONFLICT")
+    if (
+      prior.length > 16 ||
+      prior.some(
+        (row, index) =>
+          row.runId !== run.id ||
+          row.messageId !== run.assistantMessageId ||
+          row.phoneNumberId !== inbox.phoneNumberId ||
+          row.authorityDigest !== authorityDigest ||
+          row.rendererVersion !== first.rendererVersion ||
+          row.renderKind !== first.renderKind ||
+          !["reply", "app_review"].includes(row.renderKind) ||
+          row.chunkIndex !== index ||
+          row.chunkCount !== prior.length ||
+          !row.content ||
+          row.content.length > 3000 ||
+          row.contentDigest !==
+            createHash("sha256").update(row.content).digest("hex"),
+      )
+    )
+      throw new AssistantWhatsAppError("CONFLICT")
+    return { staged: prior.length, kind: first.renderKind }
+  }
   const exactReview =
     review &&
     principal &&
@@ -336,10 +379,6 @@ export async function stageAssistantWhatsAppOutboxInTransaction(
         exactWebReview && webReview ? webReview.expiresAt : inbox.expiresAt,
     })),
   ]
-  const prior = await db.assistantWhatsAppOutbox.findMany({
-    where: { inboxId: inbox.id, responseRevision: 1 },
-    orderBy: { chunkIndex: "asc" },
-  })
   if (prior.length) {
     if (
       prior.length !== chunks.length ||

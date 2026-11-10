@@ -9,6 +9,8 @@ export function shouldLogDashboardTrpcOperation(
     !options.path.startsWith("assistantChannels.") &&
     ![
       "assistant.reviewLink",
+      "assistant.responseLink",
+      "assistant.conversation",
       "assistant.decideReviewLink",
       "assistant.editReviewLink",
     ].includes(options.path) &&

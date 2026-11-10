@@ -194,3 +194,14 @@ test("list and payment totals follow their list reads, pinned to the active Stor
     )
   }
 })
+
+test("saved response lookup is a read-only POST for scoped staff, with no wildcard admission", () => {
+  expect(staffProcedureAction("assistant.responseLink", "mutation")).toBe(
+    "read",
+  )
+  expect(staffProcedureAction("assistant.responseLink", "query")).toBeNull()
+  expect(
+    staffProcedureAction("assistant.responseLinkUnsafe", "mutation"),
+  ).toBeNull()
+  expect(staffProcedureStoreInput.has("assistant.responseLink")).toBe(false)
+})

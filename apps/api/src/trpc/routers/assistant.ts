@@ -1,4 +1,5 @@
 import { capabilityForAction } from "@ewatrade/assistant/capabilities/manifest"
+import { assistantResponseMessageId } from "@ewatrade/assistant/channels/conversation-links"
 import { simpleSaleAction } from "@ewatrade/assistant/general/contracts"
 import {
   generalActionSchema,
@@ -13,6 +14,7 @@ import {
   readPendingGeneralProposals,
   startGeneralConversation,
 } from "@ewatrade/db/assistant-general"
+import { readAssistantResponseMessages } from "@ewatrade/db/assistant-response"
 import { TRPCError } from "@trpc/server"
 import { z } from "zod"
 import { readGeneralAllowance } from "../../assistant/general-allowance"
@@ -32,6 +34,7 @@ import { simpleExpenseOptions } from "../../assistant/general-simple-expense"
 import { simpleSaleOptions } from "../../assistant/general-simple-sale"
 import { simpleTransferOptions } from "../../assistant/general-simple-transfer"
 import { assistantMediaAvailability } from "../../assistant/media-availability"
+import { readAssistantResponseLink } from "../../assistant/response-link"
 import {
   decideAssistantReviewLink,
   editAssistantReviewLink,
@@ -40,6 +43,12 @@ import {
 import { createTRPCRouter, protectedProcedure } from "../init"
 const id = z.string().min(1).max(128)
 export const assistantRouter = createTRPCRouter({
+  // Read-only POST: response identities stay out of tRPC query/access-log URLs.
+  responseLink: protectedProcedure
+    .input(z.object({ messageId: assistantResponseMessageId }).strict())
+    .mutation(({ ctx, input }) =>
+      readAssistantResponseLink(ctx, input.messageId),
+    ),
   // Locator resolves through POST, keeping it out of tRPC query URLs and access logs.
   reviewLink: protectedProcedure
     .input(z.object({ token: z.string().min(1).max(2048) }).strict())
@@ -160,7 +169,14 @@ export const assistantRouter = createTRPCRouter({
     })
   }),
   conversation: protectedProcedure
-    .input(z.object({ conversationId: id }).strict())
+    .input(
+      z
+        .object({
+          conversationId: id,
+          messageId: assistantResponseMessageId.optional(),
+        })
+        .strict(),
+    )
     .query(async ({ ctx, input }) => {
       const scope = requireGeneralScope(ctx)
       const conversation = await readGeneralConversation(
@@ -176,6 +192,32 @@ export const assistantRouter = createTRPCRouter({
       const messages = await listAssistantMessages(ctx.db, conversation.id, {
         limit: 40,
       })
+      const source = input.messageId
+        ? await readAssistantResponseMessages(
+            ctx.db,
+            conversation.id,
+            input.messageId,
+          )
+        : null
+      if (input.messageId && !source)
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "This saved response is no longer available.",
+        })
+      const historical = Boolean(
+        source && !messages.some((message) => message.id === source.message.id),
+      )
+      const focusedMessages =
+        historical && source
+          ? [
+              ...(source.question ? [source.question] : []),
+              source.message,
+              ...messages,
+            ].filter(
+              (message, index, rows) =>
+                rows.findIndex((row) => row.id === message.id) === index,
+            )
+          : messages
       const proposals = await readGeneralProposals(
         ctx.db,
         scope,
@@ -188,7 +230,16 @@ export const assistantRouter = createTRPCRouter({
       })
       return {
         conversation,
-        messages,
+        messages: focusedMessages,
+        ...(source
+          ? {
+              responseMessage: {
+                id: source.message.id,
+                historical,
+                latestStartId: historical ? messages[0]?.id : undefined,
+              },
+            }
+          : {}),
         ...history,
         activeRunId: run?.id ?? null,
         allowance: await readGeneralAllowance(ctx.db, scope),

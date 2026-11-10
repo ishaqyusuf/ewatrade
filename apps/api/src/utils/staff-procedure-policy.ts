@@ -198,6 +198,8 @@ export function staffProcedureAction(
       "assistant.editProposal",
       "assistant.decideProposal",
       "assistant.reviewLink",
+      // Read-only POST: original response lookup rechecks actor and workspace.
+      "assistant.responseLink",
       "assistant.decideReviewLink",
       "assistant.editReviewLink",
       // Personal linking controls; repository rechecks fresh actor and Store authority.

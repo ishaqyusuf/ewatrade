@@ -20,7 +20,14 @@ export const generalSnapshotSchema = z.object({
         createdAt: z.coerce.date().optional(),
       }),
     )
-    .max(40),
+    .max(42),
+  responseMessage: z
+    .object({
+      id: z.string(),
+      historical: z.boolean(),
+      latestStartId: z.string().optional(),
+    })
+    .optional(),
   proposals: z.array(generalProposalSchema).max(60),
   /**
    * Saved actions this client cannot show (another client's action, retired

@@ -87,6 +87,8 @@ export function middleware(request: NextRequest) {
     request.nextUrl.pathname === "/login" &&
     isPaymentLoginDestination(request.nextUrl.searchParams.get("next"))
   const reviewContext =
+    request.nextUrl.pathname.startsWith("/open/assistant-response/") ||
+    request.nextUrl.pathname.startsWith("/assistant/c/") ||
     request.nextUrl.pathname === "/assistant-review" ||
     request.nextUrl.pathname.startsWith("/r/") ||
     request.nextUrl.pathname === "/storefront-preview" ||
@@ -96,6 +98,9 @@ export function middleware(request: NextRequest) {
       (request.nextUrl.searchParams
         .get("next")
         ?.startsWith("/assistant-review") ||
+        request.nextUrl.searchParams
+          .get("next")
+          ?.startsWith("/open/assistant-response/") ||
         request.nextUrl.searchParams.get("next")?.startsWith("/r/")))
   const withReviewPrivacy = (response: NextResponse) => {
     if (signupChat) {
