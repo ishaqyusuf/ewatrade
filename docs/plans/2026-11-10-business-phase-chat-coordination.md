@@ -127,3 +127,11 @@ scope, initially using existing Jawdah Poultry QA data. Phase3 does not resume t
 native paid query/transaction loop. R23 remains outstanding; no deployment, provider,
 new native artifact or merchant-data authority is added. All owner-facing updates
 and important decisions continue only in the coordinator chat.
+
+The owner subsequently approved the exact`5e770dbfe` Preview-only pilot rollout
+and explicitly allowed its one executor worktree. Database, Dashboard, Marketing,
+API, Storefront and isolated Preview jobs deployed successfully; matching web smoke
+passed with clean/verified runtime proof. The hold is released after receipt
+validation; the original checkout was preserved and temporary worktree removed.
+Native paid remains OFF/deferred, Production/mobile/provider activation excluded.
+Actual merchant/write/native acceptance is not inferred from this scoped pilot.

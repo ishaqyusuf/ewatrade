@@ -1,11 +1,12 @@
 # Five-phase business feature takeover — 10 November 2026
 
-**Current checkpoint:** Phase3 committed guarded native-sale source in
-`c85d5ff4f`; paid confirmation still fails the required30s transaction limit.
-Native sales remain default-off, with no T10 Workshop implementation receipt or
-paid/Cashier/replay acceptance. Phases1,2,4 have committed focused source repairs.
-The earlier plan-only checkpoints below remain history; current scope and remaining
-work are recorded at the end. No hosted release is accepted.
+**Current checkpoint:** the owner-approved Preview web pilot rolled out at
+`5e770dbfe`; matching existing-data web smoke passed with verified runtime identity.
+Native paid WhatsApp remains disabled and deferred. Phase3's guarded source
+`c85d5ff4f` has no T10 Workshop implementation receipt or paid/Cashier/replay
+acceptance. Phases1,2,4 have committed focused source repairs. The earlier plan-only
+checkpoints remain history; current scope and remaining work are recorded below.
+Production and native artifacts are outside this rollout.
 
 Codex took over the owner's **Business feature inventory and prioritization**
 work in chat `01a1c511-a483-75b0-b017-0152cab33c12`. The original Claude parent
@@ -322,3 +323,66 @@ are excluded. The existing shared `AGENT_CHAT.md` work remains uncommitted and
 outside the selected candidate. Release and schema changes still require explicit
 owner authorization; choosing app-first priority did not grant it. This proposal
 does not accept J06/J11 or replace their outstanding money/report/retry proof.
+
+## Approved Preview pilot rollout — completed
+
+The owner explicitly approved the normal Preview-only rollout of
+`5e770dbfe955caa6ac38f7cdc11923eb10c022d4`, then separately authorized the executor's
+one temporary Git worktree after its actual clean-copy mechanism was inspected.
+The original `main` checkout and uncommitted shared `AGENT_CHAT.md` were preserved.
+All five managed chats held tracked source/config through rollout and smoke; the
+temporary release worktree was removed by the executor afterward.
+
+Executed through the existing root release command:
+
+```sh
+bun run release --preview --mobile skip --yes
+```
+
+The clean-copy candidate hook passed285tests/1,820assertions, QA tooling types and
+source checks, with a fresh `clean:true` receipt for the approved full SHA. Preview
+`db:push` reported schema sync success in18.06s on its isolated configured database;
+this is schema-push evidence, not a separately inspected migration-ledger claim.
+The selected commit was pushed to `origin/preview`. Dashboard, Marketing and API
+reported READY at that candidate. Storefront passed its project/source/route checks
+and serves its Preview alias. Jobs version **20261110.1** deployed successfully to
+the isolated Preview project. All six selected components completed; mobile was
+skipped. The executor returned **exit0**.
+
+Dashboard initially waited in Vercel's concurrent-build capacity queue. A bounded
+metadata read confirmed the exact commit/branch and queue cause; no prerequisite
+error was exposed. No deployment was duplicated or cancelled to clear the queue.
+
+Matching existing-data web smoke completed **10November2026,15:38:54 Africa/Lagos**:
+
+- Exact QA login/account selection.
+- Populated catalog.
+- Correct unsaved sale-draft item and total.
+- Cancel without submitting.
+
+The receipt is **passed**, `clean:true`, `runtimeVerified:true`, with two owned
+runtime IDs. The canonical receipt validators pass against the exact approved SHA,
+current normalized Preview config hash, verification dependency hash and freshness.
+Phase5 independently validated the same existing receipts; no second smoke, extra
+provider request or DB audit was needed for that readback.
+
+Private ignored artifacts retained locally:
+
+- `.scratch/qa-release/rollout-5e770dbfe-preview.log` and its explicit exit JSON.
+- `.scratch/qa-release/fast-5e770dbfe955caa6ac38f7cdc11923eb10c022d4.json`.
+- `.scratch/qa-release/smoke-5e770dbfe955caa6ac38f7cdc11923eb10c022d4-preview-web.json`.
+
+Native paid remains **OFF**: before dispatch, a complete Preview API project and
+paginated linked-shared metadata audit found both plain and `EWATRADE_`-prefixed
+native-review settings absent. The exact `order_create` membership therefore fails
+closed. Jobs carry identifier-only work to the API, where this gate executes. No
+values were decrypted, no activation/configuration was added, and this configuration
+proof is not real-phone/native transaction acceptance.
+
+The [Preview dashboard](https://preview-dashboard.ewatrade.com) is ready for the
+scoped owner QA pilot. No sale/payment, merchant fixture, provider message or new
+public listing was created. Production, Android build/OTA and provider activation
+were excluded. Merchant-specific operating proof, J06/J11 writes, verified camera/
+HTTPS native associations and the deferred native-paid requirement remain separate.
+The72-case statuses remain6PASS/1FAIL/47BLOCKED/18NOT_ASSESSED. Subsequent local
+evidence commits do not change the deployed candidate from`5e770dbfe`.
