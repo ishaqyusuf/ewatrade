@@ -379,7 +379,7 @@ suite(
       expect(body).toContain(generalMoney(12345, "NGN"))
       expect(body).toContain("7.25 Piece")
       expect(body).toContain(
-        `https://dash.ewatrade.com/sales?catalogDetail=${encodeURIComponent(item.id)}`,
+        `https://dash.ewatrade.com/open/catalog-item/${encodeURIComponent(item.id)}`,
       )
       expect(body).toContain(
         `/assistant/c/${encodeURIComponent(conversationId)}`,
@@ -391,7 +391,7 @@ suite(
         ...options,
         currentScope: { tenantId, storeId: `${fixture.marker}-other-store` },
       }).chunks.join("\n")
-      expect(mismatch).not.toContain("/sales?catalogDetail=")
+      expect(mismatch).not.toContain("/open/catalog-item/")
       expect(mismatch).not.toContain("/assistant/c/")
       expect(
         await disconnectAssistantWhatsApp(db, {

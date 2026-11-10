@@ -27,7 +27,7 @@ test("only trusted static record links survive rendering and scope mismatches om
   const text = renderWhatsAppFinalReply(parts, options).chunks.join("")
   expect(text).toContain("Filtered first page; retain query")
   expect(text).toContain(
-    "https://dash.example.test/sales?catalogDetail=eggs%2Fone",
+    "https://dash.example.test/open/catalog-item/eggs%2Fone",
   )
   expect(text).not.toContain("https://record.example")
   expect(text).toContain("original business and Store")

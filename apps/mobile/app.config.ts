@@ -250,11 +250,18 @@ const config: ExpoConfig = {
               action: "VIEW",
               autoVerify: true,
               category: ["BROWSABLE", "DEFAULT"],
-              data: onboardingLinks.paths.map((path) => ({
-                scheme: "https",
-                host: onboardingLinks.host ?? undefined,
-                path,
-              })),
+              data: [
+                ...onboardingLinks.paths.map((path) => ({
+                  scheme: "https",
+                  host: onboardingLinks.host ?? undefined,
+                  path,
+                })),
+                {
+                  scheme: "https",
+                  host: onboardingLinks.host ?? undefined,
+                  pathPrefix: onboardingLinks.recordPathPrefix,
+                },
+              ],
             },
           ]
         : []),

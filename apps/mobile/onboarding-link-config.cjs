@@ -33,6 +33,8 @@ function getOnboardingLinkConfig(variant, configured) {
         ? url.hostname
         : null,
     paths: [`${base}/signup`, `${base}/api/early-access/verify`],
+    // Saved-Product links from WhatsApp/assistant (dashboard redirects on web).
+    recordPathPrefix: `${base}/open/catalog-item/`,
   }
 }
 

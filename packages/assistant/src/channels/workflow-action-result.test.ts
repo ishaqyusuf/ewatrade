@@ -125,3 +125,57 @@ test("queued workflow result content has exact proof identity and refuses creden
     }),
   ).not.toContain("https://untrusted.example")
 })
+test("saved product batches carry one exact app link per record, only in the original scope", () => {
+  const products: WhatsAppWorkflowActionSource = {
+    ...source,
+    purpose: "PRODUCT_CREATE",
+    workflowContextHash: "c".repeat(64),
+    selection: ["product", "product-2"].map((key) => ({
+      ...(source
+        .selection[0] as WhatsAppWorkflowActionSource["selection"][number]),
+      entityId: `entity-${key}`,
+      key,
+    })),
+  }
+  const saved = {
+    ...result,
+    purpose: "PRODUCT_CREATE",
+    results: [
+      {
+        entityId: "entity-product",
+        key: "product",
+        state: "COMMITTED",
+        recordId: "item/oud",
+        kind: "PRODUCT",
+        name: "Oud Royal 50ml",
+      },
+      {
+        entityId: "entity-product-2",
+        key: "product-2",
+        state: "COMMITTED",
+        recordId: "item-ring",
+        kind: "PRODUCT",
+        name: "Silver ring",
+      },
+    ],
+  } satisfies z.input<typeof whatsAppWorkflowActionResultSchema>
+  const body = renderWhatsAppWorkflowActionResult(products, saved, {
+    trustedAppOrigin: "https://dash.example.test",
+    currentScope: products.origin,
+  })
+  expect(body).toContain(
+    "Added product: Oud Royal 50ml\nhttps://dash.example.test/open/catalog-item/item%2Foud",
+  )
+  expect(body).toContain(
+    "Added product: Silver ring\nhttps://dash.example.test/open/catalog-item/item-ring",
+  )
+  const elsewhere = renderWhatsAppWorkflowActionResult(products, saved, {
+    trustedAppOrigin: "https://dash.example.test",
+    currentScope: { ...products.origin, storeId: "other" },
+  })
+  expect(elsewhere).toContain("Added product: Silver ring")
+  expect(elsewhere).not.toContain("/open/catalog-item/")
+  expect(renderWhatsAppWorkflowActionResult(products, saved)).not.toContain(
+    "https://",
+  )
+})

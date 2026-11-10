@@ -28,7 +28,7 @@ test("trusted static routes open exact catalog and order records and honestly la
       options,
     ),
   ).toEqual({
-    href: "https://dash.ewatrade.com/sales?catalogDetail=item-one",
+    href: "https://dash.ewatrade.com/open/catalog-item/item-one",
     label: "Open catalog item in EwaTrade",
     kind: "record",
   })
@@ -118,12 +118,10 @@ test("record identities cannot insert routes, credential parameters or external 
   expect(catalog).toBeDefined()
   expect(order).toBeDefined()
   expect(new URL(catalog?.href ?? "").origin).toBe(options.trustedAppOrigin)
-  expect(new URL(catalog?.href ?? "").searchParams.get("catalogDetail")).toBe(
-    hostile,
+  expect(new URL(catalog?.href ?? "").pathname).toBe(
+    `/open/catalog-item/${encodeURIComponent(hostile)}`,
   )
-  expect([...new URL(catalog?.href ?? "").searchParams.keys()]).toEqual([
-    "catalogDetail",
-  ])
+  expect(new URL(catalog?.href ?? "").search).toBe("")
   expect(new URL(order?.href ?? "").pathname).toStartWith(
     "/sales/orders/%2F%2F",
   )

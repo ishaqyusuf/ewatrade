@@ -11,6 +11,23 @@ export type ReadRecordAppLink = {
   kind: "record" | "directory"
 }
 
+/**
+ * One saved Product link for every channel. The installed app claims
+ * `/open/catalog-item/*` (verified app links); the web dashboard redirects it to
+ * the record. Both recheck sign-in, business and Store; the link carries no scope.
+ */
+export function catalogItemAppHref(
+  catalogItemId: string,
+  options: { trustedAppOrigin: string },
+) {
+  const origin = trustedAssistantAppOrigin(options.trustedAppOrigin)
+  if (!origin || !catalogItemId) return
+  return new URL(
+    `/open/catalog-item/${encodeURIComponent(catalogItemId)}`,
+    origin,
+  ).href
+}
+
 /** Existing app routes use the active business/Store; never imply that a link switches them. */
 export function readRecordAppLink(
   target: unknown,
@@ -30,10 +47,12 @@ export function readRecordAppLink(
 
   switch (parsed.data.kind) {
     case "catalog_item": {
-      const url = new URL("/sales", origin)
-      url.searchParams.set("catalogDetail", parsed.data.catalogItemId)
+      const href = catalogItemAppHref(parsed.data.catalogItemId, {
+        trustedAppOrigin: origin,
+      })
+      if (!href) return
       return {
-        href: url.href,
+        href,
         label: "Open catalog item in EwaTrade",
         kind: "record",
       }

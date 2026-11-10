@@ -6,6 +6,7 @@ test("native configuration claims only bounded setup paths per host", () => {
     dashboardUrl: "https://dash.ewatrade.com",
     host: "dash.ewatrade.com",
     paths: ["/signup", "/api/early-access/verify"],
+    recordPathPrefix: "/open/catalog-item/",
   })
   expect(
     getOnboardingLinkConfig("preview", "https://preview.example.com").host,

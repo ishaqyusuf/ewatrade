@@ -13,6 +13,7 @@ import {
   onboardingLinkConfiguration,
   savePendingOnboarding,
 } from "@/lib/onboarding-continuation-store"
+import { resolveSavedRecordLink } from "@/lib/saved-record-link"
 
 let continuationAttempt = 0
 
@@ -40,6 +41,14 @@ export async function redirectSystemPath({
     // Never drop into a different signup session when secure persistence fails.
     return "/continue-onboarding?error=storage"
   }
+  let dashboardUrl: string | undefined
+  try {
+    dashboardUrl = onboardingLinkConfiguration().dashboardUrl
+  } catch {
+    dashboardUrl = undefined
+  }
+  const savedRecord = resolveSavedRecordLink(path, dashboardUrl)
+  if (savedRecord) return savedRecord
   const qaPath = resolveCustomerConversationQaPath(path, __DEV__)
   if (qaPath) return qaPath
 

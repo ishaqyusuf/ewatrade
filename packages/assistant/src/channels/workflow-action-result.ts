@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { catalogItemAppHref } from "./read-record-links"
 import { whatsAppPlainText } from "./render"
 import { workflowConversationAppLink } from "./workflow"
 import { whatsAppWorkflowActionSourceSchema } from "./workflow-action-review"
@@ -102,12 +103,22 @@ export function renderWhatsAppWorkflowActionResult(
       ? `Saved in EwaTrade: ${saved.length} selected ${saved.length === 1 ? "record" : "records"}.`
       : "No selected records were added.",
   ]
-  for (const entry of saved)
-    lines.push(
+  // Exact per-record links only for the original business/Store.
+  const inScope =
+    options &&
+    source.data.origin.tenantId === options.currentScope.tenantId &&
+    source.data.origin.storeId === options.currentScope.storeId
+  for (const entry of saved) {
+    const added =
       entry.name && entry.kind
         ? `Added ${entry.kind.toLowerCase()}: ${entry.name}`
-        : `Added saved draft: ${entry.key}`,
-    )
+        : `Added saved draft: ${entry.key}`
+    const href =
+      inScope && entry.recordId && entry.kind !== "CUSTOMER"
+        ? catalogItemAppHref(entry.recordId, options)
+        : undefined
+    lines.push(href ? `${added}\n${href}` : added)
+  }
   if (failed.length)
     lines.push(
       `${failed.length} selected ${failed.length === 1 ? "record needs" : "records need"} review in EwaTrade before retrying.`,
@@ -122,9 +133,10 @@ export function renderWhatsAppWorkflowActionResult(
         options,
       )
     : undefined
-  const safe = lines.every(
-    (line) => !line.includes("…") && whatsAppPlainText(line) === line,
-  )
+  const safe = lines.every((line) => {
+    const text = line.split("\n")[0] ?? ""
+    return !text.includes("…") && whatsAppPlainText(text) === text
+  })
   const body =
     safe && lines.join("\n\n").length <= 2400
       ? lines.join("\n\n")

@@ -31,7 +31,12 @@ export function onboardingAppAssociations(env: AssociationEnvironment) {
       return { apple: null, android: null }
     }
   }
-  const paths = [`${basePath}/signup`, `${basePath}/api/early-access/verify`]
+  const paths = [
+    `${basePath}/signup`,
+    `${basePath}/api/early-access/verify`,
+    // Saved-Product links open the installed app; see /open/catalog-item.
+    `${basePath}/open/catalog-item/*`,
+  ]
   const packageName = `com.ewatrade.${suffix}`
   const appID = env.EWATRADE_APPLE_APP_SITE_ASSOCIATION_APP_IDS?.trim()
   const fingerprint = env.EWATRADE_ANDROID_APP_LINK_CERTIFICATE_SHA256?.trim()

@@ -17,6 +17,7 @@ test("only the selected app owns setup and verification links", () => {
     expect(result.apple?.applinks.details[0]?.paths).toEqual([
       "/signup",
       "/api/early-access/verify",
+      "/open/catalog-item/*",
     ])
     expect(result.android?.[0]?.target.package_name).toBe(
       `com.ewatrade.${suffix}`,
@@ -56,7 +57,11 @@ test("configured Dashboard base paths match native association paths", () => {
       EWATRADE_APPLE_APP_SITE_ASSOCIATION_APP_IDS:
         "ABCDE12345.com.ewatrade.preview",
     }).apple?.applinks.details[0]?.paths,
-  ).toEqual(["/setup/signup", "/setup/api/early-access/verify"])
+  ).toEqual([
+    "/setup/signup",
+    "/setup/api/early-access/verify",
+    "/setup/open/catalog-item/*",
+  ])
   expect(
     onboardingAppAssociations({
       APP_ENV: "preview",

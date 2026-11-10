@@ -70,7 +70,7 @@ test("actual canonical multi-movement activity never becomes a clipped quantity,
   )
   expect(rendered.kind).toBe("reply")
   expect(rendered.chunks.join("\n")).toContain(
-    "/sales?catalogDetail=original-item",
+    "/open/catalog-item/original-item",
   )
   const priced = generalCatalogActivityAnswer(
     {
