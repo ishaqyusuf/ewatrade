@@ -4,6 +4,18 @@ Date: 9 November 2026. Source audited: `529a4499879995383273113ef99d01e8192d209f
 
 Status: planning deliverable only. No runtime, schema, quota, payment, Workshop publication or release change is authorized by this document. The requested policy is 1,000 monthly WhatsApp responses and one exhaustion notice with the final reply. Recommendations below are proposals, not approved commercial policy. Current deployed configuration was not queried.
 
+## Follow-up proposal on 10 November 2026
+
+The [response handoff and alternate delivery plan](2026-11-10-whatsapp-assistant-response-handoff.md)
+adds compact previews into the exact saved web/mobile assistant answer, a near-limit
+warning, a bounded final answer/link/footer and recipient-opted-in text read-only
+app delivery after exhaustion. This is a proposed exception to the hard stop below;
+without opt-in, the original pre-work stop remains. Shared AI/media/abuse budgets,
+canonical authority and this plan's quota reservation/settlement remain required.
+The monthly 1,000 cap is not yet implemented, and is separate from unverified Meta
+free-tier/account limits. Earlier recommendations/evidence are retained as dated
+history; no commercial decision, source implementation or release is implied.
+
 ## Outcome and scope challenge
 
 Prevent an account from creating unlimited ordinary WhatsApp assistant work, show customers their allowance, and let EwaTrade operators identify expensive usage. Stop new paid work before it starts when the allowance is exhausted. Keep one final notice with the last permitted response, then suppress further ordinary replies until reset or a verified top-up.
