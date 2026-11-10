@@ -4,6 +4,7 @@ import {
   type GeneralAction,
   generalActionSchema,
 } from "@ewatrade/assistant/general/contracts"
+import { parseExactDecimal } from "@ewatrade/utils/exact-decimal"
 import {
   type ChannelProposalSource,
   projectChannelProposalReview,
@@ -103,7 +104,7 @@ test("shipment_create shows each line's landed cost, the rate, freight and total
     bookCurrencyCode: "NGN",
     supplierName: "Shenzhen Hongda",
     name: "SH-014",
-    freightAmount: "400",
+    freightAmount: parseExactDecimal("400"),
     freightCurrencyCode: "USD",
     freightMinor: "63200000",
     landedMinor: "164320000",
@@ -114,9 +115,9 @@ test("shipment_create shows each line's landed cost, the rate, freight and total
         description: "Oraimo chargers",
         itemName: "Oraimo 20W Charger · Default",
         mapped: true,
-        expectedQuantity: "200",
+        expectedQuantity: parseExactDecimal("200"),
         sourceCurrencyCode: "USD",
-        sourceUnitPrice: "3.2",
+        sourceUnitPrice: parseExactDecimal("3.2"),
         goodsMinor: "101120000",
         freightMinor: "63200000",
         landedMinor: "164320000",
@@ -204,6 +205,9 @@ test("shipment_cost_adjust shows the cost on what is still expected and what kee
   expect(text).toContain("+₦6,000.00 customs · ₦300.00 each")
   expect(text).toContain("Landed ₦6,185.83 → ₦6,485.83 each")
   expect(text).toContain("The 180 already received keep their cost.")
-  const refund = generalActionSchema.parse({ ...payload, amountMinor: "-600000" })
+  const refund = generalActionSchema.parse({
+    ...payload,
+    amountMinor: "-600000",
+  })
   expect(projected(refund, lines).kind).toBe("app_review")
 })
