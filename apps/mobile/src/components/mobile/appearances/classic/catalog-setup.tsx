@@ -501,7 +501,9 @@ export function CatalogEssentialsFields({
             label="Main unit"
             maxLength={80}
             onChangeText={onUnitNameChange}
-            placeholder={guidance.stockUnit?.placeholder}
+            // Half-width field: "e.g. Egg, Bird, Kilogram, Bag" wraps, so
+            // show the first unit only; the chips below list the rest.
+            placeholder={guidance.stockUnit?.placeholder.split(",")[0]}
             variant="green-gate"
             value={unitName}
           />
