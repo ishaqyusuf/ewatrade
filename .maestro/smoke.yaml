@@ -69,7 +69,9 @@ name: QA catalog and sale draft
 - scrollUntilVisible:
     element: ${CATALOG_ITEM}
     direction: DOWN
-    timeout: 20000
+    # Existing QA catalogs span several emulator screens; keep the exact item
+    # assertion while allowing the same bounded directory budget as QA selection.
+    timeout: 60000
     centerElement: true
 - assertVisible: ${CATALOG_ITEM}
 - tapOn: Home
