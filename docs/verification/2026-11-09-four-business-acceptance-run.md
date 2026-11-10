@@ -10,18 +10,19 @@ has the status, evidence and limitation for each case.
 
 ## Scorecard
 
-Current, 10 November 2026, after runtime run 1, the T1/T2/T3/T5/T8 commits and
-the owner's instruction to keep data-dependent retail cases blocked:
+Current, 10 November 2026, after runtime runs 1–2, all of T1–T8 landing, and the
+owner's instruction to keep data-dependent retail cases blocked:
 
 | Business | Passed | Fail | Blocked | Not assessed |
 | --- | ---: | ---: | ---: | ---: |
-| Jawdah poultry | 5/12 | 0 | 0 | 7 |
-| Laundry | 0/12 | 0 | 3 | 9 |
+| Jawdah poultry | 4/12 | 1 | 0 | 7 |
+| Laundry | 0/12 | 0 | 1 | 11 |
 | Hypnos Man Collection | 0/24 | 0 | 23 | 1 |
 | Alhaq Tech | 0/24 | 0 | 23 | 1 |
-| **Total** | **5/72 (6.9%)** | **0** | **49** | **18** |
+| **Total** | **4/72 (5.6%)** | **1** | **47** | **20** |
 
-The five passes are local-window passes (see runtime run 1). The hosted launch
+Earlier on 10 November the count was 5/72 passed; J06 moved from PASS to FAIL in
+run 2. All passes are local-window passes (see runtime runs 1–2). The hosted launch
 environment is still unselected, so they do not cover hosted or provider gates.
 
 Earlier attempts, kept for history:
@@ -54,12 +55,12 @@ should pass it quickly if nothing has regressed.
 
 | Cases | Unblocked by | State at 10 Nov |
 | --- | --- | --- |
-| L04, L12 | T6 WhatsApp laundry intake (Phase 3) | Still blocked; T6 awaits owner approval of its design cases |
+| L04, L12 | T6 WhatsApp laundry intake (Phase 3) | Landed `1e6672a17`; now NOT_ASSESSED |
 | R04, R05, R06 (H and A) | T5 rich WhatsApp product setup | Landed `082595e9a`; now NOT_ASSESSED |
 | R07 | T3 saved-product app/web links | Landed `ed975340c`; now NOT_ASSESSED |
 | R09 | T2 QR and scan-to-sale | Landed `0734a5f80`; now NOT_ASSESSED |
-| R10–R15 | T1 shipment backend + T4 shipment UI | T1 landed (`36e095785`, `cdcad01bb`); still blocked on T4 |
-| R16 | T7 WhatsApp shipment lifecycle | Still blocked; T7 awaits owner approval |
+| R10–R15 | T1 shipment backend + T4 shipment UI | Both landed (T4 `27a53202f`, `623e90e8d`); still blocked on merchant shipment data |
+| R16 | T7 WhatsApp shipment lifecycle | Landed `1e6672a17`, `6b092d7ca`; still blocked on merchant shipment data |
 | R18, R19 | T8 no-site public catalog | Landed `92db83673`; now NOT_ASSESSED |
 | R23 | **No ticket.** See decision 1 below | Still blocked |
 | R24 | T1/T4/T7 and R23 | Still blocked |
@@ -193,9 +194,42 @@ during that window and was redone after the restart. The dashboard ran
 | J03 | PASS | Eggs ₦250/Egg plus a Crate of 30 Eggs at ₦7,500, sharing one stock pool; opening stock 60. The sale form priced 1 Crate at ₦7,500. |
 | J04 | PASS | Collections of 20 and then 10 eggs, both tagged Made or collected / Row 1 / Morning collection. The second collection picked the saved categories from suggestions. Eggs went 60 → 90, confirmed in the history page and the database. |
 | J05 | PASS | Saving without a reason was refused ("Pick what happened."). A loss of 2 with reasons Died and Row 1 was saved once, and Layers went 500 → 498. Retry protection comes from the unique `(tenantId, clientOperationId)` key and the save button being disabled while saving. A deliberate network replay was not run. |
-| J06 | PASS | The cashier created ORD-001: 1 Crate + 2 Broilers = ₦23,500, linked to a customer, unpaid. The cashier's menu hides Catalog, Inventory, Staff and Finance, and their URLs redirect. The API also refuses with 403 FORBIDDEN on `inventory.balanceReport`, `inventory.operationHistory`, `inventory.auditExport`, `finance.fiscalCalendar`, `catalog.createSimpleItem` and `retailOps.staffDirectoryPage`. |
+| J06 | PASS in run 1; FAIL in run 2 | The cashier created ORD-001: 1 Crate + 2 Broilers = ₦23,500, linked to a customer, unpaid. The cashier's menu hides Catalog, Inventory, Staff and Finance, and their URLs redirect. The API also refuses with 403 FORBIDDEN on `inventory.balanceReport`, `inventory.operationHistory`, `inventory.auditExport`, `finance.fiscalCalendar`, `catalog.createSimpleItem` and `retailOps.staffDirectoryPage`. |
 
-ORD-001 is still unfulfilled and unpaid. It is the starting point for J12:
-fulfilling it should leave Layers 498, Broilers 198 and Eggs 60.
+At the end of run 1, ORD-001 was still unfulfilled and unpaid. Run 2 later
+changed J06 to FAIL.
 
 The "message customer" prompt was dismissed and nothing was sent.
+
+## Runtime run 2: Jawdah payment, fulfilment and money
+
+10 November 2026, same local window and tenant. Runtime: API at `ed975340c`
+(clean tree), dashboard `next dev`. The storefront was started with the test
+OTP adapter (`storefront-qa-otp` launch config). Starting it stopped an older
+storefront process on port 3091.
+
+While this run was in progress, Phase 1 left a half-edited
+`packages/db/src/queries/finance/shipments.ts` in the working tree. It broke
+every dashboard page ("Expected ';'") until Phase 1 repaired it. Phase 5 did not
+edit it.
+
+- **J06 → FAIL.** On ORD-001 the cashier's Record payment shows "Payment
+  accounts could not load", because `orders.paymentAccounts` returns 403 for
+  staff. The procedure is missing from the staff allowlist in
+  `apps/api/src/utils/staff-procedure-policy.ts`, though `orders.recordPayment`
+  is on it. The cashier role card says cashiers take payments. The cashier's
+  full order page also stays on "Loading order…"; the Details sheet works.
+- **J12 progress.** As owner: ₦10,000 cash, then Fulfil all (1 Crate + 2 Broilers
+  moved once), then ₦13,500 cash into Shop cash. The order is now Paid,
+  Fulfilled 2 of 2, with activity entries for creation, payment, fulfilment and
+  completion. Stock reconciles exactly to the spec's expected **Layers 498 /
+  Broilers 198 / Eggs 60**.
+- **Money finding.** Before Finance was set up, Customers showed "Owed to you
+  ₦0.00 / Nobody owes you" while ORD-001 had ₦13,500 due. After setting up
+  Finance (start date 1 Nov), Shop cash shows only the ₦13,500 paid after setup.
+  The ₦10,000 paid earlier never appears. The setup screen says older payments
+  aren't brought in, but an owner who sells before setting up Finance sees
+  different money in Orders and in Finance.
+
+J12 still needs the mobile, WhatsApp, stale-review and cross-tenant checks. No
+customer message was sent; both "message customer" prompts were dismissed.
