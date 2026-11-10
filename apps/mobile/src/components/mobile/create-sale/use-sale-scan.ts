@@ -115,9 +115,19 @@ export function useSaleScan(model: CreateSaleViewModel) {
     if (now.productSearch) now.setProductSearch("")
   }
 
-  async function read(code: string) {
-    setScanning(false)
+  // Docked scanning keeps reading: lookups run one after another so a quick
+  // second scan cannot cancel the first.
+  const queue = useRef<Promise<void>>(Promise.resolve())
+  function read(code: string) {
+    const run = queue.current.then(() => lookup(code))
+    queue.current = run.catch(() => {})
+    return run
+  }
+
+  async function lookup(code: string) {
     const current = ++session.current
+    // A new scan replaces the last scan's notice.
+    setNotice(null)
     try {
       const result = await queryClient.fetchQuery({
         ...trpc.catalog.findByCode.queryOptions({ code }),

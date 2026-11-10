@@ -47,6 +47,7 @@ export function useSaleScanLink(model: CreateSaleViewModel, scan: SaleScan) {
     target,
     error,
     start(next: string) {
+      scan.close()
       scan.dismissNotice()
       setError("")
       setCode(next)
@@ -91,6 +92,7 @@ export function useSaleScanLink(model: CreateSaleViewModel, scan: SaleScan) {
       setCode(null)
     },
     create(next: string) {
+      scan.close()
       scan.dismissNotice()
       created.current = next
       router.push(

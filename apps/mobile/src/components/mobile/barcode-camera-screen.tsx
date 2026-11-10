@@ -1,5 +1,7 @@
 import { ActionButton } from "@/components/mobile/action-button"
 import { StatusBanner } from "@/components/mobile/status-banner"
+import { Icon } from "@/components/ui/icon"
+import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { barcodeScanValue, distinctScannedBarcodes } from "@/lib/barcode-scan"
 import {
@@ -9,6 +11,7 @@ import {
   useCameraPermissions,
 } from "expo-camera"
 import { File } from "expo-file-system"
+import * as Haptics from "expo-haptics"
 import { useEffect, useRef, useState } from "react"
 import { AppState, Linking, Platform, ScrollView, View } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
@@ -232,6 +235,128 @@ export function BarcodeCameraScreen({
             {cancelLabel}
           </ActionButton>
         </View>
+      </View>
+    </View>
+  )
+}
+
+// A code must leave the frame this long before it counts as a new scan, so
+// holding the camera on one label adds it once, not on every frame.
+const RESCAN_GAP_MS = 1_200
+
+/**
+ * Camera docked in the lower half of a screen for continuous scanning: each
+ * read is handed over and the camera stays open until closed. Round controls
+ * close it and toggle the flashlight.
+ */
+export function DockedBarcodeScanner({
+  onRead,
+  onClose,
+  paused = false,
+}: {
+  onRead: (code: string) => void
+  onClose: () => void
+  /** True while a choice about the last read is open. */
+  paused?: boolean
+}) {
+  const [permission, requestPermission, refreshPermission] =
+    useCameraPermissions()
+  const [foreground, setForeground] = useState(
+    AppState.currentState === "active",
+  )
+  const [torch, setTorch] = useState(false)
+  const [error, setError] = useState("")
+  const lastSeen = useRef(new Map<string, number>())
+  useEffect(() => {
+    const listener = AppState.addEventListener("change", (state) => {
+      setForeground(state === "active")
+      if (state === "active") void refreshPermission()
+    })
+    return () => listener.remove()
+  }, [refreshPermission])
+  const seen = (data: string) => {
+    if (paused || AppState.currentState !== "active") return
+    const code = barcodeScanValue(data)
+    if (!code) return
+    const now = Date.now()
+    const before = lastSeen.current.get(code)
+    lastSeen.current.set(code, now)
+    if (before !== undefined && now - before < RESCAN_GAP_MS) return
+    void Haptics.selectionAsync().catch(() => {})
+    onRead(code)
+  }
+  const round =
+    "size-12 items-center justify-center rounded-full bg-overlay active:opacity-80"
+  return (
+    <View className="flex-1 overflow-hidden rounded-t-[24px] bg-overlay">
+      {permission?.granted && foreground ? (
+        <CameraView
+          style={{ flex: 1 }}
+          facing="back"
+          enableTorch={torch}
+          barcodeScannerSettings={{ barcodeTypes: BARCODE_TYPES }}
+          onBarcodeScanned={({ data }) => seen(data)}
+          onMountError={() =>
+            setError("The camera is unavailable. Close it and search by name.")
+          }
+        />
+      ) : (
+        <View className="flex-1 items-center justify-center gap-4 px-6">
+          <Text className="text-center text-sm text-cream">
+            {!permission
+              ? "Checking camera access…"
+              : "Allow camera access to scan barcodes."}
+          </Text>
+          {permission && !permission.granted ? (
+            <ActionButton
+              onPress={
+                permission.canAskAgain
+                  ? () => void requestPermission().catch(() => {})
+                  : () => void Linking.openSettings()
+              }
+            >
+              {permission.canAskAgain ? "Allow camera" : "Open camera settings"}
+            </ActionButton>
+          ) : null}
+        </View>
+      )}
+      <View
+        className="absolute inset-x-0 top-0 flex-row items-start justify-between p-3"
+        pointerEvents="box-none"
+      >
+        <Pressable
+          accessibilityLabel={
+            torch ? "Turn off flashlight" : "Turn on flashlight"
+          }
+          accessibilityRole="switch"
+          accessibilityState={{ checked: torch }}
+          className={round}
+          disabled={!permission?.granted}
+          haptic
+          onPress={() => setTorch((on) => !on)}
+        >
+          <Icon
+            className="size-[22px] text-cream"
+            name={torch ? "FlashOff" : "Flashlight"}
+          />
+        </Pressable>
+        <Pressable
+          accessibilityLabel="Close scanner"
+          accessibilityRole="button"
+          className={round}
+          haptic
+          onPress={onClose}
+        >
+          <Icon className="size-[22px] text-cream" name="X" />
+        </Pressable>
+      </View>
+      <View
+        className="absolute inset-x-0 bottom-0 items-center px-4 pb-4"
+        pointerEvents="none"
+      >
+        <Text className="rounded-full bg-overlay px-3.5 py-1.5 text-xs font-bold text-cream">
+          {error || "Point at a barcode. Keep scanning to add more."}
+        </Text>
       </View>
     </View>
   )

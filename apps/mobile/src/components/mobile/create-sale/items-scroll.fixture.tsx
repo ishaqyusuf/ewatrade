@@ -31,6 +31,33 @@ ui("components/ui/view", ["View"])
 ui("components/mobile/appearances/classic/create-sale", [
   "ClassicSelectedOrderLine",
 ])
+ui("components/mobile/catalog-item/offering-barcode-editor", [
+  "OfferingBarcodeScreen",
+])
+ui("components/ui/skeleton", ["Skeleton", "SkeletonGroup"])
+ui("components/mobile/create-sale/sale-scan", [
+  "SaleScanAddedBar",
+  "SaleScanLayers",
+  "SaleScanNoticeCard",
+])
+// Scanning and linking are outside this scroll probe (camera and router).
+mock.module(
+  new URL("components/mobile/create-sale/use-sale-scan", source).pathname,
+  () => ({
+    useSaleScan: () => ({
+      available: false,
+      scanning: false,
+      added: null,
+      focusRequest: 0,
+    }),
+  }),
+)
+mock.module(
+  new URL("components/mobile/create-sale/use-sale-scan-link", source).pathname,
+  () => ({
+    useSaleScanLink: () => ({ canLink: false, code: null, target: null }),
+  }),
+)
 let dockScrolls = 0
 mock.module(new URL("hooks/use-bottom-search-scroll", source).pathname, () => ({
   useBottomSearchScroll: () => ({
@@ -51,6 +78,8 @@ mock.module("react-native", () => ({ Text: leaf }))
 mock.module("react-native-css/components/FlatList", () => ({ FlatList: leaf }))
 mock.module("react-native-keyboard-controller", () => ({
   KeyboardAwareScrollView: leaf,
+  useKeyboardState: (select: (state: { isVisible: boolean }) => unknown) =>
+    select({ isVisible: false }),
 }))
 const { ClassicSaleItems } = await import(
   "../appearances/classic/create-sale-items"

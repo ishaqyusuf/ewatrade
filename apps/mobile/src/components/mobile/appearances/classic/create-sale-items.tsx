@@ -34,7 +34,7 @@ import { itemsScrollRestore } from "@/lib/sale-step-motion"
 import { cn } from "@/lib/utils"
 import { formatMinorMoney } from "@ewatrade/utils"
 import { searchMatch } from "@ewatrade/utils/search-rank"
-import { useRef } from "react"
+import { useEffect, useRef } from "react"
 import { Text as NativeText } from "react-native"
 import type { ScrollViewProps } from "react-native"
 import { FlatList } from "react-native-css/components/FlatList"
@@ -102,6 +102,11 @@ export function ClassicSaleItems({
   const scrollHide = useBottomSearchScroll()
   const scan = useSaleScan(model)
   const link = useSaleScanLink(model, scan)
+  // While scanning, each added item shows at the top of the shortened list.
+  useEffect(() => {
+    if (scan.added && scan.scanning)
+      listRef.current?.scrollToOffset({ offset: 0, animated: true })
+  }, [scan.added, scan.scanning])
   // Typing a price, description or quantity: the floating footer would cover
   // the fields below the focused one, so it steps aside until the keyboard
   // closes. Searching keeps it (the footer holds the search field).
@@ -196,7 +201,11 @@ export function ClassicSaleItems({
     <View className="flex-1">
       <FlatList
         ref={listRef as never}
-        contentContainerClassName="grow px-4 pb-[var(--sale-items-bottom)]"
+        contentContainerClassName={cn(
+          "grow px-4",
+          // The docked scanner replaces the floating footer while open.
+          scan.scanning ? "pb-4" : "pb-[var(--sale-items-bottom)]",
+        )}
         onLayout={(event) => {
           viewport.current = event.nativeEvent.layout.height
           tryRestore()
@@ -367,62 +376,69 @@ export function ClassicSaleItems({
           )
         }
       />
-      <BottomSearchFooter
-        accessibilityLabel={
-          itemKind === "service" ? "Search services" : "Search items"
-        }
-        alwaysShowSearch
-        caption={
-          <FloatingSearchCaption
-            label={
-              saleLineCount
-                ? saleItemsLabel(saleLineCount, unitCount)
-                : "Add the first item"
-            }
-            value={saleLineCount ? money(totalMinor, currencyCode) : undefined}
-          />
-        }
-        hidden={scrollHide.hidden || keyboardVisible}
-        layout={largeText ? "stacked" : "inline"}
-        localSearch
-        maxLength={160}
-        onChangeText={setProductSearch}
-        onHeightChange={setActionsHeight}
-        placeholder={
-          itemKind === "service" ? "Search services" : "Search items"
-        }
-        searchFocusRequest={scan.focusRequest}
-        searchTrailingAction={
-          scan.available && itemKind !== "service"
-            ? {
-                accessibilityLabel: "Scan a barcode or QR code",
-                icon: "BarcodeScan",
-                onPress: scan.open,
-                testID: "sale-scan",
+      {scan.scanning ? null : (
+        <BottomSearchFooter
+          accessibilityLabel={
+            itemKind === "service" ? "Search services" : "Search items"
+          }
+          alwaysShowSearch
+          caption={
+            <FloatingSearchCaption
+              label={
+                saleLineCount
+                  ? saleItemsLabel(saleLineCount, unitCount)
+                  : "Add the first item"
               }
-            : undefined
-        }
-        totalCount={0}
-        value={productSearch}
-      >
-        <ActionButton
-          accessibilityLabel="Next: customer"
-          className={cn(
-            largeText
-              ? "w-full rounded-full"
-              : "min-h-[52px] w-[132px] rounded-full",
-            // Floating over the list, so a disabled Proceed stays solid.
-            !canContinue && "border border-border bg-card opacity-100",
-          )}
-          disabled={!canContinue}
-          onPress={proceedToCustomer}
-          testID="sale-next-step"
-          trailingIcon="ArrowRight"
+              value={
+                saleLineCount ? money(totalMinor, currencyCode) : undefined
+              }
+            />
+          }
+          hidden={scrollHide.hidden || keyboardVisible}
+          layout={largeText ? "stacked" : "inline"}
+          localSearch
+          maxLength={160}
+          onChangeText={setProductSearch}
+          onHeightChange={setActionsHeight}
+          placeholder={
+            itemKind === "service" ? "Search services" : "Search items"
+          }
+          searchFocusRequest={scan.focusRequest}
+          searchTrailingAction={
+            scan.available && itemKind !== "service"
+              ? {
+                  accessibilityLabel: "Scan a barcode or QR code",
+                  icon: "BarcodeScan",
+                  onPress: scan.open,
+                  testID: "sale-scan",
+                }
+              : undefined
+          }
+          totalCount={0}
+          value={productSearch}
         >
-          Proceed
-        </ActionButton>
-      </BottomSearchFooter>
-      <SaleScanAddedBar bottom={actionsHeight + 8} scan={scan} />
+          <ActionButton
+            accessibilityLabel="Next: customer"
+            className={cn(
+              largeText
+                ? "w-full rounded-full"
+                : "min-h-[52px] w-[132px] rounded-full",
+              // Floating over the list, so a disabled Proceed stays solid.
+              !canContinue && "border border-border bg-card opacity-100",
+            )}
+            disabled={!canContinue}
+            onPress={proceedToCustomer}
+            testID="sale-next-step"
+            trailingIcon="ArrowRight"
+          >
+            Proceed
+          </ActionButton>
+        </BottomSearchFooter>
+      )}
+      <SaleScanAddedBar
+        bottom={scan.scanning ? undefined : actionsHeight + 8}
+        scan={scan}
+      />
       <SaleScanLayers scan={scan} />
       {link.code && link.target ? (
         <OfferingBarcodeScreen

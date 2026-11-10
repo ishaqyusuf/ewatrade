@@ -198,9 +198,7 @@ for (const [build, hook] of [
       const ui = await mount(hook, { dueAt: 4_000_000, product: false })
       try {
         expect(ui.option.canFulfillNow).toBe(false)
-        expect(ui.option.reason).toBe(
-          "Only Product lines use stock fulfillment.",
-        )
+        expect(ui.option.reason).toBe("Only goods lines use stock fulfillment.")
       } finally {
         await ui.close()
       }

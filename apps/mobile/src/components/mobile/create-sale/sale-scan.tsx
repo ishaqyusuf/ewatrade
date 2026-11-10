@@ -1,5 +1,4 @@
 import { ActionButton } from "@/components/mobile/action-button"
-import { MobileWorkflowChrome } from "@/components/mobile/appearances/workflow-chrome"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { Icon } from "@/components/ui/icon"
 import { Modal, useModal } from "@/components/ui/modal"
@@ -8,13 +7,12 @@ import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
 import { BottomSheetView } from "@gorhom/bottom-sheet"
 import { Suspense, lazy, useEffect } from "react"
-import { Modal as NativeModal } from "react-native"
 import { saleScanMatchName, saleScanNoticeCopy } from "./sale-scan-model"
 import type { SaleScan } from "./use-sale-scan"
 
-const BarcodeCameraScreen = lazy(() =>
+const DockedBarcodeScanner = lazy(() =>
   import("../barcode-camera-screen").then((module) => ({
-    default: module.BarcodeCameraScreen,
+    default: module.DockedBarcodeScanner,
   })),
 )
 
@@ -80,13 +78,16 @@ export function SaleScanNoticeCard({
   )
 }
 
-/** Short confirmation with Undo, floating just above the search footer. */
+/**
+ * Short confirmation with Undo: above the search footer, or at the top edge
+ * while the docked scanner is open.
+ */
 export function SaleScanAddedBar({
   scan,
   bottom,
 }: {
   scan: SaleScan
-  bottom: number
+  bottom?: number
 }) {
   if (!scan.added) return null
   const { name, previous, quantity } = scan.added
@@ -95,7 +96,7 @@ export function SaleScanAddedBar({
       accessibilityLiveRegion="polite"
       className="absolute inset-x-3 flex-row items-center gap-2.5 rounded-2xl bg-foreground px-4 py-3"
       pointerEvents="box-none"
-      style={{ bottom }}
+      style={bottom === undefined ? { top: 8 } : { bottom }}
     >
       <Icon className="size-[18px] text-gold" name="Check" />
       <Text className="min-w-0 flex-1 text-sm font-bold text-background">
@@ -114,7 +115,7 @@ export function SaleScanAddedBar({
   )
 }
 
-/** The full-screen camera and the shared-code choice. */
+/** The docked camera and the shared-code choice. */
 export function SaleScanLayers({ scan }: { scan: SaleScan }) {
   const chooser = useModal()
   const open = Boolean(scan.choices)
@@ -125,44 +126,30 @@ export function SaleScanLayers({ scan }: { scan: SaleScan }) {
   return (
     <>
       {scan.scanning ? (
-        <NativeModal
-          animationType="slide"
-          navigationBarTranslucent
-          onRequestClose={scan.close}
-          presentationStyle="fullScreen"
-          statusBarTranslucent
-          visible
-        >
-          <MobileWorkflowChrome
-            closeLabel="Close scanner"
-            hideHeader={false}
-            keyboardBottomOffset={0}
-            onClose={scan.close}
-            title="Scan to add"
+        // Docked in the lower half: the sale stays visible above and the
+        // camera keeps scanning until it is closed.
+        <View className="h-1/2">
+          <Suspense
+            fallback={
+              <View className="flex-1 gap-4 rounded-t-[24px] bg-card px-4 pt-4">
+                <StatusBanner message="Opening camera…" tone="default" />
+                <ActionButton
+                  icon="Search"
+                  onPress={scan.searchByName}
+                  variant="outline"
+                >
+                  Search by name instead
+                </ActionButton>
+              </View>
+            }
           >
-            <Suspense
-              fallback={
-                <View className="gap-4 px-4 pt-4">
-                  <StatusBanner message="Opening camera…" tone="default" />
-                  <ActionButton
-                    icon="Search"
-                    onPress={scan.searchByName}
-                    variant="outline"
-                  >
-                    Search by name instead
-                  </ActionButton>
-                </View>
-              }
-            >
-              <BarcodeCameraScreen
-                cancelLabel="Search by name instead"
-                instructions="Point the camera at a barcode or QR code on the item."
-                onCancel={scan.searchByName}
-                onRead={(code) => void scan.read(code)}
-              />
-            </Suspense>
-          </MobileWorkflowChrome>
-        </NativeModal>
+            <DockedBarcodeScanner
+              onClose={scan.close}
+              onRead={(code) => void scan.read(code)}
+              paused={Boolean(scan.choices)}
+            />
+          </Suspense>
+        </View>
       ) : null}
       <Modal
         onDismiss={scan.dismissChoices}

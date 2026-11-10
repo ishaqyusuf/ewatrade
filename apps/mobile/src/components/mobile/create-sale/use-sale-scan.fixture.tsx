@@ -73,6 +73,9 @@ port("components/mobile/barcode-camera-screen", {
   BarcodeCameraScreen: () => {
     throw cameraLoad
   },
+  DockedBarcodeScanner: () => {
+    throw cameraLoad
+  },
 })
 const { SaleScanLayers } = await import("./sale-scan")
 
