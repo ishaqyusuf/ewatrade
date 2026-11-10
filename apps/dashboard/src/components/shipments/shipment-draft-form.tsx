@@ -354,7 +354,7 @@ export function ShipmentDraftForm({
               <TableRow>
                 <TableHead>Item</TableHead>
                 <TableHead className="w-24">Qty</TableHead>
-                <TableHead className="w-24">Currency</TableHead>
+                <TableHead className="w-28">Currency</TableHead>
                 <TableHead className="w-32">Price each</TableHead>
                 <TableHead className="w-10" />
               </TableRow>
@@ -414,7 +414,7 @@ export function ShipmentDraftForm({
                   </TableCell>
                   <TableCell>
                     <Select
-                      className="h-9"
+                      className="h-9 min-w-24"
                       aria-label="Currency"
                       value={line.sourceCurrencyCode}
                       onChange={(e) =>
