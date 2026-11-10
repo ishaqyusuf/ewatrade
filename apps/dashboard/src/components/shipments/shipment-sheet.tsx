@@ -518,10 +518,6 @@ function LandedCostStep({
           unreceivedCostMinor: line.unreceivedCostMinor,
         })
       : null
-  const perUnit =
-    targetMinor && unitNow
-      ? (BigInt(targetMinor) - BigInt(unitNow)).toString()
-      : null
   const signed = (minor: string) =>
     `${minor.startsWith("-") ? "−" : "+"}${money(minor.replace("-", ""), currencyCode)}`
 
@@ -591,12 +587,15 @@ function LandedCostStep({
             onChange={(e) => setTarget(e.target.value)}
           />
         </ControlField>
-        {delta && delta !== "0" && perUnit ? (
+        {delta && delta !== "0" && targetMinor && unitNow ? (
           <p className="border border-amber-500/30 bg-amber-500/10 p-3 text-sm">
             <b>
-              {signed(perUnit)} each × {line.outstandingQuantity} ={" "}
-              {signed(delta)} change to cost
+              {signed(delta)} change to cost for the {line.outstandingQuantity}{" "}
+              still to come
             </b>
+            <br />
+            {money(unitNow, currencyCode)} → {money(targetMinor, currencyCode)}{" "}
+            each
             <br />
             Landed total {money(line.landedMinor, currencyCode)} →{" "}
             {money(

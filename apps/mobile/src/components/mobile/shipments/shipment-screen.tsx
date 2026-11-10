@@ -502,8 +502,8 @@ function LandedView({
       {delta && delta !== "0" && targetMinor && unitNow ? (
         <StatusBanner
           tone="warning"
-          title={`${signed((BigInt(targetMinor) - BigInt(unitNow)).toString())} each × ${line.outstandingQuantity} = ${signed(delta)}`}
-          message={`Landed total ${money(line.landedMinor, currencyCode)} → ${money((BigInt(line.landedMinor) + BigInt(delta)).toString(), currencyCode)}`}
+          title={`${signed(delta)} change to cost for the ${line.outstandingQuantity} still to come`}
+          message={`${money(unitNow, currencyCode)} → ${money(targetMinor, currencyCode)} each · landed total ${money(line.landedMinor, currencyCode)} → ${money((BigInt(line.landedMinor) + BigInt(delta)).toString(), currencyCode)}`}
         />
       ) : null}
       <FormField
