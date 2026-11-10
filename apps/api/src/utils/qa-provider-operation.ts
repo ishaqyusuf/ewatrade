@@ -1,4 +1,33 @@
+import {
+  type BillingEnvironment,
+  isWebReconciliationConfigured,
+} from "@ewatrade/payments/web-subscriptions"
 import type { QaLiveEffectOperation } from "@ewatrade/utils/qa-provider-policy"
+
+const PAYSTACK_WEB_TEST_PROCEDURES = new Set([
+  "retailops.createsubscriptioncheckoutintent",
+  "retailops.checkwebsubscriptionpayment",
+  "retailops.managewebsubscription",
+])
+
+/** A registered provider Test Mode adapter, never a general QA policy bypass. */
+export function qaProviderAdapterForProcedure(
+  path: string,
+  env: BillingEnvironment = process.env,
+  hasAuthorizedQaSession = false,
+): "live" | "test" {
+  if (
+    hasAuthorizedQaSession &&
+    PAYSTACK_WEB_TEST_PROCEDURES.has(path.toLowerCase()) &&
+    env.PAYSTACK_QA_SUBSCRIPTIONS_TEST_ADAPTER_ENABLED === "true" &&
+    (env.APP_ENV === "local" || env.APP_ENV === "preview") &&
+    env.DEV_PROFILE === env.APP_ENV &&
+    env.WEB_BILLING_ENVIRONMENT === "sandbox" &&
+    isWebReconciliationConfigured(env)
+  )
+    return "test"
+  return "live"
+}
 
 const EXACT_QA_PROVIDER_OPERATIONS: Readonly<
   Record<string, QaLiveEffectOperation>

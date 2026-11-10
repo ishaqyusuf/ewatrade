@@ -16,7 +16,7 @@ import {
   isEligibleAccountAgeBand,
   validateQaDerivedSession,
 } from "@ewatrade/db/queries"
-import { toPublicError } from "@ewatrade/errors"
+import { ruleRejectedError, toPublicError } from "@ewatrade/errors"
 import { dashboardProcedure } from "@ewatrade/events/dashboard-workflows"
 import { dashboardCommandId } from "@ewatrade/events/server-dashboard"
 import { recordDashboardOutcome } from "@ewatrade/jobs/product-analytics"
@@ -36,7 +36,10 @@ import {
   resolveLinkedAssistantIdentity,
 } from "../assistant/channel-principal"
 import { assertLinkedAssistantRead } from "../assistant/channel-read-policy"
-import { qaLiveEffectForProcedure } from "../utils/qa-provider-operation"
+import {
+  qaLiveEffectForProcedure,
+  qaProviderAdapterForProcedure,
+} from "../utils/qa-provider-operation"
 import {
   type QaSessionScope,
   isQaDerivedSessionAllowed,
@@ -620,7 +623,11 @@ const enforceQaProviderBoundary = t.middleware(async (opts) => {
   }
 
   const decision = evaluateQaProviderPolicy({
-    adapter: "live",
+    adapter: qaProviderAdapterForProcedure(
+      opts.path,
+      process.env,
+      Boolean(opts.ctx.qaSessionScope),
+    ),
     operation,
     tenantDataClassification: "QA",
   })
@@ -643,6 +650,10 @@ const enforceQaProviderBoundary = t.middleware(async (opts) => {
   throw new TRPCError({
     code: "PRECONDITION_FAILED",
     message: decision.message,
+    cause: ruleRejectedError(
+      new Error(decision.message),
+      "qa.providerBoundary",
+    ),
   })
 })
 

@@ -1,0 +1,55 @@
+{
+  "version": 1,
+  "id": "2026-11-10-paystack-website-readiness",
+  "tickets": ["A05"],
+  "summary": "Enforce Paystack reconciliation activation at every entrypoint, prepare strictly scoped QA Test Mode admission, preserve safe billing refusal messages and record exact owner activation requirements.",
+  "noAssistantImpact": "No assistant capability/procedure added. Website checkout, status, management and coverage remain OWNER form-only operations. Only the existing server-validated QA scope can use the three explicitly listed Paystack sandbox web procedures under independent opt-ins; ordinary/Production/native/refund/other-provider access is unchanged. No deployment or provider activation.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "path": "docs/billing/paystack-go-live-2026-11-10.md",
+      "status": "updated"
+    },
+    {
+      "topic": "feature",
+      "path": "docs/verification/2026-11-10-paystack-website-readiness.md",
+      "status": "updated"
+    },
+    {
+      "topic": "feature",
+      "path": ".brain/features/owner-wide-billing.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "api",
+      "path": ".brain/api/contracts.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "permissions",
+      "path": ".brain/api/permissions.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "decision",
+      "path": ".brain/decisions/2026-11-08-web-paystack-only.md",
+      "status": "local_only"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "apps/api/src/billing/web-subscriptions-activation.test.ts",
+      "executed": true,
+      "result": "Four disabled-entrypoint cases failed before the receiver fix. Final exact focused evidence is recorded in the 10 November receipt; no DB/provider dispatch in fixtures."
+    },
+    {
+      "kind": "test",
+      "path": "apps/api/src/utils/qa-provider-operation.test.ts",
+      "executed": true,
+      "result": "Strict Test Mode admission for the three web paths only; Production, ordinary-session, opt-in/key/profile/mode/native/refund/other-provider refusal fixtures. No hosted activation."
+    }
+  ]
+}

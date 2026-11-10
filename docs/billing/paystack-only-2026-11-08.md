@@ -1,5 +1,7 @@
 # Paystack-only web subscriptions — 8 November 2026
 
+Current activation checklist and owner actions: [10 November website plan](paystack-go-live-2026-11-10.md). The selected test account is an existing Preview QA owner; its strictly sandbox-only adapter is independently default-off. Reconciliation entrypoints now enforce the receiver switch even outside the webhook route.
+
 Sandbox update: EwaTrade2096714 now has its existing test key and6 verified NGN
 monthly test plans in the ignored local profile. All web receipt/checkout/live/USD
 activation remains off. [Setup and follow-up safety receipt](../verification/2026-11-08-paystack-sandbox-setup.md).

@@ -17,6 +17,7 @@ import {
   recordWebRefund,
   revokeOwnerWebCharge,
 } from "@ewatrade/db/owner-billing"
+import { ruleRejectedError } from "@ewatrade/errors"
 import {
   type BillingEnvironment,
   HostedCheckoutProviderError,
@@ -24,6 +25,7 @@ import {
   WebSubscriptionClient,
   isWebCheckoutEnabled,
   isWebProviderConfigured,
+  isWebReconciliationConfigured,
   paystackRecord,
   verifiedPaystackCharge,
   verifiedPaystackSubscription,
@@ -35,6 +37,14 @@ import {
 import { TRPCError } from "@trpc/server"
 import { z } from "zod"
 import { getStoreCheckoutLegalGate } from "./store-checkout-legal"
+
+function webBillingRuleError(message: string) {
+  return new TRPCError({
+    code: "PRECONDITION_FAILED",
+    message,
+    cause: ruleRejectedError(new Error(message), "billing.webSubscription"),
+  })
+}
 
 function paymentClient(env: BillingEnvironment = process.env) {
   const environment = webBillingEnvironment(env)
@@ -72,17 +82,14 @@ export async function createWebSubscriptionCheckout(
   env: BillingEnvironment = process.env,
 ) {
   if (!isWebCheckoutEnabled(env) || !isWebProviderConfigured("paystack", env))
-    throw new TRPCError({
-      code: "PRECONDITION_FAILED",
-      message:
-        "Online payments are not available yet. No payment has been taken.",
-    })
+    throw webBillingRuleError(
+      "Online payments are not available yet. No payment has been taken.",
+    )
   const legal = await getStoreCheckoutLegalGate(db, input.actorUserId, true)
   if (!legal.purchaseAvailable)
-    throw new TRPCError({
-      code: "PRECONDITION_FAILED",
-      message: "Accept the current terms before starting payment.",
-    })
+    throw webBillingRuleError(
+      "Accept the current terms before starting payment.",
+    )
   const account = await getOrCreateOwnerBillingAccount(db, input.actorUserId)
   const country = webBillingOwnerCountry(account.id, env)
   const product = webBillingProduct(input.planId, country, env)
@@ -93,11 +100,9 @@ export async function createWebSubscriptionCheckout(
     !environment ||
     (country !== "NG" && env.PAYSTACK_INTERNATIONAL_ENABLED !== "true")
   )
-    throw new TRPCError({
-      code: "PRECONDITION_FAILED",
-      message:
-        "Payment is not configured for your billing country yet. No payment has been taken.",
-    })
+    throw webBillingRuleError(
+      "Payment is not configured for your billing country yet. No payment has been taken.",
+    )
   const returnUrl = billingReturnUrl(env)
   const prepared = await prepareOwnerWebCheckout(db, {
     ...input,
@@ -140,13 +145,11 @@ export async function createWebSubscriptionCheckout(
       accountId: account.id,
       state,
     })
-    throw new TRPCError({
-      code: "PRECONDITION_FAILED",
-      message:
-        state === "uncertain"
-          ? "The payment provider response is unconfirmed. Check payment status before trying again."
-          : "Checkout could not be opened. No payment was confirmed.",
-    })
+    throw webBillingRuleError(
+      state === "uncertain"
+        ? "The payment provider response is unconfirmed. Check payment status before trying again."
+        : "Checkout could not be opened. No payment was confirmed.",
+    )
   }
 }
 
@@ -156,6 +159,11 @@ function assertEnvironment(
 ) {
   if (facts.environment !== webBillingEnvironment(env))
     throw new Error("Payment environment mismatch.")
+}
+
+function assertWebReconciliationConfigured(env: BillingEnvironment) {
+  if (!isWebReconciliationConfigured(env))
+    throw webBillingRuleError("Subscription processing is unavailable.")
 }
 
 async function reconcileCharge(
@@ -198,6 +206,7 @@ export async function reconcileInitialWebCheckout(
   checkoutId: string,
   env: BillingEnvironment = process.env,
 ) {
+  assertWebReconciliationConfigured(env)
   return reconcileCharge(db, checkoutId, `ewasub-${checkoutId}`, undefined, env)
 }
 
@@ -239,7 +248,9 @@ export async function getWebBillingSettings(
 export async function checkWebSubscriptionPayment(
   db: PrismaClient,
   actorUserId: string,
+  env: BillingEnvironment = process.env,
 ) {
+  assertWebReconciliationConfigured(env)
   const account = await findOwnerBillingAccount(db, actorUserId)
   if (!account) throw new Error("No checkout was found for this owner.")
   const session = await latestOwnerWebCheckout(db, account.id)
@@ -249,7 +260,7 @@ export async function checkWebSubscriptionPayment(
       message:
         "Payment is recorded. Apply the subscription to this business if it is not covered yet.",
     }
-  await reconcileInitialWebCheckout(db, session.id)
+  await reconcileInitialWebCheckout(db, session.id, env)
   return {
     message:
       "Payment verified. Apply the subscription to this business to use your plan.",
@@ -300,6 +311,7 @@ export async function processPaystackSubscriptionEvent(
   payload: unknown,
   env: BillingEnvironment = process.env,
 ) {
+  assertWebReconciliationConfigured(env)
   const event = z
     .object({ event: z.string(), data: z.unknown() })
     .parse(payload)

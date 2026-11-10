@@ -4,6 +4,7 @@ import {
   normalizeRole,
 } from "@ewatrade/auth/roles"
 import { getRetailOpsSubscriptionSnapshot } from "@ewatrade/db/queries"
+import { ruleRejectedError } from "@ewatrade/errors"
 import { TRPCError } from "@trpc/server"
 import {
   checkWebSubscriptionPayment,
@@ -13,6 +14,14 @@ import {
 } from "../../billing/web-subscriptions"
 import { retailOpsCreateSubscriptionCheckoutIntentSchema } from "../../schemas/retail-ops"
 import { createTRPCRouter, protectedProcedure } from "../init"
+
+function paymentRequestFailed(message: string) {
+  return new TRPCError({
+    code: "PRECONDITION_FAILED",
+    message,
+    cause: ruleRejectedError(new Error(message), "billing.webSubscription"),
+  })
+}
 
 function getRetailOpsRole(role: string): EwaTradeRole {
   const normalizedRole = normalizeRole(role)
@@ -85,11 +94,9 @@ export const retailOpsSubscriptionsRouter = createTRPCRouter({
     try {
       return await checkWebSubscriptionPayment(ctx.db, ctx.session.user.id)
     } catch {
-      throw new TRPCError({
-        code: "PRECONDITION_FAILED",
-        message:
-          "Payment has not been confirmed. Keep your receipt and check again shortly.",
-      })
+      throw paymentRequestFailed(
+        "Payment has not been confirmed. Keep your receipt and check again shortly.",
+      )
     }
   }),
   manageWebSubscription: protectedProcedure.mutation(async ({ ctx }) => {
@@ -101,11 +108,9 @@ export const retailOpsSubscriptionsRouter = createTRPCRouter({
     try {
       return await manageWebSubscription(ctx.db, ctx.session.user.id)
     } catch {
-      throw new TRPCError({
-        code: "PRECONDITION_FAILED",
-        message:
-          "Subscription management is not available yet. Keep your payment receipt.",
-      })
+      throw paymentRequestFailed(
+        "Subscription management is not available yet. Keep your payment receipt.",
+      )
     }
   }),
   createSubscriptionCheckoutIntent: protectedProcedure
