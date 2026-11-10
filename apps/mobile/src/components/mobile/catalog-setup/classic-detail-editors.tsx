@@ -360,15 +360,68 @@ export function ClassicOpeningStock({ model }: { model: CatalogSetupModel }) {
   )
 }
 
-/** SKU and barcode for the item, or for each choice. */
+/**
+ * One SKU and one barcode per choice, on that choice's main unit. Extra
+ * selling units (packs, cartons) carry none.
+ */
 export function ClassicCodes({ model }: { model: CatalogSetupModel }) {
-  const { choices, draft, update } = useDrafts(model)
+  const { draft, update } = useDrafts(model)
+  const choices = model.codeChoices
   const [selectedKey, setSelectedKey] = useState<string | null>(null)
   const selected =
-    choices.find((choice) => choice.key === selectedKey) ?? choices[0]
+    choices.find((choice) => choice.key === selectedKey) ??
+    (model.scannedBarcodeChoice
+      ? choices.find((choice) => choice.key === model.scannedBarcodeChoice?.key)
+      : undefined) ??
+    choices[0]
+  const scanned = model.seededBarcode
+  const scannedNote =
+    scanned && !model.scannedBarcodeChoice ? (
+      <View className="gap-2.5">
+        <StatusBanner
+          icon="BarcodeScan"
+          tone="warning"
+          title={`Scanned barcode ${scanned}`}
+          message={
+            choices.length
+              ? "Tap the choice it belongs to."
+              : "Add values to your customer choices first."
+          }
+        />
+        {choices.length ? (
+          <View className="flex-row flex-wrap gap-1.5">
+            {choices.map((choice) => (
+              <Pressable
+                key={choice.key}
+                accessibilityLabel={`Put barcode ${scanned} on ${choice.name}`}
+                accessibilityRole="button"
+                className="min-h-11 flex-row items-center gap-1 rounded-full bg-muted px-3.5"
+                disabled={model.locked}
+                haptic
+                onPress={() => {
+                  model.assignScannedBarcode(choice.key)
+                  setSelectedKey(choice.key)
+                }}
+              >
+                <Icon className="size-[13px] text-foreground" name="Plus" />
+                <Text className="text-xs font-bold text-foreground">
+                  {choice.name}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        ) : null}
+      </View>
+    ) : null
   if (!selected)
-    return <Lead>Finish your customer choices to add their codes.</Lead>
+    return (
+      <View className="gap-3.5">
+        {scannedNote}
+        <Lead>Finish your customer choices to add their codes.</Lead>
+      </View>
+    )
   const current = draft(selected.key)
+  const mainUnit = model.unitName.trim() || "Main unit"
   const generate = () => {
     const base =
       model.name
@@ -380,26 +433,37 @@ export function ClassicCodes({ model }: { model: CatalogSetupModel }) {
         .map((word) => word.slice(0, 4))
         .slice(0, 2)
         .join("-") || "ITEM"
-    const suffix =
-      choices.length > 1
-        ? `-${selected.name
-            .toUpperCase()
-            .replace(/[^A-Z0-9]/g, "")
-            .slice(0, 3)}`
-        : ""
+    const suffix = model.showAdvanced
+      ? `-${selected.name
+          .toUpperCase()
+          .replace(/[^A-Z0-9]/g, "")
+          .slice(0, 3)}`
+      : ""
     update(selected.key, { sku: `${base}${suffix}`.slice(0, 120) })
   }
   return (
     <View className="gap-3.5">
       <Lead>
-        Your own reference and the code printed on the pack. Both are optional.
+        {`Each choice gets one SKU and one barcode, on its main unit. ${
+          model.additionalUnits.length ? "Other selling units have none. " : ""
+        }Both are optional.`}
       </Lead>
+      {scannedNote}
       <Card>
-        {choices.length > 1 ? (
-          <Text className="text-xs font-bold text-muted-foreground">
+        <View className="flex-row items-baseline gap-2">
+          <Text
+            numberOfLines={1}
+            className="min-w-0 flex-1 text-sm font-extrabold text-foreground"
+          >
             {selected.name}
           </Text>
-        ) : null}
+          <Text
+            numberOfLines={1}
+            className="shrink text-xs font-bold text-muted-foreground"
+          >
+            {`Main unit · ${mainUnit}`}
+          </Text>
+        </View>
         <View className="flex-row items-end gap-2">
           <View className="min-w-0 flex-1">
             <FormField
@@ -415,7 +479,7 @@ export function ClassicCodes({ model }: { model: CatalogSetupModel }) {
             />
           </View>
           <Pressable
-            accessibilityLabel="Generate SKU"
+            accessibilityLabel={`Generate SKU for ${selected.name}`}
             accessibilityRole="button"
             className="min-h-[50px] flex-row items-center gap-1.5 rounded-[14px] bg-accent px-3.5"
             disabled={model.locked}
@@ -436,17 +500,23 @@ export function ClassicCodes({ model }: { model: CatalogSetupModel }) {
           editable={!model.locked}
           label="Barcode"
           maxLength={120}
-          onChangeText={(value) => update(selected.key, { barcode: value })}
+          onChangeText={(value) =>
+            // The scanned code moves here rather than sitting on two choices.
+            scanned && value.trim() === scanned
+              ? model.assignScannedBarcode(selected.key)
+              : update(selected.key, { barcode: value })
+          }
           placeholder="Scan or type"
           value={current.barcode}
         />
       </Card>
-      {choices.length > 1 ? (
+      {model.showAdvanced ? (
         <>
           <Section title="Per choice" trailing="Tap to edit" />
           <Card rows>
             {choices.map((choice, index) => {
               const on = choice.key === selected.key
+              const codes = draft(choice.key)
               return (
                 <Pressable
                   key={choice.key}
@@ -461,15 +531,23 @@ export function ClassicCodes({ model }: { model: CatalogSetupModel }) {
                   haptic
                   onPress={() => setSelectedKey(choice.key)}
                 >
-                  <Text
-                    numberOfLines={1}
-                    className="min-w-0 flex-1 text-sm font-bold text-foreground"
-                  >
-                    {choice.name}
-                  </Text>
-                  <Text className="text-xs text-muted-foreground">
-                    {draft(choice.key).sku || "No SKU"}
-                  </Text>
+                  <View className="min-w-0 flex-1">
+                    <Text
+                      numberOfLines={1}
+                      className="text-sm font-bold text-foreground"
+                    >
+                      {choice.name}
+                    </Text>
+                    <Text
+                      numberOfLines={1}
+                      className="text-xs text-muted-foreground"
+                    >
+                      {`${codes.sku.trim() || "No SKU"} · ${codes.barcode.trim() || "No barcode"}`}
+                    </Text>
+                  </View>
+                  {on ? (
+                    <Icon className="size-4 text-primary" name="Check" />
+                  ) : null}
                 </Pressable>
               )
             })}

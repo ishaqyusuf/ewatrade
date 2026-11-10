@@ -253,8 +253,12 @@ function ClassicDetailRows({
           {
             key: "codes" as const,
             label: "SKU and barcode",
-            value: "For scanning at the counter",
-            set: false,
+            value: model.seededBarcode
+              ? model.scannedBarcodeChoice
+                ? `Scanned barcode on ${model.scannedBarcodeChoice.name}`
+                : "Scanned barcode · choose a choice"
+              : "For scanning at the counter",
+            set: Boolean(model.scannedBarcodeChoice),
             icon: "Hash" as IconKeys,
             tint: "lilac" as const,
           },

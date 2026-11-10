@@ -63,6 +63,7 @@ import {
   unitKey,
 } from "./catalog-setup-model"
 import type { CatalogVariantDraft } from "./catalog-variant-model"
+import { placeScannedBarcode } from "./scanned-barcode"
 import {
   removeSellingUnitPreservingFactors,
   requireSellingUnitFactor,
@@ -668,13 +669,80 @@ export function useCatalogSetup({
     unitPrices: {},
   })
 
-  // A code scanned at a sale belongs on the single default option.
-  const seededBarcode = initialBarcode?.trim() ?? ""
   const variantDraft = (key: string): CatalogVariantDraft =>
-    variantDrafts[key] ?? {
-      ...makeDefaultVariantDraft(),
-      ...(key === "default" && seededBarcode ? { barcode: seededBarcode } : {}),
+    variantDrafts[key] ?? makeDefaultVariantDraft()
+
+  // A code scanned at a sale goes on exactly one choice's main unit. It is a
+  // real draft value, so it survives choices, sections and the advanced path.
+  const seededBarcode = initialBarcode?.trim() ?? ""
+  const codeChoices = showAdvanced
+    ? combinations
+        .filter((combination) => variantDraft(combination.key).enabled)
+        .map(({ key, name: choiceName }) => ({ key, name: choiceName }))
+    : [{ key: "default", name: name.trim() || "This item" }]
+  const scannedBarcodeChoice = seededBarcode
+    ? (codeChoices.find(
+        (choice) => variantDraft(choice.key).barcode.trim() === seededBarcode,
+      ) ?? null)
+    : null
+  // Choices the owner took the scanned code off; it is not put back there.
+  const declinedScanKeys = useRef(new Set<string>())
+  const lastScanKey = useRef<string | null>(null)
+  function assignScannedBarcode(key: string) {
+    if (editsLocked() || !seededBarcode) return
+    declinedScanKeys.current.delete(key)
+    setVariantDrafts((current) =>
+      placeScannedBarcode(
+        current,
+        key,
+        seededBarcode,
+        makeDefaultVariantDraft(),
+      ),
+    )
+  }
+  const onlyCodeChoiceKey =
+    codeChoices.length === 1 ? (codeChoices[0]?.key ?? null) : null
+  const scanLocked = editsLocked()
+  // biome-ignore lint/correctness/useExhaustiveDependencies: re-run when the holder, the choices or the drafts change
+  useEffect(() => {
+    if (!seededBarcode || scanLocked) return
+    const previous = lastScanKey.current
+    if (scannedBarcodeChoice) {
+      lastScanKey.current = scannedBarcodeChoice.key
+      return
     }
+    lastScanKey.current = null
+    const previousDraft = previous ? variantDrafts[previous] : undefined
+    if (
+      previous &&
+      previousDraft &&
+      previousDraft.barcode.trim() !== seededBarcode
+    )
+      declinedScanKeys.current.add(previous)
+    if (
+      onlyCodeChoiceKey &&
+      !declinedScanKeys.current.has(onlyCodeChoiceKey) &&
+      !variantDraft(onlyCodeChoiceKey).barcode.trim()
+    )
+      assignScannedBarcode(onlyCodeChoiceKey)
+  }, [
+    seededBarcode,
+    scanLocked,
+    scannedBarcodeChoice?.key,
+    onlyCodeChoiceKey,
+    variantDrafts,
+  ])
+
+  // A draft holding only the scanned code is not setup worth confirming over.
+  const isBlankVariantDraft = (draft: CatalogVariantDraft) => {
+    const blank = makeDefaultVariantDraft()
+    return (Object.keys(blank) as Array<keyof CatalogVariantDraft>).every(
+      (field) =>
+        field === "barcode"
+          ? !draft.barcode.trim() || draft.barcode.trim() === seededBarcode
+          : JSON.stringify(draft[field]) === JSON.stringify(blank[field]),
+    )
+  }
 
   const hasStructuralDraft = () =>
     selectedHelperKey !== null ||
@@ -682,7 +750,7 @@ export function useCatalogSetup({
     showOpeningStock ||
     trackServiceWork ||
     additionalUnits.length > 0 ||
-    Object.keys(variantDrafts).length > 0 ||
+    Object.values(variantDrafts).some((draft) => !isBlankVariantDraft(draft)) ||
     openingStock.trim().length > 0 ||
     (kind === "product" && unitName.trim().length > 0) ||
     serviceGuidance.trim().length > 0 ||
@@ -1694,9 +1762,13 @@ export function useCatalogSetup({
           removeAllAdditionalUnits()
           break
         case "remove-group":
-          setOptionGroups((groups) =>
-            groups.filter((group) => group.id !== change.id),
-          )
+          // Removing the last group leaves a plain item, not empty choices.
+          if (optionGroups.every((group) => group.id === change.id))
+            clearOptions()
+          else
+            setOptionGroups((groups) =>
+              groups.filter((group) => group.id !== change.id),
+            )
           break
       }
     }
@@ -1951,6 +2023,9 @@ export function useCatalogSetup({
     cancelSetupConfirmation,
     openPricingDetails: () => {
       if (editsLocked()) return
+      // Without customer choices there are no per-choice rows: the item keeps
+      // its one price and codes, and the per-choice path would refuse to save.
+      if (kind === "product" && optionGroups.length === 0) return
       if (
         !showAdvanced &&
         showOpeningStock &&
@@ -2057,6 +2132,11 @@ export function useCatalogSetup({
     setComposerText: guardEdit(setComposerText),
     variantDrafts,
     seededBarcode,
+    /** The choices whose main unit can carry a SKU and barcode. */
+    codeChoices,
+    /** The choice holding the scanned code, or null while it is unplaced. */
+    scannedBarcodeChoice,
+    assignScannedBarcode,
     setVariantDrafts: guardEdit(setVariantDrafts),
     additionalUnits,
     unitEditorDraft,

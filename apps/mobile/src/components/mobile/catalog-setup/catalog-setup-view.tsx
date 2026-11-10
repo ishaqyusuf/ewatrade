@@ -374,12 +374,22 @@ export function CatalogSetupView({ model }: { model: CatalogSetupModel }) {
               <StatusBanner tone="warning" message={model.optionIssue} />
             ) : null}
 
-            {model.seededBarcode && !showAdvanced ? (
+            {model.seededBarcode ? (
               <StatusBanner
                 icon="BarcodeScan"
-                message="This item is saved with the scanned barcode, then added to the sale."
-                title={`Barcode ${model.seededBarcode}`}
-                tone="default"
+                message={
+                  !model.scannedBarcodeChoice
+                    ? "Choose which choice it belongs to in SKU & barcode."
+                    : showAdvanced
+                      ? `Saved on ${model.scannedBarcodeChoice.name}, then added to the sale.`
+                      : "This item is saved with the scanned barcode, then added to the sale."
+                }
+                title={`Scanned barcode ${model.seededBarcode}`}
+                tone={model.scannedBarcodeChoice ? "default" : "warning"}
+                actionLabel={
+                  model.scannedBarcodeChoice ? undefined : "Choose choice"
+                }
+                onActionPress={() => openEditor("codes")}
               />
             ) : null}
             {submitError ? (
