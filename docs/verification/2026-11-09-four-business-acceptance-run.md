@@ -31,7 +31,7 @@ Earlier attempts, kept for history:
   assessed.
 - 9 November baseline at `7c585d5dd`: 72 NOT_ASSESSED.
 
-## Why nothing passes yet
+## Why historical proof is limited
 
 - **No launch candidate or environment is selected** (spec, evidence rules).
   Without one, no historical receipt can be credited as current.
@@ -118,9 +118,11 @@ approval. No-site catalog (R18, R19) needs a business with no published site.
 
 ## Phase 1–4 watch
 
-By 10 November: T1 backend, T2, T3, T5 and T8 had landed; T4, T6 and T7 had not.
-The matching BLOCKED rows moved to NOT_ASSESSED. They still need the runtime
-checks above before they can pass.
+By the Codex takeover on 10 November, T1–T8 had landed locally, including T4,
+T6 and T7. The earlier statement that those three had not landed is superseded.
+Data-dependent retail rows remain BLOCKED per the owner; other source-unblocked
+rows still need the runtime checks above before they can pass. See the
+[five-phase takeover](2026-11-10-five-phase-takeover.md) for exact commits and limits.
 
 ## Merchant data needed (blocks R02–R09, R17–R22 and L01)
 
@@ -261,3 +263,22 @@ messages are sent" banner.
   reached the customer's request page and their reply came back. Destination +
   ₦1,500 fee gave ₦19,500. Confirm created exactly **ORD-062**: Not paid, 4
   Crates reserved. No WhatsApp message was sent.
+
+
+## Codex takeover: scoped cashier read repair
+
+10 November 2026. Source repair `7f06ca525`, local existing-data browser only.
+`orders.paymentAccounts` and `catalog.findByCode` were missing from the exact
+scoped-staff query allowlist. Real middleware regressions failed before repair and
+passed afterward (24 tests / 129 assertions, including negative authority cases).
+The local Jawdah Poultry Acceptance cashier now sees **Received into: Shop cash**
+in an unsaved paid-order draft. ORD-001's Details, full page and direct reload
+also render correctly; the previous full-page loading failure was not reproduced.
+The draft was closed and one existing order remained. No payment/order was saved,
+no customer message/provider call was made and no fixture was created.
+
+This is evidence of the repaired read path, not complete J06 payment acceptance.
+J06 stays FAIL and the aggregate stays 6/72 local passes. Earlier run failures and
+historical evidence are retained. Source types/quick smoke/H01/H02 and standard
+existing-data web smoke passed; scope and source fingerprints are in the linked
+[takeover receipt](2026-11-10-five-phase-takeover.md).

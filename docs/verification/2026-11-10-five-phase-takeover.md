@@ -14,8 +14,8 @@ No worktree, branch change, deployment or provider action is included.
 | --- | --- | --- |
 | 1: T1–T3 | Shipment commands `cdcad01bb`; code lookup `0734a5f80`; app links `ed975340c`; sale scan UI `34f44bd25` and focus repair `c1365947a` | Scanner camera/found/repeat/ambiguous/unknown/link/denied run; exact Workshop implementation receipt; verified HTTPS app/universal links require a rebuilt native artifact and public association host. Prior custom-scheme emulator proof remains scoped. |
 | 2: T4 | Dashboard `27a53202f`, mobile `623e90e8d`, final Store-source fix `f2e296168`; approved Workshop direction 01 implemented | UI create/confirm/adjust/price/partial receive against approved shipment data; earlier list/form/refusal checks and T1 integration evidence remain valid in their scope. |
-| 3: T5–T7 | Products `082595e9a`; laundry/shipments `1e6672a17`; integrations `6b092d7ca`, `b37a2ac4f`; Workshop implementation recorded | Exact changed-case Workshop/Site parity, design deviations and target runtime acceptance remain review work. Native review actions remain off outside local unless explicitly configured; no real phone send is authorized here. |
-| 4: T8 | Host-aware sharing `040643915`; opt-in listing `92db83673`; pages/settings `a99965941`; local preview `4a882e82d`; Workshop recorded | Dashboard listing-switch verification, product photos/WhatsApp buttons and existing no-site payment/tracking examples. Preserve consent, private audience and approved direction 01. |
+| 3: T5–T7 | Products `082595e9a`; laundry/shipments `1e6672a17`; integrations `6b092d7ca`, `b37a2ac4f`; Workshop implementation recorded | Retain approved conversations v13/v14 and the documented implementation deviations. Target runtime acceptance remains open; the newer current-review-surface and earlier local-only Site instructions are recorded below. Native review actions remain off outside local unless explicitly configured; no real phone send is authorized here. |
+| 4: T8 | Host-aware sharing `040643915`; opt-in listing `92db83673`; pages/settings `a99965941`; local preview `4a882e82d`; Workshop recorded | Store/product listing controls now read-verified below; save/refetch consent changes, product photos/WhatsApp buttons and existing no-site payment/tracking examples remain. Preserve consent, private audience and approved direction 01. |
 | 5: T9 | Historical/local runs through `ee74dbc2a`; six local passes | J06 repair follow-through; J11 existing payment-link journey; remaining poultry/laundry checks; merchant-approved Hypnos/Alhaq catalog and shipment data; R23 exact-choice WhatsApp sale scope decision; selected hosted candidate/provider/native gates. |
 
 The scorecard remains **6/72 local passes, 1 failed, 47 blocked, 18 not assessed**.
@@ -98,3 +98,79 @@ SHA-256 (source was dirty over `fdea9c2d6`; committed result follows in Git):
 - `apps/api/src/utils/staff-request-access.test.ts`: `178d6559b042572aca655b239d007a8310d6ca1c1a3442d1436f8396bbe93582`
 - `packages/assistant/src/capabilities/COVERAGE.md`: `8afb08762ac9cb17c4c410ad4d6ee8e4562d0884465250661927b5e7ad03f651`
 - `bun.lock`: `05bbb4dda2da05b9a80add9e9608e2d2b47f4943c3a0872929c7efe9c58c3348`
+
+
+## Public-catalog controls: additional read-only proof
+
+Existing **Storefront Link Test 21 Oct / OWNER**, local dashboard: Settings → Stores
+shows **Business page on ẸwáTrade**, its enabled Main store switch and
+`ewatrade.localhost/b/storefront-link-test-21-oct-qa`. Catalog → Beaded Necklace
+(QA) → More → Storefront settings shows **Show on your business page**, currently
+off, and its explanation that a Store must be listed and the website is unchanged.
+Save remains disabled. The sheet was closed without editing either switch.
+This closes the missing control-rendering check; it does not prove save/refetch,
+publish new data or satisfy the merchant-specific retail cases.
+
+The relevant Brain feature explicitly records the owner's 2 November replacement
+review surface `assistant/conversations`; Phase 3 used that existing collection,
+not an invented standalone demo. Its v13/v14 design/implementation handoffs remain
+preserved. The same feature also records an earlier owner instruction to keep
+updates local and leave the private Site unchanged. Those records qualify the
+older general mirror rule; this takeover has made no Workshop/Site publication or
+selection, changed audience or rewritten archived `whatsapp-system` case history.
+The newer library labels its T5–T7 scenes proposed; catalog implementation receipts
+and local source are distinct from live availability. Actual target review remains.
+
+## Scanner cancellation: second source repair
+
+The actual `useSaleScan` hook checked its lifetime after fetching the item, but
+then awaited `tenant.featureAvailability` and could add that offering after the
+scanner closed, switched to name search, reopened or its owner unmounted. A failed
+shared-code item read could also restore a failure notice after cancellation.
+A mounted real-hook reproduction failed **four cases**, with the ordinary current
+lookup control passing. This tests draft mutation and visible notice state, not a
+copied scanner model.
+
+A final session check after the dependent reads now precedes any notice or draft
+update. Shared-code selection captures its current session and only reports its
+error while that session is still current. Existing current lookup/error behavior,
+quantities, schema, native camera, layout and search-footer components are unchanged.
+The final isolated fixture passes **seven cases / 14 assertions**, including reopen
+and current-error controls. Its wrapper verifies the exact seven JUnit test names,
+no skips/failures, in an inert separate Bun process. Wrapper plus existing scan model
+checks pass **4 tests / 23 outer assertions**. Full mobile TypeScript passes.
+These are React/hook execution checks; real camera decode and device permissions
+are separate and remain pending. No business/provider write or schema change.
+
+Scanner source SHA-256 at verification:
+
+- `apps/mobile/src/components/mobile/create-sale/use-sale-scan.ts`: `390efdd5acc78746ac9d0c9c68f29112745165209ef4d10bef0054661d2f9c43`
+- `apps/mobile/src/components/mobile/create-sale/use-sale-scan.fixture.tsx`: `ac41febb0e922502fde999fe32f099d13c04522df57887701419d48bebb874bc`
+- `apps/mobile/src/components/mobile/create-sale/use-sale-scan.test.ts`: `00109e14a70fa8142cae41a6be0ec6a7fbb446ca89ebe7ee4d72fde50ba471e5`
+
+Second-slice scoped quick smoke (seven owned source/test/impact/acceptance paths)
+passes 285/1,820 plus QA tooling types/Biome, with zero unknown mappings. It
+excludes peer iOS proposal and Agent Chat changes. H01 from the first slice remains
+valid: this hook changes no router or staff-admission metadata. Current H02 passes
+one client record with zero procedure/capability changes. Case-register integrity
+and local documentation links pass; all 72 case statuses are unchanged.
+
+
+Native follow-through: `EwaTrade_Assistant_QA` was resolved to `emulator-5556`.
+The existing no-launch doctor passed API/Metro/QA and reverse mappings without
+opening the app. Standard `qa:smoke --surface android` first failed at Maestro's
+helper extraction under the sandbox. Its normal outside-sandbox retry reached
+runner initialization, but produced no flow report or checks. During that wait,
+peer documentation commit `b57ee3daf` changed HEAD from `7f06ca525`, invalidating
+any eventual candidate receipt under the existing source-drift guard. Only this
+attempt's verified Java child was terminated; its parent saved **failed**, zero
+checks, `runtimeVerified:false`. No emulator/app state was cleared or permission
+changed. The run is not native acceptance and was not replaced by a deployment.
+
+Failed receipt:
+`.scratch/qa-release/smoke-7f06ca525b6519585218150dec8a8d40f0b5715f-local-android.json`.
+A stable source window and a responsive Maestro flow are needed before repeating
+that device check. Actual camera decode/permission/found/repeated/ambiguous/unknown/
+link checks remain open; the hook fixtures do not substitute for them.
+Scoped mobile ESLint passed. Source review/whitespace checks passed; ordinary
+unchanged types/source gates were not repeated merely for documentation updates.

@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "id": "2026-11-10-sale-scan-cancellation",
+  "tickets": ["H02"],
+  "summary": "Finish the Phase 1 T2 scanner lifetime repair: discard a canceled dependent Store read before changing the sale draft, and discard a stale shared-code selection error before restoring a notice. Closing, name-search fallback, reopening and owner unmount invalidate the pending operation; current success and error behavior remain.",
+  "noAssistantImpact": "Only the mobile explicit sale scanner hook changes. It performs existing Catalog reads and local draft selection; it neither records a sale nor adds an assistant tool, canonical command, permission, confirmation bypass, channel capability, native dependency or provider effect. Existing form_only scanner classification and channel rollouts remain unchanged.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "updated",
+      "path": "docs/verification/2026-11-10-five-phase-takeover.md",
+      "note": "Reproduced race, exact actual-hook repair and separate native-camera acceptance limits."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "apps/mobile/src/components/mobile/create-sale/use-sale-scan.test.ts",
+      "executed": true,
+      "result": "Actual mounted-hook reproduction initially failed four cases with one control passing. Final isolated child passes seven exact JUnit-verified cases / 14 child assertions; the wrapper and existing scan model suites pass four tests / 23 outer assertions. No camera/provider/network/DB effects."
+    },
+    {
+      "kind": "run",
+      "path": "scripts/qa-smoke.ts",
+      "executed": true,
+      "result": "Android no-launch doctor passed. Standard Android smoke retry was stopped during runner initialization after source HEAD drifted to peer documentation b57ee3daf; failed receipt, zero checks, no runtime/native acceptance. See takeover receipt. Source fixture/types/quick smoke/ESLint pass."
+    }
+  ]
+}

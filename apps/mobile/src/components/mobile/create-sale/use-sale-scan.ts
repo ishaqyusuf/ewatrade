@@ -78,6 +78,8 @@ export function useSaleScan(model: CreateSaleViewModel) {
         ),
       )
     }
+    // Both dependent reads can outlive closing/reopening the scanner or its owner.
+    if (session.current !== current) return
     const now = latest.current
     if (!choice || "reason" in choice) {
       setNotice({
@@ -155,10 +157,11 @@ export function useSaleScan(model: CreateSaleViewModel) {
     },
     read,
     choose(match: SaleScanMatch) {
+      const current = session.current
       setChoices(null)
-      void apply(match, session.current).catch(() =>
-        setNotice({ kind: "failed" }),
-      )
+      void apply(match, current).catch(() => {
+        if (session.current === current) setNotice({ kind: "failed" })
+      })
     },
     dismissChoices() {
       setChoices(null)
