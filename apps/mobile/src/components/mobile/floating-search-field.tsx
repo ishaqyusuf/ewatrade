@@ -147,7 +147,10 @@ export function FloatingSearchField({
   }, [focused])
 
   useEffect(() => {
-    if (focusRequest) inputRef.current?.focus()
+    if (!focusRequest) return
+    // A closing full-screen modal (the scanner) takes focus back; wait it out.
+    const timer = setTimeout(() => inputRef.current?.focus(), 450)
+    return () => clearTimeout(timer)
   }, [focusRequest])
   const showTrailing = Boolean(trailingAction) && !value && editable
 
