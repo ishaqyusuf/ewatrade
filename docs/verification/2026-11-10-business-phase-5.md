@@ -405,3 +405,75 @@ Coordinator policy review additionally confirms the explicit30s coding standard
 and180s worker job/turn lease; no automatic timeout exception is authorized. An
 app/manual-entry pilot is a separate prioritization option. The original fully
 native WhatsApp request remains outstanding while its paid path is unaccepted.
+
+## App-first local readiness packet — evidence reuse accepted
+
+The human chose **“App pilot first; native paid sales remain disabled”** in the
+coordinating chat. The coordinator accepted the smallest readiness plan and
+explicitly chose **no new smoke** for unchanged manual-flow code/data scope.
+This is existing Jawdah QA preparation, not merchant/live pilot approval. The
+original fully native WhatsApp request and its failed paid gate remain outstanding.
+
+Fresh read-only preparation on10November2026:
+
+- `bun run qa:doctor --offline` passed local-profile database isolation, dependency
+  and generated-client presence. It performed no runtime/device/database probe.
+- One existing-service doctor with the installed Portless CA passed local API
+  database readiness, Dashboard response and QA capability:
+  `NODE_EXTRA_CA_CERTS=/Users/M1PRO/.portless/ca.pem bun run qa:doctor --services api,dashboard --require-qa`.
+  It does not prove served SHA, schema/client freshness or hosted readiness.
+- Reuse the existing ignored `.scratch/qa-release/smoke-local.json`; no config,
+  profile or data was created/edited. Its web selection is the existing Jawdah
+  Poultry QA OWNER, local Dashboard, saved Snail QA7Oct and expected₦1,500.00.
+  The exact private chooser label remains in that ignored config. The five-phase
+  takeover config has the same web fields. No Android surface is selected.
+- Current **raw config-file SHA256**:
+  `4d3f72ca7945d24699e79af6dd06345b381fd94187a724276184d61254e3ace3`.
+  This is not the smoke runner's normalized config fingerprint and is not asserted
+  equal to one. QA configuration/session data remains outside Git.
+
+Evidence reused, with its limits retained:
+
+| App readiness item | Existing evidence / current scope |
+| --- | --- |
+| QA sign-in, populated catalog, manual item/total draft, Cancel | Passed local web receipt `.scratch/qa-release/smoke-fdea9c2d6df782c209edb144243cd164133bda61-local-web.json`,10Nov10:53:44–10:54:19UTC. Receipt SHA`fdea9c2d6df782c209edb144243cd164133bda61`, configHash`01eb7eb03925d0f7659b0aef021db623d40abf674d3d2bc212983794ca9a0cea`, clean:false/runtimeVerified:false. Old-source local evidence, not a current/hosted candidate receipt. |
+| Saved Order details | Existing Jawdah Poultry QA OWNER ORD-062 showed four Small Crates₦18,000 plus₦1,500 charge,₦19,500due, paid0/reserved. New-link draft canceled and Order sheet closed without saving. See current independent observations above. |
+| Receiving-account admission | Existing Jawdah Poultry Acceptance CASHIER loaded Shop cash in an unsaved paid draft and full ORD-001/details/reload after`7f06ca525`. Actual policy/middleware regression24tests/129assertions retained, including negative authority. This is admission/read proof, not a saved cashier payment. |
+
+Source comparison found no changes since the reused web receipt in the actual
+Orders router/schema, Dashboard Orders/catalog/catalog-item components or sales/
+catalog routes. The later Dashboard changes in that range were shipment-specific.
+The staff policy/middleware source and regressions remain unchanged since7f06ca525.
+The callback/context T10 changes preserve ordinary browser admission and native
+paid remains default-off. These facts support scoped feature-evidence reuse;
+they do not relabel the old receipt as a current-source or hosted pass.
+
+The concrete minimal sequence is now:
+
+1. Use the existing QA Owner/catalog and manual draft/Cancel evidence above,
+   together with fresh local-service readiness. No additional suite, browser/manual
+   pass, fixture, sale/payment submit or provider call was performed for this plan.
+2. Reuse the saved-Order and receiving-account admission read proof. Keep J06 FAIL
+   until actual saved cashier payment acceptance, and J11 NOT_ASSESSED until the
+   existing public payment/report/retry outcome. No case is promoted by app-first
+   prioritization or the doctor.
+3. The coordinator chooses the actual pilot candidate/runtime/channel scope and
+   any first merchant inputs. A small approved product/options/unit/NGN-price/
+   opening-stock set is sufficient planning input; public media needs owned photos
+   and consent only if public display is in scope. Real laundry prices/due/staff
+   facts or shipment costs/qty/freight/dated FX are needed only for those pilot
+   features. Hypnos/Alhaq fixtures or50-product stress catalogs are not required
+   for initial Jawdah QA readiness.
+
+No candidate-sensitive smoke was started before or after this decision; no source
+hold is active. If a future scope change materially requires a fresh local receipt,
+only one standard existing-data web smoke is proposed, after the coordinator's
+explicit final SHA/hold grant:
+`NODE_EXTRA_CA_CERTS=/Users/M1PRO/.portless/ca.pem bun run qa:smoke --target local --surface web --config .scratch/qa-release/smoke-local.json`.
+This is a contingent command, **not an executed or currently authorized window**.
+No native build, hosted/provider change, deployment or merchant/live pilot follows.
+
+CSV remains unchanged at72stable cases:6historical local PASS,1FAIL,47BLOCKED,
+18NOT_ASSESSED. Important owner questions remain only in the coordinating chat.
+Brain impact: own local `.brain/tasks/2026-11-10-business-phase-5.md` records the
+accepted app-first/reuse choice; aggregate policy/target documents belong to root.
