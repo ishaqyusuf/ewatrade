@@ -272,3 +272,54 @@ sale/payment, provider send, native build or deployment is implied. Finished Pha
 2 and4 source remains finished; scanning, public sharing and shipments are included
 in a first pilot only when their real prerequisites are met. J06/J11 and release
 gates remain visible. Important inputs or release decisions return to this chat.
+
+## App-pilot preparation result and Preview boundary
+
+Phase5's offline doctor and one read-only local service doctor pass. The existing
+QA config already selects Jawdah Poultry QA/Owner and Snail QA7Oct, with a manual
+draft total of NGN1,500. No config or dataset was changed. The coordinator accepts
+reuse of the earlier local manual-draft/Cancel proof because its relevant Orders,
+Catalog and dashboard entry/detail sources are unchanged. Existing saved-Order
+and cashier Shop cash admission reads are also reused. These retain their original
+source/profile limits: old receipt at`fdea9c2d6`, dirty local runtime and
+`runtimeVerified:false`, with no current hosted/candidate or saved-payment credit.
+No fresh smoke or repeated manual pass was required merely to prepare this pilot.
+Phase5's readiness receipt is committed in`469fd7b89`; the72-case CSV is unchanged.
+
+Read-only canonical commands at source`b3e65e0f3`:
+
+```sh
+bun run release status --preview --mobile skip
+bun run release plan --preview --mobile skip
+```
+
+Both completed; the plan says nothing changed. The older documented
+`release:status` alias is absent, so the existing root release subcommand was used.
+The initial sandbox fetch refusal was resolved through normal read-only escalation;
+no push, schema write or deployment was attempted.
+
+Recorded release baselines select database, dashboard, marketing, storefront, API
+and jobs; mobile is explicitly skipped. This is advisory source/tag comparison,
+not an independent current hosted-schema/runtime census. Database changes since
+the recorded baseline are the incoming-shipment schema (`36e095785`: new enum,
+six new tables/indexes/foreign keys) and opt-in platform listing (`92db83673`:
+additive listing fields). Nothing was applied to Preview during preparation.
+
+The local names-only env plan warns about absent assistant signing-version/model/
+native-review settings and some Storefront privacy/reviewer settings. Warnings are
+retained, with no invented values or settings added to silence them. The plan does
+not verify effective hosted values. Native paid must remain disabled at the target;
+verify its effective gate is false and do not add`order_create` to native-review
+action entries or activate it for the pilot. Paid subscriptions/provider activation
+remain outside this business-flow pilot preparation.
+
+Proposed next step for owner review is a **Preview web app pilot**, using the normal
+release executor with mobile skipped: explicit Preview schema authorization,
+committed candidate verification from its clean-copy hook, planned component
+rollout and matching existing-data Preview smoke. Production, Android build/OTA,
+provider activation, customer messages and merchant catalog/public-consent writes
+are excluded. The existing shared `AGENT_CHAT.md` work remains uncommitted and
+outside the selected candidate. Release and schema changes still require explicit
+owner authorization; choosing app-first priority did not grant it. This proposal
+does not accept J06/J11 or replace their outstanding money/report/retry proof.
+
