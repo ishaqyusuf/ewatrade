@@ -18,8 +18,8 @@ not promote a case or claim launch completion.
   failed receipt rather than treating initialization or partial steps as a pass.
 - [x] Confirm exact Workshop selection and source linkage; implementation receipt
   remains pending integrated device acceptance.
-- [ ] Retry the standard smoke after the catalog wait repair, within a newly
-  acknowledged Phase 5 source window.
+- [ ] Retry the standard smoke after the catalog wait repair, on a responsive
+  assigned runtime and within a newly acknowledged Phase 5 source window.
 - [ ] Complete T2 camera decode/found/repeat/shared-code/unknown/QR-link/denied
   recovery without saving a sale or inventing catalog fixtures.
 - [ ] T1 merchant-approved shipment acceptance and T3 verified HTTPS links remain
@@ -89,6 +89,60 @@ No catalog implementation record is appended from these partial observations.
 
 Permanent review: https://workshop.localhost/ewatrade/legacy/mobile-quality-workshop
 
+### Focused follow-through and remaining native gate
+
+The checked catalog-wait repair and initial report were committed at `1093df64e`.
+Phase 5's subsequent bounded read-only reconciliation found 30 active unit
+offerings, six distinct nonnull SKUs and zero barcodes for the existing Claude Web
+Test Farms catalog. `BRL-LIVE` and `EGG-MED-01` exist; there was no shared-code
+collision in that result (100-row bound was not reached). No code/product fixture
+was created. This establishes eligible saved codes, not camera decoding.
+
+A temporary focused setup used normal sign-out and the existing QA chooser. It
+stopped before choosing the farm: Android reported an actual input-dispatch ANR
+at **12:36:26 WAT**, waiting 7,531 ms for a MotionEvent. Hierarchy and screenshot
+reads slowed while ordinary ADB shell remained responsive. The setup also used
+the wrong scroll direction from the chooser's top; that setup error is not a
+product defect. Only its verified owned Maestro Java process was stopped; its
+final exit was 143. Its private diagnostics remain under
+`/private/tmp/ewa-phase1-scanner-setup/2026-11-10_123402/`. A captured Java stack
+showed a pending driver `viewHierarchy` call. This does not identify a product
+source root cause, and no native product fix was made from it.
+
+The documented Dev-client reconnect passed transport/API/Metro/QA but the app
+initially showed splash/blank startup. After coordination through Agent Chat, one
+data-preserving restart of **only** EwaTrade_Assistant_QA/5556 used the documented
+`-gpu swiftshader -feature -Vulkan -no-snapshot-load -no-snapshot-save` flags.
+The same AVD's QA profiles/data persisted. GreenTill_API34/5554 and shared API and
+Metro services were untouched. The new managed emulator session is retained as
+`5522`; no app installation, native build or data wipe occurred.
+
+After boot/reconnect, actual login, existing QA chooser, farm Owner session,
+loaded Home and an unsaved New sale screen rendered. Normal New sale and scan
+button taps reached **Opening camera**. Screenshot reads again stalled at that
+point; guest load was 10.41. The post-boot ANR query explicitly reported **no ANR
+since boot**; do not misreport this delay as another observed ANR. The attempt
+decoded no code and added no line. Temporary generated QR images were camera
+input only, with no catalog/database fixture; poster placement did not establish
+decode behavior. A queued local gRPC rotation helper was never executed: its
+owning pending screenshot/rotation command was stopped (exit 143).
+
+Cleanup restored the default wall poster (`OK`). The Dev app force-stop request
+timed out, so app closure was initially unconfirmed; a subsequent assigned-device
+PID read returned no Dev app process. No active Maestro flow or queued rotation
+remains; a subsequent explicit state query confirmed `stopped`. Camera
+permission was never changed; denied/recovery remains untested. No second generic
+smoke, source hold, passing receipt or Workshop implementation record was created.
+Phase 5 received the failure, correction and remaining gate through Agent Chat.
+Eight valid private native screenshots and a qualified `observations.json` are
+retained under `.scratch/mobile-sales-quality/runs/2026-11-10-business-phase-1/`.
+
+**Next dependency:** a responsive assigned native runtime, then a fresh explicitly
+acknowledged source window for `qa:smoke` and the separate scanner outcomes. There
+is no shared-code data for that device case, and merchant shipment/build/public
+association gates remain as documented. Repeated recovery loops, a different
+project's emulator, fabricated catalog data or a deployment cannot replace proof.
+
 ## T3 missing target evidence
 
 Earlier custom-scheme sign-in/exact-record/foreign-business refusal and web login
@@ -137,3 +191,11 @@ This is source/syntax proof, not the required native retry. H01 source metadata
 is unchanged; existing first-slice classification evidence is reused. Brain impact:
 local-only `.brain/tasks/2026-11-10-business-phase-1.md`; shared summaries remain
 with the coordinator. The harness change adds no capability/API/schema behavior.
+
+The post-commit CI H02 command with base `1093df64e^` passed across this milestone
+and the three subsequently committed peer impact records: zero capability or
+procedure rows changed. This is explicitly the combined committed range, not a
+claim that this phase authored those records. Final scanner/lock fingerprints
+match the table above; unchanged source checks were reused for this evidence-only
+append. Source milestone `1093df64e` is committed; this final evidence append is a
+separate local documentation milestone. No push or deployment is authorized.
