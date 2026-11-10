@@ -10,15 +10,16 @@ has the status, evidence and limitation for each case.
 
 ## Scorecard
 
-Current, 10 November 2026, after runtime run 1 and the T1/T2/T3/T5/T8 commits:
+Current, 10 November 2026, after runtime run 1, the T1/T2/T3/T5/T8 commits and
+the owner's instruction to keep data-dependent retail cases blocked:
 
 | Business | Passed | Fail | Blocked | Not assessed |
 | --- | ---: | ---: | ---: | ---: |
 | Jawdah poultry | 5/12 | 0 | 0 | 7 |
-| Laundry | 0/12 | 0 | 2 | 10 |
-| Hypnos Man Collection | 0/24 | 0 | 9 | 15 |
-| Alhaq Tech | 0/24 | 0 | 9 | 15 |
-| **Total** | **5/72 (6.9%)** | **0** | **20** | **47** |
+| Laundry | 0/12 | 0 | 3 | 9 |
+| Hypnos Man Collection | 0/24 | 0 | 23 | 1 |
+| Alhaq Tech | 0/24 | 0 | 23 | 1 |
+| **Total** | **5/72 (6.9%)** | **0** | **49** | **18** |
 
 The five passes are local-window passes (see runtime run 1). The hosted launch
 environment is still unselected, so they do not cover hosted or provider gates.
@@ -119,6 +120,52 @@ approval. No-site catalog (R18, R19) needs a business with no published site.
 By 10 November: T1 backend, T2, T3, T5 and T8 had landed; T4, T6 and T7 had not.
 The matching BLOCKED rows moved to NOT_ASSESSED. They still need the runtime
 checks above before they can pass.
+
+## Merchant data needed (blocks R02–R09, R17–R22 and L01)
+
+The owner asked on 10 November that retail cases needing merchant product data
+stay blocked rather than run on invented data. R01 (business/Store setup) can
+run with QA identities, so it stays NOT_ASSESSED.
+
+**Hypnos Man Collection:** about 50 base products covering perfumes (Arabian and
+Hausa), body sprays, jalabiyas, eyeglasses, wristwatches and rings. For each one:
+
+- name and category;
+- brand, only if real;
+- the options actually stocked: perfume volume in ml, jalabiya size, ring size,
+  colour;
+- selling price in NGN for each stocked option;
+- opening quantity per option;
+- selling unit (bottle, piece);
+- any manufacturer barcode or SKU;
+- at least one photo the business owns, and whether it may be shown publicly.
+
+Also needed:
+
+- sales staff names and roles;
+- whether the business already has a published site;
+- one real or owner-approved example shipment: supplier, currency, unit costs,
+  quantities, freight and the NGN rate.
+
+**Alhaq Tech:** the same per-product fields, for wall chargers, power banks, phone
+cases and pouches, screen guards, car chargers and USB cables or adapters. Only
+the choices actually stocked:
+
+- connector type;
+- wattage;
+- capacity in mAh;
+- compatible phone model;
+- cable length;
+- colour.
+
+Also: real manufacturer barcodes where the products carry them, and one China
+consignment with supplier unit prices in CNY, quantities, freight and the NGN
+rate.
+
+**Laundry:** the price list as garment × treatment × size, with a price or
+"quote" for each row, including Jalabia wash-and-iron. Also the normal due times
+and the staff roles. L02–L11 can run on clearly labelled test-only prices.
+L01 needs the real list.
 
 ## Runtime run 1: Jawdah dashboard
 
