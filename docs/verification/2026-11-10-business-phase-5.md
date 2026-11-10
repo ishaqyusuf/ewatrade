@@ -252,3 +252,40 @@ locks, current authority, complete-page confirmation, target digest and idempote
 No connected retry is active or automatically authorized. A new source-regression
 window requires concrete root cause, bounded patch/relevant proof and revised
 source freeze. H23/A23 remain BLOCKED; no merchant/native/provider case passed.
+
+### Post-read-repair regression — later source checkpoint
+
+Phase3 measured the actual adapter before/after its minimal read-ordering repair:
+price reads3→1, receiving-account reads2→1 and redundant offering-existence reads4→0;
+stock discovery and a fresh locked stock reread remain2. This removes14duplicate
+SQL reads for the four-line fixture. Canonical pricing is read after inventory
+locking; explicit same-Order initial-payment authority and existing tenant/Store/
+system-role/active/config/price/customer/account/stock/target guards remain. The
+coordinator independently reviewed the change; affected15tests/115assertions and
+required source gates passed. No cache, Finance refactor or timeout increase.
+
+Run4 used the same selected first money case and actual four-line paging
+preconditions. Frozen4697-file digest:
+`a6419830bfe8496725bec0db273bc0b4945bb6045d3aee1342b49822dd7f3d74`.
+It ended **0pass/1fail/1filtered,112assertions,337.45s**. The unpaid path and
+quantity-correction assertions were reached, but paid confirmation still exceeded
+the unchanged30s root transaction: Prisma`P2028` at
+`FinanceInventoryValuationEvent.create`,30,652ms. The earlier failure had been at
+`financeBook.update`; the repair advanced the transaction but did not qualify it.
+Full paid/Cashier/replay source acceptance remains incomplete.
+
+Phase5 independently confirmed the private
+`/private/tmp/ewatrade-t10-canonical-integration-cost-repair.log` cleanup PASS /
+externalCalls0 marker and failure summary, and independently verified the frozen
+source unchanged after completion. Existing scoped zero-owned cleanup assertions
+passed and were reused; no extra DB audit. Dependency hold released, no active
+connected run or automatic retry.
+
+This supersedes the earlier next-step wording: before any further product edit,
+coordinator now authorizes narrow per-phase/model-operation timing of the failing
+paid path. Use existing tracing or a test-only listener; export no SQL, arguments,
+identifiers or private values. Preserve the30s ceiling and every canonical proof,
+lock, authority, Finance, stock and idempotency guard. Reuse passed unpaid/Cancel/
+stale evidence and avoid repeating all successful phases. A diagnostic window
+needs its exact command, attributed fixture/cleanup and frozen instrumentation
+source. No broad Finance refactor, provider/hosted/release action or case promotion.
