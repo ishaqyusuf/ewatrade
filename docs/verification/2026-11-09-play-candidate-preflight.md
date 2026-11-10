@@ -1,5 +1,12 @@
 # Android candidate preflight checkpoint
 
+**10 November source refresh:** current Play Preview introspection and actual
+local upload-signing checks pass at native source39ada60cd. Root's full mobile
+typecheck is reused; earlier foreign Catalog/Prisma type failures are historical.
+No immutable candidate is pinned. New peer API test changes are refused by the
+canonical clean-source staging guard. See the
+[current bounded receipt](2026-11-10-android-candidate-readiness-refresh.md).
+
 **Later checkpoint:** Vercel CLI login is restored and the approved existing
 upload signer passes the actual local certificate check. The normal protected
 Preview environment pull still redacts the hosted product catalog, so current
