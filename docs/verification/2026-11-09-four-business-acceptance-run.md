@@ -325,3 +325,12 @@ Phase5 independently verified the direct human reply; earlier planning-only gate
 above are historical. Source implementation is underway, not accepted. H23/A23
 remain BLOCKED and all72statuses remain unchanged; provider/hosted/release stays
 separate. Exact provenance is in the current Phase5 receipt.
+
+T10 source integration follow-through (local guarded synthetic domain fixture,
+not merchant/runtime proof): cancellation and stale no-effect behavior passed;
+the targeted canonical money run passed hard paging preconditions but failed
+Finance posting at the unchanged30s root transaction limit. Scoped cleanup and
+externalCalls0 passed; frozen source equality verified. Minimal redundant-read
+repair is ongoing. [Exact attempts and practical pilot stance](2026-11-10-business-phase-5.md#t10-guarded-source-integration-ledger).
+H23/A23 and all other72statuses remain unchanged. No source-only pass or
+synthetic test is promoted into merchant/native/provider acceptance.

@@ -201,3 +201,54 @@ product implementation paths in Agent Chat`f9646959` and is continuing them.
 H23/A23 remain BLOCKED: authorization is not completed source or native case proof.
 No new hosted flag, provider/phone send, paid effect, build or release is implied.
 No second source hold exists while the authorized implementation proceeds.
+
+## T10 guarded source-integration ledger
+
+Current pilot stance uses ordinary manual search/code entry. Phase1's loading
+escape `1f3234316` is finished and independently reviewed by the coordinator;
+its actual layer/hook evidence8childcases/21assertions, wrapper+model4/24 and
+scoped quick/lint is reused. Camera decode/shared-code/HTTPS association remains
+unproved. The full72-case register is a coverage record; it is not a prerequisite
+for finishing useful source slices or selecting a small pilot.
+
+Phase5 reviewed and serialized the exact existing guarded channel-action fixture
+on the verified local `ewatrade_qa_v1` target. It creates a uniquely attributed
+synthetic QA Tenant/User/Store, never merchant data. Process-local rehearsal and
+a rejecting fetch trap prohibit model/provider calls. Owned cleanup validates QA
+source/slug/actor/Store/proposal idempotency ownership and removes financial,
+stock and proof dependents before asserting zero tenant/user/identity/proposals.
+Cleanup failure must retain attribution instead of broadening deletion. No
+parallel DB/browser/native test or shared service restart was performed.
+
+The dependency freeze covers4695API/package/root-input files, including new T10
+files. Before/after hashes are independent of unrelated documentation/mobile work.
+No hosted/provider/native artifact or merchant-case qualification is requested.
+
+| Attempt | Frozen source digest | Observed result and limitation |
+| --- | --- | --- |
+| Initial grant suspended before execution | Superseded `a4a33b49…` | No connected run. Quantity-only edits could clear prior payment/customer/handover facts; repaired before execution. |
+| Run1 | `7cbee3c7f8be7caaefc043fbd68a5a6c010d8ed86ae444e5c038feb40836967a` | Failed0/2,53assertions,146.29s. One short complete review legitimately fits one message, contradicting the paging assumption. Cancellation result reconstruction omitted canonical action, so exact delivery correctly refused `SAVED_RESULT_CHANGED`. No Order/payment created. Cleanup passed, externalCalls0, source unchanged. |
+| Run2 | `d6e0515699f4599c4f44a8170a812aeff5372812366c5f34b504c45a0dc94a5e` |1pass/1fail,101assertions,241.32s. Actual Cancel/stale no-effect case passed160.603s after the minimal reconstruction repair. Two short lines still fit one complete review; first case failed before Order/payment. Cleanup passed, externalCalls0, source unchanged. |
+| Final money-only run | `43d934b6d0b6928309d102bd39ffbb8f9461bfd033a85b7689e14284ab2df335` | Failed0/1 with1filtered,112assertions,353.52s. Hard actual-renderer preflight before DB and runtime paging precondition passed. Unpaid path assertions and quantity-correction were reached; paid path hit Prisma`P2028` at Finance posting's `financeBook.update`,30,832ms against the unchanged30,000ms root transaction. Full money/cashier/replay acceptance remains incomplete. |
+
+The final retry ran only the existing first money/permission/Next/replay test,
+retaining unpaid/partial/actual scoped Cashier full payment. The passed Run2
+Cancel/stale case was reused. Four exact fixture lines/₦40 total,₦40full or₦4partial,
+stockdelta4 were proven to produce two pages for all three payment states before
+fixture setup: unpaid621/400units, partial/full617/355. Three lines would still
+fit one paid message at677units. Explicit hard paging assertions replaced guessing;
+the valid ordinary one-message Confirm path was never weakened. The600s case
+budget reflected measured latency and did not widen any business transaction.
+
+Phase5 independently read the final private log's cleanup PASS/externalCalls0
+marker and failure summary, then independently verified the post-run43d934graph
+unchanged. Existing zero-owned cleanup assertions are reused; no extra DB audit
+was run. Private logs remain under `/private/tmp/ewatrade-t10-canonical-integration{,-retry,-final}.log`.
+All three outcomes remain truthful historical evidence.
+
+Current next step: minimal duplicate-read diagnosis/repair under coordinator
+instruction. Preserve the30s transaction ceiling, canonical account/stock/Finance
+locks, current authority, complete-page confirmation, target digest and idempotency.
+No connected retry is active or automatically authorized. A new source-regression
+window requires concrete root cause, bounded patch/relevant proof and revised
+source freeze. H23/A23 remain BLOCKED; no merchant/native/provider case passed.
