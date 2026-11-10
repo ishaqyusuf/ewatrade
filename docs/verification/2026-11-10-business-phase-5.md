@@ -10,7 +10,9 @@ checkpoints below retain their historical scope. No native case has passed.
 
 **Latest acceptance state:** incomplete guarded source checkpoint `c85d5ff4f`;
 paid partial confirmation still fails the unchanged30s limit. No active window
-or patch/retry loop. The practical remaining blockers are listed at the end.
+or patch/retry loop. The app-first Preview rollout and existing-data web smoke
+passed at `5e770dbfe`; this does not pass a business case or the native paid gate.
+See the final Preview checkpoint below for the exact evidence and limitations.
 
 Initial checkout: `main`, `2ecf668cc55775d9731a5afc95c5b5ccded55b47`, only
 pre-existing shared Agent Chat changes. No worktree or branch change.
@@ -477,3 +479,59 @@ CSV remains unchanged at72stable cases:6historical local PASS,1FAIL,47BLOCKED,
 18NOT_ASSESSED. Important owner questions remain only in the coordinating chat.
 Brain impact: own local `.brain/tasks/2026-11-10-business-phase-5.md` records the
 accepted app-first/reuse choice; aggregate policy/target documents belong to root.
+
+## App-first Preview rollout and smoke — independently validated
+
+The owner authorized the coordinator's normal Preview-only release of exact
+source **`5e770dbfe955caa6ac38f7cdc11923eb10c022d4`**, including schema and
+web/API/jobs, followed by the standard existing-data web smoke. The owner also
+authorized one executor temporary release worktree. Phase5 preserved the source,
+configuration and service hold throughout; the coordinator alone ran release and
+smoke. Production, mobile release and provider activation were excluded.
+
+Existing receipts independently checked after terminal success on 10 November:
+
+- `.scratch/qa-release/rollout-5e770dbfe-preview-exit.json`: exact candidate,
+  Preview, exit0. The private rollout log records clean-copy fast checks
+  **285 tests / 1,820 assertions**, schema sync in **18.06s**, Ready Dashboard,
+  Marketing and API, checked and aliased Storefront, and jobs version
+  **20261110.1** on the isolated Preview project. Its final result confirms all
+  six planned components. All six `release/preview/<component>` tags independently
+  resolve to the exact source above.
+- `.scratch/qa-release/fast-5e770dbfe955caa6ac38f7cdc11923eb10c022d4.json`:
+  passed, clean:true, completed **14:22:39.676UTC**; canonical `validFastReceipt`
+  passed against the current release-toolkit dependency hash.
+- `.scratch/qa-release/smoke-5e770dbfe955caa6ac38f7cdc11923eb10c022d4-preview-web.json`:
+  passed, clean:true, runtimeVerified:true, two owned runtime identities,
+  **14:38:19.094–14:38:54.027UTC**. Canonical `assertSmokeReceipt` passed against
+  the exact candidate, Preview/web target, freshness and current normalized config
+  hash `e536995bd7c5da22a8d2b0a41cb524461ec581c9bcf9c374dbd4b8e4bbbd126a`.
+  The four checks were QA login/exact account selection, populated catalog,
+  sale-draft item/total and cancel without submitting. No sale/payment was saved.
+- Existing ignored Preview config remained byte-identical: raw file SHA256
+  `b3053107f1f0ee3d4431661c5bd2ed4e26e5a5cd1d6e5ebc91fddcc588c0c8bb`.
+  This raw hash differs intentionally from the normalized config/toolkit hash.
+  No QA config, session artifact or private log is added to Git.
+
+The bounded pre-release provider audit found both
+`ASSISTANT_WHATSAPP_NATIVE_REVIEW_ACTIONS` and its `EWATRADE_`-prefixed name
+absent from applicable Preview API project/branch settings and the complete
+paginated linked shared-variable inventory. This is **OFF saved-configuration
+evidence**: exact `order_create` membership fails closed for the rollout. No
+values were decrypted or configuration changed; this is not a separate runtime
+gate probe. Jobs source forwards identifier-only turns to the API, where the gate
+is enforced. The coordinator accepted this audit without another Trigger audit.
+
+Original `main`/HEAD remained at the release source; only pre-existing shared
+`AGENT_CHAT.md` was dirty. The candidate temporary worktree was removed. Both
+coordinator and Phase5 receipt validation passed, then the coordinator released
+the hold. This documentation checkpoint is subsequent to deployed source
+`5e770dbfe`; its own commit is not another deployment.
+
+No new provider/browser/database test was run by Phase5 during this validation.
+Native paid/Cashier/replay remains unaccepted, exact selected Workshop v17 has no
+T10 implementation receipt, and the original native request remains outstanding.
+The Preview smoke is scoped QA evidence, not merchant or full-feature acceptance.
+All 72 stable case statuses remain **6 historical local PASS / 1 FAIL / 47 BLOCKED /
+18 NOT_ASSESSED**; J06 remains FAIL and J11 NOT_ASSESSED. Brain impact: own local
+`.brain/tasks/2026-11-10-business-phase-5.md`; root owns aggregate Brain updates.

@@ -22,8 +22,9 @@ owner's instruction to keep data-dependent retail cases blocked:
 | **Total** | **6/72 (8.3%)** | **1** | **47** | **18** |
 
 Earlier on 10 November the count was 5/72 passed; J06 moved from PASS to FAIL in
-run 2. All passes are local-window passes (see runtime runs 1–2). The hosted launch
-environment is still unselected, so they do not cover hosted or provider gates.
+run 2. All case passes are local-window passes (see runtime runs 1–2). A separate
+app-first Preview candidate now has a passed existing-data web smoke; it does not
+promote these historical case passes or cover merchant/provider gates.
 
 Earlier attempts, kept for history:
 
@@ -33,8 +34,9 @@ Earlier attempts, kept for history:
 
 ## Why historical proof is limited
 
-- **No launch candidate or environment is selected** (spec, evidence rules).
-  Without one, no historical receipt can be credited as current.
+- **The selected app-first Preview scope is narrower than launch acceptance.**
+  Exact candidate `5e770dbfe` has current web smoke evidence, but historical
+  business-case receipts are not promoted to that candidate by a draft/Cancel run.
 - **All mapped proof is local QA on older sources.** It ran on synthetic
   tenants: Jawdah Poultry QA, Mama Bisi Farms, FreshCare Demo and Heritage QA.
   It used test OTP, registered synthetic image fixtures, simulated transfer
@@ -345,3 +347,23 @@ connected loop. [Latest source checkpoint and compact practical blockers](2026-1
 distinguish finished source from the real local paid gate, merchant consent/data
 and target dependencies. All72statuses stay unchanged;72/72 is not the only useful
 pilot-readiness outcome.
+
+## App-first Preview checkpoint — 10 November, 14:38UTC
+
+Owner-approved Preview rollout of `5e770dbfe955caa6ac38f7cdc11923eb10c022d4`
+finished with explicit exit0 for database, Dashboard, Marketing, API, Storefront
+and jobs. All six Preview release tags match. Clean fast checks passed 285/1820;
+the exact candidate's Preview web smoke passed at 14:38:54UTC with clean:true,
+runtimeVerified:true and four checks: QA account, populated catalog, manual sale
+draft item/total and Cancel without submit. Phase5 independently validated the
+existing receipts, freshness and current config/dependency hashes; no new run.
+
+The native-order gate was OFF in saved Preview API project/linked-shared metadata
+before rollout. Native paid/Cashier/replay acceptance remains incomplete; selected
+Workshop v17 still has no T10 implementation receipt. This is current scoped QA
+readiness, not merchant acceptance. No sale/payment was submitted and no 72-case
+status changed: 6 historical local PASS / 1 FAIL / 47 BLOCKED / 18 NOT_ASSESSED. J06 stays
+FAIL; J11 stays NOT_ASSESSED. Production/mobile/provider activation was excluded.
+The temporary executor worktree was removed and original main/source preserved.
+Subsequent receipt commits are documentation, not deployed source. Exact private
+receipt paths and limitations: [Phase5 Preview checkpoint](2026-11-10-business-phase-5.md#app-first-preview-rollout-and-smoke--independently-validated).
