@@ -6,6 +6,7 @@ import {
   shipmentMajorToMinor,
   shipmentPriceChanges,
   shipmentRateCurrencies,
+  shipmentRoundedMinor,
   shipmentUnreceivedUnitMinor,
 } from "./shipments"
 
@@ -143,5 +144,15 @@ describe("shipment UI helpers", () => {
     })
     expect(shipmentPriceChanges([row, { ...row, value: "3" }]).ok).toBe(false)
     expect(shipmentPriceChanges([{ ...row, value: "1" }, row]).ok).toBe(false)
+  })
+
+  test("rounds T1's six-place landed unit cost to whole kobo", () => {
+    // Values from the 10 Nov QA run: Layer feed 17,091,746 kobo / 12 bags.
+    expect(shipmentRoundedMinor("1424312.166666")).toBe("1424312")
+    expect(shipmentRoundedMinor("76426.500000")).toBe("76427")
+    expect(shipmentRoundedMinor("1349043.571428")).toBe("1349044")
+    expect(shipmentRoundedMinor("440000")).toBe("440000")
+    expect(shipmentRoundedMinor(-120000)).toBe("-120000")
+    expect(shipmentRoundedMinor("-0.4")).toBe("0")
   })
 })

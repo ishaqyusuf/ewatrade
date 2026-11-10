@@ -3,6 +3,7 @@
 import { useTRPC } from "@/trpc/client"
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
 import { formatFinanceMoney } from "@ewatrade/utils/finance-money"
+import { shipmentRoundedMinor } from "@ewatrade/utils/shipments"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { useMemo } from "react"
 
@@ -16,8 +17,9 @@ export type StockChoice = {
   offering: { id: string; revision: number; priceMinor: number } | null
 }
 
+/** Formats minor units; T1's per-unit costs carry six decimal places. */
 export const money = (minor: string | number, currencyCode: string) =>
-  formatFinanceMoney(String(minor), currencyCode)
+  formatFinanceMoney(shipmentRoundedMinor(minor), currencyCode)
 
 export const OPEN_SHIPMENT = ["EXPECTED", "PARTIALLY_RECEIVED"] as const
 

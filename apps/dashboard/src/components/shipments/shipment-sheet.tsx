@@ -29,6 +29,7 @@ import {
   shipmentArrivalQuantity,
   shipmentMajorToMinor,
   shipmentPriceChanges,
+  shipmentRoundedMinor,
   shipmentUnreceivedUnitMinor,
 } from "@ewatrade/utils/shipments"
 import { useMutation, useQuery } from "@tanstack/react-query"
@@ -712,7 +713,8 @@ function SellingPricesStep({
             {rows.map(({ line, offering }) => {
               const next = shipmentMajorToMinor(prices[line.id] ?? "")
               const profit = next
-                ? BigInt(next) - BigInt(line.landedUnitMinor)
+                ? BigInt(next) -
+                  BigInt(shipmentRoundedMinor(line.landedUnitMinor))
                 : null
               return (
                 <TableRow key={line.id}>

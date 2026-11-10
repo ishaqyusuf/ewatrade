@@ -1,7 +1,10 @@
 import { useTRPC } from "@/trpc/client"
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
 import { formatFinanceMoney } from "@ewatrade/utils/finance-money"
-import type { ShipmentStatus } from "@ewatrade/utils/shipments"
+import {
+  type ShipmentStatus,
+  shipmentRoundedMinor,
+} from "@ewatrade/utils/shipments"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { useMemo } from "react"
 import type { StatusPillTone } from "../green-till/kit"
@@ -24,8 +27,9 @@ export const SHIPMENT_PILL_TONE: Record<ShipmentStatus, StatusPillTone> = {
   CANCELLED: "muted",
 }
 
+/** Formats minor units; T1's per-unit costs carry six decimal places. */
 export const money = (minor: string | number, currencyCode: string) =>
-  formatFinanceMoney(String(minor), currencyCode)
+  formatFinanceMoney(shipmentRoundedMinor(minor), currencyCode)
 
 export const isOpenShipment = (status: ShipmentStatus) =>
   status === "EXPECTED" || status === "PARTIALLY_RECEIVED"

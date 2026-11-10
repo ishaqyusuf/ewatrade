@@ -17,6 +17,7 @@ import {
   shipmentArrivalStep,
   shipmentMajorToMinor,
   shipmentPriceChanges,
+  shipmentRoundedMinor,
   shipmentUnreceivedUnitMinor,
 } from "@ewatrade/utils/shipments"
 import { useMutation, useQuery } from "@tanstack/react-query"
@@ -590,7 +591,9 @@ function PricesView({
       </Text>
       {rows.map(({ line, offering }) => {
         const next = shipmentMajorToMinor(prices[line.id] ?? "")
-        const profit = next ? BigInt(next) - BigInt(line.landedUnitMinor) : null
+        const profit = next
+          ? BigInt(next) - BigInt(shipmentRoundedMinor(line.landedUnitMinor))
+          : null
         return (
           <View key={line.id} className="gap-3 rounded-[20px] bg-card p-4">
             <Text className="font-bold">{lineName(line)}</Text>

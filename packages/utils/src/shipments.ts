@@ -61,6 +61,19 @@ function scaledProduct(left: string, right: string) {
   return `${digits.slice(0, -scale)}.${digits.slice(-scale)}`
 }
 
+/**
+ * Whole minor units for a minor-unit decimal such as T1's landed unit cost
+ * ("1424312.166666"), rounded half away from zero.
+ */
+export function shipmentRoundedMinor(minor: string | number) {
+  const text = String(minor).trim()
+  const negative = text.startsWith("-")
+  const [whole = "0", fraction = ""] = text.replace(/^[-+]/, "").split(".")
+  let value = BigInt(whole || "0")
+  if ((fraction[0] ?? "0") >= "5") value += BigInt(1)
+  return (negative && value !== BigInt(0) ? -value : value).toString()
+}
+
 /** Unreceived cost per outstanding unit, rounded to the minor unit. */
 export function shipmentUnreceivedUnitMinor(
   unreceivedCostMinor: string,
