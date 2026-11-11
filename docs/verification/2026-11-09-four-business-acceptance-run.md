@@ -10,16 +10,16 @@ has the status, evidence and limitation for each case.
 
 ## Scorecard
 
-Current, 10 November 2026, after runtime runs 1–3, all of T1–T8 landing, and the
+Current, 11 November 2026, after runtime runs 1–7, all of T1–T8 landing, and the
 owner's instruction to keep data-dependent retail cases blocked:
 
 | Business | Passed | Fail | Blocked | Not assessed |
 | --- | ---: | ---: | ---: | ---: |
 | Jawdah poultry | 9/12 | 1 | 0 | 2 |
-| Laundry | 0/12 | 0 | 1 | 11 |
+| Laundry | 3/12 | 2 | 2 | 5 |
 | Hypnos Man Collection | 0/24 | 0 | 23 | 1 |
 | Alhaq Tech | 0/24 | 0 | 23 | 1 |
-| **Total** | **9/72 (12.5%)** | **1** | **47** | **15** |
+| **Total** | **12/72 (16.7%)** | **3** | **48** | **9** |
 
 Earlier on 10 November the count was 5/72 passed; J06 moved from PASS to FAIL in
 run 2. All case passes are local-window passes (see runtime runs 1–2). A separate
@@ -417,3 +417,35 @@ replaced with the `qa-api` config at `5826d2bbe`, which includes the cashier fix
   pass. The failure is returning-owner login: `/login` is unchanged and still
   only accepts a password, while signup never asks for one. Recommended fix:
   offer code sign-in on `/login`, or ask for a password at signup.
+
+## Runtime run 7: laundry dashboard
+
+11 November 2026, Heritage Wash & Care QA tenant, API at `5826d2bbe`. The job used
+the clearly labelled test-only service "QA Laundry lifecycle — synthetic"
+(₦1,000). L01 stays blocked on the real price list. Customer updates were set to
+"Don't send", and nothing was sent.
+
+- **L02 PASS.** New job for a new synthetic customer: 3 items, due 12 Nov 15:00,
+  a team note and a ₦1,000 cash deposit. It created **ORD-006**, Not started,
+  ₦2,000 to pay.
+- **L06 PASS.** The job was assigned, started, and its due date moved to
+  13 Nov 12:00 with a reason. The history shows each step. Only an Owner exists
+  on this tenant, so staff-permission limits were not exercised.
+- **L08 PASS.** Ready → Complete job warned "₦2,000 remains outstanding" and
+  completed; payment was unchanged.
+- **L07 FAIL.** The note and the Delay problem were saved, but "Add a photo" has
+  no file upload, only a description and an external file reference. Customer
+  tracking is covered under L05.
+- **L10 FAIL.** After completion there is no collection or hand-over action,
+  even once fully paid. `handedOffAt` stays null and there is no delivery
+  option.
+- **L05 BLOCKED (policy gate).** The tracking link can be created, but every
+  `/service-tracking` page, including the 21 Oct FreshCare link, shows "This
+  shop isn't available". Public tracking and service requests need a live
+  Service Commerce policy decision. Heritage has none, and FreshCare's QA policy
+  expired on 29 Oct. The dashboard still offers the link.
+- **L09 not passed.** Deposit, ₦500 part-payment and ₦1,500 settlement all
+  recorded, and the order is Paid. The customer notification is a provider send
+  and was not authorized.
+- **Copy finding.** The laundry note and problem placeholders show poultry
+  examples ("Vaccinate the layer pen first", "20 birds missed").
