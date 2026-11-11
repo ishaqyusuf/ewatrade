@@ -1,4 +1,5 @@
 import { createHash, randomUUID } from "node:crypto"
+import { isLocalCatalogPhotoQaEnabled } from "@ewatrade/catalog/photo-qa-policy"
 import {
   type CatalogAiFacts,
   type CatalogAiPolicy,
@@ -133,6 +134,12 @@ function requireEnabled(policy: CatalogAiPolicy, tenantId: string) {
       "AI generation is paused or has not been enabled.",
     )
 }
+function hasCatalogAiPhotoStorage(tenant: {
+  dataClassification: "LIVE" | "QA"
+}) {
+  return tenant.dataClassification === "LIVE" || isLocalCatalogPhotoQaEnabled()
+}
+
 export async function startCatalogAiImage(
   db: PrismaClient,
   input: CatalogPhotoActorScope & {
@@ -151,11 +158,10 @@ export async function startCatalogAiImage(
   return runInOwnTransaction(db, async (tx) => {
     await lockCatalogAiPolicy(tx)
     const tenant = await authorizeCatalogPhotoScope(tx, input)
-    // Synthetic QA material can never enter a live provider.
-    if (tenant.dataClassification !== "LIVE")
+    if (!hasCatalogAiPhotoStorage(tenant))
       throw new CatalogAiError(
-        "FORBIDDEN",
-        "AI image generation is unavailable in Test Mode.",
+        "UNAVAILABLE",
+        "Catalog photo storage is unavailable in this environment.",
       )
     const prior = await tx.catalogAiImageJob.findUnique({
       where: {
@@ -321,7 +327,7 @@ export async function readCatalogAiImages(
               : null,
         })),
         canGenerate:
-          tenant.dataClassification === "LIVE" &&
+          hasCatalogAiPhotoStorage(tenant) &&
           (await roleAllowed(tx, input, policy)),
       }
     },
@@ -338,7 +344,8 @@ export async function claimCatalogAiImage(db: PrismaClient, id: string) {
     const effective = catalogAiEffectivePolicy(policy, job.tenantId)
     const usage = await catalogAiUsage(tx, job.tenantId, policy)
     if (
-      tenant?.dataClassification !== "LIVE" ||
+      !tenant ||
+      !hasCatalogAiPhotoStorage(tenant) ||
       !effective.enabled ||
       !(await roleAllowed(tx, job, policy)) ||
       job.model !== effective.model ||

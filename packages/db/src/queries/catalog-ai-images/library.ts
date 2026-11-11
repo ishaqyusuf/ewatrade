@@ -2,7 +2,11 @@ import {
   type CatalogStoredPhoto,
   catalogPhotoStoragePath,
 } from "@ewatrade/catalog/photo-contracts"
-import { catalogPhotoStorageIdentity } from "@ewatrade/catalog/photo-qa-policy"
+import {
+  CATALOG_QA_STORE_ID,
+  catalogPhotoStorageIdentity,
+  isLocalCatalogPhotoQaEnabled,
+} from "@ewatrade/catalog/photo-qa-policy"
 import { catalogAiTokenUsageSchema } from "@ewatrade/utils/catalog-ai-images"
 import { Prisma } from "../../../generated/prisma/client"
 import type { DbClient } from "../types"
@@ -24,12 +28,21 @@ function retainedCatalogAiImages() {
     WHERE j.state = 'DELIVERED' AND j."deliveredAt" IS NOT NULL
       AND j.mode IN ('generate', 'refine') AND v."removedAt" IS NULL
       AND t."isActive" AND t."qaPurgeStartedAt" IS NULL
-      AND t."dataClassification" = 'LIVE' AND s.status = 'ACTIVE'
+      AND s.status = 'ACTIVE'
       AND a.state = 'APPROVED' AND a."bytesDeletedAt" IS NULL
       AND a."uploadedAt" IS NOT NULL AND a."storagePath" IS NOT NULL
       AND a."reviewDisplayDigest" IS NOT NULL
       AND a."contentType" = 'image/webp'
-      AND a."storageProvider" = 'vercel_blob_private' AND a."storageStoreId" = ${storeId}
+      AND (
+        (t."dataClassification" = 'LIVE'
+          AND a."storageProvider" = 'vercel_blob_private' AND a."storageStoreId" = ${storeId})
+        ${
+          isLocalCatalogPhotoQaEnabled()
+            ? Prisma.sql`OR (t."dataClassification" = 'QA'
+              AND a."storageProvider" = 'local_test' AND a."storageStoreId" = ${CATALOG_QA_STORE_ID})`
+            : Prisma.empty
+        }
+      )
       AND (a."catalogItemId" IS NOT NULL OR a."expiresAt" > NOW())
   `
 }
@@ -82,20 +95,23 @@ export async function readCatalogAiLibraryImageTarget(
       storeId: string
       storagePath: string
       storageStoreId: string
+      storageProvider: CatalogStoredPhoto["storageProvider"]
+      dataClassification: "LIVE" | "QA"
       contentDigest: string
       sizeBytes: number
       reviewDisplayDigest: string
     }>
   >`
     SELECT a.id AS "assetId", a."tenantId", a."storeId", a."storagePath",
-      a."storageStoreId", a."contentDigest", a."sizeBytes", a."reviewDisplayDigest"
+      a."storageStoreId", a."storageProvider", t."dataClassification",
+      a."contentDigest", a."sizeBytes", a."reviewDisplayDigest"
     ${retainedCatalogAiImages()} AND j.id = ${requestId}
   `
   if (!row) throw new CatalogAiError("NOT_FOUND", "Image unavailable.")
-  const { storageStoreId, reviewDisplayDigest, ...stored } = row
+  const { storageStoreId, reviewDisplayDigest, dataClassification, ...stored } =
+    row
   const photo: CatalogStoredPhoto = {
     ...stored,
-    storageProvider: "vercel_blob_private",
     contentType: "image/webp",
   }
   if (photo.storagePath !== catalogPhotoStoragePath(photo))
@@ -107,7 +123,7 @@ export async function readCatalogAiLibraryImageTarget(
     scope: {
       tenantId: photo.tenantId,
       storeId: photo.storeId,
-      dataClassification: "LIVE" as const,
+      dataClassification,
     },
   }
 }

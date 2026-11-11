@@ -5,6 +5,7 @@ import {
   isCatalogAiProviderConfigured,
 } from "@ewatrade/catalog/image-generation-openai"
 import { processCatalogPhoto } from "@ewatrade/catalog/photo-processing"
+import { isCatalogPhotoReviewConfigured } from "@ewatrade/catalog/photo-review-openai"
 import { createCatalogPhotoStorageForScope } from "@ewatrade/catalog/photo-storage"
 import { uploadCatalogPhoto } from "@ewatrade/catalog/photo-upload"
 import {
@@ -26,30 +27,27 @@ import {
   catalogAiFactsSchema,
   catalogAiPolicySchema,
 } from "@ewatrade/utils/catalog-ai-images"
-import { assertQaJobProviderAllowed } from "../qa-provider-guard"
 import { catalogPhotoReviewHandler } from "./catalog-photo-review"
 
 export async function catalogAiImageHandler({ jobId }: { jobId: string }) {
   const existing = await prisma.catalogAiImageJob.findUnique({
     where: { id: jobId },
-    select: { state: true },
+    select: { state: true, outputAssetId: true },
   })
   if (existing?.state === "PENDING_REVIEW") {
+    if (existing.outputAssetId)
+      await catalogPhotoReviewHandler({ assetId: existing.outputAssetId })
     await settleCatalogAiImage(prisma, jobId)
     return
   }
-  if (!isCatalogAiProviderConfigured()) return
+  if (!isCatalogAiProviderConfigured() || !isCatalogPhotoReviewConfigured())
+    return
   const job = await claimCatalogAiImage(prisma, jobId)
   if (!job?.dispatchToken) return
   const token = job.dispatchToken
   let dispatched = false
   let providerCompleted = false
   try {
-    await assertQaJobProviderAllowed({
-      adapter: "live",
-      operation: "media_analysis",
-      tenantId: job.tenantId,
-    })
     const actor = {
       tenantId: job.tenantId,
       storeId: job.storeId,

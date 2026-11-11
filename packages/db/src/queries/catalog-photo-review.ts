@@ -1,4 +1,8 @@
 import { randomUUID } from "node:crypto"
+import {
+  catalogPhotoStorageIdentity,
+  isLocalCatalogPhotoQaEnabled,
+} from "@ewatrade/catalog/photo-qa-policy"
 import { Prisma, type PrismaClient } from "../../generated/prisma/client"
 import {
   authorizeCatalogPhotoScope,
@@ -47,14 +51,25 @@ export async function claimCatalogPhotoReview(
   const leaseToken = randomUUID()
   const claimed = await db.$transaction(async (tx) => {
     const tenant = await authorizeCatalogPhotoScope(tx, initial)
-    if (tenant.dataClassification !== "LIVE") return false
+    const qa = tenant.dataClassification === "QA"
+    if (qa && !isLocalCatalogPhotoQaEnabled()) return false
+    const storage = catalogPhotoStorageIdentity(tenant.dataClassification)
     const rows = await tx.$queryRaw<Array<{ id: string }>>(Prisma.sql`
       SELECT "id" FROM "CatalogPhotoAsset" WHERE "id"=${assetId}
         AND "tenantId"=${initial.tenantId} AND "storeId"=${initial.storeId}
         AND "actorUserId"=${initial.actorUserId} AND "state"='PENDING_REVIEW'
         AND "bytesDeletedAt" IS NULL AND "uploadedAt" IS NOT NULL AND "storagePath" IS NOT NULL
-        AND "storageProvider"='vercel_blob_private'
-        AND "storageStoreId"=${process.env.BLOB_STORE_ID?.trim() || ""}
+        AND "storageProvider"=${storage.provider}
+        AND "storageStoreId"=${storage.storeId}
+        ${
+          qa
+            ? Prisma.sql`AND EXISTS (
+              SELECT 1 FROM "CatalogAiImageJob" j WHERE j."outputAssetId"=${assetId}
+              AND j."tenantId"=${initial.tenantId} AND j."storeId"=${initial.storeId}
+              AND j."actorUserId"=${initial.actorUserId} AND j."state"='PENDING_REVIEW'
+            )`
+            : Prisma.empty
+        }
         AND "reviewAttempts"<${maxAttempts} AND "reviewAvailableAt"<=NOW()
         AND ("reviewLeaseUntil" IS NULL OR "reviewLeaseUntil"<=NOW())
         AND ("catalogItemId" IS NOT NULL OR "expiresAt">NOW()) FOR UPDATE SKIP LOCKED

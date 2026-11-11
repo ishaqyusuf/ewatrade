@@ -8,10 +8,11 @@ import {
   assertCatalogAiSpendInTransaction,
   catalogAiUsage,
   claimCatalogAiImage,
+  readCatalogAiImages,
   settleCatalogAiImage,
   startCatalogAiImage,
 } from "./jobs"
-import { loadCatalogAiPolicy } from "./policy"
+import { loadCatalogAiPolicy, lockCatalogAiPolicy } from "./policy"
 
 setDefaultTimeout(120_000)
 describeWithServiceCommerceDatabase(
@@ -48,7 +49,12 @@ describeWithServiceCommerceDatabase(
       const scope = { tenantId: tenant.id, storeId, actorUserId }
       const contextKey = `quota-check-${randomUUID()}`
       const policy = emptyCatalogAiPolicy()
-      policy.generation.allowance.images = 1
+      const lifetime = await catalogAiUsage(db, tenant.id, policy)
+      policy.generation.allowance.period = "monthly"
+      const monthly = await catalogAiUsage(db, tenant.id, policy)
+      policy.generation.allowance.period = "lifetime"
+      const limit = lifetime.used + lifetime.reserved + 1
+      policy.generation.allowance.images = limit
       try {
         const attempt = () =>
           db.$transaction(
@@ -81,8 +87,8 @@ describeWithServiceCommerceDatabase(
           results.filter((result) => result.status === "rejected"),
         ).toHaveLength(1)
         expect(await catalogAiUsage(db, tenant.id, policy)).toMatchObject({
-          used: 0,
-          reserved: 1,
+          used: lifetime.used,
+          reserved: lifetime.reserved + 1,
           remaining: 0,
         })
         await db.catalogAiImageJob.updateMany({
@@ -95,15 +101,15 @@ describeWithServiceCommerceDatabase(
           },
         })
         expect(await catalogAiUsage(db, tenant.id, policy)).toMatchObject({
-          used: 1,
-          reserved: 0,
+          used: lifetime.used + 1,
+          reserved: lifetime.reserved,
           remaining: 0,
         })
         policy.generation.allowance.period = "monthly"
         expect(await catalogAiUsage(db, tenant.id, policy)).toMatchObject({
-          used: 0,
-          reserved: 0,
-          remaining: 1,
+          used: monthly.used,
+          reserved: monthly.reserved,
+          remaining: limit - monthly.used - monthly.reserved,
         })
         const retainedCostId = `retained-cost-${randomUUID()}`
         await db.catalogAiProviderCost.create({
@@ -118,26 +124,42 @@ describeWithServiceCommerceDatabase(
               where: { id: retainedCostId },
             }),
           ).not.toBeNull()
-          await expect(
-            db.$transaction(
-              (tx) =>
-                assertCatalogAiSpendInTransaction(tx, {
-                  maxRequestMicros: 1,
-                  dailyCapMicros: 1,
-                }),
-              { maxWait: 10_000, timeout: 30_000 },
-            ),
-          ).rejects.toMatchObject({ code: "LIMIT" })
-          await db.catalogAiProviderCost.update({
-            where: { id: retainedCostId },
-            data: { costMicros: 0 },
-          })
           await db.$transaction(
-            (tx) =>
-              assertCatalogAiSpendInTransaction(tx, {
+            async (tx) => {
+              await lockCatalogAiPolicy(tx)
+              const today = new Date()
+              today.setUTCHours(0, 0, 0, 0)
+              const [settled, unresolved, queued] = await Promise.all([
+                tx.catalogAiProviderCost.aggregate({
+                  where: { createdAt: { gte: today } },
+                  _sum: { costMicros: true },
+                }),
+                tx.catalogAiProviderCost.aggregate({
+                  where: { costMicros: null, id: { not: retainedCostId } },
+                  _sum: { reservedCostMicros: true },
+                }),
+                tx.catalogAiImageJob.aggregate({
+                  where: { state: "QUEUED" },
+                  _sum: { reservedCostMicros: true },
+                }),
+              ])
+              const effective = {
                 maxRequestMicros: 1,
-                dailyCapMicros: 1,
-              }),
+                dailyCapMicros:
+                  (settled._sum.costMicros ?? 0) +
+                  (unresolved._sum.reservedCostMicros ?? 0) +
+                  (queued._sum.reservedCostMicros ?? 0) +
+                  1,
+              }
+              await expect(
+                assertCatalogAiSpendInTransaction(tx, effective),
+              ).rejects.toMatchObject({ code: "LIMIT" })
+              await tx.catalogAiProviderCost.update({
+                where: { id: retainedCostId },
+                data: { costMicros: 0 },
+              })
+              await assertCatalogAiSpendInTransaction(tx, effective)
+            },
             { maxWait: 10_000, timeout: 30_000 },
           )
         } finally {
@@ -145,20 +167,9 @@ describeWithServiceCommerceDatabase(
             where: { id: retainedCostId },
           })
         }
-        await expect(
-          startCatalogAiImage(db, {
-            ...scope,
-            contextKey,
-            clientOperationId: randomUUID(),
-            facts: {
-              kind: "PRODUCT",
-              name: "Cannot enter a provider",
-              description: "",
-              category: "",
-            },
-            note: "",
-          }),
-        ).rejects.toMatchObject({ code: "FORBIDDEN" })
+        expect(
+          await readCatalogAiImages(db, { ...scope, contextKey }),
+        ).toMatchObject({ canGenerate: true })
         await expect(
           startCatalogAiImage(db, {
             ...scope,

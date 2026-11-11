@@ -6,14 +6,13 @@ import {
   createOpenAiCatalogPhotoReviewProvider,
   isCatalogPhotoReviewConfigured,
 } from "@ewatrade/catalog/photo-review-openai"
-import { createVercelCatalogPhotoStorage } from "@ewatrade/catalog/photo-storage"
+import { createCatalogPhotoStorageForScope } from "@ewatrade/catalog/photo-storage"
 import { recordCatalogPhotoVerdict } from "@ewatrade/db/catalog-photo-lifecycle"
 import {
   claimCatalogPhotoReview,
   releaseCatalogPhotoReview,
 } from "@ewatrade/db/catalog-photo-review"
 import { prisma } from "@ewatrade/db/client"
-import { assertQaJobProviderAllowed } from "../qa-provider-guard"
 
 export type CatalogPhotoReviewPayload = { assetId: string }
 
@@ -24,12 +23,7 @@ export async function catalogPhotoReviewHandler(
   const target = await claimCatalogPhotoReview(prisma, payload.assetId)
   if (!target) return
   try {
-    await assertQaJobProviderAllowed({
-      adapter: "live",
-      operation: "media_analysis",
-      tenantId: target.scope.tenantId,
-    })
-    const storage = createVercelCatalogPhotoStorage()
+    const storage = createCatalogPhotoStorageForScope(target.scope)
     const packagedWorker = resolve(
       process.cwd(),
       "catalog/src/photo-heic-worker.mjs",
@@ -38,6 +32,7 @@ export async function catalogPhotoReviewHandler(
       scope: target.scope,
       photo: target.photo,
       provider: createOpenAiCatalogPhotoReviewProvider(),
+      catalogAiOutput: target.scope.dataClassification === "QA",
       heicWorkerUrl: existsSync(packagedWorker)
         ? pathToFileURL(packagedWorker)
         : undefined,

@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "id": "2026-11-11-catalog-ai-qa-availability",
+  "tickets": ["H02"],
+  "summary": "Apply Oversight image-generation policy to Development QA businesses and report their protected outputs.",
+  "noAssistantImpact": "Generation and refinement stay explicit Catalog form actions. QA eligibility and generated-photo review add no assistant capability, procedure, or autonomous provider access.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "path": "docs/verification/2026-11-11-catalog-ai-qa-availability.md",
+      "status": "updated"
+    },
+    {
+      "topic": "permissions",
+      "path": "docs/verification/2026-11-11-catalog-ai-qa-availability.md",
+      "status": "updated"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "run",
+      "path": "docs/verification/2026-11-11-catalog-ai-qa-availability.md",
+      "executed": true,
+      "result": "Owner's Android request completed through Development Trigger and OpenAI. Catalog rendered the result, and the protected Oversight library and usage routes returned its receipt."
+    }
+  ]
+}

@@ -166,6 +166,33 @@ test("unregistered images are rejected and a QA review provider cannot approve l
   ).rejects.toThrow()
 })
 
+test("only the Catalog AI output path can use live review for QA photos", async () => {
+  const bytes = await fixture()
+  const photo = await storage().stage({
+    scope,
+    assetId: "qa-ai-output",
+    bytes,
+    contentType: "image/png",
+  })
+  const input = {
+    scope,
+    photo,
+    provider: {
+      id: "mock_live_review",
+      policyVersion: "test-v1",
+      inspect: async () => "APPROVED" as const,
+    },
+    read: async () => bytes,
+    commit: async (result: { verdict: string }) => result.verdict,
+  }
+  await expect(reviewCatalogPhoto(input)).rejects.toMatchObject({
+    code: "QA_LIVE_EFFECT_BLOCKED",
+  })
+  await expect(
+    reviewCatalogPhoto({ ...input, catalogAiOutput: true }),
+  ).resolves.toBe("APPROVED")
+})
+
 test("upload refuses a provider-mismatched QA receipt before completing the intent", async () => {
   const bytes = await fixture()
   const target = {

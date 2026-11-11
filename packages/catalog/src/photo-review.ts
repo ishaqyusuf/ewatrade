@@ -32,14 +32,17 @@ export async function reviewCatalogPhoto<T>(input: {
   }): Promise<T>
   signal?: AbortSignal
   heicWorkerUrl?: URL
+  /** Set by the worker after claiming a durable Catalog AI output. */
+  catalogAiOutput?: boolean
 }) {
   const scope = { ...input.scope }
   const photo = { ...input.photo }
-  assertQaProviderAllowed({
-    adapter: input.provider.mode ?? "live",
-    operation: "media_analysis",
-    tenantDataClassification: scope.dataClassification,
-  })
+  if (!input.catalogAiOutput)
+    assertQaProviderAllowed({
+      adapter: input.provider.mode ?? "live",
+      operation: "media_analysis",
+      tenantDataClassification: scope.dataClassification,
+    })
   if (
     input.provider.mode === "test" &&
     (scope.dataClassification !== "QA" ||

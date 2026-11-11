@@ -8,6 +8,7 @@ import {
   CATALOG_QA_REVIEW_POLICY,
   CATALOG_QA_REVIEW_PROVIDER,
   CATALOG_QA_STORE_ID,
+  catalogPhotoStorageIdentity,
   isLocalCatalogPhotoQaEnabled,
 } from "@ewatrade/catalog/photo-qa-policy"
 import { Prisma, type PrismaClient } from "../../generated/prisma/client"
@@ -220,10 +221,12 @@ export async function recordCatalogPhotoVerdict(
       (tenant.dataClassification !== "LIVE" &&
         !(
           isLocalCatalogPhotoQaEnabled() &&
-          snapshot.provider === CATALOG_QA_REVIEW_PROVIDER &&
-          snapshot.policyVersion === CATALOG_QA_REVIEW_POLICY &&
           asset?.storageProvider === "local_test" &&
-          asset?.storageStoreId === CATALOG_QA_STORE_ID
+          asset?.storageStoreId === CATALOG_QA_STORE_ID &&
+          (snapshot.leaseToken
+            ? snapshot.provider !== CATALOG_QA_REVIEW_PROVIDER
+            : snapshot.provider === CATALOG_QA_REVIEW_PROVIDER &&
+              snapshot.policyVersion === CATALOG_QA_REVIEW_POLICY)
         )) ||
       (tenant.dataClassification === "LIVE" &&
         snapshot.provider === CATALOG_QA_REVIEW_PROVIDER) ||
@@ -245,7 +248,8 @@ export async function recordCatalogPhotoVerdict(
           asset.reviewLeaseUntil <= new Date() ||
           !snapshot.storageStoreId ||
           asset.storageStoreId !== snapshot.storageStoreId ||
-          snapshot.storageStoreId !== process.env.BLOB_STORE_ID?.trim()
+          snapshot.storageStoreId !==
+            catalogPhotoStorageIdentity(tenant.dataClassification).storeId
         : asset.reviewLeaseToken !== null
     )
       throw new CatalogPhotoError(
