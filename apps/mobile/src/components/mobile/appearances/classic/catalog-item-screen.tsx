@@ -42,7 +42,7 @@ import {
   productUsageLabels,
 } from "@ewatrade/utils/product-usage"
 import { StatusBar } from "expo-status-bar"
-import { type ReactNode, useState } from "react"
+import { useState } from "react"
 import { Text as NativeText, ScrollView, Share } from "react-native"
 
 type OfferingEntry = ReturnType<typeof catalogItemOfferings>[number]
@@ -63,11 +63,9 @@ const aboutRow = "flex-row items-center gap-3 py-3"
 function CatalogItemHeader({
   category,
   onBack,
-  trailing,
 }: {
   category?: string | null
   onBack: () => void
-  trailing?: ReactNode
 }) {
   return (
     <View className="min-h-11 flex-row items-center gap-2.5">
@@ -86,7 +84,6 @@ function CatalogItemHeader({
       >
         {category ? `Catalog · ${category}` : "Catalog"}
       </Text>
-      {trailing}
     </View>
   )
 }
@@ -207,25 +204,16 @@ export function ClassicCatalogItemOverview({
       keyboardAutoScrollEnabled={false}
       testID="catalog-item-overview"
     >
-      <CatalogItemHeader
-        category={item.category}
-        onBack={onBack}
-        trailing={
-          canEditImages ? (
-            <Pressable
-              accessibilityLabel="Edit images"
-              accessibilityRole="button"
-              className="size-11 items-center justify-center rounded-full bg-card shadow-sm"
-              haptic
-              onPress={() => setEditingImages(true)}
-            >
-              <Icon className="size-[20px] text-foreground" name="Camera" />
-            </Pressable>
-          ) : null
-        }
-      />
+      <CatalogItemHeader category={item.category} onBack={onBack} />
       <View className={itemIdentityRow}>
-        <CatalogItemThumb item={item} />
+        <CatalogItemThumb
+          key={offline ? "offline" : storeId}
+          item={item}
+          storeId={offline ? undefined : storeId}
+          onOpenImages={
+            canEditImages ? () => setEditingImages(true) : undefined
+          }
+        />
         <View className={itemIdentityDetails}>
           <Text
             accessibilityRole="header"
@@ -723,7 +711,6 @@ function AboutRow({
 }
 
 function CatalogItemOverviewSkeleton({ onBack }: { onBack: () => void }) {
-  const { profile } = useAuthContext()
   const largeText = useLargeTextLayout()
   const priceValues = (
     <>
@@ -743,14 +730,7 @@ function CatalogItemOverviewSkeleton({ onBack }: { onBack: () => void }) {
       scroll
       keyboardAutoScrollEnabled={false}
     >
-      <CatalogItemHeader
-        onBack={onBack}
-        trailing={
-          canEditMobileCatalog(profile) ? (
-            <View className="size-11 rounded-full bg-card shadow-sm" />
-          ) : null
-        }
-      />
+      <CatalogItemHeader onBack={onBack} />
       <SkeletonGroup accessibilityLabel="Loading item">
         <View className="gap-4">
           <View className={itemIdentityRow}>

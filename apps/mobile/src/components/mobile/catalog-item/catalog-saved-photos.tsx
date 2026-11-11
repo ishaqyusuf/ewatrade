@@ -25,7 +25,7 @@ import { SavedPhotoPreview } from "./saved-photo-preview"
 
 /**
  * Saved photos card and its editor. Pass `editing` and `onEditingChange` when
- * the screen opens the editor from elsewhere (a top-bar or quick action).
+ * the screen opens the editor from the avatar or a quick action.
  */
 export function CatalogSavedPhotos({
   item,
@@ -243,23 +243,22 @@ export function CatalogSavedPhotos({
   )
 }
 
-/** Square thumbnail: first saved photo, else illustration, else a kind icon. */
+/** The assigned image opens a read-only preview. The kind icon opens Images. */
 export function CatalogItemThumb({
   item,
+  storeId,
   size = 62,
-}: { item: CatalogItem; size?: number }) {
-  const trpc = useTRPC()
-  const offline = useOperationalModeStore((state) => state.isOfflineMode)
-  const availability = useQuery(
-    trpc.tenant.featureAvailability.queryOptions(undefined, {
-      enabled: !offline,
-      retry: false,
-    }),
-  )
+  onOpenImages,
+}: {
+  item: CatalogItem
+  storeId?: string
+  size?: number
+  onOpenImages?: () => void
+}) {
+  const [previewId, setPreviewId] = useState<string>()
   const { colorScheme } = useColorScheme()
   const colors = useColors()
   const palette = GREEN_TILL_THEME[colorScheme]
-  const storeId = offline ? undefined : availability.data?.storeId
   const photo = storeId
     ? item.photos.find((entry) => entry.storeId === storeId)
     : undefined
@@ -267,7 +266,11 @@ export function CatalogItemThumb({
     ? item.illustrations.find((entry) => entry.storeId === storeId)
     : undefined
   const service = item.kind === "service"
-  return (
+  const imageId = photo?.assetId ?? illustration?.illustrationId
+  const onPress = imageId ? () => setPreviewId(imageId) : onOpenImages
+  const closePreview = () => setPreviewId(undefined)
+  const radius = Math.round(size * 0.29)
+  const thumbnail = (
     <View
       style={{
         alignItems: "center",
@@ -276,7 +279,7 @@ export function CatalogItemThumb({
           : illustration || !service
             ? palette.amber
             : palette.lilac,
-        borderRadius: Math.round(size * 0.29),
+        borderRadius: radius,
         height: size,
         justifyContent: "center",
         overflow: "hidden",
@@ -285,9 +288,11 @@ export function CatalogItemThumb({
     >
       {photo && storeId ? (
         <SavedPhotoPreview
+          key={photo.assetId}
           assetId={photo.assetId}
           storeId={storeId}
           name={item.name}
+          variant="thumbnail"
         />
       ) : illustration ? (
         <CatalogIllustrationPreview
@@ -302,6 +307,47 @@ export function CatalogItemThumb({
         />
       )}
     </View>
+  )
+  if (!onPress) return thumbnail
+  return (
+    <>
+      <Pressable
+        accessibilityLabel={
+          imageId ? `View image for ${item.name}` : "Add images"
+        }
+        accessibilityRole="button"
+        haptic
+        onPress={onPress}
+        style={{ borderRadius: radius }}
+      >
+        {thumbnail}
+      </Pressable>
+      {previewId && previewId === imageId ? (
+        <FullScreenForm
+          visible
+          title={item.name}
+          onClose={closePreview}
+          onBack={closePreview}
+          backLabel="Back to item"
+        >
+          <View className="flex-1 items-center justify-center px-4 pb-4">
+            {photo && storeId ? (
+              <SavedPhotoPreview
+                assetId={photo.assetId}
+                storeId={storeId}
+                name={item.name}
+                contentFit="contain"
+              />
+            ) : illustration ? (
+              <CatalogIllustrationPreview
+                id={illustration.illustrationId}
+                size={240}
+              />
+            ) : null}
+          </View>
+        </FullScreenForm>
+      ) : null}
+    </>
   )
 }
 

@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "id": "2026-11-11-mobile-catalog-avatar-images",
+  "tickets": ["H02"],
+  "summary": "Open the assigned Catalog image from the mobile item avatar or open Images when the avatar is empty and the merchant can edit.",
+  "noAssistantImpact": "The avatar reuses the existing authorized photo preview and Images editor. Catalog commands, permission checks and assistant capabilities are unchanged.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/product-service-catalog-items.md"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "run",
+      "path": ".brain/features/product-service-catalog-items.md",
+      "executed": true,
+      "result": "Android 2 opened Images from an empty avatar and showed an assigned illustration in the read-only viewer. A saved photo opened the viewer and hit the existing image-load error. Mobile TypeScript and 203 scoped smoke tests passed."
+    }
+  ]
+}
