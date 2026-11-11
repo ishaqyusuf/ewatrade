@@ -10,16 +10,16 @@ has the status, evidence and limitation for each case.
 
 ## Scorecard
 
-Current, 11 November 2026, after runtime runs 1–8, all of T1–T8 landing, and the
+Current, 11 November 2026, after runtime runs 1–9, all of T1–T8 landing, and the
 owner's instruction to keep data-dependent retail cases blocked:
 
 | Business | Passed | Fail | Blocked | Not assessed |
 | --- | ---: | ---: | ---: | ---: |
-| Jawdah poultry | 9/12 | 2 | 0 | 1 |
-| Laundry | 3/12 | 3 | 2 | 4 |
+| Jawdah poultry | 9/12 | 1 | 0 | 2 |
+| Laundry | 3/12 | 2 | 2 | 5 |
 | Hypnos Man Collection | 0/24 | 0 | 23 | 1 |
 | Alhaq Tech | 0/24 | 0 | 23 | 1 |
-| **Total** | **12/72 (16.7%)** | **5** | **48** | **7** |
+| **Total** | **12/72 (16.7%)** | **3** | **48** | **9** |
 
 Earlier on 10 November the count was 5/72 passed; J06 moved from PASS to FAIL in
 run 2. All case passes are local-window passes (see runtime runs 1–2). A separate
@@ -489,7 +489,7 @@ alongside this local result.
 
 ## Runtime run 9 — J07 and L03 repair
 
-11 November 2026, local Development with existing synthetic Jawdah Poultry
+11 November 2026, repair committed as `d79dd1472`. Local Development used existing synthetic Jawdah Poultry
 Acceptance and FreshCare Demo profiles. The standard mobile Assistant HTTP
 transport used a fresh loopback API on port 3195. This avoided a shared API
 process that had failed to reload after a concurrent Prisma generation.
@@ -515,13 +515,15 @@ process that had failed to reload after a concurrent Prisma generation.
   Reopening the chat and reading the protected intake returned the original
   receipt. Replaying confirmation returned the same result.
 
-These checks resolve the specific local failures in run 8. Native UI evidence
-and the remaining J07 WhatsApp checks are still needed for launch acceptance.
-Run 8 retains the original failures and Dashboard receipts.
+These checks resolve the specific local failures in run 8. The launch rows
+return to **NOT_ASSESSED** pending native UI evidence and the remaining J07
+WhatsApp checks. Run 8 retains the original failures and Dashboard receipts.
+The unsaved drafts from the initial repro attempts were cancelled.
 
 Scoped fast verification passed 285 tests and 1,820 assertions. The focused
 Assistant, staff policy, channel, mobile receipt and booking suite passed 244
-tests and 1,936 assertions. Coverage and impact gates passed. Five failures in
+tests and 1,936 assertions. API and Assistant type checks and both coverage
+and impact gates passed. Five failures in
 the broader phase fixture suite also reproduced on the archived baseline
 `ed3e7f29b`. They concern D04 timestamp attribution, native money rendering,
 native cash/day navigation, the raw Service payment fixture and the Service
