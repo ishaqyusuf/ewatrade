@@ -18,11 +18,12 @@ export function useCatalogAiImages(input: {
 }) {
   const trpc = useTRPC()
   const client = useQueryClient()
+  const enabled = input.enabled !== false && !!input.storeId
   const query = useQuery(
     trpc.catalog.aiImages.state.queryOptions(
       { storeId: input.storeId, contextKey: input.contextKey },
       {
-        enabled: input.enabled !== false && !!input.storeId,
+        enabled,
         refetchInterval: (query) =>
           query.state.data?.jobs.some((job) =>
             ["QUEUED", "DISPATCHING", "PENDING_REVIEW"].includes(job.state),
@@ -57,7 +58,7 @@ export function useCatalogAiImages(input: {
     )
   }, [client, input.storeId, input.contextKey])
   useEffect(() => {
-    if (!query.data) return
+    if (!enabled || !query.data) return
     const next = applyCatalogAiJobs(
       current.current.assetIds,
       query.data.jobs,
@@ -65,7 +66,7 @@ export function useCatalogAiImages(input: {
     )
     if (JSON.stringify(next) !== JSON.stringify(current.current.assetIds))
       current.current.onChange(next)
-  }, [query.data])
+  }, [enabled, query.data])
   const pending = query.data?.jobs.find((job) =>
     ["QUEUED", "DISPATCHING", "UNCERTAIN", "PENDING_REVIEW"].includes(
       job.state,

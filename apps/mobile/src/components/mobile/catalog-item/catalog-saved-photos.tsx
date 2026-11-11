@@ -7,38 +7,20 @@ import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { useAuthContext } from "@/hooks/use-auth"
 import { useColorScheme, useColors } from "@/hooks/use-color"
-import { uploadMobileCatalogPhoto } from "@/lib/catalog-photo-upload"
 import { GREEN_TILL_THEME } from "@/lib/green-till-theme"
 import { canEditMobileCatalog } from "@/lib/mobile-roles"
 import { useOperationalModeStore } from "@/store/operationalModeStore"
 import { useTRPC } from "@/trpc/client"
 import type { RouterInputs } from "@ewatrade/api/trpc/routers/_app"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { TRPCClientError } from "@trpc/client"
 import * as Crypto from "expo-crypto"
-import { Image } from "expo-image"
-import { type ReactNode, useEffect, useRef, useState } from "react"
-import {
-  AccessibilityInfo,
-  Text as NativeText,
-  Modal as RNModal,
-  View,
-} from "react-native"
+import { useCallback, useRef, useState } from "react"
+import { Text as NativeText, View } from "react-native"
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller"
-import { useSafeAreaInsets } from "react-native-safe-area-context"
-import {
-  CatalogIllustrationLibrary,
-  CatalogIllustrationPreview,
-  catalogIllustrationCategoryKey,
-} from "../catalog-setup/catalog-illustration-library"
-import { useCatalogImageDraft } from "../catalog-setup/use-catalog-image-draft"
-import { DockedPhotoCamera } from "../docked-photo-camera"
+import { CatalogIllustrationPreview } from "../catalog-setup/catalog-illustration-library"
 import { CatalogImagesEditor } from "./catalog-images-editor"
 import type { CatalogItem } from "./catalog-item-presentation"
-import {
-  type CatalogGalleryEntry,
-  CatalogPhotoGalleryPicker,
-  catalogGalleryLabel,
-} from "./catalog-photo-gallery-picker"
 import { SavedPhotoPreview } from "./saved-photo-preview"
 
 /**
@@ -330,85 +312,123 @@ function SavedPhotoEditor({
 }: { item: CatalogItem; storeId: string; close(): void }) {
   const trpc = useTRPC()
   const client = useQueryClient()
-  const [ids, setIds] = useState(() =>
-    item.photos
+  const [selection, setSelection] = useState(() => ({
+    assetIds: item.photos
       .filter((photo) => photo.storeId === storeId)
       .map((photo) => photo.assetId),
-  )
-  const [illustrationId, setIllustrationId] = useState(
-    () =>
+    illustrationId:
       item.illustrations.find((image) => image.storeId === storeId)
         ?.illustrationId ?? null,
-  )
-  const expected = useRef({ assetIds: [...ids], illustrationId })
+  }))
+  const saved = useRef(selection)
   const [saving, setSaving] = useState(false)
-  const [mediaBusy, setMediaBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [writing, setWriting] = useState(false)
+  const [error, setError] = useState<{
+    message: string
+    canRetry: boolean
+  } | null>(null)
   const attempt = useRef<RouterInputs["catalog"]["photos"]["replace"] | null>(
     null,
   )
-  const mounted = useRef(true)
   const running = useRef(false)
-  useEffect(() => {
-    mounted.current = true
-    return () => {
-      mounted.current = false
-    }
+  const onBusyChange = useCallback((_busy: boolean, writing: boolean) => {
+    setWriting(writing)
   }, [])
   const replace = useMutation(trpc.catalog.photos.replace.mutationOptions())
-  async function save() {
-    if (running.current || mediaBusy) return
+  const refreshCatalog = () =>
+    client.invalidateQueries({ queryKey: trpc.catalog.pathKey() })
+  async function save(command: RouterInputs["catalog"]["photos"]["replace"]) {
+    if (running.current) return
     running.current = true
     setSaving(true)
     setError(null)
-    attempt.current ??= {
+    try {
+      const result = await replace.mutateAsync(command)
+      saved.current = {
+        assetIds: result.assetIds,
+        illustrationId: result.illustrationId ?? null,
+      }
+      attempt.current = null
+    } catch (error) {
+      setError({
+        message:
+          error instanceof Error
+            ? error.message
+            : "Images could not be saved. Try again.",
+        canRetry:
+          !(error instanceof TRPCClientError) ||
+          error.data?.code !== "CONFLICT",
+      })
+    } finally {
+      // Refetch mounted Catalog views and mark inactive search/list pages stale.
+      // A lost response may also have committed, so refresh on failure.
+      await refreshCatalog()
+      running.current = false
+      setSaving(false)
+    }
+  }
+  function changeImages(assetIds: string[], illustrationId: string | null) {
+    if (running.current || attempt.current) return
+    const previous = saved.current
+    if (
+      previous.illustrationId === illustrationId &&
+      previous.assetIds.length === assetIds.length &&
+      previous.assetIds.every((id, index) => id === assetIds[index])
+    )
+      return
+    const command = {
       catalogItemId: item.id,
       storeId,
       clientOperationId: Crypto.randomUUID(),
-      assetIds: [...ids],
+      assetIds,
       illustrationId,
-      expectedAssetIds: [...expected.current.assetIds],
-      expectedIllustrationId: expected.current.illustrationId,
+      expectedAssetIds: previous.assetIds,
+      expectedIllustrationId: previous.illustrationId,
     }
-    try {
-      await replace.mutateAsync(attempt.current)
-      await client.invalidateQueries({ queryKey: trpc.catalog.pathKey() })
-      if (mounted.current) close()
-    } catch (error) {
-      if (mounted.current)
-        setError(
-          error instanceof Error
-            ? error.message
-            : "Images could not be saved. Retry the same selection.",
-        )
-    } finally {
-      running.current = false
-      if (mounted.current) setSaving(false)
-    }
+    attempt.current = command
+    setSelection({ assetIds, illustrationId })
+    void save(command)
   }
+  const goBack = () => {
+    if (!running.current && !writing) close()
+  }
+  const saveFeedback = saving ? (
+    <Text
+      accessibilityLiveRegion="polite"
+      className="text-xs text-muted-foreground"
+    >
+      Saving images…
+    </Text>
+  ) : error ? (
+    <View className="gap-2">
+      <StatusBanner tone="warning" message={error.message} />
+      {error.canRetry ? (
+        <ActionButton
+          variant="outline"
+          onPress={() => {
+            if (attempt.current) void save(attempt.current)
+          }}
+        >
+          Retry saving images
+        </ActionButton>
+      ) : null}
+    </View>
+  ) : null
   return (
     <FullScreenForm
       visible
       title="Images"
-      onClose={close}
-      onBack={saving ? undefined : close}
+      onClose={goBack}
+      onBack={goBack}
       backLabel={`Back to ${item.name}`}
-      closeDisabled={saving}
-      footer={
-        <ActionButton
-          disabled={saving || mediaBusy}
-          isLoading={saving}
-          onPress={() => void save()}
-        >
-          {attempt.current ? "Retry same images" : "Save changes"}
-        </ActionButton>
-      }
+      closeDisabled={saving || writing}
     >
       <KeyboardAwareScrollView
         contentContainerStyle={{ padding: 16, gap: 16, paddingBottom: 24 }}
         keyboardShouldPersistTaps="handled"
       >
         <Text className="text-xs text-muted-foreground">{item.name}</Text>
+        {saveFeedback}
         <CatalogImagesEditor
           storeId={storeId}
           contextKey={item.id}
@@ -419,17 +439,18 @@ function SavedPhotoEditor({
             description: item.description ?? "",
             category: item.category ?? "",
           }}
-          assetIds={ids}
-          onChange={setIds}
+          assetIds={selection.assetIds}
+          onChange={changeImages}
           disabled={saving || !!attempt.current}
-          onBusyChange={setMediaBusy}
+          onBusyChange={onBusyChange}
+          saveFeedback={saveFeedback}
           onPersisted={(assetIds) => {
-            expected.current.assetIds = assetIds
+            const next = { assetIds, illustrationId: null }
+            saved.current = next
+            setSelection(next)
           }}
-          illustrationId={illustrationId}
-          onIllustrationChange={setIllustrationId}
+          illustrationId={selection.illustrationId}
         />
-        {error ? <StatusBanner tone="warning" message={error} /> : null}
       </KeyboardAwareScrollView>
     </FullScreenForm>
   )

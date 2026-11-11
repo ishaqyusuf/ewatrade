@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "id": "2026-11-11-mobile-catalog-image-autosave",
+  "tickets": ["H02"],
+  "summary": "Save mobile Catalog image edits immediately and refresh Catalog reads.",
+  "noAssistantImpact": "An explicit merchant image action still drives the same scoped Catalog commands. There are no assistant tool, capability, or procedure changes.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "path": "docs/verification/2026-11-11-mobile-catalog-image-autosave.md",
+      "status": "updated"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "run",
+      "path": "docs/verification/2026-11-11-mobile-catalog-image-autosave.md",
+      "executed": true,
+      "result": "The saved editor issued a replacement on Make primary, invalidated Catalog, and reused the same command on retry in a local handler check. Existing image and avatar tests passed."
+    }
+  ]
+}

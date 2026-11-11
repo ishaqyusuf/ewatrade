@@ -394,17 +394,14 @@ function CatalogImageEditor({
         category: model.category,
       }}
       assetIds={model.imageDraft.assetIds}
-      onChange={(ids) => {
-        model.imageDraft.chooseAssetIds(ids)
+      onChange={(ids, illustrationId) => {
+        if (illustrationId) model.imageDraft.chooseIllustration(illustrationId)
+        else model.imageDraft.chooseAssetIds(ids)
         model.setImageUrl("")
       }}
       disabled={model.locked || model.isOffline || !model.storeReady}
       onBusyChange={model.imageDraft.setMediaBusy}
       illustrationId={model.imageDraft.illustrationId}
-      onIllustrationChange={(id) => {
-        if (id) model.imageDraft.chooseIllustration(id)
-        else if (model.imageDraft.illustrationId) model.imageDraft.remove()
-      }}
     />
   )
 }

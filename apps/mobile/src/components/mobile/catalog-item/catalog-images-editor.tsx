@@ -16,7 +16,7 @@ import {
 import { catalogRefinementDescendants } from "@ewatrade/utils/catalog-image-editor"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import * as Crypto from "expo-crypto"
-import { useEffect, useRef, useState } from "react"
+import { type ReactNode, useEffect, useRef, useState } from "react"
 import { Modal as RNModal, ScrollView, View } from "react-native"
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller"
 import { CatalogIllustrationBrowser } from "../catalog-setup/catalog-illustration-browser"
@@ -38,19 +38,19 @@ export function CatalogImagesEditor({
   onBusyChange,
   onPersisted,
   illustrationId = null,
-  onIllustrationChange,
+  saveFeedback,
 }: {
   storeId: string
   contextKey: string
   catalogItemId?: string
   facts: CatalogAiFacts
   assetIds: string[]
-  onChange(ids: string[]): void
+  onChange(ids: string[], illustrationId: string | null): void
   disabled?: boolean
-  onBusyChange?(busy: boolean): void
+  onBusyChange?(busy: boolean, writing: boolean): void
   onPersisted?(ids: string[]): void
   illustrationId?: string | null
-  onIllustrationChange?(id: string | null): void
+  saveFeedback?: ReactNode
 }) {
   const colors = useColors()
   const trpc = useTRPC()
@@ -78,8 +78,7 @@ export function CatalogImagesEditor({
   }, [])
   const change = (ids: string[]) => {
     if (disabled) return
-    onIllustrationChange?.(null)
-    onChange(ids)
+    onChange(ids, null)
   }
   const ai = useCatalogAiImages({
     storeId,
@@ -101,11 +100,12 @@ export function CatalogImagesEditor({
   const removeVersion = useMutation(
     trpc.catalog.aiImages.deleteRefinement.mutationOptions(),
   )
-  const busy = uploading || ai.busy || removeVersion.isPending
+  const writing = uploading || removeVersion.isPending
+  const busy = writing || ai.busy
   useEffect(() => {
-    onBusyChange?.(busy)
-    return () => onBusyChange?.(false)
-  }, [busy, onBusyChange])
+    onBusyChange?.(busy, writing)
+    return () => onBusyChange?.(false, false)
+  }, [busy, onBusyChange, writing])
   const sources = useQuery(
     trpc.catalog.aiImages.sources.queryOptions(
       { storeId, assetIds },
@@ -190,8 +190,9 @@ export function CatalogImagesEditor({
   ) {
     setUploading(true)
     setError(null)
+    const next = [...selected.current]
+    const previousCount = next.length
     try {
-      const next = [...selected.current]
       for (const entry of entries.slice(0, 8 - next.length)) {
         const result = await reuse.mutateAsync({
           storeId,
@@ -201,7 +202,6 @@ export function CatalogImagesEditor({
         })
         assertCurrent()
         next.push(result.assetId)
-        change([...next])
       }
     } catch (error) {
       if (active.current.mounted)
@@ -209,7 +209,10 @@ export function CatalogImagesEditor({
           error instanceof Error ? error.message : "Image could not be copied.",
         )
     } finally {
-      if (active.current.mounted) setUploading(false)
+      if (active.current.mounted && active.current.storeId === storeId) {
+        if (next.length > previousCount) change(next)
+        setUploading(false)
+      }
     }
   }
   async function deleteRefinement() {
@@ -233,8 +236,8 @@ export function CatalogImagesEditor({
           ),
         ),
       ]
-      if (result.assetIds) onPersisted?.(result.assetIds)
-      change(next)
+      if (result.assetIds && onPersisted) onPersisted(result.assetIds)
+      else change(next)
       setViewed(result.rootAssetId)
       setConfirmDelete(false)
       await client.invalidateQueries({ queryKey: trpc.catalog.pathKey() })
@@ -298,7 +301,7 @@ export function CatalogImagesEditor({
           <ActionButton
             variant="outline"
             disabled={disabled || busy}
-            onPress={() => onIllustrationChange?.(null)}
+            onPress={() => onChange([], null)}
           >
             Remove illustration
           </ActionButton>
@@ -498,15 +501,13 @@ export function CatalogImagesEditor({
           Retry same request
         </ActionButton>
       ) : null}
-      {onIllustrationChange ? (
-        <ActionButton
-          variant="ghost"
-          disabled={disabled || busy}
-          onPress={() => setIllustrations(true)}
-        >
-          Illustration library
-        </ActionButton>
-      ) : null}
+      <ActionButton
+        variant="ghost"
+        disabled={disabled || busy}
+        onPress={() => setIllustrations(true)}
+      >
+        Illustration library
+      </ActionButton>
       <DockedPhotoCamera {...device.camera} />
       <CatalogPhotoGalleryPicker
         open={myImages}
@@ -535,8 +536,7 @@ export function CatalogImagesEditor({
             }
             selectedId={illustrationId}
             onUse={(id) => {
-              onChange([])
-              onIllustrationChange?.(id)
+              onChange([], id)
               setIllustrations(false)
             }}
           />
@@ -711,7 +711,7 @@ export function CatalogImagesEditor({
                 Keep
               </ActionButton>
               <ActionButton
-                disabled={busy}
+                disabled={disabled || busy}
                 onPress={() => void deleteRefinement()}
               >
                 Delete refinement
@@ -721,6 +721,7 @@ export function CatalogImagesEditor({
           {versions.error ? (
             <StatusBanner tone="warning" message={versions.error.message} />
           ) : null}
+          {saveFeedback}
           {feedback ? <StatusBanner tone="warning" message={feedback} /> : null}
           {status ? <StatusBanner tone="default" message={status} /> : null}
           <Text className="text-xs text-muted-foreground">
