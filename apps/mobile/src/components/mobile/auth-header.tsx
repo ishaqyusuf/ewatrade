@@ -159,8 +159,7 @@ type AuthMethodButtonProps = {
   onPress: () => void
   pending?: boolean
   tone?: "primary" | "subtle"
-  /** Green Till 03: 48pt, plain brand mark, heavier label. */
-  variant?: "default" | "sso"
+  variant?: "default" | "sso" | "link" | "outline"
 }
 
 export function AuthMethodButton({
@@ -177,7 +176,8 @@ export function AuthMethodButton({
   const colors = useColors()
   const largeTextLayout = useLargeTextLayout()
   const isPrimary = tone === "primary"
-  if (variant === "sso")
+  if (variant !== "default") {
+    const isLink = variant === "link"
     return (
       <Pressable
         accessibilityRole="button"
@@ -186,16 +186,16 @@ export function AuthMethodButton({
         onPress={onPress}
         style={{
           alignItems: "center",
-          backgroundColor: colors.card,
+          backgroundColor: variant === "sso" ? colors.card : "transparent",
           borderColor: colors.border,
           borderRadius: 14,
-          borderWidth: 1.5,
+          borderWidth: isLink ? 0 : 1.5,
           flexDirection: "row",
-          gap: 9,
+          gap: isLink ? 7 : 9,
           justifyContent: "center",
-          minHeight: 48,
+          minHeight: isLink ? 44 : variant === "outline" ? 50 : 48,
           opacity: disabled ? 0.45 : 1,
-          paddingHorizontal: 12,
+          paddingHorizontal: isLink ? 8 : 12,
           paddingVertical: largeTextLayout ? 8 : 0,
         }}
         transition
@@ -203,18 +203,31 @@ export function AuthMethodButton({
         {brandIcon === "google" ? (
           <GoogleLogo />
         ) : brandIcon === "whatsapp" ? (
-          <WhatsAppMark />
+          <WhatsAppMark size={isLink ? 16 : 18} />
         ) : (
-          <Icon className="size-sm text-foreground" name={icon} />
+          <Icon
+            className={
+              isLink ? "size-[16px] text-primary" : "size-sm text-foreground"
+            }
+            name={icon}
+          />
         )}
         <Text
-          className="min-w-0 shrink text-center text-base font-extrabold [-rn-line-height:22] text-foreground"
+          className={cn(
+            "min-w-0 shrink text-center [-rn-line-height:22]",
+            isLink
+              ? "text-sm font-bold text-primary"
+              : variant === "outline"
+                ? "text-base font-bold text-foreground"
+                : "text-base font-extrabold text-foreground",
+          )}
           numberOfLines={largeTextLayout ? 2 : 1}
         >
           {pending && loadingLabel ? loadingLabel : label}
         </Text>
       </Pressable>
     )
+  }
 
   return (
     <Pressable

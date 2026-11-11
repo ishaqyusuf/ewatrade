@@ -11,7 +11,7 @@ export function ClassicLoginScreen({
       eyebrow="Welcome back"
       title="Sign in to your business"
       actions={actions}
-      spacing="grouped"
+      spacing="dimmed"
       testID="green-gate-login"
     >
       {children}

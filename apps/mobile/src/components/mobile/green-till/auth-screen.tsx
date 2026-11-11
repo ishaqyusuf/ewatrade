@@ -14,8 +14,14 @@ import type { StepDirection } from "@/lib/step-motion"
 import { type Href, Stack } from "expo-router"
 import { StatusBar } from "expo-status-bar"
 import { type ReactNode, useId } from "react"
-import { StyleSheet, View } from "react-native"
-import Svg, { Defs, RadialGradient, Rect, Stop } from "react-native-svg"
+import { StyleSheet, View, useWindowDimensions } from "react-native"
+import Svg, {
+  Defs,
+  LinearGradient,
+  RadialGradient,
+  Rect,
+  Stop,
+} from "react-native-svg"
 
 type GreenTillAuthScreenProps = {
   children: ReactNode
@@ -45,17 +51,17 @@ type GreenTillAuthScreenProps = {
   motionDirection?: StepDirection
   /** Cards on the mint stage. Defaults to the labelled sales example. */
   stage?: ReactNode
-  /**
-   * "grouped" (sign-in, workshop mobile/sign-in-spacing 03): roomier sheet
-   * padding and a 28px gap between the title and the form's groups.
-   */
-  spacing?: "default" | "grouped"
+  /** The dimmed sign-in layout pairs grouped spacing with quieter artwork. */
+  spacing?: "default" | "grouped" | "dimmed"
   testID?: string
 }
 
 const STAGE_HEIGHT = 266
 const COMPACT_STAGE_HEIGHT = 266
 const LARGE_TEXT_STAGE_HEIGHT = 120
+// Workshop stage measurements include the status bar; MobileScreen adds it.
+const DIMMED_STAGE_HEIGHT = 228
+const NARROW_DIMMED_STAGE_HEIGHT = 190
 
 /** Option 03 Market Preview: app cards on a mint stage above a light form sheet. */
 export function GreenTillAuthScreen({
@@ -83,15 +89,23 @@ export function GreenTillAuthScreen({
   const { colorScheme } = useColorScheme()
   const colors = useColors()
   const largeText = useLargeTextLayout()
+  const { width } = useWindowDimensions()
   const palette = GREEN_TILL_THEME[colorScheme]
   const gradientId = `market-stage-${useId().replace(/:/g, "")}`
+  const dimmed = spacing === "dimmed"
+  const narrow = width <= 340
+  const showArtwork = !(largeText || stageCollapsed)
   const stageHeight = stageCollapsed
     ? 70
     : largeText
       ? LARGE_TEXT_STAGE_HEIGHT
-      : compact
-        ? COMPACT_STAGE_HEIGHT
-        : STAGE_HEIGHT
+      : dimmed
+        ? narrow
+          ? NARROW_DIMMED_STAGE_HEIGHT
+          : DIMMED_STAGE_HEIGHT
+        : compact
+          ? COMPACT_STAGE_HEIGHT
+          : STAGE_HEIGHT
   const iconTone = colorScheme === "dark" ? "light" : "dark"
   return (
     <View className="flex-1 bg-background">
@@ -124,10 +138,57 @@ export function GreenTillAuthScreen({
               <Rect width="100%" height="100%" fill={`url(#${gradientId})`} />
             </Svg>
           </View>
-          {largeText || stageCollapsed
-            ? null
-            : (stage ?? <SalesExampleStage />)}
-          <View className="absolute left-5 right-4 top-3 min-h-11 flex-row items-center gap-2">
+          {showArtwork
+            ? (stage ?? (
+                <SalesExampleStage
+                  layout={
+                    dimmed ? (narrow ? "narrow-dimmed" : "dimmed") : "default"
+                  }
+                />
+              ))
+            : null}
+          {showArtwork && dimmed ? (
+            <View
+              pointerEvents="none"
+              style={[StyleSheet.absoluteFill, styles.artworkShade]}
+            >
+              <Svg width="100%" height="100%" accessible={false}>
+                <Defs>
+                  <LinearGradient
+                    id={`${gradientId}-veil`}
+                    x1="0"
+                    y1="0"
+                    x2="0"
+                    y2="100%"
+                  >
+                    <Stop
+                      offset="0"
+                      stopColor={palette.stageEdge}
+                      stopOpacity={0.35}
+                    />
+                    <Stop
+                      offset="1"
+                      stopColor={palette.stageEdge}
+                      stopOpacity={0.61}
+                    />
+                  </LinearGradient>
+                </Defs>
+                <Rect
+                  width="100%"
+                  height="100%"
+                  fill={`url(#${gradientId}-veil)`}
+                />
+              </Svg>
+            </View>
+          ) : null}
+          <View
+            className={
+              dimmed
+                ? undefined
+                : "absolute left-5 right-4 top-3 min-h-11 flex-row items-center gap-2"
+            }
+            style={dimmed ? styles.stageControls : undefined}
+          >
             <BrandLogo reverse={colorScheme === "dark"} width={92} />
             <View className="ml-auto flex-row items-center gap-2">
               {actions}
@@ -155,22 +216,39 @@ export function GreenTillAuthScreen({
         <View
           style={[
             styles.sheet,
-            spacing === "grouped" ? styles.groupedSheet : null,
+            spacing !== "default" ? styles.groupedSheet : null,
+            dimmed ? styles.dimmedSheet : null,
+            dimmed && narrow ? styles.narrowDimmedSheet : null,
             {
               backgroundColor: colors.background,
-              boxShadow: `0 -8px 26px -8px ${palette.heroTo}6B`,
+              boxShadow: dimmed
+                ? `0 -6px 20px -12px ${palette.heroTo}59`
+                : `0 -8px 26px -8px ${palette.heroTo}6B`,
             },
           ]}
         >
           {/* Grouped keeps the progress bar close to its title. */}
           <View
-            style={spacing === "grouped" ? styles.groupedHeader : styles.header}
+            style={spacing === "default" ? styles.header : styles.groupedHeader}
           >
             {headerContent ?? (
               <View className="gap-1">
                 <Text
                   accessibilityRole="header"
-                  className="text-[23px] font-extrabold tracking-tight [-rn-line-height:28] text-foreground"
+                  className={
+                    dimmed
+                      ? undefined
+                      : "text-[23px] font-extrabold tracking-tight [-rn-line-height:28] text-foreground"
+                  }
+                  style={
+                    dimmed
+                      ? [
+                          styles.dimmedTitle,
+                          narrow && styles.narrowDimmedTitle,
+                          { color: colors.foreground },
+                        ]
+                      : undefined
+                  }
                 >
                   {title}
                 </Text>
@@ -280,8 +358,30 @@ const styles = StyleSheet.create({
     paddingTop: 28,
   },
   groupedSheet: { gap: 28, paddingHorizontal: 20, paddingTop: 32 },
+  dimmedSheet: { marginTop: -26, paddingBottom: 56, paddingHorizontal: 24 },
+  narrowDimmedSheet: { gap: 20, paddingHorizontal: 16, paddingTop: 24 },
   header: { gap: 16 },
   groupedHeader: { gap: 14 },
   stage: { overflow: "hidden", position: "relative" },
+  artworkShade: { zIndex: 1, elevation: 9 },
+  stageControls: {
+    alignItems: "center",
+    elevation: 10,
+    flexDirection: "row",
+    gap: 8,
+    left: 20,
+    minHeight: 44,
+    position: "absolute",
+    right: 16,
+    top: 16,
+    zIndex: 2,
+  },
+  dimmedTitle: {
+    fontSize: 24,
+    fontWeight: "800",
+    letterSpacing: -0.6,
+    lineHeight: 28,
+  },
+  narrowDimmedTitle: { fontSize: 21, lineHeight: 26 },
   progress: { flexDirection: "row", gap: 6 },
 })

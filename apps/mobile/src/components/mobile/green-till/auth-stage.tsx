@@ -197,7 +197,11 @@ export function StageCard({
 }
 
 /** Login, sign-up and early access: an example Home, clearly labelled. */
-export function SalesExampleStage() {
+export function SalesExampleStage({
+  layout = "default",
+}: { layout?: "default" | "dimmed" | "narrow-dimmed" } = {}) {
+  const dimmed = layout !== "default"
+  const narrow = layout === "narrow-dimmed"
   return (
     <>
       <StageHeroCard
@@ -205,8 +209,9 @@ export function SalesExampleStage() {
         value="₦184,500"
         chips={["14 orders", "Synced"]}
         left={22}
-        right={60}
-        top={60}
+        right={narrow ? 43 : 60}
+        top={narrow ? 54 : dimmed ? 59 : 60}
+        valueSize={narrow ? 22 : dimmed ? 25 : 26}
         rotate={-3}
       />
       <StageCard
@@ -215,8 +220,8 @@ export function SalesExampleStage() {
         title="3 unpaid"
         subtitle="₦22,000 to collect"
         left={30}
-        top={164}
-        width={150}
+        top={narrow ? 128 : dimmed ? 148 : 164}
+        width={narrow ? 128 : 150}
         rotate={-2}
       />
       <StageCard
@@ -225,8 +230,8 @@ export function SalesExampleStage() {
         title="Eggs · ₦4,500"
         subtitle="40 crates"
         right={18}
-        top={154}
-        width={168}
+        top={narrow ? 120 : dimmed ? 138 : 154}
+        width={narrow ? 141 : 168}
         rotate={4}
       />
     </>

@@ -203,108 +203,114 @@ export function LoginScreen() {
         />
       }
     >
-      {/* Grouped spacing (workshop mobile/sign-in-spacing 03): 10px inside a
-          group, 28px between groups (20px at large text, where the groups
-          already stand apart). */}
       <View className={largeTextLayout ? "gap-5" : "gap-7"}>
-        <View className="gap-2.5">
-          {useWhatsApp ? (
-            <View className="gap-3">
-              <QaPhoneEntryPicker
-                value={qaPhone}
-                onChange={setQaPhone}
-                disabled={isPending}
-              />
-              {qaPhone ? (
-                <QaPhoneText className="rounded-xl border border-border p-4">
-                  {qaPhone.phone}
-                </QaPhoneText>
-              ) : (
-                <PhoneField
-                  countryCode={phoneCountry}
-                  onCountryChange={setPhoneCountry}
-                  onChangeText={setPhone}
-                  value={phone}
-                  label="WhatsApp number"
-                  variant="green-gate"
+        <View className="gap-2">
+          <View className="gap-3">
+            {useWhatsApp ? (
+              <View className="gap-3">
+                <QaPhoneEntryPicker
+                  value={qaPhone}
+                  onChange={setQaPhone}
+                  disabled={isPending}
                 />
-              )}
-            </View>
-          ) : (
-            <FormField
-              autoCapitalize="none"
-              keyboardType="email-address"
-              label="Email address"
-              onChangeText={setEmail}
-              placeholder="Enter your email address"
-              textContentType="emailAddress"
-              value={email}
-              variant="green-gate"
-            />
-          )}
-          {usePassword && !useWhatsApp ? (
-            <FormField
-              autoCapitalize="none"
-              autoComplete="current-password"
-              label="Password"
-              leadingIcon="Lock"
-              onChangeText={setPassword}
-              placeholder="Enter your password"
-              secureTextEntry
-              textContentType="password"
-              value={password}
-              variant="green-gate"
-            />
-          ) : null}
-          <AuthActionButton
-            disabled={
-              useWhatsApp
-                ? !qaPhone && phone.length < 7
-                : !normalizedEmail || (usePassword && !password)
+                {qaPhone ? (
+                  <QaPhoneText className="rounded-xl border border-border p-4">
+                    {qaPhone.phone}
+                  </QaPhoneText>
+                ) : (
+                  <PhoneField
+                    countryCode={phoneCountry}
+                    onCountryChange={setPhoneCountry}
+                    onChangeText={setPhone}
+                    value={phone}
+                    label="WhatsApp number"
+                    variant="green-gate"
+                  />
+                )}
+              </View>
+            ) : (
+              <FormField
+                autoCapitalize="none"
+                keyboardType="email-address"
+                label="Email address"
+                onChangeText={setEmail}
+                placeholder="Enter your email address"
+                textContentType="emailAddress"
+                value={email}
+                variant="green-gate"
+              />
+            )}
+            {usePassword && !useWhatsApp ? (
+              <FormField
+                autoCapitalize="none"
+                autoComplete="current-password"
+                label="Password"
+                leadingIcon="Lock"
+                onChangeText={setPassword}
+                placeholder="Enter your password"
+                secureTextEntry
+                textContentType="password"
+                value={password}
+                variant="green-gate"
+              />
+            ) : null}
+            <AuthActionButton
+              disabled={
+                useWhatsApp
+                  ? !qaPhone && phone.length < 7
+                  : !normalizedEmail || (usePassword && !password)
+              }
+              isLoading={isPending}
+              loadingLabel={usePassword ? "Signing in" : "Sending code"}
+              onPress={continueWithEmail}
+              trailingIcon="ArrowRight"
+            >
+              {useWhatsApp
+                ? "Send WhatsApp code"
+                : usePassword
+                  ? "Sign in with password"
+                  : "Send login code"}
+            </AuthActionButton>
+          </View>
+          {/* At large text the two method switches stack so each label reads
+              in full instead of truncating at half width. */}
+          <View
+            className={
+              largeTextLayout ? "gap-1" : "flex-row items-center justify-center"
             }
-            isLoading={isPending}
-            loadingLabel={usePassword ? "Signing in" : "Sending code"}
-            onPress={continueWithEmail}
-            trailingIcon="ArrowRight"
           >
-            {useWhatsApp
-              ? "Send WhatsApp code"
-              : usePassword
-                ? "Sign in with password"
-                : "Send login code"}
-          </AuthActionButton>
-        </View>
-        {/* At large text the two method switches stack so each label reads
-            in full instead of truncating at half width. */}
-        <View className={largeTextLayout ? "gap-2.5" : "flex-row gap-2.5"}>
-          {phoneAvailability.data?.enabled ? (
+            {phoneAvailability.data?.enabled ? (
+              <View className={largeTextLayout ? "w-full" : "flex-1"}>
+                <AuthMethodButton
+                  icon={useWhatsApp ? "Mail" : "WhatsApp"}
+                  brandIcon={useWhatsApp ? undefined : "whatsapp"}
+                  label={useWhatsApp ? "Use email" : "Use WhatsApp"}
+                  variant="link"
+                  onPress={() => {
+                    setUseWhatsApp(!useWhatsApp)
+                    setUsePassword(false)
+                    setError(null)
+                  }}
+                  disabled={isPending}
+                />
+              </View>
+            ) : null}
+            {!largeTextLayout && phoneAvailability.data?.enabled ? (
+              <View className="h-4 w-px bg-border" />
+            ) : null}
             <View className={largeTextLayout ? "w-full" : "flex-1"}>
               <AuthMethodButton
-                icon={useWhatsApp ? "Mail" : "WhatsApp"}
-                brandIcon={useWhatsApp ? undefined : "whatsapp"}
-                label={useWhatsApp ? "Use email" : "Use WhatsApp"}
-                variant="sso"
+                icon={usePassword ? "Mail" : "Padlock"}
+                label={usePassword ? "Use code" : "Use password"}
+                variant="link"
                 onPress={() => {
-                  setUseWhatsApp(!useWhatsApp)
-                  setUsePassword(false)
+                  setUsePassword(!usePassword)
+                  setUseWhatsApp(false)
                   setError(null)
                 }}
                 disabled={isPending}
               />
             </View>
-          ) : null}
-          <View className={largeTextLayout ? "w-full" : "flex-1"}>
-            <AuthMethodButton
-              icon={usePassword ? "Mail" : "Lock"}
-              label={usePassword ? "Use code" : "Use password"}
-              variant="sso"
-              onPress={() => {
-                setUsePassword(!usePassword)
-                setUseWhatsApp(false)
-                setError(null)
-              }}
-              disabled={isPending}
-            />
           </View>
         </View>
         {error ? (
@@ -325,7 +331,7 @@ export function LoginScreen() {
             brandIcon="google"
             disabled={googleAuth.isPending}
             label="Continue with Google"
-            variant="sso"
+            variant="outline"
             loadingLabel="Connecting to Google"
             onPress={continueWithGoogle}
             pending={googleAuth.isPending}

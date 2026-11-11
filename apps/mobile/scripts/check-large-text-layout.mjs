@@ -74,7 +74,7 @@ const contracts = [
       "useLargeTextLayout",
       "<ClassicLoginScreen",
       'largeTextLayout ? "gap-5" : "gap-7"',
-      'largeTextLayout ? "gap-2.5" : "flex-row gap-2.5"',
+      'largeTextLayout ? "gap-1" : "flex-row items-center justify-center"',
       'largeTextLayout ? "w-full" : "flex-1"',
     ],
   },

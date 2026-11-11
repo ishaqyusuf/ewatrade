@@ -6,6 +6,7 @@ import * as HugeIcons from "@hugeicons/core-free-icons"
 import { HugeiconsIcon, type HugeiconsProps } from "@hugeicons/react-native"
 import type { ComponentType } from "react"
 import { View } from "react-native"
+import Svg, { Path, Rect } from "react-native-svg"
 
 export type LucideProps = Omit<HugeiconsProps, "icon" | "altIcon" | "showAlt">
 type IconThemeOverride = keyof typeof THEME | ""
@@ -115,6 +116,24 @@ const ListX = hugeIcon("ListViewIcon")
 const Loader2 = hugeIcon("Loading03Icon")
 const LocateIcon = hugeIcon("Location01Icon")
 const Lock = hugeIcon("Lock")
+function Padlock({ color, size = 24, strokeWidth = 1.9 }: LucideProps) {
+  return (
+    <Svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke={color}
+      strokeWidth={strokeWidth}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      accessible={false}
+    >
+      <Rect x={4} y={11} width={16} height={10} rx={2} />
+      <Path d="M8 11V7a4 4 0 0 1 8 0v4" />
+    </Svg>
+  )
+}
 const LogOut = hugeIcon("Logout01Icon")
 const Mail = hugeIcon("Mail")
 const MapPin = hugeIcon("MapPin")
@@ -362,6 +381,7 @@ const appIcons = {
   LocateIcon,
   Loader2,
   Lock,
+  Padlock,
   LogOut,
   Mail,
   MapPin,

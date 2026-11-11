@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "id": "2026-11-11-mobile-sign-in-dimmed-stage",
+  "tickets": ["H02"],
+  "summary": "Apply the selected Dimmed stage Workshop layout to mobile sign-in.",
+  "noAssistantImpact": "This changes sign-in presentation and retains the existing authentication handlers, permissions, and assistant capabilities.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/mobile-green-till-redesign.md"
+    }
+  ]
+}
