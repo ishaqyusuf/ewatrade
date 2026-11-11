@@ -13,7 +13,11 @@ import {
   type CatalogAiFacts,
   catalogAiAllowanceLabel,
 } from "@ewatrade/utils/catalog-ai-images"
-import { catalogRefinementDescendants } from "@ewatrade/utils/catalog-image-editor"
+import {
+  type CatalogImageOptionEditor,
+  type CatalogImageReplacement,
+  catalogRefinementDescendants,
+} from "@ewatrade/utils/catalog-image-editor"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import * as Crypto from "expo-crypto"
 import { type ReactNode, useEffect, useRef, useState } from "react"
@@ -37,6 +41,7 @@ export function CatalogImagesEditor({
   disabled = false,
   onBusyChange,
   onPersisted,
+  optionEditor,
   illustrationId = null,
   saveFeedback,
 }: {
@@ -45,10 +50,15 @@ export function CatalogImagesEditor({
   catalogItemId?: string
   facts: CatalogAiFacts
   assetIds: string[]
-  onChange(ids: string[], illustrationId: string | null): void
+  onChange(
+    ids: string[],
+    illustrationId: string | null,
+    replacements?: CatalogImageReplacement[],
+  ): void
   disabled?: boolean
   onBusyChange?(busy: boolean, writing: boolean): void
-  onPersisted?(ids: string[]): void
+  onPersisted?(ids: string[], variantIds: (string | null)[]): void
+  optionEditor?: CatalogImageOptionEditor
   illustrationId?: string | null
   saveFeedback?: ReactNode
 }) {
@@ -76,9 +86,9 @@ export function CatalogImagesEditor({
       active.current.mounted = false
     }
   }, [])
-  const change = (ids: string[]) => {
+  const change = (ids: string[], replacements?: CatalogImageReplacement[]) => {
     if (disabled) return
-    onChange(ids, null)
+    onChange(ids, null, replacements)
   }
   const ai = useCatalogAiImages({
     storeId,
@@ -121,6 +131,14 @@ export function CatalogImagesEditor({
     ),
   )
   const activeId = viewer !== null ? assetIds[viewer] : undefined
+  const assignedVariantId = activeId
+    ? (optionEditor?.assignments[activeId] ?? null)
+    : null
+  const optionMissing =
+    assignedVariantId !== null &&
+    !optionEditor?.options.some((option) => option.id === assignedVariantId)
+  const showOptions =
+    optionEditor && (optionEditor.options.length > 0 || optionMissing)
   const versions = useQuery(
     trpc.catalog.aiImages.versions.queryOptions(
       { storeId, assetId: activeId ?? "none" },
@@ -229,6 +247,9 @@ export function CatalogImagesEditor({
         ),
       })
       assertCurrent()
+      const replacements = selected.current
+        .filter((id) => result.removedAssetIds.includes(id))
+        .map((id) => ({ from: id, to: result.rootAssetId }))
       const next = [
         ...new Set(
           selected.current.map((id) =>
@@ -236,8 +257,9 @@ export function CatalogImagesEditor({
           ),
         ),
       ]
-      if (result.assetIds && onPersisted) onPersisted(result.assetIds)
-      else change(next)
+      if (result.assetIds && result.optionVariantIds)
+        onPersisted?.(result.assetIds, result.optionVariantIds)
+      else change(next, replacements)
       setViewed(result.rootAssetId)
       setConfirmDelete(false)
       await client.invalidateQueries({ queryKey: trpc.catalog.pathKey() })
@@ -316,85 +338,100 @@ export function CatalogImagesEditor({
         </Text>
       </View>
       <View className="flex-row flex-wrap gap-3">
-        {assetIds.map((id, index) => (
-          <View
-            key={id}
-            style={{
-              width: "48%",
-              aspectRatio: 1,
-              overflow: "hidden",
-              borderRadius: 16,
-              backgroundColor: colors.muted,
-            }}
-          >
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={`View image ${index + 1}`}
-              style={{ flex: 1 }}
-              onPress={() => {
-                setViewer(index)
-                setViewed(id)
+        {assetIds.map((id, index) => {
+          const assigned = optionEditor?.assignments[id] ?? null
+          const isPrimary =
+            assetIds.find(
+              (assetId) =>
+                (optionEditor?.assignments[assetId] ?? null) === assigned,
+            ) === id
+          const optionName = assigned
+            ? (optionEditor?.options.find((option) => option.id === assigned)
+                ?.name ?? "Removed option")
+            : null
+          return (
+            <View
+              key={id}
+              style={{
+                width: "48%",
+                aspectRatio: 1,
+                overflow: "hidden",
+                borderRadius: 16,
+                backgroundColor: colors.muted,
               }}
             >
-              <SavedPhotoPreview
-                assetId={id}
-                storeId={storeId}
-                name={`Image ${index + 1} of ${facts.name}`}
-                variant="thumbnail"
-              />
-            </Pressable>
-            {index === 0 ? (
-              <View className="absolute left-2 top-2 rounded-lg bg-card px-2 py-1">
-                <Text className="text-[10px] font-extrabold text-foreground">
-                  Primary
-                </Text>
-              </View>
-            ) : null}
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={`Remove image ${index + 1}`}
-              disabled={disabled || busy}
-              className="absolute right-1 top-1 size-11 items-center justify-center"
-              onPress={() => change(assetIds.filter((entry) => entry !== id))}
-            >
-              <View className="size-7 items-center justify-center rounded-full bg-card">
-                <Icon name="X" className="size-[14px] text-foreground" />
-              </View>
-            </Pressable>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={`Refine image ${index + 1} with AI`}
-              disabled={!canRefine(id)}
-              className="absolute bottom-1 right-1 min-h-11 items-center justify-center px-1"
-              onPress={() => void ai.start(id)}
-            >
-              <View
-                className="flex-row items-center gap-1 rounded-xl bg-card px-3 py-2"
-                style={{ opacity: canRefine(id) ? 1 : 0.5 }}
-              >
-                <Icon name="Sparkles" className="size-[13px] text-foreground" />
-                <Text className="text-xs font-extrabold text-foreground">
-                  Refine
-                </Text>
-              </View>
-            </Pressable>
-            {index > 0 ? (
               <Pressable
                 accessibilityRole="button"
-                accessibilityLabel={`Make image ${index + 1} primary`}
-                disabled={disabled || busy}
-                className="absolute bottom-1 left-1 min-h-11 justify-center px-1"
-                onPress={() =>
-                  change([id, ...assetIds.filter((entry) => entry !== id)])
-                }
+                accessibilityLabel={`View image ${index + 1}`}
+                style={{ flex: 1 }}
+                onPress={() => {
+                  setViewer(index)
+                  setViewed(id)
+                }}
               >
-                <Text className="rounded-md bg-card px-1 py-1 text-[9px] font-bold text-foreground">
-                  Make primary
-                </Text>
+                <SavedPhotoPreview
+                  assetId={id}
+                  storeId={storeId}
+                  name={`Image ${index + 1} of ${facts.name}`}
+                  variant="thumbnail"
+                />
               </Pressable>
-            ) : null}
-          </View>
-        ))}
+              {isPrimary || optionName ? (
+                <View className="absolute left-2 top-2 rounded-lg bg-card px-2 py-1">
+                  <Text className="text-[10px] font-extrabold text-foreground">
+                    {optionName ?? "Primary"}
+                  </Text>
+                </View>
+              ) : null}
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`Remove image ${index + 1}`}
+                disabled={disabled || busy}
+                className="absolute right-1 top-1 size-11 items-center justify-center"
+                onPress={() => change(assetIds.filter((entry) => entry !== id))}
+              >
+                <View className="size-7 items-center justify-center rounded-full bg-card">
+                  <Icon name="X" className="size-[14px] text-foreground" />
+                </View>
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`Refine image ${index + 1} with AI`}
+                disabled={!canRefine(id)}
+                className="absolute bottom-1 right-1 min-h-11 items-center justify-center px-1"
+                onPress={() => void ai.start(id)}
+              >
+                <View
+                  className="flex-row items-center gap-1 rounded-xl bg-card px-3 py-2"
+                  style={{ opacity: canRefine(id) ? 1 : 0.5 }}
+                >
+                  <Icon
+                    name="Sparkles"
+                    className="size-[13px] text-foreground"
+                  />
+                  <Text className="text-xs font-extrabold text-foreground">
+                    Refine
+                  </Text>
+                </View>
+              </Pressable>
+              {!isPrimary ? (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={`Make image ${index + 1} primary`}
+                  disabled={disabled || busy}
+                  className="absolute bottom-1 left-1 min-h-11 justify-center px-1"
+                  onPress={() =>
+                    change([id, ...assetIds.filter((entry) => entry !== id)])
+                  }
+                >
+                  <Text className="rounded-md bg-card px-1 py-1 text-[9px] font-bold text-foreground">
+                    Make primary
+                  </Text>
+                </Pressable>
+              ) : null}
+            </View>
+          )
+        })}
       </View>
       <View className="flex-row gap-2">
         {[
@@ -627,6 +664,44 @@ export function CatalogImagesEditor({
               </View>
             ) : null}
           </View>
+          {showOptions && activeId ? (
+            <View className="gap-2">
+              <Text className="text-sm font-bold text-foreground">
+                Use image for
+              </Text>
+              {optionMissing ? (
+                <Text className="text-xs text-muted-foreground">
+                  Assigned to a removed option
+                </Text>
+              ) : null}
+              <View className="flex-row flex-wrap gap-2">
+                {[
+                  { id: null, name: "General item image" },
+                  ...optionEditor.options,
+                ].map((option) => {
+                  const selected = option.id === assignedVariantId
+                  return (
+                    <Pressable
+                      key={option.id ?? "general"}
+                      accessibilityRole="button"
+                      accessibilityState={{
+                        selected,
+                        disabled: disabled || busy,
+                      }}
+                      className={`min-h-11 justify-center rounded-xl border px-3 ${selected ? "border-primary" : "border-border"}`}
+                      disabled={disabled || busy}
+                      onPress={() => optionEditor.onAssign(activeId, option.id)}
+                    >
+                      <Text className="text-xs font-semibold text-foreground">
+                        {option.name}
+                      </Text>
+                    </Pressable>
+                  )
+                })}
+              </View>
+              {saveFeedback}
+            </View>
+          ) : null}
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -675,6 +750,7 @@ export function CatalogImagesEditor({
                     assetIds.map((id, index) =>
                       index === viewer ? displayed : id,
                     ),
+                    activeId ? [{ from: activeId, to: displayed }] : [],
                   )
                 }
               >

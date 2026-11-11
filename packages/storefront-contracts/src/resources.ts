@@ -39,6 +39,8 @@ export const publicCatalogOptionSchema = z
     priceMinor: z.number().int().nonnegative().nullable(),
     currencyCode: z.string(),
     availability,
+    /** Approved photo assigned to the variant behind this offering. */
+    photoUrl: z.string().optional(),
     /** Products only. Absent for services and older loaders. */
     stock: publicStockStateSchema.optional(),
     /**

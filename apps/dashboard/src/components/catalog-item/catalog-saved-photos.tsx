@@ -6,6 +6,12 @@ import type {
   RouterOutputs,
 } from "@ewatrade/api/trpc/routers/_app"
 import { Button, Sheet } from "@ewatrade/ui"
+import {
+  type CatalogImageReplacement,
+  catalogImageAssignments,
+  catalogImageOptions,
+  catalogImageVariantIds,
+} from "@ewatrade/utils/catalog-image-editor"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { type ComponentProps, useEffect, useRef, useState } from "react"
 import { useCatalogThemeClass } from "./catalog-appearance"
@@ -20,6 +26,7 @@ type Item = Pick<
   | "illustrations"
   | "category"
   | "kind"
+  | "variants"
 >
 export function CatalogSavedPhotos({
   item,
@@ -100,17 +107,28 @@ function SavedPhotoEditor({
   const trpc = useTRPC()
   const client = useQueryClient()
   const theme = useCatalogThemeClass()
+  const [initialPhotos] = useState(() =>
+    item.photos.filter((photo) => photo.storeId === storeId),
+  )
   const [ids, setIds] = useState(() =>
-    item.photos
-      .filter((photo) => photo.storeId === storeId)
-      .map((photo) => photo.assetId),
+    initialPhotos.map((photo) => photo.assetId),
+  )
+  const [assignments, setAssignments] = useState(() =>
+    catalogImageAssignments(
+      ids,
+      initialPhotos.map((photo) => photo.optionVariantId),
+    ),
   )
   const [illustrationId, setIllustrationId] = useState(
     () =>
       item.illustrations.find((image) => image.storeId === storeId)
         ?.illustrationId ?? null,
   )
-  const expected = useRef({ assetIds: [...ids], illustrationId })
+  const expected = useRef({
+    assetIds: [...ids],
+    illustrationId,
+    optionVariantIds: catalogImageVariantIds(ids, assignments),
+  })
   const [saving, setSaving] = useState(false)
   const [mediaBusy, setMediaBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -137,8 +155,10 @@ function SavedPhotoEditor({
       storeId,
       clientOperationId: crypto.randomUUID(),
       assetIds: [...ids],
+      optionVariantIds: catalogImageVariantIds(ids, assignments),
       illustrationId,
       expectedAssetIds: [...expected.current.assetIds],
+      expectedOptionVariantIds: expected.current.optionVariantIds,
       expectedIllustrationId: expected.current.illustrationId,
     }
     try {
@@ -194,11 +214,32 @@ function SavedPhotoEditor({
           category: item.category ?? "",
         }}
         assetIds={ids}
-        onChange={setIds}
+        onChange={(assetIds, replacements?: CatalogImageReplacement[]) => {
+          setIds(assetIds)
+          setAssignments((previous) =>
+            catalogImageAssignments(
+              assetIds,
+              catalogImageVariantIds(assetIds, previous, replacements),
+            ),
+          )
+        }}
+        optionEditor={{
+          options: catalogImageOptions(item.variants),
+          assignments,
+          onAssign: (assetId, variantId) =>
+            setAssignments((previous) => ({
+              ...previous,
+              [assetId]: variantId,
+            })),
+        }}
         disabled={saving || !!attempt.current}
         onBusyChange={setMediaBusy}
-        onPersisted={(assetIds) => {
-          expected.current.assetIds = assetIds
+        onPersisted={(assetIds, optionVariantIds) => {
+          expected.current = {
+            assetIds,
+            optionVariantIds,
+            illustrationId: null,
+          }
         }}
         illustrationId={illustrationId}
         onIllustrationChange={setIllustrationId}

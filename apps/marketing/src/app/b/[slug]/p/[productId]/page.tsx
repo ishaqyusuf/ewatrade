@@ -6,7 +6,6 @@ import {
 import { PlatformIcon } from "@/components/platform-catalog/icons"
 import { PlatformProductBuy } from "@/components/platform-catalog/product-buy"
 import { PlatformProductGrid } from "@/components/platform-catalog/product-card"
-import { PlatformGallery } from "@/components/platform-catalog/product-gallery"
 import { PlatformTile } from "@/components/platform-catalog/tile"
 import { platformCatalogHref, platformOrigin } from "@/lib/platform-catalog"
 import { loadPlatformCatalog } from "@/lib/platform-catalog-server"
@@ -120,38 +119,34 @@ export default async function PlatformProductPage({ params }: Props) {
             <span>All products</span>
           </Link>
         </nav>
-        <div className="pd-grid">
-          <PlatformGallery
-            item={item}
-            artwork={
-              <PlatformTile item={item} className="pd-main" tag={false} />
-            }
-          />
-          <div className="pd-info">
-            {item.category ? (
-              <Link
-                className="pd-col"
-                href={platformCatalogHref(business.slug, {
-                  category: item.category.id,
-                })}
-              >
-                {item.category.name}
-              </Link>
-            ) : null}
-            <h1>{item.name}</h1>
-            <PlatformProductBuy
-              item={item}
-              business={business}
-              pageUrl={pageUrl}
-            />
-            {item.description ? (
-              <div className="pd-about">
-                <h2 className="pd-h">About this product</h2>
-                <p>{item.description}</p>
-              </div>
-            ) : null}
-          </div>
-        </div>
+        <PlatformProductBuy
+          item={item}
+          business={business}
+          pageUrl={pageUrl}
+          artwork={<PlatformTile item={item} className="pd-main" tag={false} />}
+          heading={
+            <>
+              {item.category ? (
+                <Link
+                  className="pd-col"
+                  href={platformCatalogHref(business.slug, {
+                    category: item.category.id,
+                  })}
+                >
+                  {item.category.name}
+                </Link>
+              ) : null}
+              <h1>{item.name}</h1>
+            </>
+          }
+        >
+          {item.description ? (
+            <div className="pd-about">
+              <h2 className="pd-h">About this product</h2>
+              <p>{item.description}</p>
+            </div>
+          ) : null}
+        </PlatformProductBuy>
         {moreSection}
       </main>
       <PlatformFooter business={business} url={catalogUrl} />

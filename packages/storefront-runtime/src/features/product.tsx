@@ -119,7 +119,7 @@ function ProductDetailBody({ item }: { item: PublicCatalogItem }) {
       optionName: item.options.length > 1 ? option.name.slice(0, 160) : "",
       unitLabel: unit,
       scale,
-      photoUrl: item.photoUrl ?? null,
+      photoUrl: option.photoUrl ?? item.photoUrl ?? null,
       illustrationId: item.illustrationId,
       ...(requestAhead
         ? { intent: "preorder" as const, preferredDate: date }
@@ -156,7 +156,11 @@ function ProductDetailBody({ item }: { item: PublicCatalogItem }) {
       </nav>
       <div className="sf-feature-product__grid">
         <div className="sf-feature-product__media">
-          <CommerceGallery item={item} kind="product" />
+          <CommerceGallery
+            item={item}
+            kind="product"
+            optionPhotoUrl={option.photoUrl}
+          />
         </div>
         <div className="sf-feature-product__info">
           <h1 className="sf-feature-display sf-feature-display--product">

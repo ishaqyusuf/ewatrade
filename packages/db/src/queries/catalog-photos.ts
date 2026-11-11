@@ -388,6 +388,30 @@ export async function getCatalogPublicPhotoTarget(
         qaPurgeStartedAt: null,
       },
       store: { status: "ACTIVE" },
+      AND: [
+        {
+          OR: [
+            { optionVariantId: null },
+            {
+              optionVariant: {
+                is: {
+                  status: "ACTIVE",
+                  archivedAt: null,
+                  offerings: {
+                    some: {
+                      status: "ACTIVE",
+                      archivedAt: null,
+                      storeAvailability: {
+                        some: { storeId: input.storeId, isAvailable: true },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          ],
+        },
+      ],
       // Served for a published Site, or for a product its owner listed on the
       // platform catalog of a listed Store; never for other unlisted products.
       OR: [

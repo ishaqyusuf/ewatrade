@@ -112,6 +112,7 @@ model SellableVariant {
   catalogItem         CatalogItem                @relation(fields: [catalogItemId], references: [id], onDelete: Cascade)
   selections          SellableVariantSelection[]
   offerings           SellableOffering[]
+  photoAssets         CatalogPhotoAsset[]
   stockBalanceSources StockBalanceSource[]
 
   @@unique([catalogItemId, key])

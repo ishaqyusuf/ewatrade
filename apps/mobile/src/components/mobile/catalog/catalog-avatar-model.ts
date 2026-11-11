@@ -12,6 +12,7 @@ type CatalogMediaSelection = {
     assetId: string
     sortOrder: number | null
     state: string
+    optionVariantId?: string | null
   }>
 }
 
@@ -34,6 +35,7 @@ export function selectCatalogAvatar(
       ?.filter(
         (entry) =>
           entry.storeId === storeId &&
+          entry.optionVariantId == null &&
           (entry.state === "APPROVED" || entry.state === "PENDING_REVIEW"),
       )
       .sort(

@@ -53,7 +53,13 @@ export const catalogItemGraph = {
   },
   photoAssets: {
     where: { state: { in: ["PENDING_REVIEW", "APPROVED"] } },
-    select: { id: true, storeId: true, state: true, sortOrder: true },
+    select: {
+      id: true,
+      storeId: true,
+      state: true,
+      sortOrder: true,
+      optionVariantId: true,
+    },
     orderBy: { sortOrder: "asc" },
   },
   variants: {
@@ -173,6 +179,7 @@ export function serializeCatalogItem(item: CatalogItemGraph) {
       storeId: photo.storeId,
       state: photo.state,
       sortOrder: photo.sortOrder,
+      optionVariantId: photo.optionVariantId ?? null,
     })),
     description: item.description,
     id: item.id,

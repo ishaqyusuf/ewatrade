@@ -420,6 +420,15 @@ body:has(.sf-catalog) {
   min-width: 0;
   overflow-wrap: anywhere;
 }
+.sf-options li > button {
+  min-width: 0;
+  text-align: left;
+  text-decoration: underline;
+  overflow-wrap: anywhere;
+}
+.sf-options li > button[aria-pressed="true"] {
+  font-weight: 600;
+}
 .sf-options li > span:last-child {
   text-align: right;
 }

@@ -64,15 +64,21 @@ function GalleryImage({
 export function CommerceGallery({
   item,
   kind,
+  optionPhotoUrl,
 }: {
   item: PublicCatalogItem
   kind: "product" | "service"
+  optionPhotoUrl?: string
 }) {
   const [failed, setFailed] = useState<readonly string[]>([])
   const [index, setIndex] = useState(0)
-  const photos = galleryPhotos(item).filter(
-    (photo) => !failed.includes(photo.id),
-  )
+  const optionPhoto =
+    optionPhotoUrl && !failed.includes(optionPhotoUrl)
+      ? [{ id: optionPhotoUrl, url: optionPhotoUrl, alt: item.name }]
+      : null
+  const photos =
+    optionPhoto ??
+    galleryPhotos(item).filter((photo) => !failed.includes(photo.id))
   const total = photos.length
   const current = Math.min(index, Math.max(total - 1, 0))
   const fail = (id: string) =>
@@ -83,7 +89,9 @@ export function CommerceGallery({
     />
   )
   if (!total)
-    return kind === "product" || galleryPhotos(item).length ? artwork : null
+    return kind === "product" || optionPhotoUrl || galleryPhotos(item).length
+      ? artwork
+      : null
   const photo = photos[current] as GalleryPhoto
   if (total === 1)
     return (

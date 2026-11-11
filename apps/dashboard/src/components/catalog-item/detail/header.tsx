@@ -44,6 +44,9 @@ export function CatalogDetailHeader({
   onStorefrontSettings?: () => void
 }) {
   const item = detail.item
+  const photo = item.photos.find(
+    (entry) => entry.storeId === store.id && entry.optionVariantId == null,
+  )
   const { close, setView } = useCatalogDetailParams()
   const themeClass = useCatalogThemeClass()
   const { editCatalogItem } = useCatalogItemParams()
@@ -56,9 +59,9 @@ export function CatalogDetailHeader({
   return (
     <SheetHeader className="shrink-0 flex-row items-start gap-4 px-6 pt-[max(1.5rem,env(safe-area-inset-top))] pb-6">
       <div className="flex size-16 shrink-0 items-center justify-center overflow-hidden bg-muted">
-        {item.photos[0] && affordances.privatePhotos ? (
+        {photo && affordances.privatePhotos ? (
           <CatalogPhotoPreview
-            assetId={item.photos[0].assetId}
+            assetId={photo.assetId}
             storeId={store.id}
             label={item.name}
           />

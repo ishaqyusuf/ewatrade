@@ -72,6 +72,7 @@ export function catalogDirectorySelect(
     photoAssets: {
       where: {
         storeId: input.storeId,
+        optionVariantId: null,
         state: { in: ["PENDING_REVIEW", "APPROVED"] },
       },
       orderBy: { sortOrder: "asc" },

@@ -585,7 +585,10 @@ function ItemSheet({
             </SheetHeader>
             <div className="mh-sheet-scroll">
               <div className="mh-sheet-art">
-                <StorefrontArtwork item={selected} />
+                <StorefrontArtwork
+                  item={selected}
+                  optionPhotoUrl={currentOption?.photoUrl}
+                />
               </div>
               <p className="mh-sheet-price">
                 <span className="mh-price">{price}</span>

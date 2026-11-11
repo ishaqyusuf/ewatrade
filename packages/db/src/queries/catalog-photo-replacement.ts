@@ -34,6 +34,8 @@ export type CatalogPhotoReplacementInput = CatalogPhotoActorScope & {
   illustrationId?: string | null
   assetIds: string[]
   expectedAssetIds?: string[]
+  optionVariantIds?: Array<string | null>
+  expectedOptionVariantIds?: Array<string | null>
   expectedIllustrationId?: string | null
   clientOperationId: string
 }
@@ -41,7 +43,13 @@ export async function replaceCatalogItemPhotosInTransaction(
   tx: Prisma.TransactionClient,
   input: CatalogPhotoReplacementInput,
 ) {
-  const request = { ...input, assetIds: [...input.assetIds] }
+  const request = {
+    ...input,
+    assetIds: [...input.assetIds],
+    optionVariantIds: input.optionVariantIds?.slice(),
+    expectedAssetIds: input.expectedAssetIds?.slice(),
+    expectedOptionVariantIds: input.expectedOptionVariantIds?.slice(),
+  }
   if (
     (request.illustrationId != null &&
       (!findCatalogIllustration(request.illustrationId) ||
@@ -50,6 +58,14 @@ export async function replaceCatalogItemPhotosInTransaction(
     new Set(request.assetIds).size !== request.assetIds.length ||
     !/^[a-zA-Z0-9_-]{1,128}$/.test(request.catalogItemId) ||
     request.assetIds.some((id) => !/^[a-zA-Z0-9_-]{1,128}$/.test(id)) ||
+    (request.optionVariantIds !== undefined &&
+      (request.optionVariantIds.length !== request.assetIds.length ||
+        request.optionVariantIds.some(
+          (id) => id !== null && !/^[a-zA-Z0-9_-]{1,128}$/.test(id),
+        ))) ||
+    (request.expectedOptionVariantIds !== undefined &&
+      request.expectedOptionVariantIds.length !==
+        request.expectedAssetIds?.length) ||
     request.clientOperationId.length < 8 ||
     request.clientOperationId.length > 160
   )
@@ -70,6 +86,15 @@ export async function replaceCatalogItemPhotosInTransaction(
         ...(request.expectedAssetIds === undefined
           ? []
           : [request.expectedAssetIds, request.expectedIllustrationId ?? null]),
+        ...(request.optionVariantIds === undefined &&
+        request.expectedOptionVariantIds === undefined
+          ? []
+          : [
+              {
+                optionVariantIds: request.optionVariantIds,
+                expectedOptionVariantIds: request.expectedOptionVariantIds,
+              },
+            ]),
       ]),
     )
     .digest("hex")
@@ -98,6 +123,9 @@ export async function replaceCatalogItemPhotosInTransaction(
       )
     return {
       assetIds: request.assetIds,
+      ...(request.optionVariantIds === undefined
+        ? {}
+        : { optionVariantIds: request.optionVariantIds }),
       illustrationId: request.illustrationId,
       replayed: true,
     }
@@ -119,7 +147,7 @@ export async function replaceCatalogItemPhotosInTransaction(
     assets.find((asset) => asset.id === id),
   )
   if (request.expectedAssetIds !== undefined) {
-    const currentIds = assets
+    const current = assets
       .filter(
         (asset) =>
           asset.catalogItemId === item.id &&
@@ -127,7 +155,6 @@ export async function replaceCatalogItemPhotosInTransaction(
           ["PENDING_REVIEW", "APPROVED"].includes(asset.state),
       )
       .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
-      .map((asset) => asset.id)
     const illustration = await tx.catalogItemIllustration.findUnique({
       where: {
         tenantId_catalogItemId_storeId: {
@@ -139,7 +166,11 @@ export async function replaceCatalogItemPhotosInTransaction(
       select: { illustrationId: true },
     })
     if (
-      JSON.stringify(currentIds) !== JSON.stringify(request.expectedAssetIds) ||
+      JSON.stringify(current.map((asset) => asset.id)) !==
+        JSON.stringify(request.expectedAssetIds) ||
+      (request.expectedOptionVariantIds !== undefined &&
+        JSON.stringify(current.map((asset) => asset.optionVariantId)) !==
+          JSON.stringify(request.expectedOptionVariantIds)) ||
       (request.expectedIllustrationId !== undefined &&
         (illustration?.illustrationId ?? null) !==
           request.expectedIllustrationId)
@@ -176,6 +207,33 @@ export async function replaceCatalogItemPhotosInTransaction(
       "PHOTO_NOT_READY",
       "One or more selected photos are unavailable in this Store.",
     )
+  // Legacy callers keep an existing assignment. New attachments are general
+  // unless the editor explicitly supplies a variant.
+  const optionVariantIds =
+    request.optionVariantIds ??
+    selected.map((asset) => asset?.optionVariantId ?? null)
+  const changedVariants = [
+    ...new Set(
+      optionVariantIds.filter(
+        (id, index): id is string =>
+          id !== null && id !== selected[index]?.optionVariantId,
+      ),
+    ),
+  ]
+  if (changedVariants.length) {
+    const variants = await tx.$queryRaw<Array<{ id: string }>>(Prisma.sql`
+      SELECT "id" FROM "SellableVariant"
+      WHERE "catalogItemId"=${item.id}
+        AND "id" IN (${Prisma.join(changedVariants)})
+        AND "archivedAt" IS NULL AND "status" <> 'ARCHIVED'
+      ORDER BY "id" FOR SHARE
+    `)
+    if (variants.length !== changedVariants.length)
+      throw new CatalogPhotoError(
+        "INVALID_PHOTO",
+        "Choose a current option for this item.",
+      )
+  }
   const otherStores = assets.filter(
     (asset) =>
       asset.catalogItemId === item.id && asset.storeId !== request.storeId,
@@ -229,6 +287,7 @@ export async function replaceCatalogItemPhotosInTransaction(
       },
       data: {
         catalogItemId: null,
+        optionVariantId: null,
         sortOrder: null,
         galleryAddedAt: new Date(),
         expiresAt: CATALOG_GALLERY_KEEP_UNTIL,
@@ -243,6 +302,7 @@ export async function replaceCatalogItemPhotosInTransaction(
     },
     data: {
       catalogItemId: null,
+      optionVariantId: null,
       state: "REMOVED",
       approvedAt: null,
       expiresAt: new Date(Date.now() + CATALOG_PHOTO_CLEANUP_GRACE_MS),
@@ -257,6 +317,7 @@ export async function replaceCatalogItemPhotosInTransaction(
       where: { id },
       data: {
         catalogItemId: item.id,
+        optionVariantId: optionVariantIds[index],
         sortOrder: offset + index,
         attachedAt: new Date(),
         galleryAddedAt: null,
@@ -300,6 +361,7 @@ export async function replaceCatalogItemPhotosInTransaction(
   })
   return {
     assetIds: request.assetIds,
+    ...(request.optionVariantIds === undefined ? {} : { optionVariantIds }),
     illustrationId: request.illustrationId,
     replayed: false,
   }

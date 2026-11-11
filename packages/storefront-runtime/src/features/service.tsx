@@ -75,7 +75,6 @@ function ServiceDetailBody({ item }: { item: PublicCatalogItem }) {
     snapshot.resources.business.timezone ?? defaultBusinessTimeZone
   const today = dateInZone(timeZone)
   const earliest = dateRequired ? addDays(today, 1) : today
-  const hasMedia = galleryPhotos(item).length > 0
   const [selected, setSelected] = useState<Record<string, string>>(() =>
     options.length === 1 && options[0] ? { [options[0].id]: "1" } : {},
   )
@@ -121,6 +120,8 @@ function ServiceDetailBody({ item }: { item: PublicCatalogItem }) {
     ? `https://wa.me/${whatsapp.replace(/\D/g, "")}?text=${encodeURIComponent(`Hello ${snapshot.resources.business.name}, I'd like to ask about ${item.name}.`)}`
     : null
   const chosen = options.filter((option) => selected[option.id] !== undefined)
+  const optionPhotoUrl = chosen.length === 1 ? chosen[0]?.photoUrl : undefined
+  const hasMedia = !!optionPhotoUrl || galleryPhotos(item).length > 0
   const priced = chosen.map((option) =>
     lineTotalMinor(option.priceMinor, selected[option.id] ?? "1"),
   )
@@ -264,7 +265,11 @@ function ServiceDetailBody({ item }: { item: PublicCatalogItem }) {
       >
         {hasMedia ? (
           <div className="sf-feature-service-detail__media">
-            <CommerceGallery item={item} kind="service" />
+            <CommerceGallery
+              item={item}
+              kind="service"
+              optionPhotoUrl={optionPhotoUrl}
+            />
           </div>
         ) : null}
         <div>

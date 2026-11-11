@@ -169,8 +169,27 @@ function item(index: number): Row {
       { storeId: "store", illustrationId: "drawing" },
     ],
     photoAssets: [
-      { id: "rejected", storeId: "store", state: "REJECTED", sortOrder: 0 },
-      { id: "photo", storeId: "store", state: "APPROVED", sortOrder: 1 },
+      {
+        id: "rejected",
+        storeId: "store",
+        state: "REJECTED",
+        sortOrder: 0,
+        optionVariantId: null,
+      },
+      {
+        id: "option",
+        storeId: "store",
+        state: "APPROVED",
+        sortOrder: 1,
+        optionVariantId: "variant-7",
+      },
+      {
+        id: "photo",
+        storeId: "store",
+        state: "APPROVED",
+        sortOrder: 2,
+        optionVariantId: null,
+      },
     ],
     product: {
       id: `product-${id}`,

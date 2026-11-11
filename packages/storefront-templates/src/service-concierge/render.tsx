@@ -534,7 +534,16 @@ export function ServiceConciergeCollection({
             </DialogHeader>
             {detail ? (
               <div className="sc-detail">
-                <StorefrontArtwork item={detail} />
+                <StorefrontArtwork
+                  item={detail}
+                  optionPhotoUrl={
+                    detailIds.length === 1
+                      ? detail.options.find(
+                          (option) => option.id === detailIds[0],
+                        )?.photoUrl
+                      : undefined
+                  }
+                />
                 <p className="sc-detail-price">{itemPriceLabel(detail)}</p>
                 {detail.description ? (
                   <p className="sc-detail-copy">{detail.description}</p>

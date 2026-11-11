@@ -49,9 +49,20 @@ export const catalogPhotoReplacementSchema = z
         "Choose distinct photos.",
       ),
     expectedAssetIds: z.array(identifier).max(8).optional(),
+    optionVariantIds: z.array(identifier.nullable()).max(8).optional(),
+    expectedOptionVariantIds: z.array(identifier.nullable()).max(8).optional(),
     expectedIllustrationId: z.string().nullable().optional(),
   })
   .strict()
+  .refine(
+    (input) =>
+      (input.optionVariantIds === undefined ||
+        input.optionVariantIds.length === input.assetIds.length) &&
+      (input.expectedOptionVariantIds === undefined ||
+        input.expectedOptionVariantIds.length ===
+          input.expectedAssetIds?.length),
+    "Each photo must have one assignment.",
+  )
   .refine(
     (input) => !input.illustrationId || input.assetIds.length === 0,
     "Choose an illustration or photos, exclusively.",

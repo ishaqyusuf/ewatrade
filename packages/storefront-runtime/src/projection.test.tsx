@@ -90,3 +90,19 @@ test("product photos render with artwork kept as the failure fallback", () => {
   expect(photoImageBroken({ complete: true, naturalWidth: 800 })).toBe(false)
   expect(photoImageBroken(null)).toBe(false)
 })
+
+test("selected option artwork takes precedence over the main item photo", () => {
+  const entry = {
+    ...item("a"),
+    photoUrl: "/api/catalog/public/stores/s/photos/general",
+  }
+  const assigned = "/api/catalog/public/stores/s/photos/day-old"
+  expect(
+    renderToStaticMarkup(
+      <StorefrontArtwork item={entry} optionPhotoUrl={assigned} />,
+    ),
+  ).toContain(`src="${assigned}"`)
+  expect(renderToStaticMarkup(<StorefrontArtwork item={entry} />)).toContain(
+    `src="${entry.photoUrl}"`,
+  )
+})

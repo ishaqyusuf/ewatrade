@@ -210,6 +210,7 @@ export function ClassicCatalogItemOverview({
           key={offline ? "offline" : storeId}
           item={item}
           storeId={offline ? undefined : storeId}
+          optionVariantId={activeFilter}
           onOpenImages={
             canEditImages ? () => setEditingImages(true) : undefined
           }
@@ -438,6 +439,7 @@ export function ClassicCatalogItemOverview({
         <CatalogSavedPhotos
           item={item}
           editing={false}
+          optionVariantId={activeFilter}
           onEditingChange={setEditingImages}
         />
       )}

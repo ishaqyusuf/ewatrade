@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "id": "2026-11-11-catalog-option-photos",
+  "tickets": ["H02"],
+  "summary": "Assign Store-scoped saved Catalog photos to variants and resolve the selected offering's photo with the general item photo as fallback.",
+  "noAssistantImpact": "The existing catalog.photos.replace operation gains optional image assignment metadata for merchant editors. Assistant Catalog creation still uses general private asset IDs. No assistant capability or procedure access changes.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/product-service-catalog-items.md"
+    },
+    {
+      "topic": "api",
+      "status": "local_only",
+      "path": ".brain/api/contracts.md"
+    },
+    {
+      "topic": "permissions",
+      "status": "local_only",
+      "path": ".brain/api/permissions.md"
+    },
+    {
+      "topic": "schema",
+      "status": "local_only",
+      "path": ".brain/database/schema.md"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/public-storefront-projection.test.ts",
+      "executed": true,
+      "result": "Approved option photos follow all offerings of their variant, legacy photos remain general, and unrelated variants' photos are omitted."
+    }
+  ]
+}

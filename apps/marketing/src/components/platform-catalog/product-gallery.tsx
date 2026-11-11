@@ -7,12 +7,28 @@ import { type ReactNode, useState } from "react"
 export function PlatformGallery({
   item,
   artwork,
+  optionPhotoUrl,
 }: {
   item: PlatformCatalogItem
   artwork: ReactNode
+  optionPhotoUrl?: string
 }) {
   const photos = item.photos ?? []
   const [index, setIndex] = useState(0)
+  const [failedOption, setFailedOption] = useState<string>()
+  if (optionPhotoUrl && failedOption !== optionPhotoUrl)
+    return (
+      <div className="gallery">
+        <div className="tile pd-main" data-tone="stone">
+          <img
+            className="tile-photo"
+            src={optionPhotoUrl}
+            alt={item.name}
+            onError={() => setFailedOption(optionPhotoUrl)}
+          />
+        </div>
+      </div>
+    )
   if (photos.length === 0) return <div className="gallery">{artwork}</div>
   const current = photos[Math.min(index, photos.length - 1)]
   return (

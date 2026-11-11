@@ -26,6 +26,8 @@ model CatalogPhotoAsset {
   reviewLeaseUntil    DateTime?
   expiresAt           DateTime
   catalogItemId       String?
+  /// Null means the photo is general to its attached Item.
+  optionVariantId     String?
   sortOrder           Int?
   attachedAt          DateTime?
   /// Kept in My images without an Item (gallery-only upload); never attached.
@@ -35,12 +37,14 @@ model CatalogPhotoAsset {
   tenant              Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Restrict)
   store               Store                  @relation(fields: [tenantId, storeId], references: [tenantId, id], onDelete: Restrict)
   catalogItem         CatalogItem?           @relation(fields: [tenantId, catalogItemId], references: [tenantId, id], onDelete: Restrict)
+  optionVariant       SellableVariant?       @relation(fields: [optionVariantId], references: [id], onDelete: Restrict)
 
   @@unique([tenantId, clientOperationId])
   @@unique([tenantId, storagePath])
   @@unique([catalogItemId, sortOrder])
   @@index([tenantId, storeId, actorUserId, expiresAt])
   @@index([tenantId, catalogItemId, state])
+  @@index([optionVariantId])
   @@index([state, reviewAvailableAt, reviewLeaseUntil])
   @@index([tenantId, storeId, galleryAddedAt])
 }

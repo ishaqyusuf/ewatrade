@@ -619,8 +619,13 @@ export function CommerceCollection({
                   {selected.description}
                 </DialogDescription>
               ) : null}
-              {selected.kind === "PRODUCT" ? (
-                <StorefrontArtwork item={selected} />
+              {selected.kind === "PRODUCT" ||
+              currentOption?.photoUrl ||
+              selected.photoUrl ? (
+                <StorefrontArtwork
+                  item={selected}
+                  optionPhotoUrl={currentOption?.photoUrl}
+                />
               ) : null}
               <StorefrontPrice item={selected} chatAvailable={!!itemAction} />
               {options.length ? (

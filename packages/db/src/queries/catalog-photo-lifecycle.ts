@@ -85,6 +85,7 @@ export async function removeCatalogPhoto(
       data: {
         state: "REMOVED",
         catalogItemId: null,
+        optionVariantId: null,
         sortOrder: null,
         approvedAt: null,
         galleryAddedAt: null,
@@ -331,6 +332,7 @@ export async function claimCatalogPhotoCleanup(
         data: {
           state: "REMOVED",
           catalogItemId: null,
+          optionVariantId: null,
           sortOrder: null,
           approvedAt: null,
           expiresAt: new Date(Date.now() + CATALOG_PHOTO_CLEANUP_GRACE_MS),

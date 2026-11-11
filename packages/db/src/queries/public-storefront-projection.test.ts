@@ -27,7 +27,7 @@ const balance = (unit: string, onHand: string, reserved = "0") => ({
 const row = (
   id: string,
   extra: {
-    photos?: string[]
+    photos?: (string | { id: string; optionVariantId: string })[]
     balances?: ReturnType<typeof balance>[]
     lowStockLevel?: string | null
     unit?: { id: string; scale: number } | null
@@ -40,7 +40,9 @@ const row = (
   description: null,
   categoryRecord: null,
   illustrations: [],
-  photoAssets: (extra.photos ?? []).map((asset) => ({ id: asset })),
+  photoAssets: (extra.photos ?? []).map((asset) =>
+    typeof asset === "string" ? { id: asset } : asset,
+  ),
   storefrontPolicies: extra.policy ? [extra.policy] : [],
   product: { lowStockLevel: extra.lowStockLevel ?? null },
   offerings: [
@@ -99,6 +101,38 @@ test("gallery preserves effective primary ordering and manual unavailability kee
     tenantId: "tenant",
     storeId: "store_1",
   })
+})
+
+test("option photos follow the variant across selling units and stay out of the general gallery", async () => {
+  const item = row("broiler", {
+    photos: [
+      { id: "day-old-photo", optionVariantId: "broiler-v" },
+      "general-photo",
+      { id: "unavailable-photo", optionVariantId: "unavailable-variant" },
+    ],
+  })
+  const [dayOld] = item.offerings
+  if (!dayOld) throw new Error("Expected a fixture offering")
+  item.offerings.push(
+    { ...dayOld, id: "day-old-tray" },
+    {
+      ...dayOld,
+      id: "fully-grown",
+      variant: { ...dayOld.variant, id: "fully-grown-variant" },
+    },
+  )
+  const { db } = fixture([item])
+  const [result] = await loadPublicStorefrontPinnedItems(db, input(["broiler"]))
+  expect(result?.photoUrl).toBe(
+    publicCatalogPhotoPath("store_1", "general-photo"),
+  )
+  expect(result?.photos?.map((photo) => photo.id)).toEqual(["general-photo"])
+  expect(result?.options.map((option) => option.photoUrl)).toEqual([
+    publicCatalogPhotoPath("store_1", "day-old-photo"),
+    publicCatalogPhotoPath("store_1", "day-old-photo"),
+    undefined,
+  ])
+  expect(JSON.stringify(result)).not.toContain("unavailable-photo")
 })
 
 function fixture(rows: ReturnType<typeof row>[]) {

@@ -14,7 +14,11 @@ import {
   type CatalogAiFacts,
   catalogAiAllowanceLabel,
 } from "@ewatrade/utils/catalog-ai-images"
-import { catalogRefinementDescendants } from "@ewatrade/utils/catalog-image-editor"
+import {
+  type CatalogImageOptionEditor,
+  type CatalogImageReplacement,
+  catalogRefinementDescendants,
+} from "@ewatrade/utils/catalog-image-editor"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useEffect, useId, useRef, useState } from "react"
 import { CatalogIllustrationPicker } from "./catalog-illustration-picker"
@@ -32,6 +36,7 @@ export function CatalogImagesEditor({
   disabled = false,
   onBusyChange,
   onPersisted,
+  optionEditor,
   illustrationId = null,
   onIllustrationChange,
 }: {
@@ -40,10 +45,11 @@ export function CatalogImagesEditor({
   catalogItemId?: string
   facts: CatalogAiFacts
   assetIds: string[]
-  onChange(ids: string[]): void
+  onChange(ids: string[], replacements?: CatalogImageReplacement[]): void
   disabled?: boolean
   onBusyChange?(busy: boolean): void
-  onPersisted?(ids: string[]): void
+  onPersisted?(ids: string[], variantIds: (string | null)[]): void
+  optionEditor?: CatalogImageOptionEditor
   illustrationId?: string | null
   onIllustrationChange?(id: string | null): void
 }) {
@@ -70,10 +76,10 @@ export function CatalogImagesEditor({
       active.current.mounted = false
     }
   }, [])
-  const change = (ids: string[]) => {
+  const change = (ids: string[], replacements?: CatalogImageReplacement[]) => {
     if (disabled) return
     onIllustrationChange?.(null)
-    onChange(ids)
+    onChange(ids, replacements)
   }
   const ai = useCatalogAiImages({
     storeId,
@@ -111,6 +117,14 @@ export function CatalogImagesEditor({
     ),
   )
   const activeId = viewer !== null ? assetIds[viewer] : undefined
+  const assignedVariantId = activeId
+    ? (optionEditor?.assignments[activeId] ?? null)
+    : null
+  const optionMissing =
+    assignedVariantId !== null &&
+    !optionEditor?.options.some((option) => option.id === assignedVariantId)
+  const showOptions =
+    optionEditor && (optionEditor.options.length > 0 || optionMissing)
   const versions = useQuery(
     trpc.catalog.aiImages.versions.queryOptions(
       { storeId, assetId: activeId ?? "none" },
@@ -197,6 +211,9 @@ export function CatalogImagesEditor({
         ),
       })
       assertCurrent()
+      const replacements = selected.current
+        .filter((id) => result.removedAssetIds.includes(id))
+        .map((id) => ({ from: id, to: result.rootAssetId }))
       const next = [
         ...new Set(
           selected.current.map((id) =>
@@ -204,8 +221,9 @@ export function CatalogImagesEditor({
           ),
         ),
       ]
-      if (result.assetIds) onPersisted?.(result.assetIds)
-      change(next)
+      if (result.assetIds && result.optionVariantIds)
+        onPersisted?.(result.assetIds, result.optionVariantIds)
+      change(next, replacements)
       setViewed(result.rootAssetId)
       setConfirmDelete(false)
       await client.invalidateQueries({ queryKey: trpc.catalog.pathKey() })
@@ -259,69 +277,81 @@ export function CatalogImagesEditor({
         </span>
       </div>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-        {assetIds.map((id, index) => (
-          <div
-            key={id}
-            className="relative aspect-square overflow-hidden rounded-2xl bg-muted"
-          >
-            <button
-              type="button"
-              aria-label={`View image ${index + 1}`}
-              className="block size-full"
-              onClick={() => {
-                setViewer(index)
-                setViewed(id)
-              }}
+        {assetIds.map((id, index) => {
+          const assigned = optionEditor?.assignments[id] ?? null
+          const isPrimary =
+            assetIds.find(
+              (assetId) =>
+                (optionEditor?.assignments[assetId] ?? null) === assigned,
+            ) === id
+          const optionName = assigned
+            ? (optionEditor?.options.find((option) => option.id === assigned)
+                ?.name ?? "Removed option")
+            : null
+          return (
+            <div
+              key={id}
+              className="relative aspect-square overflow-hidden rounded-2xl bg-muted"
             >
-              <CatalogPhotoPreview
-                compact
-                assetId={id}
-                storeId={storeId}
-                label={`Image ${index + 1} of ${facts.name}`}
-                className="size-full object-cover"
-              />
-            </button>
-            {index === 0 ? (
-              <span className="absolute top-2 left-2 rounded-md bg-background/95 px-2 py-1 text-[10px] font-semibold">
-                Primary
-              </span>
-            ) : null}
-            <Button
-              type="button"
-              size="sm"
-              variant="secondary"
-              aria-label={`Refine image ${index + 1} with AI`}
-              className="absolute right-2 bottom-2 h-8 rounded-xl px-2 text-xs"
-              disabled={!canRefine(id)}
-              onClick={() => void ai.start(id)}
-            >
-              ✧ Refine
-            </Button>
-            <Button
-              type="button"
-              size="icon"
-              variant="secondary"
-              aria-label={`Remove image ${index + 1}`}
-              className="absolute top-2 right-2 size-7 rounded-full"
-              disabled={disabled || busy}
-              onClick={() => change(assetIds.filter((entry) => entry !== id))}
-            >
-              ×
-            </Button>
-            {index > 0 ? (
               <button
                 type="button"
-                disabled={disabled || busy}
-                className="absolute bottom-2 left-2 rounded-md bg-background/95 px-1.5 py-1 text-[10px]"
-                onClick={() =>
-                  change([id, ...assetIds.filter((entry) => entry !== id)])
-                }
+                aria-label={`View image ${index + 1}`}
+                className="block size-full"
+                onClick={() => {
+                  setViewer(index)
+                  setViewed(id)
+                }}
               >
-                Make primary
+                <CatalogPhotoPreview
+                  compact
+                  assetId={id}
+                  storeId={storeId}
+                  label={`Image ${index + 1} of ${facts.name}`}
+                  className="size-full object-cover"
+                />
               </button>
-            ) : null}
-          </div>
-        ))}
+              {isPrimary || optionName ? (
+                <span className="absolute top-2 left-2 rounded-md bg-background/95 px-2 py-1 text-[10px] font-semibold">
+                  {optionName ?? "Primary"}
+                </span>
+              ) : null}
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                aria-label={`Refine image ${index + 1} with AI`}
+                className="absolute right-2 bottom-2 h-8 rounded-xl px-2 text-xs"
+                disabled={!canRefine(id)}
+                onClick={() => void ai.start(id)}
+              >
+                ✧ Refine
+              </Button>
+              <Button
+                type="button"
+                size="icon"
+                variant="secondary"
+                aria-label={`Remove image ${index + 1}`}
+                className="absolute top-2 right-2 size-7 rounded-full"
+                disabled={disabled || busy}
+                onClick={() => change(assetIds.filter((entry) => entry !== id))}
+              >
+                ×
+              </Button>
+              {!isPrimary ? (
+                <button
+                  type="button"
+                  disabled={disabled || busy}
+                  className="absolute bottom-2 left-2 rounded-md bg-background/95 px-1.5 py-1 text-[10px]"
+                  onClick={() =>
+                    change([id, ...assetIds.filter((entry) => entry !== id)])
+                  }
+                >
+                  Make primary
+                </button>
+              ) : null}
+            </div>
+          )
+        })}
       </div>
       <div className="grid grid-cols-2 gap-3">
         <Button
@@ -557,6 +587,31 @@ export function CatalogImagesEditor({
               </div>
             ) : null}
           </div>
+          {showOptions && activeId ? (
+            <label className="flex shrink-0 flex-wrap items-center gap-2 text-sm font-medium">
+              Use image for
+              <select
+                className="rounded-lg border border-input bg-background px-3 py-2"
+                value={assignedVariantId ?? ""}
+                disabled={disabled || busy}
+                onChange={(event) =>
+                  optionEditor.onAssign(activeId, event.target.value || null)
+                }
+              >
+                <option value="">General item image</option>
+                {optionMissing ? (
+                  <option disabled value={assignedVariantId}>
+                    Removed option
+                  </option>
+                ) : null}
+                {optionEditor.options.map((option) => (
+                  <option key={option.id} value={option.id}>
+                    {option.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
           <nav
             aria-label="Image versions"
             className="flex shrink-0 gap-2 overflow-x-auto p-1"
@@ -588,6 +643,7 @@ export function CatalogImagesEditor({
                     assetIds.map((id, index) =>
                       index === viewer ? displayed : id,
                     ),
+                    activeId ? [{ from: activeId, to: displayed }] : [],
                   )
                 }
               >

@@ -1,7 +1,10 @@
 import { expect, test } from "bun:test"
 import {
   type CatalogAiClientJob,
+  type CatalogImageReplacement,
   applyCatalogAiJobs,
+  catalogImageVariantIds,
+  catalogImagesForOption,
   catalogRefinementDescendants,
 } from "./catalog-image-editor"
 function job(
@@ -26,14 +29,46 @@ test("one generated image is added once, while refinements replace the original 
     sourceAssetId: "original",
     rootAssetId: "original",
   })
-  const output = applyCatalogAiJobs(["original", "other"], [refined], seen)
+  const replacements: CatalogImageReplacement[] = []
+  const output = applyCatalogAiJobs(
+    ["original", "other"],
+    [refined],
+    seen,
+    replacements,
+  )
   expect(output).toEqual(["new", "other"])
+  expect(
+    catalogImageVariantIds(
+      output,
+      { original: "day-old", other: null },
+      replacements,
+    ),
+  ).toEqual(["day-old", null])
   expect(applyCatalogAiJobs(output, [refined], seen)).toEqual(output)
   expect(applyCatalogAiJobs(output, [job("generated")], seen)).toEqual([
     "new",
     "other",
     "generated",
   ])
+})
+
+test("a selected variant wins over general photos and other options never serve as fallback", () => {
+  const photos = [
+    { id: "option", optionVariantId: "day-old" },
+    { id: "legacy" },
+    { id: "general", optionVariantId: null },
+  ]
+  expect(
+    catalogImagesForOption(photos, "day-old").map((photo) => photo.id),
+  ).toEqual(["option"])
+  expect(
+    catalogImagesForOption(photos, "grown").map((photo) => photo.id),
+  ).toEqual(["legacy", "general"])
+  expect(catalogImagesForOption(photos).map((photo) => photo.id)).toEqual([
+    "legacy",
+    "general",
+  ])
+  expect(catalogImagesForOption(photos.slice(0, 1), "grown")).toEqual([])
 })
 test("saved choice of original is not overwritten by replayed historical delivery", () => {
   expect(

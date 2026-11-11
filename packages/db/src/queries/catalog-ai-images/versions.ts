@@ -120,6 +120,7 @@ export async function deleteCatalogAiRefinement(
         rootAssetId: version.rootAssetId,
         removedAssetIds: [input.assetId],
         assetIds: null,
+        optionVariantIds: null,
       }
     const remove = new Set([input.assetId])
     for (const entry of history)
@@ -154,6 +155,7 @@ export async function deleteCatalogAiRefinement(
       select: { catalogItemId: true },
     })
     let assetIds: string[] | null = null
+    let optionVariantIds: (string | null)[] | null = null
     if (attached?.catalogItemId) {
       const catalogItemId = attached.catalogItemId
       await lockCatalogCommandInTransaction(tx, input)
@@ -165,7 +167,7 @@ export async function deleteCatalogAiRefinement(
           catalogItemId,
         },
         orderBy: { sortOrder: "asc" },
-        select: { id: true },
+        select: { id: true, optionVariantId: true },
       })
       assetIds = [
         ...new Set(
@@ -174,13 +176,22 @@ export async function deleteCatalogAiRefinement(
           ),
         ),
       ]
+      optionVariantIds = assetIds.map((id) => {
+        const retained = current.find((asset) => asset.id === id)
+        if (retained) return retained.optionVariantId
+        return (
+          current.find((asset) => remove.has(asset.id))?.optionVariantId ?? null
+        )
+      })
       // Reuse the canonical image command in the same transaction; no alternate
       // attachment writer or provider deletion can race restoration.
       await replaceCatalogItemPhotosInTransaction(tx, {
         ...input,
         catalogItemId,
         assetIds,
+        optionVariantIds,
         expectedAssetIds: current.map((asset) => asset.id),
+        expectedOptionVariantIds: current.map((asset) => asset.optionVariantId),
         clientOperationId: input.clientOperationId,
       })
     }
@@ -210,6 +221,7 @@ export async function deleteCatalogAiRefinement(
       rootAssetId: version.rootAssetId,
       removedAssetIds: actual,
       assetIds,
+      optionVariantIds,
     }
   })
 }

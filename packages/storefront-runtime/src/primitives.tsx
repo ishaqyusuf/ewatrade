@@ -33,10 +33,12 @@ export function availabilityLabel(
 }
 export function StorefrontArtwork({
   item,
+  optionPhotoUrl,
 }: {
   item: Pick<PublicCatalogItem, "id" | "name" | "illustrationId"> &
     Partial<Pick<PublicCatalogItem, "availability" | "kind">> &
     Pick<PublicCatalogItem, "photoUrl">
+  optionPhotoUrl?: string
 }) {
   const tones = ["sand", "sage", "clay", "mist", "stone", "plum"]
   const hash = [...item.id].reduce(
@@ -64,22 +66,33 @@ export function StorefrontArtwork({
       {storefrontInitials(item.name)}
     </span>
   )
+  const generalPhoto = item.photoUrl ? (
+    <StorefrontPhoto
+      src={item.photoUrl}
+      alt={item.name}
+      className="sf-product-photo"
+      loading="lazy"
+      fallback={artwork}
+    />
+  ) : (
+    artwork
+  )
   return (
     <div
       className="sf-tile"
       data-tone={tones[hash % tones.length]}
       data-out={item.availability === "OUT_OF_STOCK"}
     >
-      {item.photoUrl ? (
+      {optionPhotoUrl && optionPhotoUrl !== item.photoUrl ? (
         <StorefrontPhoto
-          src={item.photoUrl}
+          src={optionPhotoUrl}
           alt={item.name}
           className="sf-product-photo"
           loading="lazy"
-          fallback={artwork}
+          fallback={generalPhoto}
         />
       ) : (
-        artwork
+        generalPhoto
       )}
       {label ? (
         <Badge

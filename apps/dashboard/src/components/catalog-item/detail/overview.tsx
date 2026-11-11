@@ -21,8 +21,10 @@ import {
   TableHeader,
   TableRow,
 } from "@ewatrade/ui"
+import { catalogImagesForOption } from "@ewatrade/utils/catalog-image-editor"
 import Link from "next/link"
 import { useMemo } from "react"
+import { CatalogPhotoPreview } from "../catalog-photo-preview"
 import { ProductUsageForm } from "../product-usage-form"
 import { CatalogActivityEvents, CatalogDetailActivity } from "./activity"
 import { type CatalogDetail, dateTime, money, orderHref } from "./display"
@@ -58,6 +60,10 @@ export function CatalogDetailOverview({
     detail.inventoryAllowed &&
     (product?.usage === "INTERNAL_USE" || product?.usage === "BOTH")
   const units = product?.currentUnitConfiguration?.units ?? []
+  const photos = affordances.privatePhotos
+    ? item.photos.filter((photo) => photo.storeId === storeId)
+    : []
+  const showOptionPhotos = photos.some((photo) => photo.optionVariantId != null)
   const main =
     units.find((unit) => unit.stockBehavior === "canonical_shared") ??
     units.find((unit) => unit.factor === "1")
@@ -239,8 +245,12 @@ export function CatalogDetailOverview({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {item.variants.flatMap((variant) =>
-                variant.offerings.map((offering) => (
+              {item.variants.flatMap((variant) => {
+                const photo =
+                  showOptionPhotos && variant.status !== "archived"
+                    ? catalogImagesForOption(photos, variant.id)[0]
+                    : undefined
+                return variant.offerings.map((offering) => (
                   <TableRow
                     key={offering.id}
                     data-state={
@@ -256,7 +266,20 @@ export function CatalogDetailOverview({
                         label={`Select ${variant.name} ${offering.name}`}
                       />
                     </TableCell>
-                    <TableCell>{variant.name}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        {photo ? (
+                          <CatalogPhotoPreview
+                            key={photo.assetId}
+                            compact
+                            assetId={photo.assetId}
+                            storeId={storeId}
+                            label=""
+                          />
+                        ) : null}
+                        {variant.name}
+                      </div>
+                    </TableCell>
                     <TableCell>
                       {units.find(
                         (unit) =>
@@ -278,8 +301,8 @@ export function CatalogDetailOverview({
                       {offering.status}
                     </TableCell>
                   </TableRow>
-                )),
-              )}
+                ))
+              })}
             </TableBody>
           </Table>
         </div>

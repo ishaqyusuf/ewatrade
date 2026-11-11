@@ -12,6 +12,13 @@ import { canEditMobileCatalog } from "@/lib/mobile-roles"
 import { useOperationalModeStore } from "@/store/operationalModeStore"
 import { useTRPC } from "@/trpc/client"
 import type { RouterInputs } from "@ewatrade/api/trpc/routers/_app"
+import {
+  type CatalogImageReplacement,
+  catalogImageAssignments,
+  catalogImageOptions,
+  catalogImageVariantIds,
+  catalogImagesForOption,
+} from "@ewatrade/utils/catalog-image-editor"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { TRPCClientError } from "@trpc/client"
 import * as Crypto from "expo-crypto"
@@ -31,10 +38,12 @@ export function CatalogSavedPhotos({
   item,
   editing: controlledEditing,
   onEditingChange,
+  optionVariantId,
 }: {
   item: CatalogItem
   editing?: boolean
   onEditingChange?: (editing: boolean) => void
+  optionVariantId?: string
 }) {
   const trpc = useTRPC()
   const { profile } = useAuthContext()
@@ -54,7 +63,10 @@ export function CatalogSavedPhotos({
   const colors = useColors()
   const palette = GREEN_TILL_THEME[colorScheme]
   if (!storeId || offline) return null
-  const photos = item.photos.filter((photo) => photo.storeId === storeId)
+  const photos = catalogImagesForOption(
+    item.photos.filter((photo) => photo.storeId === storeId),
+    optionVariantId,
+  )
   const illustration = item.illustrations.find(
     (entry) => entry.storeId === storeId,
   )
@@ -249,18 +261,23 @@ export function CatalogItemThumb({
   storeId,
   size = 62,
   onOpenImages,
+  optionVariantId,
 }: {
   item: CatalogItem
   storeId?: string
   size?: number
   onOpenImages?: () => void
+  optionVariantId?: string
 }) {
   const [previewId, setPreviewId] = useState<string>()
   const { colorScheme } = useColorScheme()
   const colors = useColors()
   const palette = GREEN_TILL_THEME[colorScheme]
   const photo = storeId
-    ? item.photos.find((entry) => entry.storeId === storeId)
+    ? catalogImagesForOption(
+        item.photos.filter((entry) => entry.storeId === storeId),
+        optionVariantId,
+      )[0]
     : undefined
   const illustration = storeId
     ? item.illustrations.find((entry) => entry.storeId === storeId)
@@ -358,14 +375,16 @@ function SavedPhotoEditor({
 }: { item: CatalogItem; storeId: string; close(): void }) {
   const trpc = useTRPC()
   const client = useQueryClient()
-  const [selection, setSelection] = useState(() => ({
-    assetIds: item.photos
-      .filter((photo) => photo.storeId === storeId)
-      .map((photo) => photo.assetId),
-    illustrationId:
-      item.illustrations.find((image) => image.storeId === storeId)
-        ?.illustrationId ?? null,
-  }))
+  const [selection, setSelection] = useState(() => {
+    const photos = item.photos.filter((photo) => photo.storeId === storeId)
+    return {
+      assetIds: photos.map((photo) => photo.assetId),
+      optionVariantIds: photos.map((photo) => photo.optionVariantId ?? null),
+      illustrationId:
+        item.illustrations.find((image) => image.storeId === storeId)
+          ?.illustrationId ?? null,
+    }
+  })
   const saved = useRef(selection)
   const [saving, setSaving] = useState(false)
   const [writing, setWriting] = useState(false)
@@ -392,6 +411,8 @@ function SavedPhotoEditor({
       const result = await replace.mutateAsync(command)
       saved.current = {
         assetIds: result.assetIds,
+        optionVariantIds:
+          result.optionVariantIds ?? command.optionVariantIds ?? [],
         illustrationId: result.illustrationId ?? null,
       }
       attempt.current = null
@@ -413,13 +434,33 @@ function SavedPhotoEditor({
       setSaving(false)
     }
   }
-  function changeImages(assetIds: string[], illustrationId: string | null) {
+  function changeImages(
+    assetIds: string[],
+    illustrationId: string | null,
+    replacements?: CatalogImageReplacement[],
+    assignment?: { assetId: string; variantId: string | null },
+  ) {
     if (running.current || attempt.current) return
     const previous = saved.current
+    const assignments = catalogImageAssignments(
+      previous.assetIds,
+      previous.optionVariantIds,
+    )
+    const optionVariantIds = catalogImageVariantIds(
+      assetIds,
+      assignment
+        ? { ...assignments, [assignment.assetId]: assignment.variantId }
+        : assignments,
+      replacements,
+    )
     if (
       previous.illustrationId === illustrationId &&
       previous.assetIds.length === assetIds.length &&
-      previous.assetIds.every((id, index) => id === assetIds[index])
+      previous.assetIds.every(
+        (id, index) =>
+          id === assetIds[index] &&
+          previous.optionVariantIds[index] === optionVariantIds[index],
+      )
     )
       return
     const command = {
@@ -427,12 +468,14 @@ function SavedPhotoEditor({
       storeId,
       clientOperationId: Crypto.randomUUID(),
       assetIds,
+      optionVariantIds,
       illustrationId,
       expectedAssetIds: previous.assetIds,
+      expectedOptionVariantIds: previous.optionVariantIds,
       expectedIllustrationId: previous.illustrationId,
     }
     attempt.current = command
-    setSelection({ assetIds, illustrationId })
+    setSelection({ assetIds, optionVariantIds, illustrationId })
     void save(command)
   }
   const goBack = () => {
@@ -487,11 +530,25 @@ function SavedPhotoEditor({
           }}
           assetIds={selection.assetIds}
           onChange={changeImages}
+          optionEditor={{
+            options: catalogImageOptions(item.variants),
+            assignments: catalogImageAssignments(
+              selection.assetIds,
+              selection.optionVariantIds,
+            ),
+            onAssign: (assetId, variantId) =>
+              changeImages(
+                selection.assetIds,
+                selection.illustrationId,
+                undefined,
+                { assetId, variantId },
+              ),
+          }}
           disabled={saving || !!attempt.current}
           onBusyChange={onBusyChange}
           saveFeedback={saveFeedback}
-          onPersisted={(assetIds) => {
-            const next = { assetIds, illustrationId: null }
+          onPersisted={(assetIds, optionVariantIds) => {
+            const next = { assetIds, optionVariantIds, illustrationId: null }
             saved.current = next
             setSelection(next)
           }}

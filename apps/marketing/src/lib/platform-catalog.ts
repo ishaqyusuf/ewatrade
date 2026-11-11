@@ -12,6 +12,7 @@ export type PlatformCatalogOption = {
   priceMinor: number | null
   currencyCode: string
   availability: string | null
+  photoUrl?: string
 }
 
 export type PlatformCatalogItem = {

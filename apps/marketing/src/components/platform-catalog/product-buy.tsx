@@ -7,8 +7,9 @@ import {
   platformItemPrice,
   platformWhatsAppUrl,
 } from "@/lib/platform-catalog"
-import { useState } from "react"
+import { type ReactNode, useState } from "react"
 import { PlatformIcon } from "./icons"
+import { PlatformGallery } from "./product-gallery"
 
 /**
  * Option choice, quantity and customer-initiated WhatsApp drafts. Nothing is
@@ -18,10 +19,16 @@ export function PlatformProductBuy({
   item,
   business,
   pageUrl,
+  artwork,
+  heading,
+  children,
 }: {
   item: PlatformCatalogItem
   business: { name: string; whatsAppPhone: string | null }
   pageUrl: string
+  artwork: ReactNode
+  heading: ReactNode
+  children?: ReactNode
 }) {
   const single = item.options.length === 1 ? item.options[0] : null
   const [selectedId, setSelectedId] = useState<string | null>(
@@ -53,124 +60,137 @@ export function PlatformProductBuy({
   const askUrl = draft("ask")
 
   return (
-    <>
-      <div className="pd-price price">{price}</div>
-      <div className="pd-status">
-        {selected || single || item.options.length === 0 ? (
-          <span className="avail" data-a={availability.kind}>
-            <i />
-            {availability.label}
-          </span>
-        ) : (
-          <span className="avail avail-wait">
-            Choose an option to see availability
-          </span>
-        )}
-      </div>
-      {item.options.length > 1 ? (
-        <fieldset className="opt" data-need={needOption && !selected}>
-          <legend>
-            Options{selected ? <span>{selected.name}</span> : null}
-          </legend>
-          <div className="dev-list">
-            {item.options.map((option) => {
-              const optionOut = option.availability === "OUT_OF_STOCK"
-              return (
+    <div className="pd-grid">
+      <PlatformGallery
+        item={item}
+        artwork={artwork}
+        optionPhotoUrl={selected?.photoUrl}
+      />
+      <div className="pd-info">
+        {heading}
+        <div className="pd-price price">{price}</div>
+        <div className="pd-status">
+          {selected || single || item.options.length === 0 ? (
+            <span className="avail" data-a={availability.kind}>
+              <i />
+              {availability.label}
+            </span>
+          ) : (
+            <span className="avail avail-wait">
+              Choose an option to see availability
+            </span>
+          )}
+        </div>
+        {item.options.length > 1 ? (
+          <fieldset className="opt" data-need={needOption && !selected}>
+            <legend>
+              Options{selected ? <span>{selected.name}</span> : null}
+            </legend>
+            <div className="dev-list">
+              {item.options.map((option) => {
+                const optionOut = option.availability === "OUT_OF_STOCK"
+                return (
+                  <button
+                    type="button"
+                    key={option.id}
+                    className={`dev-row${optionOut ? " is-out" : ""}`}
+                    aria-pressed={option.id === selectedId}
+                    onClick={() => {
+                      setSelectedId(option.id)
+                      setNeedOption(false)
+                    }}
+                  >
+                    <span className="dev-radio" aria-hidden="true" />
+                    <span className="dev-name">{option.name}</span>
+                    <span className="dev-meta">
+                      {optionOut
+                        ? "Sold out"
+                        : option.priceMinor === null
+                          ? "Ask"
+                          : formatPlatformPrice(
+                              option.priceMinor,
+                              option.currencyCode,
+                            )}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+            {needOption && !selected ? (
+              <p className="need-msg">Choose an option first</p>
+            ) : null}
+          </fieldset>
+        ) : null}
+        <div className="pd-buy">
+          {out ? null : (
+            <>
+              <div className="opt-h">Quantity</div>
+              <div className="qty">
                 <button
                   type="button"
-                  key={option.id}
-                  className={`dev-row${optionOut ? " is-out" : ""}`}
-                  aria-pressed={option.id === selectedId}
-                  onClick={() => {
-                    setSelectedId(option.id)
-                    setNeedOption(false)
+                  aria-label="Fewer"
+                  disabled={quantity <= 1}
+                  onClick={() => setQuantity((value) => Math.max(1, value - 1))}
+                >
+                  <PlatformIcon name="minus" />
+                </button>
+                <output aria-live="polite">{quantity}</output>
+                <button
+                  type="button"
+                  aria-label="More"
+                  disabled={quantity >= 20}
+                  onClick={() =>
+                    setQuantity((value) => Math.min(20, value + 1))
+                  }
+                >
+                  <PlatformIcon name="plus" />
+                </button>
+              </div>
+            </>
+          )}
+          {orderUrl && askUrl ? (
+            <>
+              <div className="pd-actions">
+                <a
+                  className="btn btn-solid wa-btn"
+                  href={orderUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(event) => {
+                    if (item.options.length > 1 && !selected) {
+                      event.preventDefault()
+                      setNeedOption(true)
+                    }
                   }}
                 >
-                  <span className="dev-radio" aria-hidden="true" />
-                  <span className="dev-name">{option.name}</span>
-                  <span className="dev-meta">
-                    {optionOut
-                      ? "Sold out"
-                      : option.priceMinor === null
-                        ? "Ask"
-                        : formatPlatformPrice(
-                            option.priceMinor,
-                            option.currencyCode,
-                          )}
+                  <PlatformIcon name="wa" />
+                  <span>
+                    {out ? "Ask when it’s back" : "Order on WhatsApp"}
                   </span>
-                </button>
-              )
-            })}
-          </div>
-          {needOption && !selected ? (
-            <p className="need-msg">Choose an option first</p>
-          ) : null}
-        </fieldset>
-      ) : null}
-      <div className="pd-buy">
-        {out ? null : (
-          <>
-            <div className="opt-h">Quantity</div>
-            <div className="qty">
-              <button
-                type="button"
-                aria-label="Fewer"
-                disabled={quantity <= 1}
-                onClick={() => setQuantity((value) => Math.max(1, value - 1))}
-              >
-                <PlatformIcon name="minus" />
-              </button>
-              <output aria-live="polite">{quantity}</output>
-              <button
-                type="button"
-                aria-label="More"
-                disabled={quantity >= 20}
-                onClick={() => setQuantity((value) => Math.min(20, value + 1))}
-              >
-                <PlatformIcon name="plus" />
-              </button>
-            </div>
-          </>
-        )}
-        {orderUrl && askUrl ? (
-          <>
-            <div className="pd-actions">
-              <a
-                className="btn btn-solid wa-btn"
-                href={orderUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={(event) => {
-                  if (item.options.length > 1 && !selected) {
-                    event.preventDefault()
-                    setNeedOption(true)
-                  }
-                }}
-              >
-                <PlatformIcon name="wa" />
-                <span>{out ? "Ask when it’s back" : "Order on WhatsApp"}</span>
-              </a>
-              <a
-                className="btn btn-line"
-                href={askUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <PlatformIcon name="chat" />
-                <span>Ask a question</span>
-              </a>
-            </div>
+                </a>
+                <a
+                  className="btn btn-line"
+                  href={askUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <PlatformIcon name="chat" />
+                  <span>Ask a question</span>
+                </a>
+              </div>
+              <p className="pd-note">
+                You agree price, delivery and payment with {business.name} on
+                WhatsApp.
+              </p>
+            </>
+          ) : (
             <p className="pd-note">
-              You agree price, delivery and payment with {business.name} on
-              WhatsApp.
+              {business.name} hasn’t added a WhatsApp number for orders yet.
             </p>
-          </>
-        ) : (
-          <p className="pd-note">
-            {business.name} hasn’t added a WhatsApp number for orders yet.
-          </p>
-        )}
+          )}
+        </div>
+        {children}
       </div>
-    </>
+    </div>
   )
 }

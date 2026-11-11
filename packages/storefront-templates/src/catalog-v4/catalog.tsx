@@ -77,6 +77,10 @@ export function StorefrontCatalog({
     siteName: store.name,
   })
   const { selected } = detail
+  const [photoOptionId, setPhotoOptionId] = useState<string>()
+  const photoOption =
+    selected?.options.find((option) => option.id === photoOptionId) ??
+    (selected?.options.length === 1 ? selected.options[0] : undefined)
   const events = useStorefrontEvents()
   useStorefrontItemView(selected)
   const [feedback, setFeedback] = useState("")
@@ -96,11 +100,13 @@ export function StorefrontCatalog({
   const itemUrl = (item: CatalogV4Item) =>
     `${shopUrl}?item=${encodeURIComponent(item.id)}`
   function openItem(item: CatalogV4Item, trigger: HTMLElement) {
+    setPhotoOptionId(undefined)
     setFeedback("")
     setManualLink(null)
     detail.open(item, trigger)
   }
   function closeItem() {
+    setPhotoOptionId(undefined)
     setFeedback("")
     setManualLink(null)
     detail.close()
@@ -489,7 +495,10 @@ export function StorefrontCatalog({
         >
           {selected ? (
             <>
-              <StorefrontArtwork item={selected} />
+              <StorefrontArtwork
+                item={selected}
+                optionPhotoUrl={photoOption?.photoUrl}
+              />
               <div className="sf-detail-body">
                 <p className="sf-detail-category">
                   {selected.category?.name ??
@@ -527,7 +536,17 @@ export function StorefrontCatalog({
                     <ul>
                       {selected.options.map((option) => (
                         <li key={option.id}>
-                          <span>{option.name}</span>
+                          {selected.options.some((entry) => entry.photoUrl) ? (
+                            <button
+                              type="button"
+                              aria-pressed={option.id === photoOption?.id}
+                              onClick={() => setPhotoOptionId(option.id)}
+                            >
+                              {option.name}
+                            </button>
+                          ) : (
+                            <span>{option.name}</span>
+                          )}
                           <span>
                             {option.availability === "OUT_OF_STOCK"
                               ? "Out of stock"

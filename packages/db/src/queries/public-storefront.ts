@@ -282,7 +282,7 @@ export function publicCatalogPhotoPath(storeId: string, assetId: string) {
 }
 
 /**
- * The first attached photo that `getCatalogPublicPhotoTarget` would serve for this
+ * Attached photos that `getCatalogPublicPhotoTarget` can serve for this
  * Store: approved with a complete review verdict, bytes present, LIVE active tenant
  * not being purged, ACTIVE Store with a published Site. The item's own public
  * eligibility comes from the reader's item/offering filters. Only the asset ID leaves
@@ -324,7 +324,7 @@ function publicPhotoAssetSelect(storeId: string, platformListed = false) {
     },
     orderBy: [{ sortOrder: "asc" as const }, { id: "asc" as const }],
     take: 8,
-    select: { id: true },
+    select: { id: true, optionVariantId: true },
   }
 }
 
@@ -421,54 +421,70 @@ function publicItemReader(
       )
       return quantity ? { lowStockQuantity: quantity } : {}
     }
-    const photo = item.photoAssets?.[0]
-    const itemOptions = item.offerings.map((offering) => ({
-      id: offering.id,
-      name: publicStorefrontOptionName(
-        offering.variant.name,
-        offering.name,
-        offering.variant.isDefault,
-      ),
-      priceMinor:
-        offering.pricingPolicy === "FIXED" ? offering.fixedPriceMinor : null,
-      currencyCode: offering.currencyCode,
-      availability: unavailable
-        ? ("OUT_OF_STOCK" as const)
-        : item.kind === "SERVICE"
-          ? null
-          : publicStockAvailability(offering.variant.stockBalanceSources),
-      ...(item.kind === "SERVICE"
-        ? {
-            unit: {
-              label: null,
-              scale: Math.min(6, offering.serviceOffering?.quantityScale ?? 0),
-            },
-            durationMinutes: offering.serviceOffering?.durationMinutes ?? null,
-          }
-        : {
-            stock: publicStockState(
-              offering.variant.stockBalanceSources,
-              item.product?.lowStockLevel,
-            ),
-            ...lowStockCount(offering),
-            ...(offering.productUnitOffering
-              ? {
-                  unit: {
-                    label:
-                      offering.productUnitOffering.inventoryUnit.name.slice(
-                        0,
-                        40,
+    const photos = item.photoAssets ?? []
+    const generalPhotos = photos.filter(
+      (photo) => photo.optionVariantId == null,
+    )
+    const photo = generalPhotos[0]
+    const itemOptions = item.offerings.map((offering) => {
+      const optionPhoto = photos.find(
+        (photo) => photo.optionVariantId === offering.variant.id,
+      )
+      return {
+        id: offering.id,
+        ...(optionPhoto
+          ? { photoUrl: publicCatalogPhotoPath(store.id, optionPhoto.id) }
+          : {}),
+        name: publicStorefrontOptionName(
+          offering.variant.name,
+          offering.name,
+          offering.variant.isDefault,
+        ),
+        priceMinor:
+          offering.pricingPolicy === "FIXED" ? offering.fixedPriceMinor : null,
+        currencyCode: offering.currencyCode,
+        availability: unavailable
+          ? ("OUT_OF_STOCK" as const)
+          : item.kind === "SERVICE"
+            ? null
+            : publicStockAvailability(offering.variant.stockBalanceSources),
+        ...(item.kind === "SERVICE"
+          ? {
+              unit: {
+                label: null,
+                scale: Math.min(
+                  6,
+                  offering.serviceOffering?.quantityScale ?? 0,
+                ),
+              },
+              durationMinutes:
+                offering.serviceOffering?.durationMinutes ?? null,
+            }
+          : {
+              stock: publicStockState(
+                offering.variant.stockBalanceSources,
+                item.product?.lowStockLevel,
+              ),
+              ...lowStockCount(offering),
+              ...(offering.productUnitOffering
+                ? {
+                    unit: {
+                      label:
+                        offering.productUnitOffering.inventoryUnit.name.slice(
+                          0,
+                          40,
+                        ),
+                      scale: Math.min(
+                        6,
+                        offering.productUnitOffering.inventoryUnit
+                          .transactionScale,
                       ),
-                    scale: Math.min(
-                      6,
-                      offering.productUnitOffering.inventoryUnit
-                        .transactionScale,
-                    ),
-                  },
-                }
-              : {}),
-          }),
-    }))
+                    },
+                  }
+                : {}),
+            }),
+      }
+    })
     return {
       id: item.id,
       name: item.name,
@@ -497,9 +513,9 @@ function publicItemReader(
                 entry.serviceOffering.bookingPolicy !== "NOT_BOOKABLE",
             )),
       },
-      ...(item.photoAssets?.length
+      ...(generalPhotos.length
         ? {
-            photos: item.photoAssets.map((asset) => ({
+            photos: generalPhotos.map((asset) => ({
               id: asset.id,
               url: publicCatalogPhotoPath(store.id, asset.id),
               alt: item.name,

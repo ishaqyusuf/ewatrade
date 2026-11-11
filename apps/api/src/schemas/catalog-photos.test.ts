@@ -4,6 +4,7 @@ import {
   catalogPhotoGallerySchema,
   catalogPhotoIntentSchema,
   catalogPhotoMetadataSchema,
+  catalogPhotoReplacementSchema,
 } from "./catalog-photos"
 
 const intent = {
@@ -14,6 +15,36 @@ const intent = {
 }
 
 describe("Catalog private photo contracts", () => {
+  test("option assignment and expected assignment align with their photo IDs", () => {
+    const replacement = {
+      catalogItemId: "item",
+      clientOperationId: "assign-photo",
+      assetIds: ["photo-a", "photo-b"],
+      expectedAssetIds: ["photo-a"],
+    }
+    expect(catalogPhotoReplacementSchema.parse(replacement)).toEqual(
+      replacement,
+    )
+    expect(
+      catalogPhotoReplacementSchema.parse({
+        ...replacement,
+        optionVariantIds: ["variant", null],
+        expectedOptionVariantIds: [null],
+      }).optionVariantIds,
+    ).toEqual(["variant", null])
+    for (const assignment of [
+      { optionVariantIds: ["variant"] },
+      { optionVariantIds: ["https://example.test/image", null] },
+      { expectedOptionVariantIds: [null, null] },
+    ]) {
+      expect(
+        catalogPhotoReplacementSchema.safeParse({
+          ...replacement,
+          ...assignment,
+        }).success,
+      ).toBe(false)
+    }
+  })
   test("accepts normalized contents and refuses client authority or URLs", () => {
     expect(catalogPhotoIntentSchema.parse(intent)).toEqual(intent)
     for (const field of [

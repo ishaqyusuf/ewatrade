@@ -3,7 +3,10 @@
 import { useTRPC } from "@/trpc/client"
 import type { RouterInputs } from "@ewatrade/api/trpc/routers/_app"
 import type { CatalogAiFacts } from "@ewatrade/utils/catalog-ai-images"
-import { applyCatalogAiJobs } from "@ewatrade/utils/catalog-image-editor"
+import {
+  type CatalogImageReplacement,
+  applyCatalogAiJobs,
+} from "@ewatrade/utils/catalog-image-editor"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useEffect, useRef, useState } from "react"
 
@@ -14,7 +17,7 @@ export function useCatalogAiImages(input: {
   catalogItemId?: string
   facts: CatalogAiFacts
   assetIds: string[]
-  onChange(ids: string[]): void
+  onChange(ids: string[], replacements: CatalogImageReplacement[]): void
   enabled?: boolean
 }) {
   const trpc = useTRPC()
@@ -59,13 +62,15 @@ export function useCatalogAiImages(input: {
   }, [client, input.storeId, input.contextKey])
   useEffect(() => {
     if (!query.data) return
+    const replacements: CatalogImageReplacement[] = []
     const next = applyCatalogAiJobs(
       current.current.assetIds,
       query.data.jobs,
       seen.current,
+      replacements,
     )
     if (JSON.stringify(next) !== JSON.stringify(current.current.assetIds))
-      current.current.onChange(next)
+      current.current.onChange(next, replacements)
   }, [query.data])
   const pending = query.data?.jobs.find((job) =>
     ["QUEUED", "DISPATCHING", "UNCERTAIN", "PENDING_REVIEW"].includes(
