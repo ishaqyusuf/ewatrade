@@ -73,7 +73,6 @@ const contracts = [
     markers: [
       "useLargeTextLayout",
       "<ClassicLoginScreen",
-      'largeTextLayout ? "gap-5" : "gap-7"',
       'largeTextLayout ? "gap-1" : "flex-row items-center justify-center"',
       'largeTextLayout ? "w-full" : "flex-1"',
     ],

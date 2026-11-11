@@ -2,7 +2,7 @@
   "version": 1,
   "id": "2026-11-11-mobile-sign-in-method-motion",
   "tickets": ["H02"],
-  "summary": "Animate switches between mobile sign-in methods and give the primary action and social divider more room.",
+  "summary": "Animate switches between mobile sign-in methods, separate the primary action from the fields, and balance the gaps around the social divider.",
   "noAssistantImpact": "The transition changes sign-in presentation and keyboard focus only. Authentication requests, permissions, and assistant capabilities are unchanged.",
   "capabilities": [],
   "procedures": [],

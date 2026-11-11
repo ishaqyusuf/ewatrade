@@ -50,7 +50,7 @@ const methodFieldEnter = FadeIn.duration(170)
   .reduceMotion(ReduceMotion.System)
 const methodFieldExit = FadeOut.duration(85).reduceMotion(ReduceMotion.System)
 const primaryActionGap = 20
-const socialDividerInset = 6
+const dividerSpacing = "gap-2.5"
 
 export function LoginScreen() {
   const router = useRouter()
@@ -245,7 +245,7 @@ export function LoginScreen() {
         </Animated.View>
       }
     >
-      <View className={largeTextLayout ? "gap-5" : "gap-7"}>
+      <View className={dividerSpacing}>
         <View className="gap-2">
           <View style={{ gap: primaryActionGap }}>
             <LayoutAnimationConfig skipEntering skipExiting>
@@ -374,18 +374,17 @@ export function LoginScreen() {
           </Animated.View>
         </View>
         {error ? (
-          <StatusBanner
-            icon="TriangleAlert"
-            message={error}
-            title="Login needs attention"
-            tone="destructive"
-          />
+          <View className="mt-2">
+            <StatusBanner
+              icon="TriangleAlert"
+              message={error}
+              title="Login needs attention"
+              tone="destructive"
+            />
+          </View>
         ) : null}
-        <Animated.View
-          layout={methodLayout}
-          style={{ paddingTop: socialDividerInset }}
-        >
-          <View className="gap-2.5">
+        <Animated.View layout={methodLayout}>
+          <View className={dividerSpacing}>
             <AuthDivider label="or" plain />
             <AppleAuthButton
               onPress={appleAuth.startAppleAuth}
