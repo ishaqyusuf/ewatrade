@@ -251,3 +251,313 @@
     bottom: var(--dock-visible-bottom, 12px);
   }
 }
+
+[data-tint="mint"],
+.home-order-pill[data-tone="ok"] {
+  --home-tint-bg: var(--home-mint-bg);
+  --home-tint-ink: var(--home-mint-fg);
+}
+[data-tint="sky"],
+.home-order-pill[data-tone="info"] {
+  --home-tint-bg: var(--home-sky-bg);
+  --home-tint-ink: var(--home-sky-fg);
+}
+[data-tint="lilac"] {
+  --home-tint-bg: var(--home-lilac-bg);
+  --home-tint-ink: var(--home-lilac-fg);
+}
+[data-tint="amber"],
+.home-order-pill[data-tone="warn"] {
+  --home-tint-bg: var(--home-amber-bg);
+  --home-tint-ink: var(--home-amber-fg);
+}
+[data-tint="rose"],
+.home-order-pill[data-tone="danger"] {
+  --home-tint-bg: var(--home-rose-bg);
+  --home-tint-ink: var(--home-rose-fg);
+}
+.home-order-pill[data-tone="muted"] {
+  --home-tint-bg: var(--app-bg);
+  --home-tint-ink: var(--muted);
+}
+.attention-card[data-tint] {
+  background: var(--home-tint-bg);
+  color: var(--home-tint-ink);
+}
+.attention-card[data-tint] .attention-icon {
+  background: color-mix(in srgb, currentColor 14%, transparent);
+}
+.home-attention-count {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+.hero-pill.waiting::before {
+  color: var(--home-hero-waiting);
+}
+.home-orders {
+  border-radius: 20px;
+}
+.home-order {
+  min-height: 62px;
+  padding: 12px 14px;
+  gap: 12px;
+}
+.home-order-avatar {
+  display: grid;
+  place-items: center;
+  flex: 0 0 38px;
+  width: 38px;
+  height: 38px;
+  border-radius: 19px;
+  background: var(--home-tint-bg);
+  color: var(--home-tint-ink);
+  font-size: 16px;
+  font-weight: 800;
+}
+.home-order-avatar svg {
+  width: 18px;
+  height: 18px;
+}
+.home-order-name {
+  min-width: 0;
+}
+.home-order-name :is(b, small) {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.home-order-name b,
+.home-order-payment b {
+  font-size: 16px;
+  line-height: 22px;
+  font-weight: 700;
+}
+.home-order-name small {
+  font-size: 12px;
+  line-height: 20px;
+}
+.home-order-payment {
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+.home-order-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 26px;
+  margin-top: 3px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--home-tint-bg);
+  color: var(--home-tint-ink);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 20px;
+}
+.home-order-pill[data-tone="muted"] {
+  font-size: 12px;
+}
+.home-card {
+  padding: 14px;
+  border: 0;
+  border-radius: 20px;
+  background: var(--card);
+  color: var(--app-ink);
+}
+.home-card p,
+.home-card small,
+.home-ghost {
+  color: var(--muted);
+  font-size: 12px;
+}
+.home-share,
+.home-businesses {
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
+}
+.home-share header,
+.home-businesses > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.home-share header > span {
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: var(--primary-tint);
+  color: var(--primary);
+  font-weight: 700;
+  font-size: 12px;
+}
+.home-store-link {
+  color: var(--primary);
+}
+.home-store-items {
+  display: grid;
+  gap: 8px;
+}
+.home-store-items span {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  padding: 6px 14px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  font-size: 12px;
+}
+.home-businesses small,
+.home-team small,
+.home-catalog-rail small {
+  display: block;
+}
+.home-outline {
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--card);
+  color: var(--app-ink);
+  font-weight: 700;
+}
+.home-banner .home-outline {
+  margin-top: 8px;
+}
+.home-actions-inline {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+.home-actions-inline > button {
+  flex: 1;
+}
+.home-payment,
+.home-team {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+.home-payment > div,
+.home-team > span:nth-child(2) {
+  flex: 1;
+}
+.home-team {
+  margin-top: 16px;
+  align-items: center;
+  background: var(--home-tint-bg);
+  color: var(--home-tint-ink);
+}
+.home-team-dismiss {
+  text-align: center;
+}
+.home-team-dismiss button {
+  background: transparent;
+  border-color: transparent;
+  color: var(--muted);
+}
+.home-card .home-error,
+.home-error {
+  color: var(--home-rose-fg);
+  font-size: 12px;
+}
+.home-setup-ai,
+.home-setup-steps,
+.home-ghost {
+  margin-top: 12px;
+}
+.setup-progress {
+  display: flex;
+  gap: 6px;
+  margin-top: 12px;
+}
+.setup-progress span {
+  flex: 1;
+  height: 4px;
+  border-radius: 4px;
+  background: #ffffff38;
+}
+.setup-progress span[data-complete="true"] {
+  background: var(--gold);
+}
+.home-ghost {
+  padding: 14px;
+  border: 1px dashed var(--border);
+  border-radius: 18px;
+}
+.home-catalog-rail {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+}
+.home-catalog-rail button {
+  display: grid;
+  gap: 4px;
+  flex: 0 0 130px;
+  padding: 10px;
+  text-align: left;
+}
+.home-catalog-rail button > span {
+  display: grid;
+  height: 66px;
+  place-items: center;
+  border-radius: 12px;
+  background: var(--home-tint-bg);
+  color: var(--home-tint-ink);
+}
+.home-catalog-rail svg {
+  width: 22px;
+  height: 22px;
+}
+.home-skeleton {
+  min-height: 100px;
+  margin-bottom: 12px;
+  border-radius: 20px;
+  background: var(--card);
+}
+.home-skeleton--hero {
+  height: 196px;
+  border-radius: 26px;
+}
+.home-skeleton--tiles {
+  min-height: 54px;
+}
+.home .personal-conversations {
+  margin-top: 16px;
+  border-block: 1px solid var(--border);
+}
+.version-archive {
+  max-width: 100%;
+}
+.version-archive h2 {
+  margin-bottom: 8px;
+  font-size: 16px;
+}
+.version-archive iframe {
+  width: 100%;
+  height: min(1060px, 90dvh);
+  border: 0;
+  background: var(--app-bg);
+}
+
+.phone[data-screen="(admin-tabs)/admin-home"] {
+  --muted: #586378;
+  --border: #dde3ee;
+  --primary-tint: #e8ecfa;
+  --home-native-muted: #e8edf5;
+}
+:root[data-theme="dark"] .phone[data-screen="(admin-tabs)/admin-home"] {
+  --primary: #9dbbff;
+  --muted: #9aa6b8;
+  --border: #2a3342;
+  --primary-tint: #1f2b45;
+  --home-native-muted: #1e2532;
+}
+.home-order-pill[data-tone="muted"] {
+  --home-tint-bg: var(--home-native-muted);
+}
+.home-skeleton {
+  background: var(--home-native-muted);
+}

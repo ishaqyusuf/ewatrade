@@ -120,7 +120,7 @@ def catalog_evidence(database):
     with sqlite3.connect(database.resolve().as_uri() + "?mode=ro", uri=True) as db:
         db.row_factory = sqlite3.Row
         rows = db.execute("""
-            SELECT w.path, w.title, d.key, d.id AS direction_id, r.id, r.version,
+            SELECT w.path, w.title, d.key, d.id AS direction_id, r.id, r.version, r.entrypoint,
                    i.files, i.commit_hash
             FROM implementations i
             JOIN workshops w ON w.id = i.workshop_id
@@ -137,6 +137,11 @@ def catalog_evidence(database):
                 "title": row["title"],
                 "version": row["version"],
                 "commit": row["commit_hash"],
+                "asset": (
+                    "01-home/v2/index.html"
+                    if row["id"] == "5a73c53d-74c1-4f62-aef8-e7e606ce0915"
+                    else row["entrypoint"]
+                ),
                 "url": f'https://workshop.localhost/ewatrade/{row["path"]}/directions/{row["key"]}?rev={row["id"]}',
                 "state": "Implementation recorded",
             }
@@ -145,7 +150,7 @@ def catalog_evidence(database):
             later = []
             if row["path"].startswith("mobile/"):
                 later = db.execute("""
-                    SELECT r.id, r.version, w.selected_revision_id,
+                    SELECT r.id, r.version, r.entrypoint, w.selected_revision_id,
                            EXISTS (SELECT 1 FROM implementations i WHERE i.revision_id = r.id) AS implemented
                     FROM revisions r
                     JOIN directions d ON d.id = r.direction_id
@@ -166,6 +171,7 @@ def catalog_evidence(database):
                         by_file[path].append({
                             **entry,
                             "version": version["version"],
+                            "asset": version["entrypoint"],
                             "commit": None,
                             "state": "Selected · implementation pending" if selected else "Draft · no implementation receipt",
                             "url": entry["url"].split("?")[0] + "?rev=" + version["id"],
