@@ -113,6 +113,7 @@ model SellableVariant {
   selections          SellableVariantSelection[]
   offerings           SellableOffering[]
   photoAssets         CatalogPhotoAsset[]
+  additionalPhotos    CatalogPhotoOption[]
   stockBalanceSources StockBalanceSource[]
 
   @@unique([catalogItemId, key])

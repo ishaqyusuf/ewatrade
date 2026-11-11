@@ -1,0 +1,44 @@
+{
+  "version": 1,
+  "id": "2026-11-11-catalog-photo-multiple-options",
+  "tickets": ["H02"],
+  "summary": "Allow one Catalog photo to serve the item and multiple choices, and simplify the mobile refinement flow.",
+  "noAssistantImpact": "Photo assignment and refinement are existing merchant form actions. The canonical replacement command retains the same authority and no assistant procedure exposes these actions.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/product-service-catalog-items.md"
+    },
+    {
+      "topic": "api",
+      "status": "local_only",
+      "path": ".brain/api/contracts.md"
+    },
+    {
+      "topic": "schema",
+      "status": "local_only",
+      "path": ".brain/database/schema.md"
+    },
+    {
+      "topic": "permissions",
+      "status": "local_only",
+      "path": ".brain/api/permissions.md"
+    },
+    {
+      "topic": "decision",
+      "status": "local_only",
+      "path": ".brain/decisions/2026-11-11-catalog-photo-multiple-options.md"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/catalog-option-photos.integration.test.ts",
+      "executed": true,
+      "result": "Development verified multiple scopes, order-independent replay, conflict checks, legacy compatibility, and public eligibility through the additional variant."
+    }
+  ]
+}

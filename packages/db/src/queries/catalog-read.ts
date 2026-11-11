@@ -7,6 +7,10 @@ import {
   SellableOfferingKind,
   StockBalanceKind,
 } from "../../generated/prisma/enums"
+import {
+  catalogPhotoUsage,
+  catalogPhotoUsageSelect,
+} from "./catalog-photo-usage"
 
 export type CatalogItemKindValue = "product" | "service"
 export type CatalogItemStatusValue = "active" | "archived" | "draft"
@@ -58,7 +62,7 @@ export const catalogItemGraph = {
       storeId: true,
       state: true,
       sortOrder: true,
-      optionVariantId: true,
+      ...catalogPhotoUsageSelect,
     },
     orderBy: { sortOrder: "asc" },
   },
@@ -180,6 +184,7 @@ export function serializeCatalogItem(item: CatalogItemGraph) {
       state: photo.state,
       sortOrder: photo.sortOrder,
       optionVariantId: photo.optionVariantId ?? null,
+      usage: catalogPhotoUsage(photo),
     })),
     description: item.description,
     id: item.id,

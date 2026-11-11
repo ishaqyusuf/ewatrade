@@ -138,15 +138,17 @@ export function CatalogImageAddTile({
   )
 }
 
-function ChoiceCheckbox({
+export function CatalogImageChoiceCheckbox({
   checked,
   label,
   onPress,
-}: { checked: boolean; label: string; onPress(): void }) {
+  disabled = false,
+}: { checked: boolean; label: string; onPress(): void; disabled?: boolean }) {
   return (
     <Pressable
       accessibilityRole="checkbox"
-      accessibilityState={{ checked }}
+      accessibilityState={{ checked, disabled }}
+      disabled={disabled}
       className="min-h-12 flex-row items-center gap-3 rounded-xl px-3 py-2"
       haptic
       onPress={onPress}
@@ -229,7 +231,7 @@ export function CatalogImageGenerateForm({
         />
         {choices.length > 1 ? (
           <View className="rounded-2xl bg-card p-1">
-            <ChoiceCheckbox
+            <CatalogImageChoiceCheckbox
               label="Generate for each customer choice"
               checked={selectedIds !== null}
               onPress={() =>
@@ -239,7 +241,7 @@ export function CatalogImageGenerateForm({
             {selectedIds ? (
               <View className="ml-4 border-t border-border pt-1">
                 {choices.map(({ id, name }) => (
-                  <ChoiceCheckbox
+                  <CatalogImageChoiceCheckbox
                     key={id}
                     label={name}
                     checked={selectedIds.includes(id)}

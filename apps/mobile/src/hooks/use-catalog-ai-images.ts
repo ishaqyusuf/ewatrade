@@ -161,7 +161,11 @@ export function useCatalogAiImages(input: {
     }
   }
 
-  async function start(sourceAssetId?: string, choices?: CatalogAiChoice[]) {
+  async function start(
+    sourceAssetId?: string,
+    choices?: CatalogAiChoice[],
+    instruction = note,
+  ) {
     if (running.current) return
     running.current = true
     setError(null)
@@ -172,7 +176,7 @@ export function useCatalogAiImages(input: {
       contextKey: input.contextKey,
       catalogItemId: input.catalogItemId,
       facts: input.facts,
-      note: note,
+      note: instruction,
       clientOperationId: Crypto.randomUUID(),
     }
     const request: Command =

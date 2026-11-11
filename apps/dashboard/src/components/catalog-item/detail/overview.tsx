@@ -21,7 +21,10 @@ import {
   TableHeader,
   TableRow,
 } from "@ewatrade/ui"
-import { catalogImagesForOption } from "@ewatrade/utils/catalog-image-editor"
+import {
+  catalogImageUsage,
+  catalogImagesForOption,
+} from "@ewatrade/utils/catalog-image-editor"
 import Link from "next/link"
 import { useMemo } from "react"
 import { CatalogPhotoPreview } from "../catalog-photo-preview"
@@ -63,7 +66,9 @@ export function CatalogDetailOverview({
   const photos = affordances.privatePhotos
     ? item.photos.filter((photo) => photo.storeId === storeId)
     : []
-  const showOptionPhotos = photos.some((photo) => photo.optionVariantId != null)
+  const showOptionPhotos = photos.some((photo) =>
+    catalogImageUsage(photo).some((scope) => scope !== null),
+  )
   const main =
     units.find((unit) => unit.stockBehavior === "canonical_shared") ??
     units.find((unit) => unit.factor === "1")

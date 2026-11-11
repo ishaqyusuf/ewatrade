@@ -8,12 +8,38 @@ export type CatalogAiClientJob = {
   appliedAt: Date | string | null
 }
 export type CatalogImageReplacement = { from: string; to: string }
-export type CatalogImageAssignments = Readonly<Record<string, string | null>>
+export type CatalogImageUsage = (string | null)[]
+export type CatalogImageAssignments = Readonly<
+  Record<string, CatalogImageUsage>
+>
 export type CatalogImageOption = { id: string; name: string }
 export type CatalogImageOptionEditor = {
   options: readonly CatalogImageOption[]
   assignments: CatalogImageAssignments
-  onAssign(assetId: string, variantId: string | null): void
+  onAssign(assetId: string, usage: CatalogImageUsage): void
+}
+
+export function normalizeCatalogImageUsage(
+  usage: readonly (string | null)[],
+): CatalogImageUsage {
+  const variants = [...new Set(usage.filter((id) => id !== null))].sort()
+  return usage.includes(null) ? [null, ...variants] : variants
+}
+
+export function toggleCatalogImageUsage(
+  usage: CatalogImageUsage,
+  scope: string | null,
+) {
+  if (usage.includes(scope))
+    return usage.length === 1 ? usage : usage.filter((id) => id !== scope)
+  return normalizeCatalogImageUsage([...usage, scope])
+}
+
+export function catalogImageUsage(photo: {
+  optionVariantId?: string | null
+  usage?: CatalogImageUsage
+}): CatalogImageUsage {
+  return photo.usage ?? [photo.optionVariantId ?? null]
 }
 
 export function catalogImageOptions(
@@ -32,37 +58,37 @@ export function catalogImageOptions(
 
 export function catalogImageAssignments(
   assetIds: readonly string[],
-  variantIds: readonly (string | null)[],
+  usages: readonly CatalogImageUsage[],
 ): CatalogImageAssignments {
   return Object.fromEntries(
-    assetIds.map((id, index) => [id, variantIds[index] ?? null]),
+    assetIds.map((id, index) => [id, usages[index] ?? [null]]),
   )
 }
 
-export function catalogImageVariantIds(
+export function catalogImageUsages(
   assetIds: readonly string[],
   assignments: CatalogImageAssignments,
   replacements: readonly CatalogImageReplacement[] = [],
 ) {
   const next = { ...assignments }
   for (const { from, to } of replacements) {
-    if (!Object.hasOwn(next, to)) next[to] = next[from] ?? null
+    if (!Object.hasOwn(next, to)) next[to] = next[from] ?? [null]
     delete next[from]
   }
-  return assetIds.map((id) => next[id] ?? null)
+  return assetIds.map((id) => next[id] ?? [null])
 }
 
 /** Prefer a selected option's group; general and pre-assignment photos share the fallback group. */
 export function catalogImagesForOption<
-  T extends { optionVariantId?: string | null },
+  T extends Parameters<typeof catalogImageUsage>[0],
 >(photos: readonly T[], variantId?: string) {
   if (variantId) {
-    const assigned = photos.filter(
-      (photo) => photo.optionVariantId === variantId,
+    const assigned = photos.filter((photo) =>
+      catalogImageUsage(photo).includes(variantId),
     )
     if (assigned.length) return assigned
   }
-  return photos.filter((photo) => photo.optionVariantId == null)
+  return photos.filter((photo) => catalogImageUsage(photo).includes(null))
 }
 
 /** Apply once in completion order. A refinement replaces its image slot; it

@@ -10,7 +10,8 @@ import {
   type CatalogImageReplacement,
   catalogImageAssignments,
   catalogImageOptions,
-  catalogImageVariantIds,
+  catalogImageUsage,
+  catalogImageUsages,
 } from "@ewatrade/utils/catalog-image-editor"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { type ComponentProps, useEffect, useRef, useState } from "react"
@@ -114,10 +115,7 @@ function SavedPhotoEditor({
     initialPhotos.map((photo) => photo.assetId),
   )
   const [assignments, setAssignments] = useState(() =>
-    catalogImageAssignments(
-      ids,
-      initialPhotos.map((photo) => photo.optionVariantId),
-    ),
+    catalogImageAssignments(ids, initialPhotos.map(catalogImageUsage)),
   )
   const [illustrationId, setIllustrationId] = useState(
     () =>
@@ -127,7 +125,7 @@ function SavedPhotoEditor({
   const expected = useRef({
     assetIds: [...ids],
     illustrationId,
-    optionVariantIds: catalogImageVariantIds(ids, assignments),
+    photoUsages: catalogImageUsages(ids, assignments),
   })
   const [saving, setSaving] = useState(false)
   const [mediaBusy, setMediaBusy] = useState(false)
@@ -155,10 +153,10 @@ function SavedPhotoEditor({
       storeId,
       clientOperationId: crypto.randomUUID(),
       assetIds: [...ids],
-      optionVariantIds: catalogImageVariantIds(ids, assignments),
+      photoUsages: catalogImageUsages(ids, assignments),
       illustrationId,
       expectedAssetIds: [...expected.current.assetIds],
-      expectedOptionVariantIds: expected.current.optionVariantIds,
+      expectedPhotoUsages: expected.current.photoUsages,
       expectedIllustrationId: expected.current.illustrationId,
     }
     try {
@@ -219,25 +217,27 @@ function SavedPhotoEditor({
           setAssignments((previous) =>
             catalogImageAssignments(
               assetIds,
-              catalogImageVariantIds(assetIds, previous, replacements),
+              catalogImageUsages(assetIds, previous, replacements),
             ),
           )
         }}
         optionEditor={{
           options: catalogImageOptions(item.variants),
           assignments,
-          onAssign: (assetId, variantId) =>
+          onAssign: (assetId, usage) =>
             setAssignments((previous) => ({
               ...previous,
-              [assetId]: variantId,
+              [assetId]: usage,
             })),
         }}
         disabled={saving || !!attempt.current}
         onBusyChange={setMediaBusy}
-        onPersisted={(assetIds, optionVariantIds) => {
+        onPersisted={(assetIds, photoUsages) => {
+          setIds(assetIds)
+          setAssignments(catalogImageAssignments(assetIds, photoUsages))
           expected.current = {
             assetIds,
-            optionVariantIds,
+            photoUsages,
             illustrationId: null,
           }
         }}

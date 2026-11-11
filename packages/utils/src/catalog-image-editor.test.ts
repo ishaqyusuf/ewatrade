@@ -3,9 +3,10 @@ import {
   type CatalogAiClientJob,
   type CatalogImageReplacement,
   applyCatalogAiJobs,
-  catalogImageVariantIds,
+  catalogImageUsages,
   catalogImagesForOption,
   catalogRefinementDescendants,
+  toggleCatalogImageUsage,
 } from "./catalog-image-editor"
 function job(
   id: string,
@@ -38,12 +39,12 @@ test("one generated image is added once, while refinements replace the original 
   )
   expect(output).toEqual(["new", "other"])
   expect(
-    catalogImageVariantIds(
+    catalogImageUsages(
       output,
-      { original: "day-old", other: null },
+      { original: [null, "day-old"], other: [null] },
       replacements,
     ),
-  ).toEqual(["day-old", null])
+  ).toEqual([[null, "day-old"], [null]])
   expect(applyCatalogAiJobs(output, [refined], seen)).toEqual(output)
   expect(applyCatalogAiJobs(output, [job("generated")], seen)).toEqual([
     "new",
@@ -69,6 +70,21 @@ test("a selected variant wins over general photos and other options never serve 
     "general",
   ])
   expect(catalogImagesForOption(photos.slice(0, 1), "grown")).toEqual([])
+})
+
+test("the same photo can be general and assigned to more than one option", () => {
+  const usage = toggleCatalogImageUsage(["day-old"], null)
+  const shared = {
+    id: "shared",
+    usage: toggleCatalogImageUsage(usage, "grown"),
+  }
+  const photos = [{ id: "cover", optionVariantId: null }, shared]
+  expect(catalogImagesForOption(photos)).toEqual(photos)
+  expect(catalogImagesForOption(photos, "day-old")).toEqual([shared])
+  expect(catalogImagesForOption(photos, "grown")).toEqual([shared])
+  expect(catalogImagesForOption(photos, "other")).toEqual(photos)
+  expect(toggleCatalogImageUsage(usage, "day-old")).toEqual([null])
+  expect(toggleCatalogImageUsage([null], null)).toEqual([null])
 })
 test("saved choice of original is not overwritten by replayed historical delivery", () => {
   expect(

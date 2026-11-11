@@ -28,6 +28,19 @@ export const catalogPhotoMetadataSchema = z
   })
   .strict()
 
+const photoUsages = z
+  .array(
+    z
+      .array(identifier.nullable())
+      .min(1)
+      .max(97)
+      .refine(
+        (usage) => new Set(usage).size === usage.length,
+        "Choose distinct uses for each photo.",
+      ),
+  )
+  .max(8)
+
 export const catalogPhotoReplacementSchema = z
   .object({
     catalogItemId: identifier,
@@ -51,6 +64,8 @@ export const catalogPhotoReplacementSchema = z
     expectedAssetIds: z.array(identifier).max(8).optional(),
     optionVariantIds: z.array(identifier.nullable()).max(8).optional(),
     expectedOptionVariantIds: z.array(identifier.nullable()).max(8).optional(),
+    photoUsages: photoUsages.optional(),
+    expectedPhotoUsages: photoUsages.optional(),
     expectedIllustrationId: z.string().nullable().optional(),
   })
   .strict()
@@ -60,8 +75,14 @@ export const catalogPhotoReplacementSchema = z
         input.optionVariantIds.length === input.assetIds.length) &&
       (input.expectedOptionVariantIds === undefined ||
         input.expectedOptionVariantIds.length ===
-          input.expectedAssetIds?.length),
-    "Each photo must have one assignment.",
+          input.expectedAssetIds?.length) &&
+      (input.photoUsages === undefined ||
+        (input.optionVariantIds === undefined &&
+          input.photoUsages.length === input.assetIds.length)) &&
+      (input.expectedPhotoUsages === undefined ||
+        (input.expectedOptionVariantIds === undefined &&
+          input.expectedPhotoUsages.length === input.expectedAssetIds?.length)),
+    "Each photo must have a corresponding set of uses.",
   )
   .refine(
     (input) => !input.illustrationId || input.assetIds.length === 0,

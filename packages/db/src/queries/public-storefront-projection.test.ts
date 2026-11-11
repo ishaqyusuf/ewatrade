@@ -27,7 +27,14 @@ const balance = (unit: string, onHand: string, reserved = "0") => ({
 const row = (
   id: string,
   extra: {
-    photos?: (string | { id: string; optionVariantId: string })[]
+    photos?: (
+      | string
+      | {
+          id: string
+          optionVariantId: string | null
+          additionalOptions?: { variantId: string }[]
+        }
+    )[]
     balances?: ReturnType<typeof balance>[]
     lowStockLevel?: string | null
     unit?: { id: string; scale: number } | null
@@ -103,11 +110,18 @@ test("gallery preserves effective primary ordering and manual unavailability kee
   })
 })
 
-test("option photos follow the variant across selling units and stay out of the general gallery", async () => {
+test("private photo assignments project to the general gallery and matching public offerings", async () => {
   const item = row("broiler", {
     photos: [
       { id: "day-old-photo", optionVariantId: "broiler-v" },
-      "general-photo",
+      {
+        id: "general-photo",
+        optionVariantId: null,
+        additionalOptions: [
+          { variantId: "broiler-v" },
+          { variantId: "fully-grown-variant" },
+        ],
+      },
       { id: "unavailable-photo", optionVariantId: "unavailable-variant" },
     ],
   })
@@ -130,7 +144,7 @@ test("option photos follow the variant across selling units and stay out of the 
   expect(result?.options.map((option) => option.photoUrl)).toEqual([
     publicCatalogPhotoPath("store_1", "day-old-photo"),
     publicCatalogPhotoPath("store_1", "day-old-photo"),
-    undefined,
+    publicCatalogPhotoPath("store_1", "general-photo"),
   ])
   expect(JSON.stringify(result)).not.toContain("unavailable-photo")
 })

@@ -11,6 +11,10 @@ import {
 } from "@ewatrade/catalog/photo-qa-policy"
 import { describeWithServiceCommerceDatabase } from "./acceptance/service-commerce/database"
 import { replaceCatalogItemPhotos } from "./catalog-photo-replacement"
+import {
+  catalogPhotoUsage,
+  catalogPhotoUsageSelect,
+} from "./catalog-photo-usage"
 import { getCatalogPublicPhotoTarget } from "./catalog-photos"
 
 describeWithServiceCommerceDatabase("Catalog option photos", () => {
@@ -24,6 +28,7 @@ describeWithServiceCommerceDatabase("Catalog option photos", () => {
       otherStore,
       item,
       variant,
+      fallback,
       otherVariant,
       assetId,
     } = await db.$transaction(
@@ -177,6 +182,7 @@ describeWithServiceCommerceDatabase("Catalog option photos", () => {
           otherStore,
           item,
           variant,
+          fallback,
           otherVariant,
           assetId,
         }
@@ -268,6 +274,76 @@ describeWithServiceCommerceDatabase("Catalog option photos", () => {
       expect(
         (await getCatalogPublicPhotoTarget(db, lookup)).photo.assetId,
       ).toBe(assetId)
+      await db.sellableVariant.update({
+        where: { id: variant.id },
+        data: { status: "ACTIVE", archivedAt: null },
+      })
+      const shared = {
+        ...assign,
+        clientOperationId: "share-photo-across-uses",
+        optionVariantIds: undefined,
+        expectedOptionVariantIds: undefined,
+        photoUsages: [[null, variant.id, fallback.id]],
+        expectedPhotoUsages: [[null]],
+      }
+      const primaryId = variant.id < fallback.id ? variant.id : fallback.id
+      const secondaryId = primaryId === variant.id ? fallback.id : variant.id
+      const usages = [[null, primaryId, secondaryId]]
+      expect(await replaceCatalogItemPhotos(db, shared)).toMatchObject({
+        photoUsages: usages,
+        replayed: false,
+      })
+      expect(
+        await replaceCatalogItemPhotos(db, {
+          ...shared,
+          photoUsages: [[fallback.id, variant.id, null]],
+        }),
+      ).toMatchObject({ photoUsages: usages, replayed: true })
+      await expect(
+        replaceCatalogItemPhotos(db, {
+          ...shared,
+          clientOperationId: "stale-multiple-uses",
+        }),
+      ).rejects.toMatchObject({ code: "PHOTO_COMMAND_CONFLICT" })
+      await replaceCatalogItemPhotos(db, {
+        ...assign,
+        clientOperationId: "old-client-keeps-extra-uses",
+        optionVariantIds: [null],
+        expectedOptionVariantIds: [null],
+      })
+      const persisted = await db.catalogPhotoAsset.findUniqueOrThrow({
+        where: { id: assetId },
+        select: catalogPhotoUsageSelect,
+      })
+      expect(catalogPhotoUsage(persisted)).toEqual(usages[0])
+      await expect(
+        replaceCatalogItemPhotos(db, {
+          ...shared,
+          clientOperationId: "foreign-multiple-uses",
+          expectedPhotoUsages: usages,
+          photoUsages: [[null, otherVariant.id]],
+        }),
+      ).rejects.toMatchObject({ code: "INVALID_PHOTO" })
+      await replaceCatalogItemPhotos(db, {
+        ...shared,
+        clientOperationId: "share-with-two-options-only",
+        expectedPhotoUsages: usages,
+        photoUsages: [[primaryId, secondaryId]],
+      })
+      await db.sellableVariant.update({
+        where: { id: primaryId },
+        data: { status: "ARCHIVED", archivedAt: new Date() },
+      })
+      expect(
+        (await getCatalogPublicPhotoTarget(db, lookup)).photo.assetId,
+      ).toBe(assetId)
+      await replaceCatalogItemPhotos(db, {
+        ...shared,
+        clientOperationId: "remove-both-option-uses",
+        expectedPhotoUsages: [[primaryId, secondaryId]],
+        photoUsages: [[null]],
+      })
+      expect(await db.catalogPhotoOption.count({ where: { assetId } })).toBe(0)
     } finally {
       const tenantScope = { tenantId: tenant.id }
       await db.$transaction([

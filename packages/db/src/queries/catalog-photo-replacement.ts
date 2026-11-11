@@ -2,6 +2,10 @@ import { createHash } from "node:crypto"
 import { CATALOG_PHOTO_CLEANUP_GRACE_MS } from "@ewatrade/catalog/photo-contracts"
 import { findCatalogIllustration } from "@ewatrade/utils/catalog-illustrations"
 import {
+  type CatalogImageUsage,
+  normalizeCatalogImageUsage,
+} from "@ewatrade/utils/catalog-image-editor"
+import {
   type CatalogPhotoAsset,
   Prisma,
   type PrismaClient,
@@ -11,6 +15,7 @@ import {
   markCatalogAiAppliedInTransaction,
 } from "./catalog-ai-images/lineage-attachment"
 import { lockCatalogCommandInTransaction } from "./catalog-command-locks"
+import { catalogPhotoUsage } from "./catalog-photo-usage"
 import {
   CATALOG_GALLERY_KEEP_UNTIL,
   type CatalogPhotoActorScope,
@@ -36,6 +41,8 @@ export type CatalogPhotoReplacementInput = CatalogPhotoActorScope & {
   expectedAssetIds?: string[]
   optionVariantIds?: Array<string | null>
   expectedOptionVariantIds?: Array<string | null>
+  photoUsages?: CatalogImageUsage[]
+  expectedPhotoUsages?: CatalogImageUsage[]
   expectedIllustrationId?: string | null
   clientOperationId: string
 }
@@ -50,6 +57,11 @@ export async function replaceCatalogItemPhotosInTransaction(
     expectedAssetIds: input.expectedAssetIds?.slice(),
     expectedOptionVariantIds: input.expectedOptionVariantIds?.slice(),
   }
+  const validUsage = (usage: CatalogImageUsage) =>
+    usage.length > 0 &&
+    usage.length <= 97 &&
+    new Set(usage).size === usage.length &&
+    usage.every((id) => id === null || /^[a-zA-Z0-9_-]{1,128}$/.test(id))
   if (
     (request.illustrationId != null &&
       (!findCatalogIllustration(request.illustrationId) ||
@@ -66,6 +78,15 @@ export async function replaceCatalogItemPhotosInTransaction(
     (request.expectedOptionVariantIds !== undefined &&
       request.expectedOptionVariantIds.length !==
         request.expectedAssetIds?.length) ||
+    (request.photoUsages !== undefined &&
+      (request.optionVariantIds !== undefined ||
+        request.photoUsages.length !== request.assetIds.length ||
+        !request.photoUsages.every(validUsage))) ||
+    (request.expectedPhotoUsages !== undefined &&
+      (request.expectedOptionVariantIds !== undefined ||
+        request.expectedPhotoUsages.length !==
+          request.expectedAssetIds?.length ||
+        !request.expectedPhotoUsages.every(validUsage))) ||
     request.clientOperationId.length < 8 ||
     request.clientOperationId.length > 160
   )
@@ -73,6 +94,10 @@ export async function replaceCatalogItemPhotosInTransaction(
       "INVALID_PHOTO",
       "Choose up to eight distinct photos.",
     )
+  const photoUsages = request.photoUsages?.map(normalizeCatalogImageUsage)
+  const expectedPhotoUsages = request.expectedPhotoUsages?.map(
+    normalizeCatalogImageUsage,
+  )
   const hash = createHash("sha256")
     .update(
       JSON.stringify([
@@ -95,6 +120,9 @@ export async function replaceCatalogItemPhotosInTransaction(
                 expectedOptionVariantIds: request.expectedOptionVariantIds,
               },
             ]),
+        ...(photoUsages === undefined && expectedPhotoUsages === undefined
+          ? []
+          : [{ photoUsages, expectedPhotoUsages }]),
       ]),
     )
     .digest("hex")
@@ -126,6 +154,7 @@ export async function replaceCatalogItemPhotosInTransaction(
       ...(request.optionVariantIds === undefined
         ? {}
         : { optionVariantIds: request.optionVariantIds }),
+      ...(photoUsages === undefined ? {} : { photoUsages }),
       illustrationId: request.illustrationId,
       replayed: true,
     }
@@ -146,6 +175,21 @@ export async function replaceCatalogItemPhotosInTransaction(
   const selected = request.assetIds.map((id) =>
     assets.find((asset) => asset.id === id),
   )
+  const additionalOptions = assets.length
+    ? await tx.catalogPhotoOption.findMany({
+        where: { assetId: { in: assets.map(({ id }) => id) } },
+        select: { assetId: true, variantId: true },
+      })
+    : []
+  const currentUsage = (asset?: CatalogPhotoAsset) =>
+    asset
+      ? catalogPhotoUsage({
+          optionVariantId: asset.optionVariantId,
+          additionalOptions: additionalOptions.filter(
+            (option) => option.assetId === asset.id,
+          ),
+        })
+      : [null]
   if (request.expectedAssetIds !== undefined) {
     const current = assets
       .filter(
@@ -171,6 +215,9 @@ export async function replaceCatalogItemPhotosInTransaction(
       (request.expectedOptionVariantIds !== undefined &&
         JSON.stringify(current.map((asset) => asset.optionVariantId)) !==
           JSON.stringify(request.expectedOptionVariantIds)) ||
+      (expectedPhotoUsages !== undefined &&
+        JSON.stringify(current.map(currentUsage)) !==
+          JSON.stringify(expectedPhotoUsages)) ||
       (request.expectedIllustrationId !== undefined &&
         (illustration?.illustrationId ?? null) !==
           request.expectedIllustrationId)
@@ -207,16 +254,26 @@ export async function replaceCatalogItemPhotosInTransaction(
       "PHOTO_NOT_READY",
       "One or more selected photos are unavailable in this Store.",
     )
-  // Legacy callers keep an existing assignment. New attachments are general
-  // unless the editor explicitly supplies a variant.
-  const optionVariantIds =
-    request.optionVariantIds ??
-    selected.map((asset) => asset?.optionVariantId ?? null)
+  // Older clients can change their visible assignment while preserving any
+  // additional options they cannot see.
+  const usages =
+    photoUsages ??
+    selected.map((asset, index) => {
+      const legacy = request.optionVariantIds?.[index]
+      const usage = currentUsage(asset)
+      if (legacy === undefined) return usage
+      return normalizeCatalogImageUsage([
+        legacy,
+        ...usage.filter((id) => id !== (asset?.optionVariantId ?? null)),
+      ])
+    })
   const changedVariants = [
     ...new Set(
-      optionVariantIds.filter(
-        (id, index): id is string =>
-          id !== null && id !== selected[index]?.optionVariantId,
+      usages.flatMap((usage, index) =>
+        usage.filter(
+          (id): id is string =>
+            id !== null && !currentUsage(selected[index]).includes(id),
+        ),
       ),
     ),
   ]
@@ -276,6 +333,18 @@ export async function replaceCatalogItemPhotosInTransaction(
   const retainedIds = [
     ...new Set([...roots, ...history.map((version) => version.assetId)]),
   ].filter((id) => !request.assetIds.includes(id))
+  const detachedIds = assets
+    .filter(
+      (asset) =>
+        asset.catalogItemId === item.id &&
+        asset.storeId === request.storeId &&
+        !request.assetIds.includes(asset.id),
+    )
+    .map(({ id }) => id)
+  if (detachedIds.length)
+    await tx.catalogPhotoOption.deleteMany({
+      where: { assetId: { in: detachedIds } },
+    })
   if (retainedIds.length)
     await tx.catalogPhotoAsset.updateMany({
       where: {
@@ -312,17 +381,47 @@ export async function replaceCatalogItemPhotosInTransaction(
     (maximum, asset) => Math.max(maximum, (asset.sortOrder ?? -1) + 1),
     0,
   )
-  for (const [index, id] of request.assetIds.entries())
+  for (const [index, id] of request.assetIds.entries()) {
+    const usage = usages[index] ?? [null]
+    // Preserve the single assignment visible to legacy clients whenever it
+    // still represents this selection. General use always projects to null.
+    const prior = selected[index]?.optionVariantId
+    const primary = usage.includes(null)
+      ? null
+      : prior && usage.includes(prior)
+        ? prior
+        : (usage[0] ?? null)
+    const extra = usage.filter(
+      (variantId): variantId is string =>
+        variantId !== null && variantId !== primary,
+    )
+    const previousExtra = additionalOptions
+      .filter((option) => option.assetId === id)
+      .map((option) => option.variantId)
+      .sort()
     await tx.catalogPhotoAsset.update({
       where: { id },
       data: {
         catalogItemId: item.id,
-        optionVariantId: optionVariantIds[index],
+        optionVariantId: primary,
+        ...(JSON.stringify(extra) !== JSON.stringify(previousExtra)
+          ? {
+              additionalOptions: {
+                deleteMany: { variantId: { notIn: extra } },
+                createMany: {
+                  data: extra
+                    .filter((variantId) => !previousExtra.includes(variantId))
+                    .map((variantId) => ({ variantId })),
+                },
+              },
+            }
+          : {}),
         sortOrder: offset + index,
         attachedAt: new Date(),
         galleryAddedAt: null,
       },
     })
+  }
   // Older empty photo-only commands preserve curated identity. Explicit null
   // clears it; selected photos or an illustration replace this Store only.
   if (request.illustrationId !== undefined || request.assetIds.length) {
@@ -361,7 +460,10 @@ export async function replaceCatalogItemPhotosInTransaction(
   })
   return {
     assetIds: request.assetIds,
-    ...(request.optionVariantIds === undefined ? {} : { optionVariantIds }),
+    ...(request.optionVariantIds === undefined
+      ? {}
+      : { optionVariantIds: request.optionVariantIds }),
+    ...(photoUsages === undefined ? {} : { photoUsages }),
     illustrationId: request.illustrationId,
     replayed: false,
   }

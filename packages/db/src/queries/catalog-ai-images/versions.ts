@@ -2,6 +2,10 @@ import { Prisma, type PrismaClient } from "../../../generated/prisma/client"
 import { lockCatalogCommandInTransaction } from "../catalog-command-locks"
 import { replaceCatalogItemPhotosInTransaction } from "../catalog-photo-replacement"
 import {
+  catalogPhotoUsage,
+  catalogPhotoUsageSelect,
+} from "../catalog-photo-usage"
+import {
   type CatalogPhotoActorScope,
   authorizeCatalogPhotoScope,
   getCatalogPhotoReadTarget,
@@ -121,6 +125,7 @@ export async function deleteCatalogAiRefinement(
         removedAssetIds: [input.assetId],
         assetIds: null,
         optionVariantIds: null,
+        photoUsages: null,
       }
     const remove = new Set([input.assetId])
     for (const entry of history)
@@ -156,6 +161,7 @@ export async function deleteCatalogAiRefinement(
     })
     let assetIds: string[] | null = null
     let optionVariantIds: (string | null)[] | null = null
+    let photoUsages: ReturnType<typeof catalogPhotoUsage>[] | null = null
     if (attached?.catalogItemId) {
       const catalogItemId = attached.catalogItemId
       await lockCatalogCommandInTransaction(tx, input)
@@ -167,7 +173,7 @@ export async function deleteCatalogAiRefinement(
           catalogItemId,
         },
         orderBy: { sortOrder: "asc" },
-        select: { id: true, optionVariantId: true },
+        select: { id: true, ...catalogPhotoUsageSelect },
       })
       assetIds = [
         ...new Set(
@@ -176,22 +182,28 @@ export async function deleteCatalogAiRefinement(
           ),
         ),
       ]
-      optionVariantIds = assetIds.map((id) => {
+      const replaced = current.find((asset) => remove.has(asset.id))
+      photoUsages = assetIds.map((id) => {
         const retained = current.find((asset) => asset.id === id)
-        if (retained) return retained.optionVariantId
-        return (
-          current.find((asset) => remove.has(asset.id))?.optionVariantId ?? null
+        return catalogPhotoUsage(
+          retained ?? replaced ?? { optionVariantId: null },
         )
       })
+      optionVariantIds = assetIds.map(
+        (id, index) =>
+          current.find((asset) => asset.id === id)?.optionVariantId ??
+          photoUsages?.[index]?.[0] ??
+          null,
+      )
       // Reuse the canonical image command in the same transaction; no alternate
       // attachment writer or provider deletion can race restoration.
       await replaceCatalogItemPhotosInTransaction(tx, {
         ...input,
         catalogItemId,
         assetIds,
-        optionVariantIds,
+        photoUsages,
         expectedAssetIds: current.map((asset) => asset.id),
-        expectedOptionVariantIds: current.map((asset) => asset.optionVariantId),
+        expectedPhotoUsages: current.map(catalogPhotoUsage),
         clientOperationId: input.clientOperationId,
       })
     }
@@ -222,6 +234,7 @@ export async function deleteCatalogAiRefinement(
       removedAssetIds: actual,
       assetIds,
       optionVariantIds,
+      photoUsages,
     }
   })
 }

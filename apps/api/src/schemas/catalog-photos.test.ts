@@ -32,10 +32,22 @@ describe("Catalog private photo contracts", () => {
         expectedOptionVariantIds: [null],
       }).optionVariantIds,
     ).toEqual(["variant", null])
+    expect(
+      catalogPhotoReplacementSchema.parse({
+        ...replacement,
+        photoUsages: [[null, "variant", "another"], [null]],
+        expectedPhotoUsages: [[null]],
+      }).photoUsages,
+    ).toEqual([[null, "variant", "another"], [null]])
     for (const assignment of [
       { optionVariantIds: ["variant"] },
       { optionVariantIds: ["https://example.test/image", null] },
       { expectedOptionVariantIds: [null, null] },
+      { photoUsages: [[null]] },
+      { photoUsages: [[], [null]] },
+      { photoUsages: [[null, null], ["variant"]] },
+      { photoUsages: [[null], [null]], optionVariantIds: [null, null] },
+      { expectedPhotoUsages: [[null], ["variant"]] },
     ]) {
       expect(
         catalogPhotoReplacementSchema.safeParse({

@@ -19,7 +19,9 @@ import type {
 import {
   type CatalogImageOptionEditor,
   type CatalogImageReplacement,
+  type CatalogImageUsage,
   catalogRefinementDescendants,
+  toggleCatalogImageUsage,
 } from "@ewatrade/utils/catalog-image-editor"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import * as Crypto from "expo-crypto"
@@ -31,6 +33,7 @@ import { useCatalogImageDraft } from "../catalog-setup/use-catalog-image-draft"
 import { DockedPhotoCamera } from "../docked-photo-camera"
 import {
   CatalogImageAddTile,
+  CatalogImageChoiceCheckbox,
   CatalogImageGenerateForm,
   CatalogImageProgressTile,
   catalogImageTile,
@@ -71,7 +74,7 @@ export function CatalogImagesEditor({
   ): void
   disabled?: boolean
   onBusyChange?(busy: boolean, writing: boolean): void
-  onPersisted?(ids: string[], variantIds: (string | null)[]): void
+  onPersisted?(ids: string[], photoUsages: CatalogImageUsage[]): void
   optionEditor?: CatalogImageOptionEditor
   generationChoices?: CatalogAiChoice[]
   illustrationId?: string | null
@@ -88,7 +91,7 @@ export function CatalogImagesEditor({
   const [error, setError] = useState<string | null>(null)
   const [myImages, setMyImages] = useState(false)
   const [generating, setGenerating] = useState(false)
-  const [refinementNoteOpen, setRefinementNoteOpen] = useState(false)
+  const [refinementNote, setRefinementNote] = useState<string | null>(null)
   const [viewer, setViewer] = useState<number | null>(null)
   const [viewed, setViewed] = useState<string | null>(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
@@ -161,14 +164,14 @@ export function CatalogImagesEditor({
     ),
   )
   const activeId = viewer !== null ? assetIds[viewer] : undefined
-  const assignedVariantId = activeId
-    ? (optionEditor?.assignments[activeId] ?? null)
-    : null
-  const optionMissing =
-    assignedVariantId !== null &&
-    !optionEditor?.options.some((option) => option.id === assignedVariantId)
+  const usage = optionEditor?.assignments[activeId ?? ""] ?? [null]
+  const removedOptions = usage.filter(
+    (id): id is string =>
+      id !== null && !optionEditor?.options.some((option) => option.id === id),
+  )
   const showOptions =
-    optionEditor && (optionEditor.options.length > 0 || optionMissing)
+    optionEditor &&
+    (optionEditor.options.length > 0 || removedOptions.length > 0)
   const versions = useQuery(
     trpc.catalog.aiImages.versions.queryOptions(
       { storeId, assetId: activeId ?? "none" },
@@ -178,12 +181,16 @@ export function CatalogImagesEditor({
   useEffect(() => {
     setViewed(activeId ?? null)
     setConfirmDelete(false)
-    setRefinementNoteOpen(false)
+    setRefinementNote(null)
   }, [activeId])
   const version = versions.data?.versions.find(
     (entry) => entry.assetId === viewed,
   )
   const displayed = viewed ?? activeId
+  const refinementAction =
+    refinementNote !== null && !refinementNote.trim()
+      ? "Continue"
+      : "Refine with AI"
   const assertCurrent = () => {
     if (!active.current.mounted || active.current.storeId !== storeId)
       throw new Error("Store changed. Reopen Images before adding a photo.")
@@ -288,8 +295,8 @@ export function CatalogImagesEditor({
           ),
         ),
       ]
-      if (result.assetIds && result.optionVariantIds)
-        onPersisted?.(result.assetIds, result.optionVariantIds)
+      if (result.assetIds && result.photoUsages)
+        onPersisted?.(result.assetIds, result.photoUsages)
       else change(next, replacements)
       setViewed(result.rootAssetId)
       setConfirmDelete(false)
@@ -307,6 +314,7 @@ export function CatalogImagesEditor({
     !disabled &&
     !busy &&
     ai.available &&
+    !ai.retryRequest &&
     (sources.data?.some(
       (photo) => photo.id === id && photo.state === "APPROVED",
     ) ||
@@ -390,19 +398,27 @@ export function CatalogImagesEditor({
           </View>
         ) : null}
         {assetIds.map((id, index) => {
-          const assignment = (assetId: string) =>
-            optionEditor
-              ? (optionEditor.assignments[assetId] ?? null)
-              : (ai.query.data?.jobs.find(
-                  (job) => job.outputAssetId === assetId,
-                )?.choice?.id ?? null)
-          const assigned = assignment(id)
-          const isPrimary =
-            assetIds.find((assetId) => assignment(assetId) === assigned) === id
-          const optionName = assigned
-            ? (availableChoices.find((option) => option.id === assigned)
-                ?.name ?? "Removed option")
-            : null
+          const assignments = (assetId: string) =>
+            optionEditor?.assignments[assetId] ?? [
+              ai.query.data?.jobs.find((job) => job.outputAssetId === assetId)
+                ?.choice?.id ?? null,
+            ]
+          const assigned = assignments(id)
+          const isFirstFor = (scope: string | null) =>
+            assetIds.find((assetId) => assignments(assetId).includes(scope)) ===
+            id
+          const isPrimary = assigned.every(isFirstFor)
+          const label =
+            assigned.includes(null) && isFirstFor(null)
+              ? "Primary"
+              : assigned
+                  .filter((scope) => scope !== null)
+                  .map(
+                    (scope) =>
+                      availableChoices.find((option) => option.id === scope)
+                        ?.name ?? "Removed option",
+                  )
+                  .join(", ")
           return (
             <View
               key={id}
@@ -429,10 +445,16 @@ export function CatalogImagesEditor({
                   variant="thumbnail"
                 />
               </Pressable>
-              {isPrimary || optionName ? (
-                <View className="absolute left-2 top-2 rounded-lg bg-card px-2 py-1">
-                  <Text className="text-[10px] font-extrabold text-foreground">
-                    {optionName ?? "Primary"}
+              {label ? (
+                <View
+                  pointerEvents="none"
+                  className="absolute left-2 right-12 top-2 items-start"
+                >
+                  <Text
+                    numberOfLines={1}
+                    className="rounded-lg bg-card px-2 py-1 text-[10px] font-extrabold text-foreground"
+                  >
+                    {label}
                   </Text>
                 </View>
               ) : null}
@@ -535,23 +557,38 @@ export function CatalogImagesEditor({
         onBack={() => setViewer(null)}
         backLabel="Back to images"
         footer={
-          <ActionButton
-            icon="Sparkles"
-            disabled={!displayed || !canRefine(displayed)}
-            onPress={() => displayed && void ai.start(displayed)}
-          >
-            {version?.sourceAssetId ? "Refine again" : "Refine with AI"}
-          </ActionButton>
+          <View className="gap-3">
+            {refinementNote !== null ? (
+              <FormField
+                label="Add a note (optional)"
+                value={refinementNote}
+                onChangeText={setRefinementNote}
+                multiline
+                maxLength={500}
+              />
+            ) : null}
+            <ActionButton
+              icon={refinementAction === "Continue" ? undefined : "Sparkles"}
+              disabled={!displayed || !canRefine(displayed)}
+              onPress={() => {
+                if (!displayed) return
+                if (refinementNote === null) {
+                  setRefinementNote("")
+                  return
+                }
+                void ai.start(displayed, undefined, refinementNote)
+                setRefinementNote(null)
+              }}
+            >
+              {refinementAction}
+            </ActionButton>
+          </View>
         }
       >
         <KeyboardAwareScrollView
           contentContainerStyle={{ padding: 16, gap: 16, paddingBottom: 24 }}
           keyboardShouldPersistTaps="handled"
         >
-          <Text className="text-xs text-muted-foreground">
-            {version?.label ?? "Image"}
-            {displayed === activeId ? " · Current version" : ""}
-          </Text>
           <View
             style={{
               height: 320,
@@ -618,111 +655,108 @@ export function CatalogImagesEditor({
               <Text className="text-sm font-bold text-foreground">
                 Use image for
               </Text>
-              {optionMissing ? (
-                <Text className="text-xs text-muted-foreground">
-                  Assigned to a removed option
-                </Text>
-              ) : null}
-              <View className="flex-row flex-wrap gap-2">
+              <View className="rounded-2xl bg-card p-1">
                 {[
                   { id: null, name: "General item image" },
                   ...optionEditor.options,
-                ].map((option) => {
-                  const selected = option.id === assignedVariantId
-                  return (
-                    <Pressable
-                      key={option.id ?? "general"}
-                      accessibilityRole="button"
-                      accessibilityState={{
-                        selected,
-                        disabled: disabled || busy,
-                      }}
-                      className={`min-h-11 justify-center rounded-xl border px-3 ${selected ? "border-primary" : "border-border"}`}
-                      disabled={disabled || busy}
-                      onPress={() => optionEditor.onAssign(activeId, option.id)}
-                    >
-                      <Text className="text-xs font-semibold text-foreground">
-                        {option.name}
-                      </Text>
-                    </Pressable>
-                  )
-                })}
+                  ...removedOptions.map((id) => ({
+                    id,
+                    name: "Removed option",
+                  })),
+                ].map(({ id, name }) => (
+                  <CatalogImageChoiceCheckbox
+                    key={id ?? "general"}
+                    label={name}
+                    checked={usage.includes(id)}
+                    disabled={
+                      disabled ||
+                      busy ||
+                      (usage.length === 1 && usage.includes(id))
+                    }
+                    onPress={() =>
+                      optionEditor.onAssign(
+                        activeId,
+                        toggleCatalogImageUsage(usage, id),
+                      )
+                    }
+                  />
+                ))}
               </View>
-              {saveFeedback}
             </View>
           ) : null}
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ gap: 8, padding: 2 }}
-          >
-            {versions.data?.versions.map((entry) => (
-              <Pressable
-                key={entry.assetId}
-                accessibilityRole="button"
-                accessibilityState={{ selected: entry.assetId === displayed }}
-                onPress={() => {
-                  setViewed(entry.assetId)
-                  setConfirmDelete(false)
-                }}
-                style={{
-                  minHeight: 52,
-                  borderWidth: entry.assetId === displayed ? 2 : 1,
-                  borderColor:
-                    entry.assetId === displayed
-                      ? colors.primary
-                      : colors.border,
-                  borderRadius: 14,
-                  paddingHorizontal: 14,
-                  justifyContent: "center",
-                  backgroundColor: colors.card,
-                }}
-              >
-                <Text className="text-xs font-bold text-foreground">
-                  {entry.label}
-                </Text>
-                {entry.assetId === activeId ? (
-                  <Text className="text-[10px] text-muted-foreground">
-                    Current version
+          {versions.data && versions.data.versions.length > 1 ? (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ gap: 8, padding: 2 }}
+            >
+              {versions.data?.versions.map((entry) => (
+                <Pressable
+                  key={entry.assetId}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: entry.assetId === displayed }}
+                  onPress={() => {
+                    setViewed(entry.assetId)
+                    setConfirmDelete(false)
+                    setRefinementNote(null)
+                  }}
+                  style={{
+                    minHeight: 52,
+                    borderWidth: entry.assetId === displayed ? 2 : 1,
+                    borderColor:
+                      entry.assetId === displayed
+                        ? colors.primary
+                        : colors.border,
+                    borderRadius: 14,
+                    paddingHorizontal: 14,
+                    justifyContent: "center",
+                    backgroundColor: colors.card,
+                  }}
+                >
+                  <Text className="text-xs font-bold text-foreground">
+                    {entry.label}
                   </Text>
-                ) : null}
-              </Pressable>
-            ))}
-          </ScrollView>
-          <View className="flex-row items-center justify-between gap-2">
-            {displayed && displayed !== activeId ? (
-              <ActionButton
-                variant="outline"
-                disabled={disabled || busy}
-                onPress={() =>
-                  change(
-                    assetIds.map((id, index) =>
-                      index === viewer ? displayed : id,
-                    ),
-                    activeId ? [{ from: activeId, to: displayed }] : [],
-                  )
-                }
-              >
-                Use {version?.label.toLowerCase() ?? "this version"}
-              </ActionButton>
-            ) : (
-              <Text className="text-xs text-muted-foreground">
-                Shown in your image list
-              </Text>
-            )}
-            {version?.sourceAssetId ? (
-              <Pressable
-                accessibilityRole="button"
-                disabled={disabled || busy}
-                className="min-h-11 justify-center"
-                onPress={() => setConfirmDelete(true)}
-              >
-                <Text className="text-xs font-bold text-foreground">
-                  Delete refinement
-                </Text>
-              </Pressable>
-            ) : null}
-          </View>
+                  {entry.assetId === activeId ? (
+                    <Text className="text-[10px] text-muted-foreground">
+                      Current version
+                    </Text>
+                  ) : null}
+                </Pressable>
+              ))}
+            </ScrollView>
+          ) : null}
+          {displayed !== activeId || version?.sourceAssetId ? (
+            <View className="flex-row items-center justify-between gap-2">
+              {displayed && displayed !== activeId ? (
+                <ActionButton
+                  variant="outline"
+                  disabled={disabled || busy}
+                  onPress={() =>
+                    change(
+                      assetIds.map((id, index) =>
+                        index === viewer ? displayed : id,
+                      ),
+                      activeId ? [{ from: activeId, to: displayed }] : [],
+                    )
+                  }
+                >
+                  Use {version?.label.toLowerCase() ?? "this version"}
+                </ActionButton>
+              ) : null}
+              {version?.sourceAssetId ? (
+                <Pressable
+                  accessibilityRole="button"
+                  disabled={disabled || busy}
+                  className="min-h-11 justify-center"
+                  onPress={() => setConfirmDelete(true)}
+                >
+                  <Text className="text-xs font-bold text-foreground">
+                    Delete refinement
+                  </Text>
+                </Pressable>
+              ) : null}
+            </View>
+          ) : null}
           {confirmDelete ? (
             <View className="gap-3 rounded-2xl bg-card p-4">
               <Text className="text-sm text-foreground">
@@ -750,30 +784,6 @@ export function CatalogImagesEditor({
           {feedback ? <StatusBanner tone="warning" message={feedback} /> : null}
           {ai.progress[0] ? (
             <StatusBanner tone="default" message={ai.progress[0].label} />
-          ) : null}
-          <Text className="text-xs text-muted-foreground">
-            Check colour, shape and labels before using an AI edit.
-          </Text>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityState={{ expanded: refinementNoteOpen }}
-            className="min-h-11 justify-center"
-            onPress={() => setRefinementNoteOpen(!refinementNoteOpen)}
-          >
-            <Text className="text-xs text-muted-foreground underline">
-              {refinementNoteOpen
-                ? "Hide optional note"
-                : "Add a note (optional)"}
-            </Text>
-          </Pressable>
-          {refinementNoteOpen ? (
-            <FormField
-              label="Add a note (optional)"
-              value={ai.note}
-              onChangeText={ai.setNote}
-              multiline
-              maxLength={500}
-            />
           ) : null}
         </KeyboardAwareScrollView>
       </FullScreenForm>

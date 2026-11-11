@@ -8,6 +8,10 @@ import {
 } from "@ewatrade/utils"
 import { isValidStoreLink } from "@ewatrade/utils/store-link"
 import type { Prisma } from "../../generated/prisma/client"
+import {
+  catalogPhotoUsage,
+  catalogPhotoUsageSelect,
+} from "./catalog-photo-usage"
 import { saleEligibleCatalogItem } from "./product-usage"
 import {
   publicItemAvailability,
@@ -324,7 +328,7 @@ function publicPhotoAssetSelect(storeId: string, platformListed = false) {
     },
     orderBy: [{ sortOrder: "asc" as const }, { id: "asc" as const }],
     take: 8,
-    select: { id: true, optionVariantId: true },
+    select: { id: true, ...catalogPhotoUsageSelect },
   }
 }
 
@@ -421,14 +425,15 @@ function publicItemReader(
       )
       return quantity ? { lowStockQuantity: quantity } : {}
     }
-    const photos = item.photoAssets ?? []
-    const generalPhotos = photos.filter(
-      (photo) => photo.optionVariantId == null,
-    )
+    const photos = (item.photoAssets ?? []).map((photo) => ({
+      id: photo.id,
+      usage: catalogPhotoUsage(photo),
+    }))
+    const generalPhotos = photos.filter((photo) => photo.usage.includes(null))
     const photo = generalPhotos[0]
     const itemOptions = item.offerings.map((offering) => {
-      const optionPhoto = photos.find(
-        (photo) => photo.optionVariantId === offering.variant.id,
+      const optionPhoto = photos.find((photo) =>
+        photo.usage.includes(offering.variant.id),
       )
       return {
         id: offering.id,

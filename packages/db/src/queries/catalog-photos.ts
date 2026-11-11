@@ -371,6 +371,19 @@ export async function getCatalogPublicPhotoTarget(
   db: PrismaClient,
   input: { assetId: string; storeId: string },
 ) {
+  const availableVariant = {
+    status: "ACTIVE",
+    archivedAt: null,
+    offerings: {
+      some: {
+        status: "ACTIVE",
+        archivedAt: null,
+        storeAvailability: {
+          some: { storeId: input.storeId, isAvailable: true },
+        },
+      },
+    },
+  } satisfies Prisma.SellableVariantWhereInput
   const asset = await db.catalogPhotoAsset.findFirst({
     where: {
       ...catalogPublicPhotoProviderFilter(),
@@ -392,23 +405,8 @@ export async function getCatalogPublicPhotoTarget(
         {
           OR: [
             { optionVariantId: null },
-            {
-              optionVariant: {
-                is: {
-                  status: "ACTIVE",
-                  archivedAt: null,
-                  offerings: {
-                    some: {
-                      status: "ACTIVE",
-                      archivedAt: null,
-                      storeAvailability: {
-                        some: { storeId: input.storeId, isAvailable: true },
-                      },
-                    },
-                  },
-                },
-              },
-            },
+            { optionVariant: { is: availableVariant } },
+            { additionalOptions: { some: { variant: availableVariant } } },
           ],
         },
       ],

@@ -17,7 +17,9 @@ import {
 import {
   type CatalogImageOptionEditor,
   type CatalogImageReplacement,
+  type CatalogImageUsage,
   catalogRefinementDescendants,
+  toggleCatalogImageUsage,
 } from "@ewatrade/utils/catalog-image-editor"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useEffect, useId, useRef, useState } from "react"
@@ -48,7 +50,7 @@ export function CatalogImagesEditor({
   onChange(ids: string[], replacements?: CatalogImageReplacement[]): void
   disabled?: boolean
   onBusyChange?(busy: boolean): void
-  onPersisted?(ids: string[], variantIds: (string | null)[]): void
+  onPersisted?(ids: string[], photoUsages: CatalogImageUsage[]): void
   optionEditor?: CatalogImageOptionEditor
   illustrationId?: string | null
   onIllustrationChange?(id: string | null): void
@@ -117,14 +119,14 @@ export function CatalogImagesEditor({
     ),
   )
   const activeId = viewer !== null ? assetIds[viewer] : undefined
-  const assignedVariantId = activeId
-    ? (optionEditor?.assignments[activeId] ?? null)
-    : null
-  const optionMissing =
-    assignedVariantId !== null &&
-    !optionEditor?.options.some((option) => option.id === assignedVariantId)
+  const usage = optionEditor?.assignments[activeId ?? ""] ?? [null]
+  const removedOptions = usage.filter(
+    (id): id is string =>
+      id !== null && !optionEditor?.options.some((option) => option.id === id),
+  )
   const showOptions =
-    optionEditor && (optionEditor.options.length > 0 || optionMissing)
+    optionEditor &&
+    (optionEditor.options.length > 0 || removedOptions.length > 0)
   const versions = useQuery(
     trpc.catalog.aiImages.versions.queryOptions(
       { storeId, assetId: activeId ?? "none" },
@@ -221,8 +223,8 @@ export function CatalogImagesEditor({
           ),
         ),
       ]
-      if (result.assetIds && result.optionVariantIds)
-        onPersisted?.(result.assetIds, result.optionVariantIds)
+      if (result.assetIds && result.photoUsages)
+        onPersisted?.(result.assetIds, result.photoUsages)
       change(next, replacements)
       setViewed(result.rootAssetId)
       setConfirmDelete(false)
@@ -278,16 +280,25 @@ export function CatalogImagesEditor({
       </div>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         {assetIds.map((id, index) => {
-          const assigned = optionEditor?.assignments[id] ?? null
-          const isPrimary =
-            assetIds.find(
-              (assetId) =>
-                (optionEditor?.assignments[assetId] ?? null) === assigned,
-            ) === id
-          const optionName = assigned
-            ? (optionEditor?.options.find((option) => option.id === assigned)
-                ?.name ?? "Removed option")
-            : null
+          const assignments = (assetId: string) =>
+            optionEditor?.assignments[assetId] ?? [null]
+          const assigned = assignments(id)
+          const isFirstFor = (scope: string | null) =>
+            assetIds.find((assetId) => assignments(assetId).includes(scope)) ===
+            id
+          const isPrimary = assigned.every(isFirstFor)
+          const label =
+            assigned.includes(null) && isFirstFor(null)
+              ? "Primary"
+              : assigned
+                  .filter((scope) => scope !== null)
+                  .map(
+                    (scope) =>
+                      optionEditor?.options.find(
+                        (option) => option.id === scope,
+                      )?.name ?? "Removed option",
+                  )
+                  .join(", ")
           return (
             <div
               key={id}
@@ -310,9 +321,9 @@ export function CatalogImagesEditor({
                   className="size-full object-cover"
                 />
               </button>
-              {isPrimary || optionName ? (
-                <span className="absolute top-2 left-2 rounded-md bg-background/95 px-2 py-1 text-[10px] font-semibold">
-                  {optionName ?? "Primary"}
+              {label ? (
+                <span className="absolute top-2 left-2 max-w-[75%] truncate rounded-md bg-background/95 px-2 py-1 text-[10px] font-semibold">
+                  {label}
                 </span>
               ) : null}
               <Button
@@ -588,29 +599,36 @@ export function CatalogImagesEditor({
             ) : null}
           </div>
           {showOptions && activeId ? (
-            <label className="flex shrink-0 flex-wrap items-center gap-2 text-sm font-medium">
-              Use image for
-              <select
-                className="rounded-lg border border-input bg-background px-3 py-2"
-                value={assignedVariantId ?? ""}
-                disabled={disabled || busy}
-                onChange={(event) =>
-                  optionEditor.onAssign(activeId, event.target.value || null)
-                }
-              >
-                <option value="">General item image</option>
-                {optionMissing ? (
-                  <option disabled value={assignedVariantId}>
-                    Removed option
-                  </option>
-                ) : null}
-                {optionEditor.options.map((option) => (
-                  <option key={option.id} value={option.id}>
-                    {option.name}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <fieldset className="flex shrink-0 flex-wrap gap-3 text-sm">
+              <legend className="mb-2 font-medium">Use image for</legend>
+              {[
+                { id: null, name: "General item image" },
+                ...optionEditor.options,
+                ...removedOptions.map((id) => ({ id, name: "Removed option" })),
+              ].map(({ id, name }) => (
+                <label
+                  key={id ?? "general"}
+                  className="flex items-center gap-2"
+                >
+                  <input
+                    type="checkbox"
+                    checked={usage.includes(id)}
+                    disabled={
+                      disabled ||
+                      busy ||
+                      (usage.length === 1 && usage.includes(id))
+                    }
+                    onChange={() =>
+                      optionEditor.onAssign(
+                        activeId,
+                        toggleCatalogImageUsage(usage, id),
+                      )
+                    }
+                  />
+                  {name}
+                </label>
+              ))}
+            </fieldset>
           ) : null}
           <nav
             aria-label="Image versions"
