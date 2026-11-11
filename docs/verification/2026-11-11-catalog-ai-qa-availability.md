@@ -29,3 +29,23 @@ Focused QA, allowance, Oversight and policy checks passed 15 tests. The
 existing reporting integration, generation transport and API input suites
 also passed. Scoped source smoke passed 285 tests, the Jobs type check
 passed, and both assistant coverage and impact gates passed.
+
+## Product condition in the generation note
+
+Broiler chicken had a name and an empty description. Its first generation
+had an empty note and depicted a dressed chicken. Later refinements received
+the owner's live-chicken note. The old edit prompt instructed OpenAI to
+preserve the shape and appearance of the dressed source image.
+
+The new prompt treats a stated subject condition or preparation as a
+requirement. When the image lineage starts with an AI generation, refinement
+can correct the rendered subject. For lineage that starts with a camera or
+uploaded photo, the prompt preserves the photographed subject. Existing
+version history and provider request shape carry forward.
+
+The owner submitted “Live chicken. Not dressed.” on Android. Job
+`cmwbvn0yq0000sb9k8r9okt4a` used worker `20261111.6` and completed in
+37.1 seconds. The Images editor displayed a live, feathered chicken as the
+primary image. Four prompt and transport tests passed, including the generated
+image edit request. Scoped smoke passed 285 tests, the Jobs type check passed,
+and the assistant impact gate passed.

@@ -53,22 +53,33 @@ export async function catalogAiImageHandler({ jobId }: { jobId: string }) {
       storeId: job.storeId,
       actorUserId: job.actorUserId,
     }
-    let sourceBytes: Uint8Array | undefined
+    let source: { bytes: Uint8Array; generated: boolean } | undefined
     if (job.sourceAssetId) {
-      const source = await getCatalogPhotoReadTarget(prisma, {
-        ...actor,
-        assetId: job.sourceAssetId,
+      const [target, generatedRoot] = await Promise.all([
+        getCatalogPhotoReadTarget(prisma, {
+          ...actor,
+          assetId: job.sourceAssetId,
+        }),
+        prisma.catalogAiImageVersion.findFirst({
+          where: {
+            assetId: job.rootAssetId ?? job.sourceAssetId,
+            tenantId: job.tenantId,
+            storeId: job.storeId,
+            sourceAssetId: null,
+            removedAt: null,
+          },
+          select: { assetId: true },
+        }),
+      ])
+      const bytes = await createCatalogPhotoStorageForScope(target.scope).read({
+        scope: target.scope,
+        photo: target.photo,
       })
-      const bytes = await createCatalogPhotoStorageForScope(source.scope).read({
-        scope: source.scope,
-        photo: source.photo,
+      const processed = await processCatalogPhoto({
+        bytes,
+        contentType: target.photo.contentType,
       })
-      sourceBytes = (
-        await processCatalogPhoto({
-          bytes,
-          contentType: source.photo.contentType,
-        })
-      ).display.bytes
+      source = { bytes: processed.display.bytes, generated: !!generatedRoot }
     }
     await assertCatalogAiDispatch(prisma, job.id, token)
     dispatched = true
@@ -77,7 +88,7 @@ export async function catalogAiImageHandler({ jobId }: { jobId: string }) {
       note: job.note,
       policy: catalogAiPolicySchema.parse(job.policySnapshot),
       safetyScope: `${job.tenantId}:${job.actorUserId}`,
-      sourceBytes,
+      source,
     })
     await recordCatalogAiProviderUsage(prisma, {
       id: job.id,

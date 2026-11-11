@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "id": "2026-11-11-catalog-ai-subject-fidelity",
+  "tickets": ["H02"],
+  "summary": "Honor explicit product corrections in Catalog AI prompts while preserving photographed subjects.",
+  "noAssistantImpact": "The Catalog form still owns the image request. The worker uses existing photo lineage to choose a prompt. No assistant capability or procedure changes.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "path": "docs/verification/2026-11-11-catalog-ai-qa-availability.md",
+      "status": "updated"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "run",
+      "path": "packages/catalog/src/image-generation-openai.test.ts",
+      "executed": true,
+      "result": "Four focused tests passed for subject correction, photo preservation, and the single-output OpenAI transport."
+    }
+  ]
+}
