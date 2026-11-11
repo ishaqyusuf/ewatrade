@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "id": "2026-11-11-mobile-qa-businesses-list",
+  "tickets": ["H02"],
+  "summary": "Apply the selected Workshop layout to the full-screen mobile QA business chooser.",
+  "noAssistantImpact": "The changes are confined to the internal QA account chooser presentation. Existing account selection, authentication and assistant capabilities are unchanged.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/qa-selector.md"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/utils/src/qa-profiles.test.ts",
+      "executed": true,
+      "result": "Checks that only distinct businesses with the same display name receive identifiers, and that matching suffixes are extended."
+    }
+  ]
+}

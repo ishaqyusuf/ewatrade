@@ -4,6 +4,7 @@ import {
   filterQaProfiles,
   formatQaCount,
   groupQaProfiles,
+  qaBusinessNameIdentifiers,
   qaProfileDisplayName,
   qaProfileKey,
   qaProfileLabel,
@@ -37,6 +38,30 @@ test("business IDs group profiles without merging names or summing shared counts
   ])
   expect(groups[0]?.profiles[0]?.counts?.catalogItems).toBe(4)
   expect(groups[0]?.profiles.map((p) => p.counts?.orders)).toEqual([10, 3])
+})
+
+test("only separate same-name businesses get distinct short identifiers", () => {
+  const names = qaBusinessNameIdentifiers([
+    { id: "fixture-71a2", name: "Same name" },
+    { id: "fixture-71a2", name: "Same name" },
+    { id: "fixture-c84f", name: " same Name " },
+    { id: "fixture-53d6", name: "Another business" },
+  ])
+  expect([...names]).toEqual([
+    ["fixture-71a2", "71A2"],
+    ["fixture-c84f", "C84F"],
+  ])
+  expect(
+    qaBusinessNameIdentifiers([profile.business, branch.business]).size,
+  ).toBe(0)
+})
+
+test("matching ID suffixes get longer identifiers", () => {
+  const names = qaBusinessNameIdentifiers([
+    { id: "fixture-a71a2", name: "Same name" },
+    { id: "fixture-b71a2", name: "Same name" },
+  ])
+  expect([...names.values()]).toEqual(["A71A2", "B71A2"])
 })
 test("search covers identity, Store, slug and role and keeps only matching profiles", () => {
   for (const query of [" AMINA ", "qa.example", "business-one", "owner"])

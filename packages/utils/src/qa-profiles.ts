@@ -74,6 +74,35 @@ export function groupQaProfiles<T extends QaProfile>(profiles: T[]) {
   return [...groups.values()]
 }
 
+/** Label distinct businesses with the same display name, even during search. */
+export function qaBusinessNameIdentifiers(
+  businesses: readonly QaProfile["business"][],
+) {
+  const byName = new Map<string, Set<string>>()
+  for (const { id, name } of businesses) {
+    const key = name.trim().toLowerCase()
+    const ids = byName.get(key) ?? new Set<string>()
+    ids.add(id)
+    byName.set(key, ids)
+  }
+
+  const identifiers = new Map<string, string>()
+  for (const ids of byName.values()) {
+    if (ids.size < 2) continue
+    const businessIds = [...ids]
+    const maxLength = Math.max(...businessIds.map((id) => id.length))
+    let width = 4
+    let labels = businessIds.map((id) => id.slice(-width).toUpperCase())
+    while (new Set(labels).size < ids.size && width < maxLength) {
+      width += 1
+      labels = businessIds.map((id) => id.slice(-width).toUpperCase())
+    }
+    if (new Set(labels).size < ids.size) labels = businessIds
+    businessIds.forEach((id, index) => identifiers.set(id, labels[index] ?? id))
+  }
+  return identifiers
+}
+
 export function formatQaCount(value: number | null | undefined) {
   return typeof value === "number" && Number.isSafeInteger(value) && value >= 0
     ? value.toLocaleString("en-US")

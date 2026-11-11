@@ -1,6 +1,10 @@
 import { View } from "@/components/ui/view"
 import { useQaAccelerator } from "@/hooks/use-qa-accelerator"
-import { groupQaProfiles } from "@ewatrade/utils/qa-profiles"
+import {
+  filterQaProfiles,
+  groupQaProfiles,
+  qaBusinessNameIdentifiers,
+} from "@ewatrade/utils/qa-profiles"
 import { useEffect, useMemo, useState } from "react"
 import { FlatList } from "react-native"
 import { BottomSearchFooter } from "./bottom-search-footer"
@@ -8,7 +12,6 @@ import {
   QaBusinessGroup,
   QaDomainIntro,
   QaProfilesEmpty,
-  filterQaProfiles,
   qaProfilesState,
 } from "./qa-account-chooser"
 
@@ -21,9 +24,27 @@ export function QaBusinessesScreen({ onClose }: { onClose: () => void }) {
   const qa = useQaAccelerator()
   const [search, setSearch] = useState("")
   const [footerHeight, setFooterHeight] = useState(140)
+  const groups = useMemo(() => groupQaProfiles(qa.profiles), [qa.profiles])
+  const directory = useMemo(() => {
+    const identifiers = qaBusinessNameIdentifiers(
+      groups.map(({ business }) => business),
+    )
+    return new Map(
+      groups.map(({ business, profiles }) => [
+        business.id,
+        {
+          identifier: identifiers.get(business.id),
+          singleProfile: profiles.length === 1,
+        },
+      ]),
+    )
+  }, [groups])
   const profiles = useMemo(
-    () => groupQaProfiles(filterQaProfiles(qa.profiles, search)),
-    [qa.profiles, search],
+    () =>
+      search.trim()
+        ? groupQaProfiles(filterQaProfiles(qa.profiles, search))
+        : groups,
+    [groups, qa.profiles, search],
   )
 
   // Auth owns navigation after selection (dismiss sign-in screens, then Home).
@@ -46,19 +67,23 @@ export function QaBusinessesScreen({ onClose }: { onClose: () => void }) {
         keyboardDismissMode="interactive"
         keyboardShouldPersistTaps="handled"
         keyExtractor={(group) => group.business.id}
+        showsVerticalScrollIndicator={false}
         ListEmptyComponent={
           <View className="px-5">{state ?? <QaProfilesEmpty qa={qa} />}</View>
         }
         ListHeaderComponent={
-          <View className="pb-2">
-            <QaDomainIntro
-              qaDomain={qa.authorization.qaDomain}
-              onLeave={onClose}
-            />
-          </View>
+          <QaDomainIntro
+            directory
+            qaDomain={qa.authorization.qaDomain}
+            onLeave={onClose}
+          />
         }
         renderItem={({ item }) => (
-          <QaBusinessGroup profiles={item.profiles} qa={qa} />
+          <QaBusinessGroup
+            directory={directory.get(item.business.id)}
+            profiles={item.profiles}
+            qa={qa}
+          />
         )}
       />
       <BottomSearchFooter

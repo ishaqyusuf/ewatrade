@@ -2,6 +2,7 @@ import { afterAll, expect, mock, test } from "bun:test"
 import { type ReactNode, createElement } from "react"
 import { renderToStaticMarkup } from "react-dom/server"
 
+mock.module("@/components/ui/icon", () => ({ Icon: () => null }))
 mock.module("@/components/ui/modal", () => ({
   Modal: () => null,
   useModal: () => ({}),
