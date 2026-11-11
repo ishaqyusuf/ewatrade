@@ -58,3 +58,23 @@ and Trigger deployment-profile checks offline. In each, the selected worker
 key matched its server profile. The earlier 20 profile tests and 51 scoped
 smoke tests passed on source commit `1a6315346` and were reused for this settings
 change. Production image generation was not invoked.
+
+## Development Catalog and Android reconnection
+
+Chrome signed into the existing Development image-test business. An unsaved
+Blue ceramic mug draft opened the Images editor and submitted one Generate with
+AI request. The request stayed queued. The existing Development worker handler
+processed that same job once and reached DELIVERED. The browser picked up the
+image in the draft and the allowance changed from 29 to 28. OpenAI reported 103
+text input tokens and 1,449 output tokens, estimated USD 0.043985. This verifies
+browser admission and result delivery with manual worker dispatch. Automatic
+Development queue dispatch remains unverified.
+
+The connected Galaxy S24 Ultra reported a network request failure. The app was
+in the foreground and both local host services were listening, but the USB ADB
+reverse list was empty. Direct requests from the device to localhost ports 3095
+and 3096 both reproduced connection refusal. The existing Android connection
+command with `--no-launch` restored the two mappings and verified the QA
+capability. Direct device HTTP probes then returned 200 for `/health` and
+`/status`. The app remained open, and the owner confirmed it worked again. The
+full Android Catalog smoke was not repeated for the connection repair.
