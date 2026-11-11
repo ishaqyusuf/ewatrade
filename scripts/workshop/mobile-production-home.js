@@ -368,7 +368,7 @@
         offset,
         Math.max(12, bounds.height - dockElement.offsetHeight),
       )
-      dockElement.style.setProperty("--dock-visible-bottom", `${contained}px`)
+      phone.style.setProperty("--dock-visible-bottom", `${contained}px`)
     }
 
     function schedule() {
