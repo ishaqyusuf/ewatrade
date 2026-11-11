@@ -8,6 +8,21 @@ import {
   emptyCatalogAiPolicy,
 } from "./catalog-ai-images"
 
+test("generation is available by default and honors an Oversight disable", () => {
+  const policy = emptyCatalogAiPolicy()
+  expect(catalogAiEffectivePolicy(policy, "business").enabled).toBe(true)
+  expect(
+    catalogAiCostMicros(
+      policy,
+      policy.generation.model,
+      { textInput: 100, imageInput: 200, output: 1000 },
+      new Date("2026-11-11T12:00:00Z"),
+    ),
+  ).toBe(32_100)
+  policy.generation.enabled = false
+  expect(catalogAiEffectivePolicy(policy, "business").enabled).toBe(false)
+})
+
 test("global pause cannot be bypassed by a business override; allowance changes do not fabricate usage", () => {
   const policy = emptyCatalogAiPolicy()
   policy.generation.enabled = true
@@ -48,6 +63,7 @@ test("monthly windows use UTC calendar boundaries, including year rollover", () 
 })
 test("a missing rate is unknown cost; latest effective version applies with integer rounding", () => {
   const policy = emptyCatalogAiPolicy()
+  policy.providerTokenRates.entries = []
   const at = new Date("2026-11-10T12:00:00Z")
   expect(
     catalogAiCostMicros(

@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "id": "2026-11-11-catalog-ai-reporting",
+  "tickets": ["H02"],
+  "summary": "Enable Catalog image generation by default under Oversight policy and expose token and protected output review reads.",
+  "noAssistantImpact": "Catalog AI generation remains an explicit merchant form action. New operator-only HTTP reads are outside the merchant router and assistant capabilities. No new model tool, mutation or client-selected authority.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "path": "docs/verification/2026-11-11-catalog-ai-activation-and-reporting.md",
+      "status": "updated"
+    },
+    {
+      "topic": "api",
+      "path": "docs/verification/2026-11-11-catalog-ai-activation-and-reporting.md",
+      "status": "updated"
+    },
+    {
+      "topic": "permissions",
+      "path": "docs/verification/2026-11-11-catalog-ai-activation-and-reporting.md",
+      "status": "updated"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "run",
+      "path": "docs/verification/2026-11-11-catalog-ai-activation-and-reporting.md",
+      "executed": true,
+      "result": "Focused provider/policy/key checks and real Development Postgres quota and reporting checks."
+    }
+  ]
+}

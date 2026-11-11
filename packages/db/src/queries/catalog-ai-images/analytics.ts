@@ -1,11 +1,86 @@
+import type { CatalogAiTokenUsage } from "@ewatrade/utils/catalog-ai-images"
 import type { PrismaClient } from "../../../generated/prisma/client"
 import { Prisma } from "../../../generated/prisma/client"
 import { runInOwnTransaction } from "../own-transaction"
+import type { DbClient } from "../types"
 import {
   CatalogAiError,
   loadCatalogAiPolicy,
   lockCatalogAiPolicy,
 } from "./policy"
+
+type CatalogAiTokenTotals = CatalogAiTokenUsage & {
+  reportedRequests: number
+  missingUsageRequests: number
+}
+
+export async function catalogAiTokenAnalytics(db: DbClient, now = new Date()) {
+  const periodDays = 30
+  const firstDay = new Date(
+    Date.UTC(
+      now.getUTCFullYear(),
+      now.getUTCMonth(),
+      now.getUTCDate() - periodDays + 1,
+    ),
+  )
+  const totals: CatalogAiTokenTotals = {
+    textInput: 0,
+    imageInput: 0,
+    output: 0,
+    reportedRequests: 0,
+    missingUsageRequests: 0,
+  }
+  const rows = await db.$queryRaw<
+    Array<{
+      date: string
+      textInput: bigint
+      imageInput: bigint
+      output: bigint
+      reportedRequests: number
+      missingUsageRequests: number
+    }>
+  >`
+    WITH attempts AS (
+      SELECT to_char(c."createdAt", 'YYYY-MM-DD') AS date,
+        CASE WHEN
+          jsonb_typeof(j.usage->'textInput') = 'number' AND j.usage->>'textInput' ~ '^[0-9]{1,15}$'
+          AND jsonb_typeof(j.usage->'imageInput') = 'number' AND j.usage->>'imageInput' ~ '^[0-9]{1,15}$'
+          AND jsonb_typeof(j.usage->'output') = 'number' AND j.usage->>'output' ~ '^[0-9]{1,15}$'
+        THEN j.usage END AS usage
+      FROM "CatalogAiProviderCost" c LEFT JOIN "CatalogAiImageJob" j ON j.id = c.id
+      WHERE c."createdAt" >= ${firstDay} AND c."createdAt" <= ${now}
+        AND (c."costMicros" IS DISTINCT FROM 0 OR j.usage IS NOT NULL OR c."providerRequestId" IS NOT NULL)
+    )
+    SELECT date, COALESCE(SUM((usage->>'textInput')::bigint), 0)::bigint AS "textInput",
+      COALESCE(SUM((usage->>'imageInput')::bigint), 0)::bigint AS "imageInput",
+      COALESCE(SUM((usage->>'output')::bigint), 0)::bigint AS "output",
+      COUNT(usage)::int AS "reportedRequests",
+      COUNT(*) FILTER (WHERE usage IS NULL)::int AS "missingUsageRequests"
+    FROM attempts GROUP BY date ORDER BY date
+  `
+  const byDay = new Map(rows.map((row) => [row.date, row]))
+  const daily = Array.from({ length: periodDays }, (_, index) => {
+    const date = new Date(firstDay.getTime() + index * 86_400_000)
+      .toISOString()
+      .slice(0, 10)
+    const row = byDay.get(date)
+    const day = {
+      date,
+      textInput: Number(row?.textInput ?? 0n),
+      imageInput: Number(row?.imageInput ?? 0n),
+      output: Number(row?.output ?? 0n),
+      reportedRequests: row?.reportedRequests ?? 0,
+      missingUsageRequests: row?.missingUsageRequests ?? 0,
+    }
+    totals.textInput += day.textInput
+    totals.imageInput += day.imageInput
+    totals.output += day.output
+    totals.reportedRequests += day.reportedRequests
+    totals.missingUsageRequests += day.missingUsageRequests
+    return day
+  })
+  return { periodDays, totals, daily }
+}
 
 export async function catalogAiAnalytics(db: PrismaClient) {
   const from = new Date(Date.now() - 30 * 86_400_000)

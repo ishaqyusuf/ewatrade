@@ -139,15 +139,16 @@ export const catalogAiPolicyWriteSchema = z
 export type CatalogAiPolicyWrite = z.infer<typeof catalogAiPolicyWriteSchema>
 
 export function emptyCatalogAiPolicy(): CatalogAiPolicy {
+  const model = "gpt-image-2.6-flare"
   return {
     schemaVersion: 1,
     revision: 0,
     generation: {
-      enabled: false,
+      enabled: true,
       paused: false,
       allowance: { period: "lifetime", images: 30 },
       outputCounts: [1],
-      model: "gpt-image-2.6-flare",
+      model,
       quality: "medium",
       concurrency: 1,
       dailyCapMicros: 10_000_000,
@@ -156,7 +157,26 @@ export function emptyCatalogAiPolicy(): CatalogAiPolicy {
     },
     businessOverrides: [],
     customerPriceCatalog: { revision: 0, entries: [] },
-    providerTokenRates: { revision: 0, entries: [] },
+    providerTokenRates: {
+      revision: 1,
+      entries: (
+        [
+          ["text_input", 5_000_000],
+          ["image_input", 8_000_000],
+          ["image_output", 30_000_000],
+        ] as const
+      ).map(([tokenClass, amountMicrosPerMillionTokens]) => ({
+        id: `openai-flare-2026-11-11-${tokenClass}`,
+        provider: "openai",
+        model,
+        currency: "USD",
+        tokenClass,
+        amountMicrosPerMillionTokens,
+        effectiveAt: "2026-11-11T00:00:00Z",
+        provenance:
+          "https://developers.openai.com/api/docs/models/gpt-image-2.6-flare",
+      })),
+    },
     balanceSnapshot: null,
     whatsapp: { source: "existing_outbound_policy", monthlyMessages: 1000 },
   }
@@ -192,11 +212,14 @@ export function catalogAiAllowanceLabel(
 ) {
   return `${remaining} generation${remaining === 1 ? "" : "s"} left${period === "monthly" ? " this month" : ""}`
 }
-export type CatalogAiTokenUsage = {
-  textInput: number
-  imageInput: number
-  output: number
-}
+export const catalogAiTokenUsageSchema = z
+  .object({
+    textInput: z.number().int().nonnegative(),
+    imageInput: z.number().int().nonnegative(),
+    output: z.number().int().nonnegative(),
+  })
+  .strict()
+export type CatalogAiTokenUsage = z.infer<typeof catalogAiTokenUsageSchema>
 export function catalogAiCostMicros(
   policy: CatalogAiPolicy,
   model: string,

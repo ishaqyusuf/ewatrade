@@ -699,6 +699,7 @@
     "packages/oversight": {
       "name": "@ewatrade/oversight",
       "dependencies": {
+        "@ewatrade/catalog": "workspace:*",
         "@ewatrade/db": "workspace:*",
         "@ewatrade/utils": "workspace:*",
         "hono": "4.13.9",

@@ -7,6 +7,7 @@
     "./verify-key": "./src/verify-key.ts"
   },
   "dependencies": {
+    "@ewatrade/catalog": "workspace:*",
     "@ewatrade/utils": "workspace:*",
     "@ewatrade/db": "workspace:*",
     "hono": "4.13.9",

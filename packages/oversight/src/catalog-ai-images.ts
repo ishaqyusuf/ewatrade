@@ -2,6 +2,7 @@ import type { PrismaClient } from "@ewatrade/db"
 import {
   CatalogAiError,
   catalogAiAnalytics,
+  catalogAiTokenAnalytics,
   catalogAiUsage,
   loadCatalogAiPolicy,
   readCatalogAiPolicy,
@@ -12,12 +13,14 @@ import { paymentNotificationBusinesses } from "@ewatrade/db/payment-report-notif
 import { catalogAiPolicyWriteSchema } from "@ewatrade/utils/catalog-ai-images"
 import { Hono } from "hono"
 import { z } from "zod"
+import { createCatalogAiLibraryRoutes } from "./catalog-ai-library"
 import { validOversightKey } from "./verify-key"
 export function createCatalogAiOversightRoutes(
   getDb: () => PrismaClient,
   allowWrites = false,
 ) {
   const app = new Hono()
+  app.route("/library", createCatalogAiLibraryRoutes(getDb))
   app.use("*", async (c, next) => {
     c.header("Cache-Control", "no-store")
     const write = c.req.method !== "GET"
@@ -80,6 +83,9 @@ export function createCatalogAiOversightRoutes(
     return c.json(await saveCatalogAiPolicy(getDb(), input.data))
   })
   app.get("/analytics", async (c) => c.json(await catalogAiAnalytics(getDb())))
+  app.get("/token-usage", async (c) =>
+    c.json(await catalogAiTokenAnalytics(getDb())),
+  )
   app.get("/businesses", async (c) => {
     const input = z
       .object({
