@@ -266,6 +266,7 @@ function ServiceDetailBody({ item }: { item: PublicCatalogItem }) {
         {hasMedia ? (
           <div className="sf-feature-service-detail__media">
             <CommerceGallery
+              key={chosen.length === 1 ? chosen[0]?.id : item.id}
               item={item}
               kind="service"
               optionPhotoUrl={optionPhotoUrl}

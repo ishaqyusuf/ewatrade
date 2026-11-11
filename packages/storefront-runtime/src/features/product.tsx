@@ -157,6 +157,7 @@ function ProductDetailBody({ item }: { item: PublicCatalogItem }) {
       <div className="sf-feature-product__grid">
         <div className="sf-feature-product__media">
           <CommerceGallery
+            key={option.id}
             item={item}
             kind="product"
             optionPhotoUrl={option.photoUrl}

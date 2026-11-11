@@ -62,6 +62,7 @@ export function PlatformProductBuy({
   return (
     <div className="pd-grid">
       <PlatformGallery
+        key={selected?.id ?? item.id}
         item={item}
         artwork={artwork}
         optionPhotoUrl={selected?.photoUrl}
