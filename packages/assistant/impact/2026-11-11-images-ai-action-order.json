@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "id": "2026-11-11-images-ai-action-order",
+  "tickets": ["H02"],
+  "summary": "Place Generate with AI first in the mobile Images add menu.",
+  "noAssistantImpact": "The change reorders existing buttons in the shared mobile editor.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/catalog-ai-image-generation.md"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "run",
+      "path": ".brain/features/catalog-ai-image-generation.md",
+      "executed": true,
+      "result": "Android 2 showed Generate with AI as the first action in the Images add menu."
+    }
+  ]
+}

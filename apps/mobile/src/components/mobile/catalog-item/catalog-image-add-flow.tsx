@@ -35,10 +35,10 @@ export const catalogImageTile = {
 } as const
 
 const sources = [
+  { id: "generate", label: "Generate with AI", icon: "Sparkles" },
   { id: "camera", label: "Take photo", icon: "Camera" },
   { id: "photos", label: "Choose from gallery", icon: "Image" },
   { id: "my-images", label: "From My Images", icon: "LayoutGrid" },
-  { id: "generate", label: "Generate with AI", icon: "Sparkles" },
 ] as const satisfies ReadonlyArray<{
   id: string
   label: string
