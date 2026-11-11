@@ -37,3 +37,24 @@ refuses the Production key in Preview. It also removes any inherited base or
 parent generation key. The existing trigger profile suite passed 20 tests with
 219 assertions. No credential is committed. Saved environment configuration takes
 effect when the corresponding API or worker is deployed with that configuration.
+
+## Confirmed environment settings
+
+The owner confirmed the two Chrome drafts. Both keys were created with only
+Images Request permissions, then stored directly in their matching ignored
+server profiles. The Development key retained its original value and label
+suffix. The three configured values were verified distinct without printing
+or comparing a hosted secret value. Every local profile file remains mode 0600.
+
+Vercel accepted both `CATALOG_IMAGE_OPENAI_API_KEY` Secret writes on the linked
+`ewatrade-api` project. One row shows Preview scoped to branch `preview`, and
+one row shows Production. Each form was populated from the corresponding
+server profile. The final Vercel list shows both rows. Existing deployments
+continue using their deployed configuration until a new deployment. No hosted
+API or Trigger worker deployment was run.
+
+The real Preview and Production profiles passed the root environment loader
+and Trigger deployment-profile checks offline. In each, the selected worker
+key matched its server profile. The earlier 20 profile tests and 51 scoped
+smoke tests passed on source commit `1a6315346` and were reused for this settings
+change. Production image generation was not invoked.
