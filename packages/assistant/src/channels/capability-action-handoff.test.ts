@@ -126,7 +126,6 @@ test("the exact app-planned write inventory stays planned without a native revie
     "inventory.custody.move",
     "inventory.package.transform",
     "sales.product.return",
-    "services.intake.create",
     "services.message.share",
     "services.quote.approve",
     "services.quote.reject",
@@ -157,7 +156,7 @@ test("the exact app-planned write inventory stays planned without a native revie
     })
 })
 
-test("laundry and shipments need both exact channel releases while app support stays planned", () => {
+test("laundry and shipments need both exact WhatsApp releases independently of app support", () => {
   const expected = [
     ["services.intake.create", "service_intake"],
     ["services.work.transition", "service_job_line_transition"],
@@ -172,11 +171,12 @@ test("laundry and shipments need both exact channel releases while app support s
     )
     if (!capability) throw Error(`Expected ${id}`)
     expect(capability.action).toBe(action)
-    expect(capability.rollout).toBe("planned")
+    const mobileIntake = id === "services.intake.create"
+    expect(capability.rollout).toBe(mobileIntake ? "source" : "planned")
     expect(capability.whatsapp).toEqual({
       mode: "native",
       rollout: "source",
-      aheadOfApp: true,
+      ...(!mobileIntake ? { aheadOfApp: true } : {}),
     })
     expect(classifyCapabilityAction(capability, environment)).toEqual({
       kind: "planned",

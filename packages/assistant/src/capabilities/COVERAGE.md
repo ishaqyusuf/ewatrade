@@ -59,7 +59,7 @@ Tickets refer to the Brain plan `.brain/plans/2026-10-09-assistant-business-oper
 | `services.message.context.read` | 1 | read | `readServiceMessageContext` | OWNER, ADMIN, MANAGER | Owner/Admin only | dashboard, mobile | planned | `serviceCommunications.manualMessageEditorContext` |
 | `services.message.original.read` | 1 | read | `readOriginalServiceMessage` | OWNER, ADMIN, MANAGER | Owner/Admin only | dashboard, mobile | planned | `serviceCommunications.manualMessageOriginal` |
 | `services.messages.read` | 1 | read | `readServiceMessages` | OWNER, ADMIN, MANAGER | Owner/Admin only | dashboard | planned | `serviceCommunications.listMessages` |
-| `services.intake.create` | 1 | write (`service_intake`) | `draftAction` | OWNER, ADMIN, MANAGER | Owner/Admin only | dashboard, mobile, whatsapp | planned | `services.createAndConfirmIntake` |
+| `services.intake.create` | 1 | write (`service_intake`) | `draftAction` | OWNER, ADMIN, MANAGER | Owner/Admin only | mobile, whatsapp | source | `services.createAndConfirmIntake` |
 | `finance.cash_count.record` | 1 | write (`cash_count_record`) | `draftAction` | OWNER, ADMIN | Owner/Admin only | dashboard, mobile | planned | `finance.recordCashCount` |
 | `finance.cash_accounts.read` | 1 | read | `readCashAccounts` | OWNER, ADMIN | Owner/Admin only | dashboard, mobile | planned | `finance.moneyAccounts` |
 | `finance.cash_counts.read` | 1 | read | `readCashCounts` | OWNER, ADMIN | Owner/Admin only | dashboard, mobile | planned | `finance.cashCounts` |
@@ -143,7 +143,7 @@ Tickets refer to the Brain plan `.brain/plans/2026-10-09-assistant-business-oper
 | `customers.read` | 1 | read | `readCustomer` | OWNER, ADMIN, MANAGER | read, read | dashboard, mobile, whatsapp | source | `customers.getById`, `customers.contact` |
 | `customers.create` | 1 | write (`customer_create`) | `draftAction` | OWNER, ADMIN, MANAGER | Owner/Admin only | dashboard, mobile, whatsapp | source | `customers.create` |
 | `catalog.product.create` | 1 | write (`product_create`) | `draftAction` | OWNER, ADMIN, MANAGER | catalog | dashboard, mobile, whatsapp | source | `catalog.createSimpleItem` |
-| `sales.order.record_simple` | 1 | write (`sale_record`) | `draftAction` | OWNER, ADMIN, MANAGER | orders, orders, orders, Owner/Admin only | dashboard, mobile, whatsapp | source | `orders.create`, `orders.recordPayment`, `orders.activity.add`, `assistant.saleOptions` |
+| `sales.order.record_simple` | 1 | write (`sale_record`) | `draftAction` | OWNER, ADMIN, MANAGER, CASHIER | orders, orders, orders, orders | dashboard, mobile, whatsapp | source | `orders.create`, `orders.recordPayment`, `orders.activity.add`, `assistant.saleOptions` |
 | `sales.order.create` | 1 | write (`order_create`) | `draftAction` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | orders | dashboard, mobile, whatsapp | source | `orders.create` |
 | `sales.payment.record` | 1 | write (`payment_record`) | `draftAction` | OWNER, ADMIN, MANAGER | orders | dashboard, mobile, whatsapp | source | `orders.recordPayment` |
 | `customers.update` | 1 | write (`customer_update`) | `draftAction` | OWNER, ADMIN, MANAGER | Owner/Admin only | dashboard, mobile, whatsapp | source | `customers.update` |
@@ -165,7 +165,7 @@ Tickets refer to the Brain plan `.brain/plans/2026-10-09-assistant-business-oper
 | `catalog.categories.attributes` | 1 | read | `readProductCategoryAttributes` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | read | dashboard, mobile, whatsapp | source | `catalog.categories.attributes` |
 | `catalog.page` | 1 | read | `readCatalogPage` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | read, read | dashboard, mobile, whatsapp | source | `catalog.listItemsPage`, `catalog.listDirectoryPage` |
 | `sales.order.prepare` | 1 | read | `prepareOrder` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | read, Owner/Admin only | dashboard, whatsapp | source | `catalog.listItemsPage`, `customers.listPage` |
-| `services.job.prepare` | 1 | read | `prepareServiceJob` | OWNER, ADMIN, MANAGER | read, Owner/Admin only | dashboard | source | `catalog.listItemsPage`, `customers.listPage` |
+| `services.job.prepare` | 1 | read | `prepareServiceJob` | OWNER, ADMIN, MANAGER | read, Owner/Admin only | dashboard, mobile | source | `catalog.listItemsPage`, `customers.listPage` |
 | `sales.orders.lookup` | 1 | read | `lookupOpenOrders` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | read | dashboard, mobile, whatsapp | source | `orders.lookupOpenPage` |
 | `inventory.stock.receive` | 1 | write (`stock_receive`) | `draftAction` | OWNER, ADMIN, MANAGER | stock, stock | dashboard, mobile, whatsapp | source | `inventory.postBalanceOperation`, `inventory.categorySuggestions` |
 | `inventory.stock.adjust` | 1 | write (`stock_adjust`) | `draftAction` | OWNER, ADMIN, MANAGER | stock | dashboard, mobile, whatsapp | source | `inventory.postBalanceOperation` |
@@ -417,7 +417,7 @@ track conversational evaluation separately from these source test links.
 | `assistant.pendingProposals` | query | Owner/Admin only | assistant | excluded | Assistant transport or a dedicated assistant flow. |
 | `assistant.responseLink` | mutation | read | assistant | excluded | Assistant transport or a dedicated assistant flow. |
 | `assistant.reviewLink` | mutation | read | assistant | excluded | Assistant transport or a dedicated assistant flow. |
-| `assistant.saleOptions` | query | Owner/Admin only | sales | supported | sales.order.record_simple |
+| `assistant.saleOptions` | query | orders | sales | supported | sales.order.record_simple |
 | `assistant.simpleExpenseOptions` | query | Owner/Admin only | assistant | excluded | Assistant transport or a dedicated assistant flow. |
 | `assistant.simpleTransferOptions` | query | Owner/Admin only | assistant | excluded | Assistant transport or a dedicated assistant flow. |
 | `assistant.start` | mutation | read | assistant | excluded | Assistant transport or a dedicated assistant flow. |
@@ -961,11 +961,11 @@ track conversational evaluation separately from these source test links.
 | `services.transitionLine` | mutation | Owner/Admin only | services | supported | services.work.transition |
 | `services.updateEvidenceUpload` | mutation | Owner/Admin only | services | planned | H04 |
 | `services.updateSettings` | mutation | Owner/Admin only | services | planned | G05 |
-| `setupAssistant.attachments.createIntent` | mutation | Owner/Admin only | assistant | excluded | Assistant transport or a dedicated assistant flow. |
-| `setupAssistant.attachments.list` | query | Owner/Admin only | assistant | excluded | Assistant transport or a dedicated assistant flow. |
-| `setupAssistant.attachments.pending` | query | Owner/Admin only | assistant | excluded | Assistant transport or a dedicated assistant flow. |
-| `setupAssistant.attachments.remove` | mutation | Owner/Admin only | assistant | excluded | Assistant transport or a dedicated assistant flow. |
-| `setupAssistant.attachments.retry` | mutation | Owner/Admin only | assistant | excluded | Assistant transport or a dedicated assistant flow. |
+| `setupAssistant.attachments.createIntent` | mutation | read | assistant | excluded | Assistant transport or a dedicated assistant flow. |
+| `setupAssistant.attachments.list` | query | read | assistant | excluded | Assistant transport or a dedicated assistant flow. |
+| `setupAssistant.attachments.pending` | query | read | assistant | excluded | Assistant transport or a dedicated assistant flow. |
+| `setupAssistant.attachments.remove` | mutation | read | assistant | excluded | Assistant transport or a dedicated assistant flow. |
+| `setupAssistant.attachments.retry` | mutation | read | assistant | excluded | Assistant transport or a dedicated assistant flow. |
 | `setupAssistant.attachments.voiceCapabilities` | query | Owner/Admin only | assistant | excluded | Assistant transport or a dedicated assistant flow. |
 | `setupAssistant.attachments.voiceUsage` | query | Owner/Admin only | assistant | excluded | Assistant transport or a dedicated assistant flow. |
 | `setupAssistant.begin` | mutation | Owner/Admin only | assistant | excluded | Assistant transport or a dedicated assistant flow. |

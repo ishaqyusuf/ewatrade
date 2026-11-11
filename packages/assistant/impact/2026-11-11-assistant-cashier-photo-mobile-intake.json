@@ -1,0 +1,110 @@
+{
+  "version": 1,
+  "id": "2026-11-11-assistant-cashier-photo-mobile-intake",
+  "tickets": ["D04", "H02"],
+  "summary": "Allow assigned app Cashiers to record a simple sale with its payment, complete verified General chat photos at upload, and prepare a signed Service intake on mobile.",
+  "capabilities": [
+    {
+      "id": "sales.order.record_simple",
+      "change": "changed",
+      "rollout": "source",
+      "note": "App Cashiers need current Store order authority. Payment is bounded to the same sale and an existing account. Linked WhatsApp retains its manager role ceiling."
+    },
+    {
+      "id": "services.job.prepare",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Mobile uses the existing saved service and customer resolver."
+    },
+    {
+      "id": "services.intake.create",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Mobile signs the existing canonical intake action. Dashboard keeps its form and WhatsApp keeps both release gates."
+    }
+  ],
+  "procedures": [
+    {
+      "path": "assistant.saleOptions",
+      "status": "supported",
+      "reason": "Assigned Store order authority and the simple-sale role check control access to scoped receiving accounts and customer choices."
+    },
+    {
+      "path": "setupAssistant.attachments.createIntent",
+      "status": "excluded",
+      "reason": "Actor-owned client upload transport."
+    },
+    {
+      "path": "setupAssistant.attachments.list",
+      "status": "excluded",
+      "reason": "Actor-owned client attachment status."
+    },
+    {
+      "path": "setupAssistant.attachments.pending",
+      "status": "excluded",
+      "reason": "Actor-owned client attachment recovery."
+    },
+    {
+      "path": "setupAssistant.attachments.remove",
+      "status": "excluded",
+      "reason": "Actor-owned client attachment removal."
+    },
+    {
+      "path": "setupAssistant.attachments.retry",
+      "status": "excluded",
+      "reason": "Actor-owned client attachment retry."
+    }
+  ],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/assistant-simple-sales.md"
+    },
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/assistant-service-intake.md"
+    },
+    {
+      "topic": "permissions",
+      "status": "local_only",
+      "path": ".brain/api/permissions.md"
+    },
+    {
+      "topic": "api",
+      "status": "local_only",
+      "path": ".brain/api/contracts.md"
+    },
+    {
+      "topic": "decision",
+      "status": "local_only",
+      "path": ".brain/decisions/2026-11-11-assistant-general-photo-readiness.md"
+    },
+    {
+      "topic": "capability",
+      "status": "updated",
+      "path": "packages/assistant/src/capabilities/COVERAGE.md"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "apps/api/src/assistant/general-simple-sale-composition.test.ts",
+      "executed": true,
+      "result": "Assigned Cashier uses the exact composite payment. Foreign assignment and standalone payment are denied."
+    },
+    {
+      "kind": "test",
+      "path": "apps/api/src/assistant/general-service-job-access.test.ts",
+      "executed": true,
+      "result": "Mobile receives the service job preparer. The signed draft retains exact saved choices and refuses unresolved inputs."
+    },
+    {
+      "kind": "run",
+      "path": "docs/verification/2026-11-09-four-business-acceptance-run.md",
+      "executed": true,
+      "result": "Local mobile HTTP rerun saved J07 ORD-005/006 and L03 ORD-010. Confirmations replayed the same receipts. Concurrent receipt upload returned READY without a worker."
+    }
+  ]
+}

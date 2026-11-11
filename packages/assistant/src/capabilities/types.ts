@@ -43,6 +43,7 @@ type CapabilityBase = {
   whatsapp?: {
     mode: "native" | "app_review"
     rollout: CapabilityRollout
+    roles?: readonly CapabilityRole[]
     /** Released to WhatsApp through `rollout` while the app keeps it planned. */
     aheadOfApp?: true
   }

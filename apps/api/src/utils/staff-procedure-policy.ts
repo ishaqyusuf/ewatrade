@@ -37,6 +37,8 @@ const reads = new Set([
   "assistant.conversations",
   "assistant.conversation",
   "assistant.allowance",
+  "setupAssistant.attachments.pending",
+  "setupAssistant.attachments.list",
   "tenant.current",
   "services.getSettings",
   "services.assistantJobCard",
@@ -97,6 +99,7 @@ const reads = new Set([
   "storefrontRequests.order",
 ])
 const orders = new Set([
+  "assistant.saleOptions",
   "businessBanking.createPaymentLink",
   "businessBanking.reviewReport",
   "customerMessages.prepareOpen",
@@ -206,6 +209,10 @@ export function staffProcedureAction(
       "assistant.responseLink",
       "assistant.decideReviewLink",
       "assistant.editReviewLink",
+      // Personal files are scoped to the actor's active Assistant conversation.
+      "setupAssistant.attachments.createIntent",
+      "setupAssistant.attachments.retry",
+      "setupAssistant.attachments.remove",
       // Personal linking controls; repository rechecks fresh actor and Store authority.
       "assistantChannels.createWhatsAppLink",
       "assistantChannels.confirmWhatsAppLink",

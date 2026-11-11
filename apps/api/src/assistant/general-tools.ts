@@ -229,7 +229,10 @@ import {
   generalServiceIntakeOptionsInput,
   readGeneralServiceIntakeOptions,
 } from "./general-service-intake-options"
-import { prepareGeneralServiceJob } from "./general-service-job-draft"
+import {
+  prepareGeneralServiceJob,
+  serviceIntakeFromJobDraft,
+} from "./general-service-job-draft"
 import {
   serviceMessageModelContext,
   serviceMessageModelOriginal,
@@ -1433,6 +1436,42 @@ export function createGeneralTools(
             }
           const result = await prepareGeneralServiceJob(fresh, input)
           if (result.status !== "ready") return result
+          if (serviceJobCardShown) return { status: "card_ready" }
+          if (fresh.requestHeaders?.get("x-assistant-client") !== "dashboard") {
+            const intake = serviceIntakeFromJobDraft(result.draft)
+            if (!intake)
+              return {
+                status: "needs_changes",
+                issues: [
+                  result.draft.customerIssue,
+                  ...(result.draft.issues ?? []),
+                ].filter(Boolean),
+                instruction:
+                  "Explain what needs a saved choice or use the Services form for quote-required work. Do not draft a sale instead.",
+              }
+            serviceJobCardShown = true
+            try {
+              const proposal = await draftGeneralProposal(
+                fresh,
+                conversationId,
+                intake,
+              )
+              onProposal(proposal.proposalId, {
+                proposalId: proposal.proposalId,
+                revision: proposal.revision,
+                payloadHash: proposalDigest(proposal.payload),
+              })
+              observeFirstDraft("service", intake.lines.length, 0)
+              return {
+                status: "card_ready",
+                instruction:
+                  "One service intake is ready for review. Say Ready to review and stop.",
+              }
+            } catch (error) {
+              serviceJobCardShown = false
+              throw error
+            }
+          }
           serviceJobCardShown = true
           observeFirstDraft(
             "service",

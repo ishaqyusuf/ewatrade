@@ -31,7 +31,9 @@ export function assertLinkedAssistantRead(
     !capability.clients.includes("whatsapp") ||
     !generalCapabilityEnabled(capability, "whatsapp") ||
     !whatsAppCapabilityEnabled(capability, environment) ||
-    !capability.policy.roles.includes(input.role as CapabilityRole) ||
+    !(capability.whatsapp?.roles ?? capability.policy.roles).includes(
+      input.role as CapabilityRole,
+    ) ||
     (!capability.procedures.includes(input.path) && !supportRead)
   )
     throw new TRPCError({

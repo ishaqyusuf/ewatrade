@@ -74,7 +74,13 @@ export function classifyCapabilityAction(
       whatsAppCapabilityEnabled(capability, environment)
       ? { kind: "native_review" }
       : { kind: "planned" }
-  if (!capability.clients.includes("dashboard")) return { kind: "unavailable" }
+  if (!capability.clients.includes("dashboard")) {
+    if (!hasCompleteReview || capability.whatsapp?.mode !== "native")
+      return { kind: "unavailable" }
+    return whatsAppCapabilityEnabled(capability, environment)
+      ? { kind: "native_review" }
+      : { kind: "planned" }
+  }
   if (capability.domain === "staff" || capability.id.startsWith("settings."))
     return { kind: "app_review", reason: "sensitive_app_review" }
   if (hasCompleteReview && whatsAppCapabilityEnabled(capability, environment))

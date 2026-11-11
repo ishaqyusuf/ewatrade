@@ -86,7 +86,8 @@ test("browser composite dependencies retain parent and exact current canonical a
   for (const dependency of ["order_create", "payment_record"] as const)
     expect(() =>
       assertGeneralCompositeDependency(cashier.ctx, "sale_record", dependency),
-    ).toThrow()
+    ).not.toThrow()
+  expect(() => assertGeneralAction(cashier.ctx, "payment_record")).toThrow()
   expect(cashier.touched).toEqual([])
   const lostStore = context()
   lostStore.ctx.tenantContext.activeStore = null
@@ -133,6 +134,33 @@ test("composition rejects unrelated dependencies and parents without broadening 
       ASSISTANT_WHATSAPP_WRITES_ENABLED: "false",
     }),
   ).toBe(false)
+})
+
+test("cashier simple-sale payment requires a current assignment at the exact Store", () => {
+  const { ctx } = context("CASHIER")
+  const access: NonNullable<
+    GeneralTransactionContext["tenantContext"]["staffAccess"]
+  > = {
+    businessRole: "CASHIER",
+    mode: "SCOPED",
+    status: "ACTIVE",
+    catalogEditor: false,
+    assignments: [{ storeId: "store", role: "CASHIER", status: "ACTIVE" }],
+  }
+  ctx.tenantContext.staffAccess = access
+  expect(
+    assertGeneralCompositeDependency(ctx, "sale_record", "payment_record")
+      .storeId,
+  ).toBe("store")
+  ctx.tenantContext.staffAccess = {
+    ...access,
+    assignments: [
+      { storeId: "other-store", role: "CASHIER", status: "ACTIVE" },
+    ],
+  }
+  expect(() =>
+    assertGeneralCompositeDependency(ctx, "sale_record", "payment_record"),
+  ).toThrow()
 })
 
 test("internal sale execution refuses non-generated order shapes before canonical effects", async () => {
@@ -211,15 +239,15 @@ test("partial order drafts stay editable and cannot acquire confirmation or touc
   expect(generalProposalForApp(row).approvalToken).toBeUndefined()
 })
 
-test("standalone initial-payment execution and composite execution still refuse a disallowed parent actor", async () => {
+test("standalone initial-payment execution refuses a cashier who can record payment on an exact simple sale", async () => {
   const { ctx, touched } = context("CASHIER")
   await expect(
     orderCreate.execute(ctx, order, "standalone-key"),
   ).rejects.toThrow()
   await expect(
     executeSimpleSaleOrder(ctx, order, "composite-key"),
-  ).rejects.toThrow()
-  expect(touched).toEqual([])
+  ).rejects.toThrow("Unexpected domain effect")
+  expect(touched).not.toEqual([])
 })
 
 test("valid generated sale and ordinary browser order reach the same canonical transaction boundary", async () => {

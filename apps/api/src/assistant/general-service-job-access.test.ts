@@ -1,8 +1,9 @@
 import { expect, test } from "bun:test"
 import type { GeneralContext } from "./general-context"
+import { serviceIntakeFromJobDraft } from "./general-service-job-draft"
 import { createGeneralTools } from "./general-tools"
 
-test("the form-only job preparer is available to a dashboard owner without enabling signed intake or WhatsApp writes", () => {
+test("the service job preparer is available to Dashboard and mobile owners", () => {
   const previous = process.env.ASSISTANT_APPROVAL_SIGNING_KEY
   const previousPreparation = process.env.ASSISTANT_COMMERCE_PREPARATION_ENABLED
   process.env.ASSISTANT_APPROVAL_SIGNING_KEY = "k".repeat(32)
@@ -47,7 +48,7 @@ test("the form-only job preparer is available to a dashboard owner without enabl
           () => {},
         ),
       ),
-    ).not.toContain("prepareServiceJob")
+    ).toContain("prepareServiceJob")
     process.env.ASSISTANT_COMMERCE_PREPARATION_ENABLED = "false"
     const fallback = Object.keys(
       createGeneralTools(
@@ -74,4 +75,42 @@ test("the form-only job preparer is available to a dashboard owner without enabl
     else
       process.env.ASSISTANT_COMMERCE_PREPARATION_ENABLED = previousPreparation
   }
+})
+
+test("mobile job preparation keeps exact saved choices and refuses unresolved prices", () => {
+  const line = {
+    name: "Jalabia · Wash & iron",
+    offeringId: "laundry-offering",
+    quantity: "20",
+    unitPriceMinor: 40000,
+  }
+  const draft = {
+    origin: { tenantId: "freshcare", storeId: "main" },
+    currencyCode: "NGN",
+    customer: {
+      id: "saved-customer",
+      name: "QA Customer",
+      phone: null,
+      email: null,
+    },
+    lines: [line],
+    assumptions: [],
+  }
+  expect(serviceIntakeFromJobDraft(draft)).toEqual({
+    action: "service_intake",
+    customerId: "saved-customer",
+    lines: [{ offeringId: "laundry-offering", quantity: "20" }],
+  })
+  expect(
+    serviceIntakeFromJobDraft({
+      ...draft,
+      customerIssue: "Ambiguous customer",
+    }),
+  ).toBeNull()
+  expect(
+    serviceIntakeFromJobDraft({
+      ...draft,
+      lines: [{ ...line, quoteRequired: true, unitPriceMinor: undefined }],
+    }),
+  ).toBeNull()
 })

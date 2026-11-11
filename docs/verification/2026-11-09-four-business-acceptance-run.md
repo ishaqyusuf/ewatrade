@@ -486,3 +486,44 @@ The 9 November entries recorded older Mama Bisi web/backend evidence for J07
 and an earlier FreshCare ORD-006 receipt for L03. Both were initially
 `NOT_ASSESSED` in the launch register. Those historical references remain
 alongside this local result.
+
+## Runtime run 9 — J07 and L03 repair
+
+11 November 2026, local Development with existing synthetic Jawdah Poultry
+Acceptance and FreshCare Demo profiles. The standard mobile Assistant HTTP
+transport used a fresh loopback API on port 3195. This avoided a shared API
+process that had failed to reload after a concurrent Prisma generation.
+
+- **J07.** The assigned cashier recorded **ORD-005** as Walk-in with ₦5,000
+  cash on a ₦20,000 sale, and **ORD-006** for the selected saved customer with
+  ₦12,000 paid in full. Each order has one Shop cash payment and the cashier's
+  actor ID. Two concurrent PUTs of the same verified synthetic photo returned
+  `READY` for the same attachment. The row had zero processing attempts. The
+  saved ORD-006 attachment digest matched the upload. Both confirmation replays
+  and reopened chats returned the original receipts. Sale turns had zero model
+  steps. The permission change covers same-sale payments using an existing
+  account. Standalone Assistant payment, Finance setup and new-account
+  creation retain their own authority.
+- **Photo retry hardening.** A second fresh local API on port 3196 verified two
+  concurrent uploads and a protected read of the original bytes after the final
+  retry change. The unused test attachment was removed.
+- **L03.** Live DeepSeek Flash used the service job preparer in two steps
+  (92,182 recorded tokens) and produced one `service_intake` proposal. One
+  confirmation created **ORD-010**, one confirmed intake and one linked job.
+  The saved customer and 20 Jalabia · Wash & iron at ₦400 each survived
+  confirmation. The total was ₦8,000, paid ₦0, with no customer notification.
+  Reopening the chat and reading the protected intake returned the original
+  receipt. Replaying confirmation returned the same result.
+
+These checks resolve the specific local failures in run 8. Native UI evidence
+and the remaining J07 WhatsApp checks are still needed for launch acceptance.
+Run 8 retains the original failures and Dashboard receipts.
+
+Scoped fast verification passed 285 tests and 1,820 assertions. The focused
+Assistant, staff policy, channel, mobile receipt and booking suite passed 244
+tests and 1,936 assertions. Coverage and impact gates passed. Five failures in
+the broader phase fixture suite also reproduced on the archived baseline
+`ed3e7f29b`. They concern D04 timestamp attribution, native money rendering,
+native cash/day navigation, the raw Service payment fixture and the Service
+Request tool fixture. Lockfile SHA-256
+`d46df37ad728068b27917a729b0dde05013583519c802c51a7ee5c615e0d9f65`.

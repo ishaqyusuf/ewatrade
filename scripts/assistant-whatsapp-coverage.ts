@@ -198,7 +198,8 @@ const lines = [
         : "native"
     const classified = classification(capability)
     const channelRollout = capability.whatsapp?.rollout ?? "planned"
-    return `| ${capability.id} | ${capability.mode} | ${capability.procedures.join(", ")} | ${capability.policy.roles.join(", ")} | ${capability.scope} | ${capability.rollout} | ${classified.current} | ${channelRollout} | ${classified.reason} | ${target} candidate | ${capability.tests.join(", ")} | ${channelTests(capability).join(", ")} | ${classified.acceptance} |`
+    const roles = capability.whatsapp?.roles ?? capability.policy.roles
+    return `| ${capability.id} | ${capability.mode} | ${capability.procedures.join(", ")} | ${roles.join(", ")} | ${capability.scope} | ${capability.rollout} | ${classified.current} | ${channelRollout} | ${classified.reason} | ${target} candidate | ${capability.tests.join(", ")} | ${channelTests(capability).join(", ")} | ${classified.acceptance} |`
   }),
   "",
   "Local client lifecycle references: apps/dashboard/src/components/assistant-whatsapp/connect-whatsapp.mounted.test.ts; apps/mobile/src/components/mobile/assistant-whatsapp/screen.mounted.test.ts; packages/assistant/evaluations/whatsapp-chat-attachment-switch.test.ts; apps/dashboard/src/components/product-assistant/product-form-resume.mounted.test.ts. These mount actual client orchestration with synthetic boundary responses; they do not certify authenticated browser/device or live Meta acceptance.",

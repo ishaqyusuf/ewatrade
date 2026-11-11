@@ -63,7 +63,13 @@ export function assistantAttachmentRequestId(
 ) {
   return `voice_${createHash("sha256")
     .update(
-      [scope.tenantId, scope.storeId, scope.userId, conversationId, clientRequestId].join("\n"),
+      [
+        scope.tenantId,
+        scope.storeId,
+        scope.userId,
+        conversationId,
+        clientRequestId,
+      ].join("\n"),
     )
     .digest("hex")
     .slice(0, 48)}`
@@ -269,7 +275,7 @@ export async function pinAssistantAttachmentStorage(
   })
 }
 
-/** PENDING_UPLOAD → UPLOADED once; a replay of the same bytes is a no-op. */
+/** Verified general-chat photos are ready as soon as their original is stored. */
 export async function markAssistantAttachmentUploaded(
   db: DbClient,
   input: {
@@ -278,6 +284,7 @@ export async function markAssistantAttachmentUploaded(
     storageStoreId: string | null
     storagePath: string
     durationMs?: number
+    readyGeneralImage?: true
     now?: Date
   },
 ) {
@@ -286,6 +293,9 @@ export async function markAssistantAttachmentUploaded(
     where: {
       id: input.attachmentId,
       conversation: {
+        ...(input.readyGeneralImage
+          ? { purpose: "GENERAL", status: "ACTIVE" }
+          : {}),
         owner: {
           accountPrivacyRequests: {
             none: { status: { in: ["PROCESSING", "COMPLETED"] } },
@@ -297,9 +307,13 @@ export async function markAssistantAttachmentUploaded(
       storagePath: input.storagePath,
       status: "PENDING_UPLOAD",
       uploadExpiresAt: { gt: now },
+      ...(input.readyGeneralImage
+        ? { kind: "IMAGE", retentionUntil: { gt: now } }
+        : {}),
     },
     data: {
-      status: "UPLOADED",
+      status: input.readyGeneralImage ? "READY" : "UPLOADED",
+      ...(input.readyGeneralImage ? { processedAt: now } : {}),
       storageProvider: input.storageProvider,
       storageStoreId: input.storageStoreId,
       storagePath: input.storagePath,

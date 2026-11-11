@@ -5,6 +5,7 @@ import {
   serviceJobDraftSchema,
   serviceNameKey,
 } from "@ewatrade/assistant/general/contracts"
+import type { ServiceIntakeAction } from "@ewatrade/assistant/general/service-intake"
 import { createGeneralDomainCaller } from "./general-callers"
 import { type GeneralContext, requireGeneralScope } from "./general-context"
 import { recordPreparation } from "./preparation-observability"
@@ -114,4 +115,34 @@ export async function prepareGeneralServiceJob(
       .length,
   })
   return { status: "ready" as const, draft }
+}
+
+/** Mobile review can sign only saved, fixed-price offerings. */
+export function serviceIntakeFromJobDraft(draft: ServiceJobDraft) {
+  if (draft.customerIssue) return null
+  const lines: ServiceIntakeAction["lines"] = []
+  for (const line of draft.lines) {
+    if (
+      !line.offeringId ||
+      line.resolution ||
+      line.quoteRequired ||
+      line.unitPriceMinor === undefined
+    )
+      return null
+    lines.push({ offeringId: line.offeringId, quantity: line.quantity })
+  }
+  const instructions = [draft.notes, ...draft.assumptions]
+    .filter(Boolean)
+    .join("\n")
+  const payload: ServiceIntakeAction = {
+    action: "service_intake",
+    lines,
+    ...(draft.customer?.id
+      ? { customerId: draft.customer.id }
+      : draft.customer
+        ? { customerName: draft.customer.name }
+        : {}),
+    ...(instructions ? { instructions } : {}),
+  }
+  return payload
 }

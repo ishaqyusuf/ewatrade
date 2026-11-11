@@ -468,7 +468,10 @@ function assertCapabilityDomainAuthority(
     assertCanManageSalesOperations(tenant.membership.role)
   }
   const role = normalizeRole(tenant.membership.role)
-  if (!role || !capability.policy.roles.includes(role as CapabilityRole))
+  const roles =
+    (isLinkedAssistantIdentity(ctx.session) && capability.whatsapp?.roles) ||
+    capability.policy.roles
+  if (!role || !roles.includes(role as CapabilityRole))
     throw new TRPCError({
       code: "FORBIDDEN",
       message: ["CASHIER", "OPERATOR"].includes(role ?? "")
@@ -555,7 +558,7 @@ export function assertGeneralCompositeDependency(
       code: "FORBIDDEN",
       message: "Unsupported assistant composition.",
     })
-  assertGeneralAction(ctx, "sale_record")
+  const scope = assertGeneralAction(ctx, "sale_record")
   if (dependency !== "order_create" && dependency !== "payment_record")
     throw new TRPCError({
       code: "FORBIDDEN",
@@ -567,6 +570,15 @@ export function assertGeneralCompositeDependency(
       code: "FORBIDDEN",
       message: "The assistant can't do this yet.",
     })
+  // The parent already checks the Store's orders.recordPayment permission.
+  // Cashiers can record the receipt inside this sale's transaction.
+  if (
+    dependency === "payment_record" &&
+    normalizeRole(ctx.tenantContext.membership.role) === "CASHIER"
+  ) {
+    assertCanOperateOrders(ctx.tenantContext.membership.role)
+    return scope
+  }
   return assertCapabilityAuthority(ctx, capability)
 }
 

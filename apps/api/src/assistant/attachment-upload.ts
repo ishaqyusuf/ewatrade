@@ -142,39 +142,71 @@ export function registerAssistantAttachmentRoutes(
           }
         }
         const storage = setupAttachmentStorage(scope.dataClassification)
+        const target = setupAttachmentTarget(row)
+        const expectedPath = assistantAttachmentStoragePath(target)
+        const completedUpload = async () => {
+          const current = await readAssistantAttachment(
+            db,
+            scope,
+            row.id,
+          ).catch((error: unknown) => {
+            if (error instanceof AssistantAttachmentError) return null
+            throw error
+          })
+          if (
+            current?.storagePath === expectedPath &&
+            current.storageProvider === storage.provider &&
+            current.storageStoreId === storage.storeId &&
+            current.status !== "PENDING_UPLOAD"
+          )
+            return context.json({
+              attachmentId: row.id,
+              status: current.status,
+            })
+        }
         if (
           !storage.storeId ||
           !(await pinAssistantAttachmentStorage(db, scope, {
             attachmentId: row.id,
             storageProvider: storage.provider,
             storageStoreId: storage.storeId,
-            storagePath: assistantAttachmentStoragePath(
-              setupAttachmentTarget(row),
-            ),
+            storagePath: expectedPath,
           }))
         )
-          return refuse(
-            context,
-            409,
-            "UPLOAD_EXPIRED",
-            "This upload is no longer available.",
+          return (
+            (await completedUpload()) ??
+            refuse(
+              context,
+              409,
+              "UPLOAD_EXPIRED",
+              "This upload is no longer available.",
+            )
           )
         const { storagePath } = await storage.stage({
-          target: setupAttachmentTarget(row),
+          target,
           bytes,
           abortSignal: context.req.raw.signal,
         })
+        const readyGeneralImage =
+          row.kind === "IMAGE" &&
+          (
+            await db.assistantConversation.findUnique({
+              where: { id: row.conversationId },
+              select: { purpose: true },
+            })
+          )?.purpose === "GENERAL"
         const saved = await markAssistantAttachmentUploaded(db, {
           attachmentId: row.id,
           storageProvider: storage.provider,
           storageStoreId: storage.storeId,
           storagePath,
           durationMs,
+          ...(readyGeneralImage ? { readyGeneralImage: true } : {}),
         })
         if (!saved) {
-          await storage
-            .remove({ target: setupAttachmentTarget(row) })
-            .catch(() => undefined)
+          const replay = await completedUpload()
+          if (replay) return replay
+          await storage.remove({ target }).catch(() => undefined)
           return refuse(
             context,
             409,
@@ -182,12 +214,17 @@ export function registerAssistantAttachmentRoutes(
             "This recording was removed or its upload expired.",
           )
         }
-        // Stored and recorded: a dispatch failure is recovered by the sweep.
-        await enqueueAssistantAttachmentProcessing(
-          row.id,
-          analyticsOrigin,
-        ).catch(() => undefined)
-        return context.json({ attachmentId: row.id, status: "UPLOADED" })
+        if (!readyGeneralImage) {
+          // Stored and recorded: a dispatch failure is recovered by the sweep.
+          await enqueueAssistantAttachmentProcessing(
+            row.id,
+            analyticsOrigin,
+          ).catch(() => undefined)
+        }
+        return context.json({
+          attachmentId: row.id,
+          status: readyGeneralImage ? "READY" : "UPLOADED",
+        })
       } catch (error) {
         return mapError(context, error)
       }
