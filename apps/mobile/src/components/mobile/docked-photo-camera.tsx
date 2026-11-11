@@ -17,12 +17,14 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 const SHUTTER = 72
+// Room the bottom control row takes, kept clear of the permission prompt.
+const CONTROLS = SHUTTER + 32
 
 /**
- * Small live camera docked at the top of the current screen, in place of the
- * full-screen system camera. One tap on the round shutter takes the photo and
- * hands it over; the caller closes the camera. Without camera access it offers
- * the phone's photos instead.
+ * Live camera docked over the lower part of the current screen, in place of
+ * the full-screen system camera. One tap on the round shutter takes the photo
+ * and hands it over; the caller closes the camera. Without camera access it
+ * offers the phone's photos instead.
  */
 export function DockedPhotoCamera({
   open,
@@ -72,6 +74,7 @@ function DockedPhotoCameraBody({
   const [ready, setReady] = useState(false)
   const [busy, setBusy] = useState(false)
   const [torch, setTorch] = useState(false)
+  const [facing, setFacing] = useState<"back" | "front">("back")
   const [error, setError] = useState("")
   const camera = useRef<CameraView>(null)
   const active = useRef(true)
@@ -130,89 +133,158 @@ function DockedPhotoCameraBody({
         onPress={onClose}
         noRipple
         transition={false}
-        style={{
-          backgroundColor: colors.overlay,
-          bottom: 0,
-          left: 0,
-          position: "absolute",
-          right: 0,
-          top: 0,
-        }}
+        style={{ flex: 1 }}
       />
       <View
         accessibilityViewIsModal
-        style={{
-          height: Math.max(260, Math.round(height / 3)),
-          marginHorizontal: 12,
-          marginTop: insets.top + 12,
-        }}
+        className="overflow-hidden rounded-t-[20px] bg-overlay"
+        style={{ height: Math.round(height * 0.62) }}
       >
-        <View className="flex-1 overflow-hidden rounded-[24px] bg-overlay">
-          {live ? (
-            <CameraView
-              ref={camera}
-              style={{ flex: 1 }}
-              facing="back"
-              mode="picture"
-              enableTorch={torch}
-              onCameraReady={() => setReady(true)}
-              onMountError={() => {
-                setReady(false)
-                setError("The camera is unavailable. Choose a photo instead.")
-              }}
-            />
-          ) : (
-            <View className="flex-1 items-center justify-center gap-3 px-6">
-              <Text className="text-center text-sm text-cream">
-                {!permission
-                  ? "Checking camera access…"
-                  : "Allow camera access to take a product photo."}
-              </Text>
-              {permission && !permission.granted ? (
-                <ActionButton
-                  onPress={
-                    permission.canAskAgain
-                      ? () => void requestPermission().catch(() => {})
-                      : () => void Linking.openSettings()
-                  }
-                >
-                  {permission.canAskAgain
-                    ? "Allow camera"
-                    : "Open camera settings"}
-                </ActionButton>
-              ) : null}
-              {permission && !permission.granted ? (
-                <ActionButton variant="outline" onPress={onChoosePhoto}>
-                  Choose from phone
-                </ActionButton>
-              ) : null}
-            </View>
-          )}
+        {live ? (
+          <CameraView
+            ref={camera}
+            style={{ flex: 1 }}
+            facing={facing}
+            mode="picture"
+            enableTorch={torch}
+            onCameraReady={() => setReady(true)}
+            onMountError={() => {
+              setReady(false)
+              setError("The camera is unavailable. Choose a photo instead.")
+            }}
+          />
+        ) : (
           <View
-            className="absolute inset-x-0 top-0 flex-row items-start justify-between p-3"
+            className="flex-1 items-center justify-center gap-3 px-6"
+            style={{ paddingBottom: CONTROLS + insets.bottom }}
+          >
+            <Text className="text-center text-sm text-cream">
+              {!permission
+                ? "Checking camera access…"
+                : "Allow camera access to take a product photo."}
+            </Text>
+            {permission && !permission.granted ? (
+              <ActionButton
+                onPress={
+                  permission.canAskAgain
+                    ? () => void requestPermission().catch(() => {})
+                    : () => void Linking.openSettings()
+                }
+              >
+                {permission.canAskAgain
+                  ? "Allow camera"
+                  : "Open camera settings"}
+              </ActionButton>
+            ) : null}
+            {permission && !permission.granted ? (
+              <ActionButton variant="outline" onPress={onChoosePhoto}>
+                Choose from phone
+              </ActionButton>
+            ) : null}
+          </View>
+        )}
+        {error ? (
+          <View
+            className="absolute inset-x-0 top-0 items-center px-4 pt-4"
+            pointerEvents="none"
+          >
+            <Text className="rounded-full bg-overlay px-3.5 py-1.5 text-center text-xs font-bold text-cream">
+              {error}
+            </Text>
+          </View>
+        ) : null}
+        <View
+          className="absolute inset-x-0 bottom-0 flex-row items-center justify-between px-7"
+          pointerEvents="box-none"
+          style={{ paddingBottom: insets.bottom + 16 }}
+        >
+          <Pressable
+            accessibilityLabel="Back"
+            accessibilityRole="button"
+            className={round}
+            haptic
+            onPress={onClose}
+          >
+            <Icon className="size-[20px]" color={onCamera} name="ChevronLeft" />
+          </Pressable>
+          {live ? (
+            <Pressable
+              accessibilityLabel="Take photo"
+              accessibilityRole="button"
+              accessibilityState={{ busy, disabled: !ready || busy }}
+              disabled={!ready || busy}
+              haptic
+              onPress={() => void snap()}
+              style={{
+                alignItems: "center",
+                backgroundColor: colors.overlay,
+                borderRadius: SHUTTER / 2,
+                height: SHUTTER,
+                justifyContent: "center",
+                opacity: ready ? 1 : 0.6,
+                width: SHUTTER,
+              }}
+            >
+              <View
+                style={{
+                  alignItems: "center",
+                  backgroundColor: palette.overlayForeground,
+                  borderRadius: (SHUTTER - 12) / 2,
+                  height: SHUTTER - 12,
+                  justifyContent: "center",
+                  width: SHUTTER - 12,
+                }}
+              >
+                {busy ? <ActivityIndicator color={colors.overlay} /> : null}
+              </View>
+            </Pressable>
+          ) : null}
+          <View
+            style={{ height: SHUTTER, justifyContent: "center" }}
             pointerEvents="box-none"
           >
             {live ? (
-              <Pressable
-                accessibilityLabel={
-                  torch ? "Turn off flashlight" : "Turn on flashlight"
-                }
-                accessibilityRole="switch"
-                accessibilityState={{ checked: torch }}
-                className={round}
-                disabled={!ready}
-                haptic
-                onPress={() => setTorch((on) => !on)}
+              // Flash and flip stack above the close button, as in the design.
+              <View
+                className="gap-2"
+                pointerEvents="box-none"
+                style={{ bottom: SHUTTER - 14 + 8, position: "absolute" }}
               >
-                <Icon
-                  className="size-[20px]"
-                  color={onCamera}
-                  name={torch ? "FlashOff" : "Flashlight"}
-                />
-              </Pressable>
-            ) : (
-              <View />
-            )}
+                <Pressable
+                  accessibilityLabel={
+                    torch ? "Turn off flashlight" : "Turn on flashlight"
+                  }
+                  accessibilityRole="switch"
+                  accessibilityState={{ checked: torch }}
+                  className={round}
+                  disabled={!ready || facing === "front"}
+                  haptic
+                  onPress={() => setTorch((on) => !on)}
+                >
+                  <Icon
+                    className="size-[20px]"
+                    color={onCamera}
+                    name={torch ? "Zap" : "FlashOff"}
+                  />
+                </Pressable>
+                <Pressable
+                  accessibilityLabel="Switch camera"
+                  accessibilityRole="button"
+                  className={round}
+                  haptic
+                  onPress={() => {
+                    setTorch(false)
+                    setFacing((side) => (side === "back" ? "front" : "back"))
+                  }}
+                >
+                  <Icon
+                    className="size-[20px]"
+                    color={onCamera}
+                    name="RefreshCw"
+                  />
+                </Pressable>
+              </View>
+            ) : null}
             <Pressable
               accessibilityLabel="Close camera"
               accessibilityRole="button"
@@ -223,55 +295,6 @@ function DockedPhotoCameraBody({
               <Icon className="size-[20px]" color={onCamera} name="X" />
             </Pressable>
           </View>
-          {error ? (
-            <View
-              className="absolute inset-x-0 items-center px-4"
-              pointerEvents="none"
-              style={{ bottom: SHUTTER + 28 }}
-            >
-              <Text className="rounded-full bg-overlay px-3.5 py-1.5 text-center text-xs font-bold text-cream">
-                {error}
-              </Text>
-            </View>
-          ) : null}
-          {live ? (
-            <View
-              className="absolute inset-x-0 bottom-0 items-center pb-4"
-              pointerEvents="box-none"
-            >
-              <Pressable
-                accessibilityLabel="Take photo"
-                accessibilityRole="button"
-                accessibilityState={{ busy, disabled: !ready || busy }}
-                disabled={!ready || busy}
-                haptic
-                onPress={() => void snap()}
-                style={{
-                  alignItems: "center",
-                  borderColor: palette.overlayForeground,
-                  borderRadius: SHUTTER / 2,
-                  borderWidth: 4,
-                  height: SHUTTER,
-                  justifyContent: "center",
-                  opacity: ready ? 1 : 0.6,
-                  width: SHUTTER,
-                }}
-              >
-                <View
-                  style={{
-                    alignItems: "center",
-                    backgroundColor: palette.overlayForeground,
-                    borderRadius: (SHUTTER - 16) / 2,
-                    height: SHUTTER - 16,
-                    justifyContent: "center",
-                    width: SHUTTER - 16,
-                  }}
-                >
-                  {busy ? <ActivityIndicator color={colors.overlay} /> : null}
-                </View>
-              </Pressable>
-            </View>
-          ) : null}
         </View>
       </View>
     </View>
