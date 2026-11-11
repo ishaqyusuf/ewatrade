@@ -321,7 +321,8 @@ export function useAssistantReceipts(
     await add((await shrinkPhoto(asset)) ?? original)
   }
 
-  async function pick(source: "camera" | "library" | "file") {
+  /** Photos pick several at once, up to the files left for this message. */
+  async function pick(source: "library" | "file") {
     if (items.length >= MAX_FILES) return
     if (source === "file") {
       const result = await DocumentPicker.getDocumentAsync({
@@ -340,29 +341,40 @@ export function useAssistantReceipts(
       else await add(file)
       return
     }
-    if (source === "camera") {
-      const permission = await ImagePicker.requestCameraPermissionsAsync()
-      if (!permission.granted) return
-    }
-    const options: ImagePicker.ImagePickerOptions = {
+    const result = await ImagePicker.launchImageLibraryAsync({
       allowsEditing: false,
+      allowsMultipleSelection: true,
       mediaTypes: ["images"],
       quality: 0.8,
-    }
-    const result =
-      source === "camera"
-        ? await ImagePicker.launchCameraAsync(options)
-        : await ImagePicker.launchImageLibraryAsync(options)
-    const asset = result.canceled ? undefined : result.assets[0]
-    if (!asset?.mimeType) return
-    await addPhoto({
-      fileName: asset.fileName,
-      height: asset.height,
-      mimeType: asset.mimeType,
-      sizeBytes: asset.fileSize ?? new File(asset.uri).size,
-      uri: asset.uri,
-      width: asset.width,
+      selectionLimit: MAX_FILES - items.length,
     })
+    if (result.canceled) return
+    await Promise.all(
+      result.assets.slice(0, MAX_FILES - items.length).flatMap((asset) =>
+        asset.mimeType
+          ? [
+              addPhoto({
+                fileName: asset.fileName,
+                height: asset.height,
+                mimeType: asset.mimeType,
+                sizeBytes: asset.fileSize ?? new File(asset.uri).size,
+                uri: asset.uri,
+                width: asset.width,
+              }),
+            ]
+          : [],
+      ),
+    )
+  }
+
+  /** A photo from the docked camera. */
+  async function addCaptured(photo: { uri: string; mimeType: string }) {
+    if (items.length >= MAX_FILES) return
+    try {
+      await addPhoto({ ...photo, sizeBytes: new File(photo.uri).size })
+    } catch {
+      /* The capture's temporary file is gone; nothing to add. */
+    }
   }
 
   function discard(localId: string) {
@@ -401,6 +413,7 @@ export function useAssistantReceipts(
     ),
     canAdd: items.length < MAX_FILES,
     pick,
+    addCaptured,
     discard,
   }
 }

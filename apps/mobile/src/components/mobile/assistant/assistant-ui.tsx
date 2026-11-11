@@ -5,7 +5,7 @@ import { View } from "@/components/ui/view"
 import { useColors } from "@/hooks/use-color"
 import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
 import { useRouter } from "expo-router"
-import { Children, type ReactNode, useState } from "react"
+import { Children, type ReactNode, useRef, useState } from "react"
 import {
   ActivityIndicator,
   LayoutAnimation,
@@ -230,20 +230,27 @@ export function AssistantComposer({
   // One line of scaled text plus padding, so 200% text isn't clipped.
   const { fontScale } = useWindowDimensions()
   const lineHeight = Math.ceil(22 * fontScale)
-  const [focused, setFocused] = useState(false)
-  // Idle, the box is one pill row. Focused, or holding text, files or the
-  // attach menu, it opens into a card: the text on top, its buttons below.
+  // The text length at which one line overflowed the pill; shorter again,
+  // the box returns to a pill. Measured only in the pill, so the wider card
+  // cannot flip it back and forth.
+  const [wrapAt, setWrapAt] = useState<number | null>(null)
+  // The field's one-line height as measured, padding and all.
+  const oneLine = useRef(Number.POSITIVE_INFINITY)
+  if (wrapAt !== null && (!value || value.length < wrapAt)) setWrapAt(null)
+  // One line of text is a pill row (owner's reference). A second line, a
+  // line break or files open it into a card: text on top, buttons below.
   const stacked =
     !voice?.recording &&
-    // Android's Back hides the keyboard without blurring the field.
-    ((focused && keyboardVisible) ||
-      !!value ||
+    (wrapAt !== null ||
+      value.includes("\n") ||
       Children.toArray(children).length > 0)
   const working = voice?.working === true
   const sendDisabled =
     !busy || !onStop
       ? disabled || working || (!value.trim() && !canSendEmpty)
       : false
+  // Nothing to send: the round button starts a voice note instead.
+  const talk = !busy && !!voice && !value.trim() && !canSendEmpty
   const plus = onAttach ? (
     <ComposerIcon
       icon={attachOpen ? "X" : "Plus"}
@@ -260,7 +267,24 @@ export function AssistantComposer({
       onPress={voice.start}
     />
   ) : null
-  const send = (
+  const talkDisabled = disabled || working
+  const send = talk ? (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel="Talk: record a voice note"
+      accessibilityState={{ disabled: talkDisabled }}
+      disabled={talkDisabled}
+      haptic
+      onPress={voice.start}
+      style={roundButton(colors.foreground, talkDisabled)}
+    >
+      <Icon
+        name="AudioLines"
+        className="size-[22px]"
+        color={colors.background}
+      />
+    </Pressable>
+  ) : (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={busy ? "Stop reply" : "Send message"}
@@ -268,27 +292,25 @@ export function AssistantComposer({
       disabled={!busy && sendDisabled}
       haptic
       onPress={busy ? onStop : onSend}
-      style={{
-        alignItems: "center",
-        backgroundColor: busy ? colors.foreground : colors.primary,
-        borderRadius: 999,
-        height: 40,
-        justifyContent: "center",
-        opacity: !busy && sendDisabled ? 0.4 : 1,
-        width: 40,
-      }}
+      style={roundButton(colors.foreground, !busy && sendDisabled)}
     >
       <Icon
         name={busy ? "Square" : "ArrowUp"}
-        className="size-[19px]"
-        color={busy ? colors.background : colors.primaryForeground}
+        className="size-[20px]"
+        color={colors.background}
       />
     </Pressable>
   )
   // Messages scroll under the composer, blurred and fading into the page
   // (as ChatGPT).
   return (
-    <ScrollUnderBlur color={surface ?? colors.background} fadeAbove={28}>
+    // Messages scroll under the composer, blurred but still showing around
+    // the pill (owner's reference).
+    <ScrollUnderBlur
+      color={surface ?? colors.background}
+      fadeAbove={36}
+      veilAlpha="4D"
+    >
       <View className="gap-2 px-3 pt-1.5">
         {reason ? (
           <Text
@@ -320,10 +342,10 @@ export function AssistantComposer({
           style={{
             backgroundColor: colors.card,
             borderColor: colors.border,
-            borderRadius: stacked ? 24 : 28,
+            borderRadius: stacked ? 28 : 999,
             borderWidth: 1,
             gap: 6,
-            padding: stacked ? 6 : 5,
+            padding: stacked ? 8 : 5,
           }}
         >
           {children}
@@ -403,16 +425,19 @@ export function AssistantComposer({
                   accessibilityHint={value ? undefined : placeholder}
                   value={value}
                   onChangeText={(next) => {
-                    if (!!next !== !!value) easeStack(reduceMotion)
+                    // Each added or removed line eases the box's height.
+                    easeStack(reduceMotion)
+                    if (wrapAt !== null && next.length < wrapAt) setWrapAt(null)
                     onChange(next)
                   }}
-                  onFocus={() => {
-                    easeStack(reduceMotion)
-                    setFocused(true)
-                  }}
-                  onBlur={() => {
-                    easeStack(reduceMotion)
-                    setFocused(false)
+                  onContentSizeChange={(event) => {
+                    if (stacked || wrapAt !== null) return
+                    const height = event.nativeEvent.contentSize.height
+                    oneLine.current = Math.min(oneLine.current, height)
+                    if (value && height > oneLine.current + lineHeight / 2) {
+                      easeStack(reduceMotion)
+                      setWrapAt(value.length)
+                    }
                   }}
                   selectionColor={colors.primary}
                   style={{
@@ -423,7 +448,7 @@ export function AssistantComposer({
                     minHeight: Math.max(stacked ? 44 : 40, lineHeight + 18),
                     paddingHorizontal: stacked ? 10 : 6,
                     paddingBottom: stacked ? 6 : 9,
-                    paddingTop: stacked ? 10 : 9,
+                    paddingTop: stacked ? 8 : 9,
                   }}
                 />
                 {value ? null : (
@@ -441,7 +466,7 @@ export function AssistantComposer({
                       left: stacked ? 10 : 6,
                       position: "absolute",
                       right: stacked ? 10 : 6,
-                      top: stacked ? 10 : 9,
+                      top: stacked ? 8 : 9,
                     }}
                   >
                     {placeholder}
@@ -543,17 +568,28 @@ function ComposerIcon({
       onPress={onPress}
       style={{
         alignItems: "center",
-        backgroundColor: colors.muted,
-        borderRadius: 999,
-        height: 40,
+        height: 44,
         justifyContent: "center",
         opacity: disabled ? 0.45 : 1,
-        width: 40,
+        width: 44,
       }}
     >
-      <Icon className="size-[21px]" color={colors.foreground} name={icon} />
+      <Icon className="size-[24px]" color={colors.foreground} name={icon} />
     </Pressable>
   )
+}
+
+/** The round send/talk button: inverted against the box (owner's reference). */
+function roundButton(color: string, dimmed: boolean) {
+  return {
+    alignItems: "center",
+    backgroundColor: color,
+    borderRadius: 999,
+    height: 44,
+    justifyContent: "center",
+    opacity: dimmed ? 0.4 : 1,
+    width: 44,
+  } as const
 }
 
 export function AssistantThinking() {

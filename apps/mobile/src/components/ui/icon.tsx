@@ -59,6 +59,7 @@ const Building = hugeIcon("Building")
 const Building2 = hugeIcon("Building02Icon")
 const Calendar = hugeIcon("Calendar")
 const CalendarCheck = hugeIcon("CalendarCheckIn01Icon")
+const AudioLines = hugeIcon("AudioWave01Icon")
 const Camera = hugeIcon("Camera")
 const Video = hugeIcon("Video01Icon")
 const Play = hugeIcon("PlayIcon")
@@ -90,6 +91,7 @@ const EyeOff = hugeIcon("ViewOffIcon")
 const Fence = hugeIcon("FenceIcon")
 const FilePenLine = hugeIcon("FileEditIcon")
 const FileText = hugeIcon("File02Icon")
+const Paperclip = hugeIcon("Attachment01Icon")
 const FolderPlus = hugeIcon("FolderAddIcon")
 const FingerPrint = hugeIcon("FingerPrintIcon")
 const FingerPrintScan = hugeIcon("FingerPrintScanIcon")
@@ -302,6 +304,7 @@ const appIcons = {
   Building2,
   Calendar,
   CalendarCheck,
+  AudioLines,
   Camera,
   Video,
   Play,
@@ -332,6 +335,7 @@ const appIcons = {
   Fence,
   FilePenLine,
   FileText,
+  Paperclip,
   FingerPrint,
   FingerPrintScan,
   FolderPlus,

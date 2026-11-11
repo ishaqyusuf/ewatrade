@@ -1,4 +1,5 @@
 import { useCustomerVoiceNote } from "@/components/mobile/customer-conversations/use-customer-voice-note"
+import { DockedPhotoCamera } from "@/components/mobile/docked-photo-camera"
 import { Icon, type IconKeys } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
@@ -12,7 +13,12 @@ import { formatStoreConversationVoiceElapsed } from "@ewatrade/utils"
 import { useQuery } from "@tanstack/react-query"
 import { Image } from "expo-image"
 import { type ComponentProps, useEffect, useRef, useState } from "react"
-import { ActivityIndicator, BackHandler, StyleSheet } from "react-native"
+import {
+  ActivityIndicator,
+  BackHandler,
+  ScrollView,
+  StyleSheet,
+} from "react-native"
 import { ASSISTANT_ATTACHMENT_COPY } from "./assistant-attachment-limits"
 import { AssistantComposer } from "./assistant-ui"
 import {
@@ -29,7 +35,8 @@ type ComposerProps = Omit<
 
 /**
  * The business chat's box: + attaches receipt photos/PDFs (read before they
- * can be sent), the mic writes a voice note out into the box, Send sends.
+ * can be sent), the camera docks over the screen, the mic writes a voice note
+ * out into the box, Send sends.
  */
 export function AssistantChatBox({
   conversationId,
@@ -44,6 +51,7 @@ export function AssistantChatBox({
 }) {
   const trpc = useTRPC()
   const [menuOpen, setMenuOpen] = useState(false)
+  const [cameraOpen, setCameraOpen] = useState(false)
   const [boxHeight, setBoxHeight] = useState(0)
   const capabilities = useQuery(
     trpc.setupAssistant.attachments.voiceCapabilities.queryOptions(undefined, {
@@ -111,6 +119,7 @@ export function AssistantChatBox({
   // biome-ignore lint/correctness/useExhaustiveDependencies: a new composer scope resets transient controls.
   useEffect(() => {
     setMenuOpen(false)
+    setCameraOpen(false)
     sendWhenWritten.current = false
     setPendingSend(null)
   }, [conversationId, resetKey])
@@ -136,7 +145,8 @@ export function AssistantChatBox({
   const state = recorder.state
   const pick = (source: "camera" | "library" | "file") => {
     setMenuOpen(false)
-    void receipts.pick(source)
+    if (source === "camera") setCameraOpen(true)
+    else void receipts.pick(source)
   }
   useEffect(() => {
     if (!menuOpen) return
@@ -205,8 +215,13 @@ export function AssistantChatBox({
           }
         >
           {receipts.items.length ? (
-            <View className="gap-1.5 px-0.5 pt-0.5">
-              <View className="flex-row flex-wrap gap-2">
+            <View className="gap-1.5 pt-0.5">
+              <ScrollView
+                horizontal
+                keyboardShouldPersistTaps="handled"
+                showsHorizontalScrollIndicator={false}
+                contentContainerClassName="gap-2.5 px-0.5"
+              >
                 {receipts.items.map((item) => (
                   <ReceiptThumb
                     key={item.localId}
@@ -214,7 +229,7 @@ export function AssistantChatBox({
                     onRemove={() => receipts.discard(item.localId)}
                   />
                 ))}
-              </View>
+              </ScrollView>
               {receipts.items.map((item) =>
                 item.phase === "failed" ? (
                   <Text
@@ -245,11 +260,23 @@ export function AssistantChatBox({
           />
         </>
       ) : null}
+      <DockedPhotoCamera
+        open={cameraOpen}
+        onClose={() => setCameraOpen(false)}
+        onCapture={(photo) => {
+          setCameraOpen(false)
+          void receipts.addCaptured(photo)
+        }}
+        onChoosePhoto={() => pick("library")}
+      />
     </>
   )
 }
 
-/** A photo or PDF in the box: a large rounded tile with a round × (owner's reference). */
+/**
+ * A photo or PDF in the box: a tall rounded tile with a dark round ×; a PDF
+ * shows its mark and name (owner's reference).
+ */
 function ReceiptThumb({
   item,
   onRemove,
@@ -261,21 +288,21 @@ function ReceiptThumb({
   const { colorScheme } = useColorScheme()
   const palette = GREEN_TILL_THEME[colorScheme]
   const large = useLargeTextLayout()
-  const size = large ? 112 : 88
+  const width = large ? 132 : 112
   const busy = item.phase === "uploading" || item.phase === "reading"
   return (
     <View
       accessible
       accessibilityLabel={`${item.fileName}, ${item.phase === "ready" ? "ready" : item.phase === "failed" ? "failed" : item.phase === "reading" ? "reading" : "uploading"}`}
       style={{
-        backgroundColor: colors.muted,
+        backgroundColor: item.image ? colors.muted : "transparent",
         borderColor:
           item.phase === "failed" ? colors.destructive : "transparent",
-        borderRadius: 18,
+        borderRadius: 24,
         borderWidth: 2,
-        height: size,
+        height: Math.round(width * 1.25),
         overflow: "hidden",
-        width: size,
+        width,
       }}
     >
       {item.image ? (
@@ -285,11 +312,15 @@ function ReceiptThumb({
           style={{ height: "100%", width: "100%" }}
         />
       ) : (
-        <View className="flex-1 justify-end gap-1 p-2">
-          <Icon className="size-[24px] text-muted-foreground" name="FileText" />
+        <View className="flex-1 justify-center gap-2 px-2.5">
+          <Icon
+            className="size-[30px]"
+            color={colors.destructive}
+            name="FileText"
+          />
           <Text
-            className="text-xs font-bold [-rn-line-height:16] text-foreground"
-            numberOfLines={2}
+            className="text-base font-medium [-rn-line-height:22] text-foreground"
+            numberOfLines={3}
           >
             {item.fileName}
           </Text>
@@ -311,17 +342,21 @@ function ReceiptThumb({
         onPress={onRemove}
         style={{
           alignItems: "center",
-          backgroundColor: palette.paper,
-          borderRadius: 14,
-          height: 28,
+          backgroundColor: palette.overlayChip,
+          borderRadius: 16,
+          height: 32,
           justifyContent: "center",
           position: "absolute",
-          right: 5,
-          top: 5,
-          width: 28,
+          right: 7,
+          top: 7,
+          width: 32,
         }}
       >
-        <Icon className="size-[15px]" color={palette.paperInk} name="X" />
+        <Icon
+          className="size-[18px]"
+          color={palette.overlayForeground}
+          name="X"
+        />
       </Pressable>
     </View>
   )
@@ -329,7 +364,7 @@ function ReceiptThumb({
 
 /**
  * The + menu (owner's reference): a card floating above the box, keyboard
- * left open behind it. Camera · Upload photo · Upload file.
+ * left open behind it. Camera · Photos · Files, each in a round icon well.
  */
 function AttachMenu({
   bottom,
@@ -359,12 +394,12 @@ function AttachMenu({
           },
           {
             icon: "Image" as const,
-            label: "Upload photo",
+            label: "Photos",
             source: "library" as const,
           },
         ]
       : []),
-    { icon: "FileText", label: "Upload file", source: "file" },
+    { icon: "Paperclip", label: "Files", source: "file" },
   ]
   return (
     <View
@@ -372,14 +407,15 @@ function AttachMenu({
       style={{
         backgroundColor: colors.card,
         borderColor: colors.border,
-        borderRadius: 20,
+        borderRadius: 28,
         borderWidth: 1,
         bottom,
         elevation: 8,
+        gap: 4,
         left: 12,
-        minWidth: 224,
+        minWidth: 240,
         overflow: "hidden",
-        paddingVertical: 6,
+        padding: 10,
         position: "absolute",
         shadowColor: palette.cardShadow,
         shadowOffset: { height: 6, width: 0 },
@@ -393,25 +429,36 @@ function AttachMenu({
           accessibilityRole="button"
           accessibilityState={{ disabled: full }}
           className={cn(
-            "min-h-[52px] flex-row items-center gap-3.5 px-4",
+            "min-h-[56px] flex-row items-center gap-3.5 rounded-[20px] px-1.5",
             full && "opacity-45",
           )}
           disabled={full}
           haptic
           onPress={() => onPick(option.source)}
         >
-          <Icon
-            className="size-[22px]"
-            color={colors.foreground}
-            name={option.icon}
-          />
-          <Text className="text-base font-semibold [-rn-line-height:22] text-foreground">
+          <View
+            style={{
+              alignItems: "center",
+              backgroundColor: colors.muted,
+              borderRadius: 24,
+              height: 48,
+              justifyContent: "center",
+              width: 48,
+            }}
+          >
+            <Icon
+              className="size-[22px]"
+              color={colors.foreground}
+              name={option.icon}
+            />
+          </View>
+          <Text className="text-lg font-semibold [-rn-line-height:24] text-foreground">
             {option.label}
           </Text>
         </Pressable>
       ))}
       {full ? (
-        <Text className="px-4 pb-2 pt-1 text-sm [-rn-line-height:20] text-muted-foreground">
+        <Text className="px-2 pb-1 pt-1 text-sm [-rn-line-height:20] text-muted-foreground">
           {ASSISTANT_ATTACHMENT_COPY.full}
         </Text>
       ) : null}

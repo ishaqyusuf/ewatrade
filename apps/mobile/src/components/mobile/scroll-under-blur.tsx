@@ -14,16 +14,19 @@ import { StyleSheet, View } from "react-native"
 export function ScrollUnderBlur({
   color,
   fadeAbove = 24,
+  veilAlpha = "99",
   children,
 }: {
   /** The screen colour the bar settles into (`#RRGGBB`). */
   color: string
   /** How far the fade reaches above the bar, in points. */
   fadeAbove?: number
+  /** Hex alpha of the colour wash over the blur; lower shows more of what scrolls under. */
+  veilAlpha?: string
   children: ReactNode
 }) {
   const { colorScheme } = useColorScheme()
-  const veil = `${color}99`
+  const veil = `${color}${veilAlpha}`
   return (
     <View>
       <LinearGradient
