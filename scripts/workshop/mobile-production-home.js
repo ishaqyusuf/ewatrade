@@ -38,11 +38,11 @@
     return `<button type="button" data-screen="${screen}" ${current ? 'aria-current="page"' : ""}>${icons[icon]}<span>${name}</span></button>`
   }
 
-  function dock() {
-    return `${dockTab("home", "Home", "(admin-tabs)/admin-home", true)}
+  function dock(active = "(admin-tabs)/admin-home") {
+    return `${dockTab("home", "Home", "(admin-tabs)/admin-home", active === "(admin-tabs)/admin-home")}
       ${dockTab("orders", "Orders", "(admin-tabs)/orders")}
       <button type="button" data-action="open-sheet" class="dock-create" aria-label="Create">${icons.plus}</button>
-      ${dockTab("catalog", "Catalog", "(admin-tabs)/catalog")}
+      ${dockTab("catalog", "Catalog", "(admin-tabs)/catalog", active === "(admin-tabs)/catalog")}
       ${dockTab("more", "More", "(admin-tabs)/more")}`
   }
 

@@ -42,6 +42,11 @@ AREA_RULES = (
 )
 SHEET = re.compile(r"<(Modal|BottomSheetModal|[A-Z]\w*Sheet)(?=[\s/>])")
 IMPORT = re.compile(r'["\']@/(components/(?:mobile|ui)/[^"\']+)["\']')
+CATALOG_IMAGES = "apps/mobile/src/components/mobile/catalog-item/catalog-images-editor.tsx"
+CATALOG_IMAGES_REFERENCE = (
+    "dashboard/web-app/catalog/ai-images/directions/02"
+    "?rev=f6a38263-326e-4e69-8c94-46d39a386e1a&screen=mobile.html"
+)
 BASELINE = {
     "splash": (
         "Startup splash",
@@ -56,6 +61,22 @@ BASELINE = {
     "quick-create": ("Quick create", CREATE, None),
     "business-switch-modal": ("Workspaces", "apps/mobile/src/app/business-switch-modal.tsx", None),
     "sync-status-modal": ("Sync & offline", "apps/mobile/src/app/sync-status-modal.tsx", None),
+    "global-search": ("Global search", "apps/mobile/src/app/global-search.tsx", None),
+    "(admin-tabs)/catalog": ("Catalog", "apps/mobile/src/app/(admin-tabs)/catalog.tsx", None),
+    "catalog-item/[catalogItemId]": (
+        "Saved product overview", "apps/mobile/src/app/catalog-item/[catalogItemId].tsx", None,
+    ),
+    "first-product-setup-modal": (
+        "Add item", "apps/mobile/src/app/first-product-setup-modal.tsx", None,
+    ),
+    "catalog-item-images": ("Images editor", CATALOG_IMAGES, CATALOG_IMAGES_REFERENCE),
+    "catalog-image-gallery": ("Image gallery", CATALOG_IMAGES, CATALOG_IMAGES_REFERENCE),
+}
+EMBEDDED_BASELINES = {
+    "splash": "Startup view",
+    "quick-create": "Bottom sheet",
+    "catalog-item-images": "Full-screen editor",
+    "catalog-image-gallery": "Full-screen viewer",
 }
 QUALITY_REVISION = "f9f8714e-0bfd-46f5-b03a-69cabfc93d12"
 QUALITY_PAGES = {
@@ -230,12 +251,13 @@ def inventory(evidence):
 
     for entry_id, (name, source, reference) in BASELINE.items():
         # Quick create is represented by its reviewed surface entry.
-        entries.pop(f"{source}#Modal", None)
+        if entry_id == "quick-create":
+            entries.pop(f"{source}#Modal", None)
         entry = entries.setdefault(entry_id, {
             "id": entry_id,
             "source": source,
             "sources": [source],
-            "kind": "Bottom sheet" if entry_id == "quick-create" else "Startup view",
+            "kind": EMBEDDED_BASELINES.get(entry_id, "Route"),
         })
         entry.update(label=name, area="Playable", reference=reference)
 
