@@ -15,11 +15,11 @@ owner's instruction to keep data-dependent retail cases blocked:
 
 | Business | Passed | Fail | Blocked | Not assessed |
 | --- | ---: | ---: | ---: | ---: |
-| Jawdah poultry | 6/12 | 1 | 0 | 5 |
+| Jawdah poultry | 7/12 | 0 | 0 | 5 |
 | Laundry | 0/12 | 0 | 1 | 11 |
 | Hypnos Man Collection | 0/24 | 0 | 23 | 1 |
 | Alhaq Tech | 0/24 | 0 | 23 | 1 |
-| **Total** | **6/72 (8.3%)** | **1** | **47** | **18** |
+| **Total** | **7/72 (9.7%)** | **0** | **47** | **18** |
 
 Earlier on 10 November the count was 5/72 passed; J06 moved from PASS to FAIL in
 run 2. All case passes are local-window passes (see runtime runs 1–2). A separate
@@ -367,3 +367,21 @@ FAIL; J11 stays NOT_ASSESSED. Production/mobile/provider activation was excluded
 The temporary executor worktree was removed and original main/source preserved.
 Subsequent receipt commits are documentation, not deployed source. Exact private
 receipt paths and limitations: [Phase5 Preview checkpoint](2026-11-10-business-phase-5.md#app-first-preview-rollout-and-smoke--independently-validated).
+
+## Runtime run 4: cashier payment rerun
+
+11 November 2026, same local window. Another session's API was running on 3095
+without `NODE_ENV=development`, and its QA capability check failed. It was
+replaced with the `qa-api` config at `5826d2bbe`, which includes the cashier fix
+`7f06ca525`.
+
+- **J06 → PASS.** The cashier signed in with their password and created ORD-002
+  (Walk-in, 2 Eggs, ₦500). They then recorded ₦200 cash, with "Received into:
+  Shop cash" offered. The order shows Part paid, ₦300 due, and the activity log
+  credits the cashier. The earlier FAIL is kept in history.
+- **New finding: stale Store after switching users.** Password login and logout
+  never reset the httpOnly `ewatrade.active_store_id` cookie; only QA access
+  and owner signup set it. On a browser last used by another business's owner,
+  every cashier order and catalog read failed with "Tenant not found", and the
+  order form crashed. Selecting the cashier's own Store fixed it. This matters on
+  shared shop devices.
