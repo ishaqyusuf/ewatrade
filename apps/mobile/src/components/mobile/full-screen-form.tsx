@@ -17,6 +17,7 @@ import {
   useState,
 } from "react"
 import { Keyboard, Modal as NativeModal, View } from "react-native"
+import { GestureHandlerRootView } from "react-native-gesture-handler"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 type ModalBackAction = () => boolean
@@ -132,37 +133,42 @@ export function FullScreenForm({
         else close()
       }}
     >
-      <ModalBackContext.Provider value={registerBackAction}>
-        {/* Keyboard-free pickers inside the form still present sheets. */}
-        <BottomSheetModalProvider>
-          <MobileWorkflowChrome
-            hideHeader={false}
-            keyboardBottomOffset={96}
-            title={title}
-            closeLabel={closeLabel}
-            onClose={close}
-            onBack={onBack}
-            backLabel={backLabel}
-          >
-            {/* Explicit flex styles: with classes the body collapsed inside the
-              native modal and the footer was drawn under the header. */}
-            <View
-              style={{
-                flex: 1,
-                paddingBottom: bottomInset && !footer ? insets.bottom : 0,
-              }}
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <ModalBackContext.Provider value={registerBackAction}>
+          {/* Keyboard-free pickers inside the form still present sheets. */}
+          <BottomSheetModalProvider>
+            <MobileWorkflowChrome
+              hideHeader={false}
+              keyboardBottomOffset={96}
+              title={title}
+              closeLabel={closeLabel}
+              onClose={close}
+              onBack={onBack}
+              backLabel={backLabel}
             >
-              {footer ? (
-                <DockedFooterLayout footer={footer} label={`${title} actions`}>
-                  {children}
-                </DockedFooterLayout>
-              ) : (
-                children
-              )}
-            </View>
-          </MobileWorkflowChrome>
-        </BottomSheetModalProvider>
-      </ModalBackContext.Provider>
+              {/* Explicit flex styles: with classes the body collapsed inside the
+              native modal and the footer was drawn under the header. */}
+              <View
+                style={{
+                  flex: 1,
+                  paddingBottom: bottomInset && !footer ? insets.bottom : 0,
+                }}
+              >
+                {footer ? (
+                  <DockedFooterLayout
+                    footer={footer}
+                    label={`${title} actions`}
+                  >
+                    {children}
+                  </DockedFooterLayout>
+                ) : (
+                  children
+                )}
+              </View>
+            </MobileWorkflowChrome>
+          </BottomSheetModalProvider>
+        </ModalBackContext.Provider>
+      </GestureHandlerRootView>
     </NativeModal>
   )
 }

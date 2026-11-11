@@ -1,4 +1,5 @@
 import { ActionButton } from "@/components/mobile/action-button"
+import { FloatingActionRow } from "@/components/mobile/floating-action-row"
 import {
   FullScreenForm,
   useFullScreenFormBack,
@@ -14,7 +15,7 @@ import {
   type CatalogAiChoice,
   catalogAiAllowanceLabel,
 } from "@ewatrade/utils/catalog-ai-images"
-import { BottomSheetView } from "@gorhom/bottom-sheet"
+import { BottomSheetScrollView } from "@gorhom/bottom-sheet"
 import { useCallback, useRef, useState } from "react"
 import { View } from "react-native"
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller"
@@ -111,37 +112,27 @@ export function CatalogImageAddTile({
           if (source) onChoose(source)
         }}
       >
-        <BottomSheetView
-          style={{ gap: 4, paddingHorizontal: 12, paddingBottom: 16 }}
-        >
-          {sources.map(({ id, label, icon }) => {
-            const unavailable =
-              (id === "my-images" && !hasGalleryImages) ||
-              (id === "generate" && !canGenerate)
-            return (
-              <Pressable
-                key={id}
-                accessibilityRole="button"
-                accessibilityState={{ disabled: unavailable }}
-                disabled={unavailable}
-                haptic
-                className={cn(
-                  "min-h-14 flex-row items-center gap-3 rounded-2xl px-3",
-                  unavailable && "opacity-50",
-                )}
-                onPress={() => {
-                  pendingSource.current = id
-                  sheet.dismiss()
-                }}
-              >
-                <Icon name={icon} className="size-[20px] text-foreground" />
-                <Text className="min-w-0 flex-1 text-base font-semibold text-foreground">
-                  {label}
-                </Text>
-              </Pressable>
-            )
-          })}
-        </BottomSheetView>
+        <BottomSheetScrollView showsVerticalScrollIndicator={false}>
+          <View className="px-5 pb-6">
+            {sources.map(({ id, label, icon }) => {
+              const unavailable =
+                (id === "my-images" && !hasGalleryImages) ||
+                (id === "generate" && !canGenerate)
+              return (
+                <FloatingActionRow
+                  key={id}
+                  icon={icon}
+                  label={label}
+                  disabled={unavailable}
+                  onPress={() => {
+                    pendingSource.current = id
+                    sheet.dismiss()
+                  }}
+                />
+              )
+            })}
+          </View>
+        </BottomSheetScrollView>
       </Modal>
     </>
   )

@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "id": "2026-11-11-images-floating-menu",
+  "tickets": ["H02"],
+  "summary": "Share Home Add rows with the Images source sheet and restore Android gesture handling in full-screen modal windows.",
+  "noAssistantImpact": "The existing Home and Images actions keep their routes, permissions and commands.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/catalog-ai-image-generation.md"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "run",
+      "path": ".brain/features/catalog-ai-image-generation.md",
+      "executed": true,
+      "result": "Both tapping outside and dragging the handle failed on Android 2 before the gesture root was mounted inside the full-screen native modal. Both gestures then closed the Images source sheet and returned to Images."
+    }
+  ]
+}

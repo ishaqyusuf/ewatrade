@@ -1,6 +1,5 @@
-import { Icon } from "@/components/ui/icon"
+import { FloatingActionRow } from "@/components/mobile/floating-action-row"
 import { Modal, type useModal } from "@/components/ui/modal"
-import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
 import { useAuthContext } from "@/hooks/use-auth"
@@ -8,12 +7,10 @@ import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
 import { BottomSheetScrollView } from "@gorhom/bottom-sheet"
 import { useRouter } from "expo-router"
 
-import { StatusBadge } from "@/components/mobile/status-badge"
 import {
   type AdminCreateAction,
   buildAdminCreateActions,
 } from "@/lib/admin-create-actions"
-import { cn } from "@/lib/utils"
 import type { MobileWorkspaceFeatureAvailability } from "@/lib/workspace-feature-availability"
 
 type AdminCreateActionSheetProps = {
@@ -63,8 +60,6 @@ export function AdminCreateActionContent({
   actions: AdminCreateAction[]
   onActionPress: (action: AdminCreateAction) => void
 }) {
-  const largeTextLayout = useLargeTextLayout()
-
   return (
     <View className="px-5 pb-6">
       <View className="mb-4 gap-1 px-1">
@@ -79,69 +74,11 @@ export function AdminCreateActionContent({
         </Text>
       </View>
       {actions.map((action) => (
-        <Pressable
-          accessibilityHint={action.detail}
-          accessibilityRole="button"
-          accessibilityState={{ disabled: action.disabled }}
-          className={cn(
-            "-mx-2 min-h-16 flex-row gap-3 border-t border-border px-3 py-3",
-            largeTextLayout ? "items-start" : "items-center",
-            action.emphasis === "catalog" &&
-              !action.disabled &&
-              "bg-primary/5 active:bg-primary/10",
-            action.emphasis === "standard" &&
-              !action.disabled &&
-              "active:bg-accent",
-          )}
-          disabled={action.disabled}
-          haptic
+        <FloatingActionRow
+          {...action}
           key={action.label}
           onPress={() => onActionPress(action)}
-          transition
-        >
-          <View
-            className={cn(
-              "size-10 items-center justify-center rounded-full",
-              largeTextLayout && "mt-1",
-              action.emphasis === "catalog" && !action.disabled
-                ? "bg-primary"
-                : "bg-muted",
-            )}
-          >
-            <Icon
-              className={cn(
-                "size-sm",
-                action.emphasis === "catalog" && !action.disabled
-                  ? "text-primary-foreground"
-                  : "text-muted-foreground",
-              )}
-              name={action.icon}
-            />
-          </View>
-          <View className="min-w-0 flex-1 gap-1">
-            <Text className="font-extrabold text-foreground">
-              {action.label}
-            </Text>
-            <Text className="text-sm [-rn-line-height:22] text-muted-foreground">
-              {action.detail}
-            </Text>
-          </View>
-          {action.disabled && action.statusLabel ? (
-            <StatusBadge
-              className={largeTextLayout ? "mt-1" : undefined}
-              label={action.statusLabel}
-              tone="warning"
-            />
-          ) : (
-            <Icon
-              className={cn(
-                "size-sm text-muted-foreground",
-                largeTextLayout && "mt-1",
-              )}
-              name="ChevronRight"
-            />
-          )}
-        </Pressable>
+        />
       ))}
     </View>
   )
