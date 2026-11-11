@@ -15,11 +15,11 @@ owner's instruction to keep data-dependent retail cases blocked:
 
 | Business | Passed | Fail | Blocked | Not assessed |
 | --- | ---: | ---: | ---: | ---: |
-| Jawdah poultry | 7/12 | 0 | 0 | 5 |
+| Jawdah poultry | 8/12 | 0 | 0 | 4 |
 | Laundry | 0/12 | 0 | 1 | 11 |
 | Hypnos Man Collection | 0/24 | 0 | 23 | 1 |
 | Alhaq Tech | 0/24 | 0 | 23 | 1 |
-| **Total** | **7/72 (9.7%)** | **0** | **47** | **18** |
+| **Total** | **8/72 (11.1%)** | **0** | **47** | **17** |
 
 Earlier on 10 November the count was 5/72 passed; J06 moved from PASS to FAIL in
 run 2. All case passes are local-window passes (see runtime runs 1–2). A separate
@@ -385,3 +385,18 @@ replaced with the `qa-api` config at `5826d2bbe`, which includes the cashier fix
   every cashier order and catalog read failed with "Tenant not found", and the
   order form crashed. Selecting the cashier's own Store fixed it. This matters on
   shared shop devices.
+
+## Runtime run 5: Jawdah payment link
+
+11 November 2026, Jawdah Poultry QA tenant, API at `5826d2bbe`.
+
+- **J11 PASS.** On ORD-062 (₦19,500, from request R-ARCHEP) the owner created a
+  fixed ₦19,500 manual link with reference EWA-2ACSJ7RYCY. The earlier 24-hour
+  link had expired. The customer page showed the amount, the fictional QA bank
+  details and the reference.
+- Tapping "I have paid" created one report in Payments to check and left the
+  order Unpaid. The owner set the received amount, ticked the bank check and
+  recorded the payment once; the review warns it "can't be recorded twice".
+- ORD-062 is now **Paid, balance ₦0**. The customer page shows "Payment
+  confirmed", and Payments to check is empty.
+- No real transfer, gateway or bank check was involved.
