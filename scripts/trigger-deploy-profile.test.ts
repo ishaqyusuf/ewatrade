@@ -484,6 +484,7 @@ describe("Trigger jobs selected deployment profile", () => {
       {
         ...preview,
         OPENAI_API_KEY: "parent-secret",
+        CATALOG_IMAGE_OPENAI_API_KEY: "local-image-key",
         RESEND_API_KEY: "base-secret",
         TRIGGER_ACCESS_TOKEN: "parent-access",
       },
@@ -491,6 +492,7 @@ describe("Trigger jobs selected deployment profile", () => {
       production,
     )
     expect(result.OPENAI_API_KEY).toBeUndefined()
+    expect(result.CATALOG_IMAGE_OPENAI_API_KEY).toBeUndefined()
     expect(result.RESEND_API_KEY).toBeUndefined()
     expect(result.TRIGGER_ACCESS_TOKEN).toBeUndefined()
     expect(
@@ -518,6 +520,40 @@ describe("Trigger jobs selected deployment profile", () => {
         production,
       ),
     ).toThrow()
+  })
+
+  test("syncs each Catalog image key from its own profile and refuses Production reuse in Preview", () => {
+    const selectedProduction = {
+      ...production,
+      CATALOG_IMAGE_OPENAI_API_KEY: "production-image-key",
+    }
+    const selectedPreview = {
+      ...preview,
+      CATALOG_IMAGE_OPENAI_API_KEY: "preview-image-key",
+    }
+    for (const selected of [selectedProduction, selectedPreview]) {
+      const result = selectedTriggerDeployEnvironment(
+        selected,
+        selected,
+        selectedProduction,
+      )
+      expect(
+        syncedTriggerJobEnvironment(result).CATALOG_IMAGE_OPENAI_API_KEY,
+      ).toBe(selected.CATALOG_IMAGE_OPENAI_API_KEY)
+    }
+    expect(() =>
+      selectedTriggerDeployEnvironment(
+        preview,
+        {
+          ...preview,
+          CATALOG_IMAGE_OPENAI_API_KEY:
+            selectedProduction.CATALOG_IMAGE_OPENAI_API_KEY,
+        },
+        selectedProduction,
+      ),
+    ).toThrow(
+      "Preview jobs refuses the Production value for CATALOG_IMAGE_OPENAI_API_KEY",
+    )
   })
 
   test("refuses copied Production runtime credentials and endpoints without disclosing values", () => {
