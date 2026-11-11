@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "id": "2026-11-11-catalog-ai-choice-payload",
+  "tickets": ["H02"],
+  "summary": "Send only the ID and name of each selected Catalog choice in mobile AI batch requests.",
+  "noAssistantImpact": "This fixes the mobile payload for the existing form-only batch procedure.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/catalog-ai-image-generation.md"
+    },
+    {
+      "topic": "api",
+      "status": "not_applicable",
+      "note": "The existing strict input contract already requires an ID and name for each choice."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "apps/api/src/schemas/catalog-ai-images.test.ts",
+      "executed": true,
+      "result": "The strict contract rejects full Catalog variant objects and accepts the mapped choice payload. A rolled-back Development transaction reserved both existing Broiler choices."
+    }
+  ]
+}

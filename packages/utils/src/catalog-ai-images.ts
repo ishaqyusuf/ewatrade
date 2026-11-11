@@ -272,3 +272,7 @@ export const catalogAiJobFactsSchema = catalogAiFactsSchema.extend({
 
 export type CatalogAiChoice = z.infer<typeof catalogAiChoiceSchema>
 export type CatalogAiJobFacts = z.infer<typeof catalogAiJobFactsSchema>
+
+export function catalogAiChoiceInputs(choices: readonly CatalogAiChoice[]) {
+  return choices.map(({ id, name }) => ({ id, name }))
+}

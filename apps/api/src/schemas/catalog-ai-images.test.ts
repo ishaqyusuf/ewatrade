@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test"
+import { catalogAiChoiceInputs } from "@ewatrade/utils/catalog-ai-images"
 import {
   catalogAiCancelSchema,
   catalogAiDeleteVersionSchema,
@@ -72,4 +73,23 @@ test("a choice run rejects duplicate choices and refinement fields", () => {
       tenantId: "untrusted",
     }).success,
   ).toBe(false)
+})
+
+test("saved Catalog choices send only their ID and name to the batch API", () => {
+  const variants = [
+    { id: "variant-1", name: "Day-old", status: "active", selections: [] },
+    { id: "variant-2", name: "Fully grown", status: "active", selections: [] },
+  ]
+  expect(
+    catalogAiStartBatchSchema.safeParse({ ...base, choices: variants }).success,
+  ).toBe(false)
+  expect(
+    catalogAiStartBatchSchema.parse({
+      ...base,
+      choices: catalogAiChoiceInputs(variants),
+    }).choices,
+  ).toEqual([
+    { id: "variant-1", name: "Day-old" },
+    { id: "variant-2", name: "Fully grown" },
+  ])
 })

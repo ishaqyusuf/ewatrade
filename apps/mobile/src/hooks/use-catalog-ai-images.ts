@@ -1,8 +1,9 @@
 import { useTRPC } from "@/trpc/client"
 import type { RouterInputs } from "@ewatrade/api/trpc/routers/_app"
-import type {
-  CatalogAiChoice,
-  CatalogAiFacts,
+import {
+  type CatalogAiChoice,
+  type CatalogAiFacts,
+  catalogAiChoiceInputs,
 } from "@ewatrade/utils/catalog-ai-images"
 import {
   type CatalogImageReplacement,
@@ -176,7 +177,9 @@ export function useCatalogAiImages(input: {
     }
     const request: Command =
       previous ??
-      (choices?.length ? { ...common, choices } : { ...common, sourceAssetId })
+      (choices?.length
+        ? { ...common, choices: catalogAiChoiceInputs(choices) }
+        : { ...common, sourceAssetId })
     setStarting({
       scope,
       operationId: request.clientOperationId,
