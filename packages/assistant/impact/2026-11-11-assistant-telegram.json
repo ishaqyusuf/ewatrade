@@ -1,0 +1,100 @@
+{
+  "version": 1,
+  "id": "2026-11-11-assistant-telegram",
+  "tickets": ["H01", "H02"],
+  "summary": "Add a private Telegram channel for the existing General assistant with scoped reads, reviewed actions, account linking and durable delivery.",
+  "capabilities": [
+    {
+      "id": "customers.page",
+      "change": "unchanged",
+      "rollout": "source",
+      "note": "Telegram reuses this canonical Store-scoped read under independent transport release admission."
+    },
+    {
+      "id": "customers.create",
+      "change": "unchanged",
+      "rollout": "source",
+      "note": "Telegram stages and confirms the same canonical proposal and returns its committed receipt."
+    },
+    {
+      "id": "sales.order.record_simple",
+      "change": "unchanged",
+      "rollout": "source",
+      "note": "Telegram inherits the existing linked role ceiling and canonical review and action paths."
+    }
+  ],
+  "procedures": [
+    {
+      "path": "assistantChannels.confirmTelegramLink",
+      "status": "excluded",
+      "reason": "Authenticated personal Telegram connection control; unavailable to assistant tools and linked principals."
+    },
+    {
+      "path": "assistantChannels.createTelegramLink",
+      "status": "excluded",
+      "reason": "Authenticated personal Telegram connection control; unavailable to assistant tools and linked principals."
+    },
+    {
+      "path": "assistantChannels.telegramAvailability",
+      "status": "excluded",
+      "reason": "Authenticated personal Telegram connection control; unavailable to assistant tools and linked principals."
+    },
+    {
+      "path": "assistantChannels.telegramLink",
+      "status": "excluded",
+      "reason": "Authenticated personal Telegram connection control; unavailable to assistant tools and linked principals."
+    }
+  ],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/assistant-telegram.md"
+    },
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/decisions/2026-11-11-telegram-assistant-channel.md"
+    },
+    {
+      "topic": "capability",
+      "status": "updated",
+      "path": "packages/assistant/src/capabilities/COVERAGE.md"
+    },
+    {
+      "topic": "permissions",
+      "status": "local_only",
+      "path": ".brain/api/permissions.md"
+    },
+    {
+      "topic": "api",
+      "status": "local_only",
+      "path": ".brain/api/endpoints.md"
+    },
+    {
+      "topic": "schema",
+      "status": "local_only",
+      "path": ".brain/database/schema.md"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/assistant/src/channels/policy.test.ts",
+      "executed": true,
+      "result": "Compatible Telegram reads and actions require exact release IDs and preserve linked authority."
+    },
+    {
+      "kind": "test",
+      "path": "apps/api/src/communications/telegram-routes.test.ts",
+      "executed": true,
+      "result": "Private webhook admission, secret check, durable dispatch and machine route contracts pass."
+    },
+    {
+      "kind": "test",
+      "path": "apps/api/src/assistant/telegram-runtime.integration.test.ts",
+      "executed": true,
+      "result": "Guarded QA database run passed 1 test and 54 assertions: authenticated link, canonical customer read and create, exact sent review callback, and replay of one receipt. Telegram delivery and dispatch were simulated."
+    }
+  ]
+}

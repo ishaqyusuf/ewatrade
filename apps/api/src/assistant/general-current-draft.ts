@@ -9,6 +9,7 @@ import {
   generalConversationWhere,
   generalProposalWhere,
 } from "@ewatrade/db/assistant-general"
+import { readAssistantTelegramPendingEdit } from "@ewatrade/db/assistant-telegram"
 import { isLinkedAssistantIdentity } from "./channel-principal"
 import type { GeneralTransactionContext } from "./general-actions"
 import { requireGeneralScope } from "./general-context"
@@ -44,7 +45,8 @@ type PendingDraft = {
   expiresAt: Date
 }
 export type CurrentGeneralDraftSource = {
-  kind: "committed_reference" | "legacy_unique"
+  kind: "committed_reference" | "legacy_unique" | "telegram_review"
+  reviewId?: string
   conversationId: string
   /** The server's current running turn, never supplied by the model. */
   runId: string
@@ -248,6 +250,44 @@ export async function readCurrentGeneralDraftInTransaction(
     },
   })
   if (!userMessage) return { status: "unavailable" }
+  if (
+    isLinkedAssistantIdentity(fresh.session) &&
+    fresh.session.channel === "telegram" &&
+    fresh.session.inboxLease
+  ) {
+    const edit = await readAssistantTelegramPendingEdit(
+      fresh.db,
+      fresh.session.inboxLease,
+    )
+    if (edit) {
+      const proposal = await fresh.db.assistantActionProposal.findFirst({
+        where: {
+          ...generalProposalWhere(scope),
+          id: edit.proposalId,
+          revision: edit.revision,
+          payloadHash: edit.payloadHash,
+          conversationId: conversation.id,
+          status: "PENDING",
+          expiresAt: { gt: new Date() },
+        },
+      })
+      const payload = generalActionSchema.safeParse(proposal?.payload)
+      if (!proposal || !payload.success) return { status: "unavailable" }
+      return {
+        status: "available",
+        payload: payload.data,
+        source: {
+          kind: "telegram_review",
+          reviewId: edit.id,
+          conversationId: conversation.id,
+          runId: input.runId,
+          proposalId: proposal.id,
+          revision: proposal.revision,
+          payloadHash: proposal.payloadHash,
+        },
+      }
+    }
+  }
   const sources = await fresh.db.assistantMessage.findMany({
     where: {
       conversationId: conversation.id,
@@ -310,4 +350,15 @@ export async function readCurrentGeneralDraftInTransaction(
     includeAllActions: isLinkedAssistantIdentity(fresh.session),
     now,
   })
+}
+
+export async function hasCurrentTelegramEdit(
+  ctx: Pick<GeneralTransactionContext, "db" | "session">,
+) {
+  return Boolean(
+    isLinkedAssistantIdentity(ctx.session) &&
+      ctx.session.channel === "telegram" &&
+      ctx.session.inboxLease &&
+      (await readAssistantTelegramPendingEdit(ctx.db, ctx.session.inboxLease)),
+  )
 }

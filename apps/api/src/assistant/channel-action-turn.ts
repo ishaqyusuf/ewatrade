@@ -29,7 +29,7 @@ import {
 import { TRPCError } from "@trpc/server"
 import { z } from "zod"
 import { paymentLinkOrigin } from "../banking/config"
-import { isLinkedAssistantIdentity } from "./channel-principal"
+import { isLinkedWhatsAppIdentity } from "./channel-principal"
 import type { GeneralContext } from "./general-context"
 import {
   decideGeneralProposalInTransaction,
@@ -51,7 +51,7 @@ export function assistantWhatsAppActionResultText(
 }
 
 export const defaultChannelActionDependencies = () => ({
-  linked: isLinkedAssistantIdentity,
+  linked: isLinkedWhatsAppIdentity,
   transaction: inFreshGeneralTransaction,
   lease: assertAssistantWhatsAppInboxLease,
   resolve: resolveAssistantWhatsAppConversation,

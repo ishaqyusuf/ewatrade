@@ -5,7 +5,7 @@ import { commercePreparationEnabled } from "./preparation-observability"
 /** Every shipped capability is on; planned ones are not built yet, except in a channel released ahead of the app. */
 export function generalCapabilityEnabled(
   capability: Capability,
-  channel?: "whatsapp",
+  channel?: "whatsapp" | "telegram",
 ) {
   if (
     !commercePreparationEnabled() &&

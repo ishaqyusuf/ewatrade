@@ -8,15 +8,15 @@ import {
   readAssistantWhatsAppConfig,
 } from "@ewatrade/communications"
 import {
-  type LinkedAssistantIdentity,
-  isLinkedAssistantIdentity,
+  type LinkedWhatsAppIdentity,
+  isLinkedWhatsAppIdentity,
 } from "./channel-principal"
 
 // Internal projection only: the default guard still requires the private server-issued brand.
 export type TypingIdentity = Pick<
-  LinkedAssistantIdentity,
+  LinkedWhatsAppIdentity,
   "purpose" | "principal" | "inboxLease"
-> & { user: Pick<LinkedAssistantIdentity["user"], "id"> }
+> & { user: Pick<LinkedWhatsAppIdentity["user"], "id"> }
 type TypingContext = {
   session: unknown
   requestId?: string
@@ -76,7 +76,7 @@ export type AssistantWhatsAppTypingReport = AssistantWhatsAppTypingOutcome & {
 const provider = new DirectMetaWhatsAppProvider()
 export const defaultChannelTypingDependencies = () => ({
   linked: (identity: unknown): identity is TypingIdentity =>
-    isLinkedAssistantIdentity(identity),
+    isLinkedWhatsAppIdentity(identity),
   allowed: isAssistantWhatsAppPilot,
   config: readAssistantWhatsAppConfig,
   send: (input: Parameters<typeof provider.sendTyping>[0]) =>

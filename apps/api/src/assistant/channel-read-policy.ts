@@ -3,13 +3,14 @@ import type {
   Capability,
   CapabilityRole,
 } from "@ewatrade/assistant/capabilities/types"
-import { whatsAppCapabilityEnabled } from "@ewatrade/assistant/channels/policy"
+import { linkedCapabilityEnabled } from "@ewatrade/assistant/channels/policy"
 import { TRPCError } from "@trpc/server"
 import { generalCapabilityEnabled } from "./general-rollout"
 
 /** A linked domain caller is a specific authorized read, never an unrestricted internal caller. */
 export function assertLinkedAssistantRead(
   input: {
+    channel?: "whatsapp" | "telegram"
     capabilityId?: string
     path: string
     type: string
@@ -29,8 +30,8 @@ export function assertLinkedAssistantRead(
     capability.mode !== "read" ||
     input.type !== "query" ||
     !capability.clients.includes("whatsapp") ||
-    !generalCapabilityEnabled(capability, "whatsapp") ||
-    !whatsAppCapabilityEnabled(capability, environment) ||
+    !generalCapabilityEnabled(capability, input.channel ?? "whatsapp") ||
+    !linkedCapabilityEnabled(capability, input.channel, environment) ||
     !(capability.whatsapp?.roles ?? capability.policy.roles).includes(
       input.role as CapabilityRole,
     ) ||
@@ -39,7 +40,9 @@ export function assertLinkedAssistantRead(
     throw new TRPCError({
       code: "FORBIDDEN",
       message:
-        "This operation is not available through the WhatsApp assistant.",
+        input.channel === "telegram"
+          ? "This operation is unavailable in the Telegram assistant."
+          : "This operation is not available through the WhatsApp assistant.",
     })
   return capability
 }

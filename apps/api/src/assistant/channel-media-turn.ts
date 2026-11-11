@@ -24,7 +24,7 @@ import {
 } from "@ewatrade/db/assistant-whatsapp"
 import { runInOwnSerializableTransaction } from "@ewatrade/db/own-transaction"
 import { openOrderWhere, resolveOrderScope } from "@ewatrade/db/queries"
-import { isLinkedAssistantIdentity } from "./channel-principal"
+import { isLinkedWhatsAppIdentity } from "./channel-principal"
 import {
   type GeneralContext,
   canDraftGeneralCapability,
@@ -121,7 +121,7 @@ export async function prepareAssistantWhatsAppMediaTurn(
   },
 ): Promise<WhatsAppPreparedMediaTurn> {
   if (
-    !isLinkedAssistantIdentity(ctx.session) ||
+    !isLinkedWhatsAppIdentity(ctx.session) ||
     ctx.session.principal.bindingId !== lease.bindingId
   )
     throw Error("WhatsApp media authority changed.")

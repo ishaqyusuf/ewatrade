@@ -1,4 +1,5 @@
 import type { GeneralAction } from "@ewatrade/assistant/general/contracts"
+import { finishAssistantTelegramPendingEdit } from "@ewatrade/db/assistant-telegram"
 import { TRPCError } from "@trpc/server"
 import type { GeneralContext } from "./general-context"
 import { assertGeneralDraftAction } from "./general-context"
@@ -66,6 +67,8 @@ export function createGeneralDraftCorrection(
           revision: read.revision,
           payload,
         })
+        if (read.kind === "telegram_review" && read.reviewId)
+          await finishAssistantTelegramPendingEdit(fresh.db, read.reviewId)
         return {
           proposalId: saved.id,
           revision: saved.revision,

@@ -10,6 +10,7 @@ import { prisma } from "@ewatrade/db"
 import { isLegalSignupSessionBlocked } from "@ewatrade/db/legal-session-access"
 import { isPrescriptionProductionLaunchApproved } from "@ewatrade/db/queries"
 import { toPublicErrorEnvelope } from "@ewatrade/errors"
+import { enqueueAssistantTelegramTurn } from "@ewatrade/jobs/assistant-telegram"
 import { trpcServer } from "@hono/trpc-server"
 import { OpenAPIHono } from "@hono/zod-openapi"
 import { Hono } from "hono"
@@ -23,6 +24,11 @@ import { registerAssistantChannelDeliveryRoute } from "./assistant/channel-deliv
 import { registerAssistantChannelTurnRoute } from "./assistant/channel-turn-route"
 import { registerAssistantChatRoutes } from "./assistant/chat-route"
 import { registerGeneralAssistantChatRoutes } from "./assistant/general-chat-route"
+import {
+  acceptAssistantTelegramUpdate,
+  processAssistantTelegramDelivery,
+  processAssistantTelegramTurn,
+} from "./assistant/telegram-runtime"
 import { registerVoiceGatewayRoutes } from "./assistant/voice-gateway"
 import { registerManualPaymentReceiptRoutes } from "./banking/manual-payment-receipts"
 import { registerPaystackSubscriptionWebhook } from "./billing/paystack-subscription-webhook"
@@ -31,6 +37,7 @@ import { registerStoreNotificationRoutes } from "./billing/store-notifications"
 import { registerCatalogPhotoPreviewRoutes } from "./catalog/photo-preview"
 import { registerCatalogPublicPhotoRoutes } from "./catalog/photo-public"
 import { registerCatalogPhotoUploadRoutes } from "./catalog/photo-upload"
+import { registerAssistantTelegramRoutes } from "./communications/telegram-routes"
 import { registerWhatsAppEmbeddedSignupRoutes } from "./communications/whatsapp-embedded-signup"
 import { registerWhatsAppWebhookRoutes } from "./communications/whatsapp-webhook"
 import { registerDomainPaystackWebhook } from "./domains/paystack-webhook"
@@ -223,6 +230,12 @@ registerVoiceGatewayRoutes(app)
 registerGeneralAssistantChatRoutes(app)
 registerAssistantChannelTurnRoute(app)
 registerAssistantChannelDeliveryRoute(app)
+registerAssistantTelegramRoutes(app, {
+  accept: acceptAssistantTelegramUpdate,
+  enqueueTurn: enqueueAssistantTelegramTurn,
+  processTurn: processAssistantTelegramTurn,
+  processDelivery: processAssistantTelegramDelivery,
+})
 registerPrescriptionMediaDeliveryRoutes(app)
 registerServiceCommerceMediaDeliveryRoutes(app)
 registerServiceCommerceMediaUploadRoutes(app)

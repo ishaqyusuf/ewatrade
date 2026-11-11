@@ -173,6 +173,41 @@ export function whatsAppWebReviewDraftEnabled(
         policy.releasedCapabilityIds.includes(capability.id)))
   )
 }
+/** Both linked transports use the same reviewed capability contracts and role ceilings. */
+export function telegramNativeCapability(capability: Capability) {
+  return (
+    capability.clients.includes("whatsapp") &&
+    capability.whatsapp?.mode === "native" &&
+    ["source", "pilot", "enabled"].includes(capability.whatsapp.rollout) &&
+    ["source", "pilot", "enabled"].includes(capability.rollout) &&
+    (capability.mode === "read" ||
+      !stagedNativeReviewActions.some((action) => action === capability.action))
+  )
+}
+
+export function telegramCapabilityReleased(
+  capability: Capability,
+  env: Environment = process.env,
+) {
+  return (
+    env.ASSISTANT_TELEGRAM_ENABLED === "true" &&
+    (env.ASSISTANT_TELEGRAM_RELEASED_CAPABILITY_IDS ?? "")
+      .split(",")
+      .some((id) => id.trim() === capability.id)
+  )
+}
+
+export function linkedCapabilityEnabled(
+  capability: Capability,
+  channel: "telegram" | "whatsapp" = "whatsapp",
+  env: Environment = process.env,
+) {
+  return channel === "telegram"
+    ? telegramNativeCapability(capability) &&
+        telegramCapabilityReleased(capability, env)
+    : whatsAppCapabilityEnabled(capability, env)
+}
+
 /** Stable policy evidence; source-test/doc edits do not invalidate saved replies. */
 export function whatsAppCapabilityPolicyStamp(
   manifest: readonly Capability[],

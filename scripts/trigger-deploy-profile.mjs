@@ -50,6 +50,7 @@ export const TRIGGER_JOB_ENV_KEYS = [
   "JOB_SCHEDULE_MODE",
   "API_URL",
   "INTERNAL_API_KEY",
+  "ASSISTANT_TELEGRAM_ENABLED",
   ...assistantWhatsAppFlags,
   "ASSISTANT_WHATSAPP_ROLLOUT_MODE",
   "ASSISTANT_WHATSAPP_RELEASED_CAPABILITY_IDS",
@@ -376,6 +377,8 @@ export function syncedTriggerJobEnvironment(env) {
     )
   // Always overwrite a previously deployed opt-in when the selected file unsets it.
   result.JOB_SCHEDULE_MODE = env.JOB_SCHEDULE_MODE?.trim() || "standard"
+  result.ASSISTANT_TELEGRAM_ENABLED =
+    env.ASSISTANT_TELEGRAM_ENABLED?.trim() === "true" ? "true" : "false"
   if (
     env.APP_ENV === "preview" &&
     env.ASSISTANT_WHATSAPP_ENABLED?.trim() !== "true"

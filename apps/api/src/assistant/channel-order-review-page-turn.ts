@@ -16,7 +16,7 @@ import {
 } from "@ewatrade/db/assistant-whatsapp"
 import { TRPCError } from "@trpc/server"
 import {
-  isLinkedAssistantIdentity,
+  isLinkedWhatsAppIdentity,
   lockLinkedAssistantIdentity,
 } from "./channel-principal"
 import { type GeneralContext, assertGeneralAction } from "./general-context"
@@ -42,7 +42,7 @@ export async function processAssistantWhatsAppOrderReviewPageTurn(
   )
   if (!parsed.success && !invalid) return false
   await inFreshGeneralTransaction(ctx, async (fresh) => {
-    if (!isLinkedAssistantIdentity(fresh.session))
+    if (!isLinkedWhatsAppIdentity(fresh.session))
       throw new AssistantWhatsAppError("UNAUTHORIZED")
     await assertAssistantWhatsAppInboxLease(fresh.db, lease)
     const resolved = await lockLinkedAssistantIdentity(fresh.db, fresh.session)

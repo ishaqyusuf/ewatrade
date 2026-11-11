@@ -35,6 +35,10 @@ jobs:
         env:
           EWATRADE_DATABASE_URL: postgresql://unit-only@127.0.0.1:1/unused
         run: bun --env-file=/dev/null test apps/api/src/trpc/routers/assistant-channels.test.ts apps/api/src/assistant/channel-controls.test.ts packages/db/src/queries/assistant-whatsapp/privacy.test.ts
+      - name: Telegram transport and account boundaries
+        env:
+          EWATRADE_DATABASE_URL: postgresql://unit-only@127.0.0.1:1/unused
+        run: bun --env-file=/dev/null test packages/communications/src/telegram.test.ts apps/api/src/communications/telegram-routes.test.ts
       - name: WhatsApp inventory is current
         run: bun scripts/assistant-whatsapp-coverage.ts --check
       - name: Proposal recovery and inventory routing regressions
@@ -42,6 +46,8 @@ jobs:
       - name: Booking review approval and exact completion regressions
         run: bun --env-file=/dev/null test packages/assistant/evaluations/booking-source-regressions.test.ts
       - name: Coverage snapshot is current
+        env:
+          APP_ENV: local
         working-directory: apps/api
         run: bun --env-file=/dev/null scripts/assistant-coverage.ts --check
       - name: Impact record covers gated changes

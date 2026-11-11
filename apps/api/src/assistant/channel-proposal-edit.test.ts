@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test"
 import { generalActionSchema } from "@ewatrade/assistant/general/contracts"
 import { AssistantWhatsAppError } from "@ewatrade/db/assistant-whatsapp"
-import type { LinkedAssistantIdentity } from "./channel-principal"
+import type { LinkedWhatsAppIdentity } from "./channel-principal"
 import {
   createWhatsAppDraftCorrection,
   defaultWhatsAppDraftCorrectionDependencies,
@@ -91,7 +91,7 @@ function fixture(
   const ctx = { db, session } as unknown as GeneralContext
   const fresh = ctx as unknown as GeneralTransactionContext
   const deps = defaultWhatsAppEditRequestDependencies()
-  deps.linked = (identity: unknown): identity is LinkedAssistantIdentity =>
+  deps.linked = (identity: unknown): identity is LinkedWhatsAppIdentity =>
     identity === session
   deps.transaction = async <T>(
     _ctx: GeneralContext,

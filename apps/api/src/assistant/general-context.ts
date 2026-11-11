@@ -7,7 +7,9 @@ import type {
   CapabilityRole,
 } from "@ewatrade/assistant/capabilities/types"
 import {
-  whatsAppCapabilityEnabled,
+  linkedCapabilityEnabled,
+  telegramCapabilityReleased,
+  telegramNativeCapability,
   whatsAppWebReviewDraftEnabled,
 } from "@ewatrade/assistant/channels/policy"
 import type { GeneralActionName } from "@ewatrade/assistant/general/contracts"
@@ -48,6 +50,11 @@ export function supportsGeneralCapability(
   ctx: GeneralScopeContext,
   capability: Capability,
 ) {
+  if (
+    isLinkedAssistantIdentity(ctx.session) &&
+    ctx.session.channel === "telegram"
+  )
+    return telegramNativeCapability(capability)
   const client = isLinkedAssistantIdentity(ctx.session)
     ? "whatsapp"
     : ctx.requestHeaders?.get("x-assistant-client") === "dashboard"
@@ -407,10 +414,12 @@ export function assertCapability(
   if (
     !generalCapabilityEnabled(
       capability,
-      isLinkedAssistantIdentity(ctx.session) ? "whatsapp" : undefined,
+      isLinkedAssistantIdentity(ctx.session)
+        ? (ctx.session.channel ?? "whatsapp")
+        : undefined,
     ) ||
     (isLinkedAssistantIdentity(ctx.session) &&
-      !whatsAppCapabilityEnabled(capability))
+      !linkedCapabilityEnabled(capability, ctx.session.channel))
   )
     throw new TRPCError({
       code: "FORBIDDEN",
@@ -511,9 +520,13 @@ export function assertGeneralDraftAction(
   const capability = capabilityForAction(action)
   if (!isLinkedAssistantIdentity(ctx.session))
     return assertCapability(ctx, capability)
-  if (whatsAppCapabilityEnabled(capability))
+  if (linkedCapabilityEnabled(capability, ctx.session.channel))
     return assertCapability(ctx, capability)
-  if (!ctx.session.inboxLease || !whatsAppWebReviewDraftEnabled(capability))
+  const webReviewEnabled =
+    ctx.session.channel === "telegram"
+      ? telegramCapabilityReleased(capability)
+      : whatsAppWebReviewDraftEnabled(capability)
+  if (!ctx.session.inboxLease || !webReviewEnabled)
     throw new TRPCError({
       code: "FORBIDDEN",
       message: "This action needs review in EwaTrade.",
@@ -587,7 +600,7 @@ export function assertGeneralOrderInitialPayment(ctx: GeneralScopeContext) {
   const order = capabilityForAction("order_create")
   if (
     isLinkedAssistantIdentity(ctx.session) &&
-    whatsAppCapabilityEnabled(order)
+    linkedCapabilityEnabled(order, ctx.session.channel)
   ) {
     // Current parent capability, domain, role, plan and exact Store grant.
     return assertGeneralAction(ctx, "order_create")

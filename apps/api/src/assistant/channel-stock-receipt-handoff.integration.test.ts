@@ -25,7 +25,7 @@ import { catalogRouter } from "../trpc/routers/catalog"
 import { inventoryRouter } from "../trpc/routers/inventory"
 import { createAssistantWhatsAppActionFixture } from "./channel-action-integration-fixture"
 import {
-  isLinkedAssistantIdentity,
+  isLinkedWhatsAppIdentity,
   lockLinkedAssistantIdentity,
 } from "./channel-principal"
 import { generalPersistentParts } from "./general-persistence"
@@ -327,7 +327,7 @@ async function handoff(action: "stock_receive", text: string) {
       ),
     )
   await db.$transaction(async (tx) => {
-    if (!isLinkedAssistantIdentity(ctx.session))
+    if (!isLinkedWhatsAppIdentity(ctx.session))
       throw Error("Real linked identity required")
     const resolved = await lockLinkedAssistantIdentity(tx, ctx.session)
     await stampAssistantWhatsAppExecution(tx, claimed.lease, resolved)

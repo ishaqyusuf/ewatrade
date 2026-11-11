@@ -40,7 +40,7 @@ import { TRPCError } from "@trpc/server"
 import { z } from "zod"
 import { dispatchStaffInvitationProposalEmail } from "../staff/invitation-dispatch"
 import {
-  isLinkedAssistantIdentity,
+  isLinkedWhatsAppIdentity,
   lockLinkedAssistantIdentity,
   requireBrowserIdentity,
   resolveLinkedAssistantIdentity,
@@ -353,7 +353,7 @@ export async function processAssistantWhatsAppReviewLinkRecoveryTurn(
   inbox: RecoveryInbox,
 ): Promise<{ kind: "completed" } | undefined> {
   if (
-    !isLinkedAssistantIdentity(ctx.session) ||
+    !isLinkedWhatsAppIdentity(ctx.session) ||
     ctx.session.purpose !== "GENERAL" ||
     ctx.session.principal.bindingId !== lease.bindingId
   )
@@ -411,7 +411,7 @@ export async function processAssistantWhatsAppReviewLinkRecoveryTurn(
   const resolvedIntent = intent
   return inFreshGeneralTransaction(ctx, async (fresh) => {
     if (
-      !isLinkedAssistantIdentity(fresh.session) ||
+      !isLinkedWhatsAppIdentity(fresh.session) ||
       fresh.session.purpose !== "GENERAL"
     )
       throw new TRPCError({ code: "UNAUTHORIZED" })

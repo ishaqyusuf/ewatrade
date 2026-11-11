@@ -30,7 +30,7 @@ import {
 } from "@ewatrade/db/queries"
 import { enqueueCatalogPhotoReview } from "@ewatrade/jobs/catalog-photo-review"
 import { TRPCError } from "@trpc/server"
-import { isLinkedAssistantIdentity } from "./channel-principal"
+import { isLinkedWhatsAppIdentity } from "./channel-principal"
 import {
   executeReviewedWorkflowSelectionInTransaction,
   projectCommand,
@@ -164,7 +164,7 @@ async function inWorkflowReceiptTransaction<T>(
   )
 }
 export const defaultChannelWorkflowActionDependencies = () => ({
-  linked: isLinkedAssistantIdentity,
+  linked: isLinkedWhatsAppIdentity,
   transaction: inFreshLinkedWorkflowTransaction,
   receiptTransaction: inWorkflowReceiptTransaction,
   lease: assertAssistantWhatsAppInboxLease,

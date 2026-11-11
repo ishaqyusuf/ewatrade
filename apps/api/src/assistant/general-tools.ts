@@ -14,6 +14,10 @@ import {
 } from "@ewatrade/assistant/channels/capability-action-handoff"
 import { nativeOrderChoiceIssues } from "@ewatrade/assistant/channels/order-review"
 import {
+  linkedCapabilityEnabled,
+  telegramCapabilityReleased,
+} from "@ewatrade/assistant/channels/policy"
+import {
   plannedReportAppInstruction,
   plannedReportAppLink,
 } from "@ewatrade/assistant/channels/read-record-links"
@@ -115,7 +119,10 @@ import { serviceJobMessagesSchema } from "../schemas/services"
 import { resolveProtectedTenantContext } from "../trpc/init"
 import { orderScope } from "../trpc/order-scope"
 import { createBusinessReportingCaller } from "../trpc/routers/business-reporting"
-import { isLinkedAssistantIdentity } from "./channel-principal"
+import {
+  isLinkedAssistantIdentity,
+  isLinkedWhatsAppIdentity,
+} from "./channel-principal"
 import {
   createWhatsAppDraftCorrection,
   hasCurrentWhatsAppEdit,
@@ -147,6 +154,7 @@ import {
   requireGeneralScope,
 } from "./general-context"
 import { generalCountAnswer } from "./general-count-answer"
+import { hasCurrentTelegramEdit } from "./general-current-draft"
 import { readCurrentGeneralDraftInTransaction } from "./general-current-draft"
 import {
   generalCustomerAllocationHistoryAnswer,
@@ -450,7 +458,7 @@ export function createGeneralTools(
   let correctionMode: "native" | "natural" | null = null
   const readCorrection = async (fresh: GeneralContext) => {
     correctionMode = null
-    if (isLinkedAssistantIdentity(fresh.session)) {
+    if (isLinkedWhatsAppIdentity(fresh.session)) {
       const selected = await nativeCorrection.read(fresh)
       if (selected.status === "editing") {
         correctionMode = "native"
@@ -540,12 +548,23 @@ export function createGeneralTools(
     process.env.DASHBOARD_URL ??
     process.env.NEXT_PUBLIC_DASHBOARD_URL ??
     "https://dash.ewatrade.com"
+  const classifyHandoff = (context: GeneralContext, capability: Capability) => {
+    if (!isLinkedAssistantIdentity(context.session))
+      return { kind: "unavailable" } as const
+    if (context.session.channel !== "telegram")
+      return classifyCapabilityAction(capability)
+    return capability.mode === "write" &&
+      telegramCapabilityReleased(capability) &&
+      !linkedCapabilityEnabled(capability, "telegram")
+      ? ({ kind: "app_review", reason: "complete_app_review" } as const)
+      : ({ kind: "unavailable" } as const)
+  }
   const availableHandoffCapabilities = writeCapabilities.filter(
     (capability) => {
       if (
         !isLinkedAssistantIdentity(ctx.session) ||
         canDraftGeneralCapability(ctx, capability) ||
-        classifyCapabilityAction(capability).kind !== "app_review"
+        classifyHandoff(ctx, capability).kind !== "app_review"
       )
         return false
       try {
@@ -2899,7 +2918,9 @@ export function createGeneralTools(
         wrap("draftAction", async (fresh) => {
           if (
             isLinkedAssistantIdentity(fresh.session) &&
-            (await hasCurrentWhatsAppEdit(fresh))
+            (isLinkedWhatsAppIdentity(fresh.session)
+              ? await hasCurrentWhatsAppEdit(fresh)
+              : await hasCurrentTelegramEdit(fresh))
           )
             throw new TRPCError({
               code: "BAD_REQUEST",
@@ -2979,7 +3000,7 @@ export function createGeneralTools(
         }),
     })
   }
-  if (isLinkedAssistantIdentity(ctx.session))
+  if (isLinkedWhatsAppIdentity(ctx.session))
     listed.askWhatsAppQuestion = tool({
       description:
         "Present one short clarification or useful read follow-up with up to three plain-text reply choices. Choices are untrusted user input hints, never business scope, record authority, proof or confirmation. Ask about exact stated amounts, dates, units or ambiguous records rather than guessing. Never request passwords/codes or offer Confirm/Save/Cancel; the server owns approvals, connection and scope controls.",
@@ -3003,7 +3024,7 @@ export function createGeneralTools(
           }
         }),
     })
-  if (isLinkedAssistantIdentity(ctx.session)) {
+  if (isLinkedWhatsAppIdentity(ctx.session)) {
     listed.readCurrentWhatsAppDraft = tool({
       description:
         "Read the payload of the exact draft the user selected Edit on. Server selects its binding, proposal and current revision; no credential or approval is returned. Never infer an editing target from the newest proposal.",
@@ -3084,7 +3105,7 @@ export function createGeneralTools(
           )
           if (!capability) throw new TRPCError({ code: "FORBIDDEN" })
           const current = assertGeneralActionHandoffAuthority(fresh, capability)
-          const classification = classifyCapabilityAction(capability)
+          const classification = classifyHandoff(fresh, capability)
           if (
             classification.kind !== "app_review" ||
             fresh.assistantConversationId !== conversationId

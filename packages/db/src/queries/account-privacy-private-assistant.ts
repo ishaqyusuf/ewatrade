@@ -1,6 +1,12 @@
 import { createHash } from "node:crypto"
 import { z } from "zod"
 import type { Prisma, PrismaClient } from "../../generated/prisma/client"
+import {
+  AssistantTelegramPrivateCleanupError,
+  assistantTelegramPrivacyInventory,
+  eraseAssistantTelegramPrivateCleanupInTransaction,
+  prepareAssistantTelegramPrivateCleanupInTransaction,
+} from "./assistant-telegram/privacy"
 import { assistantWhatsAppPrivacyInventory } from "./assistant-whatsapp/privacy"
 import {
   AssistantWhatsAppPrivateCleanupError,
@@ -171,11 +177,12 @@ export async function countAccountPrivacyPrivateAssistant(
   const proposals = await db.assistantActionProposal.count({
     where: { actorUserId: subjectId },
   })
-  const channel = await assistantWhatsAppPrivacyInventory(db, subjectId)
-  const channelRecords = Object.values(channel).reduce(
-    (sum, count) => sum + count,
-    0,
-  )
+  const whatsapp = await assistantWhatsAppPrivacyInventory(db, subjectId)
+  const telegram = await assistantTelegramPrivacyInventory(db, subjectId)
+  const channelRecords = [
+    ...Object.values(whatsapp),
+    ...Object.values(telegram),
+  ].reduce((sum, count) => sum + count, 0)
   return {
     conversations,
     runs,
@@ -371,16 +378,24 @@ export async function processAccountPrivacyPrivateAssistant(
   const channel = await channelOperation(() =>
     runInOwnSerializableTransaction(db, async (tx) => {
       const { subjectId } = await context(tx, input, now)
-      return prepareAssistantWhatsAppPrivateCleanupInTransaction(
-        tx,
-        subjectId,
-        now,
-      )
+      const whatsapp =
+        await prepareAssistantWhatsAppPrivateCleanupInTransaction(
+          tx,
+          subjectId,
+          now,
+        )
+      const telegram =
+        await prepareAssistantTelegramPrivateCleanupInTransaction(
+          tx,
+          subjectId,
+          now,
+        )
+      return { whatsapp, telegram }
     }),
   )
   // Keep the committed revocation/pending cancellation even when original send
   // proof or a live lease must remain for real provider reconciliation.
-  if (channel.unresolved)
+  if (channel.whatsapp.unresolved || channel.telegram.unresolved)
     throw new AccountPrivacyPrivateAssistantError("PRIVATE_WORK_UNRESOLVED")
   const before = await runInOwnSerializableTransaction(db, async (tx) => {
     const { subjectId } = await context(tx, input, now)
@@ -432,13 +447,22 @@ export async function processAccountPrivacyPrivateAssistant(
           }
         throw new AccountPrivacyPrivateAssistantError("SCOPE_CHANGED")
       }
-      const channelRecordsRemoved =
+      const cleanupAt = new Date()
+      const whatsappRemoved =
         await eraseAssistantWhatsAppPrivateCleanupInTransaction(
           tx,
           subjectId,
-          channel,
-          new Date(),
+          channel.whatsapp,
+          cleanupAt,
         )
+      const telegramRemoved =
+        await eraseAssistantTelegramPrivateCleanupInTransaction(
+          tx,
+          subjectId,
+          channel.telegram,
+          cleanupAt,
+        )
+      const channelRecordsRemoved = whatsappRemoved + telegramRemoved
       const attachmentsRemoved = await tx.assistantAttachment.deleteMany({
         where: {
           id: { in: fresh.attachments.map((row) => row.id) },
@@ -508,7 +532,10 @@ async function channelOperation<T>(operation: () => Promise<T>): Promise<T> {
   try {
     return await operation()
   } catch (error) {
-    if (error instanceof AssistantWhatsAppPrivateCleanupError)
+    if (
+      error instanceof AssistantWhatsAppPrivateCleanupError ||
+      error instanceof AssistantTelegramPrivateCleanupError
+    )
       throw new AccountPrivacyPrivateAssistantError(error.code)
     throw error
   }

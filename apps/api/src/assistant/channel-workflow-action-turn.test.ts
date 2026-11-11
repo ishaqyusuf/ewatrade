@@ -4,7 +4,7 @@ import {
   WHATSAPP_WORKFLOW_ACTION_INVALID_REPLY,
 } from "@ewatrade/assistant/channels/workflow-action-result"
 import type { WhatsAppWorkflowActionSource } from "@ewatrade/assistant/channels/workflow-action-review"
-import type { LinkedAssistantIdentity } from "./channel-principal"
+import type { LinkedWhatsAppIdentity } from "./channel-principal"
 import {
   defaultChannelWorkflowActionDependencies,
   processAssistantWhatsAppWorkflowAction,
@@ -103,7 +103,7 @@ function fixture(
   const ctx = { session, db } as unknown as GeneralContext
   const fresh = { session, db } as unknown as GeneralTransactionContext
   const deps = defaultChannelWorkflowActionDependencies()
-  deps.linked = (identity: unknown): identity is LinkedAssistantIdentity =>
+  deps.linked = (identity: unknown): identity is LinkedWhatsAppIdentity =>
     identity === session
   deps.transaction = async <T>(
     _context: GeneralContext,

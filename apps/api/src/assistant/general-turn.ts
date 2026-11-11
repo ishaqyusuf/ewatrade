@@ -1,5 +1,8 @@
 import { ASSISTANT_RUNTIME_CONFIGURATION_KEY } from "@ewatrade/ai/runtime-config"
-import { WHATSAPP_ASSISTANT_PROMPT_VERSION } from "@ewatrade/assistant/channels/instructions"
+import {
+  TELEGRAM_ASSISTANT_PROMPT_VERSION,
+  WHATSAPP_ASSISTANT_PROMPT_VERSION,
+} from "@ewatrade/assistant/channels/instructions"
 import { generalStoredPartSchema } from "@ewatrade/assistant/general/contracts"
 import { GENERAL_PROMPT_VERSION } from "@ewatrade/assistant/general/prompt"
 import { generalReadContinuationContext } from "@ewatrade/assistant/general/read-continuation"
@@ -22,7 +25,6 @@ import {
   readGeneralConversation,
   readGeneralRun,
 } from "@ewatrade/db/assistant-general"
-import { stampAssistantWhatsAppExecution } from "@ewatrade/db/assistant-whatsapp"
 import { TRPCError } from "@trpc/server"
 import {
   type LanguageModelUsage,
@@ -33,7 +35,7 @@ import { z } from "zod"
 import { resolveProtectedTenantContext } from "../trpc/init"
 import {
   isLinkedAssistantIdentity,
-  lockLinkedAssistantIdentity,
+  stampLinkedAssistantExecution,
 } from "./channel-principal"
 import {
   attachmentSendRefusal,
@@ -71,7 +73,7 @@ export async function createGeneralAssistantTurn(
     ? await resolveProtectedTenantContext({ ...context, tenantContext: null })
     : context
   const scope = requireGeneralScope(ctx)
-  const linked = isLinkedAssistantIdentity(ctx.session)
+  const linked = isLinkedAssistantIdentity(ctx.session) ? ctx.session : null
   if (linked && ctx.assistantConversationId !== body.conversationId)
     throw new GeneralTurnError(
       404,
@@ -138,15 +140,8 @@ export async function createGeneralAssistantTurn(
         : "One of these files is not available. Attach it again.",
     )
   const begun = await ctx.db.$transaction(async (tx) => {
-    if (isLinkedAssistantIdentity(ctx.session)) {
-      const current = await lockLinkedAssistantIdentity(tx, ctx.session)
-      if (ctx.session.inboxLease)
-        await stampAssistantWhatsAppExecution(
-          tx,
-          ctx.session.inboxLease,
-          current,
-        )
-    }
+    if (isLinkedAssistantIdentity(ctx.session))
+      await stampLinkedAssistantExecution(tx, ctx.session)
     await tx.$queryRaw`SELECT "id" FROM "AssistantConversation" WHERE "id" = ${conversation.id} FOR UPDATE`
     if (await readGeneralActiveRun(tx, scope, conversation.id))
       throw new TRPCError({
@@ -159,7 +154,7 @@ export async function createGeneralAssistantTurn(
       conversationId: conversation.id,
       model: model.modelId,
       promptVersion: linked
-        ? `${GENERAL_PROMPT_VERSION}/${WHATSAPP_ASSISTANT_PROMPT_VERSION}`
+        ? `${GENERAL_PROMPT_VERSION}/${linked.channel === "telegram" ? TELEGRAM_ASSISTANT_PROMPT_VERSION : WHATSAPP_ASSISTANT_PROMPT_VERSION}`
         : GENERAL_PROMPT_VERSION,
       provider: model.provider,
       requestId: body.requestId,

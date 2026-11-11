@@ -501,7 +501,7 @@ export async function editGeneralProposalInTransaction(
 }
 
 export async function generalProposalWithReview(
-  ctx: GeneralContext,
+  ctx: GeneralTransactionContext,
   row: AssistantActionProposal,
 ): Promise<GeneralProposal> {
   if (
@@ -518,7 +518,9 @@ export async function generalProposalWithReview(
     proposal.status === "PENDING" &&
     !generalCapabilityEnabled(
       capabilityForAction(proposal.payload.action),
-      isLinkedAssistantIdentity(ctx.session) ? "whatsapp" : undefined,
+      isLinkedAssistantIdentity(ctx.session)
+        ? (ctx.session.channel ?? "whatsapp")
+        : undefined,
     )
   )
     return {

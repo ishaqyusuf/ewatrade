@@ -1,9 +1,9 @@
 import { isAssistantWhatsAppPilotTenant } from "@ewatrade/assistant/channels/policy"
 import { whatsAppFreshSessionMs } from "@ewatrade/assistant/channels/whatsapp"
-import { isAccountPrivacyAccessBlocked } from "../account-privacy-access"
-import { isLegalSignupSessionBlocked } from "../legal-session-access"
-import { getCustomerAccountAgeStatus } from "../store-conversation-age-authority"
-import { getActiveTenantForUser } from "../tenants"
+import {
+  type AssistantChannelScope,
+  readAssistantChannelScope,
+} from "../assistant-channel-authority"
 import type { DbClient } from "../types"
 
 export class AssistantWhatsAppError extends Error {
@@ -28,12 +28,7 @@ export class AssistantWhatsAppError extends Error {
   }
 }
 
-export type WhatsAppActorScope = {
-  userId: string
-  tenantId: string
-  storeId: string
-  membershipId: string
-}
+export type WhatsAppActorScope = AssistantChannelScope
 export type WhatsAppWebActor = WhatsAppActorScope & { sessionId: string }
 export type WhatsAppPersonalActor = { userId: string; sessionId: string }
 
@@ -61,36 +56,12 @@ export async function requireWhatsAppActorScope(
   db: DbClient,
   scope: WhatsAppActorScope,
 ) {
-  const tenant = await db.tenant.findUnique({
-    where: { id: scope.tenantId },
-    select: { slug: true },
-  })
-  if (!tenant || !isAssistantWhatsAppPilotTenant(scope.tenantId))
-    throw new AssistantWhatsAppError("UNAUTHORIZED")
-  const context = await getActiveTenantForUser(db, {
-    userId: scope.userId,
-    tenantSlug: tenant.slug,
-    storeId: scope.storeId,
-  })
-  if (
-    !context ||
-    context.tenant.id !== scope.tenantId ||
-    context.membership.id !== scope.membershipId ||
-    context.activeStore?.id !== scope.storeId ||
-    context.activeStore.status !== "ACTIVE" ||
-    context.tenant.qaPurgeStartedAt ||
-    context.staffAccess?.status !== "ACTIVE" ||
-    !["OWNER", "ADMIN", "MANAGER", "CASHIER", "OPERATOR"].includes(
-      context.membership.role,
-    )
+  const context = await readAssistantChannelScope(
+    db,
+    scope,
+    isAssistantWhatsAppPilotTenant,
   )
-    throw new AssistantWhatsAppError("UNAUTHORIZED")
-  if (
-    !(await getCustomerAccountAgeStatus(db, scope.userId)).eligible ||
-    (await isAccountPrivacyAccessBlocked(db, scope.userId)) ||
-    (await isLegalSignupSessionBlocked(db, scope.userId))
-  )
-    throw new AssistantWhatsAppError("UNAUTHORIZED")
+  if (!context) throw new AssistantWhatsAppError("UNAUTHORIZED")
   return context
 }
 

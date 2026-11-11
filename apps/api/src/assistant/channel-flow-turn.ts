@@ -52,7 +52,7 @@ import {
   nativeFlowStateSchema,
 } from "./channel-flow-state"
 import {
-  isLinkedAssistantIdentity,
+  isLinkedWhatsAppIdentity,
   lockLinkedAssistantIdentity,
   resolveLinkedAssistantIdentity,
 } from "./channel-principal"
@@ -98,7 +98,7 @@ export async function processAssistantWhatsAppFlowTurn(
   )
   if (!command && !returned.success && !invalid) return false
   if (
-    !isLinkedAssistantIdentity(ctx.session) ||
+    !isLinkedWhatsAppIdentity(ctx.session) ||
     ctx.session.purpose !== "GENERAL"
   )
     return false
@@ -138,7 +138,7 @@ export async function processAssistantWhatsAppFlowTurn(
   if (launch) {
     // Claim once before provider I/O. Uncertain acceptance must never duplicate a form.
     const prepared = await inFreshGeneralTransaction(ctx, async (fresh) => {
-      if (!isLinkedAssistantIdentity(fresh.session))
+      if (!isLinkedWhatsAppIdentity(fresh.session))
         throw Error("Linked identity required.")
       const current = await lockLinkedAssistantIdentity(fresh.db, fresh.session)
       await stampAssistantWhatsAppExecution(fresh.db, lease, current)
@@ -286,7 +286,7 @@ export async function processAssistantWhatsAppFlowTurn(
   }
   try {
     await inFreshGeneralTransaction(ctx, async (fresh) => {
-      if (!isLinkedAssistantIdentity(fresh.session))
+      if (!isLinkedWhatsAppIdentity(fresh.session))
         throw Error("Linked identity required.")
       const current = await lockLinkedAssistantIdentity(fresh.db, fresh.session)
       await stampAssistantWhatsAppExecution(fresh.db, lease, current)
@@ -468,7 +468,7 @@ export async function processAssistantWhatsAppFlowTurn(
     if (!returned.success) throw error
     // Invalid structured returns never reach a model or create a proposal. Record a safe recovery reply.
     await inFreshGeneralTransaction(ctx, async (fresh) => {
-      if (!isLinkedAssistantIdentity(fresh.session))
+      if (!isLinkedWhatsAppIdentity(fresh.session))
         throw Error("Linked identity required.")
       const current = await lockLinkedAssistantIdentity(fresh.db, fresh.session)
       await stampAssistantWhatsAppExecution(fresh.db, lease, current)

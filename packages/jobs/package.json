@@ -7,6 +7,7 @@
     "./catalog-ai-images": "./src/catalog-ai-images.ts",
     ".": "./src/index.ts",
     "./catalog-photo-review": "./src/catalog-photo-review.ts",
+    "./assistant-telegram": "./src/assistant-telegram.ts",
     "./assistant-whatsapp": "./src/assistant-whatsapp.ts",
     "./assistant-attachments": "./src/assistant-attachments.ts",
     "./product-analytics": "./src/product-analytics.ts",

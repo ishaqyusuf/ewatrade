@@ -3,6 +3,8 @@ model Store {
   storefrontOrderRequests                           StorefrontOrderRequest[]
   assistantWhatsAppLinks AssistantWhatsAppLink[]
   assistantWhatsAppGrants AssistantWhatsAppGrant[]
+  assistantTelegramLinks AssistantTelegramLink[]
+  assistantTelegramGrants AssistantTelegramGrant[]
   customerMessageTemplates CustomerMessageTemplate[]
   businessActivityEvents BusinessActivityEvent[]
   businessActivityScopes BusinessActivityStoreScope[]

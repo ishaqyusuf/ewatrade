@@ -359,7 +359,7 @@ export async function createDefaultWhatsAppMediaIngestDependencies(
 ): Promise<WhatsAppMediaIngestDependencies | null> {
   const [
     {
-      isLinkedAssistantIdentity,
+      isLinkedWhatsAppIdentity,
       resolveLinkedAssistantIdentity,
       lockLinkedAssistantIdentity,
     },
@@ -397,7 +397,7 @@ export async function createDefaultWhatsAppMediaIngestDependencies(
     import("../media-availability"),
   ])
   if (
-    !isLinkedAssistantIdentity(ctx.session) ||
+    !isLinkedWhatsAppIdentity(ctx.session) ||
     !ctx.session.inboxLease ||
     !ctx.assistantConversationId
   )
@@ -487,7 +487,7 @@ export async function createDefaultWhatsAppMediaIngestDependencies(
     },
     createIntent: (intent) =>
       transaction(async (fresh) => {
-        if (!isLinkedAssistantIdentity(fresh.session))
+        if (!isLinkedWhatsAppIdentity(fresh.session))
           throw Error("WhatsApp media authority changed.")
         // GENERAL media runs before normal turn admission. Pin its actual
         // authority here, retaining identity/inbox-before-attachment lock order.

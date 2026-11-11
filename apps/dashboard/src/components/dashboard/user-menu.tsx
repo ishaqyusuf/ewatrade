@@ -114,6 +114,12 @@ export function UserMenu({
         >
           WhatsApp assistant
         </DropdownMenuItem>
+        <DropdownMenuItem
+          render={<Link href="/account/telegram" />}
+          className="rounded-none px-2 py-1.5 font-normal"
+        >
+          Telegram assistant
+        </DropdownMenuItem>
         <DropdownMenuSeparator className="my-1" />
         <div className="flex items-center justify-between px-2 py-1.5">
           <span className="text-xs">Theme</span>

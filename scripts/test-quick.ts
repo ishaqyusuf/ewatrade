@@ -159,6 +159,7 @@ export function selectQuickPlan(files: string[]) {
       /^scripts\//.test(file) ||
       file === ".gitignore" ||
       file === ".github/workflows/fast-checks.yml" ||
+      file === ".github/workflows/assistant-gate.yml" ||
       /^\.maestro\/.+\.yaml$/.test(file)
     )
       groups.add("core")

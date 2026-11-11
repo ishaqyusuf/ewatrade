@@ -11,6 +11,7 @@ import {
 } from "@ewatrade/db/queries"
 import { listActiveTenantPhotoErasureRuns } from "@ewatrade/db/tenant-photo-erasure"
 import { idempotencyKeys, logger, schedules } from "@trigger.dev/sdk/v3"
+import { recoverAssistantTelegramWork } from "../assistant-telegram"
 import {
   recoverAssistantWhatsAppDeliveries,
   recoverAssistantWhatsAppTurns,
@@ -114,6 +115,7 @@ export const SCHEDULED_CADENCES = {
           recoverAssistantWhatsAppDeliveries(),
         ]),
       ),
+      sweep("assistant.telegram.recovery", recoverAssistantTelegramWork),
       sweep("auth.phone-otp-expiry", () =>
         purgeExpiredPhoneOtpChallenges(prisma),
       ),

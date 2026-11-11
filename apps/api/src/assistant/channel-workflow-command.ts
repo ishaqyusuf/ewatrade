@@ -36,7 +36,7 @@ import {
 import type { Prisma } from "@ewatrade/db/types"
 import { isExactDecimal } from "@ewatrade/utils/exact-decimal"
 import { z } from "zod"
-import { isLinkedAssistantIdentity } from "./channel-principal"
+import { isLinkedWhatsAppIdentity } from "./channel-principal"
 import type { GeneralTransactionContext } from "./general-actions"
 import { catalogCommandForSetupEntity } from "./setup-commit"
 import { requireSetupAssistantScope } from "./setup-context"
@@ -366,7 +366,7 @@ export async function executeReviewedWorkflowSelectionInTransaction(
   const source = whatsAppWorkflowActionSourceSchema.parse(input)
   const identity = fresh.session
   if (
-    !isLinkedAssistantIdentity(identity) ||
+    !isLinkedWhatsAppIdentity(identity) ||
     !identity.inboxLease ||
     identity.purpose !== source.purpose ||
     fresh.assistantConversationId !== source.conversationId ||

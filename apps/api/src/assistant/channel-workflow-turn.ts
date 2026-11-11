@@ -20,7 +20,7 @@ import {
 import type { Prisma } from "@ewatrade/db/types"
 import { resolveProtectedTenantContext } from "../trpc/init"
 import {
-  isLinkedAssistantIdentity,
+  isLinkedWhatsAppIdentity,
   lockLinkedAssistantIdentity,
   resolveLinkedAssistantIdentity,
 } from "./channel-principal"
@@ -148,7 +148,7 @@ export async function inFreshLinkedWorkflowTransaction<T>(
 ) {
   const identity = context.session
   if (
-    !isLinkedAssistantIdentity(identity) ||
+    !isLinkedWhatsAppIdentity(identity) ||
     !identity.inboxLease ||
     !context.assistantConversationId ||
     (identity.purpose !== "SETUP" && identity.purpose !== "PRODUCT_CREATE")
@@ -205,7 +205,7 @@ export async function inFreshLinkedWorkflowTransaction<T>(
 export function createLinkedWorkflowRepository(context: GeneralContext) {
   const identity = context.session
   if (
-    !isLinkedAssistantIdentity(identity) ||
+    !isLinkedWhatsAppIdentity(identity) ||
     !identity.inboxLease ||
     !context.assistantConversationId ||
     (identity.purpose !== "SETUP" && identity.purpose !== "PRODUCT_CREATE")
@@ -393,7 +393,7 @@ export async function createChannelWorkflowTurn(
   signal?: AbortSignal,
 ) {
   if (
-    !isLinkedAssistantIdentity(context.session) ||
+    !isLinkedWhatsAppIdentity(context.session) ||
     !whatsAppWorkflowEnabled(context.session.purpose)
   )
     throw new WorkflowTurnError(
@@ -424,7 +424,7 @@ export async function createChannelWorkflowTurn(
       ctx as GeneralContext,
       async (fresh) => {
         if (
-          !isLinkedAssistantIdentity(fresh.session) ||
+          !isLinkedWhatsAppIdentity(fresh.session) ||
           !fresh.session.inboxLease
         )
           throw new WorkflowTurnError(

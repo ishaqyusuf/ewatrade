@@ -21,7 +21,7 @@ import {
 } from "@ewatrade/db/assistant-whatsapp"
 import { TRPCError } from "@trpc/server"
 import { NATIVE_FLOW_KIND } from "./channel-flow-state"
-import { isLinkedAssistantIdentity } from "./channel-principal"
+import { isLinkedWhatsAppIdentity } from "./channel-principal"
 import type { GeneralTransactionContext } from "./general-actions"
 import type { GeneralContext } from "./general-context"
 import {
@@ -37,7 +37,7 @@ import { proposalDigest } from "./proposal-security"
 
 /** The exact accepted review is consumed before a new revision can be edited. No approval or business effect. */
 export const defaultWhatsAppEditRequestDependencies = () => ({
-  linked: isLinkedAssistantIdentity,
+  linked: isLinkedWhatsAppIdentity,
   transaction: inFreshGeneralTransaction,
   lease: assertAssistantWhatsAppInboxLease,
   resolve: resolveAssistantWhatsAppConversation,
@@ -219,7 +219,7 @@ export async function processAssistantWhatsAppEditRequest(
 
 async function currentEdit(fresh: GeneralTransactionContext) {
   if (
-    !isLinkedAssistantIdentity(fresh.session) ||
+    !isLinkedWhatsAppIdentity(fresh.session) ||
     fresh.session.purpose !== "GENERAL"
   )
     throw new TRPCError({
@@ -316,7 +316,7 @@ export function readCurrentWhatsAppDraft(ctx: GeneralContext) {
 /** Call before legacy simple-chat dispatch so it cannot select a different pending proposal. */
 export async function hasCurrentWhatsAppEdit(ctx: GeneralContext) {
   return (
-    isLinkedAssistantIdentity(ctx.session) &&
+    isLinkedWhatsAppIdentity(ctx.session) &&
     (await readCurrentWhatsAppDraft(ctx)).status === "editing"
   )
 }
@@ -338,7 +338,7 @@ type WhatsAppDraftCorrectionSource = {
 
 async function readWhatsAppDraftCorrection(fresh: GeneralTransactionContext) {
   const current = await currentEdit(fresh)
-  if (!current || !isLinkedAssistantIdentity(fresh.session)) return null
+  if (!current || !isLinkedWhatsAppIdentity(fresh.session)) return null
   const source: WhatsAppDraftCorrectionSource = {
     intentId: current.intent.id,
     intentDigest: proposalDigest(current.intent.formData),

@@ -6,11 +6,11 @@ Tickets refer to the Brain plan `.brain/plans/2026-10-09-assistant-business-oper
 
 ## Summary
 
-- Router procedures: 821 (625 merchant, 196 public/account/internal)
+- Router procedures: 827 (629 merchant, 198 public/account/internal)
 - Merchant supported by a capability: 185
 - Merchant planned: 142
 - Merchant form-only: 235
-- Merchant excluded: 63
+- Merchant excluded: 67
 - Capabilities: 169 (88 read, 81 write)
 
 ## Capabilities
@@ -422,8 +422,12 @@ track conversational evaluation separately from these source test links.
 | `assistant.simpleTransferOptions` | query | Owner/Admin only | assistant | excluded | Assistant transport or a dedicated assistant flow. |
 | `assistant.start` | mutation | read | assistant | excluded | Assistant transport or a dedicated assistant flow. |
 | `assistantChannels.availability` | query | read | assistant | excluded | Assistant transport or a dedicated assistant flow. |
+| `assistantChannels.confirmTelegramLink` | mutation | read | assistant | excluded | Assistant transport or a dedicated assistant flow. |
 | `assistantChannels.confirmWhatsAppLink` | mutation | read | assistant | excluded | Assistant transport or a dedicated assistant flow. |
+| `assistantChannels.createTelegramLink` | mutation | read | assistant | excluded | Assistant transport or a dedicated assistant flow. |
 | `assistantChannels.createWhatsAppLink` | mutation | read | assistant | excluded | Assistant transport or a dedicated assistant flow. |
+| `assistantChannels.telegramAvailability` | query | read | assistant | excluded | Assistant transport or a dedicated assistant flow. |
+| `assistantChannels.telegramLink` | query | read | assistant | excluded | Assistant transport or a dedicated assistant flow. |
 | `assistantChannels.whatsAppLink` | query | read | assistant | excluded | Assistant transport or a dedicated assistant flow. |
 | `businessBanking.accounts` | query | Owner/Admin only | sales | form_only | Manual bank instructions, customer reports and merchant receipt confirmation use the payment-link/review forms. Customer evidence never authorizes a payment; no model or WhatsApp payment approval is enabled. |
 | `businessBanking.availability` | query | read | sales | form_only | Manual bank instructions, customer reports and merchant receipt confirmation use the payment-link/review forms. Customer evidence never authorizes a payment; no model or WhatsApp payment approval is enabled. |

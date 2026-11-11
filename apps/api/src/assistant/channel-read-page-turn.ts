@@ -13,7 +13,7 @@ import {
 } from "@ewatrade/db/assistant-whatsapp"
 import { TRPCError } from "@trpc/server"
 import {
-  isLinkedAssistantIdentity,
+  isLinkedWhatsAppIdentity,
   lockLinkedAssistantIdentity,
   resolveLinkedAssistantIdentity,
 } from "./channel-principal"
@@ -45,7 +45,7 @@ export async function processAssistantWhatsAppReadPageTurn(
   )
   if (!parsed.success && !invalid) return false
   if (
-    !isLinkedAssistantIdentity(ctx.session) ||
+    !isLinkedWhatsAppIdentity(ctx.session) ||
     ctx.session.purpose !== "GENERAL"
   )
     throw new TRPCError({
@@ -83,7 +83,7 @@ export async function processAssistantWhatsAppReadPageTurn(
       })
   }
   await inFreshGeneralTransaction(ctx, async (fresh) => {
-    if (!isLinkedAssistantIdentity(fresh.session))
+    if (!isLinkedWhatsAppIdentity(fresh.session))
       throw Error("Linked identity required.")
     const current = await lockLinkedAssistantIdentity(fresh.db, fresh.session)
     await stampAssistantWhatsAppExecution(fresh.db, lease, current)

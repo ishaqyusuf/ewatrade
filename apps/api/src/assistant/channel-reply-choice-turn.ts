@@ -12,7 +12,7 @@ import {
 } from "@ewatrade/db/assistant-whatsapp"
 import { TRPCError } from "@trpc/server"
 import {
-  isLinkedAssistantIdentity,
+  isLinkedWhatsAppIdentity,
   lockLinkedAssistantIdentity,
 } from "./channel-principal"
 import { inFreshLinkedWorkflowTransaction } from "./channel-workflow-turn"
@@ -48,7 +48,7 @@ async function processWorkflowReplyChoice(
     | Parameters<typeof resolveAssistantWhatsAppWorkflowReplyChoice>[2]
     | undefined,
 ): Promise<WhatsAppReplyChoiceTurnResult> {
-  if (!isLinkedAssistantIdentity(ctx.session))
+  if (!isLinkedWhatsAppIdentity(ctx.session))
     throw new TRPCError({ code: "UNAUTHORIZED" })
   const principal = ctx.session.principal
   const saved = command
@@ -61,7 +61,7 @@ async function processWorkflowReplyChoice(
   return inFreshLinkedWorkflowTransaction<WhatsAppReplyChoiceTurnResult>(
     ctx,
     async (fresh) => {
-      if (!isLinkedAssistantIdentity(fresh.session))
+      if (!isLinkedWhatsAppIdentity(fresh.session))
         throw new TRPCError({ code: "UNAUTHORIZED" })
       // Re-resolve the exact sent source, binding, authority and drafts after locking.
       const latest = command
@@ -143,7 +143,7 @@ export async function processAssistantWhatsAppReplyChoiceTurn(
   )
   if (!parsed.success && !invalid) return { kind: "none" }
   if (
-    isLinkedAssistantIdentity(ctx.session) &&
+    isLinkedWhatsAppIdentity(ctx.session) &&
     workflowPurposes.has(ctx.session.purpose)
   )
     return processWorkflowReplyChoice(
@@ -152,7 +152,7 @@ export async function processAssistantWhatsAppReplyChoiceTurn(
       parsed.success ? parsed.data.command : undefined,
     )
   if (
-    !isLinkedAssistantIdentity(ctx.session) ||
+    !isLinkedWhatsAppIdentity(ctx.session) ||
     ctx.session.purpose !== "GENERAL"
   )
     throw new TRPCError({
@@ -170,7 +170,7 @@ export async function processAssistantWhatsAppReplyChoiceTurn(
     ctx,
     async (fresh) => {
       if (
-        !isLinkedAssistantIdentity(fresh.session) ||
+        !isLinkedWhatsAppIdentity(fresh.session) ||
         fresh.session.purpose !== "GENERAL"
       )
         throw new TRPCError({ code: "UNAUTHORIZED" })

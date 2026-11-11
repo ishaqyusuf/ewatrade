@@ -11,6 +11,9 @@ export default function AccessUnavailablePage() {
       <Link href="/account/whatsapp" className="underline">
         Manage your WhatsApp assistant access
       </Link>
+      <Link href="/account/telegram" className="underline">
+        Manage your Telegram assistant access
+      </Link>
       <Link href="/login" className="underline">
         Return to sign in
       </Link>

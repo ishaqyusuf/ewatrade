@@ -8,7 +8,7 @@ import {
   defaultChannelActionDependencies,
   processAssistantWhatsAppAction,
 } from "./channel-action-turn"
-import type { LinkedAssistantIdentity } from "./channel-principal"
+import type { LinkedWhatsAppIdentity } from "./channel-principal"
 import type { GeneralTransactionContext } from "./general-actions"
 import type { GeneralContext } from "./general-context"
 
@@ -118,7 +118,7 @@ function fixture(
   const ctx = { session, db } as unknown as GeneralContext
   const fresh = { session, db } as unknown as GeneralTransactionContext
   const deps = defaultChannelActionDependencies()
-  deps.linked = (identity: unknown): identity is LinkedAssistantIdentity =>
+  deps.linked = (identity: unknown): identity is LinkedWhatsAppIdentity =>
     identity === session
   deps.transaction = async <T>(
     _ctx: GeneralContext,

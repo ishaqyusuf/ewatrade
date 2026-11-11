@@ -18,7 +18,7 @@ import {
   subtractExactDecimals,
 } from "@ewatrade/utils/exact-decimal"
 import { TRPCError } from "@trpc/server"
-import { isLinkedAssistantIdentity } from "./channel-principal"
+import { isLinkedWhatsAppIdentity } from "./channel-principal"
 import type { GeneralTransactionContext } from "./general-actions"
 import { paymentAccountName } from "./general-actions"
 import {
@@ -32,7 +32,7 @@ export function isNativeCatalogOrder(
   ctx: Pick<GeneralTransactionContext, "session">,
 ) {
   return (
-    isLinkedAssistantIdentity(ctx.session) &&
+    isLinkedWhatsAppIdentity(ctx.session) &&
     whatsAppCapabilityEnabled(capabilityForAction("order_create"))
   )
 }

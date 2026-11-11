@@ -87,6 +87,7 @@ function database(
     status?: string
     count?: number
     channelCount?: number
+    telegramCount?: number
     lateBilling?: boolean
   } = {},
 ) {
@@ -136,6 +137,15 @@ function database(
         assistantWhatsAppSelections: 0,
         assistantWhatsAppActionReviews: 0,
         assistantWhatsAppWorkflowReviews: 0,
+        assistantTelegramIdentities: input.telegramCount ?? 0,
+        assistantTelegramLinks: 0,
+        assistantTelegramGrants: 0,
+        assistantTelegramBindings: 0,
+        assistantTelegramInbox: 0,
+        assistantTelegramOutbox: 0,
+        assistantTelegramActionReviews: 0,
+        mixedOwnership: false,
+        inFlight: false,
       },
     ],
     productAnalyticsEvent: { count: async () => input.count ?? 0 },
@@ -203,12 +213,14 @@ test("private assistant data is processed before conversation outcomes, includin
 })
 
 test("channel-only private attribution keeps canonical erasure step available", async () => {
-  const result = await getAccountPrivacyWorkflow(
-    database({ channelCount: 1 }),
-    { requestId: "request", operatorUserId: "operator" },
-  )
-  expect(result.privateAssistantRecords).toBe(1)
-  expect(result.nextStep).toBe("ERASE_PRIVATE_ASSISTANT")
+  for (const counts of [{ channelCount: 1 }, { telegramCount: 1 }]) {
+    const result = await getAccountPrivacyWorkflow(database(counts), {
+      requestId: "request",
+      operatorUserId: "operator",
+    })
+    expect(result.privateAssistantRecords).toBe(1)
+    expect(result.nextStep).toBe("ERASE_PRIVATE_ASSISTANT")
+  }
 })
 
 test("stale subscription evidence returns the resumable workflow to billing review", async () => {

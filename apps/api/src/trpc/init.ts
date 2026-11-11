@@ -32,8 +32,8 @@ import superjson from "superjson"
 import {
   type RequestIdentity,
   isLinkedAssistantIdentity,
+  refreshLinkedAssistantIdentity,
   requireBrowserIdentity,
-  resolveLinkedAssistantIdentity,
 } from "../assistant/channel-principal"
 import { assertLinkedAssistantRead } from "../assistant/channel-read-policy"
 import {
@@ -400,11 +400,7 @@ export async function resolveProtectedTenantContext(
   const { session } = ctx
 
   if (isLinkedAssistantIdentity(session)) {
-    const resolved = await resolveLinkedAssistantIdentity(
-      ctx.db,
-      session.principal,
-      session.inboxLease,
-    )
+    const resolved = await refreshLinkedAssistantIdentity(ctx.db, session)
     if (
       ctx.qaSessionScope ||
       ctx.isInternalRequest ||
@@ -539,6 +535,7 @@ const enforceLinkedAssistantRead = t.middleware(async (opts) => {
     })
   if (isLinkedAssistantIdentity(opts.ctx.session))
     assertLinkedAssistantRead({
+      channel: opts.ctx.session.channel,
       capabilityId: opts.ctx.assistantReadCapabilityId,
       path: opts.path,
       type: opts.type,

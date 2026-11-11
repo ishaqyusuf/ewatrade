@@ -1,0 +1,584 @@
+import { createHash } from "node:crypto"
+import { capabilityForAction } from "@ewatrade/assistant/capabilities/manifest"
+import { renderWhatsAppActionResultChunks } from "@ewatrade/assistant/channels/action-result"
+import { renderWhatsAppActionReviewBody } from "@ewatrade/assistant/channels/action-review"
+import { conversationAppLink } from "@ewatrade/assistant/channels/conversation-links"
+import type { AssistantChannelDeliveryResult } from "@ewatrade/assistant/channels/delivery"
+import { renderWhatsAppFinalReply } from "@ewatrade/assistant/channels/render"
+import type { AssistantChannelTurnResult } from "@ewatrade/assistant/channels/worker"
+import {
+  generalActionSchema,
+  generalStoredPartSchema,
+} from "@ewatrade/assistant/general/contracts"
+import {
+  type AssistantTelegramConfig,
+  DirectTelegramBotProvider,
+  type NormalizedAssistantTelegramUpdate,
+  isAssistantTelegramDisconnect,
+  readAssistantTelegramConfig,
+} from "@ewatrade/communications"
+import { prisma } from "@ewatrade/db"
+import { readGeneralActiveRun } from "@ewatrade/db/assistant-general"
+import {
+  AssistantTelegramError,
+  acceptAssistantTelegramUpdate as acceptTelegramInbox,
+  assertAssistantTelegramDeliveryAuthority,
+  claimAssistantTelegramInbox,
+  claimAssistantTelegramLink,
+  claimAssistantTelegramOutbox,
+  disconnectAssistantTelegram,
+  finishAssistantTelegramActionReview,
+  maskAssistantTelegramSender,
+  nextAssistantTelegramInbox,
+  nextAssistantTelegramOutbox,
+  readAssistantTelegramActionReview,
+  retryAssistantTelegramInbox,
+  settleAssistantTelegramInbox,
+  settleAssistantTelegramOutbox,
+  stageAssistantTelegramActionReview,
+  stageAssistantTelegramOutbox,
+} from "@ewatrade/db/assistant-telegram"
+import { enqueueAssistantTelegramDelivery } from "@ewatrade/jobs/assistant-telegram"
+import { TRPCError } from "@trpc/server"
+import { paymentLinkOrigin } from "../banking/config"
+import { isWhatsAppCredentialSubmission } from "../communications/whatsapp-credential-guard"
+import { createTelegramAssistantContext } from "./channel-principal"
+import { buildChannelProposalReview } from "./channel-proposal-review"
+import type { GeneralTransactionContext } from "./general-actions"
+import {
+  type GeneralContext,
+  assertGeneralAction,
+  canUseCapability,
+  requireGeneralScope,
+} from "./general-context"
+import {
+  decideGeneralProposalInTransaction,
+  inFreshGeneralTransaction,
+} from "./general-proposals"
+import { createGeneralAssistantTurn } from "./general-turn"
+import { GeneralTurnError } from "./general-turn-contract"
+import { proposalApprovalToken } from "./proposal-security"
+
+const callbackPattern = /^(confirm|cancel|edit):([A-Za-z0-9_-]{1,48})$/
+const useReview =
+  "Use the buttons on the exact draft review to confirm, edit or cancel."
+const unavailableReview =
+  "This review has expired or changed. Ask me for the current draft."
+const appOrigin = () =>
+  process.env.DASHBOARD_URL ??
+  process.env.NEXT_PUBLIC_DASHBOARD_URL ??
+  "https://dash.ewatrade.com"
+
+type IngressReceipt = { ingressId?: string; notice?: string }
+export async function acceptAssistantTelegramUpdate(
+  config: AssistantTelegramConfig,
+  event: NormalizedAssistantTelegramUpdate,
+): Promise<IngressReceipt> {
+  const sender = {
+    botId: config.botId,
+    userId: event.userId,
+    chatId: event.chatId,
+  }
+  const occurredAt = event.kind === "message" ? event.occurredAt : new Date()
+  if (event.kind === "message") {
+    const message = event.text.trim()
+    if (isAssistantTelegramDisconnect(message)) {
+      const result = await disconnectAssistantTelegram(prisma, {
+        ...sender,
+        updateId: event.updateId,
+        messageId: event.messageId,
+        occurredAt,
+      })
+      return result.revoked
+        ? { notice: "Telegram disconnected from EwaTrade." }
+        : {}
+    }
+    if (!config.enabled) return {}
+    if (/^\/start(?:\s|$)/u.test(message)) {
+      const link = /^\/start ([A-Za-z0-9_-]{43})$/u.exec(message)
+      if (link?.[1]) {
+        const claimed = await claimAssistantTelegramLink(prisma, {
+          ...sender,
+          updateId: event.updateId,
+          occurredAt,
+          code: link[1],
+        })
+        return claimed
+          ? {
+              notice: `Compare Telegram account ${maskAssistantTelegramSender(event.userId)} in EwaTrade, then confirm the connection.`,
+            }
+          : {}
+      }
+      return {
+        notice: "Open EwaTrade account settings and choose Connect Telegram.",
+      }
+    }
+    // Credential content and its digest stay outside the durable assistant inbox.
+    if (isWhatsAppCredentialSubmission(message)) return {}
+  }
+  if (
+    !config.enabled ||
+    (event.kind === "callback" && !callbackPattern.test(event.data))
+  )
+    return {}
+  const row = await acceptTelegramInbox(prisma, {
+    ...sender,
+    updateId: event.updateId,
+    messageId: event.messageId,
+    occurredAt,
+    allowedUserIds: config.allowedUserIds,
+    allowedTenantIds: config.allowedTenantIds,
+    content:
+      event.kind === "message"
+        ? { kind: "message", text: event.text }
+        : { kind: "callback", data: event.data, callbackId: event.callbackId },
+  })
+  return row ? { ingressId: row.id } : {}
+}
+
+type TelegramClaim = NonNullable<
+  Awaited<ReturnType<typeof claimAssistantTelegramInbox>>
+>
+
+function savedChat(ctx: GeneralContext) {
+  const scope = requireGeneralScope(ctx)
+  const origin = { tenantId: scope.tenantId, storeId: scope.storeId }
+  const conversation = {
+    purpose: "GENERAL" as const,
+    origin,
+    conversationId: ctx.assistantConversationId ?? "",
+  }
+  const options = { trustedAppOrigin: appOrigin(), currentScope: origin }
+  return {
+    conversation,
+    options,
+    link: conversationAppLink(conversation, options),
+  }
+}
+
+async function stageText(
+  fresh: GeneralTransactionContext,
+  lease: TelegramClaim["lease"],
+  messages: readonly string[],
+) {
+  for (const message of messages)
+    await stageAssistantTelegramOutbox(fresh.db, lease, { text: message })
+  await settleAssistantTelegramInbox(fresh.db, lease, {})
+}
+
+async function executeCallback(
+  ctx: GeneralContext,
+  claim: TelegramClaim,
+  data: string,
+) {
+  const { lease, inbox } = claim
+  const callback = callbackPattern.exec(data)
+  const decision = callback?.[1]
+  const reviewId = callback?.[2]
+  if (
+    !reviewId ||
+    (decision !== "confirm" && decision !== "edit" && decision !== "cancel")
+  ) {
+    await inFreshGeneralTransaction(ctx, (fresh) =>
+      stageText(fresh, lease, [unavailableReview]),
+    )
+    return
+  }
+  try {
+    await inFreshGeneralTransaction(ctx, async (fresh) => {
+      const proof = await readAssistantTelegramActionReview(fresh.db, lease, {
+        reviewId,
+        providerMessageId: inbox.messageId,
+      })
+      const scope = requireGeneralScope(fresh)
+      const row = proof
+        ? await fresh.db.assistantActionProposal.findFirst({
+            where: {
+              id: proof.proposalId,
+              revision: proof.revision,
+              payloadHash: proof.payloadHash,
+              actorUserId: scope.userId,
+              tenantId: scope.tenantId,
+              storeId: scope.storeId,
+              conversationId: fresh.assistantConversationId,
+            },
+          })
+        : null
+      if (!proof || !row || (proof.decision && proof.decision !== decision)) {
+        await stageText(fresh, lease, [unavailableReview])
+        return
+      }
+      if (decision === "edit") {
+        if (row.status !== "PENDING" || row.expiresAt <= new Date()) {
+          await stageText(fresh, lease, [unavailableReview])
+          return
+        }
+        assertGeneralAction(
+          fresh,
+          generalActionSchema.parse(row.payload).action,
+        )
+        if (!proof.decision)
+          await finishAssistantTelegramActionReview(fresh.db, proof.id, {
+            decision,
+          })
+        await stageText(fresh, lease, [
+          "What would you like to change in this draft?",
+        ])
+        return
+      }
+      const proposal = await decideGeneralProposalInTransaction(fresh, {
+        proposalId: row.id,
+        revision: row.revision,
+        decision,
+        ...(decision === "confirm" && row.status === "PENDING"
+          ? {
+              approvalToken: proposalApprovalToken(
+                row,
+                process.env.ASSISTANT_APPROVAL_SIGNING_KEY ?? "",
+              ),
+            }
+          : {}),
+      })
+      if (!proof.decision)
+        await finishAssistantTelegramActionReview(fresh.db, proof.id, {
+          decision,
+          resultRef: {
+            proposalId: proposal.id,
+            revision: proposal.revision,
+            status: proposal.status,
+          },
+        })
+      await stageText(
+        fresh,
+        lease,
+        renderWhatsAppActionResultChunks(proposal, savedChat(ctx).link?.href, {
+          appOrigin: appOrigin(),
+          paymentOrigin:
+            proposal.receipt?.kind === "payment_links"
+              ? paymentLinkOrigin()
+              : undefined,
+        }),
+      )
+    })
+  } catch (error) {
+    if (
+      !(error instanceof TRPCError) &&
+      !(
+        error instanceof AssistantTelegramError &&
+        ["CONFLICT", "EXPIRED"].includes(error.code)
+      )
+    )
+      throw error
+    await inFreshGeneralTransaction(ctx, (fresh) =>
+      stageText(fresh, lease, [unavailableReview]),
+    )
+  }
+}
+
+async function findRun(ctx: GeneralContext, requestId: string) {
+  const scope = requireGeneralScope(ctx)
+  return ctx.db.assistantRun.findFirst({
+    where: {
+      requestId,
+      actorUserId: scope.userId,
+      conversationId: ctx.assistantConversationId,
+    },
+    include: { assistantMessage: true },
+  })
+}
+
+async function stageRunReply(
+  ctx: GeneralContext,
+  claim: TelegramClaim,
+  run: NonNullable<Awaited<ReturnType<typeof findRun>>>,
+) {
+  const message = run.assistantMessage
+  if (run.status !== "COMPLETED" || !message) {
+    await inFreshGeneralTransaction(ctx, (fresh) =>
+      stageText(fresh, claim.lease, [
+        "The assistant could not finish this request. Please try again.",
+      ]),
+    )
+    return
+  }
+  const parts = Array.isArray(message.parts) ? message.parts : []
+  const refs = parts.flatMap((part) => {
+    const parsed = generalStoredPartSchema.safeParse(part)
+    return parsed.success &&
+      parsed.data.type === "data-general-proposal-reference"
+      ? [parsed.data.data]
+      : []
+  })
+  await inFreshGeneralTransaction(ctx, async (fresh) => {
+    const scope = requireGeneralScope(fresh)
+    const reference = refs.length === 1 ? refs[0] : undefined
+    const proposal = reference
+      ? await fresh.db.assistantActionProposal.findFirst({
+          where: {
+            id: reference.proposalId,
+            revision: reference.revision,
+            payloadHash: reference.payloadHash,
+            status: "PENDING",
+            actorUserId: scope.userId,
+            tenantId: scope.tenantId,
+            storeId: scope.storeId,
+            conversationId: fresh.assistantConversationId,
+          },
+        })
+      : null
+    if (
+      proposal &&
+      canUseCapability(fresh, capabilityForAction(proposal.action))
+    ) {
+      const projection = await buildChannelProposalReview(fresh, proposal)
+      const now = Date.now()
+      const expiresAt = new Date(
+        Math.min(
+          proposal.expiresAt.getTime(),
+          claim.inbox.expiresAt.getTime(),
+          (run.completedAt ?? run.startedAt).getTime() + 5 * 60_000,
+        ),
+      )
+      if (
+        projection.kind === "review" &&
+        !projection.pages &&
+        expiresAt.getTime() > now
+      ) {
+        const review = renderWhatsAppActionReviewBody(
+          {
+            ...projection.review,
+            expiresAt: expiresAt.toISOString(),
+          },
+          { now },
+        )
+        if (review.kind === "review") {
+          await stageAssistantTelegramActionReview(fresh.db, claim.lease, {
+            ...review.source,
+            expiresAt,
+            text: review.body,
+            reviewDigest: createHash("sha256")
+              .update(review.body)
+              .digest("hex"),
+          })
+          await settleAssistantTelegramInbox(fresh.db, claim.lease, {
+            runId: run.id,
+          })
+          return
+        }
+      }
+    }
+    const { options, conversation, link } = savedChat(ctx)
+    if (proposal && link) {
+      const reviewUrl = new URL(link.href)
+      reviewUrl.searchParams.set("proposalId", proposal.id)
+      await stageAssistantTelegramOutbox(fresh.db, claim.lease, {
+        text: "Review this saved draft in EwaTrade.",
+        buttons: [[{ text: "Review in EwaTrade", url: reviewUrl.href }]],
+        runId: run.id,
+        messageId: message.id,
+      })
+      await settleAssistantTelegramInbox(fresh.db, claim.lease, {
+        runId: run.id,
+      })
+      return
+    }
+    const rendered = renderWhatsAppFinalReply(message.parts, {
+      ...options,
+      conversation,
+      scopeLabel: `${fresh.tenantContext.tenant.name} · ${fresh.tenantContext.activeStore?.name ?? "Store"}`,
+    })
+    for (const text of rendered.chunks)
+      await stageAssistantTelegramOutbox(fresh.db, claim.lease, {
+        text,
+        runId: run.id,
+        messageId: message.id,
+      })
+    await settleAssistantTelegramInbox(fresh.db, claim.lease, { runId: run.id })
+  })
+}
+
+export async function processAssistantTelegramTurn(
+  ingressId: string,
+  {
+    createTurn = createGeneralAssistantTurn,
+    enqueueDelivery = enqueueAssistantTelegramDelivery,
+  }: {
+    createTurn?: typeof createGeneralAssistantTurn
+    enqueueDelivery?: typeof enqueueAssistantTelegramDelivery
+  } = {},
+): Promise<AssistantChannelTurnResult> {
+  if (!readAssistantTelegramConfig()) return { status: "disabled" }
+  const claim = await claimAssistantTelegramInbox(prisma, ingressId)
+  if (!claim) {
+    await dispatchAssistantTelegramReply(ingressId, enqueueDelivery)
+    const next = await nextAssistantTelegramInbox(prisma, ingressId)
+    return { status: "idle", ...(next ? { nextIngressId: next.id } : {}) }
+  }
+  const { principal, lease, inbox, content } = claim
+  try {
+    const ctx = await createTelegramAssistantContext(
+      prisma,
+      principal,
+      inbox.requestId,
+      lease,
+    )
+    if (content.kind === "callback") {
+      await executeCallback(ctx, claim, content.data)
+    } else {
+      const text = content.text.trim()
+      const control =
+        text === "/help"
+          ? "Ask about stock, sales or other records you can access. To make a change, describe it and review the draft I send. Use /scope to check your Store or /disconnect to unlink."
+          : text === "/scope"
+            ? `${ctx.tenantContext.tenant.name} · ${ctx.tenantContext.activeStore?.name ?? "Store"}\nChange your connection in EwaTrade account settings.`
+            : /^(?:proceed|confirm|cancel|yes|go ahead|done|save(?: it| sale)?)[.!]*$/i.test(
+                  text,
+                )
+              ? useReview
+              : text.startsWith("/")
+                ? "Use /help to see the available commands."
+                : undefined
+      if (control) {
+        await inFreshGeneralTransaction(ctx, (fresh) =>
+          stageText(fresh, lease, [control]),
+        )
+      } else {
+        let run = await findRun(ctx, inbox.requestId)
+        if (run?.status === "RUNNING" && ctx.assistantConversationId) {
+          await readGeneralActiveRun(
+            ctx.db,
+            requireGeneralScope(ctx),
+            ctx.assistantConversationId,
+          )
+          run = await findRun(ctx, inbox.requestId)
+        }
+        if (!run) {
+          const turn = await createTurn(ctx, {
+            conversationId: ctx.assistantConversationId,
+            requestId: inbox.requestId,
+            message: {
+              id: inbox.userMessageId,
+              role: "user",
+              parts: [{ type: "text", text }],
+            },
+          })
+          const reader = turn.stream.getReader()
+          try {
+            while (!(await reader.read()).done) {
+              /* Wait for canonical finalization. */
+            }
+          } finally {
+            reader.releaseLock()
+          }
+          await turn.completion
+          run = await findRun(ctx, inbox.requestId)
+        }
+        if (!run || run.status === "RUNNING") {
+          await retryAssistantTelegramInbox(prisma, lease, "RUN_IN_PROGRESS")
+          return { status: "retry" }
+        }
+        await stageRunReply(ctx, claim, run)
+      }
+    }
+  } catch (error) {
+    if (
+      error instanceof TRPCError &&
+      ["UNAUTHORIZED", "FORBIDDEN", "NOT_FOUND"].includes(error.code)
+    ) {
+      await settleAssistantTelegramInbox(prisma, lease, {
+        state: "CANCELLED",
+        errorCode: "AUTHORITY_CHANGED",
+      })
+      return { status: "cancelled" }
+    }
+    const code =
+      error instanceof GeneralTurnError ? error.code : "TURN_UNAVAILABLE"
+    await retryAssistantTelegramInbox(prisma, lease, code)
+    return { status: "retry" }
+  }
+  await dispatchAssistantTelegramReply(ingressId, enqueueDelivery)
+  const next = await nextAssistantTelegramInbox(prisma, ingressId)
+  return { status: "completed", ...(next ? { nextIngressId: next.id } : {}) }
+}
+
+async function dispatchAssistantTelegramReply(
+  ingressId: string,
+  enqueue: typeof enqueueAssistantTelegramDelivery,
+) {
+  try {
+    const row = await prisma.assistantTelegramOutbox.findFirst({
+      where: { inboxId: ingressId, state: "PENDING" },
+      orderBy: { sequence: "asc" },
+      select: { id: true },
+    })
+    if (row) await enqueue(row.id)
+  } catch {
+    console.error("[assistant] Telegram delivery deferred to recovery")
+  }
+}
+
+export async function processAssistantTelegramDelivery(
+  outboxId: string,
+  deps: { send?: DirectTelegramBotProvider["sendMessage"] } = {},
+): Promise<AssistantChannelDeliveryResult> {
+  const config = readAssistantTelegramConfig()
+  if (!config) return { status: "disabled" }
+  const claim = await claimAssistantTelegramOutbox(prisma, outboxId)
+  if (!claim) return { status: "idle" }
+  const { lease, principal, payload } = claim
+  try {
+    const { scope } = await assertAssistantTelegramDeliveryAuthority(
+      prisma,
+      lease,
+    )
+    if (
+      config.botId !== principal.botId ||
+      !config.allowedUserIds.has(scope.userId) ||
+      !config.allowedTenantIds.has(scope.tenantId)
+    )
+      throw new AssistantTelegramError("UNAUTHORIZED")
+  } catch (error) {
+    if (!(error instanceof AssistantTelegramError)) throw error
+    await settleAssistantTelegramOutbox(prisma, lease, {
+      status: "cancelled",
+      errorCode: "AUTHORITY_CHANGED",
+    })
+    const next = await nextAssistantTelegramOutbox(prisma, outboxId)
+    return { status: "cancelled", ...(next ? { nextOutboxId: next.id } : {}) }
+  }
+  const provider = new DirectTelegramBotProvider(config)
+  const send = deps.send ?? provider.sendMessage.bind(provider)
+  const result = await send({
+    chatId: principal.chatId,
+    text: payload.text,
+    buttons: payload.buttons?.map((row) =>
+      row.map((button) =>
+        "url" in button
+          ? { text: button.text, url: button.url }
+          : { text: button.text, callbackData: button.data },
+      ),
+    ),
+  })
+  if (result.status === "retry") {
+    await settleAssistantTelegramOutbox(prisma, lease, {
+      status: "retry",
+      retryAt: new Date(Date.now() + result.retryAfterMs),
+    })
+    return { status: "busy" }
+  }
+  const status =
+    result.status === "accepted"
+      ? "sent"
+      : result.status === "uncertain"
+        ? "unknown"
+        : "failed"
+  await settleAssistantTelegramOutbox(
+    prisma,
+    lease,
+    result.status === "accepted"
+      ? { status: "sent", providerMessageId: result.messageId }
+      : { status: result.status === "uncertain" ? "unknown" : "failed" },
+  )
+  const next = await nextAssistantTelegramOutbox(prisma, outboxId)
+  return { status, ...(next ? { nextOutboxId: next.id } : {}) }
+}

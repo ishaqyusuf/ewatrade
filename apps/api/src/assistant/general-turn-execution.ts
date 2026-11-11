@@ -1,5 +1,8 @@
 import { capabilityForAction } from "@ewatrade/assistant/capabilities/manifest"
-import { whatsAppAssistantInstructions } from "@ewatrade/assistant/channels/instructions"
+import {
+  telegramAssistantInstructions,
+  whatsAppAssistantInstructions,
+} from "@ewatrade/assistant/channels/instructions"
 import { isPlainAccountBalanceRequest } from "@ewatrade/assistant/general/contracts"
 import { isCatalogOrderPreparationIntent } from "@ewatrade/assistant/general/order-preparation"
 import {
@@ -15,10 +18,14 @@ import {
   type UIMessageStreamWriter,
   stepCountIs,
 } from "ai"
-import { isLinkedAssistantIdentity } from "./channel-principal"
+import {
+  isLinkedAssistantIdentity,
+  isLinkedWhatsAppIdentity,
+} from "./channel-principal"
 import { hasCurrentWhatsAppEdit } from "./channel-proposal-edit"
 import { streamGeneralReply } from "./general-announced-action"
 import { type GeneralContext, canUseCapability } from "./general-context"
+import { hasCurrentTelegramEdit } from "./general-current-draft"
 import { generalProposalReferencePart } from "./general-persistence"
 import { handleSimpleExpenseChat } from "./general-simple-expense-chat"
 import { handleSimpleMoneyInChat } from "./general-simple-money-in-chat"
@@ -128,7 +135,9 @@ export async function executeGeneralTurn({
     history: stored,
   }
   const linked = isLinkedAssistantIdentity(ctx.session)
-  const editingWhatsAppDraft = linked && (await hasCurrentWhatsAppEdit(ctx))
+  const editingChannelDraft = isLinkedWhatsAppIdentity(ctx.session)
+    ? await hasCurrentWhatsAppEdit(ctx)
+    : await hasCurrentTelegramEdit(ctx)
   const channelConfirmation =
     linked &&
     /^(?:proceed|confirm|cancel|yes|go ahead|done|save(?: it| sale)?)[.!]*$/i.test(
@@ -159,7 +168,7 @@ export async function executeGeneralTurn({
     if (
       linked &&
       (channelConfirmation ||
-        editingWhatsAppDraft ||
+        editingChannelDraft ||
         !canUseCapability(ctx, capabilityForAction(action)))
     )
       continue
@@ -194,7 +203,13 @@ export async function executeGeneralTurn({
           ctx.tenantContext.tenant.currencyCode,
         role: ctx.tenantContext.membership.role,
         ...generalLocalNow(ctx.tenantContext.tenant.timezone ?? "Africa/Lagos"),
-      }) + (linked ? whatsAppAssistantInstructions() : ""),
+      }) +
+      (linked
+        ? isLinkedAssistantIdentity(ctx.session) &&
+          ctx.session.channel === "telegram"
+          ? telegramAssistantInstructions()
+          : whatsAppAssistantInstructions()
+        : ""),
     tools,
     stopWhen: stepCountIs(6),
     maxOutputTokens: 2000,

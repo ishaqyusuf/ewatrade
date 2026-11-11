@@ -11,7 +11,11 @@ const OWNED_PREVIEW_HOST =
 
 /** Fixed machine routes; deployment protection access is limited to one selected Preview. */
 export function assistantWorkerEndpoint(
-  route: "channel-turn" | "channel-delivery",
+  route:
+    | "channel-turn"
+    | "channel-delivery"
+    | "telegram-turn"
+    | "telegram-delivery",
   env: Environment = process.env,
 ): AssistantWorkerEndpoint {
   const origin = env.API_URL?.trim()

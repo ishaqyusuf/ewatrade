@@ -1,8 +1,17 @@
 import type { Session } from "@ewatrade/auth"
 import {
   isAssistantWhatsAppPilot,
+  readAssistantTelegramConfig,
   readAssistantWhatsAppConfig,
 } from "@ewatrade/communications"
+import {
+  AssistantTelegramError,
+  type TelegramConversationPrincipal,
+  type TelegramInboxLease,
+  lockAssistantTelegramConversation,
+  resolveAssistantTelegramConversation,
+  stampAssistantTelegramExecution,
+} from "@ewatrade/db/assistant-telegram"
 import {
   AssistantWhatsAppError,
   type WhatsAppConversationPrincipal,
@@ -10,6 +19,7 @@ import {
   assertAssistantWhatsAppInboxLease,
   assistantWhatsAppAuthorityDigest,
   resolveAssistantWhatsAppConversation,
+  stampAssistantWhatsAppExecution,
 } from "@ewatrade/db/assistant-whatsapp"
 import type { Prisma, PrismaClient } from "@ewatrade/db/types"
 import { TRPCError } from "@trpc/server"
@@ -26,7 +36,8 @@ function channelIdentityError(error: unknown): never {
     })
   throw error
 }
-export type LinkedAssistantIdentity = {
+export type LinkedWhatsAppIdentity = {
+  readonly channel?: "whatsapp"
   readonly [linkedIdentityBrand]: true
   readonly user: Session["user"]
   /** No browser Session, cookie, token or synthetic session ID exists for this principal. */
@@ -35,6 +46,18 @@ export type LinkedAssistantIdentity = {
   readonly principal: Readonly<WhatsAppConversationPrincipal>
   readonly inboxLease?: Readonly<WhatsAppInboxLease>
 }
+type LinkedTelegramIdentity = Omit<
+  LinkedWhatsAppIdentity,
+  "channel" | "purpose" | "principal" | "inboxLease"
+> & {
+  readonly channel: "telegram"
+  readonly purpose: "GENERAL"
+  readonly principal: Readonly<TelegramConversationPrincipal>
+  readonly inboxLease?: Readonly<TelegramInboxLease>
+}
+export type LinkedAssistantIdentity =
+  | LinkedWhatsAppIdentity
+  | LinkedTelegramIdentity
 export type RequestIdentity = Session | LinkedAssistantIdentity
 
 /** The private symbol cannot be supplied in a request header or JSON body. */
@@ -47,6 +70,12 @@ export function isLinkedAssistantIdentity(
       linkedIdentityBrand in identity &&
       identity[linkedIdentityBrand] === true,
   )
+}
+
+export function isLinkedWhatsAppIdentity(
+  identity: unknown,
+): identity is LinkedWhatsAppIdentity {
+  return isLinkedAssistantIdentity(identity) && identity.channel !== "telegram"
 }
 
 export function requireBrowserIdentity(
@@ -111,7 +140,7 @@ export async function resolveLinkedAssistantIdentity(
       code: "UNAUTHORIZED",
       message: "Account unavailable.",
     })
-  const identity: LinkedAssistantIdentity = Object.freeze({
+  const identity: LinkedWhatsAppIdentity = Object.freeze({
     [linkedIdentityBrand]: true as const,
     user,
     session: null,
@@ -122,10 +151,36 @@ export async function resolveLinkedAssistantIdentity(
   return { identity, ...resolved }
 }
 
+type ResolvedWhatsAppIdentity = Awaited<
+  ReturnType<typeof resolveLinkedAssistantIdentity>
+>
+type ResolvedTelegramIdentity = Awaited<
+  ReturnType<typeof resolveLinkedTelegramIdentity>
+>
+
+export function lockLinkedAssistantIdentity(
+  db: Prisma.TransactionClient,
+  identity: LinkedWhatsAppIdentity,
+): Promise<ResolvedWhatsAppIdentity>
+export function lockLinkedAssistantIdentity(
+  db: Prisma.TransactionClient,
+  identity: LinkedTelegramIdentity,
+): Promise<ResolvedTelegramIdentity>
+export function lockLinkedAssistantIdentity(
+  db: Prisma.TransactionClient,
+  identity: LinkedAssistantIdentity,
+): Promise<ResolvedWhatsAppIdentity | ResolvedTelegramIdentity>
 export async function lockLinkedAssistantIdentity(
   db: Prisma.TransactionClient,
   identity: LinkedAssistantIdentity,
 ) {
+  if (identity.channel === "telegram")
+    return resolveLinkedTelegramIdentity(
+      db,
+      identity.principal,
+      identity.inboxLease,
+      lockAssistantTelegramConversation,
+    )
   await db.$queryRaw`SELECT id FROM "AssistantWhatsAppIdentity" WHERE "phoneNumberId"=${identity.principal.phoneNumberId} AND "senderId"=${identity.principal.senderId} FOR SHARE`
   await db.$queryRaw`SELECT id FROM "AssistantWhatsAppGrant" WHERE id=${identity.principal.grantId} FOR SHARE`
   if (identity.inboxLease)
@@ -149,6 +204,103 @@ export async function createLinkedAssistantContext(
     principal,
     inboxLease,
   )
+  return linkedContext(db, resolved, requestId)
+}
+
+export function refreshLinkedAssistantIdentity(
+  db: PrismaClient,
+  identity: LinkedAssistantIdentity,
+) {
+  return identity.channel === "telegram"
+    ? resolveLinkedTelegramIdentity(db, identity.principal, identity.inboxLease)
+    : resolveLinkedAssistantIdentity(
+        db,
+        identity.principal,
+        identity.inboxLease,
+      )
+}
+
+type TelegramResolver = (
+  db: Prisma.TransactionClient,
+  principal: TelegramConversationPrincipal,
+  lease?: TelegramInboxLease,
+) => ReturnType<typeof resolveAssistantTelegramConversation>
+
+export async function resolveLinkedTelegramIdentity(
+  db: Prisma.TransactionClient,
+  principal: TelegramConversationPrincipal,
+  inboxLease?: TelegramInboxLease,
+  resolve: TelegramResolver = resolveAssistantTelegramConversation,
+) {
+  const config = readAssistantTelegramConfig()
+  const denied = () =>
+    new TRPCError({
+      code: "UNAUTHORIZED",
+      message: "Telegram assistant access changed. Connect again in EwaTrade.",
+    })
+  if (!config || config.botId !== principal.botId) throw denied()
+  const resolved = await resolve(db, principal, inboxLease).catch(
+    (error: unknown) => {
+      if (error instanceof AssistantTelegramError) throw denied()
+      throw error
+    },
+  )
+  if (
+    !resolved ||
+    !config.allowedUserIds.has(resolved.scope.userId) ||
+    !config.allowedTenantIds.has(resolved.scope.tenantId)
+  )
+    throw denied()
+  const user = await db.user.findUnique({
+    where: { id: resolved.scope.userId },
+  })
+  if (!user) throw denied()
+  const identity: LinkedTelegramIdentity = Object.freeze({
+    [linkedIdentityBrand]: true as const,
+    channel: "telegram",
+    user,
+    session: null,
+    purpose: "GENERAL",
+    principal: Object.freeze({ ...principal }),
+    ...(inboxLease ? { inboxLease: Object.freeze({ ...inboxLease }) } : {}),
+  })
+  return { ...resolved, identity }
+}
+
+export async function createTelegramAssistantContext(
+  db: PrismaClient,
+  principal: TelegramConversationPrincipal,
+  requestId: string,
+  inboxLease: TelegramInboxLease,
+): Promise<GeneralContext> {
+  const resolved = await resolveLinkedTelegramIdentity(
+    db,
+    principal,
+    inboxLease,
+  )
+  return linkedContext(db, resolved, requestId)
+}
+
+export async function stampLinkedAssistantExecution(
+  tx: Prisma.TransactionClient,
+  identity: LinkedAssistantIdentity,
+) {
+  if (identity.channel === "telegram") {
+    const current = await lockLinkedAssistantIdentity(tx, identity)
+    if (identity.inboxLease)
+      await stampAssistantTelegramExecution(tx, identity.inboxLease, current)
+  } else {
+    const current = await lockLinkedAssistantIdentity(tx, identity)
+    if (identity.inboxLease)
+      await stampAssistantWhatsAppExecution(tx, identity.inboxLease, current)
+  }
+}
+
+function linkedContext(
+  db: PrismaClient,
+  resolved: ResolvedWhatsAppIdentity | ResolvedTelegramIdentity,
+  requestId: string,
+): GeneralContext {
   return {
     db,
     session: resolved.identity,

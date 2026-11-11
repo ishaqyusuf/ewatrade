@@ -6,9 +6,15 @@ import { staffInvitationPrivacyInventoryFixture } from "./account-privacy-staff-
 describe("count-only staff invitation privacy inventory", () => {
   test("one parameterized snapshot returns counts without content, token, address or provider IDs", async () => {
     const calls: unknown[][] = []
-    const row = staffInvitationPrivacyInventoryFixture(
-      "staffInvitationCommands",
-    )
+    const row = {
+      staffInvitationCommands: 1,
+      staffInvitationNotifications: 0,
+      staffInvitationAttempts: 0,
+      staffInvitationEncryptedPayloads: 0,
+      staffInvitationQueuedNotifications: 0,
+      staffInvitationUncertainNotifications: 0,
+      staffInvitationProviderIdentifiers: 0,
+    }
     const db = {
       $queryRaw: async (...values: unknown[]) => {
         calls.push(values)

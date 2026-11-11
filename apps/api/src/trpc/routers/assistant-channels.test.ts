@@ -9,6 +9,13 @@ const keys = [
   "ASSISTANT_WHATSAPP_DISPLAY_NUMBER",
   "WHATSAPP_OTP_PHONE_NUMBER_ID",
   "WHATSAPP_OTP_ACCESS_TOKEN",
+  "ASSISTANT_TELEGRAM_ENABLED",
+  "ASSISTANT_TELEGRAM_BOT_ID",
+  "ASSISTANT_TELEGRAM_BOT_USERNAME",
+  "ASSISTANT_TELEGRAM_BOT_TOKEN",
+  "ASSISTANT_TELEGRAM_WEBHOOK_SECRET",
+  "ASSISTANT_TELEGRAM_PILOT_USER_IDS",
+  "ASSISTANT_TELEGRAM_PILOT_TENANT_IDS",
 ] as const
 let previous: Record<string, string | undefined>
 beforeEach(() => {
@@ -20,6 +27,14 @@ beforeEach(() => {
     ASSISTANT_WHATSAPP_DISPLAY_NUMBER: "2348000000000",
     WHATSAPP_OTP_PHONE_NUMBER_ID: "90000000000001",
     WHATSAPP_OTP_ACCESS_TOKEN: "synthetic-never-sent",
+    ASSISTANT_TELEGRAM_ENABLED: "true",
+    ASSISTANT_TELEGRAM_BOT_ID: "90000000000002",
+    ASSISTANT_TELEGRAM_BOT_USERNAME: "ewatrade_testing_bot",
+    ASSISTANT_TELEGRAM_BOT_TOKEN:
+      "90000000000002:synthetic_telegram_testing_token",
+    ASSISTANT_TELEGRAM_WEBHOOK_SECRET: "synthetic_telegram_webhook_secret",
+    ASSISTANT_TELEGRAM_PILOT_USER_IDS: "picker-user",
+    ASSISTANT_TELEGRAM_PILOT_TENANT_IDS: "picker-tenant",
   })
 })
 afterEach(() => {
@@ -48,6 +63,12 @@ function fixture() {
       assistantWhatsAppGrant: {
         findMany: async (input: unknown) => {
           reads.push({ table: "grant", input })
+          return []
+        },
+      },
+      assistantTelegramGrant: {
+        findMany: async (input: unknown) => {
+          reads.push({ table: "telegramGrant", input })
           return []
         },
       },
@@ -101,6 +122,111 @@ test("scoped availability and every link stage require enrollment of the actual 
   process.env.ASSISTANT_WHATSAPP_PILOT_USER_IDS = "another-user"
   expect(await caller.availability()).toEqual({ enabled: false })
   expect(reads).toHaveLength(0)
+})
+
+test("Telegram linking checks the server-selected Store and enrollment before writing", async () => {
+  const { ctx, reads } = fixture()
+  const caller = assistantChannelsRouter.createCaller({
+    ...ctx,
+    tenantContext: {
+      tenant: {
+        id: "picker-tenant",
+        qaPurgeStartedAt: null,
+        dataClassification: "QA",
+      },
+      membership: { id: "picker-membership", role: "OWNER" },
+      activeStore: { id: "picker-store" },
+    },
+  } as unknown as TRPCContext)
+
+  expect(await caller.telegramAvailability()).toEqual({ enabled: true })
+  await expect(
+    caller.createTelegramLink({
+      tenantId: "picker-tenant",
+      storeId: "former-store",
+    }),
+  ).rejects.toMatchObject({ code: "CONFLICT" })
+  const forged = {
+    tenantId: "picker-tenant",
+    storeId: "picker-store",
+    userId: "other-user",
+  }
+  await expect(caller.createTelegramLink(forged)).rejects.toMatchObject({
+    code: "BAD_REQUEST",
+  })
+
+  process.env.ASSISTANT_TELEGRAM_PILOT_TENANT_IDS = "other-tenant"
+  expect(await caller.telegramAvailability()).toEqual({ enabled: false })
+  await expect(
+    caller.createTelegramLink({
+      tenantId: "picker-tenant",
+      storeId: "picker-store",
+    }),
+  ).rejects.toMatchObject({ code: "NOT_FOUND" })
+  await expect(
+    caller.telegramLink({ linkId: "owned-pending-link" }),
+  ).rejects.toMatchObject({ code: "NOT_FOUND" })
+  await expect(
+    caller.confirmTelegramLink({ linkId: "owned-pending-link", revision: 2 }),
+  ).rejects.toMatchObject({ code: "NOT_FOUND" })
+  expect(reads).toHaveLength(0)
+})
+
+test("Telegram account management refuses linked identities and pinned QA sessions", async () => {
+  const { ctx, reads } = fixture()
+  const forged = assistantChannelsRouter.createCaller({
+    ...ctx,
+    session: { user: { id: "picker-user" }, session: null },
+  } as TRPCContext)
+  await expect(forged.telegramConnections()).rejects.toMatchObject({
+    code: "UNAUTHORIZED",
+  })
+  await expect(
+    forged.revokeTelegram({ grantId: "owned-grant" }),
+  ).rejects.toMatchObject({ code: "UNAUTHORIZED" })
+
+  const pinned = assistantChannelsRouter.createCaller({
+    ...ctx,
+    qaSessionScope: { tenantId: "pinned", storeId: "pinned" },
+  } as TRPCContext)
+  await expect(pinned.telegramConnections()).rejects.toMatchObject({
+    code: "FORBIDDEN",
+  })
+  await expect(
+    pinned.revokeTelegram({ grantId: "owned-grant" }),
+  ).rejects.toMatchObject({ code: "FORBIDDEN" })
+  expect(reads).toHaveLength(0)
+})
+
+test("Telegram connections can be found for revocation without provider configuration or active scope", async () => {
+  const { caller, reads } = fixture()
+  process.env.ASSISTANT_TELEGRAM_ENABLED = "false"
+  Reflect.deleteProperty(process.env, "ASSISTANT_TELEGRAM_BOT_TOKEN")
+
+  expect(await caller.telegramConnections({ cursor: "previous-page" })).toEqual(
+    { items: [], nextCursor: null },
+  )
+  expect(reads).toMatchObject([
+    {
+      table: "session",
+      input: {
+        where: {
+          id: "real-picker-session",
+          userId: "picker-user",
+          qaAuthorizationId: null,
+        },
+      },
+    },
+    {
+      table: "telegramGrant",
+      input: {
+        where: {
+          identity: { userId: "picker-user" },
+          id: { lt: "previous-page" },
+        },
+      },
+    },
+  ])
 })
 
 test("personal picker uses the real browser actor without a currently selected Tenant", async () => {

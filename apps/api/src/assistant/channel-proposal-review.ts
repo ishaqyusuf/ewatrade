@@ -21,7 +21,7 @@ import {
 } from "@ewatrade/assistant/general/contracts"
 import { isSimpleProductCreate } from "@ewatrade/assistant/general/product-create"
 import { parseExactDecimal } from "@ewatrade/utils/exact-decimal"
-import type { GeneralContext } from "./general-context"
+import type { GeneralTransactionContext } from "./general-actions"
 import type { generalProposalWithReview } from "./general-proposals"
 import {
   isProposalApprovalValid,
@@ -588,7 +588,7 @@ export function projectChannelProposalReview(
 
 /** Uses the existing canonical review builder; caller still owns locked binding/proposal authority. */
 export async function buildChannelProposalReview(
-  ctx: GeneralContext,
+  ctx: GeneralTransactionContext,
   row: ProposalRow,
   now = Date.now(),
 ): Promise<ChannelProposalReviewProjection> {

@@ -1,0 +1,130 @@
+import { expect, test } from "bun:test"
+import type { AssistantTelegramConfig } from "@ewatrade/communications"
+import { OpenAPIHono } from "@hono/zod-openapi"
+import { registerAssistantTelegramRoutes } from "./telegram-routes"
+
+const config: AssistantTelegramConfig = {
+  enabled: true,
+  botId: "123",
+  username: "ewatrade_test_bot",
+  token: "123:synthetic_test_token_123456789",
+  webhookSecret: "synthetic_test_webhook_secret",
+  allowedUserIds: new Set(["member"]),
+  allowedTenantIds: new Set(["tenant"]),
+}
+
+function createRoutes(
+  options: { enabled?: boolean; acceptError?: boolean } = {},
+) {
+  const app = new OpenAPIHono()
+  const calls: string[] = []
+  registerAssistantTelegramRoutes(app, {
+    config: () => ({ ...config, enabled: options.enabled ?? true }),
+    workerSecret: () => "worker-secret",
+    accept: async (_, event) => {
+      if (options.acceptError) throw Error("private database error")
+      calls.push(`accept:${event.kind}:${event.updateId}`)
+      if (event.kind === "message" && event.text === "/disconnect")
+        return { notice: "Disconnected" }
+      return { ingressId: "ingress-1" }
+    },
+    enqueueTurn: async (id) => {
+      calls.push(`enqueue:${id}`)
+    },
+    processTurn: async (id) => {
+      calls.push(`process:${id}`)
+      return { status: "completed" }
+    },
+    processDelivery: async (id) => {
+      calls.push(`deliver:${id}`)
+      return { status: "sent" }
+    },
+    provider: () => ({
+      answerCallbackQuery: async (id) => {
+        calls.push(`ack:${id}`)
+        return true
+      },
+      sendMessage: async ({ text }) => {
+        calls.push(`notice:${text}`)
+        return { status: "accepted", messageId: "5" }
+      },
+    }),
+  })
+  return { app, calls }
+}
+
+const user = { id: 456, is_bot: false }
+const message = {
+  message_id: 17,
+  date: 1_784_000_000,
+  chat: { id: 456, type: "private" },
+  from: user,
+  text: "How many eggs?",
+}
+const callback = {
+  update_id: 9,
+  callback_query: { id: "10", from: user, message, data: "opaque" },
+}
+const postWebhook = (
+  app: OpenAPIHono,
+  update: unknown,
+  secret = config.webhookSecret,
+) =>
+  app.request("/api/webhooks/telegram", {
+    method: "POST",
+    headers: { "x-telegram-bot-api-secret-token": secret },
+    body: JSON.stringify(update),
+  })
+
+test("authenticates Telegram and commits before scheduling or acknowledging the callback", async () => {
+  const { app, calls } = createRoutes()
+  expect((await postWebhook(app, callback, "wrong")).status).toBe(401)
+  expect(calls).toEqual([])
+  expect((await postWebhook(app, callback)).status).toBe(200)
+  expect(calls).toEqual(["accept:callback:9", "enqueue:ingress-1", "ack:10"])
+})
+
+test("leaves callback unacknowledged when persistence fails", async () => {
+  const { app, calls } = createRoutes({ acceptError: true })
+  const reply = await postWebhook(app, callback)
+  expect(reply.status).toBe(503)
+  expect(await reply.json()).toEqual({ code: "CHANNEL_UNAVAILABLE" })
+  expect(calls).toEqual([])
+})
+
+test("disabled Telegram admits only signed disconnect", async () => {
+  const { app, calls } = createRoutes({ enabled: false })
+  expect((await postWebhook(app, { update_id: 8, message })).status).toBe(200)
+  expect((await postWebhook(app, callback)).status).toBe(200)
+  expect(
+    (
+      await postWebhook(app, {
+        update_id: 10,
+        message: { ...message, text: "/disconnect" },
+      })
+    ).status,
+  ).toBe(200)
+  expect(calls).toEqual(["accept:message:10", "notice:Disconnected"])
+})
+
+test("worker accepts only authenticated, bounded identifier payloads", async () => {
+  const { app, calls } = createRoutes()
+  const work = (route: string, data: unknown, secret = "worker-secret") =>
+    app.request(`/api/internal/assistant/telegram-${route}`, {
+      method: "POST",
+      headers: { "x-internal-key": secret },
+      body: JSON.stringify(data),
+    })
+  expect((await work("turn", { ingressId: "1" }, "wrong")).status).toBe(401)
+  expect(
+    (await work("turn", { ingressId: "1", tenantId: "injected" })).status,
+  ).toBe(400)
+  expect((await work("turn", { ingressId: "a".repeat(600) })).status).toBe(413)
+  expect(await (await work("turn", { ingressId: "1" })).json()).toEqual({
+    status: "completed",
+  })
+  expect(await (await work("delivery", { outboxId: "2" })).json()).toEqual({
+    status: "sent",
+  })
+  expect(calls).toEqual(["process:1", "deliver:2"])
+})

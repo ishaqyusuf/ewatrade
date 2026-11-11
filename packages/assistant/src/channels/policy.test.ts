@@ -5,6 +5,7 @@ import {
   assistantWhatsAppPilotTenantIds,
   assistantWhatsAppUserAllowed,
   isAssistantWhatsAppPilotTenant,
+  linkedCapabilityEnabled,
   whatsAppCapabilityEnabled,
   whatsAppCapabilityPolicyStamp,
   whatsAppChannelPolicy,
@@ -359,4 +360,34 @@ test("newer native reviews stay on web review in hosted releases until explicitl
       ASSISTANT_WHATSAPP_NATIVE_REVIEW_ACTIONS: "payment_record",
     }),
   ).toBe(payment.whatsapp?.mode === "native")
+})
+
+test("Telegram releases compatible reads and writes independently of WhatsApp configuration", () => {
+  const sale = capabilityManifest.find(
+    (entry) => entry.id === "sales.order.record_simple",
+  )
+  const stagedOrder = capabilityManifest.find(
+    (entry) => entry.id === "sales.order.create",
+  )
+  if (!sale || !stagedOrder) throw Error("Sale capabilities required")
+  const config = {
+    ASSISTANT_TELEGRAM_ENABLED: "true",
+    ASSISTANT_TELEGRAM_RELEASED_CAPABILITY_IDS: `${search.id},${sale.id},${stagedOrder.id}`,
+  }
+  expect(linkedCapabilityEnabled(search, "telegram", config)).toBe(true)
+  expect(linkedCapabilityEnabled(sale, "telegram", config)).toBe(true)
+  expect(linkedCapabilityEnabled(stagedOrder, "telegram", config)).toBe(false)
+  expect(linkedCapabilityEnabled(sale, "whatsapp", config)).toBe(false)
+  expect(
+    linkedCapabilityEnabled(sale, "telegram", {
+      ...config,
+      ASSISTANT_TELEGRAM_RELEASED_CAPABILITY_IDS: `${sale.id}.extra,*`,
+    }),
+  ).toBe(false)
+  expect(
+    linkedCapabilityEnabled(sale, "telegram", {
+      ...config,
+      ASSISTANT_TELEGRAM_ENABLED: "false",
+    }),
+  ).toBe(false)
 })

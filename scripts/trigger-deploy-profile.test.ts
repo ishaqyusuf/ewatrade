@@ -255,6 +255,34 @@ describe("Trigger jobs selected deployment profile", () => {
       )
     })
 
+    test("syncs only the selected Telegram recovery switch, excluding bot credentials", () => {
+      const apiOnly = {
+        ASSISTANT_TELEGRAM_BOT_TOKEN: "fixture-bot-token",
+        ASSISTANT_TELEGRAM_WEBHOOK_SECRET: "fixture-webhook-secret",
+      }
+      const enabledPreview = {
+        ...preview,
+        ...previewMachine,
+        ...apiOnly,
+        ASSISTANT_TELEGRAM_ENABLED: "true",
+      }
+      const enabled = syncedTriggerJobEnvironment(
+        selectedTriggerDeployEnvironment(preview, enabledPreview, production),
+      )
+      expect(enabled.ASSISTANT_TELEGRAM_ENABLED).toBe("true")
+      for (const name of Object.keys(apiOnly))
+        expect(enabled[name]).toBeUndefined()
+
+      const disabled = syncedTriggerJobEnvironment(
+        selectedTriggerDeployEnvironment(
+          enabledPreview,
+          { ...preview, ...previewMachine },
+          production,
+        ),
+      )
+      expect(disabled.ASSISTANT_TELEGRAM_ENABLED).toBe("false")
+    })
+
     test("syncs all seven disabled gates and only the selected protected Preview credentials", () => {
       const host = "ewatrade-api-fixture123-ishaqyusufs-projects.vercel.app"
       const selected = {

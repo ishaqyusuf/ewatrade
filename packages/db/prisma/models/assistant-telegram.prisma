@@ -1,0 +1,203 @@
+model AssistantTelegramIdentity {
+  id                  String @id @default(cuid())
+  botId               String
+  telegramUserId      String
+  chatId              String
+  userId              String
+  generation          Int @default(1)
+  selectionGeneration Int @default(0)
+  activeBindingId     String?
+  revokedAt           DateTime?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  user     User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  grants   AssistantTelegramGrant[]
+  bindings AssistantTelegramBinding[]
+
+  @@unique([botId, telegramUserId])
+  @@index([userId, revokedAt])
+}
+
+model AssistantTelegramLink {
+  id                       String @id @default(cuid())
+  tokenDigest              String @unique
+  botId                    String
+  userId                   String
+  tenantId                 String
+  storeId                  String
+  membershipId             String
+  revision                 Int @default(1)
+  claimedTelegramUserId    String?
+  claimedChatId            String?
+  claimedUpdateId          String?
+  confirmedGrantGeneration Int?
+  confirmedAt              DateTime?
+  cancelledAt              DateTime?
+  expiresAt                DateTime
+  createdAt                DateTime @default(now())
+
+  user       User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant     Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store      Store @relation(fields: [storeId, tenantId], references: [id, tenantId], onDelete: Cascade)
+  membership Membership @relation(fields: [membershipId, tenantId], references: [id, tenantId], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([expiresAt])
+}
+
+model AssistantTelegramGrant {
+  id            String @id @default(cuid())
+  identityId    String
+  tenantId      String
+  membershipId  String
+  storeId       String
+  generation    Int @default(1)
+  consentedAt   DateTime
+  expiresAt     DateTime
+  idleExpiresAt DateTime
+  revokedAt     DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  identity   AssistantTelegramIdentity @relation(fields: [identityId], references: [id], onDelete: Cascade)
+  tenant     Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store      Store @relation(fields: [storeId, tenantId], references: [id, tenantId], onDelete: Cascade)
+  membership Membership @relation(fields: [membershipId, tenantId], references: [id, tenantId], onDelete: Cascade)
+  bindings   AssistantTelegramBinding[]
+
+  @@unique([identityId, tenantId])
+  @@index([membershipId, revokedAt])
+  @@index([expiresAt])
+}
+
+model AssistantTelegramBinding {
+  id                  String @id @default(cuid())
+  identityId          String
+  grantId             String
+  conversationId      String
+  identityGeneration  Int
+  grantGeneration     Int
+  selectionGeneration Int
+  inboundSequence     Int @default(0)
+  createdAt           DateTime @default(now())
+
+  identity     AssistantTelegramIdentity @relation(fields: [identityId], references: [id], onDelete: Cascade)
+  grant        AssistantTelegramGrant @relation(fields: [grantId], references: [id], onDelete: Cascade)
+  conversation AssistantConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  inbox        AssistantTelegramInbox[]
+  reviews      AssistantTelegramActionReview[]
+
+  @@unique([identityId, selectionGeneration])
+  @@index([conversationId])
+  @@index([grantId])
+}
+
+enum AssistantTelegramInboxState {
+  PENDING
+  PROCESSING
+  COMPLETED
+  CANCELLED
+  FAILED
+  EXPIRED
+}
+
+model AssistantTelegramInbox {
+  id                       String @id @default(cuid())
+  bindingId                String
+  botId                    String
+  updateId                 String
+  messageId                String
+  content                  Json?
+  contentDigest            String
+  sequence                 Int
+  requestId                String @unique
+  userMessageId            String @unique
+  state                    AssistantTelegramInboxState @default(PENDING)
+  providerOccurredAt       DateTime
+  expiresAt                DateTime
+  nextAttemptAt            DateTime?
+  attempts                 Int @default(0)
+  leaseOwner               String?
+  leaseGeneration          Int @default(0)
+  leaseExpiresAt           DateTime?
+  executionAuthorityDigest String?
+  runId                    String?
+  errorCode                String?
+  completedAt              DateTime?
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+
+  binding AssistantTelegramBinding @relation(fields: [bindingId], references: [id], onDelete: Cascade)
+  run     AssistantRun? @relation(fields: [runId], references: [id], onDelete: SetNull)
+  outbox  AssistantTelegramOutbox[]
+
+  @@unique([botId, updateId])
+  @@unique([bindingId, sequence])
+  @@index([state, nextAttemptAt, createdAt])
+  @@index([expiresAt])
+  @@index([runId])
+}
+
+enum AssistantTelegramOutboxState {
+  PENDING
+  SENDING
+  SENT
+  FAILED
+  UNKNOWN
+  CANCELLED
+  EXPIRED
+}
+
+model AssistantTelegramOutbox {
+  id                String @id @default(cuid())
+  inboxId           String
+  sequence          Int
+  payload           Json?
+  payloadDigest     String
+  authorityDigest   String
+  runId             String?
+  messageId         String?
+  state             AssistantTelegramOutboxState @default(PENDING)
+  expiresAt         DateTime
+  nextAttemptAt     DateTime?
+  attempts          Int @default(0)
+  leaseOwner        String?
+  leaseGeneration   Int @default(0)
+  leaseExpiresAt    DateTime?
+  providerMessageId String?
+  errorCode         String?
+  completedAt       DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  inbox  AssistantTelegramInbox @relation(fields: [inboxId], references: [id], onDelete: Cascade)
+  review AssistantTelegramActionReview?
+
+  @@unique([inboxId, sequence])
+  @@index([state, nextAttemptAt, createdAt])
+  @@index([expiresAt])
+}
+
+model AssistantTelegramActionReview {
+  id           String @id @default(cuid())
+  bindingId    String
+  outboxId     String @unique
+  proposalId   String
+  revision     Int
+  payloadHash  String
+  reviewDigest String
+  expiresAt    DateTime
+  decision     String?
+  resultRef    Json?
+  editUsedAt   DateTime?
+  createdAt    DateTime @default(now())
+  completedAt  DateTime?
+
+  binding  AssistantTelegramBinding @relation(fields: [bindingId], references: [id], onDelete: Cascade)
+  outbox   AssistantTelegramOutbox @relation(fields: [outboxId], references: [id], onDelete: Cascade)
+  proposal AssistantActionProposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+
+  @@index([bindingId, expiresAt])
+  @@index([proposalId, revision])
+}

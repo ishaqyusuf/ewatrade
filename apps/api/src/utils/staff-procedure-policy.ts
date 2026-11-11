@@ -12,6 +12,9 @@ const reads = new Set([
   "assistantChannels.availability",
   "assistantChannels.whatsAppLink",
   "assistantChannels.whatsAppConnections",
+  "assistantChannels.telegramAvailability",
+  "assistantChannels.telegramLink",
+  "assistantChannels.telegramConnections",
   "customerMessages.catalog",
   "customerMessages.templateStatus",
   "customerMessages.preview",
@@ -217,6 +220,9 @@ export function staffProcedureAction(
       "assistantChannels.createWhatsAppLink",
       "assistantChannels.confirmWhatsAppLink",
       "assistantChannels.revokeWhatsApp",
+      "assistantChannels.createTelegramLink",
+      "assistantChannels.confirmTelegramLink",
+      "assistantChannels.revokeTelegram",
     ].includes(path)
   )
     return "read"

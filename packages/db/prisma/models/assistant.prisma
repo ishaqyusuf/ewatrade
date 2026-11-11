@@ -40,6 +40,7 @@ enum SetupDraftEntityState {
 model AssistantConversation {
   whatsAppWorkflowReviews AssistantWhatsAppWorkflowReview[]
   whatsAppBindings AssistantWhatsAppBinding[]
+  telegramBindings AssistantTelegramBinding[]
   id           String                       @id @default(cuid())
   tenantId     String
   storeId      String
@@ -187,6 +188,7 @@ model AssistantRun {
   conversation AssistantConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   usageEvents  AssistantUsageEvent[]
   whatsAppInbox AssistantWhatsAppInbox[]
+  telegramInbox AssistantTelegramInbox[]
 
   @@unique([actorUserId, requestId])
 }
@@ -305,6 +307,7 @@ model AssistantActionProposal {
   conversation AssistantConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   actor User @relation("AssistantProposalActor", fields: [actorUserId], references: [id], onDelete: Restrict)
   whatsAppActionReviews AssistantWhatsAppActionReview[]
+  telegramActionReviews AssistantTelegramActionReview[]
 
   @@unique([tenantId, actorUserId, idempotencyKey])
   @@index([conversationId, status, createdAt])

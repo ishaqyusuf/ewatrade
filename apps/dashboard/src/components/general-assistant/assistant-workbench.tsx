@@ -57,6 +57,12 @@ export function AssistantWorkbench() {
   const pending = useGeneralPendingReviews(vm)
   const pendingChats = new Set(pending.map((row) => row.conversationId))
   const focus = useReviewFocus(vm)
+  const proposalId = search.get("proposalId")
+  const requestedReview =
+    routeId === vm.conversationId &&
+    vm.data?.proposals.some((proposal) => proposal.id === proposalId)
+      ? proposalId
+      : null
   const [historyOpen, setHistoryOpen] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [chatQuery, setChatQuery] = useState("")
@@ -252,8 +258,8 @@ export function AssistantWorkbench() {
             <>
               <GeneralThread
                 vm={vm}
-                focusId={focus.focusId}
-                onFocused={focus.clear}
+                focusId={focus.focusId ?? requestedReview}
+                onFocused={focus.focusId ? focus.clear : undefined}
                 contentClassName={COLUMN}
               />
               <div className="shrink-0 px-4 pb-3 sm:px-6">

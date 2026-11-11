@@ -18,7 +18,7 @@ import {
 import { createAssistantWhatsAppActionFixture } from "./channel-action-integration-fixture"
 import { WHATSAPP_ACTION_INVALID_REPLY } from "./channel-action-turn"
 import {
-  isLinkedAssistantIdentity,
+  isLinkedWhatsAppIdentity,
   lockLinkedAssistantIdentity,
 } from "./channel-principal"
 import { prepareAssistantWhatsAppReview } from "./channel-review-staging"
@@ -132,7 +132,7 @@ async function editAndReview(proposalId: string, revision: number) {
   if (!reference)
     throw Error("Exact canonical edited proposal source unavailable")
   await db.$transaction(async (tx) => {
-    if (!isLinkedAssistantIdentity(ctx.session))
+    if (!isLinkedWhatsAppIdentity(ctx.session))
       throw Error("Real linked edit context required")
     const resolved = await lockLinkedAssistantIdentity(tx, ctx.session)
     await stampAssistantWhatsAppExecution(tx, claimed.lease, resolved)

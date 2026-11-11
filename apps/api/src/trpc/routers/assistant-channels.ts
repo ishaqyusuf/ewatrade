@@ -9,12 +9,21 @@ import {
   whatsAppStorePageSchema,
 } from "@ewatrade/assistant/channels/whatsapp"
 import {
+  isAssistantTelegramEnrolled,
   isAssistantWhatsAppPilot,
+  readAssistantTelegramConfig,
   readAssistantWhatsAppConfig,
 } from "@ewatrade/communications"
 import {
+  AssistantTelegramError,
+  confirmAssistantTelegramLink,
+  createAssistantTelegramLink,
+  listAssistantTelegramGrants,
+  readAssistantTelegramLink,
+  revokeAssistantTelegramGrant,
+} from "@ewatrade/db/assistant-telegram"
+import {
   AssistantWhatsAppError,
-  type WhatsAppWebActor,
   confirmAssistantWhatsAppLink,
   createAssistantWhatsAppLink,
   listAssistantWhatsAppBusinesses,
@@ -54,7 +63,7 @@ function configuration(userId: string, tenantId?: string) {
   return config
 }
 
-function actor(ctx: GeneralContext): WhatsAppWebActor {
+function actor(ctx: GeneralContext) {
   const store = ctx.tenantContext.activeStore
   if (!store)
     throw new TRPCError({
@@ -74,7 +83,10 @@ async function result<T>(operation: () => Promise<T>) {
   try {
     return await operation()
   } catch (error) {
-    if (error instanceof AssistantWhatsAppError)
+    if (
+      error instanceof AssistantWhatsAppError ||
+      error instanceof AssistantTelegramError
+    )
       throw new TRPCError({
         code:
           error.code === "RATE_LIMITED"
@@ -90,8 +102,108 @@ async function result<T>(operation: () => Promise<T>) {
   }
 }
 
+const telegramId = z.string().min(1).max(128)
+
+function telegramConfiguration(scope: { userId: string; tenantId: string }) {
+  const config = readAssistantTelegramConfig()
+  if (!config || !isAssistantTelegramEnrolled(config, scope))
+    throw new TRPCError({
+      code: "NOT_FOUND",
+      message: "Telegram assistant is not available.",
+    })
+  return config
+}
+
 /** Personal linking controls. No model tool can issue or confirm a link. */
 export const assistantChannelsRouter = createTRPCRouter({
+  telegramAvailability: protectedProcedure.query(({ ctx }) => {
+    const config = readAssistantTelegramConfig()
+    return {
+      enabled:
+        !ctx.qaSessionScope &&
+        Boolean(ctx.tenantContext.activeStore) &&
+        config !== null &&
+        isAssistantTelegramEnrolled(config, {
+          userId: ctx.session.user.id,
+          tenantId: ctx.tenantContext.tenant.id,
+        }),
+    }
+  }),
+  createTelegramLink: protectedProcedure
+    .input(z.object({ tenantId: telegramId, storeId: telegramId }).strict())
+    .mutation(({ ctx, input }) =>
+      result(async () => {
+        const scope = actor(ctx)
+        const config = telegramConfiguration(scope)
+        if (
+          scope.tenantId !== input.tenantId ||
+          scope.storeId !== input.storeId
+        )
+          throw new TRPCError({
+            code: "CONFLICT",
+            message: "Your business or Store changed. Refresh and try again.",
+          })
+        const { id, revision, expiresAt, code } =
+          await createAssistantTelegramLink(ctx.db, scope, config.botId)
+        const url = new URL(`https://t.me/${config.username}`)
+        url.searchParams.set("start", code)
+        return { id, revision, expiresAt, url: url.href }
+      }),
+    ),
+  telegramLink: protectedProcedure
+    .input(z.object({ linkId: telegramId }).strict())
+    .query(({ ctx, input }) =>
+      result(() => {
+        const scope = actor(ctx)
+        const config = telegramConfiguration(scope)
+        return readAssistantTelegramLink(
+          ctx.db,
+          scope,
+          input.linkId,
+          config.botId,
+        )
+      }),
+    ),
+  confirmTelegramLink: protectedProcedure
+    .input(
+      z
+        .object({ linkId: telegramId, revision: z.number().int().positive() })
+        .strict(),
+    )
+    .mutation(({ ctx, input }) =>
+      result(async () => {
+        const scope = actor(ctx)
+        const config = telegramConfiguration(scope)
+        const { id, maskedSender } = await confirmAssistantTelegramLink(
+          ctx.db,
+          scope,
+          { ...input, botId: config.botId },
+        )
+        return { id, maskedSender }
+      }),
+    ),
+  telegramConnections: authenticatedProcedure
+    .input(z.object({ cursor: telegramId.optional() }).strict().optional())
+    .query(({ ctx, input }) =>
+      result(() =>
+        listAssistantTelegramGrants(
+          ctx.db,
+          { userId: ctx.session.user.id, sessionId: ctx.session.session.id },
+          { cursor: input?.cursor },
+        ),
+      ),
+    ),
+  revokeTelegram: authenticatedProcedure
+    .input(z.object({ grantId: telegramId }).strict())
+    .mutation(({ ctx, input }) =>
+      result(() =>
+        revokeAssistantTelegramGrant(
+          ctx.db,
+          { userId: ctx.session.user.id, sessionId: ctx.session.session.id },
+          input.grantId,
+        ),
+      ),
+    ),
   whatsAppBusinesses: authenticatedProcedure
     .input(whatsAppScopePageSchema)
     .query(({ ctx, input }) =>
