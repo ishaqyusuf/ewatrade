@@ -41,6 +41,10 @@ export function LoginForm({
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
+  const [method, setMethod] = useState<"password" | "code">("password")
+  const [codeSentTo, setCodeSentTo] = useState<string | null>(null)
+  const [code, setCode] = useState("")
+  const [notice, setNotice] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(
     initialError === "no_tenant"
@@ -58,15 +62,28 @@ export function LoginForm({
         await accountEntry.signIn()
         return
       }
-      const res = await workflow.fetch("login", "/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email,
-          password,
-          next: getLoginDestination(next),
-        }),
-      })
+      if (method === "code" && codeSentTo !== email) {
+        await sendCode()
+        return
+      }
+      const res = await workflow.fetch(
+        "login",
+        method === "code" ? "/api/auth/login-code" : "/api/auth/login",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(
+            method === "code"
+              ? {
+                  action: "verify",
+                  email,
+                  code,
+                  next: getLoginDestination(next),
+                }
+              : { email, password, next: getLoginDestination(next) },
+          ),
+        },
+      )
 
       const body = await res.json().catch(() => ({}))
 
@@ -89,6 +106,46 @@ export function LoginForm({
       setLoading(false)
     }
   }
+
+  async function sendCode() {
+    setNotice(null)
+    const res = await fetch("/api/auth/login-code", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "request", email }),
+    })
+    const body = (await res.json().catch(() => ({}))) as { error?: string }
+    if (!res.ok) {
+      setError(body.error ?? "We could not send a code. Please try again.")
+      return
+    }
+    setCode("")
+    setCodeSentTo(email)
+    setNotice(`We sent a 6-digit code to ${email}. It expires in 10 minutes.`)
+  }
+
+  async function resendCode() {
+    setLoading(true)
+    setError(null)
+    try {
+      await sendCode()
+    } catch {
+      setError("Network error. Please check your connection.")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  function switchMethod(nextMethod: "password" | "code") {
+    setMethod(nextMethod)
+    setError(null)
+    setNotice(null)
+    setCode("")
+    setCodeSentTo(null)
+  }
+
+  const awaitingCode =
+    !accountEntry && method === "code" && codeSentTo === email
 
   return (
     <AuthShell
@@ -133,7 +190,7 @@ export function LoginForm({
             </Field>
 
             {/* Password */}
-            {!accountEntry && (
+            {!accountEntry && method === "password" && (
               <Field className="gap-1.5">
                 <div className="flex items-center justify-between">
                   <FieldLabel htmlFor="password">Password</FieldLabel>
@@ -177,6 +234,42 @@ export function LoginForm({
               </Field>
             )}
 
+            {/* Login code */}
+            {awaitingCode && (
+              <Field className="gap-1.5">
+                <div className="flex items-center justify-between">
+                  <FieldLabel htmlFor="login-code">Login code</FieldLabel>
+                  <button
+                    type="button"
+                    disabled={loading}
+                    onClick={() => void resendCode()}
+                    className="text-xs text-muted-foreground hover:text-foreground"
+                  >
+                    Send a new code
+                  </button>
+                </div>
+                <Input
+                  disabled={loading}
+                  id="login-code"
+                  name="code"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  pattern="[0-9]{6}"
+                  maxLength={6}
+                  required
+                  value={code}
+                  onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
+                  placeholder="123456"
+                />
+              </Field>
+            )}
+
+            {notice && !error && (
+              <FormFeedback appearance="dashboard" variant="default">
+                {notice}
+              </FormFeedback>
+            )}
+
             {error && (
               <FormFeedback appearance="dashboard">{error}</FormFeedback>
             )}
@@ -188,9 +281,30 @@ export function LoginForm({
                 disabled={loading || (accountEntry && !accountEntry.canSignIn)}
                 className="mt-1 w-full"
               >
-                {loading ? "Signing in…" : "Sign in"}
+                {method === "code" && !awaitingCode && !accountEntry
+                  ? loading
+                    ? "Sending code…"
+                    : "Send login code"
+                  : loading
+                    ? "Signing in…"
+                    : "Sign in"}
               </SubmitButton>
             </FormActions>
+
+            {!accountEntry && (
+              <button
+                type="button"
+                disabled={loading}
+                onClick={() =>
+                  switchMethod(method === "password" ? "code" : "password")
+                }
+                className="text-center text-sm text-muted-foreground hover:text-foreground"
+              >
+                {method === "password"
+                  ? "Email me a login code instead"
+                  : "Sign in with a password instead"}
+              </button>
+            )}
           </div>
         </FieldGroup>
       </form>

@@ -1,12 +1,7 @@
-import type { AppRouter } from "@ewatrade/api/trpc/routers/_app"
+import { createOwnerAuthApi, isSameOriginJsonPost } from "@/lib/owner-auth-api"
 import { createBetterAuthSessionCookieHeaders } from "@ewatrade/auth"
-import {
-  getTrustedPrivacyNetworkSource,
-  getTrustedQaNetworkSource,
-} from "@ewatrade/utils/qa-network-source"
-import { TRPCClientError, createTRPCClient, httpBatchLink } from "@trpc/client"
+import { TRPCClientError } from "@trpc/client"
 import { type NextRequest, NextResponse } from "next/server"
-import superjson from "superjson"
 import { z } from "zod"
 
 const account = z.object({
@@ -54,35 +49,7 @@ const requestSchema = z.discriminatedUnion("action", [
 ])
 
 function api(request: NextRequest) {
-  const origin = (
-    process.env.NEXT_PUBLIC_API_URL ??
-    process.env.API_URL ??
-    "http://localhost:3095"
-  ).replace(/\/$/, "")
-  const internalKey = process.env.INTERNAL_API_KEY?.trim()
-  const source = {
-    env: process.env,
-    getHeader: (name: string) => request.headers.get(name),
-  }
-  const clientAddress =
-    getTrustedPrivacyNetworkSource(source) ?? getTrustedQaNetworkSource(source)
-  return createTRPCClient<AppRouter>({
-    links: [
-      httpBatchLink({
-        url: `${origin}/api/trpc`,
-        transformer: superjson,
-        headers: () => ({
-          "x-trpc-source": "web-owner-signup",
-          ...(internalKey && clientAddress
-            ? {
-                "x-ewatrade-client-ip": clientAddress,
-                "x-internal-key": internalKey,
-              }
-            : {}),
-        }),
-      }),
-    ],
-  })
+  return createOwnerAuthApi(request, "web-owner-signup")
 }
 
 function failure(error: unknown) {
@@ -135,19 +102,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const origin = request.headers.get("origin")
-  const host =
-    request.headers.get("x-forwarded-host") ?? request.headers.get("host")
-  let sameOrigin = false
-  try {
-    sameOrigin = Boolean(origin && new URL(origin).host === host)
-  } catch {
-    /* Malformed origins fail closed. */
-  }
-  if (
-    !request.headers.get("content-type")?.startsWith("application/json") ||
-    !sameOrigin
-  ) {
+  if (!isSameOriginJsonPost(request)) {
     return NextResponse.json(
       { message: "Reload this signup page and try again." },
       { status: 403 },
