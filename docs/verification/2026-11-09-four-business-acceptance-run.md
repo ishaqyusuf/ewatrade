@@ -15,11 +15,11 @@ owner's instruction to keep data-dependent retail cases blocked:
 
 | Business | Passed | Fail | Blocked | Not assessed |
 | --- | ---: | ---: | ---: | ---: |
-| Jawdah poultry | 8/12 | 0 | 0 | 4 |
+| Jawdah poultry | 9/12 | 1 | 0 | 2 |
 | Laundry | 0/12 | 0 | 1 | 11 |
 | Hypnos Man Collection | 0/24 | 0 | 23 | 1 |
 | Alhaq Tech | 0/24 | 0 | 23 | 1 |
-| **Total** | **8/72 (11.1%)** | **0** | **47** | **17** |
+| **Total** | **9/72 (12.5%)** | **1** | **47** | **15** |
 
 Earlier on 10 November the count was 5/72 passed; J06 moved from PASS to FAIL in
 run 2. All case passes are local-window passes (see runtime runs 1–2). A separate
@@ -400,3 +400,20 @@ replaced with the `qa-api` config at `5826d2bbe`, which includes the cashier fix
 - ORD-062 is now **Paid, balance ₦0**. The customer page shows "Payment
   confirmed", and Payments to check is empty.
 - No real transfer, gateway or bank check was involved.
+
+## Runtime run 6: Jawdah availability policy and J01 status
+
+11 November 2026, API at `5826d2bbe`.
+
+- **J08 PASS.** On Jawdah Poultry QA Eggs, turning on "Mark as unavailable" and
+  "Allow book ahead" made the public page show "Sold out now: request ahead",
+  with a preferred date described as a preference, not a reservation. Both
+  settings were then restored ("Website follows your stock"). The image half
+  passed in run 3 on the fresh tenant.
+- **New finding: missing photos.** The same Eggs item now shows "Try image again"
+  in Catalog, and an illustration publicly instead of its 29 Oct approved
+  photos.
+- **J01 → FAIL.** Setup, the saved NG/NGN Store, the plan and the staff identity
+  pass. The failure is returning-owner login: `/login` is unchanged and still
+  only accepts a password, while signup never asks for one. Recommended fix:
+  offer code sign-in on `/login`, or ask for a password at signup.
