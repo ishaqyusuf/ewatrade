@@ -10,16 +10,16 @@ has the status, evidence and limitation for each case.
 
 ## Scorecard
 
-Current, 11 November 2026, after runtime runs 1–7, all of T1–T8 landing, and the
+Current, 11 November 2026, after runtime runs 1–8, all of T1–T8 landing, and the
 owner's instruction to keep data-dependent retail cases blocked:
 
 | Business | Passed | Fail | Blocked | Not assessed |
 | --- | ---: | ---: | ---: | ---: |
-| Jawdah poultry | 9/12 | 1 | 0 | 2 |
-| Laundry | 3/12 | 2 | 2 | 5 |
+| Jawdah poultry | 9/12 | 2 | 0 | 1 |
+| Laundry | 3/12 | 3 | 2 | 4 |
 | Hypnos Man Collection | 0/24 | 0 | 23 | 1 |
 | Alhaq Tech | 0/24 | 0 | 23 | 1 |
-| **Total** | **12/72 (16.7%)** | **3** | **48** | **9** |
+| **Total** | **12/72 (16.7%)** | **5** | **48** | **7** |
 
 Earlier on 10 November the count was 5/72 passed; J06 moved from PASS to FAIL in
 run 2. All case passes are local-window passes (see runtime runs 1–2). A separate
@@ -449,3 +449,40 @@ the clearly labelled test-only service "QA Laundry lifecycle — synthetic"
   and was not authorized.
 - **Copy finding.** The laundry note and problem placeholders show poultry
   examples ("Vaccinate the layer pen first", "20 birds missed").
+
+## Runtime run 8 — J07 and L03 Assistant
+
+11 November 2026, 16:26–16:37 WAT. The local API on port 3095 and Dashboard
+on port 3094 started from `a284ac2aeb7edd71c5418eaed9a234ac93ed2316`.
+The owner approved DeepSeek `deepseek-flash` at `api.deepseek.com` for
+synthetic QA prompts and their relevant QA context. Dashboard used the existing
+Jawdah Poultry Acceptance and FreshCare Demo QA owners. Mobile results below
+come from authenticated requests through the mobile API transport. Android
+started and passed the development connection check. Device interaction and
+WhatsApp delivery remain unverified.
+
+| Case | Dashboard | Mobile API |
+| --- | --- | --- |
+| J07 | **ORD-003** saved as Walk-in, ₦20,000 total, ₦5,000 cash, ₦15,000 due. The receipt survived reload. **ORD-004** saved for the selected QA customer, ₦12,000 cash, ₦0 due. Each order has one payment into Shop cash. The saved order Activity shows the synthetic PNG and the stored digest matches the source attachment. | The invited cashier's simple-sale turn ended with `STREAM_FAILED` and “Reply interrupted.” It created no proposal. The sale capability currently admits Owner, Admin and Manager. |
+| L03 | DeepSeek completed two steps with 118,665 recorded tokens. The review matched the saved customer and 20 Jalabia · Wash & iron at ₦400 each. One confirmation saved **ORD-009** with one confirmed intake and one linked job, ₦8,000 outstanding and no notification. **Created / Open job** survived reload and opened the original job. | DeepSeek returned the same quantity, service and price after five steps and 242,928 recorded tokens. It drafted `order_create` instead of a service intake. The test cancelled that draft through the same API and verified that order and payment counts stayed constant. |
+
+J07's six successful Dashboard turns and failed cashier turn recorded zero model
+steps. The simple-sale handler processed the sale text and account/customer
+choices before model dispatch. The walk-in confirmation replay through
+`assistant.decideProposal` returned the identical canonical receipt, with order
+and payment counts unchanged. The synthetic upload remained `UPLOADED` until the
+existing attachment handler was run for that exact local QA image. The file then
+became `READY` and the normal chat and order flows retained it. Automatic
+attachment processing did not pass.
+
+**J07 FAIL.** The owner Dashboard save and replay were verified. The required
+cashier path failed, and native UI and WhatsApp remain unverified.
+
+**L03 FAIL.** The Dashboard path passed on FreshCare's saved QA price list.
+The mobile API offered a different action and did not create an intake or job.
+The required mobile experience remains unverified on device.
+
+The 9 November entries recorded older Mama Bisi web/backend evidence for J07
+and an earlier FreshCare ORD-006 receipt for L03. Both were initially
+`NOT_ASSESSED` in the launch register. Those historical references remain
+alongside this local result.
