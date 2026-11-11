@@ -17,7 +17,7 @@ import {
 } from "@ewatrade/utils/catalog-ai-images"
 import { BottomSheetScrollView } from "@gorhom/bottom-sheet"
 import { useCallback, useRef, useState } from "react"
-import { View } from "react-native"
+import { ActivityIndicator, View } from "react-native"
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller"
 import Svg, {
   Circle,
@@ -292,9 +292,9 @@ export function CatalogImageProgressTile({
         ...catalogImageTile,
         width: size,
         height: size,
-        justifyContent: "flex-end",
+        alignItems: "center",
+        justifyContent: "center",
         backgroundColor: colors.muted,
-        padding: 12,
       }}
     >
       <View pointerEvents="none" className="absolute inset-0">
@@ -326,17 +326,7 @@ export function CatalogImageProgressTile({
           <Rect width="180" height="180" fill="url(#dots)" mask="url(#mask)" />
         </Svg>
       </View>
-      {choice ? (
-        <Text
-          numberOfLines={2}
-          className="mb-2 text-xs font-bold text-foreground"
-        >
-          {choice}
-        </Text>
-      ) : null}
-      <View className="self-end rounded-full border border-border bg-card px-3 py-2">
-        <Text className="text-xs font-bold text-foreground">{label}</Text>
-      </View>
+      <ActivityIndicator size="large" color={colors.foreground} />
     </View>
   )
 }

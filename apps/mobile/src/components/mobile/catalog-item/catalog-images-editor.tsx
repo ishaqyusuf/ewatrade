@@ -35,6 +35,10 @@ import {
   CatalogImageProgressTile,
   catalogImageTile,
 } from "./catalog-image-add-flow"
+import {
+  CatalogImageDeleteSheet,
+  type CatalogImageRemoval,
+} from "./catalog-image-delete-sheet"
 import { CatalogPhotoGalleryPicker } from "./catalog-photo-gallery-picker"
 import { SavedPhotoPreview } from "./saved-photo-preview"
 
@@ -88,6 +92,7 @@ export function CatalogImagesEditor({
   const [viewer, setViewer] = useState<number | null>(null)
   const [viewed, setViewed] = useState<string | null>(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [removal, setRemoval] = useState<CatalogImageRemoval | null>(null)
   const active = useRef({ mounted: true, storeId })
   const selected = useRef(assetIds)
   const uploadingId = useRef<string | null>(null)
@@ -374,7 +379,9 @@ export function CatalogImagesEditor({
               accessibilityLabel="Remove illustration"
               disabled={disabled || busy}
               className="absolute right-1 top-1 size-11 items-center justify-center"
-              onPress={() => onChange([], null)}
+              onPress={() =>
+                setRemoval({ kind: "illustration", id: illustrationId })
+              }
             >
               <View className="size-7 items-center justify-center rounded-full bg-card">
                 <Icon name="X" className="size-[14px] text-foreground" />
@@ -434,30 +441,10 @@ export function CatalogImagesEditor({
                 accessibilityLabel={`Remove image ${index + 1}`}
                 disabled={disabled || busy}
                 className="absolute right-1 top-1 size-11 items-center justify-center"
-                onPress={() => change(assetIds.filter((entry) => entry !== id))}
+                onPress={() => setRemoval({ kind: "photo", id })}
               >
                 <View className="size-7 items-center justify-center rounded-full bg-card">
                   <Icon name="X" className="size-[14px] text-foreground" />
-                </View>
-              </Pressable>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={`Refine image ${index + 1} with AI`}
-                disabled={!canRefine(id)}
-                className="absolute bottom-1 right-1 min-h-11 items-center justify-center px-1"
-                onPress={() => void ai.start(id)}
-              >
-                <View
-                  className="flex-row items-center gap-1 rounded-xl bg-card px-3 py-2"
-                  style={{ opacity: canRefine(id) ? 1 : 0.5 }}
-                >
-                  <Icon
-                    name="Sparkles"
-                    className="size-[13px] text-foreground"
-                  />
-                  <Text className="text-xs font-extrabold text-foreground">
-                    Refine
-                  </Text>
                 </View>
               </Pressable>
               {!isPrimary ? (
@@ -484,8 +471,7 @@ export function CatalogImagesEditor({
       ) : null}
       {sources.data?.some((photo) => photo.state === "PENDING_REVIEW") ? (
         <Text className="text-xs text-muted-foreground">
-          Your photo stays private while its image check runs. Refine becomes
-          available after it passes.
+          Your photo stays private while its image check runs.
         </Text>
       ) : null}
       {feedback ? <StatusBanner tone="warning" message={feedback} /> : null}
@@ -495,15 +481,25 @@ export function CatalogImagesEditor({
           message="An image could not be generated. Try again."
         />
       ) : null}
-      {ai.retryRequest ? (
-        <ActionButton
-          variant="outline"
-          disabled={ai.busy}
-          onPress={() => void ai.start()}
-        >
+      {ai.retryRequest && !ai.busy ? (
+        <ActionButton variant="outline" onPress={() => void ai.start()}>
           Retry same request
         </ActionButton>
       ) : null}
+      <CatalogImageDeleteSheet
+        target={removal}
+        storeId={storeId}
+        itemName={facts.name}
+        disabled={disabled || busy}
+        onClose={() => setRemoval(null)}
+        onDelete={({ kind, id }) => {
+          if (kind === "illustration") {
+            if (illustrationId === id) onChange([], null)
+          } else if (selected.current.includes(id)) {
+            change(selected.current.filter((entry) => entry !== id))
+          }
+        }}
+      />
       <DockedPhotoCamera {...device.camera} />
       <CatalogPhotoGalleryPicker
         open={myImages}
@@ -554,7 +550,7 @@ export function CatalogImagesEditor({
         >
           <Text className="text-xs text-muted-foreground">
             {version?.label ?? "Image"}
-            {displayed === activeId ? " · Default" : ""}
+            {displayed === activeId ? " · Current version" : ""}
           </Text>
           <View
             style={{
@@ -687,7 +683,7 @@ export function CatalogImagesEditor({
                 </Text>
                 {entry.assetId === activeId ? (
                   <Text className="text-[10px] text-muted-foreground">
-                    Default
+                    Current version
                   </Text>
                 ) : null}
               </Pressable>

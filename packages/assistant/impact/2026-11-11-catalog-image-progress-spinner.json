@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "id": "2026-11-11-catalog-image-progress-spinner",
+  "tickets": ["H02"],
+  "summary": "Simplify the mobile Catalog image cards and confirm removal in a sheet with the selected photo.",
+  "noAssistantImpact": "The mobile form changes how it presents job states, photo actions and version labels. Existing image commands and assistant behavior are unchanged.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/catalog-ai-image-generation.md"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "run",
+      "path": ".brain/features/catalog-ai-image-generation.md",
+      "executed": true,
+      "result": "Android 2 showed a spinner on the pending Day-old tile and then displayed both approved choice images. The delete sheet showed the selected Day-old image, Cancel preserved both photos, and Refine was available in the viewer."
+    }
+  ]
+}
