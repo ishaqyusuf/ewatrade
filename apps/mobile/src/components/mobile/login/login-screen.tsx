@@ -28,7 +28,29 @@ import { useTRPC } from "@/trpc/client"
 import { getCountry, toInternationalPhone } from "@ewatrade/utils/countries"
 import { useMutation, useQuery } from "@tanstack/react-query"
 import { useLocalSearchParams, useRouter } from "expo-router"
-import { useState } from "react"
+import { useRef, useState } from "react"
+import { Keyboard, type TextInput } from "react-native"
+import Animated, {
+  Easing,
+  FadeIn,
+  FadeOut,
+  LayoutAnimationConfig,
+  LinearTransition,
+  ReduceMotion,
+} from "react-native-reanimated"
+
+type SignInMethod = "email" | "whatsapp" | "password"
+
+const methodLayout = LinearTransition.duration(220)
+  .easing(Easing.out(Easing.cubic))
+  .reduceMotion(ReduceMotion.System)
+const methodFieldEnter = FadeIn.duration(170)
+  .delay(35)
+  .easing(Easing.out(Easing.cubic))
+  .reduceMotion(ReduceMotion.System)
+const methodFieldExit = FadeOut.duration(85).reduceMotion(ReduceMotion.System)
+const primaryActionGap = 20
+const socialDividerInset = 6
 
 export function LoginScreen() {
   const router = useRouter()
@@ -53,8 +75,12 @@ export function LoginScreen() {
   )
   const [error, setError] = useState<string | null>(null)
   const [password, setPassword] = useState("")
-  const [usePassword, setUsePassword] = useState(false)
-  const [useWhatsApp, setUseWhatsApp] = useState(Boolean(invitedPhone))
+  const passwordInput = useRef<TextInput>(null)
+  const [method, setMethod] = useState<SignInMethod>(
+    invitedPhone ? "whatsapp" : "email",
+  )
+  const usePassword = method === "password"
+  const useWhatsApp = method === "whatsapp"
   const [phone, setPhone] = useState(invitedPhone?.digits ?? "")
   const [qaPhone, setQaPhone] = useState<SelectedQaPhone | null>(null)
   const [phoneCountry, setPhoneCountry] = useState(
@@ -165,6 +191,20 @@ export function LoginScreen() {
     passwordMutation.isPending ||
     requestPhoneMutation.isPending
 
+  const switchMethod = (next: SignInMethod) => {
+    if (isPending || method === next) return
+    // Keep the keyboard when the email input survives the switch.
+    if (
+      useWhatsApp ||
+      next === "whatsapp" ||
+      passwordInput.current?.isFocused()
+    ) {
+      Keyboard.dismiss()
+    }
+    setMethod(next)
+    setError(null)
+  }
+
   const continueWithEmail = () => {
     if (useWhatsApp) {
       requestPhoneMutation.mutate({
@@ -196,122 +236,142 @@ export function LoginScreen() {
   return (
     <ClassicLoginScreen
       footer={
-        <AuthFooterAction
-          eyebrow="New to ẸwáTrade?"
-          href="/sign-up"
-          label="Create a business account"
-        />
+        <Animated.View layout={methodLayout}>
+          <AuthFooterAction
+            eyebrow="New to ẸwáTrade?"
+            href="/sign-up"
+            label="Create a business account"
+          />
+        </Animated.View>
       }
     >
       <View className={largeTextLayout ? "gap-5" : "gap-7"}>
         <View className="gap-2">
-          <View className="gap-3">
-            {useWhatsApp ? (
-              <View className="gap-3">
-                <QaPhoneEntryPicker
-                  value={qaPhone}
-                  onChange={setQaPhone}
-                  disabled={isPending}
-                />
-                {qaPhone ? (
-                  <QaPhoneText className="rounded-xl border border-border p-4">
-                    {qaPhone.phone}
-                  </QaPhoneText>
-                ) : (
-                  <PhoneField
-                    countryCode={phoneCountry}
-                    onCountryChange={setPhoneCountry}
-                    onChangeText={setPhone}
-                    value={phone}
-                    label="WhatsApp number"
-                    variant="green-gate"
-                  />
-                )}
+          <View style={{ gap: primaryActionGap }}>
+            <LayoutAnimationConfig skipEntering skipExiting>
+              <View collapsable={false} className="gap-3">
+                <Animated.View
+                  key={useWhatsApp ? "whatsapp" : "email"}
+                  entering={methodFieldEnter}
+                  exiting={methodFieldExit}
+                >
+                  {useWhatsApp ? (
+                    <View className="gap-3">
+                      <QaPhoneEntryPicker
+                        value={qaPhone}
+                        onChange={setQaPhone}
+                        disabled={isPending}
+                      />
+                      {qaPhone ? (
+                        <QaPhoneText className="rounded-xl border border-border p-4">
+                          {qaPhone.phone}
+                        </QaPhoneText>
+                      ) : (
+                        <PhoneField
+                          countryCode={phoneCountry}
+                          onCountryChange={setPhoneCountry}
+                          onChangeText={setPhone}
+                          value={phone}
+                          label="WhatsApp number"
+                          variant="green-gate"
+                        />
+                      )}
+                    </View>
+                  ) : (
+                    <FormField
+                      autoCapitalize="none"
+                      keyboardType="email-address"
+                      label="Email address"
+                      onChangeText={setEmail}
+                      placeholder="Enter your email address"
+                      textContentType="emailAddress"
+                      value={email}
+                      variant="green-gate"
+                    />
+                  )}
+                </Animated.View>
+                {usePassword ? (
+                  <Animated.View
+                    entering={methodFieldEnter}
+                    exiting={methodFieldExit}
+                  >
+                    <FormField
+                      autoCapitalize="none"
+                      autoComplete="current-password"
+                      label="Password"
+                      leadingIcon="Lock"
+                      onChangeText={setPassword}
+                      placeholder="Enter your password"
+                      ref={passwordInput}
+                      secureTextEntry
+                      textContentType="password"
+                      value={password}
+                      variant="green-gate"
+                    />
+                  </Animated.View>
+                ) : null}
               </View>
-            ) : (
-              <FormField
-                autoCapitalize="none"
-                keyboardType="email-address"
-                label="Email address"
-                onChangeText={setEmail}
-                placeholder="Enter your email address"
-                textContentType="emailAddress"
-                value={email}
-                variant="green-gate"
-              />
-            )}
-            {usePassword && !useWhatsApp ? (
-              <FormField
-                autoCapitalize="none"
-                autoComplete="current-password"
-                label="Password"
-                leadingIcon="Lock"
-                onChangeText={setPassword}
-                placeholder="Enter your password"
-                secureTextEntry
-                textContentType="password"
-                value={password}
-                variant="green-gate"
-              />
-            ) : null}
-            <AuthActionButton
-              disabled={
-                useWhatsApp
-                  ? !qaPhone && phone.length < 7
-                  : !normalizedEmail || (usePassword && !password)
-              }
-              isLoading={isPending}
-              loadingLabel={usePassword ? "Signing in" : "Sending code"}
-              onPress={continueWithEmail}
-              trailingIcon="ArrowRight"
-            >
-              {useWhatsApp
-                ? "Send WhatsApp code"
-                : usePassword
-                  ? "Sign in with password"
-                  : "Send login code"}
-            </AuthActionButton>
+            </LayoutAnimationConfig>
+            <Animated.View layout={methodLayout}>
+              <AuthActionButton
+                disabled={
+                  useWhatsApp
+                    ? !qaPhone && phone.length < 7
+                    : !normalizedEmail || (usePassword && !password)
+                }
+                isLoading={isPending}
+                loadingLabel={usePassword ? "Signing in" : "Sending code"}
+                onPress={continueWithEmail}
+                trailingIcon="ArrowRight"
+              >
+                {useWhatsApp
+                  ? "Send WhatsApp code"
+                  : usePassword
+                    ? "Sign in with password"
+                    : "Send login code"}
+              </AuthActionButton>
+            </Animated.View>
           </View>
           {/* At large text the two method switches stack so each label reads
               in full instead of truncating at half width. */}
-          <View
-            className={
-              largeTextLayout ? "gap-1" : "flex-row items-center justify-center"
-            }
-          >
-            {phoneAvailability.data?.enabled ? (
+          <Animated.View layout={methodLayout}>
+            <View
+              className={
+                largeTextLayout
+                  ? "gap-1"
+                  : "flex-row items-center justify-center"
+              }
+            >
+              {phoneAvailability.data?.enabled ? (
+                <View className={largeTextLayout ? "w-full" : "flex-1"}>
+                  <AuthMethodButton
+                    icon={useWhatsApp ? "Mail" : "WhatsApp"}
+                    brandIcon={useWhatsApp ? undefined : "whatsapp"}
+                    label={useWhatsApp ? "Use email" : "Use WhatsApp"}
+                    variant="link"
+                    onPress={() =>
+                      switchMethod(useWhatsApp ? "email" : "whatsapp")
+                    }
+                    disabled={isPending}
+                  />
+                </View>
+              ) : null}
+              {!largeTextLayout && phoneAvailability.data?.enabled ? (
+                <View className="h-4 w-px bg-border" />
+              ) : null}
               <View className={largeTextLayout ? "w-full" : "flex-1"}>
                 <AuthMethodButton
-                  icon={useWhatsApp ? "Mail" : "WhatsApp"}
-                  brandIcon={useWhatsApp ? undefined : "whatsapp"}
-                  label={useWhatsApp ? "Use email" : "Use WhatsApp"}
+                  icon={usePassword ? "Mail" : "Padlock"}
+                  label={usePassword ? "Use code" : "Use password"}
                   variant="link"
-                  onPress={() => {
-                    setUseWhatsApp(!useWhatsApp)
-                    setUsePassword(false)
-                    setError(null)
-                  }}
+                  onPress={() =>
+                    switchMethod(usePassword ? "email" : "password")
+                  }
                   disabled={isPending}
                 />
               </View>
-            ) : null}
-            {!largeTextLayout && phoneAvailability.data?.enabled ? (
-              <View className="h-4 w-px bg-border" />
-            ) : null}
-            <View className={largeTextLayout ? "w-full" : "flex-1"}>
-              <AuthMethodButton
-                icon={usePassword ? "Mail" : "Padlock"}
-                label={usePassword ? "Use code" : "Use password"}
-                variant="link"
-                onPress={() => {
-                  setUsePassword(!usePassword)
-                  setUseWhatsApp(false)
-                  setError(null)
-                }}
-                disabled={isPending}
-              />
             </View>
-          </View>
+          </Animated.View>
         </View>
         {error ? (
           <StatusBanner
@@ -321,22 +381,27 @@ export function LoginScreen() {
             tone="destructive"
           />
         ) : null}
-        <View className="gap-2.5">
-          <AuthDivider label="or" plain />
-          <AppleAuthButton
-            onPress={appleAuth.startAppleAuth}
-            disabled={appleAuth.isPending}
-          />
-          <AuthMethodButton
-            brandIcon="google"
-            disabled={googleAuth.isPending}
-            label="Continue with Google"
-            variant="outline"
-            loadingLabel="Connecting to Google"
-            onPress={continueWithGoogle}
-            pending={googleAuth.isPending}
-          />
-        </View>
+        <Animated.View
+          layout={methodLayout}
+          style={{ paddingTop: socialDividerInset }}
+        >
+          <View className="gap-2.5">
+            <AuthDivider label="or" plain />
+            <AppleAuthButton
+              onPress={appleAuth.startAppleAuth}
+              disabled={appleAuth.isPending}
+            />
+            <AuthMethodButton
+              brandIcon="google"
+              disabled={googleAuth.isPending}
+              label="Continue with Google"
+              variant="outline"
+              loadingLabel="Connecting to Google"
+              onPress={continueWithGoogle}
+              pending={googleAuth.isPending}
+            />
+          </View>
+        </Animated.View>
       </View>
     </ClassicLoginScreen>
   )
