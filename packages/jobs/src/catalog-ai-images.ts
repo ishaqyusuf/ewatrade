@@ -1,16 +1,8 @@
 import { catalogAiRecoveryCandidates } from "@ewatrade/db/catalog-ai-images"
 import { prisma } from "@ewatrade/db/client"
-import { catalogAiImageHandler } from "./handlers/catalog-ai-image"
-import { triggerJob } from "./trigger"
+import { enqueueCatalogAiImage } from "./handlers/catalog-ai-image"
 
-export async function enqueueCatalogAiImage(jobId: string) {
-  await triggerJob(
-    "catalog.ai-image.generate",
-    catalogAiImageHandler,
-    { jobId },
-    { maxAttempts: 1 },
-  )
-}
+export { enqueueCatalogAiImage }
 export async function recoverCatalogAiImages() {
   const jobs = await catalogAiRecoveryCandidates(prisma)
   for (const job of jobs) {

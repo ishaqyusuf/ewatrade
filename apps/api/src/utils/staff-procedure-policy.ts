@@ -166,6 +166,8 @@ const reconciliation = new Set([
 ])
 const catalog = new Set([
   "catalog.aiImages.start",
+  "catalog.aiImages.startBatch",
+  "catalog.aiImages.cancel",
   "catalog.aiImages.deleteRefinement",
   "catalog.photos.replace",
   "catalog.photos.remove",

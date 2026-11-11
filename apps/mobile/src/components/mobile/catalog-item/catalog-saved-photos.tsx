@@ -438,7 +438,7 @@ function SavedPhotoEditor({
     assetIds: string[],
     illustrationId: string | null,
     replacements?: CatalogImageReplacement[],
-    assignment?: { assetId: string; variantId: string | null },
+    assignmentsToApply?: Array<{ assetId: string; variantId: string | null }>,
   ) {
     if (running.current || attempt.current) return
     const previous = saved.current
@@ -448,8 +448,16 @@ function SavedPhotoEditor({
     )
     const optionVariantIds = catalogImageVariantIds(
       assetIds,
-      assignment
-        ? { ...assignments, [assignment.assetId]: assignment.variantId }
+      assignmentsToApply?.length
+        ? {
+            ...assignments,
+            ...Object.fromEntries(
+              assignmentsToApply.map(({ assetId, variantId }) => [
+                assetId,
+                variantId,
+              ]),
+            ),
+          }
         : assignments,
       replacements,
     )
@@ -516,7 +524,6 @@ function SavedPhotoEditor({
         contentContainerStyle={{ padding: 16, gap: 16, paddingBottom: 24 }}
         keyboardShouldPersistTaps="handled"
       >
-        <Text className="text-xs text-muted-foreground">{item.name}</Text>
         {saveFeedback}
         <CatalogImagesEditor
           storeId={storeId}
@@ -529,6 +536,9 @@ function SavedPhotoEditor({
             category: item.category ?? "",
           }}
           assetIds={selection.assetIds}
+          generationChoices={catalogImageOptions(item.variants).filter(
+            (option) => option.status === "active",
+          )}
           onChange={changeImages}
           optionEditor={{
             options: catalogImageOptions(item.variants),
@@ -541,7 +551,7 @@ function SavedPhotoEditor({
                 selection.assetIds,
                 selection.illustrationId,
                 undefined,
-                { assetId, variantId },
+                [{ assetId, variantId }],
               ),
           }}
           disabled={saving || !!attempt.current}

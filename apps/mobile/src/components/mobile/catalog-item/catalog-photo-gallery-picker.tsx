@@ -86,6 +86,7 @@ export function CatalogPhotoGalleryPicker({
   available = 0,
   pickedAssetIds = [],
   onClose,
+  initialScope = "store",
   onAdd,
 }: {
   open: boolean
@@ -96,6 +97,7 @@ export function CatalogPhotoGalleryPicker({
   available?: number
   pickedAssetIds?: string[]
   onClose(): void
+  initialScope?: "store" | "all"
   onAdd?(entries: CatalogGalleryEntry[]): void
 }) {
   return (
@@ -115,6 +117,7 @@ export function CatalogPhotoGalleryPicker({
           available={available}
           pickedAssetIds={pickedAssetIds}
           onClose={onClose}
+          initialScope={initialScope}
           onAdd={(entries) => {
             onAdd?.(entries)
             onClose()
@@ -132,6 +135,7 @@ function GalleryPicker({
   available,
   pickedAssetIds,
   onClose,
+  initialScope,
   onAdd,
 }: {
   storeId: string
@@ -140,12 +144,13 @@ function GalleryPicker({
   available: number
   pickedAssetIds: string[]
   onClose(): void
+  initialScope: "store" | "all"
   onAdd(entries: CatalogGalleryEntry[]): void
 }) {
   const trpc = useTRPC()
   const colors = useColors()
   const { width } = useWindowDimensions()
-  const [scope, setScope] = useState<"store" | "all">("store")
+  const [scope, setScope] = useState(initialScope)
   const [search, setSearch] = useState("")
   const [query, setQuery] = useState("")
   const [category, setCategory] = useState<string | null>(null)

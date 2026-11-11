@@ -258,3 +258,17 @@ export const catalogAiFactsSchema = z
   })
   .strict()
 export type CatalogAiFacts = z.infer<typeof catalogAiFactsSchema>
+
+export const catalogAiChoiceSchema = z
+  .object({
+    id: z.string().trim().min(1).max(128),
+    name: z.string().trim().min(1).max(200),
+  })
+  .strict()
+
+export const catalogAiJobFactsSchema = catalogAiFactsSchema.extend({
+  choice: catalogAiChoiceSchema.optional(),
+})
+
+export type CatalogAiChoice = z.infer<typeof catalogAiChoiceSchema>
+export type CatalogAiJobFacts = z.infer<typeof catalogAiJobFactsSchema>

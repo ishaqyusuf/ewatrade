@@ -6,10 +6,10 @@ Tickets refer to the Brain plan `.brain/plans/2026-10-09-assistant-business-oper
 
 ## Summary
 
-- Router procedures: 819 (623 merchant, 196 public/account/internal)
+- Router procedures: 821 (625 merchant, 196 public/account/internal)
 - Merchant supported by a capability: 185
 - Merchant planned: 142
-- Merchant form-only: 233
+- Merchant form-only: 235
 - Merchant excluded: 63
 - Capabilities: 169 (88 read, 81 write)
 
@@ -462,9 +462,11 @@ track conversational evaluation separately from these source test links.
 | `businessReporting.stock` | query | stock | inventory | supported | inventory.stock.report |
 | `businessReporting.supplierAging` | query | Owner/Admin only | finance | supported | finance.supplier_aging.report |
 | `catalog.addServiceChoice` | mutation | catalog | catalog | form_only | Explicit native Catalog sheet/menu commands; assistant model tools cannot invoke these writes. Assistant edits use the narrow price, details, identifier and availability capabilities. |
+| `catalog.aiImages.cancel` | mutation | catalog | catalog | form_only | Photo capture, upload, AI generation and refinement belong to the product form; model tools cannot spend generation allowance. |
 | `catalog.aiImages.deleteRefinement` | mutation | catalog | catalog | form_only | Photo capture, upload, AI generation and refinement belong to the product form; model tools cannot spend generation allowance. |
 | `catalog.aiImages.sources` | query | catalog | catalog | form_only | Photo capture, upload, AI generation and refinement belong to the product form; model tools cannot spend generation allowance. |
 | `catalog.aiImages.start` | mutation | catalog | catalog | form_only | Photo capture, upload, AI generation and refinement belong to the product form; model tools cannot spend generation allowance. |
+| `catalog.aiImages.startBatch` | mutation | catalog | catalog | form_only | Photo capture, upload, AI generation and refinement belong to the product form; model tools cannot spend generation allowance. |
 | `catalog.aiImages.state` | query | catalog | catalog | form_only | Photo capture, upload, AI generation and refinement belong to the product form; model tools cannot spend generation allowance. |
 | `catalog.aiImages.versions` | query | catalog | catalog | form_only | Photo capture, upload, AI generation and refinement belong to the product form; model tools cannot spend generation allowance. |
 | `catalog.archiveOffering` | mutation | catalog | catalog | supported | catalog.archive |

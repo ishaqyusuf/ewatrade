@@ -2,19 +2,23 @@ import { isCatalogAiProviderConfigured } from "@ewatrade/catalog/image-generatio
 import { isCatalogPhotoReviewConfigured } from "@ewatrade/catalog/photo-review-openai"
 import {
   CatalogAiError,
+  cancelCatalogAiImages,
   deleteCatalogAiRefinement,
   readCatalogAiImages,
   readCatalogAiSources,
   readCatalogAiVersions,
   startCatalogAiImage,
+  startCatalogAiImageBatch,
 } from "@ewatrade/db/catalog-ai-images"
 import { CatalogPhotoError } from "@ewatrade/db/catalog-photos"
 import { enqueueCatalogAiImage } from "@ewatrade/jobs/catalog-ai-images"
 import { TRPCError } from "@trpc/server"
 import { catalogPhotoActorScope } from "../../catalog/photo-access"
 import {
+  catalogAiCancelSchema,
   catalogAiContextSchema,
   catalogAiDeleteVersionSchema,
+  catalogAiStartBatchSchema,
   catalogAiStartSchema,
   catalogAiVersionsSchema,
 } from "../../schemas/catalog-ai-images"
@@ -73,6 +77,35 @@ export const catalogAiImagesRouter = createTRPCRouter({
           await enqueueCatalogAiImage(job.id).catch(() => undefined)
         return job
       }),
+    ),
+  startBatch: protectedProcedure
+    .input(catalogAiStartBatchSchema)
+    .mutation(({ ctx, input }) =>
+      command(async () => {
+        const scope = catalogPhotoActorScope(ctx, input.storeId)
+        if (!configured())
+          throw new CatalogAiError(
+            "UNAVAILABLE",
+            "AI image generation is not configured yet.",
+          )
+        const jobs = await startCatalogAiImageBatch(ctx.db, {
+          ...input,
+          ...scope,
+        })
+        const next = jobs.find((job) => job.state === "QUEUED")
+        if (next) await enqueueCatalogAiImage(next.id).catch(() => undefined)
+        return jobs
+      }),
+    ),
+  cancel: protectedProcedure
+    .input(catalogAiCancelSchema)
+    .mutation(({ ctx, input }) =>
+      command(() =>
+        cancelCatalogAiImages(ctx.db, {
+          ...input,
+          ...catalogPhotoActorScope(ctx, input.storeId),
+        }),
+      ),
     ),
   sources: protectedProcedure
     .input(

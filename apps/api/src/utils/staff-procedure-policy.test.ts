@@ -213,7 +213,7 @@ test("Catalog AI admits only exact Catalog-authorized methods", () => {
     expect(staffProcedureAction(path, "mutation")).toBeNull()
     expect(staffProcedureAction(`${path}Unsafe`, "query")).toBeNull()
   }
-  for (const name of ["start", "deleteRefinement"]) {
+  for (const name of ["start", "startBatch", "cancel", "deleteRefinement"]) {
     const path = `catalog.aiImages.${name}`
     expect(staffProcedureAction(path, "mutation")).toBe("catalog")
     expect(staffProcedureAction(path, "query")).toBeNull()

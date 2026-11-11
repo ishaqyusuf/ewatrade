@@ -1,6 +1,9 @@
 import { useTRPC } from "@/trpc/client"
 import type { RouterInputs } from "@ewatrade/api/trpc/routers/_app"
-import type { CatalogAiFacts } from "@ewatrade/utils/catalog-ai-images"
+import type {
+  CatalogAiChoice,
+  CatalogAiFacts,
+} from "@ewatrade/utils/catalog-ai-images"
 import {
   type CatalogImageReplacement,
   applyCatalogAiJobs,
@@ -9,14 +12,21 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import * as Crypto from "expo-crypto"
 import { useEffect, useRef, useState } from "react"
 
-type Command = RouterInputs["catalog"]["aiImages"]["start"]
+type Commands = RouterInputs["catalog"]["aiImages"]
+type Command = Commands["start"] | Commands["startBatch"]
+export type GeneratedCatalogImageChoice = { assetId: string; variantId: string }
+
 export function useCatalogAiImages(input: {
   storeId: string
   contextKey: string
   catalogItemId?: string
   facts: CatalogAiFacts
   assetIds: string[]
-  onChange(ids: string[], replacements: CatalogImageReplacement[]): void
+  onChange(
+    ids: string[],
+    replacements: CatalogImageReplacement[],
+    choices: GeneratedCatalogImageChoice[],
+  ): void
   enabled?: boolean
 }) {
   const trpc = useTRPC()
@@ -37,7 +47,16 @@ export function useCatalogAiImages(input: {
     ),
   )
   const mutation = useMutation(trpc.catalog.aiImages.start.mutationOptions())
+  const batch = useMutation(trpc.catalog.aiImages.startBatch.mutationOptions())
+  const cancellation = useMutation(
+    trpc.catalog.aiImages.cancel.mutationOptions(),
+  )
   const [error, setError] = useState<string | null>(null)
+  const [starting, setStarting] = useState<{
+    scope: string
+    operationId: string
+    choices: CatalogAiChoice[]
+  } | null>(null)
   const seen = useRef(new Set<string>())
   const running = useRef(false)
   const current = useRef(input)
@@ -69,33 +88,105 @@ export function useCatalogAiImages(input: {
       seen.current,
       replacements,
     )
-    if (JSON.stringify(next) !== JSON.stringify(current.current.assetIds))
-      current.current.onChange(next, replacements)
+    if (JSON.stringify(next) !== JSON.stringify(current.current.assetIds)) {
+      const choices = query.data.jobs.flatMap((job) =>
+        job.mode === "generate" &&
+        job.choice &&
+        job.outputAssetId &&
+        next.includes(job.outputAssetId) &&
+        !current.current.assetIds.includes(job.outputAssetId)
+          ? [{ assetId: job.outputAssetId, variantId: job.choice.id }]
+          : [],
+      )
+      current.current.onChange(next, replacements, choices)
+    }
   }, [enabled, query.data])
-  const pending = query.data?.jobs.find((job) =>
-    ["QUEUED", "DISPATCHING", "UNCERTAIN", "PENDING_REVIEW"].includes(
-      job.state,
-    ),
+  const pending =
+    query.data?.jobs.filter((job) =>
+      ["QUEUED", "DISPATCHING", "UNCERTAIN", "PENDING_REVIEW"].includes(
+        job.state,
+      ),
+    ) ?? []
+  const cancellable = pending.filter(
+    (job) =>
+      job.state !== "UNCERTAIN" && job.failureCode !== "CANCEL_REQUESTED",
   )
-  async function start(sourceAssetId?: string) {
+  const progress = pending.length
+    ? pending.map((job) => ({
+        id: job.id,
+        choice: job.choice?.name,
+        label:
+          job.failureCode === "CANCEL_REQUESTED"
+            ? "Stopping…"
+            : job.state === "QUEUED"
+              ? "Queued"
+              : job.state === "PENDING_REVIEW" || job.state === "UNCERTAIN"
+                ? "Checking…"
+                : job.mode === "refine"
+                  ? "Refining…"
+                  : "Creating…",
+      }))
+    : starting?.scope === scope
+      ? (starting.choices.length ? starting.choices : [null]).map((choice) => ({
+          id: choice?.id ?? starting.operationId,
+          choice: choice?.name,
+          label: "Starting…",
+        }))
+      : []
+
+  async function cancel() {
+    if (cancellation.isPending || !cancellable.length) return
+    setError(null)
+    try {
+      await cancellation.mutateAsync({
+        storeId: input.storeId,
+        contextKey: input.contextKey,
+        jobIds: cancellable.map((job) => job.id),
+      })
+    } catch (error) {
+      if (activeScope.current === scope)
+        setError(
+          error instanceof Error
+            ? error.message
+            : "Could not stop generation. Try again.",
+        )
+    } finally {
+      await client.invalidateQueries({
+        queryKey: trpc.catalog.aiImages.state.queryKey({
+          storeId: input.storeId,
+          contextKey: input.contextKey,
+        }),
+      })
+    }
+  }
+
+  async function start(sourceAssetId?: string, choices?: CatalogAiChoice[]) {
     if (running.current) return
     running.current = true
     setError(null)
     const originalScope = scope
     const previous = client.getQueryData<Command>(commandKey)
-    const request: Command = previous ?? {
+    const common = {
       storeId: input.storeId,
       contextKey: input.contextKey,
       catalogItemId: input.catalogItemId,
-      sourceAssetId,
       facts: input.facts,
       note: note,
       clientOperationId: Crypto.randomUUID(),
     }
+    const request: Command =
+      previous ??
+      (choices?.length ? { ...common, choices } : { ...common, sourceAssetId })
+    setStarting({
+      scope,
+      operationId: request.clientOperationId,
+      choices: "choices" in request ? request.choices : [],
+    })
     client.setQueryData(commandKey, request)
     setRetryRequest(true)
     try {
-      await mutation.mutateAsync(request)
+      if ("choices" in request) await batch.mutateAsync(request)
+      else await mutation.mutateAsync(request)
       client.removeQueries({ queryKey: commandKey, exact: true })
       if (activeScope.current === originalScope) setRetryRequest(false)
     } catch (error) {
@@ -125,13 +216,14 @@ export function useCatalogAiImages(input: {
             : "The request could not be confirmed. Retry the same request.",
         )
     } finally {
-      running.current = false
       await client.invalidateQueries({
         queryKey: trpc.catalog.aiImages.state.queryKey({
           storeId: input.storeId,
           contextKey: input.contextKey,
         }),
       })
+      running.current = false
+      if (activeScope.current === originalScope) setStarting(null)
     }
   }
   const [note, setNote] = useState("")
@@ -142,8 +234,12 @@ export function useCatalogAiImages(input: {
     error,
     retryRequest,
     start,
-    busy: mutation.isPending || !!pending,
+    cancel,
+    canCancel: cancellable.length > 0 && !cancellation.isPending,
+    cancelling: cancellation.isPending,
+    busy: progress.length > 0,
     pending,
+    progress,
     available:
       !!query.data?.configured &&
       !!query.data.canGenerate &&

@@ -7,14 +7,28 @@ import {
 } from "@gorhom/bottom-sheet"
 import {
   type ReactNode,
+  createContext,
   forwardRef,
   useCallback,
+  useContext,
+  useEffect,
   useImperativeHandle,
   useRef,
   useState,
 } from "react"
 import { Keyboard, Modal as NativeModal, View } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
+
+type ModalBackAction = () => boolean
+const ModalBackContext = createContext<
+  ((action: ModalBackAction) => () => void) | null
+>(null)
+
+/** Native modals consume Android Back before an inner sheet can see it. */
+export function useFullScreenFormBack(action: ModalBackAction) {
+  const register = useContext(ModalBackContext)
+  useEffect(() => register?.(action), [action, register])
+}
 
 type FullScreenFormProps = {
   title: string
@@ -92,6 +106,13 @@ export function FullScreenForm({
   onClose: () => void
 }) {
   const insets = useSafeAreaInsets()
+  const backActions = useRef(new Set<ModalBackAction>())
+  const registerBackAction = useCallback((action: ModalBackAction) => {
+    backActions.current.add(action)
+    return () => {
+      backActions.current.delete(action)
+    }
+  }, [])
   const close = () => {
     if (closeDisabled) return
     Keyboard.dismiss()
@@ -104,37 +125,44 @@ export function FullScreenForm({
       statusBarTranslucent
       navigationBarTranslucent
       visible={visible}
-      onRequestClose={onBack ?? close}
+      onRequestClose={() => {
+        for (const action of Array.from(backActions.current).reverse())
+          if (action()) return
+        if (onBack) onBack()
+        else close()
+      }}
     >
-      {/* Keyboard-free pickers inside the form still present sheets. */}
-      <BottomSheetModalProvider>
-        <MobileWorkflowChrome
-          hideHeader={false}
-          keyboardBottomOffset={96}
-          title={title}
-          closeLabel={closeLabel}
-          onClose={close}
-          onBack={onBack}
-          backLabel={backLabel}
-        >
-          {/* Explicit flex styles: with classes the body collapsed inside the
-              native modal and the footer was drawn under the header. */}
-          <View
-            style={{
-              flex: 1,
-              paddingBottom: bottomInset && !footer ? insets.bottom : 0,
-            }}
+      <ModalBackContext.Provider value={registerBackAction}>
+        {/* Keyboard-free pickers inside the form still present sheets. */}
+        <BottomSheetModalProvider>
+          <MobileWorkflowChrome
+            hideHeader={false}
+            keyboardBottomOffset={96}
+            title={title}
+            closeLabel={closeLabel}
+            onClose={close}
+            onBack={onBack}
+            backLabel={backLabel}
           >
-            {footer ? (
-              <DockedFooterLayout footer={footer} label={`${title} actions`}>
-                {children}
-              </DockedFooterLayout>
-            ) : (
-              children
-            )}
-          </View>
-        </MobileWorkflowChrome>
-      </BottomSheetModalProvider>
+            {/* Explicit flex styles: with classes the body collapsed inside the
+              native modal and the footer was drawn under the header. */}
+            <View
+              style={{
+                flex: 1,
+                paddingBottom: bottomInset && !footer ? insets.bottom : 0,
+              }}
+            >
+              {footer ? (
+                <DockedFooterLayout footer={footer} label={`${title} actions`}>
+                  {children}
+                </DockedFooterLayout>
+              ) : (
+                children
+              )}
+            </View>
+          </MobileWorkflowChrome>
+        </BottomSheetModalProvider>
+      </ModalBackContext.Provider>
     </NativeModal>
   )
 }

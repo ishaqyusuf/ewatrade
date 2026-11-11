@@ -5,19 +5,232 @@ import { describeWithServiceCommerceDatabase } from "../acceptance/service-comme
 import { reserveAssistantWhatsAppTransportInTransaction } from "../assistant-whatsapp/usage"
 import {
   assertCatalogAiAllowanceInTransaction,
+  assertCatalogAiDispatch,
   assertCatalogAiSpendInTransaction,
+  cancelCatalogAiImages,
   catalogAiUsage,
   claimCatalogAiImage,
+  failCatalogAiImage,
   readCatalogAiImages,
+  recordCatalogAiProviderUsage,
   settleCatalogAiImage,
   startCatalogAiImage,
+  startCatalogAiJobsInTransaction,
 } from "./jobs"
+import { markCatalogAiAppliedInTransaction } from "./lineage-attachment"
 import { loadCatalogAiPolicy, lockCatalogAiPolicy } from "./policy"
 
 setDefaultTimeout(120_000)
 describeWithServiceCommerceDatabase(
   "Catalog AI quota and WhatsApp monthly invariants",
   () => {
+    test("cancellation fences dispatch and keeps the cost of a response already in flight", async () => {
+      const { prisma: db } = await import("../../client")
+      const tenant = await db.tenant.findFirstOrThrow({
+        where: {
+          id: "cmuv4c0450001z49kd8k5o0s1",
+          dataClassification: "QA",
+          isActive: true,
+        },
+        select: {
+          id: true,
+          users: {
+            where: { role: "OWNER", status: "ACTIVE" },
+            take: 1,
+            select: { userId: true },
+          },
+          stores: {
+            where: { status: "ACTIVE" },
+            take: 1,
+            select: { id: true },
+          },
+        },
+      })
+      const actorUserId = tenant.users[0]?.userId
+      const storeId = tenant.stores[0]?.id
+      if (!actorUserId || !storeId)
+        throw new Error("The existing Jawdah QA owner is required.")
+      const scope = { tenantId: tenant.id, storeId, actorUserId }
+      const contextKey = `cancel-check-${randomUUID()}`
+      const policy = emptyCatalogAiPolicy()
+      const token = randomUUID()
+      const ids: string[] = []
+      try {
+        await expect(
+          db.$transaction(
+            async (tx) => {
+              const { policy } = await loadCatalogAiPolicy(tx)
+              const before = await catalogAiUsage(tx, tenant.id, policy)
+              const request = {
+                ...scope,
+                contextKey,
+                clientOperationId: randomUUID(),
+                facts: {
+                  kind: "PRODUCT" as const,
+                  name: "Broiler",
+                  description: "",
+                  category: "",
+                },
+                note: "",
+                choices: [
+                  { id: "variant-1", name: "Day-old" },
+                  { id: "variant-2", name: "Fully grown" },
+                ],
+              }
+              const jobs = await startCatalogAiJobsInTransaction(tx, request)
+              expect(jobs.map((job) => job.choice)).toEqual(request.choices)
+              expect(new Set(jobs.map((job) => job.id)).size).toBe(2)
+              expect(
+                jobs.every((job) => job.runId === request.clientOperationId),
+              ).toBe(true)
+              expect(
+                await startCatalogAiJobsInTransaction(tx, request),
+              ).toEqual(jobs)
+              expect(await catalogAiUsage(tx, tenant.id, policy)).toMatchObject(
+                {
+                  used: before.used,
+                  reserved: before.reserved + 2,
+                },
+              )
+              throw new Error("Roll back choice reservations")
+            },
+            { maxWait: 10_000, timeout: 30_000 },
+          ),
+        ).rejects.toThrow("Roll back choice reservations")
+
+        for (const inFlight of [false, true]) {
+          const job = await db.catalogAiImageJob.create({
+            data: {
+              ...scope,
+              contextKey,
+              clientOperationId: randomUUID(),
+              payloadHash: "cancellation-integration",
+              mode: "generate",
+              facts: { kind: "PRODUCT", name: "Cancellation metadata check" },
+              note: "",
+              policySnapshot: policy,
+              policyRevision: 0,
+              model: policy.generation.model,
+              reservedCostMicros: 1,
+              state: "DISPATCHING",
+              dispatchToken: token,
+              dispatchedAt: new Date(),
+            },
+          })
+          ids.push(job.id)
+          await db.catalogAiProviderCost.create({
+            data: { id: job.id, reservedCostMicros: 1 },
+          })
+          expect(
+            await cancelCatalogAiImages(db, {
+              ...scope,
+              contextKey: "other-draft",
+              jobIds: [job.id],
+            }),
+          ).toEqual({ stopped: 0, requested: 0 })
+          expect(
+            await cancelCatalogAiImages(db, {
+              ...scope,
+              contextKey,
+              jobIds: [job.id],
+            }),
+          ).toEqual({ stopped: 0, requested: 1 })
+          await expect(
+            assertCatalogAiDispatch(db, job.id, token),
+          ).rejects.toMatchObject({ code: "CONFLICT" })
+          if (inFlight) {
+            expect(
+              await recordCatalogAiProviderUsage(db, {
+                id: job.id,
+                token,
+                usage: null,
+                requestId: "test-response",
+              }),
+            ).toBe(false)
+          } else {
+            await failCatalogAiImage(db, {
+              id: job.id,
+              token,
+              uncertain: false,
+              beforeDispatch: true,
+            })
+          }
+          expect(
+            await db.catalogAiImageJob.findUniqueOrThrow({
+              where: { id: job.id },
+            }),
+          ).toMatchObject({
+            state: "CANCELLED",
+            deliveredAt: null,
+            outputAssetId: null,
+          })
+          expect(
+            await db.catalogAiProviderCost.findUniqueOrThrow({
+              where: { id: job.id },
+            }),
+          ).toMatchObject({
+            costMicros: inFlight ? null : 0,
+            providerRequestId: inFlight ? "test-response" : null,
+          })
+        }
+        const choiceAssets = [randomUUID(), randomUUID()]
+        await expect(
+          db.$transaction(
+            async (tx) => {
+              const jobs = await tx.catalogAiImageJob.createManyAndReturn({
+                data: choiceAssets.map((assetId, index) => ({
+                  ...scope,
+                  contextKey,
+                  clientOperationId: randomUUID(),
+                  payloadHash: "choice-delivery-integration",
+                  mode: "generate",
+                  facts: {
+                    kind: "PRODUCT",
+                    name: "Cancellation metadata check",
+                    description: "",
+                    category: "",
+                    choice: { id: `variant-${index}`, name: `Choice ${index}` },
+                  },
+                  note: "",
+                  policySnapshot: policy,
+                  policyRevision: 0,
+                  model: policy.generation.model,
+                  reservedCostMicros: 1,
+                  state: "DELIVERED",
+                  outputAssetId: assetId,
+                  deliveredAt: new Date(),
+                })),
+              })
+              await markCatalogAiAppliedInTransaction(
+                tx,
+                scope,
+                choiceAssets.slice(0, 1),
+                contextKey,
+              )
+              const recorded = await tx.catalogAiImageJob.findMany({
+                where: { id: { in: jobs.map((job) => job.id) } },
+              })
+              expect(
+                recorded.find((job) => job.outputAssetId === choiceAssets[0])
+                  ?.appliedAt,
+              ).toBeInstanceOf(Date)
+              expect(
+                recorded.find((job) => job.outputAssetId === choiceAssets[1])
+                  ?.appliedAt,
+              ).toBeNull()
+              throw new Error("Roll back simulated delivery")
+            },
+            { maxWait: 10_000, timeout: 30_000 },
+          ),
+        ).rejects.toThrow("Roll back simulated delivery")
+      } finally {
+        await db.catalogAiImageJob.deleteMany({ where: { id: { in: ids } } })
+        await db.catalogAiProviderCost.deleteMany({
+          where: { id: { in: ids } },
+        })
+      }
+    })
+
     test("real transactions admit only one final image reservation and retain lifetime delivery history", async () => {
       const { prisma: db } = await import("../../client")
       const tenant = await db.tenant.findFirst({

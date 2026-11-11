@@ -394,6 +394,11 @@ function CatalogImageEditor({
         category: model.category,
       }}
       assetIds={model.imageDraft.assetIds}
+      generationChoices={model.combinations.flatMap((choice) =>
+        model.showAdvanced && model.variantDrafts[choice.key]?.enabled !== false
+          ? [{ id: choice.key, name: choice.name }]
+          : [],
+      )}
       onChange={(ids, illustrationId) => {
         if (illustrationId) model.imageDraft.chooseIllustration(illustrationId)
         else model.imageDraft.chooseAssetIds(ids)

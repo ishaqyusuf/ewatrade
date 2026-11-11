@@ -53,6 +53,7 @@ import {
   UnitConfigurationStatus,
   WorkAuthorizationPolicy,
 } from "../../generated/prisma/enums"
+import { attachGeneratedDraftChoices } from "./catalog-ai-images/lineage-attachment"
 import { listCatalogAttentionItemIds } from "./catalog-attention"
 import { resolveCatalogCategorySelection } from "./catalog-categories"
 import { lockCatalogCommandInTransaction } from "./catalog-command-locks"
@@ -1256,12 +1257,17 @@ export async function createCatalogItemInTransaction(
   }
 
   if (input.photoAssetIds?.length) {
-    await attachCatalogPhotoAssets(tx, {
+    const photoScope = {
       actorUserId: input.actorUserId,
       tenantId: input.tenantId,
       storeId: input.storeId,
       assetIds: input.photoAssetIds,
       catalogItemId: item.id,
+    }
+    await attachCatalogPhotoAssets(tx, photoScope)
+    await attachGeneratedDraftChoices(tx, {
+      ...photoScope,
+      contextKey: input.clientOperationId,
     })
   }
 

@@ -1,6 +1,8 @@
 import { expect, test } from "bun:test"
 import {
+  catalogAiCancelSchema,
   catalogAiDeleteVersionSchema,
+  catalogAiStartBatchSchema,
   catalogAiStartSchema,
 } from "./catalog-ai-images"
 const base = {
@@ -42,4 +44,32 @@ test("refinement deletion requires the exact reviewed version set", () => {
       expectedVersionAssetIds: ["photo"],
     }).assetId,
   ).toBe("photo")
+})
+
+test("a choice run rejects duplicate choices and refinement fields", () => {
+  const first = { id: "variant-1", name: "Day-old" }
+  const second = { id: "variant-2", name: "Fully grown" }
+  expect(
+    catalogAiStartBatchSchema.parse({ ...base, choices: [first, second] })
+      .choices,
+  ).toEqual([first, second])
+  for (const choices of [[], [first, { ...first, name: "Duplicate" }]]) {
+    expect(
+      catalogAiStartBatchSchema.safeParse({ ...base, choices }).success,
+    ).toBe(false)
+  }
+  expect(
+    catalogAiStartBatchSchema.safeParse({
+      ...base,
+      choices: [first],
+      sourceAssetId: "existing-photo",
+    }).success,
+  ).toBe(false)
+  expect(
+    catalogAiCancelSchema.safeParse({
+      contextKey: "new-draft",
+      jobIds: ["job-id"],
+      tenantId: "untrusted",
+    }).success,
+  ).toBe(false)
 })

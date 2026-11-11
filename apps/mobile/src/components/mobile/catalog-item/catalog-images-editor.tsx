@@ -2,16 +2,19 @@ import { ActionButton } from "@/components/mobile/action-button"
 import { FormField } from "@/components/mobile/form-field"
 import { FullScreenForm } from "@/components/mobile/full-screen-form"
 import { StatusBanner } from "@/components/mobile/status-banner"
-import { Icon, type IconKeys } from "@/components/ui/icon"
+import { Icon } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
-import { useCatalogAiImages } from "@/hooks/use-catalog-ai-images"
+import {
+  type GeneratedCatalogImageChoice,
+  useCatalogAiImages,
+} from "@/hooks/use-catalog-ai-images"
 import { useColors } from "@/hooks/use-color"
 import { uploadMobileCatalogPhoto } from "@/lib/catalog-photo-upload"
 import { useTRPC } from "@/trpc/client"
-import {
-  type CatalogAiFacts,
-  catalogAiAllowanceLabel,
+import type {
+  CatalogAiChoice,
+  CatalogAiFacts,
 } from "@ewatrade/utils/catalog-ai-images"
 import {
   type CatalogImageOptionEditor,
@@ -21,12 +24,17 @@ import {
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import * as Crypto from "expo-crypto"
 import { type ReactNode, useEffect, useRef, useState } from "react"
-import { Modal as RNModal, ScrollView, View } from "react-native"
+import { ScrollView, View, useWindowDimensions } from "react-native"
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller"
-import { CatalogIllustrationBrowser } from "../catalog-setup/catalog-illustration-browser"
 import { CatalogIllustrationPreview } from "../catalog-setup/catalog-illustration-library"
 import { useCatalogImageDraft } from "../catalog-setup/use-catalog-image-draft"
 import { DockedPhotoCamera } from "../docked-photo-camera"
+import {
+  CatalogImageAddTile,
+  CatalogImageGenerateForm,
+  CatalogImageProgressTile,
+  catalogImageTile,
+} from "./catalog-image-add-flow"
 import { CatalogPhotoGalleryPicker } from "./catalog-photo-gallery-picker"
 import { SavedPhotoPreview } from "./saved-photo-preview"
 
@@ -42,6 +50,7 @@ export function CatalogImagesEditor({
   onBusyChange,
   onPersisted,
   optionEditor,
+  generationChoices,
   illustrationId = null,
   saveFeedback,
 }: {
@@ -54,23 +63,28 @@ export function CatalogImagesEditor({
     ids: string[],
     illustrationId: string | null,
     replacements?: CatalogImageReplacement[],
+    choices?: GeneratedCatalogImageChoice[],
   ): void
   disabled?: boolean
   onBusyChange?(busy: boolean, writing: boolean): void
   onPersisted?(ids: string[], variantIds: (string | null)[]): void
   optionEditor?: CatalogImageOptionEditor
+  generationChoices?: CatalogAiChoice[]
   illustrationId?: string | null
   saveFeedback?: ReactNode
 }) {
   const colors = useColors()
+  const { width } = useWindowDimensions()
+  const [gridWidth, setGridWidth] = useState(0)
+  const tileSize = Math.floor(((gridWidth || width - 32) - 12) / 2)
   const trpc = useTRPC()
   const client = useQueryClient()
   const stores = useQuery(trpc.tenant.stores.queryOptions())
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [myImages, setMyImages] = useState(false)
-  const [noteOpen, setNoteOpen] = useState(false)
-  const [illustrations, setIllustrations] = useState(false)
+  const [generating, setGenerating] = useState(false)
+  const [refinementNoteOpen, setRefinementNoteOpen] = useState(false)
   const [viewer, setViewer] = useState<number | null>(null)
   const [viewed, setViewed] = useState<string | null>(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
@@ -86,9 +100,13 @@ export function CatalogImagesEditor({
       active.current.mounted = false
     }
   }, [])
-  const change = (ids: string[], replacements?: CatalogImageReplacement[]) => {
+  const change = (
+    ids: string[],
+    replacements?: CatalogImageReplacement[],
+    choices?: GeneratedCatalogImageChoice[],
+  ) => {
     if (disabled) return
-    onChange(ids, null, replacements)
+    onChange(ids, null, replacements, choices)
   }
   const ai = useCatalogAiImages({
     storeId,
@@ -112,6 +130,13 @@ export function CatalogImagesEditor({
   )
   const writing = uploading || removeVersion.isPending
   const busy = writing || ai.busy
+  const availableChoices = generationChoices ?? optionEditor?.options ?? []
+  const gallery = useQuery(
+    trpc.catalog.photos.gallery.queryOptions(
+      { storeId, scope: "all", limit: 1 },
+      { enabled: !!storeId && !disabled, retry: false },
+    ),
+  )
   useEffect(() => {
     onBusyChange?.(busy, writing)
     return () => onBusyChange?.(false, false)
@@ -148,6 +173,7 @@ export function CatalogImagesEditor({
   useEffect(() => {
     setViewed(activeId ?? null)
     setConfirmDelete(false)
+    setRefinementNoteOpen(false)
   }, [activeId])
   const version = versions.data?.versions.find(
     (entry) => entry.assetId === viewed,
@@ -281,82 +307,102 @@ export function CatalogImagesEditor({
     ) ||
       versions.data?.versions.some((entry) => entry.assetId === id))
   const feedback = error ?? device.error ?? ai.error ?? ai.query.error?.message
-  const status =
-    ai.pending?.state === "UNCERTAIN"
-      ? "Checking this request. Your generation stays reserved; no duplicate will be started."
-      : ai.pending
-        ? ai.pending.state === "PENDING_REVIEW"
-          ? "Checking your new image…"
-          : ai.pending.mode === "refine"
-            ? "Refining your photo…"
-            : "Creating your image…"
-        : null
-  const note = (
-    <>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityState={{ expanded: noteOpen }}
-        className="min-h-11 justify-center"
-        onPress={() => setNoteOpen(!noteOpen)}
-      >
-        <Text className="text-xs text-muted-foreground underline">
-          {noteOpen ? "Hide optional note" : "+ Add a note (optional)"}
-        </Text>
-      </Pressable>
-      {noteOpen ? (
-        <FormField
-          label="Additional direction (optional)"
-          value={ai.note}
-          onChangeText={ai.setNote}
-          multiline
-          maxLength={500}
-          placeholder="e.g. A warm, neutral background"
-        />
-      ) : null}
-    </>
-  )
+  const jobs = ai.query.data?.jobs ?? []
+  const latestRun = jobs[0]?.runId
+  const generationFailed =
+    !ai.busy &&
+    jobs.some((job) => job.runId === latestRun && job.state === "FAILED")
   return (
     <View className="gap-4">
-      {illustrationId ? (
-        <View className="items-center gap-3 rounded-[20px] bg-card p-4">
-          <CatalogIllustrationPreview id={illustrationId} size={160} />
-          <ActionButton
-            variant="outline"
-            disabled={disabled || busy}
-            onPress={() => onChange([], null)}
+      {ai.progress.length ? (
+        <View className="flex-row flex-wrap items-center justify-between gap-2 rounded-2xl bg-card px-3 py-2">
+          <Text
+            accessibilityLiveRegion="polite"
+            className="text-sm font-bold text-foreground"
           >
-            Remove illustration
+            {ai.progress.length > 1
+              ? `${ai.progress.length} images in progress`
+              : "Image generation in progress"}
+          </Text>
+          <ActionButton
+            variant="ghost"
+            disabled={!ai.canCancel}
+            onPress={() => void ai.cancel()}
+          >
+            {ai.cancelling ? "Stopping…" : "Cancel generation"}
           </ActionButton>
         </View>
       ) : null}
-      <View className="flex-row items-center justify-between">
-        <Text className="text-sm font-extrabold text-foreground">
-          Your images
-        </Text>
-        <Text className="text-xs text-muted-foreground">
-          {assetIds.length} / 8
-        </Text>
-      </View>
-      <View className="flex-row flex-wrap gap-3">
+      <View
+        onLayout={(event) => setGridWidth(event.nativeEvent.layout.width)}
+        style={{ flexDirection: "row", flexWrap: "wrap", gap: 12 }}
+      >
+        <CatalogImageAddTile
+          size={tileSize}
+          disabled={disabled || busy || assetIds.length >= 8}
+          hasGalleryImages={!!gallery.data?.entries.length}
+          canGenerate={ai.available && !ai.retryRequest && !!facts.name.trim()}
+          onChoose={(source) => {
+            if (disabled || busy || assetIds.length >= 8) return
+            if (source === "generate") setGenerating(true)
+            else if (source === "my-images") setMyImages(true)
+            else void device.select(source)
+          }}
+        />
+        {ai.progress.map(({ id, choice, label }) => (
+          <CatalogImageProgressTile
+            key={id}
+            size={tileSize}
+            choice={choice}
+            label={label}
+          />
+        ))}
+        {illustrationId ? (
+          <View
+            style={{
+              ...catalogImageTile,
+              width: tileSize,
+              height: tileSize,
+              alignItems: "center",
+              justifyContent: "center",
+              backgroundColor: colors.card,
+            }}
+          >
+            <CatalogIllustrationPreview id={illustrationId} size={96} />
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Remove illustration"
+              disabled={disabled || busy}
+              className="absolute right-1 top-1 size-11 items-center justify-center"
+              onPress={() => onChange([], null)}
+            >
+              <View className="size-7 items-center justify-center rounded-full bg-card">
+                <Icon name="X" className="size-[14px] text-foreground" />
+              </View>
+            </Pressable>
+          </View>
+        ) : null}
         {assetIds.map((id, index) => {
-          const assigned = optionEditor?.assignments[id] ?? null
+          const assignment = (assetId: string) =>
+            optionEditor
+              ? (optionEditor.assignments[assetId] ?? null)
+              : (ai.query.data?.jobs.find(
+                  (job) => job.outputAssetId === assetId,
+                )?.choice?.id ?? null)
+          const assigned = assignment(id)
           const isPrimary =
-            assetIds.find(
-              (assetId) =>
-                (optionEditor?.assignments[assetId] ?? null) === assigned,
-            ) === id
+            assetIds.find((assetId) => assignment(assetId) === assigned) === id
           const optionName = assigned
-            ? (optionEditor?.options.find((option) => option.id === assigned)
+            ? (availableChoices.find((option) => option.id === assigned)
                 ?.name ?? "Removed option")
             : null
           return (
             <View
               key={id}
               style={{
-                width: "48%",
-                aspectRatio: 1,
-                overflow: "hidden",
-                borderRadius: 16,
+                ...catalogImageTile,
+                width: tileSize,
+                height: tileSize,
                 backgroundColor: colors.muted,
               }}
             >
@@ -433,92 +479,6 @@ export function CatalogImagesEditor({
           )
         })}
       </View>
-      <View className="flex-row gap-2">
-        {[
-          ["camera", "Take photo", "Camera"],
-          ["photos", "Choose", "Image"],
-          ["gallery", "My images", "LayoutGrid"],
-        ].map(([source, label, icon]) => (
-          <Pressable
-            key={source}
-            accessibilityRole="button"
-            accessibilityLabel={label}
-            disabled={disabled || busy || assetIds.length >= 8}
-            onPress={() =>
-              source === "gallery"
-                ? setMyImages(true)
-                : void device.select(source === "camera" ? "camera" : "photos")
-            }
-            style={{
-              flex: 1,
-              minHeight: 72,
-              borderRadius: 16,
-              backgroundColor: colors.card,
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 7,
-              opacity: disabled || busy || assetIds.length >= 8 ? 0.5 : 1,
-            }}
-          >
-            <Icon
-              name={icon as IconKeys}
-              className="size-[20px] text-primary"
-            />
-            <Text className="text-xs font-bold text-foreground">{label}</Text>
-          </Pressable>
-        ))}
-      </View>
-      <View className="gap-2 rounded-[20px] bg-card p-4">
-        <View className="flex-row items-center gap-2">
-          <Icon name="Sparkles" className="size-[16px] text-primary" />
-          <Text className="text-sm font-extrabold text-foreground">
-            Create a new image
-          </Text>
-        </View>
-        <Text className="mb-2 text-xs text-muted-foreground">
-          Uses your {facts.kind === "SERVICE" ? "service" : "product"} details.
-        </Text>
-        <ActionButton
-          icon="Sparkles"
-          className="rounded-2xl"
-          disabled={
-            disabled ||
-            busy ||
-            !ai.available ||
-            assetIds.length >= 8 ||
-            !facts.name.trim()
-          }
-          onPress={() => void ai.start()}
-        >
-          Generate with AI
-        </ActionButton>
-        {note}
-      </View>
-      {ai.query.data ? (
-        <Text className="border-t border-border pt-3 text-[11px] text-muted-foreground">
-          {catalogAiAllowanceLabel(
-            ai.query.data.usage.remaining,
-            ai.query.data.usage.period,
-          )}
-          {ai.query.data.usage.reserved
-            ? ` · ${ai.query.data.usage.reserved} reserved`
-            : ""}
-        </Text>
-      ) : null}
-      {status ? (
-        <StatusBanner
-          tone="default"
-          message={`${status} You can leave Images and return.`}
-        />
-      ) : null}
-      {!ai.query.isPending && !ai.available && !ai.pending ? (
-        <Text className="text-xs text-muted-foreground">
-          {ai.query.data?.usage.remaining === 0
-            ? "You have used your free generations."
-            : "AI generation is currently unavailable."}{" "}
-          Your images remain available.
-        </Text>
-      ) : null}
       {uploading ? (
         <StatusBanner tone="default" message="Adding photo…" />
       ) : null}
@@ -529,55 +489,48 @@ export function CatalogImagesEditor({
         </Text>
       ) : null}
       {feedback ? <StatusBanner tone="warning" message={feedback} /> : null}
+      {!feedback && generationFailed ? (
+        <StatusBanner
+          tone="warning"
+          message="An image could not be generated. Try again."
+        />
+      ) : null}
       {ai.retryRequest ? (
         <ActionButton
           variant="outline"
-          disabled={ai.busy && !ai.pending}
+          disabled={ai.busy}
           onPress={() => void ai.start()}
         >
           Retry same request
         </ActionButton>
       ) : null}
-      <ActionButton
-        variant="ghost"
-        disabled={disabled || busy}
-        onPress={() => setIllustrations(true)}
-      >
-        Illustration library
-      </ActionButton>
       <DockedPhotoCamera {...device.camera} />
       <CatalogPhotoGalleryPicker
         open={myImages}
         onClose={() => setMyImages(false)}
         storeId={storeId}
+        initialScope="all"
         item={{ id: catalogItemId ?? "", name: facts.name || "this item" }}
         stores={stores.data ?? []}
         available={8 - assetIds.length}
         pickedAssetIds={assetIds}
         onAdd={(entries) => void addFromGallery(entries)}
       />
-      {illustrations ? (
-        <RNModal
-          visible
-          animationType="slide"
-          presentationStyle="fullScreen"
-          onRequestClose={() => setIllustrations(false)}
-        >
-          <CatalogIllustrationBrowser
-            onClose={() => setIllustrations(false)}
-            kind={facts.kind === "SERVICE" ? "service" : "product"}
-            itemName={facts.name}
-            businessProfileKey={
-              stores.data?.find((store) => store.id === storeId)
-                ?.businessProfileKey
-            }
-            selectedId={illustrationId}
-            onUse={(id) => {
-              onChange([], id)
-              setIllustrations(false)
-            }}
-          />
-        </RNModal>
+      {generating ? (
+        <CatalogImageGenerateForm
+          note={ai.note}
+          onChangeNote={ai.setNote}
+          kind={facts.kind === "SERVICE" ? "service" : "product"}
+          choices={availableChoices}
+          capacity={8 - assetIds.length}
+          usage={ai.query.data?.usage}
+          onClose={() => setGenerating(false)}
+          onGenerate={(choices) => {
+            setGenerating(false)
+            void ai.start(undefined, choices)
+            ai.setNote("")
+          }}
+        />
       ) : null}
       <FullScreenForm
         visible={viewer !== null && !!activeId}
@@ -799,11 +752,33 @@ export function CatalogImagesEditor({
           ) : null}
           {saveFeedback}
           {feedback ? <StatusBanner tone="warning" message={feedback} /> : null}
-          {status ? <StatusBanner tone="default" message={status} /> : null}
+          {ai.progress[0] ? (
+            <StatusBanner tone="default" message={ai.progress[0].label} />
+          ) : null}
           <Text className="text-xs text-muted-foreground">
             Check colour, shape and labels before using an AI edit.
           </Text>
-          {note}
+          <Pressable
+            accessibilityRole="button"
+            accessibilityState={{ expanded: refinementNoteOpen }}
+            className="min-h-11 justify-center"
+            onPress={() => setRefinementNoteOpen(!refinementNoteOpen)}
+          >
+            <Text className="text-xs text-muted-foreground underline">
+              {refinementNoteOpen
+                ? "Hide optional note"
+                : "Add a note (optional)"}
+            </Text>
+          </Pressable>
+          {refinementNoteOpen ? (
+            <FormField
+              label="Add a note (optional)"
+              value={ai.note}
+              onChangeText={ai.setNote}
+              multiline
+              maxLength={500}
+            />
+          ) : null}
         </KeyboardAwareScrollView>
       </FullScreenForm>
     </View>

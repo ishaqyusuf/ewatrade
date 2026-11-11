@@ -1,0 +1,44 @@
+{
+  "version": 1,
+  "id": "2026-11-11-mobile-catalog-image-runs",
+  "tickets": ["H01", "H02"],
+  "summary": "Use the shared mobile Images grid for new and saved items and support explicit generation and cancellation across customer choices.",
+  "capabilities": [],
+  "procedures": [
+    {
+      "path": "catalog.aiImages.cancel",
+      "status": "form_only",
+      "reason": "Only the current Catalog actor can cancel jobs in their Store and Images context."
+    },
+    {
+      "path": "catalog.aiImages.startBatch",
+      "status": "form_only",
+      "reason": "Explicit Catalog form submission reserves one generation per selected choice. The server owns scope, quota, concurrency and cost admission."
+    }
+  ],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/catalog-ai-image-generation.md"
+    },
+    {
+      "topic": "api",
+      "status": "local_only",
+      "path": ".brain/api/contracts.md"
+    },
+    {
+      "topic": "permissions",
+      "status": "local_only",
+      "path": ".brain/api/permissions.md"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/catalog-ai-images/allowance.integration.test.ts",
+      "executed": true,
+      "result": "Local QA database test passed 20 assertions across atomic choice reservations and replay, scope refusal, cancellation before dispatch, in-flight cost retention without delivery, and preserving a sibling choice result for a later save."
+    }
+  ]
+}
