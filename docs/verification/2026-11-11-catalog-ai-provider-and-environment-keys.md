@@ -78,3 +78,13 @@ command with `--no-launch` restored the two mappings and verified the QA
 capability. Direct device HTTP probes then returned 200 for `/health` and
 `/status`. The app remained open, and the owner confirmed it worked again. The
 full Android Catalog smoke was not repeated for the connection repair.
+
+## Development queue ready for a device test
+
+The existing `bun run dev --local -f jobs` launcher started the Development
+worker. Trigger reported worker version `20261111.1` ready and completed
+`catalog.ai-image.generate` run `run_06gsjei3to3cp04icjashs38a2`. The check used
+an already-delivered Development job, so it verified dispatch and worker pickup
+without another generation or a new allowance charge. The worker was left
+running for the owner's phone test. The Galaxy S24 Ultra retained both USB
+reverse mappings at the start of this check.
