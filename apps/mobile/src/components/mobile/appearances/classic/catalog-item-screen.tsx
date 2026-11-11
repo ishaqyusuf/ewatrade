@@ -42,13 +42,54 @@ import {
   productUsageLabels,
 } from "@ewatrade/utils/product-usage"
 import { StatusBar } from "expo-status-bar"
-import { useState } from "react"
+import { type ReactNode, useState } from "react"
 import { Text as NativeText, ScrollView, Share } from "react-native"
 
 type OfferingEntry = ReturnType<typeof catalogItemOfferings>[number]
 type StockBalance = NonNullable<
   CatalogItemOverviewProps["item"]["product"]
 >["stockBalances"][number]
+
+const overviewContent = "gap-4 px-[18px] pb-12"
+const itemIdentityRow = "flex-row items-center gap-3"
+const itemIdentityDetails = "min-w-0 flex-1 gap-1"
+const priceCard = "rounded-[20px] bg-card shadow-sm"
+const priceHeader = "h-[34px] flex-row items-center gap-2 bg-muted px-3.5"
+const stockColumn = "w-16"
+const priceColumn = "w-[84px]"
+const aboutCard = "rounded-[20px] bg-card px-3.5 shadow-sm"
+const aboutRow = "flex-row items-center gap-3 py-3"
+
+function CatalogItemHeader({
+  category,
+  onBack,
+  trailing,
+}: {
+  category?: string | null
+  onBack: () => void
+  trailing?: ReactNode
+}) {
+  return (
+    <View className="min-h-11 flex-row items-center gap-2.5">
+      <Pressable
+        accessibilityLabel="Back to catalog"
+        accessibilityRole="button"
+        className="size-11 items-center justify-center rounded-full bg-card shadow-sm"
+        haptic
+        onPress={onBack}
+      >
+        <Icon className="size-[20px] text-foreground" name="ArrowLeft" />
+      </Pressable>
+      <Text
+        numberOfLines={1}
+        className="min-w-0 flex-1 text-xs font-bold text-muted-foreground"
+      >
+        {category ? `Catalog · ${category}` : "Catalog"}
+      </Text>
+      {trailing}
+    </View>
+  )
+}
 
 // 03 Price List: compact header, quick actions, variant filter and a price
 // table with stock per option. Photos and the description sit at the bottom.
@@ -160,43 +201,32 @@ export function ClassicCatalogItemOverview({
   }
   return (
     <MobileScreen
-      contentClassName="gap-4 px-[18px] pb-12"
+      contentClassName={overviewContent}
       refreshControl={<QueryRefreshControl />}
       scroll
       keyboardAutoScrollEnabled={false}
       testID="catalog-item-overview"
     >
-      <View className="min-h-11 flex-row items-center gap-2.5">
-        <Pressable
-          accessibilityLabel="Back to catalog"
-          accessibilityRole="button"
-          className="size-11 items-center justify-center rounded-full bg-card shadow-sm"
-          haptic
-          onPress={onBack}
-        >
-          <Icon className="size-[20px] text-foreground" name="ArrowLeft" />
-        </Pressable>
-        <Text
-          numberOfLines={1}
-          className="min-w-0 flex-1 text-xs font-bold text-muted-foreground"
-        >
-          {item.category ? `Catalog · ${item.category}` : "Catalog"}
-        </Text>
-        {canEditImages ? (
-          <Pressable
-            accessibilityLabel="Edit images"
-            accessibilityRole="button"
-            className="size-11 items-center justify-center rounded-full bg-card shadow-sm"
-            haptic
-            onPress={() => setEditingImages(true)}
-          >
-            <Icon className="size-[20px] text-foreground" name="Camera" />
-          </Pressable>
-        ) : null}
-      </View>
-      <View className="flex-row items-center gap-3">
+      <CatalogItemHeader
+        category={item.category}
+        onBack={onBack}
+        trailing={
+          canEditImages ? (
+            <Pressable
+              accessibilityLabel="Edit images"
+              accessibilityRole="button"
+              className="size-11 items-center justify-center rounded-full bg-card shadow-sm"
+              haptic
+              onPress={() => setEditingImages(true)}
+            >
+              <Icon className="size-[20px] text-foreground" name="Camera" />
+            </Pressable>
+          ) : null
+        }
+      />
+      <View className={itemIdentityRow}>
         <CatalogItemThumb item={item} />
-        <View className="min-w-0 flex-1 gap-1">
+        <View className={itemIdentityDetails}>
           <Text
             accessibilityRole="header"
             className="text-[21px] font-extrabold leading-[25px] tracking-tight text-foreground"
@@ -320,15 +350,17 @@ export function ClassicCatalogItemOverview({
               ))}
             </ScrollView>
           ) : null}
-          <View className="rounded-[20px] bg-card shadow-sm">
+          <View className={priceCard}>
             <View className="overflow-hidden rounded-[20px]">
               {largeText ? null : (
-                <View className="h-[34px] flex-row items-center gap-2 bg-muted px-3.5">
+                <View className={priceHeader}>
                   <TableHead className="flex-1">Option</TableHead>
-                  <TableHead className="w-16 text-right">
+                  <TableHead className={cn(stockColumn, "text-right")}>
                     {product ? "Stock" : "Work"}
                   </TableHead>
-                  <TableHead className="w-[84px] text-right">Price</TableHead>
+                  <TableHead className={cn(priceColumn, "text-right")}>
+                    Price
+                  </TableHead>
                 </View>
               )}
               {rows.map((entry, index) => (
@@ -352,7 +384,7 @@ export function ClassicCatalogItemOverview({
       ) : null}
       <View>
         <SectionHeader title="About" />
-        <View className="rounded-[20px] bg-card px-3.5 shadow-sm">
+        <View className={aboutCard}>
           {item.description ? (
             <Text className="py-3 text-xs [-rn-line-height:22] text-muted-foreground">
               {item.description}
@@ -473,7 +505,7 @@ function PriceRow({
         quote || offering.fixedPriceMinor === null
           ? "text-xs font-bold text-muted-foreground"
           : "text-sm font-extrabold text-foreground",
-        !largeText && "w-[84px]",
+        !largeText && priceColumn,
       )}
     >
       {priceLabel}
@@ -481,7 +513,9 @@ function PriceRow({
   )
   const stockText = product ? (
     stock ? (
-      <View className={largeText ? "flex-row items-baseline gap-1.5" : "w-16"}>
+      <View
+        className={largeText ? "flex-row items-baseline gap-1.5" : stockColumn}
+      >
         <Text className="text-right text-xs font-bold tabular-nums text-foreground">
           {largeText ? `${stock.onHandQuantity} on hand` : stock.onHandQuantity}
         </Text>
@@ -493,7 +527,7 @@ function PriceRow({
       <Text
         className={cn(
           "text-right text-xs font-bold text-muted-foreground",
-          !largeText && "w-16",
+          !largeText && stockColumn,
         )}
       >
         —
@@ -503,7 +537,7 @@ function PriceRow({
     <Text
       className={cn(
         "text-right text-xs font-semibold text-muted-foreground",
-        !largeText && "w-16",
+        !largeText && stockColumn,
       )}
     >
       Job
@@ -533,10 +567,7 @@ function PriceRow({
       )}
     </>
   )
-  const className = cn(
-    "min-h-14 gap-2 px-3.5 py-2",
-    !largeText && "flex-row items-center",
-  )
+  const className = priceRowClassName(largeText)
   const label = `${offering.name}, ${variant.name}, ${quote ? "quote required" : priceLabel === "Not set" ? "price not set" : priceLabel}${
     stock ? `, ${stock.onHandQuantity} on hand` : ""
   }`
@@ -556,6 +587,10 @@ function PriceRow({
       {content}
     </View>
   )
+}
+
+function priceRowClassName(largeText: boolean) {
+  return cn("min-h-14 gap-2 px-3.5 py-2", !largeText && "flex-row items-center")
 }
 
 function FilterChip({
@@ -662,12 +697,7 @@ function AboutRow({
   const { colorScheme } = useColorScheme()
   const palette = GREEN_TILL_THEME[colorScheme]
   return (
-    <View
-      className={cn(
-        "flex-row items-center gap-3 py-3",
-        border && "border-t border-border",
-      )}
-    >
+    <View className={cn(aboutRow, border && "border-t border-border")}>
       <View
         style={{
           alignItems: "center",
@@ -692,6 +722,124 @@ function AboutRow({
   )
 }
 
+function CatalogItemOverviewSkeleton({ onBack }: { onBack: () => void }) {
+  const { profile } = useAuthContext()
+  const largeText = useLargeTextLayout()
+  const priceValues = (
+    <>
+      <View className={cn("items-end gap-2", !largeText && stockColumn)}>
+        <Skeleton height={9} width={22} />
+        <Skeleton height={9} width={36} />
+      </View>
+      <View className={cn("items-end", !largeText && priceColumn)}>
+        <Skeleton height={11} width={48} />
+      </View>
+    </>
+  )
+
+  return (
+    <MobileScreen
+      contentClassName={overviewContent}
+      scroll
+      keyboardAutoScrollEnabled={false}
+    >
+      <CatalogItemHeader
+        onBack={onBack}
+        trailing={
+          canEditMobileCatalog(profile) ? (
+            <View className="size-11 rounded-full bg-card shadow-sm" />
+          ) : null
+        }
+      />
+      <SkeletonGroup accessibilityLabel="Loading item">
+        <View className="gap-4">
+          <View className={itemIdentityRow}>
+            <Skeleton height={62} radius={18} width={62} />
+            <View className={itemIdentityDetails}>
+              <View className="h-[25px] justify-center">
+                <Skeleton height={16} width="65%" />
+              </View>
+              <View className="mt-[3px] flex-row items-center gap-1.5">
+                <Skeleton height={26} radius={13} width={72} />
+                <Skeleton height={26} radius={13} width={52} />
+              </View>
+            </View>
+          </View>
+          <View
+            className={cn(
+              "mb-1 mt-[18px]",
+              largeText ? "flex-row flex-wrap gap-y-3" : "flex-row gap-1.5",
+            )}
+          >
+            {(["order", "operation", "Images", "Share"] as const).map(
+              (action) => (
+                <View
+                  className={cn(
+                    "items-center gap-[7px]",
+                    largeText ? "w-1/2" : "flex-1",
+                  )}
+                  key={action}
+                >
+                  <Skeleton height={54} radius={18} width={54} />
+                  {action === "Images" || action === "Share" ? (
+                    <Text className="text-center text-xs font-bold [-rn-line-height:22] text-foreground">
+                      {action}
+                    </Text>
+                  ) : (
+                    <View className="h-[22px] justify-center">
+                      <Skeleton height={9} width={48} />
+                    </View>
+                  )}
+                </View>
+              ),
+            )}
+          </View>
+          <View className={priceCard}>
+            <View className="overflow-hidden rounded-[20px]">
+              {largeText ? null : (
+                <View className={priceHeader}>
+                  <TableHead className="flex-1">Option</TableHead>
+                  <View className={cn("items-end", stockColumn)}>
+                    <Skeleton height={9} width={42} />
+                  </View>
+                  <TableHead className={cn(priceColumn, "text-right")}>
+                    Price
+                  </TableHead>
+                </View>
+              )}
+              <View className={priceRowClassName(largeText)}>
+                <View className={cn("min-w-0 gap-2", !largeText && "flex-1")}>
+                  <Skeleton height={10} width="42%" />
+                  <Skeleton height={10} width="65%" />
+                </View>
+                {largeText ? (
+                  <View className="flex-row items-center justify-between gap-3">
+                    {priceValues}
+                  </View>
+                ) : (
+                  priceValues
+                )}
+              </View>
+            </View>
+          </View>
+          <View>
+            <SectionHeader title="About" />
+            <View className={aboutCard}>
+              <View className={aboutRow}>
+                <Skeleton height={36} radius={11} width={36} />
+                <View className="h-[42px] min-w-0 flex-1 justify-center gap-2">
+                  <Skeleton height={11} width="55%" />
+                  <Skeleton height={10} width="80%" />
+                </View>
+              </View>
+            </View>
+          </View>
+        </View>
+      </SkeletonGroup>
+    </MobileScreen>
+  )
+}
+
 export function ClassicCatalogItemScreen(props: CatalogItemScreenProps) {
   const { colorScheme } = useColorScheme()
   const unavailable = catalogItemUnavailable(props)
@@ -707,30 +855,22 @@ export function ClassicCatalogItemScreen(props: CatalogItemScreenProps) {
             item={props.item}
           />
         </MotionView>
+      ) : props.isPending && !props.isOffline ? (
+        <CatalogItemOverviewSkeleton onBack={props.onBack} />
       ) : (
         <MobileScreen
-          contentClassName="gap-4 px-[18px] pb-12"
+          contentClassName={overviewContent}
           scroll
           keyboardAutoScrollEnabled={false}
         >
           <ActionButton variant="ghost" icon="ArrowLeft" onPress={props.onBack}>
             Back to catalog
           </ActionButton>
-          {props.isPending && !props.isOffline ? (
-            <SkeletonGroup accessibilityLabel="Loading item">
-              <View className="gap-4">
-                <Skeleton height={28} radius={4} width="66%" />
-                <Skeleton height={224} radius={26} />
-                <Skeleton height={144} radius={20} />
-              </View>
-            </SkeletonGroup>
-          ) : (
-            <EmptyState
-              icon="Package"
-              title={unavailable.title}
-              message={unavailable.message}
-            />
-          )}
+          <EmptyState
+            icon="Package"
+            title={unavailable.title}
+            message={unavailable.message}
+          />
           {!props.isPending && !props.isOffline && props.onRetry ? (
             <ActionButton variant="outline" onPress={props.onRetry}>
               Try again

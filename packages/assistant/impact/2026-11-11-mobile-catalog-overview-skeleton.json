@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "id": "2026-11-11-mobile-catalog-overview-skeleton",
+  "tickets": ["H02"],
+  "summary": "Align the mobile Catalog item loading layout with the loaded overview and reuse its Back button.",
+  "noAssistantImpact": "The change is limited to mobile presentation while the existing Catalog read is pending. Catalog commands, permissions and assistant capabilities are unchanged.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/product-service-catalog-items.md"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "run",
+      "path": ".brain/features/product-service-catalog-items.md",
+      "executed": true,
+      "result": "Physical Android 2 showed the loading skeleton and then the same item's overview. The Back button, thumbnail and quick action tiles aligned across both states. Mobile TypeScript and 203 scoped smoke tests passed."
+    }
+  ]
+}
