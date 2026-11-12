@@ -122,6 +122,75 @@ describe("real-time P08 handler", () => {
   })
 })
 
+describe("real-time P08 payload and inline send", () => {
+  test("rows carry the template key and the frozen decision with its consent", async () => {
+    const { tx, inserts } = fakeTx({})
+    await createLimitPressureHandler({})(tx, usage(50))
+    expect(inserts[0]).toMatchObject({
+      templateKey: "lifecycle-limit-reached",
+      payload: {
+        ctaPath: "/settings/billing",
+        inAppKey: null,
+        consent: "transactional",
+        data: expect.objectContaining({ used: 50, cap: 50, stage: 100 }),
+      },
+    })
+  })
+
+  test("new email rows are sent after a delay; in-app and suppressed rows are not", async () => {
+    const { tx } = fakeTx({
+      members: [
+        { role: "OWNER", userId: "owner_1" },
+        { role: "ADMIN", userId: "admin_1" },
+      ],
+      unsubscribed: ["admin_1"],
+    })
+    const scheduled: { run: () => void; delayMs: number }[] = []
+    const sent: string[] = []
+    const handler = createLimitPressureHandler(
+      {},
+      {
+        sendEmail: async (id) => {
+          sent.push(id)
+        },
+        schedule: (run, delayMs) => scheduled.push({ run, delayMs }),
+      },
+    )
+    await handler(tx, usage(45))
+    // Nothing is sent inside the transaction.
+    expect(sent).toEqual([])
+    expect(scheduled).toHaveLength(1)
+    expect(scheduled[0]?.delayMs).toBe(3_000)
+    scheduled[0]?.run()
+    await Promise.resolve()
+    expect(sent).toEqual(["msg_0"])
+
+    const banner = fakeTx({})
+    const bannerScheduled: unknown[] = []
+    await createLimitPressureHandler(
+      {},
+      {
+        sendEmail: async () => {},
+        schedule: (run) => bannerScheduled.push(run),
+      },
+    )(banner.tx, usage(40))
+    expect(bannerScheduled).toHaveLength(0)
+  })
+
+  test("an existing ledger row is not sent again", async () => {
+    const { tx } = fakeTx({})
+    ;(
+      tx as { lifecycleMessage: { createManyAndReturn: unknown } }
+    ).lifecycleMessage.createManyAndReturn = async () => []
+    const scheduled: unknown[] = []
+    await createLimitPressureHandler(
+      {},
+      { sendEmail: async () => {}, schedule: (run) => scheduled.push(run) },
+    )(tx, usage(45))
+    expect(scheduled).toHaveLength(0)
+  })
+})
+
 describe("checkout availability", () => {
   const business = { countryCode: "NG", currencyCode: "NGN" }
   const products = JSON.stringify(

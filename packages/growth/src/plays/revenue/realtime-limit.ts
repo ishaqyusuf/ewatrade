@@ -4,8 +4,15 @@
 // GROWTH_LIFECYCLE_ENABLED and run this inside a savepoint.
 //
 // Same decision as the daily sweep (`limitPressureDecision`), same send
-// policy (`planLifecycleMessages`), same ledger keys, so whichever path runs
-// first wins and the other is a no-op on the unique key.
+// policy (`planLifecycleMessages`), same ledger keys and frozen payload, so
+// whichever path runs first wins and the other is a no-op on the unique key.
+//
+// Inline send: the handler runs inside the caller's transaction and cannot
+// see its commit, so each new email row is handed to `sendEmail` a moment
+// later. If the transaction has not committed (or rolled back) by then, the
+// sender finds no pending row and skips; the hourly lifecycle sweep sends any
+// row left pending. The sender is injected because @ewatrade/jobs depends on
+// this package.
 
 import {
   type LimitPressureHandler,
@@ -17,7 +24,6 @@ import {
   readLifecycleHistory,
   readMarketingPreferences,
 } from "@ewatrade/db/lifecycle-messages"
-import type { LifecyclePlay } from "../../contract"
 import {
   LIFECYCLE_RECIPIENT_ROLES,
   type PolicyRecipient,
@@ -33,9 +39,25 @@ function enabledPlays(env: Record<string, string | undefined>) {
   return new Set(raw.split(",").map((id) => id.trim()))
 }
 
+export type LimitPressureHookOptions = {
+  /** `sendLifecycleEmail` from @ewatrade/jobs/lifecycle. Omit to leave rows to the sweep. */
+  sendEmail?: (id: string) => Promise<unknown>
+  /** Wait before the inline send so the caller's transaction can commit. */
+  sendDelayMs?: number
+  schedule?: (run: () => void, delayMs: number) => void
+}
+
+export const LIMIT_PRESSURE_SEND_DELAY_MS = 3_000
+
 export function createLimitPressureHandler(
   env: Record<string, string | undefined> = process.env,
+  options: LimitPressureHookOptions = {},
 ): LimitPressureHandler {
+  const schedule =
+    options.schedule ??
+    ((run: () => void, delayMs: number) => {
+      setTimeout(run, delayMs)
+    })
   return async (tx, usage) => {
     const tenant = await tx.tenant.findUnique({
       where: { id: usage.tenantId },
@@ -80,21 +102,17 @@ export function createLimitPressureHandler(
       },
     }))
 
-    // The threshold decides consent and channel; give the policy that view.
-    const play: LifecyclePlay = {
-      ...limitPressurePlay,
-      consent: playDecision.consent ?? limitPressurePlay.consent,
-      channels: playDecision.channels ?? limitPressurePlay.channels,
-    }
+    // The policy applies the threshold's consent and channel overrides.
     const { planned } = planLifecycleMessages({
       now: usage.now,
       tenantId: usage.tenantId,
-      eligible: [{ play, decision: playDecision }],
+      eligible: [{ play: limitPressurePlay, decision: playDecision }],
       recipients,
       enabledPlays: enabledPlays(env),
     })
-    for (const row of planned)
-      await insertLifecycleMessageIfAbsent(tx, {
+    const emailIds: string[] = []
+    for (const row of planned) {
+      const inserted = await insertLifecycleMessageIfAbsent(tx, {
         tenantId: row.tenantId,
         userId: row.userId,
         playId: row.playId,
@@ -103,14 +121,40 @@ export function createLimitPressureHandler(
         channel: row.channel,
         status: row.status,
         suppressedReason: row.suppressedReason,
+        templateKey: row.decision.templateKey,
+        payload: {
+          data: row.decision.data,
+          ctaPath: row.decision.ctaPath,
+          inAppKey: row.decision.inAppKey ?? null,
+          consent: row.consent,
+        },
         now: usage.now,
       })
+      if (
+        inserted.created &&
+        row.channel === "email" &&
+        row.status === "pending"
+      )
+        emailIds.push(inserted.id)
+    }
+    const send = options.sendEmail
+    if (!send) return
+    for (const id of emailIds)
+      schedule(() => {
+        send(id).catch((error: unknown) => {
+          console.error("lifecycle limit-pressure inline send failed", {
+            id,
+            error: error instanceof Error ? error.message : String(error),
+          })
+        })
+      }, options.sendDelayMs ?? LIMIT_PRESSURE_SEND_DELAY_MS)
   }
 }
 
-/** Call once at process start (API). */
+/** Call once at process start (API), passing the lifecycle email sender. */
 export function installLimitPressureHook(
   env: Record<string, string | undefined> = process.env,
+  options: LimitPressureHookOptions = {},
 ) {
-  setLimitPressureHandler(createLimitPressureHandler(env))
+  setLimitPressureHandler(createLimitPressureHandler(env, options))
 }

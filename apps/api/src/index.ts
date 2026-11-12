@@ -12,6 +12,7 @@ import { isPrescriptionProductionLaunchApproved } from "@ewatrade/db/queries"
 import { toPublicErrorEnvelope } from "@ewatrade/errors"
 import { installLimitPressureHook } from "@ewatrade/growth/revenue/realtime-limit"
 import { enqueueAssistantTelegramTurn } from "@ewatrade/jobs/assistant-telegram"
+import { sendLifecycleEmail } from "@ewatrade/jobs/lifecycle"
 import { trpcServer } from "@hono/trpc-server"
 import { OpenAPIHono } from "@hono/zod-openapi"
 import { Hono } from "hono"
@@ -74,9 +75,11 @@ const allowedOrigins =
     .map((origin) => origin.trim())
     .filter(Boolean) ?? []
 
-// Lifecycle P08: limit writes record the nudge in their own transaction.
-// Inert unless GROWTH_LIFECYCLE_ENABLED=true.
-installLimitPressureHook()
+// Lifecycle P08: limit writes record the nudge in their own transaction and
+// send its email shortly after commit. Inert unless GROWTH_LIFECYCLE_ENABLED=true.
+installLimitPressureHook(process.env, {
+  sendEmail: (id) => sendLifecycleEmail(id),
+})
 
 const app = new OpenAPIHono()
 
