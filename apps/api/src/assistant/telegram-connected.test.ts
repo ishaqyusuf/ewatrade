@@ -220,6 +220,6 @@ test("c-second: the busy reply names only the business being connected", () => {
       storeName: "Balogun",
     }),
   ).toBe(
-    "This Telegram account is already connected to another EwaTrade account. Nothing changed.\n\nTo use <b>Ada Fabrics</b> in Telegram, connect a different Telegram account.",
+    "This Telegram account is already connected to another EwaTrade account. Nothing changed.\n\nTo use <b>Ada Fabrics</b> here, send /disconnect, then create a new link in EwaTrade.",
   )
 })

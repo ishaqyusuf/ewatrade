@@ -190,7 +190,7 @@ export const assistantChannelsRouter = createTRPCRouter({
         const scope = actor(ctx)
         const config = telegramConfiguration(scope)
         try {
-          const { id, maskedSender, claimMessage, previousScope } =
+          const { id, maskedSender, claimMessage, previousScope, handedOver } =
             await confirmAssistantTelegramLink(ctx.db, scope, {
               ...input,
               botId: config.botId,
@@ -200,13 +200,14 @@ export const assistantChannelsRouter = createTRPCRouter({
             storeName: ctx.tenantContext.activeStore?.name ?? "Store",
           }
           // Phase 2 (c-switch): a chat that was already connected swaps its pin.
+          // c-second hand-over: clear the previous user's pin, without naming them.
           if (claimMessage)
-            await (previousScope
+            await (previousScope || handedOver
               ? showTelegramReconnected(
                   telegramChat(config),
                   claimMessage,
                   business,
-                  previousScope,
+                  previousScope ?? business,
                 )
               : showTelegramConnected(
                   telegramChat(config),
