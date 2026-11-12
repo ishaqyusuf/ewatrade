@@ -393,6 +393,32 @@ export function ConnectTelegram({ scope }: { scope: TelegramConnectScope }) {
       {enabled &&
       !expired &&
       claim?.state === "awaiting_confirmation" &&
+      claim.busy ? (
+        <div className="grid justify-items-start gap-3 border-t pt-4">
+          <output className="grid gap-1 text-sm">
+            <strong className="font-medium">
+              This Telegram account is connected to another EwaTrade account.
+              Nothing changed.
+            </strong>
+            <span className="text-muted-foreground">
+              Disconnect it from that account first, or use a different Telegram
+              account.
+            </span>
+          </output>
+          <Button
+            disabled={
+              create.isPending || context.isFetching || availability.isFetching
+            }
+            onClick={() => void start()}
+          >
+            {create.isPending ? "Creating link…" : "Create a new link"}
+          </Button>
+        </div>
+      ) : null}
+      {enabled &&
+      !expired &&
+      claim?.state === "awaiting_confirmation" &&
+      !claim.busy &&
       claim.maskedSender ? (
         <div className="grid justify-items-start gap-3 border-t pt-4">
           <div className="flex items-center gap-3 rounded-md border bg-muted/40 p-3">
