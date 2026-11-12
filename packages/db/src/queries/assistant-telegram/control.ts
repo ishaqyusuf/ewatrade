@@ -13,7 +13,11 @@ import {
 /** A cancelled draft is mentioned for this long after a typed "confirm" (s-old). */
 const recentlyCancelled = 15 * 60_000
 
-export type AssistantTelegramDraftState = "open" | "cancelled" | "none"
+export type AssistantTelegramDraftState = {
+  state: "open" | "cancelled" | "none"
+  /** The open review's Telegram message, so a hint can quote it. */
+  reviewMessageId?: string
+}
 
 /**
  * Whether this chat's binding has a draft review waiting for its buttons, or
@@ -32,19 +36,29 @@ export async function readAssistantTelegramDraftState(
       outbox: { state: "SENT" },
       proposal: { status: "PENDING", expiresAt: { gt: now } },
     },
-    select: { id: true },
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    select: { outbox: { select: { providerMessageId: true } } },
   })
-  if (open) return "open"
+  if (open)
+    return {
+      state: "open",
+      ...(open.outbox.providerMessageId
+        ? { reviewMessageId: open.outbox.providerMessageId }
+        : {}),
+    }
   const latest = await db.assistantTelegramActionReview.findFirst({
     where: { bindingId, decision: { not: null } },
     orderBy: [{ completedAt: "desc" }, { id: "desc" }],
     select: { decision: true, completedAt: true },
   })
-  return latest?.decision === "cancel" &&
-    latest.completedAt &&
-    latest.completedAt.getTime() > now.getTime() - recentlyCancelled
-    ? "cancelled"
-    : "none"
+  return {
+    state:
+      latest?.decision === "cancel" &&
+      latest.completedAt &&
+      latest.completedAt.getTime() > now.getTime() - recentlyCancelled
+        ? "cancelled"
+        : "none",
+  }
 }
 
 /**
