@@ -29,6 +29,20 @@
    (Test Mode webhook: `https://preview-api.ewatrade.com/api/billing/webhooks/paystack`.)
 5. Approve the Terms draft (and answer its three questions).
 
+6. Decide how existing businesses move (owner decision: every business starts on Free):
+   - New businesses start on Free only while owner billing is on
+     (`OWNER_BILLING_ENABLED=true` + `STORE_BILLING_ENVIRONMENT`): signup stamps
+     `retailOps.billingPolicy` (`packages/db/src/queries/owner-businesses.ts:181`).
+     The Production API has `OWNER_BILLING_ENABLED` (set ~8 Nov) and the local
+     `.env.production` says true, so recent signups may already start on Free; the
+     Vercel value and Production data were not readable from this session.
+   - Businesses created without that stamp resolve to `RETAIL_OPS_LAUNCH_DEFAULT_PLAN_ID
+     = "starter"` (`retail-ops-subscription-plans.ts:126`, used at
+     `retail-ops-subscriptions.ts:1123` and `:2505`; mobile mirror
+     `apps/mobile/src/lib/retail-ops-subscription.ts:132`) — free Starter, forever.
+   - Choose: keep them on Starter free until a set date, or move them to Free with
+     notice. Either way they can then buy a plan.
+
 ## Agent steps after the owner actions
 
 1. Publish the approved Terms (new version, approval constants).
