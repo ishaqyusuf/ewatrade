@@ -30,6 +30,10 @@ import { TRPCError, initTRPC } from "@trpc/server"
 import type { Context } from "hono"
 import superjson from "superjson"
 import {
+  captureAssistantProcedureEvents,
+  isAssistantEventProcedure,
+} from "../assistant/analytics"
+import {
   type RequestIdentity,
   isLinkedAssistantIdentity,
   refreshLinkedAssistantIdentity,
@@ -547,6 +551,23 @@ const enforceLinkedAssistantRead = t.middleware(async (opts) => {
 // Outside the staff transaction: next() resolves only after commit has succeeded.
 const captureDashboardOutcome = t.middleware(async (opts) => {
   const result = await opts.next()
+  if (
+    opts.type === "mutation" &&
+    opts.ctx.session &&
+    !opts.ctx.isInternalRequest &&
+    isAssistantEventProcedure(opts.path)
+  )
+    try {
+      void captureAssistantProcedureEvents(opts.ctx, {
+        path: opts.path,
+        rawInput: await opts.getRawInput(),
+        result: result.ok
+          ? { ok: true, data: result.data }
+          : { ok: false, errorCode: result.error.code },
+      })
+    } catch {
+      /* Optional capture cannot fail a committed business operation. */
+    }
   if (
     process.env.NEXT_PUBLIC_LOGLY_DASHBOARD_ENABLED !== "true" ||
     opts.ctx.requestHeaders.get("x-ewatrade-analytics") !== "allowed" ||

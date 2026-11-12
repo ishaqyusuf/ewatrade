@@ -1,5 +1,6 @@
 "use client"
 import { useAssistantDraftRequests } from "@/components/page-fab/fab-slot"
+import { assistantAnalyticsHeaders } from "@/lib/assistant-analytics-headers"
 import { useTRPC } from "@/trpc/client"
 import { useChat } from "@ai-sdk/react"
 import type {
@@ -8,6 +9,7 @@ import type {
   GeneralProposal,
 } from "@ewatrade/assistant/general/contracts"
 import { readGeneralSnapshot } from "@ewatrade/assistant/general/snapshot"
+import { useEvents } from "@ewatrade/events/client"
 import { useDashboardWorkflow } from "@ewatrade/events/dashboard-client"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { DefaultChatTransport, type UIMessage } from "ai"
@@ -50,6 +52,7 @@ export function useGeneralAssistant({
   responseMessageId?: string | null
 } = {}) {
   const workflow = useDashboardWorkflow()
+  const events = useEvents()
   const typed = useRef(false)
   const messageSettled = useRef(true)
   const settleMessage = (phase: "completed" | "failed" | "cancelled") => {
@@ -168,7 +171,10 @@ export function useGeneralAssistant({
       new DefaultChatTransport<Message>({
         api: "/api/assistant/general/chat",
         credentials: "same-origin",
-        headers: { "x-assistant-client": "dashboard" },
+        headers: () => ({
+          "x-assistant-client": "dashboard",
+          ...assistantAnalyticsHeaders(events),
+        }),
         prepareSendMessagesRequest: ({ messages, body }) => {
           if (!conversationId) throw Error("Conversation unavailable")
           const last = [...messages].reverse().find((m) => m.role === "user")
@@ -207,7 +213,7 @@ export function useGeneralAssistant({
           }
         },
       }),
-    [conversationId],
+    [conversationId, events],
   )
   const chat = useChat<Message>({
     id: conversationId ?? "general",

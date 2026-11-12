@@ -1,3 +1,4 @@
+import { analyticsRequestHeaders } from "@/lib/analytics-collection"
 import type { MobileSession } from "@/lib/session-store"
 export function assistantScope(session: MobileSession | null) {
   if (
@@ -44,5 +45,6 @@ export function assistantRequestHeaders(session: MobileSession) {
     "x-tenant-slug": session.profile.businessSlug ?? "",
     "x-store-id": session.profile.storeId ?? "",
     "x-trpc-source": "mobile",
+    ...analyticsRequestHeaders(),
   }
 }

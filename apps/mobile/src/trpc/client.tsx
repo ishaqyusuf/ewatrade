@@ -1,5 +1,6 @@
 "use client"
 
+import { analyticsRequestHeaders } from "@/lib/analytics-collection"
 import { getAppVariant } from "@/lib/app-variant"
 import { getBaseUrl } from "@/lib/base-url"
 import { mobileAgeRequestHeaders } from "@/lib/mobile-age-request-headers"
@@ -72,6 +73,8 @@ async function getTrpcHeaders() {
     headers.set("x-store-id", session.profile.storeId)
   }
   headers.set("x-trpc-source", "mobile")
+  for (const [name, value] of Object.entries(analyticsRequestHeaders()))
+    headers.set(name, value)
   return Object.fromEntries(headers)
 }
 

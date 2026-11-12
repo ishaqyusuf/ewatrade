@@ -1,5 +1,6 @@
 "use client"
 
+import { assistantAnalyticsHeaders } from "@/lib/assistant-analytics-headers"
 import type { AppRouter } from "@ewatrade/api/trpc/routers/_app"
 import { useEvents } from "@ewatrade/events/client"
 import { resolveTenantDomain } from "@ewatrade/utils"
@@ -69,7 +70,7 @@ export function TRPCReactProvider({
       return {
         "x-trpc-source": "react",
         "x-assistant-client": "dashboard",
-        "x-ewatrade-analytics": events.canCollect() ? "allowed" : "denied",
+        ...assistantAnalyticsHeaders(events),
         ...(tenantSlug ? { "x-tenant-slug": tenantSlug } : {}),
       }
     }

@@ -1,6 +1,8 @@
 "use client"
+import { useEvents } from "@ewatrade/events/client"
 import { useDashboardWorkflow } from "@ewatrade/events/dashboard-client"
 
+import { assistantAnalyticsHeaders } from "@/lib/assistant-analytics-headers"
 import { useTRPC } from "@/trpc/client"
 import { useChat } from "@ai-sdk/react"
 import { SETUP_ATTACHMENT_PART } from "@ewatrade/assistant/setup/attachments"
@@ -83,6 +85,7 @@ export function SetupChat({
 }) {
   const settled = useRef(true)
   const workflow = useDashboardWorkflow()
+  const events = useEvents()
   const trpc = useTRPC()
   const queryClient = useQueryClient()
   const refreshDraft = () =>
@@ -100,6 +103,7 @@ export function SetupChat({
       new DefaultChatTransport<SetupChatMessage>({
         api: "/api/assistant/chat",
         credentials: "same-origin",
+        headers: () => assistantAnalyticsHeaders(events),
         prepareSendMessagesRequest: ({ messages }) => {
           const last = messages.at(-1)
           return {
@@ -134,7 +138,7 @@ export function SetupChat({
           }
         },
       }),
-    [conversationId],
+    [conversationId, events],
   )
 
   const runIdRef = useRef<string | null>(null)

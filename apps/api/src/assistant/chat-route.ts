@@ -11,6 +11,7 @@ import { createUIMessageStreamResponse } from "ai"
 import type { Context } from "hono"
 import { z } from "zod"
 import { createTRPCContext, resolveProtectedTenantContext } from "../trpc/init"
+import { type AssistantEventSpec, emitAssistantEvents } from "./analytics"
 import {
   type AssistantChatRepository,
   createAssistantChatRepository,
@@ -38,6 +39,8 @@ export type AssistantChatDependencies = {
   admit: (context: Context) => Promise<{
     scope: ChatScope
     repository: AssistantChatRepository
+    /** Analytics observer for this request's turn; never throws. */
+    observe?: (events: AssistantEventSpec[]) => void
   }>
   resolveModel: (input: {
     scope: ChatScope
@@ -55,7 +58,11 @@ export function defaultAssistantChatDependencies(): AssistantChatDependencies {
         await createTRPCContext(undefined, context),
       )
       const scope = requireSetupAssistantScope(ctx)
-      return { scope, repository: createAssistantChatRepository(ctx.db, scope) }
+      return {
+        scope,
+        repository: createAssistantChatRepository(ctx.db, scope),
+        observe: (events) => emitAssistantEvents(ctx, events),
+      }
     },
     resolveModel: ({ scope, repository }) =>
       resolveSetupAssistantModel({

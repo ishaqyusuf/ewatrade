@@ -1,5 +1,9 @@
 import { useAuthContext } from "@/hooks/use-auth"
 import {
+  clearAnalyticsCollectionCheck,
+  setAnalyticsCollectionCheck,
+} from "@/lib/analytics-collection"
+import {
   type MobileSession,
   getSession,
   getSessionGeneration,
@@ -158,6 +162,9 @@ export function AnalyticsRuntime() {
     })
     client.current = analytics
     activeClient = analytics
+    const collectionCheck = () =>
+      permission.current && liveSessionLifetime() === ownerLifetime
+    setAnalyticsCollectionCheck(collectionCheck)
     analytics.init()
     analytics.setContext(context.current ?? null)
     analytics.trackPageView({ route: latestRoute.current })
@@ -169,6 +176,7 @@ export function AnalyticsRuntime() {
     return () => {
       listener.remove()
       analytics.destroy()
+      clearAnalyticsCollectionCheck(collectionCheck)
       client.current = null
       if (activeClient === analytics) activeClient = null
     }

@@ -33,6 +33,7 @@ import {
 } from "ai"
 import { z } from "zod"
 import { resolveProtectedTenantContext } from "../trpc/init"
+import { assistantInputKind, emitAssistantEvents } from "./analytics"
 import {
   isLinkedAssistantIdentity,
   stampLinkedAssistantExecution,
@@ -179,6 +180,7 @@ export async function createGeneralAssistantTurn(
     scopeKey: budgetScopeKey,
     limits: budgetLimits,
   })
+  const inputKind = assistantInputKind(attachments)
   if (!budget.allowed) {
     await completeAssistantRun(ctx.db, {
       runId: begun.run.id,
@@ -189,6 +191,19 @@ export async function createGeneralAssistantTurn(
       status: "FAILED",
       errorCode: "BUDGET_EXHAUSTED",
     })
+    emitAssistantEvents(ctx, [
+      {
+        name: "assistant_turn_blocked",
+        key: `run:${begun.run.id}`,
+        details: {
+          block_reason: "quota",
+          input_kind: inputKind,
+          provider: model.provider,
+          model: model.modelId,
+          error_code: "BUDGET_EXHAUSTED",
+        },
+      },
+    ])
     throw new GeneralTurnError(
       429,
       "BUDGET_EXHAUSTED",
@@ -293,6 +308,8 @@ export async function createGeneralAssistantTurn(
       clearTimeout(deadline)
       signal?.removeEventListener("abort", abort)
       const parts = generalPersistentParts(responseMessage.parts)
+      const runFailed = failed || isAborted
+      const durationMs = Date.now() - startedAt
       try {
         await completeAssistantRun(ctx.db, {
           runId: begun.run.id,
@@ -300,7 +317,7 @@ export async function createGeneralAssistantTurn(
           actorUserId: scope.userId,
           provider: model.provider,
           model: model.modelId,
-          status: failed || isAborted ? "FAILED" : "COMPLETED",
+          status: runFailed ? "FAILED" : "COMPLETED",
           errorCode: failed
             ? "STREAM_FAILED"
             : isAborted
@@ -318,7 +335,7 @@ export async function createGeneralAssistantTurn(
               }
             : undefined,
           stepCount: steps,
-          durationMs: Date.now() - startedAt,
+          durationMs,
           budgetScopeKey,
           assistantMessage: parts.length
             ? {
@@ -328,6 +345,25 @@ export async function createGeneralAssistantTurn(
               }
             : undefined,
         })
+        // One turn event per run, after the run is saved (completed or failed).
+        emitAssistantEvents(ctx, [
+          {
+            name: runFailed
+              ? "assistant_turn_failed"
+              : "assistant_turn_completed",
+            key: `run:${begun.run.id}`,
+            details: {
+              input_kind: inputKind,
+              step_count: steps,
+              provider: model.provider,
+              model: model.modelId,
+              duration_ms: durationMs,
+              ...(runFailed
+                ? { error_code: failed ? "STREAM_FAILED" : "ABORTED" }
+                : {}),
+            },
+          },
+        ])
         const saved = await readGeneralRun(ctx.db, scope, begun.run.id)
         const message = parts.length
           ? await ctx.db.assistantMessage.findFirst({

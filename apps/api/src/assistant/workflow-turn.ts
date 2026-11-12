@@ -37,6 +37,7 @@ import {
   stepCountIs,
 } from "ai"
 import { z } from "zod"
+import { type AssistantEventSpec, assistantInputKind } from "./analytics"
 import {
   attachmentSendRefusal,
   knownAttachments,
@@ -119,6 +120,8 @@ export type WorkflowTurnDependencies = {
   }) => Promise<ResolvedAssistantModel | null>
   guard: AssistantStreamGuard
   activeRuns: Map<string, AbortController>
+  /** Optional analytics observer; called after the run is saved, never throws. */
+  observe?: (events: AssistantEventSpec[]) => void
 }
 
 /** Only text, step and settled tool parts are kept in history. */
@@ -295,6 +298,7 @@ export async function createWorkflowAssistantTurn(
       scopeKey: budgetScopeKey,
       limits: SETUP_BUDGET_LIMITS,
     })
+    const inputKind = assistantInputKind(attachments)
     if (!budget.allowed) {
       await repository.completeRun({
         runId: begun.run.id,
@@ -312,6 +316,19 @@ export async function createWorkflowAssistantTurn(
           parts: [{ type: "text", text: BUDGET_EXHAUSTED_MESSAGE }],
         },
       })
+      deps.observe?.([
+        {
+          name: "assistant_turn_blocked",
+          key: `run:${begun.run.id}`,
+          details: {
+            block_reason: "quota",
+            input_kind: inputKind,
+            provider: model.provider,
+            model: model.modelId,
+            error_code: "BUDGET_EXHAUSTED",
+          },
+        },
+      ])
       throw new WorkflowTurnError(
         429,
         "BUDGET_EXHAUSTED",
@@ -513,13 +530,15 @@ export async function createWorkflowAssistantTurn(
             ),
           ])
           const parts = persistableParts(responseMessage)
+          const runFailed = failed || isAborted
+          const durationMs = Date.now() - startedAt
           await repository.completeRun({
             runId: begun.run.id,
             tenantId: scope.tenantId,
             actorUserId: scope.userId,
             provider: model.provider,
             model: model.modelId,
-            status: failed || isAborted ? "FAILED" : "COMPLETED",
+            status: runFailed ? "FAILED" : "COMPLETED",
             errorCode: failed
               ? "STREAM_FAILED"
               : isAborted
@@ -527,7 +546,7 @@ export async function createWorkflowAssistantTurn(
                 : undefined,
             usage: usageRecord(outcome.usage),
             stepCount: outcome.steps,
-            durationMs: Date.now() - startedAt,
+            durationMs,
             budgetScopeKey,
             assistantMessage:
               parts.length > 0
@@ -538,6 +557,25 @@ export async function createWorkflowAssistantTurn(
                   }
                 : undefined,
           })
+          // One turn event per run, after the run is saved.
+          deps.observe?.([
+            {
+              name: runFailed
+                ? "assistant_turn_failed"
+                : "assistant_turn_completed",
+              key: `run:${begun.run.id}`,
+              details: {
+                input_kind: inputKind,
+                step_count: outcome.steps,
+                provider: model.provider,
+                model: model.modelId,
+                duration_ms: durationMs,
+                ...(runFailed
+                  ? { error_code: failed ? "STREAM_FAILED" : "ABORTED" }
+                  : {}),
+              },
+            },
+          ])
           const [saved, messages] = await Promise.all([
             repository.readRun(begun.run.id),
             repository.listMessages(conversation.id, { limit: 1 }),

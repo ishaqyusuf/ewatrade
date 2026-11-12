@@ -1,6 +1,10 @@
 import { createHmac } from "node:crypto"
 import { z } from "zod"
 import {
+  assistantEnvelopeSchema,
+  assistantEventsEnabled,
+} from "./assistant-envelope"
+import {
   type AssistantSignal,
   assistantSignalSchema,
   productCreationSignal,
@@ -204,7 +208,12 @@ export async function deliverDashboardOutcome(
   envelope: unknown,
   send: typeof fetch = fetch,
 ) {
-  const event = serverEnvelopeSchema.parse(envelope)
+  const assistant = assistantEnvelopeSchema.safeParse(envelope)
+  // Queued assistant events are dropped (not sent) once their flag is off.
+  if (assistant.success && !assistantEventsEnabled()) return
+  const event = assistant.success
+    ? assistant.data
+    : serverEnvelopeSchema.parse(envelope)
   const collector = process.env.LOGLY_COLLECTOR_URL
   const key = process.env.LOGLY_DASHBOARD_PROJECT_KEY
   if (!collector || !key)

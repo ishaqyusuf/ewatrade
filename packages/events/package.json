@@ -19,6 +19,7 @@
     "./dashboard-workflows": "./src/dashboard-workflows.ts",
     "./dashboard-client": "./src/dashboard-workflow-client.ts",
     "./server-dashboard": "./src/server-dashboard.ts",
+    "./server-assistant": "./src/server-assistant.ts",
     "./assistant-signals": "./src/assistant-signals.ts",
     "./growth-intent": "./src/growth-intent.ts"
   },

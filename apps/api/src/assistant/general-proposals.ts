@@ -30,6 +30,7 @@ import {
 import type { Prisma } from "@ewatrade/db/types"
 import { TRPCError } from "@trpc/server"
 import { dispatchStaffInvitationProposalEmail } from "../staff/invitation-dispatch"
+import { emitAssistantEvents } from "./analytics"
 import {
   isLinkedAssistantIdentity,
   lockLinkedAssistantIdentity,
@@ -202,9 +203,17 @@ export async function draftGeneralProposal(
   conversationId: string,
   raw: unknown,
 ) {
-  return inFreshGeneralTransaction(ctx, (fresh) =>
+  const draft = await inFreshGeneralTransaction(ctx, (fresh) =>
     draftGeneralProposalInTransaction(fresh, conversationId, raw),
   )
+  emitAssistantEvents(ctx, [
+    {
+      name: "assistant_action_proposed",
+      key: `proposal:${draft.proposalId}:${draft.revision}`,
+      details: { action: draft.payload.action },
+    },
+  ])
+  return draft
 }
 
 /** Composes deterministic channel drafts with their lease/return receipt atomically. */

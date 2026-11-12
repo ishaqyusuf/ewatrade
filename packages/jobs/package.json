@@ -11,6 +11,7 @@
     "./assistant-whatsapp": "./src/assistant-whatsapp.ts",
     "./assistant-attachments": "./src/assistant-attachments.ts",
     "./product-analytics": "./src/product-analytics.ts",
+    "./assistant-events": "./src/assistant-events.ts",
     "./staff-invitations": "./src/staff-invitations.ts",
     "./lifecycle": "./src/lifecycle.ts"
   },
