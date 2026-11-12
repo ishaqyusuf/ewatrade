@@ -1,4 +1,9 @@
 export {
+  type AssistantTelegramAccessEndReason,
+  type AssistantTelegramAccessEnded,
+  endAssistantTelegramAccess,
+} from "./access"
+export {
   AssistantTelegramError,
   type TelegramConversationPrincipal,
   type TelegramInboxLease,

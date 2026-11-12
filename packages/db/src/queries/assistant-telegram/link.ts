@@ -64,6 +64,24 @@ async function connectedMessage(
     ? { ...message, businessName: link.tenant.name, storeName: link.store.name }
     : null
 }
+export { connectedMessage as connectedTelegramMessage }
+
+/**
+ * Workshop c-second: this Telegram account is already connected to a different
+ * EwaTrade user. Only a yes/no leaves this function; the other account is never named.
+ */
+async function heldByOtherAccount(
+  db: DbClient,
+  key: { botId: string; telegramUserId: string },
+  userId: string,
+) {
+  return Boolean(
+    await db.assistantTelegramIdentity.findFirst({
+      where: { ...key, userId: { not: userId } },
+      select: { id: true },
+    }),
+  )
+}
 
 /** Display details exist only while a claim waits for the merchant's decision. */
 const clearedClaimDisplay = { claimedName: null, claimedUsername: null }
@@ -155,6 +173,8 @@ export type AssistantTelegramClaim = {
   linkId: string
   businessName: string
   storeName: string
+  /** Already connected to another EwaTrade account: nothing can be confirmed. */
+  busy?: true
 }
 
 export function claimAssistantTelegramLink(
@@ -197,10 +217,17 @@ export function claimAssistantTelegramLink(
         Math.floor(link.createdAt.getTime() / 1000) * 1000
     )
       return false
-    const claim = {
+    const claim: AssistantTelegramClaim = {
       linkId: link.id,
       businessName: link.tenant.name,
       storeName: link.store.name,
+      ...((await heldByOtherAccount(
+        tx,
+        { botId: input.botId, telegramUserId: input.userId },
+        link.userId,
+      ))
+        ? { busy: true as const }
+        : {}),
     }
     if (link.claimedTelegramUserId)
       return link.claimedTelegramUserId === input.userId &&
@@ -277,6 +304,17 @@ export async function readAssistantTelegramLink(
     maskedSender: link.claimedTelegramUserId
       ? maskAssistantTelegramSender(link.claimedTelegramUserId)
       : null,
+    busy: Boolean(
+      link.claimedTelegramUserId &&
+        !link.cancelledAt &&
+        !link.confirmedAt &&
+        link.expiresAt > now &&
+        (await heldByOtherAccount(
+          db,
+          { botId: link.botId, telegramUserId: link.claimedTelegramUserId },
+          actor.userId,
+        )),
+    ),
     ...(link.claimedTelegramUserId &&
     !link.cancelledAt &&
     !link.confirmedAt &&
@@ -336,6 +374,7 @@ export function confirmAssistantTelegramLink(
         ...grant,
         maskedSender: maskAssistantTelegramSender(key.telegramUserId),
         claimMessage: null,
+        previousScope: null,
       }
     }
     if (link.expiresAt <= now) throw new AssistantTelegramError("EXPIRED")
@@ -350,6 +389,32 @@ export function confirmAssistantTelegramLink(
         existing.chatId !== link.claimedChatId)
     )
       throw new AssistantTelegramError("CONFLICT")
+    // Workshop c-switch: the scope this chat used until now, read before the
+    // grant upsert below can move a same-business grant to the new Store.
+    const replaced =
+      existing && !existing.revokedAt && existing.activeBindingId
+        ? await tx.assistantTelegramBinding.findFirst({
+            where: { id: existing.activeBindingId, identityId: existing.id },
+            select: {
+              grant: {
+                select: {
+                  tenantId: true,
+                  storeId: true,
+                  tenant: { select: { name: true } },
+                  store: { select: { name: true } },
+                },
+              },
+            },
+          })
+        : null
+    const previousScope = replaced
+      ? {
+          tenantId: replaced.grant.tenantId,
+          storeId: replaced.grant.storeId,
+          businessName: replaced.grant.tenant.name,
+          storeName: replaced.grant.store.name,
+        }
+      : null
     const identity = existing
       ? await tx.assistantTelegramIdentity.update({
           where: { id: existing.id },
@@ -440,6 +505,7 @@ export function confirmAssistantTelegramLink(
       ...grant,
       maskedSender: maskAssistantTelegramSender(key.telegramUserId),
       claimMessage: claimMessage(link),
+      previousScope,
     }
   })
 }

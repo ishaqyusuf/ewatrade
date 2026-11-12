@@ -98,11 +98,18 @@ test("a current Telegram disconnect records its update and replay leaves a later
   expect(replay.effects).toEqual([])
 })
 
-function claimFixture(link: Record<string, unknown> | null) {
+function claimFixture(
+  link: Record<string, unknown> | null,
+  heldBy: string | null = null,
+) {
   const writes: Record<string, unknown>[] = []
   const tx = {
     $executeRaw: async () => undefined,
     $queryRaw: async () => [],
+    assistantTelegramIdentity: {
+      findFirst: async ({ where }: { where: { userId: { not: string } } }) =>
+        heldBy && heldBy !== where.userId.not ? { id: "identity" } : null,
+    },
     assistantTelegramLink: {
       findUnique: async () => link,
       updateMany: async ({ data }: { data: Record<string, unknown> }) => {
@@ -120,6 +127,7 @@ function claimFixture(link: Record<string, unknown> | null) {
 const openLink = {
   id: "link-1",
   botId: "100",
+  userId: "user-b",
   revision: 1,
   claimedTelegramUserId: null,
   claimedChatId: null,
@@ -166,6 +174,28 @@ test("a claim keeps a bounded Telegram label and returns the scope names", async
   expect(invalid.writes[0]).toMatchObject({
     claimedName: null,
     claimedUsername: null,
+  })
+})
+
+test("c-second: a Telegram account held by another EwaTrade user claims as busy", async () => {
+  const busy = claimFixture(openLink, "user-a")
+  expect(await claimAssistantTelegramLink(busy.db, claim, now)).toEqual({
+    linkId: "link-1",
+    businessName: "Mama Ada Provisions",
+    storeName: "Yaba Main",
+    busy: true,
+  })
+  // The same EwaTrade user reconnecting is not busy.
+  expect(
+    await claimAssistantTelegramLink(
+      claimFixture(openLink, "user-b").db,
+      claim,
+      now,
+    ),
+  ).toEqual({
+    linkId: "link-1",
+    businessName: "Mama Ada Provisions",
+    storeName: "Yaba Main",
   })
 })
 
