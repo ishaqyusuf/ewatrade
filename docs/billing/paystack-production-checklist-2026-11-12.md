@@ -21,9 +21,11 @@
    merchant 2096714, and switch the account to Live. Paystack confirmed the
    Profile, Contact, matching registered and office addresses, and registration
    numbers were saved. Paystack confirmed all three CAC documents and the
-   director and sole shareholder profile were saved. The recap still requires
-   business address proof issued within the last six months, identity and home
-   address verification, the corporate payout account, and the Service Agreement.
+   director and sole shareholder profile were saved. The NIN matched the form
+   and the original ID photo uploaded. The director's BVN consent is required
+   before the Identity step can be saved. The recap still requires business
+   address proof issued within the last six months, home address verification,
+   the corporate payout account, and the Service Agreement.
    Reconcile the existing second director entry against the CAC records before
    submitting activation.
 2. Paystack Live: create monthly NGN plans, unlimited invoices —
