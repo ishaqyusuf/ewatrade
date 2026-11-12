@@ -97,7 +97,7 @@ All copy is short, phone-first and uses the product's existing words where they 
 
 ## Workshop — batch 1 published
 
-Published 12 November 2026 at [workshop.localhost/ewatrade/assistant/telegram-system](https://workshop.localhost/ewatrade/assistant/telegram-system), authored by Claude Opus 5.5 at high effort. 02 is marked recommended. Nothing has been selected or implemented.
+Published 12 November 2026 at [workshop.localhost/ewatrade/assistant/telegram-system](https://workshop.localhost/ewatrade/assistant/telegram-system), authored by Claude Opus 5.5 at high effort. On 12 November 2026 the owner selected **02 · Telegram-native**, revision `a1d386e1-584b-4044-8252-24370d11b3fb`. Implementation has not started.
 
 | Direction | Revision |
 | --- | --- |
