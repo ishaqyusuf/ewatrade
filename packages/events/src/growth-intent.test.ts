@@ -104,4 +104,31 @@ describe("growth intent events", () => {
       }),
     ).toBe(false)
   })
+
+  test("camelCase limit suffixes pass; Home card taps are not counted", () => {
+    expect(
+      growthIntentEvent({
+        name: "nudge_shown",
+        surface: "dashboard",
+        play: "P08_limit:ordersPerMonth",
+        placement: "banner",
+      })?.properties.category,
+    ).toBe("P08_limit:ordersPerMonth")
+    expect(
+      isSeePlansTap({
+        name: "upgrade_cta_clicked",
+        surface: "mobile",
+        feature: "storefront",
+        placement: "home_card",
+      }),
+    ).toBe(false)
+    expect(
+      isSeePlansTap({
+        name: "upgrade_cta_clicked",
+        surface: "dashboard",
+        feature: "finance",
+        placement: "lock_sheet",
+      }),
+    ).toBe(true)
+  })
 })

@@ -19,6 +19,12 @@ export const GROWTH_INTENT_FEATURES = [
   "whatsapp",
   "telegram",
   "home",
+  "finance",
+  "customer_messages",
+  "suppliers",
+  "invoices",
+  "advanced_reports",
+  "order_reminders",
 ] as const
 export type GrowthIntentFeature = (typeof GROWTH_INTENT_FEATURES)[number]
 
@@ -37,7 +43,7 @@ const feature = z.enum(GROWTH_INTENT_FEATURES)
 const placement = z.enum(GROWTH_INTENT_PLACEMENTS)
 const surface = z.enum(["dashboard", "mobile"])
 /** Play ids are code constants, e.g. `P04_site_setup` or `P08_limit:products`. */
-const play = z.string().regex(/^P\d{2}_[a-z0-9_]{1,40}(:[a-z0-9_]{1,24})?$/)
+const play = z.string().regex(/^P\d{2}_[a-z0-9_]{1,40}(:[a-zA-Z0-9_]{1,32})?$/)
 const plan = z.enum(["free", "starter", "growth", "pro"])
 
 export const growthIntentInputSchema = z.discriminatedUnion("name", [
@@ -100,9 +106,18 @@ export function growthIntentEvent(
   }
 }
 
+/** Placements that are a locked feature or a reached limit (counted taps). */
+export const LOCKED_FEATURE_PLACEMENTS = [
+  "lock_sheet",
+  "limit_card",
+  "inline_link",
+] as const satisfies readonly GrowthIntentPlacement[]
+export type LockedFeaturePlacement = (typeof LOCKED_FEATURE_PLACEMENTS)[number]
+
 /**
- * A "See plans" tap on a locked feature. These are what the server-side
- * per-business counter records for the feature-intent play (W3).
+ * A "See plans" tap on a locked feature or reached limit. These are what the
+ * server-side per-business counter records for the feature-intent play (W3);
+ * Home cards, banners and the plan page itself are not counted.
  */
 export function isSeePlansTap(
   input: GrowthIntentInput,
@@ -110,6 +125,7 @@ export function isSeePlansTap(
   return (
     input.name === "upgrade_cta_clicked" &&
     input.feature !== "plan_billing" &&
-    input.placement !== "plan_page"
+    input.feature !== "home" &&
+    (LOCKED_FEATURE_PLACEMENTS as readonly string[]).includes(input.placement)
   )
 }
