@@ -105,6 +105,7 @@ describe("scheduled cadences", () => {
       "catalog.photo.cleanup": "0 * * * * task",
       "catalog.photo.review-recovery": "*/15 * * * * task",
       "domains.reconcile": "0 * * * * task",
+      "growth-lifecycle": "0 * * * * sweep",
       "orders.fulfillment-reminders": "0 * * * * task",
       "prescriptions.retention": "15 2 * * * task",
       "service-commerce.booking-reminder-schedule": "*/5 * * * * sweep",

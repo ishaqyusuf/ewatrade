@@ -595,6 +595,7 @@
         "@ewatrade/email": "workspace:*",
         "@ewatrade/errors": "workspace:*",
         "@ewatrade/events": "workspace:*",
+        "@ewatrade/growth": "workspace:*",
         "@ewatrade/notifications": "workspace:*",
         "@ewatrade/observability": "workspace:*",
         "@ewatrade/payments": "workspace:*",

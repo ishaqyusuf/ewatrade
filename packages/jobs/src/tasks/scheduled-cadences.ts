@@ -18,6 +18,7 @@ import {
 } from "../assistant-whatsapp"
 import { recoverCatalogAiImages } from "../catalog-ai-images"
 import { isCommercialOrderDigestWindow } from "../handlers/commercial-order-reminder-digest"
+import { runGrowthLifecycleSweep } from "../lifecycle"
 import { runManualPaymentAlertSweep } from "../manual-payment-alerts"
 import { runManualPaymentOutcomeSweep } from "../manual-payment-outcomes"
 import { automaticJobCron } from "../schedule-policy"
@@ -205,6 +206,10 @@ export const SCHEDULED_CADENCES = {
       sweep("store-conversation.credential-expiry", () =>
         runStoreConversationCredentialExpiry(),
       ),
+      // Off unless GROWTH_LIFECYCLE_ENABLED=true (no SQL when off). Its daily
+      // part runs once per UTC day after 07:00 WAT; each tick inside
+      // 08:00–20:00 WAT also sends leftover pending lifecycle email.
+      sweep("growth-lifecycle", () => runGrowthLifecycleSweep()),
     ],
   },
   "schedules.daily": {

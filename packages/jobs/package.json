@@ -11,7 +11,8 @@
     "./assistant-whatsapp": "./src/assistant-whatsapp.ts",
     "./assistant-attachments": "./src/assistant-attachments.ts",
     "./product-analytics": "./src/product-analytics.ts",
-    "./staff-invitations": "./src/staff-invitations.ts"
+    "./staff-invitations": "./src/staff-invitations.ts",
+    "./lifecycle": "./src/lifecycle.ts"
   },
   "scripts": {
     "dev": "node ../../scripts/with-workspace-env.mjs bun ../../scripts/with-trigger-profile.mjs -- trigger dev",
@@ -26,6 +27,7 @@
     "@ewatrade/db": "workspace:*",
     "@ewatrade/domains": "workspace:*",
     "@ewatrade/email": "workspace:*",
+    "@ewatrade/growth": "workspace:*",
     "@ewatrade/errors": "workspace:*",
     "@ewatrade/notifications": "workspace:*",
     "@ewatrade/observability": "workspace:*",
