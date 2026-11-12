@@ -29,6 +29,7 @@
         "@ewatrade/email": "workspace:*",
         "@ewatrade/errors": "workspace:*",
         "@ewatrade/events": "workspace:*",
+        "@ewatrade/growth": "workspace:*",
         "@ewatrade/jobs": "workspace:*",
         "@ewatrade/observability": "workspace:*",
         "@ewatrade/order-receipts": "workspace:*",
@@ -573,6 +574,7 @@
       "version": "0.1.0",
       "dependencies": {
         "@ewatrade/db": "workspace:*",
+        "@ewatrade/payments": "workspace:*",
       },
       "devDependencies": {
         "@ewatrade/tsconfig": "workspace:*",

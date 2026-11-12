@@ -30,6 +30,7 @@
     "@ewatrade/email": "workspace:*",
     "@ewatrade/errors": "workspace:*",
     "@ewatrade/events": "workspace:*",
+    "@ewatrade/growth": "workspace:*",
     "@ewatrade/jobs": "workspace:*",
     "@ewatrade/observability": "workspace:*",
     "@ewatrade/payments": "workspace:*",

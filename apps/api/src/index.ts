@@ -10,6 +10,7 @@ import { prisma } from "@ewatrade/db"
 import { isLegalSignupSessionBlocked } from "@ewatrade/db/legal-session-access"
 import { isPrescriptionProductionLaunchApproved } from "@ewatrade/db/queries"
 import { toPublicErrorEnvelope } from "@ewatrade/errors"
+import { installLimitPressureHook } from "@ewatrade/growth/revenue/realtime-limit"
 import { enqueueAssistantTelegramTurn } from "@ewatrade/jobs/assistant-telegram"
 import { trpcServer } from "@hono/trpc-server"
 import { OpenAPIHono } from "@hono/zod-openapi"
@@ -71,6 +72,10 @@ const allowedOrigins =
   process.env.ALLOWED_API_ORIGINS?.split(",")
     .map((origin) => origin.trim())
     .filter(Boolean) ?? []
+
+// Lifecycle P08: limit writes record the nudge in their own transaction.
+// Inert unless GROWTH_LIFECYCLE_ENABLED=true.
+installLimitPressureHook()
 
 const app = new OpenAPIHono()
 
