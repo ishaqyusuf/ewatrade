@@ -20,9 +20,10 @@
 1. Paystack: finish company compliance for ZEROES AND ONE TECH HUB NIG LIMITED,
    merchant 2096714, and switch the account to Live. Paystack confirmed the
    Profile, Contact, matching registered and office addresses, and registration
-   numbers were saved. The activation wizard still needs the three CAC PDFs,
-   proof of the business address issued within the last six months, People,
-   Account and Service Agreement.
+   numbers were saved. Paystack confirmed all three CAC documents were saved
+   and opened the business representative form. Proof of the business address
+   issued within the last six months, People, Account and Service Agreement are
+   still pending.
 2. Paystack Live: create monthly NGN plans, unlimited invoices —
    Starter 5,000 / Growth 15,000 / Pro 30,000. Add 6,000 / 18,000 / 36,000 only
    to sell outside Africa. Send the `PLN_…` codes (not secret).
