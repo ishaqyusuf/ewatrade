@@ -57,6 +57,9 @@ standIn("store/operationalModeStore", {
 standIn("lib/session-store", {
   getSessionGeneration: () => sessionGeneration,
 })
+standIn("hooks/use-growth-intent", {
+  useGrowthIntent: () => ({ sheetOpened() {}, seePlans() {} }),
+})
 standIn("trpc/client", {
   getDataCacheGeneration: () => generation,
   useTRPC: () => ({

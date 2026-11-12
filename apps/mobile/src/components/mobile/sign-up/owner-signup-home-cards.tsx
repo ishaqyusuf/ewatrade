@@ -4,6 +4,7 @@ import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
 import { useAuthContext } from "@/hooks/use-auth"
+import { useGrowthIntent } from "@/hooks/use-growth-intent"
 import { getPlan } from "@/lib/retail-ops-subscription"
 import { useOperationalModeStore } from "@/store/operationalModeStore"
 import { useTRPC } from "@/trpc/client"
@@ -16,6 +17,7 @@ export function OwnerSignupHomeCards() {
   const auth = useAuthContext()
   const trpc = useTRPC()
   const router = useRouter()
+  const intent = useGrowthIntent()
   const offline = useOperationalModeStore((s) => s.isOfflineMode)
   const [shareError, setShareError] = useState<string | null>(null)
   const current = useQuery(
@@ -114,7 +116,10 @@ export function OwnerSignupHomeCards() {
         {limited ? (
           <AuthMethodButton
             label="See plans"
-            onPress={() => router.push("/subscription-modal")}
+            onPress={() => {
+              intent.seePlans("storefront", "home_card")
+              router.push("/subscription-modal")
+            }}
           />
         ) : null}
         {shareError ? (
@@ -171,7 +176,10 @@ export function OwnerSignupHomeCards() {
                 accessibilityRole="button"
                 accessibilityLabel={`Upgrade to set up ${business.name}`}
                 className="min-h-11 justify-center px-3.5"
-                onPress={() => router.push("/subscription-modal")}
+                onPress={() => {
+                  intent.seePlans("businesses", "home_card")
+                  router.push("/subscription-modal")
+                }}
               >
                 <Text className="text-xs font-bold text-primary">Upgrade</Text>
               </Pressable>

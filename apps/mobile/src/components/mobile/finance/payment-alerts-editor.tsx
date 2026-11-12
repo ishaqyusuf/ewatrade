@@ -7,6 +7,7 @@ import { Pressable } from "@/components/ui/pressable"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
+import { useGrowthIntent } from "@/hooks/use-growth-intent"
 import { cn } from "@/lib/utils"
 import {
   ALERT_CHANNELS,
@@ -79,6 +80,7 @@ export function PaymentAlertsEditor({
   onRetry: () => void
 }) {
   const router = useRouter()
+  const intent = useGrowthIntent()
   const heading = (
     <View className="gap-1">
       <Text
@@ -155,7 +157,10 @@ export function PaymentAlertsEditor({
           message="Payment alerts aren't on your plan. New reports still show in Payments to check and the bell."
           tone="muted"
           linkLabel="See plans"
-          onLinkPress={() => router.push(PLANS_ROUTE)}
+          onLinkPress={() => {
+            intent.seePlans("payment_alerts", "inline_link")
+            router.push(PLANS_ROUTE)
+          }}
         />
       </View>
     )
@@ -189,7 +194,10 @@ export function PaymentAlertsEditor({
           message="Payment alerts aren't on your plan. New reports still show in Payments to check and the bell."
           tone="muted"
           linkLabel="See plans"
-          onLinkPress={() => router.push(PLANS_ROUTE)}
+          onLinkPress={() => {
+            intent.seePlans("payment_alerts", "inline_link")
+            router.push(PLANS_ROUTE)
+          }}
         />
       </View>
     )
@@ -246,6 +254,7 @@ function AlertsForm({
   onRetry: () => void
 }) {
   const router = useRouter()
+  const intent = useGrowthIntent()
   const [picking, setPicking] = useState(false)
   const chosen = draft.recipientUserIds
   const set = (change: Partial<AlertDraft>) => onDraft({ ...draft, ...change })
@@ -522,11 +531,11 @@ function AlertsForm({
                     className="min-h-9 justify-center px-1"
                     haptic
                     hitSlop={6}
-                    onPress={() =>
-                      line.action === "plans"
-                        ? router.push(PLANS_ROUTE)
-                        : onRetry()
-                    }
+                    onPress={() => {
+                      if (line.action !== "plans") return onRetry()
+                      intent.seePlans("payment_alerts", "inline_link")
+                      router.push(PLANS_ROUTE)
+                    }}
                   >
                     <Text className="text-xs font-extrabold text-primary">
                       {line.action === "plans" ? "See plans" : "Try again"}

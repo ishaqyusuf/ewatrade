@@ -3,6 +3,7 @@ import { Icon } from "@/components/ui/icon"
 import { Modal, useModal } from "@/components/ui/modal"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
+import { useGrowthIntent } from "@/hooks/use-growth-intent"
 import { BottomSheetView } from "@gorhom/bottom-sheet"
 import { useRouter } from "expo-router"
 import { useEffect, useRef } from "react"
@@ -46,6 +47,11 @@ export function AttachmentLockSheet({
     if (open) modal.present()
     else modal.dismiss()
   }, [open, modal.present, modal.dismiss])
+  const intent = useGrowthIntent()
+  // Purchase intent only counts for people who can act on plans.
+  useEffect(() => {
+    if (open && canSeePlans) intent.sheetOpened("attachments", "lock_sheet")
+  }, [open, canSeePlans, intent])
   const what =
     surface === "order"
       ? "Photos, videos and documents"
@@ -92,6 +98,7 @@ export function AttachmentLockSheet({
                   !latest.current.canSeePlans
                 )
                   return
+                intent.seePlans("attachments", "lock_sheet")
                 const go = () => {
                   onClose()
                   router.push("/subscription-modal" as never)

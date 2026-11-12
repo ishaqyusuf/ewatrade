@@ -2,6 +2,7 @@ import {
   SubscriptionPlanContent,
   WorkflowModalScreen,
 } from "@/components/mobile"
+import { PlanPageOpened } from "@/components/mobile/growth/plan-page-opened"
 import { SUBSCRIPTION_SCREEN_COPY } from "@/components/mobile/subscription-plan-presentation"
 
 export default function SubscriptionModalRoute() {
@@ -10,6 +11,7 @@ export default function SubscriptionModalRoute() {
       closeLabel="Close plan and billing"
       title={SUBSCRIPTION_SCREEN_COPY.title}
     >
+      <PlanPageOpened />
       <SubscriptionPlanContent presentation="screen" />
     </WorkflowModalScreen>
   )

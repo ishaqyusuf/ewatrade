@@ -84,6 +84,9 @@ standIn("trpc/client", {
 })
 const box = ({ children }: { children?: ReactNode }) =>
   createElement("div", null, children)
+standIn("hooks/use-growth-intent", {
+  useGrowthIntent: () => ({ sheetOpened() {}, seePlans() {} }),
+})
 standIn("components/ui/view", { View: box })
 standIn("components/ui/text", { Text: box })
 standIn("components/ui/icon", { Icon: () => null })

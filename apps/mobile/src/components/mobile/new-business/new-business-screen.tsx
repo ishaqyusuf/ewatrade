@@ -12,6 +12,7 @@ import type { WorkflowModalChromeProps } from "@/components/mobile/workflow-moda
 import { StepTransition } from "@/components/ui/step-transition"
 import { Text } from "@/components/ui/text"
 import { useBottomSearchScroll } from "@/hooks/use-bottom-search-scroll"
+import { useGrowthIntent } from "@/hooks/use-growth-intent"
 import { useTRPC } from "@/trpc/client"
 import { listBusinessProfiles } from "@ewatrade/utils"
 import { useQuery } from "@tanstack/react-query"
@@ -75,6 +76,7 @@ function useBusinessLimit(enabled: boolean) {
 export function NewBusinessOnboardingScreen() {
   const model = useNewBusiness()
   const router = useRouter()
+  const intent = useGrowthIntent()
   // Warn from the first step, so the owner learns before filling the form.
   const limit = useBusinessLimit(!model.local && !model.isOffline)
   const [footerHeight, setFooterHeight] = useState(88)
@@ -224,7 +226,10 @@ export function NewBusinessOnboardingScreen() {
           ) : model.step === 4 && limit ? (
             <>
               <ActionButton
-                onPress={() => router.push("/subscription-modal")}
+                onPress={() => {
+                  intent.seePlans("businesses", "limit_card")
+                  router.push("/subscription-modal")
+                }}
                 trailingIcon="ArrowRight"
               >
                 See plans

@@ -9,6 +9,7 @@ import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
 import { useBottomSearchScroll } from "@/hooks/use-bottom-search-scroll"
 import { useColors } from "@/hooks/use-color"
+import { useGrowthIntent } from "@/hooks/use-growth-intent"
 import { shouldShowListSearch } from "@/lib/list-pagination"
 import { useRouter } from "expo-router"
 import { VariableContextProvider } from "nativewind"
@@ -40,6 +41,7 @@ export function StaffChrome(props: WorkflowModalChromeProps) {
 
 export function StaffInviteContent({ onComplete }: StaffInviteProps) {
   const router = useRouter()
+  const intent = useGrowthIntent()
   const colors = useColors()
   const vm = useStaffDirectory(onComplete)
   const { invitation, rows } = vm
@@ -165,7 +167,10 @@ export function StaffInviteContent({ onComplete }: StaffInviteProps) {
                     pendingCount={
                       rows.filter((row) => row.statusLabel === "Pending").length
                     }
-                    onSeePlans={() => router.push("/subscription-modal")}
+                    onSeePlans={() => {
+                      intent.seePlans("staff", "limit_card")
+                      router.push("/subscription-modal")
+                    }}
                     used={vm.entitlement?.used}
                     limit={vm.entitlement?.limit}
                     planName={vm.planName}
