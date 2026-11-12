@@ -27,7 +27,7 @@
 4. Paystack Live → Settings → API Keys & Webhooks → Webhook URL:
    `https://api.ewatrade.com/api/billing/webhooks/paystack`.
    (Test Mode webhook: `https://preview-api.ewatrade.com/api/billing/webhooks/paystack`.)
-5. Approve the Terms draft (and answer its three questions).
+5. Done 12 Nov: Terms approved and published (c45752c5c).
 
 6. Resolved 12 Nov: every business starts on Free. There are no real businesses
    on the old free-Starter fallback, so no migration, grace period or notice.
@@ -35,7 +35,7 @@
 
 ## Agent steps after the owner actions
 
-1. Publish the approved Terms (new version, approval constants).
+1. Done: Terms published as `2026-11-12-web-subscriptions-1` (c45752c5c).
 2. Set Production on ewatrade-api: `WEB_BILLING_PRODUCTS` (from the PLN codes),
    `WEB_BILLING_ENVIRONMENT=production`,
    `WEB_BILLING_RETURN_URL=https://dash.ewatrade.com/settings/billing`,

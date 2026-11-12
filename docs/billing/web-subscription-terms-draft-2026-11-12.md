@@ -1,8 +1,9 @@
 # Draft Terms wording for website subscriptions — 12 November 2026
 
-Status: draft for the owner to approve. Not published. The current Terms
-(version `2026-10-15-adult-chat-1`) only describe future App Store / Google Play
-plans. They say nothing about paying for a plan by card on the website.
+Status: owner approved 12 Nov 2026 and published as version
+`2026-11-12-web-subscriptions-1` (c45752c5c), with support@ewatrade.com and a
+14-day review window. The wording went into the Software billing policy, which is
+published with the Terms under one version.
 
 Publishing changes the Terms version. Every user then accepts the new Terms once:
 owners do it on Plan and billing before paying (added in 79505bbc5), and mobile
