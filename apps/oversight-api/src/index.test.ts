@@ -34,11 +34,45 @@ test("health and rejected requests do not initialize the database", async () => 
   }
   expect(initializations).toBe(0)
 
-  const unavailable = await app.request("/api/oversight/v1/summary", { headers })
+  const unavailable = await app.request("/api/oversight/v1/summary", {
+    headers,
+  })
   expect(initializations).toBe(1)
   expect(unavailable.status).toBe(503)
   expect(unavailable.headers.get("Cache-Control")).toBe("no-store")
   expect(await unavailable.json()).toEqual({
     error: "Project data is unavailable",
   })
+})
+
+test("growth routes sit behind the read key and validate before the database", async () => {
+  process.env.OVERSIGHT_READ_KEY = "b".repeat(64)
+  let initializations = 0
+  const app = createOversightApp(() => {
+    initializations += 1
+    throw new Error("Private database connection details")
+  })
+  const headers = { Authorization: `Bearer ${process.env.OVERSIGHT_READ_KEY}` }
+  for (const path of ["overview", "leads", "businesses/t_1"]) {
+    const rejected = await app.request(`/api/oversight/v1/growth/${path}`)
+    expect(rejected.status).toBe(401)
+    expect(rejected.headers.get("Cache-Control")).toBe("no-store")
+  }
+  for (const path of [
+    "leads?take=500",
+    "leads?page=-1",
+    "leads?extra=1",
+    "businesses/bad%20id",
+  ]) {
+    const invalid = await app.request(`/api/oversight/v1/growth/${path}`, {
+      headers,
+    })
+    expect(invalid.status).toBe(400)
+  }
+  expect(initializations).toBe(0)
+  const unavailable = await app.request("/api/oversight/v1/growth/overview", {
+    headers,
+  })
+  expect(unavailable.status).toBe(503)
+  expect(initializations).toBe(1)
 })

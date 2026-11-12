@@ -8,6 +8,7 @@ import {
 import { Hono } from "hono"
 import { z } from "zod"
 import { createCatalogAiOversightRoutes } from "./catalog-ai-images"
+import { createGrowthOversightRoutes } from "./growth"
 import { createPaymentNotificationOversightRoutes } from "./payment-notifications"
 import { validOversightKey } from "./verify-key"
 export function createOversightRoutes(
@@ -40,6 +41,7 @@ export function createOversightRoutes(
       return c.json({ error: "Unauthorized" }, 401)
     await next()
   })
+  oversightRoutes.route("/growth", createGrowthOversightRoutes(getDb))
   const list = z.object({
     search: z.string().trim().max(100).default(""),
     cursor: z.string().max(200).optional(),
