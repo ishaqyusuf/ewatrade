@@ -17,8 +17,10 @@
 
 ## Owner actions (only you can do these)
 
-1. Paystack: finish company compliance (0 of 5) for ZEROES AND ONE TECH HUB NIG
-   LIMITED, merchant 2096714, and switch the account to Live.
+1. Paystack: finish company compliance for ZEROES AND ONE TECH HUB NIG LIMITED,
+   merchant 2096714, and switch the account to Live. Paystack confirmed Profile
+   saved (1 of 5 complete in Test Mode). Contact, Account, Documents and Service
+   agreement are pending.
 2. Paystack Live: create monthly NGN plans, unlimited invoices —
    Starter 5,000 / Growth 15,000 / Pro 30,000. Add 6,000 / 18,000 / 36,000 only
    to sell outside Africa. Send the `PLN_…` codes (not secret).
