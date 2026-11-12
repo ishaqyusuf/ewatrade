@@ -51,7 +51,13 @@ export function endAssistantTelegramAccess(
     allowedTenantIds?: ReadonlySet<string>
   },
   now = new Date(),
+  checks: {
+    readScope?: typeof readAssistantChannelScope
+    accountBlocked?: (db: DbClient, userId: string) => Promise<boolean>
+  } = {},
 ): Promise<AssistantTelegramAccessEnded | null> {
+  const readScope = checks.readScope ?? readAssistantChannelScope
+  const blocked = checks.accountBlocked ?? accountBlocked
   if (
     !isTelegramId(input.botId) ||
     !isTelegramId(input.userId) ||
@@ -102,17 +108,14 @@ export function endAssistantTelegramAccess(
     // A deleted membership cascades to its grant and binding: access was removed.
     if (!grant || grant.revokedAt) reason = "removed"
     else if (
-      !(await readAssistantChannelScope(tx, {
+      !(await readScope(tx, {
         userId: identity.userId,
         tenantId: grant.tenantId,
         storeId: grant.storeId,
         membershipId: grant.membershipId,
       }))
     ) {
-      if (
-        grant.tenant.qaPurgeStartedAt ||
-        (await accountBlocked(tx, identity.userId))
-      )
+      if (grant.tenant.qaPurgeStartedAt || (await blocked(tx, identity.userId)))
         return null
       reason = "removed"
     } else if (
