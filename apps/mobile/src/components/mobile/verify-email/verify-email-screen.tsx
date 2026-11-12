@@ -3,6 +3,7 @@ import { OtpInput } from "@/components/mobile/otp-input"
 import { OtpKeypad } from "@/components/mobile/otp-keypad"
 import { Toast } from "@/components/ui/toast"
 import { useAuthContext } from "@/hooks/use-auth"
+import { getAppVariant } from "@/lib/app-variant"
 import { assistantResponseLoginDestination } from "@/lib/assistant-response-link"
 import { clearPendingOnboarding } from "@/lib/onboarding-continuation-store"
 import { getStoredQaAuthorization } from "@/lib/qa-authorization-store"
@@ -60,6 +61,7 @@ export function VerifyEmailScreen() {
     orderChannels?: string
     otherBusinessDescription?: string
     phone?: string
+    previewQaCode?: string
     qaEntryId?: string
     returnTo?: string
     teamSize?: string
@@ -114,6 +116,14 @@ export function VerifyEmailScreen() {
   const authEntryHref = mode === "login" ? "/login" : "/sign-up"
   const trpc = useTRPC()
   const [code, setCode] = useState("")
+  const previewQaSignIn =
+    getAppVariant() === "preview" && !useWhatsApp && mode === "login"
+  const initialPreviewQaCode = firstParam(params.previewQaCode) ?? ""
+  const [previewQaCode, setPreviewQaCode] = useState(
+    previewQaSignIn && /^\d{6}$/.test(initialPreviewQaCode)
+      ? initialPreviewQaCode
+      : null,
+  )
   const [status, setStatus] = useState<
     "idle" | "resent" | "verifying" | "error"
   >("idle")
@@ -133,7 +143,8 @@ export function VerifyEmailScreen() {
       },
       onSuccess(data) {
         setStatus("resent")
-        setMessage("Code sent again")
+        setMessage(null)
+        setPreviewQaCode(previewQaSignIn ? data.previewQaCode : null)
         setCooldown(RESEND_COOLDOWN_SECONDS)
         if (data.devCode)
           Toast.show(`Use ${data.devCode} as OTP`, {
@@ -432,6 +443,7 @@ export function VerifyEmailScreen() {
       email={emailDeliveryLabel}
       channel={useWhatsApp ? "whatsapp" : "email"}
       mode={mode}
+      previewQaCode={previewQaCode}
       otp={
         <OtpInput
           disableSystemKeyboard
@@ -456,6 +468,7 @@ export function VerifyEmailScreen() {
           isVerifying={isVerifying}
           message={message}
           onPress={resendCode}
+          previewQa={Boolean(previewQaCode)}
           wasResent={status === "resent"}
           cooldownSeconds={cooldown}
         />

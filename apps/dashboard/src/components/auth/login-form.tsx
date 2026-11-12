@@ -42,8 +42,9 @@ export function LoginForm({
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
   const [method, setMethod] = useState<"password" | "code">("password")
-  const [codeSentTo, setCodeSentTo] = useState<string | null>(null)
+  const [codeEmail, setCodeEmail] = useState<string | null>(null)
   const [code, setCode] = useState("")
+  const [previewQaCode, setPreviewQaCode] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(
@@ -62,7 +63,7 @@ export function LoginForm({
         await accountEntry.signIn()
         return
       }
-      if (method === "code" && codeSentTo !== email) {
+      if (method === "code" && codeEmail !== email) {
         await sendCode()
         return
       }
@@ -114,14 +115,22 @@ export function LoginForm({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action: "request", email }),
     })
-    const body = (await res.json().catch(() => ({}))) as { error?: string }
+    const body = (await res.json().catch(() => ({}))) as {
+      error?: string
+      previewQaCode?: string
+    }
     if (!res.ok) {
       setError(body.error ?? "We could not send a code. Please try again.")
       return
     }
     setCode("")
-    setCodeSentTo(email)
-    setNotice(`We sent a 6-digit code to ${email}. It expires in 10 minutes.`)
+    setCodeEmail(email)
+    setPreviewQaCode(body.previewQaCode ?? null)
+    setNotice(
+      body.previewQaCode
+        ? `Use ${body.previewQaCode} to sign in. It expires in 10 minutes.`
+        : `We sent a 6-digit code to ${email}. It expires in 10 minutes.`,
+    )
   }
 
   async function resendCode() {
@@ -141,11 +150,11 @@ export function LoginForm({
     setError(null)
     setNotice(null)
     setCode("")
-    setCodeSentTo(null)
+    setCodeEmail(null)
+    setPreviewQaCode(null)
   }
 
-  const awaitingCode =
-    !accountEntry && method === "code" && codeSentTo === email
+  const awaitingCode = !accountEntry && method === "code" && codeEmail === email
 
   return (
     <AuthShell
@@ -245,7 +254,7 @@ export function LoginForm({
                     onClick={() => void resendCode()}
                     className="text-xs text-muted-foreground hover:text-foreground"
                   >
-                    Send a new code
+                    {previewQaCode ? "Refresh code" : "Send a new code"}
                   </button>
                 </div>
                 <Input
@@ -264,7 +273,7 @@ export function LoginForm({
               </Field>
             )}
 
-            {notice && !error && (
+            {awaitingCode && notice && !error && (
               <FormFeedback appearance="dashboard" variant="default">
                 {notice}
               </FormFeedback>
@@ -283,8 +292,8 @@ export function LoginForm({
               >
                 {method === "code" && !awaitingCode && !accountEntry
                   ? loading
-                    ? "Sending code…"
-                    : "Send login code"
+                    ? "Getting code…"
+                    : "Get login code"
                   : loading
                     ? "Signing in…"
                     : "Sign in"}
@@ -301,7 +310,7 @@ export function LoginForm({
                 className="text-center text-sm text-muted-foreground hover:text-foreground"
               >
                 {method === "password"
-                  ? "Email me a login code instead"
+                  ? "Use a login code instead"
                   : "Sign in with a password instead"}
               </button>
             )}

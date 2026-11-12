@@ -39,7 +39,7 @@ function failure(error: unknown) {
 // Email-code sign-in for owners who never set a password. It reuses the mobile
 // owner code (10-minute expiry, 5 attempts, single use, per-email and per-network
 // budgets). Requesting a code never looks up the account, so known and unknown
-// addresses get the same response; only a correct code reveals whether one exists.
+// addresses in the same policy domain get the same response.
 export async function POST(request: NextRequest) {
   if (!isSameOriginJsonPost(request))
     return NextResponse.json(
@@ -64,6 +64,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           sent: true,
+          ...(process.env.APP_ENV === "preview" &&
+          process.env.VERCEL_ENV !== "production" &&
+          result.previewQaCode
+            ? { previewQaCode: result.previewQaCode }
+            : {}),
           ...(process.env.NODE_ENV !== "production"
             ? { devCode: result.devCode }
             : {}),

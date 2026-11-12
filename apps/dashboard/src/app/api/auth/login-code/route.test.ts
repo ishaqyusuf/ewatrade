@@ -4,11 +4,18 @@ import { POST } from "./route"
 
 const originalFetch = globalThis.fetch
 const priorApi = process.env.NEXT_PUBLIC_API_URL
+const priorAppEnv = process.env.APP_ENV
+const priorVercelEnv = process.env.VERCEL_ENV
 afterEach(() => {
   globalThis.fetch = originalFetch
   if (priorApi === undefined)
     Reflect.deleteProperty(process.env, "NEXT_PUBLIC_API_URL")
   else process.env.NEXT_PUBLIC_API_URL = priorApi
+  if (priorAppEnv === undefined) Reflect.deleteProperty(process.env, "APP_ENV")
+  else process.env.APP_ENV = priorAppEnv
+  if (priorVercelEnv === undefined)
+    Reflect.deleteProperty(process.env, "VERCEL_ENV")
+  else process.env.VERCEL_ENV = priorVercelEnv
 })
 
 function request(
@@ -88,6 +95,21 @@ test("known and unknown emails get the same request response", async () => {
     bodies.push(await response.json())
   }
   expect(bodies[0]).toEqual(bodies[1])
+})
+
+test("only Preview displays the API-provided QA sign-in code", async () => {
+  process.env.APP_ENV = "preview"
+  process.env.VERCEL_ENV = "preview"
+  const body = { action: "request", email: "owner@example.test" }
+  fixture(ok({ devCode: null, previewQaCode: "123456" }), [])
+  expect(await (await POST(request(body))).json()).toMatchObject({
+    previewQaCode: "123456",
+  })
+
+  process.env.VERCEL_ENV = "production"
+  expect(await (await POST(request(body))).json()).not.toHaveProperty(
+    "previewQaCode",
+  )
 })
 
 test("a wrong or expired code is refused without a session", async () => {

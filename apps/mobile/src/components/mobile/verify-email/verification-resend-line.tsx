@@ -8,6 +8,7 @@ export function VerificationResendLine({
   isVerifying,
   message,
   onPress,
+  previewQa = false,
   wasResent,
   cooldownSeconds = 0,
 }: {
@@ -17,26 +18,42 @@ export function VerificationResendLine({
   isVerifying: boolean
   message: string | null
   onPress: () => void
+  previewQa?: boolean
   wasResent: boolean
   /** Seconds until another code can be sent. */
   cooldownSeconds?: number
 }) {
+  const copy = previewQa
+    ? {
+        loading: "Refreshing code",
+        ready: "Code refreshed",
+        help: "Code expired?",
+        action: "Refresh code",
+        cooldown: "Refresh code in ",
+      }
+    : {
+        loading: "Sending code",
+        ready: "Code sent again",
+        help: "Didn't receive it?",
+        action: "Resend code",
+        cooldown: "Send a new code in ",
+      }
   const lead = isSending
-    ? "Sending code"
+    ? copy.loading
     : isVerifying
       ? "Verifying code"
       : isError && message
         ? message
         : wasResent
-          ? "Code sent again"
-          : "Didn't receive it?"
+          ? copy.ready
+          : copy.help
   if (cooldownSeconds > 0 && !isSending && !isVerifying && !isError)
     return (
       <Text
         accessibilityLiveRegion="polite"
         className="text-center text-xs [-rn-line-height:22] text-muted-foreground"
       >
-        Send a new code in{" "}
+        {copy.cooldown}
         <Text className="text-xs font-bold tabular-nums text-foreground">
           {`${Math.floor(cooldownSeconds / 60)}:${String(cooldownSeconds % 60).padStart(2, "0")}`}
         </Text>
@@ -44,7 +61,7 @@ export function VerificationResendLine({
     )
   return (
     <Pressable
-      accessibilityLabel="Resend code"
+      accessibilityLabel={copy.action}
       accessibilityRole="button"
       className="min-h-11 flex-row flex-wrap items-center justify-center gap-1 px-3"
       disabled={disabled}
@@ -64,7 +81,7 @@ export function VerificationResendLine({
       </Text>
       {!isSending && !isVerifying ? (
         <Text className="text-center text-xs font-bold [-rn-line-height:22] text-foreground">
-          Resend code
+          {copy.action}
         </Text>
       ) : null}
     </Pressable>

@@ -5,6 +5,7 @@ export type VerifyEmailPresentationProps = {
   email: string
   channel?: "email" | "whatsapp"
   mode: "login" | "sign-up"
+  previewQaCode?: string | null
   otp: ReactNode
   resend: ReactNode
   keypad: ReactNode

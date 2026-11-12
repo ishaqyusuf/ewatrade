@@ -136,13 +136,14 @@ export function LoginScreen() {
 
         setError(message)
       },
-      onSuccess() {
+      onSuccess({ previewQaCode }) {
         setError(null)
         router.push({
           pathname: "/verify-email",
           params: {
             email: normalizedEmail,
             mode: "login",
+            previewQaCode: previewQaCode ?? undefined,
             returnTo,
           },
         })
@@ -328,7 +329,7 @@ export function LoginScreen() {
                   ? "Send WhatsApp code"
                   : usePassword
                     ? "Sign in with password"
-                    : "Send login code"}
+                    : "Get login code"}
               </AuthActionButton>
             </Animated.View>
           </View>

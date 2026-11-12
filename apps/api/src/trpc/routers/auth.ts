@@ -732,7 +732,11 @@ export const authRouter = createTRPCRouter({
         }
       })()
 
-      if (!otp.deliverySuppressed && shouldDispatchMobileOwnerOtpEmail()) {
+      if (
+        !otp.deliverySuppressed &&
+        !otp.previewQaCode &&
+        shouldDispatchMobileOwnerOtpEmail()
+      ) {
         const managedEmailEnv = await getQaPolicyEnvironment()
         const emailMessages = (() => {
           try {
@@ -764,6 +768,7 @@ export const authRouter = createTRPCRouter({
       }
 
       return {
+        previewQaCode: otp.previewQaCode ?? null,
         devCode:
           !otp.deliverySuppressed && shouldUseFixedMobileOwnerOtp(process.env)
             ? otp.code

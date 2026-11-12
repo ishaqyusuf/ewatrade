@@ -10,6 +10,7 @@ export function ClassicVerifyEmailScreen({
   email,
   channel = "email",
   mode,
+  previewQaCode,
   otp,
   resend,
   keypad,
@@ -23,16 +24,25 @@ export function ClassicVerifyEmailScreen({
             ? "Login code"
             : "Email verification"
       }
-      title="Enter the code we sent"
+      title={
+        previewQaCode
+          ? `Use ${previewQaCode} to sign in`
+          : "Enter the code we sent"
+      }
       subtitle={
-        <>
-          Sent to <Text className="font-bold text-foreground">{email}</Text>
-        </>
+        previewQaCode ? (
+          "The code expires in 10 minutes."
+        ) : (
+          <>
+            Sent to <Text className="font-bold text-foreground">{email}</Text>
+          </>
+        )
       }
       backHref={authEntryHref}
       backLabel={
         channel === "whatsapp" ? "Use another number" : "Use another email"
       }
+      stageCollapsed={Boolean(previewQaCode)}
       stage={<VerifyStage email={email} channel={channel} />}
       testID="green-gate-verify"
     >

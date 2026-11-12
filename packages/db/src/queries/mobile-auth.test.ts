@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test"
 import { LEGAL_DOCUMENT_VERSION } from "@ewatrade/utils/legal-documents"
+import type { Prisma } from "../../generated/prisma/client"
 import { verifyMobileAppleIdentity } from "./mobile-apple-auth"
 import {
   MobileAccountNotFoundError,
@@ -22,6 +23,7 @@ const PINNED_ENV_KEYS = [
   "EMAIL_QA_DOMAIN_ROUTES",
   "QA_POLICY_READ_KEY",
   "QA_POLICY_URL",
+  "VERCEL_ENV",
 ] as const
 let previousEnv: Array<string | undefined> = []
 beforeEach(() => {
@@ -181,6 +183,7 @@ function createMockMobileAuthDb(input?: {
   stores?: StoreRow[]
   tenants?: TenantRow[]
   users?: UserRow[]
+  findUser?: (where: Prisma.UserWhereInput) => { id: string } | null
 }) {
   const accounts = [...(input?.accounts ?? [])]
   const accountAccesses = [...(input?.accountAccesses ?? [])]
@@ -488,6 +491,8 @@ function createMockMobileAuthDb(input?: {
       findUnique: async () => null,
     },
     user: {
+      findFirst: async ({ where }: { where: Prisma.UserWhereInput }) =>
+        input?.findUser?.(where) ?? null,
       findUnique: async ({
         where,
       }: {
@@ -686,6 +691,88 @@ describe("mobile auth queries", () => {
         NODE_ENV: "production",
       }),
     ).toBe(false)
+  })
+
+  test("Preview displays the test code and requires an eligible QA account to use it", async () => {
+    await withQaPolicy([ISHAQ_QA_ENTRY], async () => {
+      process.env.APP_ENV = "preview"
+      process.env.VERCEL_ENV = "preview"
+      const email = "owner@ishaq.qa.test"
+      let eligible = false
+      const db = createMockMobileAuthDb({
+        users: [
+          {
+            id: "qa-owner",
+            email,
+            emailVerified: true,
+            name: "QA Owner",
+            ageBand: "ADULT",
+          },
+        ],
+        memberships: [
+          {
+            role: "OWNER",
+            status: "ACTIVE",
+            userId: "qa-owner",
+            tenant: {
+              id: "qa-business",
+              name: "QA Business",
+              slug: "qa-business",
+              dataClassification: "QA",
+              stores: [],
+            },
+          },
+        ],
+        findUser(where) {
+          const qaTenant = {
+            dataClassification: "QA",
+            qaSourceDomain: "ishaq.qa.test",
+            qaPurgeStartedAt: null,
+          }
+          expect(where).toEqual({
+            email,
+            emailVerified: true,
+            isPlatformAdmin: false,
+            memberships: {
+              some: {
+                status: "ACTIVE",
+                tenant: { ...qaTenant, isActive: true },
+              },
+              every: { tenant: qaTenant },
+            },
+            storeConversationAccountAccesses: { none: { status: "ACTIVE" } },
+          })
+          return eligible ? { id: "qa-owner" } : null
+        },
+      })
+      const request = { email, mode: "login" as const }
+      expect(await createMobileOwnerOtp(db.client, request)).toMatchObject({
+        code: "123456",
+        previewQaCode: "123456",
+      })
+      await expect(
+        verifyMobileOwnerOtp(db.client, { ...request, code: "123456" }),
+      ).rejects.toThrow("A verified Preview QA account is required.")
+      expect(db.sessions).toHaveLength(0)
+
+      eligible = true
+      process.env.VERCEL_ENV = "production"
+      await expect(
+        verifyMobileOwnerOtp(db.client, { ...request, code: "123456" }),
+      ).rejects.toThrow("The verification code has expired.")
+      expect(db.sessions).toHaveLength(0)
+
+      process.env.VERCEL_ENV = "preview"
+      const session = await verifyMobileOwnerOtp(db.client, {
+        ...request,
+        code: "123456",
+      })
+      expect(session.tenant?.id).toBe("qa-business")
+      expect(db.sessions).toHaveLength(1)
+      await expect(
+        verifyMobileOwnerOtp(db.client, { ...request, code: "123456" }),
+      ).rejects.toThrow("The verification code has expired.")
+    })
   })
 
   test("resolves customer history only from active explicit account links", async () => {

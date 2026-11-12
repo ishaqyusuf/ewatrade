@@ -15,6 +15,7 @@ import {
   currentEffectiveLegalPublication,
   resolveLegalSignupChoice,
 } from "@ewatrade/utils/legal-approval"
+import { managedQaDomainEnabled } from "@ewatrade/utils/qa-policy-server"
 import type { Prisma } from "../../generated/prisma/client"
 import { AccountAgeBand, MembershipRole } from "../../generated/prisma/enums"
 import { recordLegalAcceptance } from "./account-privacy"
@@ -100,6 +101,7 @@ export type MobileAuthSessionResult = {
 
 export type MobileOwnerOtpResult = {
   deliverySuppressed?: true
+  previewQaCode?: string
   code: string
   email: string
   expiresAt: Date
@@ -275,6 +277,18 @@ function createOtpCode() {
   }
 
   return randomInt(0, 1_000_000).toString().padStart(6, "0")
+}
+
+async function previewQaEmailLoginDomain(email: string, mode: MobileAuthMode) {
+  if (
+    mode !== "login" ||
+    process.env.APP_ENV !== "preview" ||
+    process.env.VERCEL_ENV === "production" ||
+    !email.endsWith(".test")
+  )
+    return null
+  const domain = email.slice(email.lastIndexOf("@") + 1)
+  return (await managedQaDomainEnabled(domain)) ? domain : null
 }
 
 function createSessionToken() {
@@ -651,9 +665,14 @@ export async function createMobileOwnerOtp(
       : null
   await requireMobileApprovedSignup(db, input)
   const email = normalizeEmail(input.email)
+  const previewQaDomain = credentialContext
+    ? null
+    : await previewQaEmailLoginDomain(email, input.mode)
   const code = credentialContext
     ? randomInt(0, 1_000_000).toString().padStart(6, "0")
-    : createOtpCode()
+    : previewQaDomain
+      ? "123456"
+      : createOtpCode()
   const now = new Date()
   const expiresAt = addMinutes(now, OTP_TTL_MINUTES)
   const identifier = buildOwnerCredentialIdentifier(
@@ -719,6 +738,7 @@ export async function createMobileOwnerOtp(
             : null,
         mode: input.mode,
         name: cleanText(input.name),
+        previewQaDomain: previewQaDomain ?? undefined,
         operatingModel: cleanText(input.operatingModel),
         orderChannels: input.orderChannels ?? [],
         otherBusinessDescription: cleanText(input.otherBusinessDescription),
@@ -732,6 +752,7 @@ export async function createMobileOwnerOtp(
     code,
     email,
     expiresAt,
+    ...(previewQaDomain ? { previewQaCode: code } : {}),
   }
 }
 
@@ -799,6 +820,7 @@ export async function verifyMobileOwnerOtp(
     orderChannels?: string[] | null
     otherBusinessDescription?: string | null
     phone?: string | null
+    previewQaDomain?: string
     teamSize?: string | null
   }
 
@@ -846,6 +868,43 @@ export async function verifyMobileOwnerOtp(
 
   if (input.accessToken !== payload.accessToken)
     throw new OnboardingContinuationError("CONFLICT")
+
+  if (payload.previewQaDomain !== undefined) {
+    const qaDomain = payload.previewQaDomain
+    if (
+      credentialContext ||
+      !qaDomain ||
+      (await previewQaEmailLoginDomain(email, input.mode)) !== qaDomain
+    )
+      throw new Error("The verification code has expired. Request a new code.")
+    // The displayed code is public. An ordinary session must be limited to an
+    // account whose existing access is entirely within this QA namespace.
+    const qaTenant = {
+      dataClassification: "QA" as const,
+      qaSourceDomain: qaDomain,
+      qaPurgeStartedAt: null,
+    }
+    const qaUser = await db.user.findFirst({
+      where: {
+        email,
+        emailVerified: true,
+        isPlatformAdmin: false,
+        memberships: {
+          some: {
+            status: "ACTIVE",
+            tenant: { ...qaTenant, isActive: true },
+          },
+          every: { tenant: qaTenant },
+        },
+        storeConversationAccountAccesses: { none: { status: "ACTIVE" } },
+      },
+      select: { id: true },
+    })
+    if (!qaUser) throw new Error("A verified Preview QA account is required.")
+    await db.verification.deleteMany({ where: { identifier } })
+    return createMobileSessionForVerifiedUser(db, qaUser.id, "email", qaDomain)
+  }
+
   const approvedOnboarding = await requireMobileApprovedSignup(db, {
     ...input,
     businessName: payload.businessName,
