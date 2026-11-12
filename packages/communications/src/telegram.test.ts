@@ -366,3 +366,59 @@ test("deletes one message in a valid private chat", async () => {
     },
   ])
 })
+
+test("quotes the review in a receipt and adds a short callback toast", async () => {
+  const calls: { method: string; body: Record<string, unknown> }[] = []
+  const provider = new DirectTelegramBotProvider(config, async (url, init) => {
+    calls.push({
+      method: String(url).split("/").pop() ?? "",
+      body: JSON.parse(String(init.body)),
+    })
+    return Response.json({
+      ok: true,
+      result: String(url).endsWith("/sendMessage") ? { message_id: 19 } : true,
+    })
+  })
+  expect(
+    await provider.sendMessage({
+      chatId: "4501234567890",
+      text: "Saved in EwaTrade.",
+      replyToMessageId: "18",
+    }),
+  ).toEqual({ status: "accepted", messageId: "19" })
+  expect(
+    await provider.sendMessage({
+      chatId: "4501234567890",
+      text: "Saved in EwaTrade.",
+      replyToMessageId: "0",
+    }),
+  ).toEqual({ status: "failed" })
+  expect(await provider.answerCallbackQuery("callback-1", "Saving…")).toBe(true)
+  expect(await provider.answerCallbackQuery("callback-2")).toBe(true)
+  expect(
+    await provider.answerCallbackQuery("callback-3", "x".repeat(201)),
+  ).toBe(true)
+  expect(calls).toEqual([
+    {
+      method: "sendMessage",
+      body: {
+        chat_id: 4501234567890,
+        text: "Saved in EwaTrade.",
+        link_preview_options: { is_disabled: true },
+        reply_parameters: { message_id: 18, allow_sending_without_reply: true },
+      },
+    },
+    {
+      method: "answerCallbackQuery",
+      body: { callback_query_id: "callback-1", text: "Saving…" },
+    },
+    {
+      method: "answerCallbackQuery",
+      body: { callback_query_id: "callback-2" },
+    },
+    {
+      method: "answerCallbackQuery",
+      body: { callback_query_id: "callback-3" },
+    },
+  ])
+})

@@ -363,10 +363,18 @@ export class DirectTelegramBotProvider {
     buttons?: readonly (readonly TelegramButton[])[]
     /** Text is Telegram HTML; callers escape any user or business text. */
     html?: boolean
+    /** Quote the bot's own earlier message; sends unquoted if it is gone. */
+    replyToMessageId?: string
   }): Promise<TelegramSendResult> {
-    const { chatId, text, buttons, html } = input
+    const { chatId, text, buttons, html, replyToMessageId } = input
     const target = Number(chatId)
-    if (positiveId(target) !== chatId || !validText(text, buttons))
+    const replyTo = Number(replyToMessageId)
+    if (
+      positiveId(target) !== chatId ||
+      !validText(text, buttons) ||
+      (replyToMessageId !== undefined &&
+        positiveId(replyTo) !== replyToMessageId)
+    )
       return { status: "failed" }
 
     const response = await this.request("sendMessage", {
@@ -374,6 +382,14 @@ export class DirectTelegramBotProvider {
       text,
       link_preview_options: { is_disabled: true },
       ...(html ? { parse_mode: "HTML" } : {}),
+      ...(replyToMessageId !== undefined
+        ? {
+            reply_parameters: {
+              message_id: replyTo,
+              allow_sending_without_reply: true,
+            },
+          }
+        : {}),
       ...keyboard(buttons),
     })
     return this.messageResult(response)
@@ -538,9 +554,14 @@ export class DirectTelegramBotProvider {
       : { status: "uncertain" }
   }
 
-  async answerCallbackQuery(callbackId: string): Promise<boolean> {
+  /** A short toast describes the tap; Telegram caps toast text at 200 characters. */
+  async answerCallbackQuery(
+    callbackId: string,
+    text?: string,
+  ): Promise<boolean> {
     const response = await this.request("answerCallbackQuery", {
       callback_query_id: callbackId,
+      ...(text && text.length <= 200 ? { text } : {}),
     })
     return response?.body?.ok === true && response.body.result === true
   }
