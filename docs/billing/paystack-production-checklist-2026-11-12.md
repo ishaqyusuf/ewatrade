@@ -20,15 +20,11 @@
 1. Paystack: finish company compliance for ZEROES AND ONE TECH HUB NIG LIMITED,
    merchant 2096714, and switch the account to Live. Paystack confirmed the
    Profile, Contact, matching registered and office addresses, and registration
-   numbers were saved. Paystack confirmed all three CAC documents and the
-   director and sole shareholder profile were saved. The NIN matched the form
-   and the original ID photo uploaded. The director's BVN consent is required
-   before the Identity step can be saved. Paystack saved the director's
-   residential address. Business and residential address proofs issued within
-   the last six months, the corporate payout account, and the Service Agreement
-   are still pending.
-   Reconcile the existing second director entry against the CAC records before
-   submitting activation.
+   numbers were saved. Paystack confirmed all three CAC documents were saved,
+   displays BVN Provided for the director, and lists Account Details and Service
+   Agreement as complete. The only People entry is Director only at the owner's
+   request. Business Address Verification, Business Owner(s), and Owner(s)
+   Verification are incomplete in the recap, and activation is disabled.
 2. Paystack Live: create monthly NGN plans, unlimited invoices —
    Starter 5,000 / Growth 15,000 / Pro 30,000. Add 6,000 / 18,000 / 36,000 only
    to sell outside Africa. Send the `PLN_…` codes (not secret).
