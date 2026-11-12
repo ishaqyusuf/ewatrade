@@ -8,6 +8,12 @@ model AssistantTelegramIdentity {
   selectionGeneration Int @default(0)
   activeBindingId     String?
   revokedAt           DateTime?
+  /// Hand-over (Workshop c-second): set when another EwaTrade user connected this
+  /// Telegram account after this identity lost access. telegramUserId then holds
+  /// "detached:<id>" so the unique key is free; the row and its history stay
+  /// with this user, and the real Telegram ID is kept here.
+  detachedAt             DateTime?
+  detachedTelegramUserId String?
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 
