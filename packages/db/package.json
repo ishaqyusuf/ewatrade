@@ -83,7 +83,9 @@
     "./commerce-quote-reviewed-decision": "./src/queries/commerce-quote-reviewed-decision.ts",
     "./own-transaction": "./src/queries/own-transaction.ts",
     "./manual-payment-assessments": "./src/queries/manual-payment-assessments.ts",
-    "./lifecycle-messages": "./src/queries/lifecycle-messages.ts"
+    "./lifecycle-messages": "./src/queries/lifecycle-messages.ts",
+    "./growth-intent": "./src/queries/growth-intent.ts",
+    "./growth-metrics": "./src/queries/growth-metrics.ts"
   },
   "scripts": {
     "seed:category-suggestion-config": "bun scripts/seed-category-suggestion-config.ts",

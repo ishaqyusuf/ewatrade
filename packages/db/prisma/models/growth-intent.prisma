@@ -1,0 +1,18 @@
+// "See plans" taps per business, feature and month for the lifecycle
+// feature-intent play (docs/plans/2026-11-12-lifecycle-marketing-plan.md, W3).
+// Logly is ingest-only, so this first-party counter is the server-side read.
+// Fixed labels only (packages/events/src/growth-intent.ts): no user, amount or text.
+model GrowthFeatureIntent {
+  tenantId String
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  /// GROWTH_INTENT_FEATURES label, e.g. "staff" or "attachments".
+  feature  String
+  /// UTC month, `YYYY-MM`.
+  month    String
+  taps     Int      @default(0)
+  firstAt  DateTime @default(now())
+  lastAt   DateTime @default(now())
+
+  @@id([tenantId, feature, month])
+  @@index([month, feature, taps])
+}

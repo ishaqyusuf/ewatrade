@@ -1,6 +1,7 @@
 model Tenant {
   growthSnapshots BusinessGrowthSnapshot[]
   lifecycleMessages LifecycleMessage[]
+  growthFeatureIntents GrowthFeatureIntent[]
   catalogStorefrontPolicies CatalogStorefrontPolicy[]
   manualPaymentAlertSettings ManualPaymentAlertSetting[]
   paymentNotificationQuotas PaymentNotificationQuota[]
