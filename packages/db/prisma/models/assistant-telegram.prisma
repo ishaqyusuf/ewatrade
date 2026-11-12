@@ -31,6 +31,12 @@ model AssistantTelegramLink {
   claimedTelegramUserId    String?
   claimedChatId            String?
   claimedUpdateId          String?
+  /// Telegram first/last name and @username from the Start update. Shown in
+  /// EwaTrade only while the claim waits for confirmation; cleared when it ends.
+  claimedName              String?
+  claimedUsername          String?
+  /// The bot's claim message, edited in place to Connected, Closed or Expired.
+  claimMessageId           String?
   confirmedGrantGeneration Int?
   confirmedAt              DateTime?
   cancelledAt              DateTime?

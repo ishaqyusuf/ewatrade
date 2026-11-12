@@ -17,6 +17,7 @@ import {
   readAssistantTelegramWebhookConfig,
 } from "@ewatrade/communications"
 import type { OpenAPIHono } from "@hono/zod-openapi"
+import type { TelegramNotice } from "../assistant/telegram-runtime"
 import { safeCompare } from "../utils/safe-compare"
 
 const webhookMaxBytes = 64 * 1024
@@ -63,11 +64,19 @@ type TelegramRouteDependencies = {
   workerSecret?: () => string | undefined
   provider?: (
     config: AssistantTelegramConfig,
-  ) => Pick<DirectTelegramBotProvider, "answerCallbackQuery" | "sendMessage">
+  ) => Pick<
+    DirectTelegramBotProvider,
+    | "answerCallbackQuery"
+    | "sendMessage"
+    | "editMessageText"
+    | "pinChatMessage"
+    | "unpinAllChatMessages"
+    | "setChatCommands"
+  >
   accept: (
     config: AssistantTelegramConfig,
     event: NormalizedAssistantTelegramUpdate,
-  ) => Promise<{ ingressId?: string; notice?: string }>
+  ) => Promise<{ ingressId?: string; notice?: TelegramNotice }>
   enqueueTurn: (ingressId: string) => Promise<unknown>
   processTurn: (ingressId: string) => Promise<AssistantChannelTurnResult>
   processDelivery: (outboxId: string) => Promise<AssistantChannelDeliveryResult>
@@ -130,9 +139,21 @@ export function registerAssistantTelegramRoutes(
       const bot = provider(current)
       if (event.kind === "callback")
         effects.push(bot.answerCallbackQuery(event.callbackId))
-      if (accepted.notice)
+      const notice = accepted.notice
+      if (notice)
         effects.push(
-          bot.sendMessage({ chatId: event.chatId, text: accepted.notice }),
+          bot
+            .sendMessage({
+              chatId: event.chatId,
+              text: notice.text,
+              html: notice.html,
+              buttons: notice.buttons,
+            })
+            .then(async (sent) => {
+              if (sent.status === "accepted" && notice.onSent)
+                await notice.onSent(sent.messageId, bot)
+            })
+            .finally(() => notice.after?.(bot)),
         )
     }
     await Promise.allSettled(effects)

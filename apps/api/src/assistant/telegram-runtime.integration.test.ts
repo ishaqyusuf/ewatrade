@@ -201,6 +201,13 @@ suite("Telegram assistant against guarded development QA", () => {
           acknowledged.push(id)
           return true
         },
+        editMessageText: async (target) => ({
+          status: "accepted",
+          messageId: target.messageId,
+        }),
+        pinChatMessage: async () => true,
+        unpinAllChatMessages: async () => true,
+        setChatCommands: async () => true,
       }),
     })
     await prisma.$transaction(async (tx) => {
@@ -314,9 +321,14 @@ suite("Telegram assistant against guarded development QA", () => {
     expect(pending.state).toBe("awaiting_confirmation")
     expect(queuedTurns).toHaveLength(0)
     expect(typingSignals).toHaveLength(0)
-    expect(deliveries.at(-1)?.text).toContain(
-      pending.maskedSender ?? "missing-sender",
-    )
+    // The claim reply names the scope and the link keeps that message for edits.
+    expect(deliveries.at(-1)?.text).toContain(businessName)
+    expect(pending.maskedSender).toBeTruthy()
+    const claimed = await db.assistantTelegramLink.findUniqueOrThrow({
+      where: { id: link.id },
+      select: { claimMessageId: true },
+    })
+    expect(claimed.claimMessageId).toBeTruthy()
     await links.confirmAssistantTelegramLink(db, actor, {
       linkId: link.id,
       revision: pending.revision,

@@ -68,4 +68,12 @@ export async function expireAssistantTelegramWork(
         completedAt: now,
       },
     })
+  // Telegram names shown during a claim never outlive the five-minute link.
+  await db.assistantTelegramLink.updateMany({
+    where: {
+      expiresAt: { lte: now },
+      OR: [{ claimedName: { not: null } }, { claimedUsername: { not: null } }],
+    },
+    data: { claimedName: null, claimedUsername: null },
+  })
 }

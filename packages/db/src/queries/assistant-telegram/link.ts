@@ -21,6 +21,66 @@ const grantLifetime = 30 * 24 * 60 * 60_000
 export const telegramGrantIdleTime = 7 * 24 * 60 * 60_000
 export const maskAssistantTelegramSender = (id: string) => `••••${id.slice(-4)}`
 
+/** Telegram profile text is user-controlled: keep printable, bounded text only. */
+function claimDisplayName(value: string | null | undefined) {
+  const text = (value ?? "")
+    .replace(/[\p{Cc}\p{Cf}]/gu, "")
+    .replace(/\s+/g, " ")
+    .trim()
+  return text ? text.slice(0, 128) : null
+}
+function claimUsername(value: string | null | undefined) {
+  return value && /^[A-Za-z0-9_]{4,32}$/.test(value) ? value : null
+}
+/** The pinned "Connected" message from the confirmation that opened this chat's access. */
+async function connectedMessage(
+  db: DbClient,
+  where: {
+    botId: string
+    telegramUserId: string
+    chatId: string
+    tenantId?: string
+  },
+) {
+  const link = await db.assistantTelegramLink.findFirst({
+    where: {
+      botId: where.botId,
+      claimedTelegramUserId: where.telegramUserId,
+      claimedChatId: where.chatId,
+      ...(where.tenantId ? { tenantId: where.tenantId } : {}),
+      confirmedAt: { not: null },
+      claimMessageId: { not: null },
+    },
+    orderBy: { confirmedAt: "desc" },
+    select: {
+      claimedChatId: true,
+      claimMessageId: true,
+      tenant: { select: { name: true } },
+      store: { select: { name: true } },
+    },
+  })
+  const message = link && claimMessage(link)
+  return message && link
+    ? { ...message, businessName: link.tenant.name, storeName: link.store.name }
+    : null
+}
+
+/** Display details exist only while a claim waits for the merchant's decision. */
+const clearedClaimDisplay = { claimedName: null, claimedUsername: null }
+
+export type AssistantTelegramClaimMessage = {
+  chatId: string
+  messageId: string
+}
+function claimMessage(link: {
+  claimedChatId: string | null
+  claimMessageId: string | null
+}): AssistantTelegramClaimMessage | null {
+  return link.claimedChatId && link.claimMessageId
+    ? { chatId: link.claimedChatId, messageId: link.claimMessageId }
+    : null
+}
+
 async function requireWebActor(
   db: DbClient,
   actor: TelegramWebActor,
@@ -91,11 +151,23 @@ export function createAssistantTelegramLink(
   })
 }
 
+export type AssistantTelegramClaim = {
+  linkId: string
+  businessName: string
+  storeName: string
+}
+
 export function claimAssistantTelegramLink(
   db: PrismaClient,
-  input: TelegramSender & { updateId: string; code: string; occurredAt: Date },
+  input: TelegramSender & {
+    updateId: string
+    code: string
+    occurredAt: Date
+    name?: string | null
+    username?: string | null
+  },
   now = new Date(),
-) {
+): Promise<AssistantTelegramClaim | false> {
   if (
     !isTelegramId(input.botId) ||
     !isTelegramId(input.userId) ||
@@ -110,6 +182,10 @@ export function claimAssistantTelegramLink(
     await lockTelegramSender(tx, input)
     const link = await tx.assistantTelegramLink.findUnique({
       where: { tokenDigest: telegramDigest("link", input.code) },
+      include: {
+        tenant: { select: { name: true } },
+        store: { select: { name: true } },
+      },
     })
     if (
       !link ||
@@ -121,12 +197,17 @@ export function claimAssistantTelegramLink(
         Math.floor(link.createdAt.getTime() / 1000) * 1000
     )
       return false
+    const claim = {
+      linkId: link.id,
+      businessName: link.tenant.name,
+      storeName: link.store.name,
+    }
     if (link.claimedTelegramUserId)
-      return (
-        link.claimedTelegramUserId === input.userId &&
+      return link.claimedTelegramUserId === input.userId &&
         link.claimedChatId === input.chatId &&
         link.claimedUpdateId === input.updateId
-      )
+        ? claim
+        : false
     const updated = await tx.assistantTelegramLink.updateMany({
       where: {
         id: link.id,
@@ -140,11 +221,32 @@ export function claimAssistantTelegramLink(
         claimedTelegramUserId: input.userId,
         claimedChatId: input.chatId,
         claimedUpdateId: input.updateId,
+        claimedName: claimDisplayName(input.name),
+        claimedUsername: claimUsername(input.username),
         revision: { increment: 1 },
       },
     })
-    return updated.count === 1
+    return updated.count === 1 ? claim : false
   })
+}
+
+/** Remember the bot's claim reply so later decisions edit that same message. */
+export async function recordAssistantTelegramClaimMessage(
+  db: DbClient,
+  input: TelegramSender & { linkId: string; messageId: string },
+) {
+  if (!isTelegramId(input.messageId)) return false
+  const updated = await db.assistantTelegramLink.updateMany({
+    where: {
+      id: input.linkId,
+      botId: input.botId,
+      claimedTelegramUserId: input.userId,
+      claimedChatId: input.chatId,
+      claimMessageId: null,
+    },
+    data: { claimMessageId: input.messageId },
+  })
+  return updated.count === 1
 }
 
 export async function readAssistantTelegramLink(
@@ -175,6 +277,12 @@ export async function readAssistantTelegramLink(
     maskedSender: link.claimedTelegramUserId
       ? maskAssistantTelegramSender(link.claimedTelegramUserId)
       : null,
+    ...(link.claimedTelegramUserId &&
+    !link.cancelledAt &&
+    !link.confirmedAt &&
+    link.expiresAt > now
+      ? { claimedName: link.claimedName, claimedUsername: link.claimedUsername }
+      : { claimedName: null, claimedUsername: null }),
   }
 }
 
@@ -223,9 +331,11 @@ export function confirmAssistantTelegramLink(
         select: { id: true, generation: true, expiresAt: true },
       })
       if (!grant) throw new AssistantTelegramError("CONFLICT")
+      // A retried confirmation already edited the claim message.
       return {
         ...grant,
         maskedSender: maskAssistantTelegramSender(key.telegramUserId),
+        claimMessage: null,
       }
     }
     if (link.expiresAt <= now) throw new AssistantTelegramError("EXPIRED")
@@ -282,6 +392,7 @@ export function confirmAssistantTelegramLink(
         confirmedAt: now,
         confirmedGrantGeneration: grant.generation,
         revision: { increment: 1 },
+        ...clearedClaimDisplay,
       },
     })
     if (confirmed.count !== 1) throw new AssistantTelegramError("CONFLICT")
@@ -328,8 +439,118 @@ export function confirmAssistantTelegramLink(
     return {
       ...grant,
       maskedSender: maskAssistantTelegramSender(key.telegramUserId),
+      claimMessage: claimMessage(link),
     }
   })
+}
+
+/** "This isn't me": close a claimed link without connecting anything. */
+export function rejectAssistantTelegramLink(
+  db: PrismaClient,
+  actor: TelegramWebActor,
+  input: { linkId: string; revision: number; botId: string },
+  now = new Date(),
+) {
+  return runInOwnSerializableTransaction(db, async (tx) => {
+    await lockWebActor(tx, actor, now)
+    const link = await tx.assistantTelegramLink.findFirst({
+      where: { ...linkScope(actor, input.botId), id: input.linkId },
+    })
+    if (!link?.claimedTelegramUserId || link.confirmedAt || link.cancelledAt)
+      throw new AssistantTelegramError("UNAVAILABLE")
+    if (link.revision !== input.revision)
+      throw new AssistantTelegramError("CONFLICT")
+    const closed = await tx.assistantTelegramLink.updateMany({
+      where: {
+        id: link.id,
+        revision: link.revision,
+        confirmedAt: null,
+        cancelledAt: null,
+      },
+      data: {
+        cancelledAt: now,
+        revision: { increment: 1 },
+        ...clearedClaimDisplay,
+      },
+    })
+    if (closed.count !== 1) throw new AssistantTelegramError("CONFLICT")
+    return { claimMessage: claimMessage(link) }
+  })
+}
+
+/**
+ * Expiry is applied when someone next touches the link (no timer job). Returns
+ * the claim message once so the caller can edit it to "expired".
+ */
+export function closeExpiredAssistantTelegramClaim(
+  db: PrismaClient,
+  actor: TelegramWebActor,
+  input: { linkId: string; botId: string },
+  now = new Date(),
+) {
+  return runInOwnSerializableTransaction(db, async (tx) => {
+    await lockWebActor(tx, actor, now)
+    const link = await tx.assistantTelegramLink.findFirst({
+      where: { ...linkScope(actor, input.botId), id: input.linkId },
+    })
+    if (!link || link.confirmedAt || link.cancelledAt || link.expiresAt > now)
+      return null
+    const message = claimMessage(link)
+    await tx.assistantTelegramLink.updateMany({
+      where: { id: link.id, claimMessageId: link.claimMessageId },
+      data: { claimMessageId: null, ...clearedClaimDisplay },
+    })
+    return message
+  })
+}
+
+/** Current connection for a Telegram sender, or null when the chat is not connected. */
+export async function readAssistantTelegramConnection(
+  db: DbClient,
+  sender: TelegramSender,
+  now = new Date(),
+) {
+  if (
+    !isTelegramId(sender.botId) ||
+    !isTelegramId(sender.userId) ||
+    !isTelegramId(sender.chatId)
+  )
+    return null
+  const identity = await db.assistantTelegramIdentity.findFirst({
+    where: {
+      botId: sender.botId,
+      telegramUserId: sender.userId,
+      chatId: sender.chatId,
+      revokedAt: null,
+    },
+    select: { id: true, activeBindingId: true },
+  })
+  if (!identity?.activeBindingId) return null
+  const binding = await db.assistantTelegramBinding.findFirst({
+    where: {
+      id: identity.activeBindingId,
+      identityId: identity.id,
+      grant: {
+        revokedAt: null,
+        expiresAt: { gt: now },
+        idleExpiresAt: { gt: now },
+      },
+    },
+    select: {
+      grant: {
+        select: {
+          tenant: { select: { name: true } },
+          store: { select: { name: true } },
+        },
+      },
+    },
+  })
+  return binding
+    ? {
+        businessName: binding.grant.tenant.name,
+        storeName: binding.grant.store.name,
+      }
+    : null
 }
 
 export async function cancelTelegramWork(
@@ -421,18 +642,30 @@ export function revokeAssistantTelegramGrant(
       where: { id: grantId },
       data: { revokedAt: now, generation: { increment: 1 } },
     })
-    if (
+    const activeHere = Boolean(
       grant.identity.activeBindingId &&
-      (await tx.assistantTelegramBinding.count({
-        where: { id: grant.identity.activeBindingId, grantId },
-      }))
+        (await tx.assistantTelegramBinding.count({
+          where: { id: grant.identity.activeBindingId, grantId },
+        })),
     )
+    if (activeHere)
       await tx.assistantTelegramIdentity.update({
         where: { id: grant.identityId },
         data: { activeBindingId: null, selectionGeneration: { increment: 1 } },
       })
     await cancelTelegramWork(tx, { grantId }, now)
-    return { revoked: true as const }
+    // Only a chat that was using this grant changes its pin and menu.
+    if (!activeHere) return { revoked: true as const, connectedMessage: null }
+    return {
+      revoked: true as const,
+      chatId: grant.identity.chatId,
+      connectedMessage: await connectedMessage(tx, {
+        botId: grant.identity.botId,
+        telegramUserId: grant.identity.telegramUserId,
+        chatId: grant.identity.chatId,
+        tenantId: grant.tenantId,
+      }),
+    }
   })
 }
 
@@ -534,6 +767,13 @@ export function disconnectAssistantTelegram(
       data: { revokedAt: now, generation: { increment: 1 } },
     })
     await cancelTelegramWork(tx, { identityId: identity.id }, now)
-    return { revoked: true }
+    return {
+      revoked: true,
+      connectedMessage: await connectedMessage(tx, {
+        botId: input.botId,
+        telegramUserId: input.userId,
+        chatId: input.chatId,
+      }),
+    }
   })
 }

@@ -19,13 +19,19 @@ export {
   settleAssistantTelegramInbox,
 } from "./inbox"
 export {
+  type AssistantTelegramClaim,
+  type AssistantTelegramClaimMessage,
   claimAssistantTelegramLink,
+  closeExpiredAssistantTelegramClaim,
   confirmAssistantTelegramLink,
   createAssistantTelegramLink,
   disconnectAssistantTelegram,
   listAssistantTelegramGrants,
   maskAssistantTelegramSender,
+  readAssistantTelegramConnection,
   readAssistantTelegramLink,
+  recordAssistantTelegramClaimMessage,
+  rejectAssistantTelegramLink,
   revokeAssistantTelegramGrant,
 } from "./link"
 export {

@@ -14,6 +14,7 @@ import {
   type AssistantTelegramConfig,
   DirectTelegramBotProvider,
   type NormalizedAssistantTelegramUpdate,
+  type TelegramButton,
   isAssistantTelegramDisconnect,
   readAssistantTelegramConfig,
 } from "@ewatrade/communications"
@@ -28,10 +29,11 @@ import {
   claimAssistantTelegramOutbox,
   disconnectAssistantTelegram,
   finishAssistantTelegramActionReview,
-  maskAssistantTelegramSender,
   nextAssistantTelegramInbox,
   nextAssistantTelegramOutbox,
   readAssistantTelegramActionReview,
+  readAssistantTelegramConnection,
+  recordAssistantTelegramClaimMessage,
   retryAssistantTelegramInbox,
   settleAssistantTelegramInbox,
   settleAssistantTelegramOutbox,
@@ -61,18 +63,36 @@ import {
 import { createGeneralAssistantTurn } from "./general-turn"
 import { GeneralTurnError } from "./general-turn-contract"
 import { proposalApprovalToken } from "./proposal-security"
+import {
+  type TelegramChatEffects,
+  openEwaTradeButtons,
+  showTelegramDisconnected,
+  telegramAppOrigin,
+  telegramCopy,
+} from "./telegram-presentation"
 
 const callbackPattern = /^(confirm|cancel|edit):([A-Za-z0-9_-]{1,48})$/
 const useReview =
   "Use the buttons on the exact draft review to confirm, edit or cancel."
 const unavailableReview =
   "This review has expired or changed. Ask me for the current draft."
-const appOrigin = () =>
-  process.env.DASHBOARD_URL ??
-  process.env.NEXT_PUBLIC_DASHBOARD_URL ??
-  "https://dash.ewatrade.com"
+const appOrigin = telegramAppOrigin
 
-type IngressReceipt = { ingressId?: string; notice?: string }
+/** A reply sent straight from the webhook (no inbox), e.g. linking and entry replies. */
+export type TelegramNotice = {
+  text: string
+  html?: boolean
+  buttons?: TelegramButton[][]
+  /** Runs after Telegram accepts the reply, with the bot for follow-up chat effects. */
+  onSent?: (messageId: string, bot: TelegramChatEffects) => Promise<unknown>
+  /** Runs after the reply whatever its outcome. */
+  after?: (bot: TelegramChatEffects) => Promise<unknown>
+}
+type IngressReceipt = { ingressId?: string; notice?: TelegramNotice }
+const entryNotice = (): TelegramNotice => ({
+  text: telegramCopy.entry,
+  buttons: openEwaTradeButtons(),
+})
 export async function acceptAssistantTelegramUpdate(
   config: AssistantTelegramConfig,
   event: NormalizedAssistantTelegramUpdate,
@@ -93,7 +113,17 @@ export async function acceptAssistantTelegramUpdate(
         occurredAt,
       })
       return result.revoked
-        ? { notice: "Telegram disconnected from EwaTrade." }
+        ? {
+            notice: {
+              text: "Telegram disconnected from EwaTrade.",
+              after: (bot) =>
+                showTelegramDisconnected(
+                  bot,
+                  event.chatId,
+                  result.connectedMessage ?? null,
+                ),
+            },
+          }
         : {}
     }
     if (!config.enabled) return {}
@@ -105,15 +135,36 @@ export async function acceptAssistantTelegramUpdate(
           updateId: event.updateId,
           occurredAt,
           code: link[1],
+          name: event.sender?.name,
+          username: event.sender?.username,
         })
-        return claimed
-          ? {
-              notice: `Compare Telegram account ${maskAssistantTelegramSender(event.userId)} in EwaTrade, then confirm the connection.`,
-            }
-          : {}
+        // Invalid, expired, used and foreign links all get the same neutral reply.
+        if (!claimed)
+          return {
+            notice: {
+              text: telegramCopy.staleLink,
+              buttons: openEwaTradeButtons(),
+            },
+          }
+        return {
+          notice: {
+            text: telegramCopy.claim(claimed),
+            html: true,
+            buttons: openEwaTradeButtons(),
+            onSent: (messageId) =>
+              recordAssistantTelegramClaimMessage(prisma, {
+                ...sender,
+                linkId: claimed.linkId,
+                messageId,
+              }),
+          },
+        }
       }
+      const connection = await readAssistantTelegramConnection(prisma, sender)
       return {
-        notice: "Open EwaTrade account settings and choose Connect Telegram.",
+        notice: connection
+          ? { text: telegramCopy.alreadyConnected(connection), html: true }
+          : entryNotice(),
       }
     }
     // Credential content and its digest stay outside the durable assistant inbox.
@@ -136,7 +187,15 @@ export async function acceptAssistantTelegramUpdate(
         ? { kind: "message", text: event.text }
         : { kind: "callback", data: event.data, callbackId: event.callbackId },
   })
-  return row ? { ingressId: row.id } : {}
+  if (row) return { ingressId: row.id }
+  // Ordinary text in a chat that is not connected gets the neutral entry reply.
+  // Connected chats rejected for other reasons (duplicates, enrollment) stay silent.
+  if (
+    event.kind === "message" &&
+    !(await readAssistantTelegramConnection(prisma, sender))
+  )
+    return { notice: entryNotice() }
+  return {}
 }
 
 type TelegramClaim = NonNullable<

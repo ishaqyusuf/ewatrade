@@ -80,7 +80,12 @@ type TelegramUpdateIdentity = {
 
 export type NormalizedAssistantTelegramUpdate = TelegramUpdateIdentity &
   (
-    | { kind: "message"; text: string }
+    | {
+        kind: "message"
+        text: string
+        /** Profile text from Telegram, used only to label a pending link claim. */
+        sender?: { name: string | null; username: string | null }
+      }
     | { kind: "callback"; callbackId: string; data: string }
   )
 
@@ -154,8 +159,30 @@ export function parseAssistantTelegramUpdate(
   const input = message?.text
   if (typeof input !== "string" || byteLength(input) > 16_384) return null
   const text = input.trim()
-  return text ? { ...identity, kind: "message", text } : null
+  if (!text) return null
+  const part = (value: unknown) =>
+    typeof value === "string" && value.length <= 256 ? value.trim() : ""
+  const name = [part(user?.first_name), part(user?.last_name)]
+    .filter(Boolean)
+    .join(" ")
+  const username = part(user?.username)
+  return {
+    ...identity,
+    kind: "message",
+    text,
+    sender: { name: name || null, username: username || null },
+  }
 }
+
+/** Escape user or business text placed inside Telegram HTML messages. */
+export function escapeTelegramHtml(value: string) {
+  return value.replace(
+    /[&<>]/g,
+    (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[char] ?? char,
+  )
+}
+
+export type TelegramBotCommand = { command: string; description: string }
 
 export function isAssistantTelegramDisconnect(text: string) {
   return /^(?:\/(?:disconnect|stop)|stop|disconnect)$/i.test(text)
@@ -177,11 +204,61 @@ type TelegramMethod =
   | "sendChatAction"
   | "answerCallbackQuery"
   | "editMessageReplyMarkup"
+  | "editMessageText"
+  | "pinChatMessage"
+  | "unpinAllChatMessages"
+  | "setMyCommands"
+  | "deleteMyCommands"
 type TelegramFetch = (url: string, init: RequestInit) => Promise<Response>
 type TelegramRequest = {
   status: number
   body: Record<string, unknown> | null
   retryAfter: number | null
+}
+
+function validText(
+  text: string,
+  buttons?: readonly (readonly TelegramButton[])[],
+) {
+  return (
+    Boolean(text) &&
+    text.length <= 4096 &&
+    !buttons?.some(
+      (row) =>
+        row.length === 0 ||
+        row.some(
+          (button) =>
+            !button.text ||
+            ("callbackData" in button &&
+              (!button.callbackData || byteLength(button.callbackData) > 64)),
+        ),
+    )
+  )
+}
+
+function keyboard(buttons?: readonly (readonly TelegramButton[])[]) {
+  return buttons?.length
+    ? {
+        reply_markup: {
+          inline_keyboard: buttons.map((row) =>
+            row.map((button) =>
+              button.callbackData
+                ? { text: button.text, callback_data: button.callbackData }
+                : { text: button.text, url: button.url },
+            ),
+          ),
+        },
+      }
+    : undefined
+}
+
+function notModified(response: TelegramRequest | null) {
+  return (
+    response?.status === 400 &&
+    response.body?.ok === false &&
+    typeof response.body.description === "string" &&
+    /^Bad Request: message is not modified\b/i.test(response.body.description)
+  )
 }
 
 export class DirectTelegramBotProvider {
@@ -211,45 +288,115 @@ export class DirectTelegramBotProvider {
     chatId: string
     text: string
     buttons?: readonly (readonly TelegramButton[])[]
+    /** Text is Telegram HTML; callers escape any user or business text. */
+    html?: boolean
   }): Promise<TelegramSendResult> {
-    const { chatId, text, buttons } = input
+    const { chatId, text, buttons, html } = input
     const target = Number(chatId)
-    if (
-      positiveId(target) !== chatId ||
-      !text ||
-      text.length > 4096 ||
-      buttons?.some(
-        (row) =>
-          row.length === 0 ||
-          row.some(
-            (button) =>
-              !button.text ||
-              ("callbackData" in button &&
-                (!button.callbackData || byteLength(button.callbackData) > 64)),
-          ),
-      )
-    )
+    if (positiveId(target) !== chatId || !validText(text, buttons))
       return { status: "failed" }
 
     const response = await this.request("sendMessage", {
       chat_id: target,
       text,
       link_preview_options: { is_disabled: true },
-      ...(buttons?.length
-        ? {
-            reply_markup: {
-              inline_keyboard: buttons.map((row) =>
-                row.map((button) =>
-                  button.callbackData
-                    ? { text: button.text, callback_data: button.callbackData }
-                    : { text: button.text, url: button.url },
-                ),
-              ),
-            },
-          }
-        : {}),
+      ...(html ? { parse_mode: "HTML" } : {}),
+      ...keyboard(buttons),
     })
     return this.messageResult(response)
+  }
+
+  /** Edit the bot's own message in place; no buttons removes its keyboard. */
+  async editMessageText(input: {
+    chatId: string
+    messageId: string
+    text: string
+    buttons?: readonly (readonly TelegramButton[])[]
+    html?: boolean
+  }): Promise<TelegramSendResult> {
+    const chatId = Number(input.chatId)
+    const messageId = Number(input.messageId)
+    if (
+      positiveId(chatId) !== input.chatId ||
+      positiveId(messageId) !== input.messageId ||
+      !validText(input.text, input.buttons)
+    )
+      return { status: "failed" }
+    const response = await this.request("editMessageText", {
+      chat_id: chatId,
+      message_id: messageId,
+      text: input.text,
+      link_preview_options: { is_disabled: true },
+      ...(input.html ? { parse_mode: "HTML" } : {}),
+      // An explicit empty keyboard removes spent buttons from the edited message.
+      ...(keyboard(input.buttons) ?? { reply_markup: { inline_keyboard: [] } }),
+    })
+    if (notModified(response))
+      return { status: "accepted", messageId: input.messageId }
+    const result = this.messageResult(response)
+    return result.status === "accepted" && result.messageId !== input.messageId
+      ? { status: "uncertain" }
+      : result
+  }
+
+  /** Pin quietly: the pinned bar shows the connected Business and Store. */
+  async pinChatMessage(input: { chatId: string; messageId: string }) {
+    const chatId = Number(input.chatId)
+    const messageId = Number(input.messageId)
+    if (
+      positiveId(chatId) !== input.chatId ||
+      positiveId(messageId) !== input.messageId
+    )
+      return false
+    return this.ok(
+      await this.request("pinChatMessage", {
+        chat_id: chatId,
+        message_id: messageId,
+        disable_notification: true,
+      }),
+    )
+  }
+
+  async unpinAllChatMessages(chatId: string) {
+    const target = Number(chatId)
+    if (positiveId(target) !== chatId) return false
+    return this.ok(
+      await this.request("unpinAllChatMessages", { chat_id: target }),
+    )
+  }
+
+  /** Per-chat command menu; null restores the bot's default commands. */
+  async setChatCommands(
+    chatId: string,
+    commands: readonly TelegramBotCommand[] | null,
+  ) {
+    const target = Number(chatId)
+    if (
+      positiveId(target) !== chatId ||
+      commands?.some(
+        ({ command, description }) =>
+          !/^[a-z0-9_]{1,32}$/.test(command) ||
+          !description ||
+          description.length > 256,
+      )
+    )
+      return false
+    const scope = { type: "chat", chat_id: target }
+    return this.ok(
+      commands
+        ? await this.request("setMyCommands", { commands, scope })
+        : await this.request("deleteMyCommands", { scope }),
+    )
+  }
+
+  private ok(response: TelegramRequest | null) {
+    return (
+      response !== null &&
+      response.status >= 200 &&
+      response.status < 300 &&
+      response.body?.ok === true &&
+      response.body.result === true
+    )
   }
 
   async clearInlineKeyboard(input: {
@@ -269,12 +416,7 @@ export class DirectTelegramBotProvider {
       message_id: messageId,
       reply_markup: { inline_keyboard: [] },
     })
-    if (
-      response?.status === 400 &&
-      response.body?.ok === false &&
-      typeof response.body.description === "string" &&
-      /^Bad Request: message is not modified\b/i.test(response.body.description)
-    )
+    if (notModified(response))
       return { status: "accepted", messageId: input.messageId }
     const result = this.messageResult(response)
     return result.status === "accepted" && result.messageId !== input.messageId

@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test"
 import {
   DirectTelegramBotProvider,
+  escapeTelegramHtml,
   isAssistantTelegramEnrolled,
   parseAssistantTelegramUpdate,
   readAssistantTelegramConfig,
@@ -62,6 +63,7 @@ test("extracts private sender, chat, message and callback provenance", () => {
     occurredAt: new Date(message.date * 1000),
     kind: "message",
     text: "How many eggs?",
+    sender: { name: null, username: "ignored" },
   })
 
   expect(
@@ -200,4 +202,76 @@ test("clears only the original message's inline keyboard and accepts a repeated 
   expect(
     await provider.clearInlineKeyboard({ ...target, messageId: "invalid" }),
   ).toEqual({ status: "failed" })
+})
+
+test("reads a bounded profile label from Start and escapes HTML text", () => {
+  const start = {
+    ...message,
+    text: "/start",
+    from: {
+      id: 4_501_234_567_890,
+      is_bot: false,
+      first_name: " Ada ",
+      last_name: "Okafor",
+      username: "ada_provisions",
+    },
+  }
+  const parsed = parseAssistantTelegramUpdate({ update_id: 11, message: start })
+  expect(parsed?.kind === "message" && parsed.sender).toEqual({
+    name: "Ada Okafor",
+    username: "ada_provisions",
+  })
+  expect(escapeTelegramHtml("Ada & <Sons>")).toBe("Ada &amp; &lt;Sons&gt;")
+})
+
+test("edits, pins and scopes commands with exact Bot API payloads", async () => {
+  const calls: { method: string; body: Record<string, unknown> }[] = []
+  const provider = new DirectTelegramBotProvider(config, async (url, init) => {
+    const method = String(url).split("/").pop() ?? ""
+    calls.push({ method, body: JSON.parse(String(init.body)) })
+    return Response.json(
+      method === "editMessageText"
+        ? { ok: true, result: { message_id: 41 } }
+        : { ok: true, result: true },
+    )
+  })
+  const target = { chatId: "4501234567890", messageId: "41" }
+  expect(
+    await provider.editMessageText({
+      ...target,
+      text: "<b>Connected ✓</b>",
+      html: true,
+    }),
+  ).toEqual({ status: "accepted", messageId: "41" })
+  expect(await provider.pinChatMessage(target)).toBe(true)
+  expect(
+    await provider.setChatCommands(target.chatId, [
+      { command: "scope", description: "Your Business and Store" },
+    ]),
+  ).toBe(true)
+  expect(await provider.setChatCommands(target.chatId, null)).toBe(true)
+  expect(await provider.unpinAllChatMessages(target.chatId)).toBe(true)
+  expect(calls.map(({ method }) => method)).toEqual([
+    "editMessageText",
+    "pinChatMessage",
+    "setMyCommands",
+    "deleteMyCommands",
+    "unpinAllChatMessages",
+  ])
+  expect(calls[0]?.body).toMatchObject({
+    chat_id: 4501234567890,
+    message_id: 41,
+    parse_mode: "HTML",
+    reply_markup: { inline_keyboard: [] },
+  })
+  expect(calls[1]?.body).toMatchObject({ disable_notification: true })
+  expect(calls[2]?.body).toMatchObject({
+    scope: { type: "chat", chat_id: 4501234567890 },
+  })
+  expect(
+    await provider.setChatCommands(target.chatId, [
+      { command: "Bad-Command", description: "x" },
+    ]),
+  ).toBe(false)
+  expect(calls).toHaveLength(5)
 })

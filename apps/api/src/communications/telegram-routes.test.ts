@@ -25,7 +25,32 @@ function createRoutes(
       if (options.acceptError) throw Error("private database error")
       calls.push(`accept:${event.kind}:${event.updateId}`)
       if (event.kind === "message" && event.text === "/disconnect")
-        return { notice: "Disconnected" }
+        return {
+          notice: {
+            text: "Disconnected",
+            after: async (bot) => {
+              await bot.unpinAllChatMessages(event.chatId)
+            },
+          },
+        }
+      if (event.kind === "message" && event.text === "/start claim")
+        return {
+          notice: {
+            text: "Confirm <b>Shop</b>",
+            html: true,
+            buttons: [
+              [
+                {
+                  text: "Open EwaTrade",
+                  url: "https://dash.example/account/telegram",
+                },
+              ],
+            ],
+            onSent: async (messageId) => {
+              calls.push(`recorded:${messageId}`)
+            },
+          },
+        }
       return { ingressId: "ingress-1" }
     },
     enqueueTurn: async (id) => {
@@ -44,10 +69,19 @@ function createRoutes(
         calls.push(`ack:${id}`)
         return true
       },
-      sendMessage: async ({ text }) => {
-        calls.push(`notice:${text}`)
+      sendMessage: async ({ text, html, buttons }) => {
+        calls.push(
+          `notice:${text}${html ? ":html" : ""}${buttons ? `:${buttons.length}` : ""}`,
+        )
         return { status: "accepted", messageId: "5" }
       },
+      editMessageText: async () => ({ status: "accepted", messageId: "5" }),
+      pinChatMessage: async () => true,
+      unpinAllChatMessages: async (chatId) => {
+        calls.push(`unpin:${chatId}`)
+        return true
+      },
+      setChatCommands: async () => true,
     }),
   })
   return { app, calls }
@@ -104,7 +138,25 @@ test("disabled Telegram admits only signed disconnect", async () => {
       })
     ).status,
   ).toBe(200)
-  expect(calls).toEqual(["accept:message:10", "notice:Disconnected"])
+  expect(calls).toEqual([
+    "accept:message:10",
+    "notice:Disconnected",
+    "unpin:456",
+  ])
+})
+
+test("sends HTML claim replies with buttons and records the sent message", async () => {
+  const { app, calls } = createRoutes()
+  const update = {
+    update_id: 12,
+    message: { ...message, text: "/start claim" },
+  }
+  expect((await postWebhook(app, update)).status).toBe(200)
+  expect(calls).toEqual([
+    "accept:message:12",
+    "notice:Confirm <b>Shop</b>:html:1",
+    "recorded:5",
+  ])
 })
 
 test("worker accepts only authenticated, bounded identifier payloads", async () => {

@@ -77,6 +77,10 @@ export function ConnectTelegram({ scope }: { scope: TelegramConnectScope }) {
   const confirm = useMutation(
     trpc.assistantChannels.confirmTelegramLink.mutationOptions({ gcTime: 0 }),
   )
+  const reject = useMutation(
+    trpc.assistantChannels.rejectTelegramLink.mutationOptions({ gcTime: 0 }),
+  )
+  const [closed, setClosed] = useState(false)
   const status = useQuery(
     trpc.assistantChannels.telegramLink.queryOptions(
       { linkId: link?.id ?? "none" },
@@ -158,6 +162,7 @@ export function ConnectTelegram({ scope }: { scope: TelegramConnectScope }) {
     if (!enabled || !current()) return
     setLink(null)
     setExpired(false)
+    setClosed(false)
     setConnected("")
     setError("")
     const version = ++requestVersion.current
@@ -217,6 +222,46 @@ export function ConnectTelegram({ scope }: { scope: TelegramConnectScope }) {
       }
     }
   }
+
+  /** "This isn't me": close the link without connecting; the bot edits its message. */
+  async function decline() {
+    if (
+      !enabled ||
+      !current() ||
+      !link ||
+      claim?.state !== "awaiting_confirmation"
+    )
+      return
+    setError("")
+    const version = requestVersion.current
+    try {
+      await reject.mutateAsync({ linkId: link.id, revision: claim.revision })
+      if (current() && version === requestVersion.current) {
+        setClosed(true)
+        setLink(null)
+      }
+    } catch {
+      if (current() && version === requestVersion.current) {
+        setError("Could not close the link. Refresh the page and try again.")
+        void status.refetch()
+      }
+    }
+  }
+
+  const account =
+    claim?.state === "awaiting_confirmation"
+      ? {
+          name: claim.claimedName,
+          username: claim.claimedUsername,
+          masked: claim.maskedSender,
+        }
+      : null
+  const initials = (account?.name ?? account?.username ?? "")
+    .split(/\s+/)
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase()
 
   return (
     <section
@@ -279,9 +324,17 @@ export function ConnectTelegram({ scope }: { scope: TelegramConnectScope }) {
       (!link ||
         ["cancelled", "expired", "confirmed"].includes(claim?.state ?? "")) ? (
         <div className="grid justify-items-start gap-2">
-          {expired ||
-          claim?.state === "expired" ||
-          claim?.state === "cancelled" ? (
+          {closed ? (
+            <output className="grid gap-1 text-sm">
+              <strong className="font-medium">Nothing was connected</strong>
+              <span className="text-muted-foreground">
+                That link is closed. The other Telegram account can't use your
+                business.
+              </span>
+            </output>
+          ) : expired ||
+            claim?.state === "expired" ||
+            claim?.state === "cancelled" ? (
             <output className="text-sm">Create a new link to continue.</output>
           ) : null}
           <Button
@@ -342,27 +395,52 @@ export function ConnectTelegram({ scope }: { scope: TelegramConnectScope }) {
       claim?.state === "awaiting_confirmation" &&
       claim.maskedSender ? (
         <div className="grid justify-items-start gap-3 border-t pt-4">
+          <div className="flex items-center gap-3 rounded-md border bg-muted/40 p-3">
+            <span
+              aria-hidden="true"
+              className="grid size-11 place-items-center rounded-full bg-primary/10 text-sm font-semibold text-primary"
+            >
+              {initials || "TG"}
+            </span>
+            <div className="grid text-sm">
+              <strong className="font-medium">
+                {account?.name ?? "Telegram account"}
+              </strong>
+              <span className="text-muted-foreground">
+                {account?.username ? `@${account.username} · ` : ""}ID{" "}
+                {claim.maskedSender}
+              </span>
+            </div>
+          </div>
           <p className="text-sm">
-            Check that <strong>{claim.maskedSender}</strong> matches the account
-            shown by the bot. Confirm to give it access to{" "}
+            Connect this Telegram account to{" "}
             <strong>
               {scope.businessName} · {scope.storeName}
             </strong>
-            ?
+            ? It gets the same permissions you have in EwaTrade.
           </p>
-          <Button
-            disabled={
-              confirm.isPending ||
-              !status.isFetchedAfterMount ||
-              status.isFetching ||
-              status.isPaused ||
-              context.isFetching ||
-              availability.isFetching
-            }
-            onClick={() => void approve()}
-          >
-            {confirm.isPending ? "Confirming…" : "Confirm Telegram account"}
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              disabled={
+                confirm.isPending ||
+                !status.isFetchedAfterMount ||
+                status.isFetching ||
+                status.isPaused ||
+                context.isFetching ||
+                availability.isFetching
+              }
+              onClick={() => void approve()}
+            >
+              {confirm.isPending ? "Confirming…" : "Confirm Telegram account"}
+            </Button>
+            <Button
+              variant="outline"
+              disabled={confirm.isPending || reject.isPending}
+              onClick={() => void decline()}
+            >
+              {reject.isPending ? "Closing…" : "This isn't me"}
+            </Button>
+          </div>
         </div>
       ) : null}
       {error ? (

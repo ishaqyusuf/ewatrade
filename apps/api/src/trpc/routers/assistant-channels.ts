@@ -9,6 +9,8 @@ import {
   whatsAppStorePageSchema,
 } from "@ewatrade/assistant/channels/whatsapp"
 import {
+  type AssistantTelegramConfig,
+  DirectTelegramBotProvider,
   isAssistantTelegramEnrolled,
   isAssistantWhatsAppPilot,
   readAssistantTelegramConfig,
@@ -16,10 +18,12 @@ import {
 } from "@ewatrade/communications"
 import {
   AssistantTelegramError,
+  closeExpiredAssistantTelegramClaim,
   confirmAssistantTelegramLink,
   createAssistantTelegramLink,
   listAssistantTelegramGrants,
   readAssistantTelegramLink,
+  rejectAssistantTelegramLink,
   revokeAssistantTelegramGrant,
 } from "@ewatrade/db/assistant-telegram"
 import {
@@ -39,6 +43,12 @@ import { TRPCError } from "@trpc/server"
 import { z } from "zod"
 import { requireBrowserIdentity } from "../../assistant/channel-principal"
 import type { GeneralContext } from "../../assistant/general-context"
+import {
+  closeTelegramClaim,
+  showTelegramConnected,
+  showTelegramDisconnected,
+  telegramCopy,
+} from "../../assistant/telegram-presentation"
 import {
   authenticatedProcedure,
   createTRPCRouter,
@@ -114,6 +124,14 @@ function telegramConfiguration(scope: { userId: string; tenantId: string }) {
   return config
 }
 
+/** Chat edits are presentation only; access is already decided when they run. */
+const telegramChat = (config: AssistantTelegramConfig) =>
+  new DirectTelegramBotProvider(config)
+
+const linkDecisionSchema = z
+  .object({ linkId: telegramId, revision: z.number().int().positive() })
+  .strict()
+
 /** Personal linking controls. No model tool can issue or confirm a link. */
 export const assistantChannelsRouter = createTRPCRouter({
   telegramAvailability: protectedProcedure.query(({ ctx }) => {
@@ -165,21 +183,69 @@ export const assistantChannelsRouter = createTRPCRouter({
       }),
     ),
   confirmTelegramLink: protectedProcedure
-    .input(
-      z
-        .object({ linkId: telegramId, revision: z.number().int().positive() })
-        .strict(),
-    )
+    .input(linkDecisionSchema)
     .mutation(({ ctx, input }) =>
       result(async () => {
         const scope = actor(ctx)
         const config = telegramConfiguration(scope)
-        const { id, maskedSender } = await confirmAssistantTelegramLink(
+        try {
+          const { id, maskedSender, claimMessage } =
+            await confirmAssistantTelegramLink(ctx.db, scope, {
+              ...input,
+              botId: config.botId,
+            })
+          if (claimMessage)
+            await showTelegramConnected(telegramChat(config), claimMessage, {
+              businessName: ctx.tenantContext.tenant.name,
+              storeName: ctx.tenantContext.activeStore?.name ?? "Store",
+            })
+          return { id, maskedSender }
+        } catch (error) {
+          // Expiry is applied on the next touch: close the bot's claim message once.
+          if (
+            error instanceof AssistantTelegramError &&
+            error.code === "EXPIRED"
+          ) {
+            const message = await closeExpiredAssistantTelegramClaim(
+              ctx.db,
+              scope,
+              {
+                linkId: input.linkId,
+                botId: config.botId,
+              },
+            )
+            if (message)
+              await closeTelegramClaim(
+                telegramChat(config),
+                message,
+                telegramCopy.expired,
+              )
+          }
+          throw error
+        }
+      }),
+    ),
+  rejectTelegramLink: protectedProcedure
+    .input(linkDecisionSchema)
+    .mutation(({ ctx, input }) =>
+      result(async () => {
+        const scope = actor(ctx)
+        const config = telegramConfiguration(scope)
+        const { claimMessage } = await rejectAssistantTelegramLink(
           ctx.db,
           scope,
-          { ...input, botId: config.botId },
+          {
+            ...input,
+            botId: config.botId,
+          },
         )
-        return { id, maskedSender }
+        if (claimMessage)
+          await closeTelegramClaim(
+            telegramChat(config),
+            claimMessage,
+            telegramCopy.closed,
+          )
+        return { closed: true as const }
       }),
     ),
   telegramConnections: authenticatedProcedure
@@ -196,13 +262,21 @@ export const assistantChannelsRouter = createTRPCRouter({
   revokeTelegram: authenticatedProcedure
     .input(z.object({ grantId: telegramId }).strict())
     .mutation(({ ctx, input }) =>
-      result(() =>
-        revokeAssistantTelegramGrant(
+      result(async () => {
+        const revoked = await revokeAssistantTelegramGrant(
           ctx.db,
           { userId: ctx.session.user.id, sessionId: ctx.session.session.id },
           input.grantId,
-        ),
-      ),
+        )
+        const config = readAssistantTelegramConfig()
+        if (config && "chatId" in revoked && revoked.chatId)
+          await showTelegramDisconnected(
+            telegramChat(config),
+            revoked.chatId,
+            revoked.connectedMessage ?? null,
+          )
+        return { revoked: revoked.revoked }
+      }),
     ),
   whatsAppBusinesses: authenticatedProcedure
     .input(whatsAppScopePageSchema)
