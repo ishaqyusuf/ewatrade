@@ -84,7 +84,7 @@ On 12 November 2026 the owner selected 02 v4 (`a722c2e1`) and said "Start implem
 | Phase | Families | Status |
 | --- | --- | --- |
 | 1 · Linking and first contact | 1–3 | **Done locally**, commit `9fbe45403`, Workshop implementation recorded. Not deployed. BotFather description and default commands are pending a release-time provider action. |
-| 2 · Connected entry, roles, access ending | 4–6 | Next |
+| 2 · Connected entry, roles, access ending | 4–6 | **Done locally**, commits `0b79ef8b0`, `cba80271d`, `756daa72f`, `f9360ccd5`, `9f395074a`, `5c6398dd9` and `21b9e9f55`. Workshop implementation recorded. Role-aware /help, /scope with Change in EwaTrade, Switch Store pin swap, the c-second busy state, lazy a-lost and a-expired, and the a-role refusal. Pending: Change Store buttons on model refusals (a-cashier, a-mgr, a-other) need a structured signal; the a-role toast is answered before the turn; and the c-second hand-over after /disconnect is an owner decision. Not deployed. |
 | 3 · Telegram HTML renderer, chats and reads | 7–8, 17 | Planned |
 | 4 · Review status lines and receipts | 9–10 | Planned |
 | 5 · Media and EwaTrade handoff | 11–13 | **Done locally**, commits `94b875bc1` and `d83cc66f9`. Not deployed. Photos, files, albums, videos and voice notes get a text-only reply that quotes them (`f-today`, `v-today`), one per album. Approve, cancel or edit in EwaTrade edits the Telegram review-link message (`x-review`, `x-link-cancel`, `x-link-edited`, `x-link-used`). Uploads, attaching, transcription, the voice budget and length limit, PDF receipts and expired-link edits are pending owner decisions 4 and 5. |
