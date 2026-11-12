@@ -67,13 +67,28 @@ Published 12 November 2026 as 02 · Telegram-native v3, revision `f2ede755-8c49-
 | `rd-search`, `rd-price`, `rd-low`, `rd-today`, `rd-debts`, `rd-sup`, `rd-bal`, `rd-svc`, `rd-count` | Use the WhatsApp Hybrid content. The scope footer is dropped because the pinned message already shows it, and “as of” stays for live figures. Follow-ups are callback buttons, and app handoffs are URL buttons. |
 | `rd-staff`, `rd-rep` | Hand off to EwaTrade, as in WhatsApp. |
 
-## Remaining batches
+## Batches 4–6 · Families 9–18 (published)
 
-| Batch | Scenario families | Telegram design questions |
-| --- | --- | --- |
-| 4 | 9–10 · Writes, setup and imports | Design callback buttons for exact draft review, corrections and receipt replay. Route complex forms and setup to authenticated EwaTrade. |
-| 5 | 11–13 · Files, voice and continuation links | Map media handling and retry states. Separate currently supported text from proposed uploads and transcription. Design saved answer and review handoff. |
-| 6 | 14–18 · Recovery, safety, forms, formatting and payment links | Cover disconnect, stale actions and outages. Compare native buttons with Mini Apps where the form calls for it. Keep money effects behind the existing canonical review and label unsupported cases as proposals. |
+Published 12 November 2026 as 02 · Telegram-native v4, revision `a722c2e1-5caf-4a09-b15a-9be57383a590`. It was designed in three parallel sessions and integrated here. It adds 116 cases, and every one of the 18 WhatsApp families is now mapped: 159 cases in total, with all 175 case runs passing QA. The per-case mapping, the proposals and the unverified points are in [batches 4–6 mapping](./2026-11-12-telegram-workshop-batches-4-6.md).
+
+| Batch | Families | Cases | Main Telegram pieces |
+| --- | --- | --- | --- |
+| 4 | 9 Writes · 10 Setup, products, import | 31 | Canonical Confirm / Edit / Cancel reviews. Decided reviews are edited to show a status line. Receipts reply to the review. Double taps and uncertain saves return the same receipt. Missing facts are grouped. Setup and imports hand off to EwaTrade. |
+| 5 | 11 Files and photos · 12 Voice notes · 13 Continue in the app | 41 | Photo, document, album and voice bubbles with upload states. Transcript review. Header chat actions. The EwaTrade review handoff edits the same message into the receipt or a new link. Today the bot answers no media. |
+| 6 | 14 Control · 15 Safety · 16 Forms · 17 Formatting · 18 Payment links | 44 | Disconnect asks first. Stop bot and RESTART. Outage retries are edited in place. Password messages are deleted. Forwarded reviews are refused. Pidgin replies. A Mini App compared with native buttons for the six forms. A Telegram HTML formatter. Payment links with `copy_text`. |
+
+## Open owner decisions
+
+Collected from every batch. None of these blocks the design review.
+
+1. **First contact:** should the bot delete the user's `/start` message after handling it? Telegram requires START once per chat.
+2. **Receipts:** should a receipt reply to the review, as designed, or be edited onto the review?
+3. **Money writes:** should expense, money in and transfer stay Owner or Admin only in Telegram, as in WhatsApp?
+4. **Media:** should the text-only reply to photos and voice notes ship first? Today they get no answer. What length limit should voice notes have? Should receipts be sent as PDFs in chat?
+5. **Expired links:** should the bot edit an expired review link to “Get a new link” itself? That needs a job, so check it against the Trigger.dev budget.
+6. **Control:** should `/disconnect` ask first? Should a typed “cancel” cancel the only open draft?
+7. **Forms:** should the Mini App be the default for sale, expense and receive stock, with chat buttons for customer and product?
+8. **Language and sharing:** which reply languages should be supported, with reviews kept in English? Is a Telegram share option needed beyond **Copy message** and **Open WhatsApp**?
 
 ## Review and acceptance
 
