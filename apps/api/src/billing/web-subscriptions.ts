@@ -99,7 +99,19 @@ export async function createWebSubscriptionCheckout(
     throw webBillingRuleError(
       "Online payments are not available yet. No payment has been taken.",
     )
-  const legal = await getStoreCheckoutLegalGate(db, input.actorUserId, true)
+  // QA sessions cannot reach the Account terms procedures, so a QA business
+  // skips the terms step in Test Mode only, where no real money moves.
+  const qaTestCheckout =
+    webBillingEnvironment(env) === "sandbox" &&
+    (
+      await db.tenant.findUnique({
+        where: { id: input.tenantId },
+        select: { dataClassification: true },
+      })
+    )?.dataClassification === "QA"
+  const legal = qaTestCheckout
+    ? { purchaseAvailable: true }
+    : await getStoreCheckoutLegalGate(db, input.actorUserId, true)
   if (!legal.purchaseAvailable)
     throw webBillingRuleError(
       "Accept the current terms before starting payment.",

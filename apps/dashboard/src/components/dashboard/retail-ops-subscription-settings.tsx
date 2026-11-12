@@ -403,6 +403,7 @@ export function RetailOpsSubscriptionSettings() {
       {snapshot?.webBilling ? (
         <ConversationAccountTerms
           copy={BILLING_TERMS_COPY}
+          serverEnforced
           onAllowedChange={setTermsAccepted}
         />
       ) : null}

@@ -105,3 +105,61 @@ for (const environment of ["sandbox", "production"] as const) {
     expect(calls).toHaveLength(3)
   })
 }
+
+test("only a QA business in Test Mode skips the terms step", async () => {
+  const run = async (
+    environment: "sandbox" | "production",
+    dataClassification: "QA" | "LIVE",
+  ) => {
+    const { db, calls } = databaseBoundary()
+    Object.defineProperties(db, {
+      tenant: {
+        value: { findUnique: async () => ({ dataClassification }) },
+      },
+      legalAcceptance: {
+        value: {
+          findUnique: async () => {
+            calls.push("terms")
+            return null
+          },
+        },
+      },
+    })
+    const error = await createWebSubscriptionCheckout(
+      db,
+      {
+        actorUserId: "fixture-owner",
+        tenantId: "fixture-business",
+        email: "owner@example.test",
+        planId: "starter",
+      },
+      {
+        APP_ENV: environment === "production" ? "production" : "preview",
+        STORE_BILLING_ENVIRONMENT: environment,
+        WEB_BILLING_ENVIRONMENT: environment,
+        OWNER_BILLING_ENABLED: "true",
+        PAYSTACK_SUBSCRIPTION_SECRET_KEY:
+          environment === "production"
+            ? "sk_live_FAKE_NOT_A_REAL_KEY"
+            : "sk_test_FAKE_NOT_A_REAL_KEY",
+        WEB_BILLING_ENABLED: "true",
+        WEB_BILLING_RECONCILIATION_ENABLED: "true",
+        WEB_BILLING_RELEASE_APPROVED: "true",
+      },
+    ).catch((cause: unknown) => cause)
+    return { calls, message: error instanceof Error ? error.message : null }
+  }
+  const qaTest = await run("sandbox", "QA")
+  expect(qaTest.calls).not.toContain("terms")
+  for (const [environment, classification] of [
+    ["sandbox", "LIVE"],
+    ["production", "QA"],
+    ["production", "LIVE"],
+  ] as const) {
+    const result = await run(environment, classification)
+    expect(result.calls).toContain("terms")
+    expect(result.message).toBe(
+      "Accept the current terms before starting payment.",
+    )
+  }
+})

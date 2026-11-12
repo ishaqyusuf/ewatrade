@@ -38,9 +38,12 @@ export const BILLING_TERMS_COPY: TermsCopy = {
 export function ConversationAccountTerms({
   onAllowedChange,
   copy = CONVERSATION_COPY,
+  serverEnforced = false,
 }: {
   onAllowedChange: (allowed: boolean) => void
   copy?: TermsCopy
+  /** The server checks terms itself; an unreadable status does not block. */
+  serverEnforced?: boolean
 }) {
   const trpc = useTRPC()
   const status = useQuery(
@@ -55,11 +58,15 @@ export function ConversationAccountTerms({
   const legalOrigin =
     process.env.NEXT_PUBLIC_MARKETING_URL ?? "https://ewatrade.com"
 
+  const unknown = serverEnforced && status.isError
   useEffect(() => {
     onAllowedChange(
-      status.data?.effective === true && status.data.accepted === true,
+      unknown ||
+        (status.data?.effective === true && status.data.accepted === true),
     )
-  }, [onAllowedChange, status.data?.effective, status.data?.accepted])
+  }, [onAllowedChange, unknown, status.data?.effective, status.data?.accepted])
+
+  if (unknown) return null
 
   if (status.data?.effective && status.data.accepted) return null
 
