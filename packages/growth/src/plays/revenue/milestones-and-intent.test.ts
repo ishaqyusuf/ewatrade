@@ -218,3 +218,48 @@ describe("P16 feature intent", () => {
     expect(featureIntentPlay.eligible(makeContext())).toBeNull()
   })
 })
+
+describe("P16 intent labels from the tap counter", () => {
+  const ctx = (planId: "free" | "starter", features: string[]) =>
+    makeContext(
+      { planId },
+      {
+        featureIntent: {
+          taps: 3,
+          thirdTapAt: new Date("2026-11-11T08:00:00Z"),
+          features,
+        },
+      },
+    )
+
+  test("W4 labels map to the plan that unlocks them", () => {
+    expect(
+      featureIntentPlay.eligible(ctx("free", ["stores"]))?.data,
+    ).toMatchObject({
+      featureLabel: "More than one business",
+      recommendedPlanId: "starter",
+    })
+    expect(
+      featureIntentPlay.eligible(ctx("starter", ["customer_messages"]))?.data
+        .recommendedPlanId,
+    ).toBe("growth")
+    expect(
+      featureIntentPlay.eligible(ctx("free", ["payment_alerts"]))?.data,
+    ).toMatchObject({
+      featureLabel: "Payment alerts",
+      recommendedPlanId: "starter",
+    })
+  })
+
+  test("limit labels are P08's, not feature intent", () => {
+    expect(
+      featureIntentPlay.eligible(ctx("free", ["products", "orders", "home"])),
+    ).toBeNull()
+  })
+
+  test("payment alerts on a paid plan are not a plan problem", () => {
+    expect(
+      featureIntentPlay.eligible(ctx("starter", ["payment_alerts"])),
+    ).toBeNull()
+  })
+})

@@ -1,13 +1,23 @@
 // P16 Feature intent: one email, 24h after the third "See plans" tap on the
 // locked-feature sheets (attachments, finance, customer messages, …).
 //
-// Source: a server-side tap counter (`FeatureIntentTap`), not Logly. Logly
-// events leave through the analytics outbox and are erased once delivered,
-// and mobile sends straight to the collector, so the server cannot count
-// them per business. The engine loads `PlayContext.featureIntent` from the
-// counter (`getFeatureIntentSummaries` in @ewatrade/db).
+// Source: W4's first-party tap counter (`GrowthFeatureIntent`, per business,
+// feature label and month), not Logly. Logly is ingest-only: dashboard events
+// leave through the analytics outbox and are erased once delivered, and
+// mobile sends straight to the collector, so the server cannot count them.
+// The engine fills `PlayContext.featureIntent` from that counter:
+//   taps       = lock-sheet taps over the current and previous month
+//   thirdTapAt = latest tap once taps >= 3 (so the wait is >= 24h after the third)
+//   features   = intent labels, most recent first
+// Labels are W4's GROWTH_INTENT_FEATURES (packages/events/src/growth-intent.ts);
+// catalogue feature keys are accepted too.
 
-import { RETAIL_OPS_PLAN_FEATURE_LABELS } from "@ewatrade/db/subscription-plans"
+import {
+  RETAIL_OPS_PLAN_FEATURE_LABELS,
+  type RetailOpsPlanFeature,
+  type RetailOpsSubscriptionPlan,
+} from "@ewatrade/db/subscription-plans"
+import type { GrowthPlanId } from "../../contract"
 import type { LifecyclePlay, PlayContext, PlayDecision } from "../../contract"
 import {
   catalogPlan,
@@ -23,6 +33,53 @@ export const FEATURE_INTENT_DELAY_MS = 24 * 60 * 60 * 1000
 /** Past this, the intent is stale: never email weeks after the taps. */
 export const FEATURE_INTENT_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000
 
+/**
+ * Intent labels that come from a locked-feature sheet, mapped to the plan
+ * feature that unlocks them. Limit labels (products, orders, storefront) are
+ * P08's job and are ignored here. Payment alerts are gated by the operator's
+ * payment-notification policy, not a catalogue feature, so they point at the
+ * first paid plan.
+ */
+const INTENT_LABEL_FEATURES: Record<
+  string,
+  RetailOpsPlanFeature | "first_paid_plan"
+> = {
+  attachments: "attachments",
+  staff: "staff",
+  businesses: "multipleBusinesses",
+  stores: "multipleBusinesses",
+  finance: "finance",
+  customer_messages: "customerMessages",
+  suppliers: "suppliers",
+  invoices: "invoices",
+  receipts: "invoices",
+  advanced_reports: "advancedReports",
+  order_reminders: "orderReminders",
+  payment_alerts: "first_paid_plan",
+}
+
+type IntentTarget = {
+  label: string
+  plan: RetailOpsSubscriptionPlan
+}
+
+/** The plan that unlocks a tapped label for this business, or null. */
+export function intentTarget(
+  planId: GrowthPlanId,
+  label: string,
+): IntentTarget | null {
+  const current = catalogPlan(planId)
+  const mapped = isPlanFeature(label) ? label : INTENT_LABEL_FEATURES[label]
+  if (!mapped) return null
+  if (mapped === "first_paid_plan") {
+    if (planId !== "free") return null
+    return { label: "Payment alerts", plan: catalogPlan("starter") }
+  }
+  if (current.features.includes(mapped)) return null
+  const plan = smallestPlanWithFeature(planId, mapped)
+  return plan ? { label: RETAIL_OPS_PLAN_FEATURE_LABELS[mapped], plan } : null
+}
+
 function eligible(ctx: PlayContext): PlayDecision | null {
   const intent = ctx.featureIntent
   if (!intent || intent.taps < FEATURE_INTENT_TAPS || !intent.thirdTapAt)
@@ -31,13 +88,18 @@ function eligible(ctx: PlayContext): PlayDecision | null {
   if (age < FEATURE_INTENT_DELAY_MS || age > FEATURE_INTENT_MAX_AGE_MS)
     return null
   const current = catalogPlan(ctx.snapshot.planId)
-  // The most recent tapped feature the plan still lacks; none = already unlocked.
-  const feature = intent.features
-    .filter(isPlanFeature)
-    .find((key) => !current.features.includes(key))
-  if (!feature) return null
-  const recommended = smallestPlanWithFeature(ctx.snapshot.planId, feature)
-  if (!recommended) return null
+  // The most recent tapped label the plan still lacks; none = already unlocked.
+  let feature: string | null = null
+  let target: IntentTarget | null = null
+  for (const label of intent.features) {
+    target = intentTarget(ctx.snapshot.planId, label)
+    if (target) {
+      feature = label
+      break
+    }
+  }
+  if (!feature || !target) return null
+  const recommended = target.plan
   const { ctaPath, ctaLabel } = upgradeCta({
     plan: recommended,
     checkoutAvailable: ctx.checkoutAvailable,
@@ -49,7 +111,7 @@ function eligible(ctx: PlayContext): PlayDecision | null {
     ctaPath,
     data: {
       feature,
-      featureLabel: RETAIL_OPS_PLAN_FEATURE_LABELS[feature],
+      featureLabel: target.label,
       planName: current.name,
       ctaLabel,
       ...recommendedPlanData(recommended, ctx.checkoutAvailable),
