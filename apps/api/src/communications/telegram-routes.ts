@@ -164,14 +164,23 @@ export function registerAssistantTelegramRoutes(
       const notice = accepted.notice
       if (notice)
         effects.push(
-          bot
-            .sendMessage({
-              chatId: event.chatId,
-              text: notice.text,
-              html: notice.html,
-              buttons: notice.buttons,
-              replyToMessageId: notice.replyTo,
-            })
+          (notice.editMessageId
+            ? // Phase 3: a spent /chats list is edited in place, buttons removed.
+              bot.editMessageText({
+                chatId: event.chatId,
+                messageId: notice.editMessageId,
+                text: notice.text,
+                html: notice.html,
+                buttons: notice.buttons,
+              })
+            : bot.sendMessage({
+                chatId: event.chatId,
+                text: notice.text,
+                html: notice.html,
+                buttons: notice.buttons,
+                replyToMessageId: notice.replyTo,
+              })
+          )
             .then(async (sent) => {
               if (sent.status === "accepted" && notice.onSent)
                 await notice.onSent(sent.messageId, bot)

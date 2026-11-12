@@ -52,6 +52,14 @@ function createRoutes(
           },
         }
       if (event.kind === "callback" && event.data === "confirm:stale") return {}
+      if (event.kind === "callback" && event.data.startsWith("tc:"))
+        return {
+          notice: {
+            text: "<b>Your chats · Yaba</b>\nContinuing: <b>Today 9:12</b>",
+            html: true,
+            editMessageId: "17",
+          },
+        }
       if (
         (event.kind === "callback" && event.data.startsWith("tgx:")) ||
         event.kind === "member"
@@ -85,7 +93,12 @@ function createRoutes(
         )
         return { status: "accepted", messageId: "5" }
       },
-      editMessageText: async () => ({ status: "accepted", messageId: "5" }),
+      editMessageText: async ({ messageId, text, html, buttons }) => {
+        calls.push(
+          `edit:${messageId}:${text}${html ? ":html" : ""}${buttons ? `:${buttons.length}` : ""}`,
+        )
+        return { status: "accepted", messageId }
+      },
       deleteMessage: async ({ messageId }) => {
         calls.push(`delete:${messageId}`)
         return true
@@ -218,6 +231,24 @@ test("sends HTML claim replies with buttons and records the sent message", async
     "accept:message:12",
     "notice:Confirm <b>Shop</b>:html:1",
     "recorded:5",
+  ])
+})
+
+test("a /chats pick edits the tapped list in place instead of sending", async () => {
+  const { app, calls } = createRoutes()
+  const tap = {
+    update_id: 40,
+    callback_query: {
+      ...callback.callback_query,
+      id: "cb-40",
+      data: "tc:3:cm9x0abcdefghijklmnopqrs:abcdefghijkl",
+    },
+  }
+  expect((await postWebhook(app, tap)).status).toBe(200)
+  expect(calls).toEqual([
+    "accept:callback:40",
+    "ack:cb-40",
+    "edit:17:<b>Your chats · Yaba</b>\nContinuing: <b>Today 9:12</b>:html",
   ])
 })
 
