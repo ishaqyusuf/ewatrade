@@ -42,7 +42,10 @@ import { enqueueAssistantTelegramDelivery } from "@ewatrade/jobs/assistant-teleg
 import { TRPCError } from "@trpc/server"
 import { paymentLinkOrigin } from "../banking/config"
 import { isWhatsAppCredentialSubmission } from "../communications/whatsapp-credential-guard"
-import { createTelegramAssistantContext } from "./channel-principal"
+import {
+  createTelegramAssistantContext,
+  resolveLinkedTelegramIdentity,
+} from "./channel-principal"
 import { buildChannelProposalReview } from "./channel-proposal-review"
 import type { GeneralTransactionContext } from "./general-actions"
 import {
@@ -139,6 +142,34 @@ export async function acceptAssistantTelegramUpdate(
 type TelegramClaim = NonNullable<
   Awaited<ReturnType<typeof claimAssistantTelegramInbox>>
 >
+
+function startTelegramTyping(
+  { principal, lease }: TelegramClaim,
+  sendTyping: DirectTelegramBotProvider["sendTyping"],
+) {
+  const controller = new AbortController()
+  const { signal } = controller
+  let timer: ReturnType<typeof setTimeout> | undefined
+  async function pulse(refresh: boolean) {
+    try {
+      // The turn checked authority before the first pulse. Refreshes must
+      // still belong to an active connection and the same worker lease.
+      if (refresh) await resolveLinkedTelegramIdentity(prisma, principal, lease)
+      const nextPulseAt = Date.now() + 4_000
+      if (signal.aborted || !(await sendTyping(principal.chatId, signal)))
+        return
+      if (!signal.aborted)
+        timer = setTimeout(() => void pulse(true), nextPulseAt - Date.now())
+    } catch {
+      // Typing is optional; neither provider nor authority lookup failures delay the turn.
+    }
+  }
+  void pulse(false)
+  return () => {
+    clearTimeout(timer)
+    controller.abort()
+  }
+}
 
 function savedChat(ctx: GeneralContext) {
   const scope = requireGeneralScope(ctx)
@@ -411,12 +442,15 @@ export async function processAssistantTelegramTurn(
   {
     createTurn = createGeneralAssistantTurn,
     enqueueDelivery = enqueueAssistantTelegramDelivery,
+    sendTyping,
   }: {
     createTurn?: typeof createGeneralAssistantTurn
     enqueueDelivery?: typeof enqueueAssistantTelegramDelivery
+    sendTyping?: DirectTelegramBotProvider["sendTyping"]
   } = {},
 ): Promise<AssistantChannelTurnResult> {
-  if (!readAssistantTelegramConfig()) return { status: "disabled" }
+  const config = readAssistantTelegramConfig()
+  if (!config) return { status: "disabled" }
   const claim = await claimAssistantTelegramInbox(prisma, ingressId)
   if (!claim) {
     await dispatchAssistantTelegramReply(ingressId, enqueueDelivery)
@@ -462,25 +496,34 @@ export async function processAssistantTelegramTurn(
           run = await findRun(ctx, inbox.requestId)
         }
         if (!run) {
-          const turn = await createTurn(ctx, {
-            conversationId: ctx.assistantConversationId,
-            requestId: inbox.requestId,
-            message: {
-              id: inbox.userMessageId,
-              role: "user",
-              parts: [{ type: "text", text }],
-            },
-          })
-          const reader = turn.stream.getReader()
+          const provider = new DirectTelegramBotProvider(config)
+          const stopTyping = startTelegramTyping(
+            claim,
+            sendTyping ?? provider.sendTyping.bind(provider),
+          )
           try {
-            while (!(await reader.read()).done) {
-              /* Wait for canonical finalization. */
+            const turn = await createTurn(ctx, {
+              conversationId: ctx.assistantConversationId,
+              requestId: inbox.requestId,
+              message: {
+                id: inbox.userMessageId,
+                role: "user",
+                parts: [{ type: "text", text }],
+              },
+            })
+            const reader = turn.stream.getReader()
+            try {
+              while (!(await reader.read()).done) {
+                /* Wait for canonical finalization. */
+              }
+            } finally {
+              reader.releaseLock()
             }
+            await turn.completion
+            run = await findRun(ctx, inbox.requestId)
           } finally {
-            reader.releaseLock()
+            stopTyping()
           }
-          await turn.completion
-          run = await findRun(ctx, inbox.requestId)
         }
         if (!run || run.status === "RUNNING") {
           await retryAssistantTelegramInbox(prisma, lease, "RUN_IN_PROGRESS")

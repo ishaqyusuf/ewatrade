@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "id": "2026-11-12-telegram-typing",
+  "tickets": ["H02"],
+  "summary": "Show Telegram's native typing indicator while the assistant prepares a reply in an authorized private chat.",
+  "noAssistantImpact": "Typing is a temporary transport signal. It adds no assistant capability, tool, procedure, stored message, or write authority.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/assistant-telegram.md"
+    },
+    {
+      "topic": "capability",
+      "status": "not_applicable",
+      "note": "The shared assistant capability inventory and Telegram release admission are unchanged."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/communications/src/telegram.test.ts",
+      "executed": true,
+      "result": "Telegram provider and webhook suite passed 10 tests and 50 assertions, including the private chat typing payload and request cancellation."
+    },
+    {
+      "kind": "test",
+      "path": "apps/api/src/assistant/telegram-runtime.integration.test.ts",
+      "executed": true,
+      "result": "Guarded development QA verified typing starts and stops for customer reads and drafts, stays off for linking and callbacks, and preserves confirmation and receipt replay. Telegram delivery was simulated."
+    }
+  ]
+}

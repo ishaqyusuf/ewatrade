@@ -152,6 +152,31 @@ test("sends plain text and opaque inline controls and classifies Telegram outcom
   })
 })
 
+test("sends a cancellable typing action only to a valid private chat", async () => {
+  const requests: RequestInit[] = []
+  const controller = new AbortController()
+  const provider = new DirectTelegramBotProvider(config, async (url, init) => {
+    expect(new URL(url).pathname.endsWith("/sendChatAction")).toBe(true)
+    requests.push(init)
+    return Response.json({ ok: true, result: true })
+  })
+  expect(await provider.sendTyping("-17")).toBe(false)
+  expect(
+    await provider.sendTyping(String(message.chat.id), controller.signal),
+  ).toBe(true)
+  expect(requests).toHaveLength(1)
+  expect(requests[0]).toMatchObject({
+    method: "POST",
+    body: JSON.stringify({ chat_id: message.chat.id, action: "typing" }),
+  })
+  controller.abort()
+  expect(requests[0]?.signal?.aborted).toBe(true)
+  expect(
+    await provider.sendTyping(String(message.chat.id), controller.signal),
+  ).toBe(false)
+  expect(requests).toHaveLength(1)
+})
+
 test("clears only the original message's inline keyboard and accepts a repeated edit", async () => {
   const target = { chatId: "456", messageId: "55" }
   const provider = new DirectTelegramBotProvider(config, async (url, init) => {

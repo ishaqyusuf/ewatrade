@@ -174,6 +174,7 @@ export type TelegramSendResult =
 
 type TelegramMethod =
   | "sendMessage"
+  | "sendChatAction"
   | "answerCallbackQuery"
   | "editMessageReplyMarkup"
 type TelegramFetch = (url: string, init: RequestInit) => Promise<Response>
@@ -188,6 +189,23 @@ export class DirectTelegramBotProvider {
     private readonly config: Pick<AssistantTelegramConfig, "token">,
     private readonly send: TelegramFetch = fetch,
   ) {}
+
+  async sendTyping(chatId: string, signal?: AbortSignal): Promise<boolean> {
+    const target = Number(chatId)
+    if (positiveId(target) !== chatId || signal?.aborted) return false
+    const response = await this.request(
+      "sendChatAction",
+      { chat_id: target, action: "typing" },
+      signal,
+    )
+    return (
+      response !== null &&
+      response.status >= 200 &&
+      response.status < 300 &&
+      response.body?.ok === true &&
+      response.body.result === true
+    )
+  }
 
   async sendMessage(input: {
     chatId: string
@@ -298,8 +316,12 @@ export class DirectTelegramBotProvider {
   private async request(
     method: TelegramMethod,
     payload: Record<string, unknown>,
+    signal?: AbortSignal,
   ): Promise<TelegramRequest | null> {
     try {
+      const timeout = AbortSignal.timeout(
+        method === "sendMessage" ? 20_000 : 2_000,
+      )
       const response = await this.send(
         `https://api.telegram.org/bot${this.config.token}/${method}`,
         {
@@ -307,9 +329,7 @@ export class DirectTelegramBotProvider {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
           redirect: "error",
-          signal: AbortSignal.timeout(
-            method === "sendMessage" ? 20_000 : 2_000,
-          ),
+          signal: signal ? AbortSignal.any([signal, timeout]) : timeout,
         },
       )
       const retryAfter = Number(response.headers.get("retry-after"))

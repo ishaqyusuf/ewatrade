@@ -50,6 +50,7 @@ const queuedTurns: string[] = []
 const queuedDeliveries: string[] = []
 const deliveries: Delivery[] = []
 const clearedKeyboards: Array<{ chatId: string; messageId: string }> = []
+const typingSignals: AbortSignal[] = []
 const acknowledged: string[] = []
 let update = 0
 let externalCalls = 0
@@ -175,6 +176,12 @@ suite("Telegram assistant against guarded development QA", () => {
       },
       processTurn: (id) =>
         runtime.processAssistantTelegramTurn(id, {
+          sendTyping: async (chatId, signal) => {
+            expect(chatId).toBe(String(telegramId))
+            if (!signal) throw Error("Expected cancellable Telegram typing")
+            typingSignals.push(signal)
+            return true
+          },
           enqueueDelivery: async (outboxId) => {
             queuedDeliveries.push(outboxId)
           },
@@ -306,6 +313,7 @@ suite("Telegram assistant against guarded development QA", () => {
     )
     expect(pending.state).toBe("awaiting_confirmation")
     expect(queuedTurns).toHaveLength(0)
+    expect(typingSignals).toHaveLength(0)
     expect(deliveries.at(-1)?.text).toContain(
       pending.maskedSender ?? "missing-sender",
     )
@@ -321,8 +329,13 @@ suite("Telegram assistant against guarded development QA", () => {
     const readText = read.map(({ text }) => text).join("\n")
     expect(readText).toContain(existingName)
     expect(readText).toContain(storeName)
+    expect(typingSignals.length).toBeGreaterThan(0)
+    expect(typingSignals.every((signal) => signal.aborted)).toBe(true)
 
+    const beforeDraft = typingSignals.length
     const draft = await exchange(messageUpdate(`add customer ${addedName}`))
+    expect(typingSignals.length).toBeGreaterThan(beforeDraft)
+    expect(typingSignals.every((signal) => signal.aborted)).toBe(true)
     const review = draft.find((reply) => reply.buttons?.length)
     const confirm = review?.buttons
       ?.flat()
@@ -334,6 +347,7 @@ suite("Telegram assistant against guarded development QA", () => {
       await db.customer.count({ where: { tenantId, name: addedName } }),
     ).toBe(0)
 
+    const beforeCallbacks = typingSignals.length
     const wrong = await exchange(
       callbackUpdate(confirm, String(Number(review.messageId) + 50_000)),
     )
@@ -355,6 +369,7 @@ suite("Telegram assistant against guarded development QA", () => {
     expect(duplicate.map(({ text }) => text)).toEqual(
       first.map(({ text }) => text),
     )
+    expect(typingSignals).toHaveLength(beforeCallbacks)
     expect(clearedKeyboards).toEqual([
       { chatId: String(telegramId), messageId: review.messageId },
     ])
