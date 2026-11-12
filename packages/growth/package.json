@@ -6,7 +6,9 @@
   "exports": {
     "./contract": "./src/contract.ts",
     "./fixtures": "./src/fixtures.ts",
-    "./registry": "./src/registry.ts"
+    "./registry": "./src/registry.ts",
+    "./policy": "./src/policy.ts",
+    "./stage": "./src/stage.ts"
   },
   "scripts": {
     "test": "bun test src",
