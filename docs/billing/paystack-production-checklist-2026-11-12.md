@@ -22,9 +22,10 @@
    Profile, Contact, matching registered and office addresses, and registration
    numbers were saved. Paystack confirmed all three CAC documents were saved,
    displays BVN Provided for the director, and lists Account Details and Service
-   Agreement as complete. The only People entry is Director only at the owner's
-   request. Business Address Verification, Business Owner(s), and Owner(s)
-   Verification are incomplete in the recap, and activation is disabled.
+   Agreement as complete. Paystack saved the CAC-listed director as 100% owner
+   on the same People entry. The residential address proof slot is empty.
+   Business Address Verification, Business Owner(s), and Owner(s) Verification
+   are incomplete in the recap, and activation is disabled.
 2. Paystack Live: create monthly NGN plans, unlimited invoices —
    Starter 5,000 / Growth 15,000 / Pro 30,000. Add 6,000 / 18,000 / 36,000 only
    to sell outside Africa. Send the `PLN_…` codes (not secret).
