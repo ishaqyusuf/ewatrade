@@ -571,6 +571,9 @@
     "packages/growth": {
       "name": "@ewatrade/growth",
       "version": "0.1.0",
+      "dependencies": {
+        "@ewatrade/db": "workspace:*",
+      },
       "devDependencies": {
         "@ewatrade/tsconfig": "workspace:*",
         "@types/bun": "^1.3.14",
