@@ -47,10 +47,10 @@ Verify the returned model/options. Do not silently substitute another model or
 effort level; report a capability mismatch. This preference does not itself
 start a Workshop or change existing design/implementation ownership.
 
-Owner fallback instruction, 21 October 2026: when Claude is unavailable (including
-API rate limits), Codex should do the Workshop work directly and finish the
-authorized deliverable. Report the fallback; do not keep retrying or ask for a
-model override. Preserve the same review, history and implementation boundaries.
+Owner fallback instruction, 12 November 2026: when Claude Opus 5.5 at high effort
+is unavailable, pause Workshop authoring and ask the owner for explicit permission
+before taking over or using another author. Preserve any partial work and the
+same review, history and implementation boundaries.
 
 ## Workshop continuation rule
 
