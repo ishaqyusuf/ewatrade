@@ -1,6 +1,7 @@
 "use client"
 
 import { OWNER_PLAN_LIMITS } from "@/components/owner-signup/model"
+import { useGrowthIntent } from "@/hooks/use-growth-intent"
 import { useTRPC } from "@/trpc/client"
 import { Button, Skeleton, buttonVariants } from "@ewatrade/ui"
 import {
@@ -78,6 +79,7 @@ export function OnlineStoreStrip({
   hasCatalogItems: boolean
 }) {
   const trpc = useTRPC()
+  const intent = useGrowthIntent()
   const subscription = useQuery(
     trpc.retailOps.subscription.queryOptions(undefined, { retry: false }),
   )
@@ -148,6 +150,7 @@ export function OnlineStoreStrip({
             <Link
               className="px-1 text-sm text-primary underline underline-offset-4"
               href="/settings/billing"
+              onClick={() => intent.seePlans("storefront", "home_card")}
             >
               See plans
             </Link>
@@ -225,6 +228,7 @@ export function OnlineStoreStrip({
 
 /** Overview: the owner's other businesses, shown once there is more than one. */
 export function OwnerBusinesses() {
+  const intent = useGrowthIntent()
   const trpc = useTRPC()
   const summary = useQuery(
     trpc.tenant.ownerSignupSummary.queryOptions(undefined, { retry: false }),
@@ -325,6 +329,7 @@ export function OwnerBusinesses() {
               <Link
                 className="text-sm font-medium text-primary underline underline-offset-4"
                 href="/settings/billing"
+                onClick={() => intent.seePlans("businesses", "home_card")}
               >
                 Upgrade
               </Link>

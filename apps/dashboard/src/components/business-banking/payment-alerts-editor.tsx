@@ -1,4 +1,5 @@
 "use client"
+import { useGrowthIntent } from "@/hooks/use-growth-intent"
 import { Button, Checkbox, RadioGroup, RadioGroupItem, cn } from "@ewatrade/ui"
 import {
   ALERT_CHANNELS,
@@ -76,6 +77,7 @@ export function PaymentAlertsEditor({
   disabled: boolean
   onRetry: () => void
 }) {
+  const intent = useGrowthIntent()
   const headingId = useId()
   const heading = (
     <div className="grid gap-0.5" id={headingId}>
@@ -125,7 +127,11 @@ export function PaymentAlertsEditor({
         <Note tone="info">
           Payment alerts aren't on your plan. New reports still show in Payments
           to check and the bell.{" "}
-          <Link href="/settings/billing" className="underline">
+          <Link
+            href="/settings/billing"
+            className="underline"
+            onClick={() => intent.seePlans("payment_alerts", "inline_link")}
+          >
             See plans
           </Link>
         </Note>
@@ -159,7 +165,11 @@ export function PaymentAlertsEditor({
         <Note tone="info">
           Payment alerts aren't on your plan. New reports still show in Payments
           to check and the bell.{" "}
-          <Link href="/settings/billing" className="underline">
+          <Link
+            href="/settings/billing"
+            className="underline"
+            onClick={() => intent.seePlans("payment_alerts", "inline_link")}
+          >
             See plans
           </Link>
         </Note>
@@ -217,6 +227,7 @@ function AlertsForm({
   disabled: boolean
   onRetry: () => void
 }) {
+  const intent = useGrowthIntent()
   const [picking, setPicking] = useState(false)
   const pickerId = useId()
   const channelLabelId = useId()
@@ -447,7 +458,13 @@ function AlertsForm({
                 <small className="pl-6 text-xs text-muted-foreground">
                   {line.text}{" "}
                   {line.action === "plans" ? (
-                    <Link href="/settings/billing" className="underline">
+                    <Link
+                      href="/settings/billing"
+                      className="underline"
+                      onClick={() =>
+                        intent.seePlans("payment_alerts", "inline_link")
+                      }
+                    >
                       See plans
                     </Link>
                   ) : line.action === "retry" ? (

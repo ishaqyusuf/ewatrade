@@ -1,4 +1,5 @@
 import { RetailOpsSubscriptionSettings } from "@/components/dashboard/retail-ops-subscription-settings"
+import { PlanPageOpened } from "@/components/growth/plan-page-opened"
 import { AssistantAllowance } from "@/components/product-assistant/assistant-allowance"
 import { getServerSession } from "@/lib/session"
 import { getActiveTenant } from "@/lib/tenant"
@@ -13,6 +14,7 @@ export default async function BillingSettingsPage() {
 
   return (
     <div className="grid min-w-0 gap-7">
+      <PlanPageOpened />
       <RetailOpsSubscriptionSettings />
       <AssistantAllowance />
     </div>

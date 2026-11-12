@@ -1,6 +1,7 @@
 "use client"
 
 import { FormFeedback } from "@/components/forms/form-feedback"
+import { useGrowthIntent } from "@/hooks/use-growth-intent"
 import { useZodForm } from "@/hooks/use-zod-form"
 import { useTRPC } from "@/trpc/client"
 import { Button, Field, FieldError, FieldLabel, Input } from "@ewatrade/ui"
@@ -22,6 +23,7 @@ export function CreateStoreForm({
   onSubmittingChange: (pending: boolean) => void
 }) {
   const trpc = useTRPC()
+  const intent = useGrowthIntent()
   const cache = useQueryClient()
   const router = useRouter()
   const form = useZodForm<z.infer<typeof schema>>(schema, {
@@ -79,6 +81,7 @@ export function CreateStoreForm({
               <Link
                 href="/settings/billing"
                 className="underline underline-offset-4"
+                onClick={() => intent.seePlans("stores", "limit_card")}
               >
                 View plans
               </Link>

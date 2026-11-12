@@ -104,7 +104,9 @@ export function growthIntentEvent(
  * A "See plans" tap on a locked feature. These are what the server-side
  * per-business counter records for the feature-intent play (W3).
  */
-export function isSeePlansTap(input: GrowthIntentInput) {
+export function isSeePlansTap(
+  input: GrowthIntentInput,
+): input is Extract<GrowthIntentInput, { name: "upgrade_cta_clicked" }> {
   return (
     input.name === "upgrade_cta_clicked" &&
     input.feature !== "plan_billing" &&

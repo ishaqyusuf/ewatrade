@@ -1,5 +1,6 @@
 "use client"
 
+import { useGrowthIntent } from "@/hooks/use-growth-intent"
 import {
   type AttachmentAccess,
   attachmentScope,
@@ -23,6 +24,7 @@ export function useAttachmentAccess(resourceId: string) {
   const trpc = useTRPC()
   const client = useTRPCClient()
   const router = useRouter()
+  const intent = useGrowthIntent()
   const current = useQuery(trpc.tenant.current.queryOptions())
   const generation = useRef(getDataCacheGeneration())
   const latest = useRef({ resourceId, generation: 0 })
@@ -61,7 +63,11 @@ export function useAttachmentAccess(resourceId: string) {
     const result = await check()
     if (result.status === "stale") return false
     if (result.status !== "allowed") {
-      if (active()) setExplanation({ ...result, active, check })
+      if (active()) {
+        setExplanation({ ...result, active, check })
+        if (result.canReviewPlan)
+          intent.sheetOpened("attachments", "lock_sheet")
+      }
       return false
     }
     return true
@@ -108,6 +114,7 @@ export function useAttachmentAccess(resourceId: string) {
                     result.canReviewPlan
                   ) {
                     setExplanation(null)
+                    intent.seePlans("attachments", "lock_sheet")
                     router.push("/settings/billing")
                   } else if (explanation.active())
                     setExplanation(
