@@ -215,9 +215,13 @@ export function telegramRoleChangedRefusal(
 }
 
 export const telegramPhase2Copy = {
-  /** Workshop c-second. The other EwaTrade account is never named. */
+  /**
+   * Workshop c-second. The other EwaTrade account is never named. A Telegram
+   * account stays with its first EwaTrade user even after /disconnect, so the
+   * design's "/disconnect, then connect again" step is withheld (owner decision).
+   */
   busy: (business: Scope) =>
-    `This Telegram account is already connected to another EwaTrade account. Nothing changed.\n\nTo use <b>${escapeTelegramHtml(business.businessName)}</b> here, send /disconnect, then connect again from that account.`,
+    `This Telegram account is already connected to another EwaTrade account. Nothing changed.\n\nTo use <b>${escapeTelegramHtml(business.businessName)}</b> in Telegram, connect a different Telegram account.`,
   /** Workshop c-switch: the claim message after a new scope is confirmed. */
   switched: (business: Scope, previous: Scope) =>
     `<b>Connected ✓</b>\n${escapeTelegramHtml(scopeLabel(business))}\n\n${escapeTelegramHtml(scopeLabel(previous))} is no longer connected here.`,

@@ -401,7 +401,7 @@ export function ConnectTelegram({ scope }: { scope: TelegramConnectScope }) {
               Nothing changed.
             </strong>
             <span className="text-muted-foreground">
-              Disconnect it from that account first, or use a different Telegram
+              To use this business in Telegram, connect a different Telegram
               account.
             </span>
           </output>
