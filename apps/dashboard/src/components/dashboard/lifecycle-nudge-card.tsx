@@ -1,11 +1,17 @@
 "use client"
 
 import { useTRPC } from "@/trpc/client"
+import { useEvents } from "@ewatrade/events/client"
+import {
+  type GrowthIntentInput,
+  growthIntentEvent,
+} from "@ewatrade/events/growth-intent"
 import { Button, buttonVariants } from "@ewatrade/ui"
 import { Cancel01Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import Link from "next/link"
+import { useEffect } from "react"
 
 /**
  * Overview: the one lifecycle nudge the daily sweep chose for this owner
@@ -23,6 +29,21 @@ export function LifecycleNudgeCard() {
     }),
   )
   const card = nudge.data
+  const events = useEvents()
+  const track = (name: GrowthIntentInput["name"], play: string) => {
+    const event = growthIntentEvent({
+      name,
+      surface: "dashboard",
+      play,
+      placement: "home_card",
+    })
+    if (event) events.track(event.name, event.properties)
+  }
+  const shownPlay = card?.playId
+  // biome-ignore lint/correctness/useExhaustiveDependencies: once per new nudge
+  useEffect(() => {
+    if (shownPlay) track("nudge_shown", shownPlay)
+  }, [card?.id])
   if (!card) return null
   return (
     <section
@@ -44,7 +65,10 @@ export function LifecycleNudgeCard() {
         aria-label="Dismiss"
         className="-mr-2 -mt-2 shrink-0"
         disabled={dismiss.isPending}
-        onClick={() => dismiss.mutate({ id: card.id })}
+        onClick={() => {
+          track("nudge_dismissed", card.playId)
+          dismiss.mutate({ id: card.id })
+        }}
         size="icon"
         variant="ghost"
       >

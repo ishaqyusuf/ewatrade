@@ -4,10 +4,26 @@ import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
 import { useColorScheme } from "@/hooks/use-color"
 import { GREEN_TILL_THEME, type GreenTillTint } from "@/lib/green-till-theme"
+import { trackProductEvent } from "@/runtime/analytics-runtime"
 import { useTRPC } from "@/trpc/client"
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
+import {
+  type GrowthIntentInput,
+  growthIntentEvent,
+} from "@ewatrade/events/growth-intent"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { type Href, useRouter } from "expo-router"
+import { useEffect } from "react"
+
+function track(name: GrowthIntentInput["name"], play: string) {
+  const event = growthIntentEvent({
+    name,
+    surface: "mobile",
+    play,
+    placement: "home_card",
+  })
+  if (event) trackProductEvent(event.name, event.properties)
+}
 
 type NudgeKey = NonNullable<RouterOutputs["growth"]["activeNudge"]>["key"]
 
@@ -48,6 +64,11 @@ export function LifecycleNudgeCard() {
   )
   const card = nudge.data
   const screen = card ? NUDGE_SCREENS[card.key] : undefined
+  const shownPlay = screen ? card?.playId : undefined
+  // biome-ignore lint/correctness/useExhaustiveDependencies: once per new nudge
+  useEffect(() => {
+    if (shownPlay) track("nudge_shown", shownPlay)
+  }, [card?.id])
   if (!card || !screen) return null
   const palette = GREEN_TILL_THEME[colorScheme]
   return (
@@ -96,7 +117,10 @@ export function LifecycleNudgeCard() {
         className="size-11 items-center justify-center rounded-full"
         disabled={dismiss.isPending}
         hitSlop={4}
-        onPress={() => dismiss.mutate({ id: card.id })}
+        onPress={() => {
+          track("nudge_dismissed", card.playId)
+          dismiss.mutate({ id: card.id })
+        }}
       >
         <Icon className="size-[16px] text-muted-foreground" name="X" />
       </Pressable>
