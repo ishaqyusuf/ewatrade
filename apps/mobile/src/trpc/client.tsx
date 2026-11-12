@@ -1,5 +1,6 @@
 "use client"
 
+import { getAppVariant } from "@/lib/app-variant"
 import { getBaseUrl } from "@/lib/base-url"
 import { mobileAgeRequestHeaders } from "@/lib/mobile-age-request-headers"
 import { getSession } from "@/lib/session-store"
@@ -109,7 +110,13 @@ export function TRPCReactProvider(
               true: httpLink({
                 url: getTrpcUrl(),
                 transformer: superjson,
-                headers: getTrpcHeaders,
+                headers: async ({ op }) => ({
+                  ...(await getTrpcHeaders()),
+                  ...(op.path === "auth.requestMobileOwnerOtp" &&
+                  getAppVariant() === "preview"
+                    ? { "x-ewatrade-preview-qa-code": "inline" }
+                    : {}),
+                }),
               }),
               false: httpBatchLink({
                 url: getTrpcUrl(),

@@ -29,6 +29,9 @@ export function createOwnerAuthApi(request: NextRequest, source: string) {
         transformer: superjson,
         headers: () => ({
           "x-trpc-source": source,
+          ...(source === "web-login-code"
+            ? { "x-ewatrade-preview-qa-code": "inline" }
+            : {}),
           ...(internalKey && clientAddress
             ? {
                 "x-ewatrade-client-ip": clientAddress,

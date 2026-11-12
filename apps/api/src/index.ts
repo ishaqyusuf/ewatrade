@@ -117,6 +117,7 @@ app.use(
       "accept-language",
       "cf-ray",
       "trpc-accept",
+      "x-ewatrade-preview-qa-code",
       "x-force-primary",
       "x-internal-key",
       "x-request-id",

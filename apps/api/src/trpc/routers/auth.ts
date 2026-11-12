@@ -709,7 +709,12 @@ export const authRouter = createTRPCRouter({
         try {
           return await createMobileOwnerOtp(
             ctx.db,
-            input,
+            {
+              ...input,
+              showPreviewQaCode:
+                ctx.requestHeaders.get("x-ewatrade-preview-qa-code") ===
+                "inline",
+            },
             ctx.privacyClientIp ?? ctx.clientIp ?? "unknown",
           )
         } catch (error) {

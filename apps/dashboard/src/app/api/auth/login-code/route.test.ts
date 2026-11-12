@@ -36,12 +36,16 @@ function request(
   )
 }
 
-type Call = { url: string; body: unknown }
+type Call = { url: string; body: unknown; headers: Headers }
 function fixture(reply: unknown, calls: Call[]) {
   process.env.NEXT_PUBLIC_API_URL = "https://api.example.test"
   globalThis.fetch = Object.assign(
     async (input: Parameters<typeof fetch>[0], init?: RequestInit) => {
-      calls.push({ url: String(input), body: JSON.parse(String(init?.body)) })
+      calls.push({
+        url: String(input),
+        body: JSON.parse(String(init?.body)),
+        headers: new Headers(init?.headers),
+      })
       return Response.json([reply])
     },
     { preconnect: originalFetch.preconnect },
@@ -101,10 +105,12 @@ test("only Preview displays the API-provided QA sign-in code", async () => {
   process.env.APP_ENV = "preview"
   process.env.VERCEL_ENV = "preview"
   const body = { action: "request", email: "owner@example.test" }
-  fixture(ok({ devCode: null, previewQaCode: "123456" }), [])
+  const calls: Call[] = []
+  fixture(ok({ devCode: null, previewQaCode: "123456" }), calls)
   expect(await (await POST(request(body))).json()).toMatchObject({
     previewQaCode: "123456",
   })
+  expect(calls[0]?.headers.get("x-ewatrade-preview-qa-code")).toBe("inline")
 
   process.env.VERCEL_ENV = "production"
   expect(await (await POST(request(body))).json()).not.toHaveProperty(

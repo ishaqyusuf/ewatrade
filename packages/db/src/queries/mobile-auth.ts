@@ -653,6 +653,7 @@ export async function createMobileOwnerOtp(
     orderChannels?: string[] | null
     otherBusinessDescription?: string | null
     phone?: string | null
+    showPreviewQaCode?: boolean
     teamSize?: string | null
   },
   networkSource = "unknown",
@@ -665,9 +666,10 @@ export async function createMobileOwnerOtp(
       : null
   await requireMobileApprovedSignup(db, input)
   const email = normalizeEmail(input.email)
-  const previewQaDomain = credentialContext
-    ? null
-    : await previewQaEmailLoginDomain(email, input.mode)
+  const previewQaDomain =
+    input.showPreviewQaCode && !credentialContext
+      ? await previewQaEmailLoginDomain(email, input.mode)
+      : null
   const code = credentialContext
     ? randomInt(0, 1_000_000).toString().padStart(6, "0")
     : previewQaDomain

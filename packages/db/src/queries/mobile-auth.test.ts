@@ -746,10 +746,16 @@ describe("mobile auth queries", () => {
         },
       })
       const request = { email, mode: "login" as const }
-      expect(await createMobileOwnerOtp(db.client, request)).toMatchObject({
-        code: "123456",
-        previewQaCode: "123456",
-      })
+      const legacyDb = createMockMobileAuthDb()
+      expect(
+        await createMobileOwnerOtp(legacyDb.client, request),
+      ).not.toHaveProperty("previewQaCode")
+      expect(
+        await createMobileOwnerOtp(db.client, {
+          ...request,
+          showPreviewQaCode: true,
+        }),
+      ).toMatchObject({ code: "123456", previewQaCode: "123456" })
       await expect(
         verifyMobileOwnerOtp(db.client, { ...request, code: "123456" }),
       ).rejects.toThrow("A verified Preview QA account is required.")
