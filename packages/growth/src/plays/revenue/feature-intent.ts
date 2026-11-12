@@ -17,7 +17,7 @@ import {
   type RetailOpsPlanFeature,
   type RetailOpsSubscriptionPlan,
 } from "@ewatrade/db/subscription-plans"
-import type { GrowthPlanId } from "../../contract"
+import type { FeatureIntentSummary, GrowthPlanId } from "../../contract"
 import type { LifecyclePlay, PlayContext, PlayDecision } from "../../contract"
 import {
   catalogPlan,
@@ -78,6 +78,31 @@ export function intentTarget(
   if (current.features.includes(mapped)) return null
   const plan = smallestPlanWithFeature(planId, mapped)
   return plan ? { label: RETAIL_OPS_PLAN_FEATURE_LABELS[mapped], plan } : null
+}
+
+/**
+ * Build `PlayContext.featureIntent` from W4's counter rows
+ * (`featureIntentTapsForTenant` in @ewatrade/db/growth-intent, this month).
+ * Only labels that a plan unlocks count toward the three taps.
+ */
+export function featureIntentSummaryFromTaps(
+  rows: readonly { feature: string; taps: number; lastAt: Date }[],
+): FeatureIntentSummary | null {
+  const counted = rows
+    .filter(
+      (row) =>
+        isPlanFeature(row.feature) || row.feature in INTENT_LABEL_FEATURES,
+    )
+    .sort((a, b) => b.lastAt.getTime() - a.lastAt.getTime())
+  if (counted.length === 0) return null
+  const taps = counted.reduce((sum, row) => sum + row.taps, 0)
+  return {
+    taps,
+    // Rows keep only the latest tap; waiting from it is >= 24h after the third.
+    thirdTapAt:
+      taps >= FEATURE_INTENT_TAPS ? (counted[0]?.lastAt ?? null) : null,
+    features: counted.map((row) => row.feature),
+  }
 }
 
 function eligible(ctx: PlayContext): PlayDecision | null {

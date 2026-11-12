@@ -1,7 +1,10 @@
 import { describe, expect, test } from "bun:test"
 import type { SalesHistory } from "../../contract"
 import { makeContext } from "../../fixtures"
-import { featureIntentPlay } from "./feature-intent"
+import {
+  featureIntentPlay,
+  featureIntentSummaryFromTaps,
+} from "./feature-intent"
 import { nextPlanPitch } from "./plans"
 import { secondBusinessPlay } from "./second-business"
 import { successMilestonePlay } from "./success-milestones"
@@ -261,5 +264,32 @@ describe("P16 intent labels from the tap counter", () => {
     expect(
       featureIntentPlay.eligible(ctx("starter", ["payment_alerts"])),
     ).toBeNull()
+  })
+})
+
+describe("feature intent summary from the tap counter", () => {
+  const at = (iso: string) => new Date(iso)
+
+  test("sums unlockable labels and orders them by the latest tap", () => {
+    expect(
+      featureIntentSummaryFromTaps([
+        { feature: "attachments", taps: 2, lastAt: at("2026-11-10T09:00:00Z") },
+        { feature: "products", taps: 9, lastAt: at("2026-11-11T09:00:00Z") },
+        { feature: "staff", taps: 1, lastAt: at("2026-11-11T08:00:00Z") },
+      ]),
+    ).toEqual({
+      taps: 3,
+      thirdTapAt: at("2026-11-11T08:00:00Z"),
+      features: ["staff", "attachments"],
+    })
+  })
+
+  test("two taps have no third-tap time; no rows is null", () => {
+    expect(
+      featureIntentSummaryFromTaps([
+        { feature: "staff", taps: 2, lastAt: at("2026-11-11T08:00:00Z") },
+      ])?.thirdTapAt,
+    ).toBeNull()
+    expect(featureIntentSummaryFromTaps([])).toBeNull()
   })
 })
