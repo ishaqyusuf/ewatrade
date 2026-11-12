@@ -48,7 +48,7 @@ test("c-help: /help lists what an Owner can use, then the commands", () => {
   expect(
     telegramHelpReply(ctx("OWNER"), { manifest, canUse: () => true }).text,
   ).toBe(
-    "What I can do here\nWith your Owner access you can ask about sales, stock and customers, and record sales, expenses and new customers. I send a review before anything is saved.\n\n/scope — your Business and Store\n/disconnect — remove Telegram access",
+    "What I can do here\nWith your Owner access you can ask about sales, stock and customers, and record sales, expenses and new customers. I send a review before anything is saved.\n\n/new — start a new chat\n/chats — continue a saved chat\n/scope — your Business and Store\n/disconnect — remove Telegram access",
   )
 })
 

@@ -154,9 +154,19 @@ export function telegramHelpReply(
     ? `With ${access} you can ${can.join(", and ")}.${writes.length ? " I send a review before anything is saved." : ""}`
     : `There is nothing I can do here with ${access} yet.`
   return {
-    text: `What I can do here\n${intro}\n\n/scope — your Business and Store\n/disconnect — remove Telegram access`,
+    text: `What I can do here\n${intro}\n\n${commandLines()}`,
   }
 }
+
+/** The connected menu's commands, so /help never drifts from it. */
+const commandLines = () =>
+  telegramConnectedCommands
+    .filter(({ command }) => command !== "help")
+    .map(
+      ({ command, description }) =>
+        `/${command} — ${description.charAt(0).toLowerCase()}${description.slice(1)}`,
+    )
+    .join("\n")
 
 /** Typed requests to change scope get the same answer as /scope (Workshop c-switch). */
 const scopeRequests = new Set([
