@@ -1,3 +1,7 @@
+import { type TelegramMedia, readTelegramMedia } from "./telegram-media"
+
+export type { TelegramMedia, TelegramMediaKind } from "./telegram-media"
+
 type Environment = Record<string, string | undefined>
 
 export type AssistantTelegramConfig = {
@@ -90,6 +94,8 @@ export type NormalizedAssistantTelegramUpdate =
             forward?: { userId: string | null; isBot: boolean }
           }
         | { kind: "callback"; callbackId: string; data: string }
+        /** Photo, file, video or voice note: its kind only, never the file or caption. */
+        | ({ kind: "media" } & TelegramMedia)
       ))
   | (Omit<TelegramUpdateIdentity, "messageId"> & {
       /** `my_chat_member`: the user stopped (blocked) or restarted the bot. */
@@ -169,7 +175,11 @@ export function parseAssistantTelegramUpdate(
     }
   }
   const input = message?.text
-  if (typeof input !== "string" || byteLength(input) > 16_384) return null
+  if (typeof input !== "string") {
+    const media = message && readTelegramMedia(message)
+    return media ? { ...identity, kind: "media", ...media } : null
+  }
+  if (byteLength(input) > 16_384) return null
   const text = input.trim()
   if (!text) return null
   const part = (value: unknown) =>

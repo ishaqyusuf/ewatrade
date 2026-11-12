@@ -40,6 +40,7 @@ import {
   editAssistantReviewLink,
   readAssistantReviewLink,
 } from "../../assistant/review-links"
+import { showTelegramHandoffOutcome } from "../../assistant/telegram-handoff"
 import { createTRPCRouter, protectedProcedure } from "../init"
 const id = z.string().min(1).max(128)
 export const assistantRouter = createTRPCRouter({
@@ -261,7 +262,12 @@ export const assistantRouter = createTRPCRouter({
         })
         .strict(),
     )
-    .mutation(({ ctx, input }) => decideGeneralProposal(ctx, input)),
+    .mutation(async ({ ctx, input }) => {
+      const proposal = await decideGeneralProposal(ctx, input)
+      // A draft opened from Telegram's "Review in EwaTrade": edit that message (best effort).
+      await showTelegramHandoffOutcome(ctx, proposal)
+      return proposal
+    }),
   editProposal: protectedProcedure
     .input(
       z
@@ -272,5 +278,9 @@ export const assistantRouter = createTRPCRouter({
         })
         .strict(),
     )
-    .mutation(({ ctx, input }) => editGeneralProposal(ctx, input)),
+    .mutation(async ({ ctx, input }) => {
+      const proposal = await editGeneralProposal(ctx, input)
+      await showTelegramHandoffOutcome(ctx, proposal)
+      return proposal
+    }),
 })

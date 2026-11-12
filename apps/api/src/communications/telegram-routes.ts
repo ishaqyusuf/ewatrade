@@ -148,6 +148,7 @@ export function registerAssistantTelegramRoutes(
               text: notice.text,
               html: notice.html,
               buttons: notice.buttons,
+              replyToMessageId: notice.replyTo,
             })
             .then(async (sent) => {
               if (sent.status === "accepted" && notice.onSent)

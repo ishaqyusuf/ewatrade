@@ -70,6 +70,8 @@ import {
   telegramPhase2Copy,
   telegramRoleChangedRefusal,
 } from "./telegram-connected"
+import { retireTelegramHandoffLinks } from "./telegram-handoff"
+import { acceptAssistantTelegramMedia } from "./telegram-media"
 import {
   type TelegramChatEffects,
   openEwaTradeButtons,
@@ -90,6 +92,8 @@ export type TelegramNotice = {
   text: string
   html?: boolean
   buttons?: TelegramButton[][]
+  /** Quote this user message at the top of the reply (`reply_parameters`). */
+  replyTo?: string
   /** Runs after Telegram accepts the reply, with the bot for follow-up chat effects. */
   onSent?: (messageId: string, bot: TelegramChatEffects) => Promise<unknown>
   /** Runs after the reply whatever its outcome. */
@@ -123,6 +127,12 @@ export async function acceptAssistantTelegramUpdate(
   }
   // Stop bot and RESTART are handled by the control hook (phase 6).
   if (event.kind === "member") return {}
+  // Phase 5 (f-today, v-today): media gets a text-only reply and never enters the inbox.
+  if (event.kind === "media")
+    return acceptAssistantTelegramMedia(config, event, {
+      notConnected: async () =>
+        (await accessEndedNotice(config, sender)) ?? entryNotice(),
+    })
   const occurredAt = event.kind === "message" ? event.occurredAt : new Date()
   if (event.kind === "message") {
     const message = event.text.trim()
@@ -520,6 +530,14 @@ async function stageRunReply(
         text: "Review this saved draft in EwaTrade.",
         buttons: [[{ text: "Review in EwaTrade", url: reviewUrl.href }]],
         runId: run.id,
+        messageId: message.id,
+      })
+      // Phase 5 (x-link-product): a corrected draft's earlier link loses its button.
+      await retireTelegramHandoffLinks(fresh.db, claim.lease, {
+        proposalId: proposal.id,
+        tenantId: scope.tenantId,
+        actorUserId: scope.userId,
+        chatId: claim.principal.chatId,
         messageId: message.id,
       })
       await settleAssistantTelegramInbox(fresh.db, claim.lease, {
