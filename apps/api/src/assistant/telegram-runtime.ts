@@ -28,6 +28,7 @@ import {
   claimAssistantTelegramLink,
   claimAssistantTelegramOutbox,
   disconnectAssistantTelegram,
+  endAssistantTelegramAccess,
   finishAssistantTelegramActionReview,
   nextAssistantTelegramInbox,
   nextAssistantTelegramOutbox,
@@ -64,6 +65,12 @@ import { createGeneralAssistantTurn } from "./general-turn"
 import { GeneralTurnError } from "./general-turn-contract"
 import { proposalApprovalToken } from "./proposal-security"
 import {
+  telegramAccessEndedNotice,
+  telegramConnectedControl,
+  telegramPhase2Copy,
+  telegramRoleChangedRefusal,
+} from "./telegram-connected"
+import {
   type TelegramChatEffects,
   openEwaTradeButtons,
   showTelegramDisconnected,
@@ -93,6 +100,18 @@ const entryNotice = (): TelegramNotice => ({
   text: telegramCopy.entry,
   buttons: openEwaTradeButtons(),
 })
+/** Phase 2 (a-lost, a-expired): close ended access once and explain it, else null. */
+async function accessEndedNotice(
+  config: AssistantTelegramConfig,
+  sender: { botId: string; userId: string; chatId: string },
+): Promise<TelegramNotice | null> {
+  const ended = await endAssistantTelegramAccess(prisma, {
+    ...sender,
+    allowedUserIds: config.allowedUserIds,
+    allowedTenantIds: config.allowedTenantIds,
+  })
+  return ended ? telegramAccessEndedNotice(sender.chatId, ended) : null
+}
 export async function acceptAssistantTelegramUpdate(
   config: AssistantTelegramConfig,
   event: NormalizedAssistantTelegramUpdate,
@@ -148,6 +167,11 @@ export async function acceptAssistantTelegramUpdate(
               buttons: openEwaTradeButtons(),
             },
           }
+        // c-second: held by another EwaTrade account. Not a claim message to edit later.
+        if (claimed.busy)
+          return {
+            notice: { text: telegramPhase2Copy.busy(claimed), html: true },
+          }
         return {
           notice: {
             text: telegramCopy.claim(claimed),
@@ -166,7 +190,7 @@ export async function acceptAssistantTelegramUpdate(
       return {
         notice: connection
           ? { text: telegramCopy.alreadyConnected(connection), html: true }
-          : entryNotice(),
+          : ((await accessEndedNotice(config, sender)) ?? entryNotice()),
       }
     }
     // Credential content and its digest stay outside the durable assistant inbox.
@@ -190,6 +214,8 @@ export async function acceptAssistantTelegramUpdate(
         : { kind: "callback", data: event.data, callbackId: event.callbackId },
   })
   if (row) return { ingressId: row.id }
+  const ended = await accessEndedNotice(config, sender)
+  if (ended) return { notice: ended }
   // Ordinary text in a chat that is not connected gets the neutral entry reply.
   // Connected chats rejected for other reasons (duplicates, enrollment) stay silent.
   if (
@@ -304,6 +330,24 @@ async function executeCallback(
       if (!proof || !row || (proof.decision && proof.decision !== decision)) {
         await stageText(fresh, lease, [unavailableReview])
         return
+      }
+      // Phase 2 (a-role): the role or Store access changed after the draft.
+      // The callback toast was already answered at the webhook, so the refusal
+      // is a reply and the review's buttons are cleared. Cancel stays allowed.
+      if (
+        decision !== "cancel" &&
+        !proof.decision &&
+        row.status === "PENDING" &&
+        row.expiresAt > new Date()
+      ) {
+        const refusal = telegramRoleChangedRefusal(
+          fresh,
+          capabilityForAction(row.action),
+        )
+        if (refusal) {
+          await stageText(fresh, lease, [refusal], inbox.messageId)
+          return
+        }
       }
       if (decision === "edit") {
         if (row.status !== "PENDING" || row.expiresAt <= new Date()) {
@@ -530,22 +574,37 @@ export async function processAssistantTelegramTurn(
       await executeCallback(ctx, claim, content.data)
     } else {
       const text = content.text.trim()
+      // Phase 2: /help by role (c-help, a-cashier-menu), /scope with a
+      // Change in EwaTrade button (c-switch).
+      const connected = telegramConnectedControl(ctx, text)
       const control =
-        text === "/help"
-          ? "Ask about stock, sales or other records you can access. To make a change, describe it and review the draft I send. Use /scope to check your Store or /disconnect to unlink."
-          : text === "/scope"
-            ? `${ctx.tenantContext.tenant.name} · ${ctx.tenantContext.activeStore?.name ?? "Store"}\nChange your connection in EwaTrade account settings.`
-            : /^(?:proceed|confirm|cancel|yes|go ahead|done|save(?: it| sale)?)[.!]*$/i.test(
-                  text,
-                )
-              ? useReview
-              : text.startsWith("/")
-                ? "Use /help to see the available commands."
-                : undefined
-      if (control) {
-        await inFreshGeneralTransaction(ctx, (fresh) =>
-          stageText(fresh, lease, [control]),
+        connected ??
+        (/^(?:proceed|confirm|cancel|yes|go ahead|done|save(?: it| sale)?)[.!]*$/i.test(
+          text,
         )
+          ? { text: useReview }
+          : text.startsWith("/")
+            ? { text: "Use /help to see the available commands." }
+            : undefined)
+      if (control) {
+        await inFreshGeneralTransaction(ctx, async (fresh) => {
+          await stageAssistantTelegramOutbox(fresh.db, lease, {
+            text: control.text,
+            // Control replies carry URL buttons only (Change in EwaTrade).
+            ...(control.buttons
+              ? {
+                  buttons: control.buttons.map((row) =>
+                    row.flatMap((button) =>
+                      button.url
+                        ? [{ text: button.text, url: button.url }]
+                        : [],
+                    ),
+                  ),
+                }
+              : {}),
+          })
+          await settleAssistantTelegramInbox(fresh.db, lease, {})
+        })
       } else {
         let run = await findRun(ctx, inbox.requestId)
         if (run?.status === "RUNNING" && ctx.assistantConversationId) {
