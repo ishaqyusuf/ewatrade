@@ -114,6 +114,7 @@ export * from "./qa-email-routing"
 export * from "../components/lifecycle-layout"
 export * from "./lifecycle"
 export * from "../templates/lifecycle-adoption"
+export * from "../templates/lifecycle-revenue"
 
 export function createEmailMessage(message: EmailMessage) {
   return message

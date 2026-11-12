@@ -112,6 +112,7 @@ function eligible(ctx: PlayContext): PlayDecision | null {
     data: {
       feature,
       featureLabel: target.label,
+      taps: intent.taps,
       planName: current.name,
       ctaLabel,
       ...recommendedPlanData(recommended, ctx.checkoutAvailable),
