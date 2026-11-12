@@ -6,8 +6,8 @@ Status: planning deliverable only. No runtime, schema, quota, payment, Workshop 
 
 ## Owner decision on 12 November 2026: replies by plan
 
-- Monthly WhatsApp replies: **Free 200, Growth 1,000, Pro 1,000.** Starter is assumed
-  to be 1,000 (the "normal usage" figure); confirm it before implementation.
+- Monthly WhatsApp replies: **Free 200, Starter 1,000, Growth 1,000, Pro 1,000**
+  (Starter confirmed the same day).
 - The base limit therefore comes from the payer's resolved plan, not a single constant.
   Store the applied limit on `AssistantWhatsAppQuotaPeriod` when the period opens. A
   plan change during the month raises (or keeps) the current period's limit; it never

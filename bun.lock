@@ -568,6 +568,15 @@
         "react": ">=19",
       },
     },
+    "packages/growth": {
+      "name": "@ewatrade/growth",
+      "version": "0.1.0",
+      "devDependencies": {
+        "@ewatrade/tsconfig": "workspace:*",
+        "@types/bun": "^1.3.14",
+        "typescript": "^5.9.3",
+      },
+    },
     "packages/jobs": {
       "name": "@ewatrade/jobs",
       "version": "1.0.0",
@@ -1325,6 +1334,8 @@
     "@ewatrade/errors": ["@ewatrade/errors@workspace:packages/errors"],
 
     "@ewatrade/events": ["@ewatrade/events@workspace:packages/events"],
+
+    "@ewatrade/growth": ["@ewatrade/growth@workspace:packages/growth"],
 
     "@ewatrade/jobs": ["@ewatrade/jobs@workspace:packages/jobs"],
 

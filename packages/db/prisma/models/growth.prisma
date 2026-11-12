@@ -1,0 +1,90 @@
+// Lifecycle marketing (docs/plans/2026-11-12-lifecycle-marketing-plan.md).
+// Snapshot = one row per business per UTC day; LifecycleMessage = the
+// send-once ledger for every nudge, including holdout rows that are never sent.
+
+model BusinessGrowthSnapshot {
+  id                  String   @id @default(cuid())
+  tenantId            String
+  tenant              Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  /// UTC calendar day the snapshot describes.
+  day                 DateTime @db.Date
+  /// signed_up | activated | habit | expanding | paying | at_risk | dormant
+  stage               String
+  planId              String
+  businessCreatedAt   DateTime
+  activeDays28        Int
+  ordersLast7         Int
+  ordersThisMonth     Int
+  ordersTotal         Int
+  salesMinorThisMonth BigInt
+  currencyCode        String
+  catalogItems        Int
+  staffCount          Int
+  businessesOwned     Int
+  moneyAccounts       Int
+  storefrontPublished Boolean
+  customDomain        Boolean
+  whatsappLinked      Boolean
+  telegramLinked      Boolean
+  /// Null until the WhatsApp quota ledger exists.
+  waRepliesUsed       Int?
+  waRepliesCap        Int?
+  /// { [limitName]: used / limit } for every finite plan limit, e.g. { "products": 0.85 }.
+  limitPressure       Json
+  lastActiveAt        DateTime?
+  createdAt           DateTime @default(now())
+
+  @@unique([tenantId, day])
+  @@index([day, stage])
+}
+
+model LifecycleMessage {
+  id                String    @id @default(cuid())
+  tenantId          String
+  tenant            Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  /// Owner/Admin recipient.
+  userId            String
+  user              User      @relation("LifecycleMessageRecipient", fields: [userId], references: [id], onDelete: Cascade)
+  /// Play id plus variant suffix where needed, e.g. "P08_limit:products".
+  playId            String
+  /// Dedupe window chosen by the play, e.g. "2026-11", "products:2026-11" or "once".
+  periodKey         String
+  /// control (holdout) | a | b
+  variant           String
+  /// email | in_app | whatsapp | telegram
+  channel           String
+  /// pending | sending | sent | suppressed | failed | holdout
+  status            String
+  suppressedReason  String?
+  /// Null = automated, signed by the founder. Later: the Oversight operator who sent it.
+  senderUserId      String?
+  providerMessageId String?   @unique
+  attempts          Int       @default(0)
+  claimedAt         DateTime?
+  sentAt            DateTime?
+  deliveredAt       DateTime?
+  openedAt          DateTime?
+  clickedAt         DateTime?
+  dismissedAt       DateTime?
+  convertedAt       DateTime?
+  /// What the conversion was, e.g. a plan change id or site id.
+  conversionRef     String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@unique([tenantId, userId, playId, periodKey])
+  @@index([status, createdAt])
+  @@index([playId, sentAt])
+  @@index([userId, sentAt])
+}
+
+model MarketingPreference {
+  userId            String    @id
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productTips       Boolean   @default(true)
+  offers            Boolean   @default(true)
+  monthlyReport     Boolean   @default(true)
+  /// Set by one-click unsubscribe, hard bounce or spam complaint. Blocks all lifecycle mail.
+  unsubscribedAllAt DateTime?
+  updatedAt         DateTime  @updatedAt
+}

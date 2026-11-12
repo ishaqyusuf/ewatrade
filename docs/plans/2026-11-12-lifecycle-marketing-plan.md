@@ -2,9 +2,8 @@
 
 Date: 12 November 2026. Source audited: current `main` checkout.
 
-Status: planning only. Nothing is implemented yet. The owner answered most decisions
-on 12 November 2026 (Section 8). Two remain open: top-up pack pricing and the sending
-subdomain.
+Status: approved for implementation 12 November 2026 as four parallel workstreams
+(Section 7). Only top-up pack pricing is still open (Section 8).
 
 ## 1. Short answer: what exists today
 
@@ -119,7 +118,7 @@ Monthly WhatsApp replies by plan (owner decision, 12 Nov 2026):
 | Plan | Replies per month |
 | --- | --- |
 | Free | 200 |
-| Starter | 1,000 (assumed: the "normal usage" figure) |
+| Starter | 1,000 (confirmed) |
 | Growth | 1,000 |
 | Pro | 1,000 |
 
@@ -421,11 +420,11 @@ everything is automatic and signed by Ishaq.
 | --- | --- | --- |
 | 1 | Sender identity | **"Ishaq from EwaTrade"** for now, fully automated. Later, the Oversight marketing console lets each operator choose messages and send under their own name |
 | 2 | Opt-in default | Not answered directly. **Using the recommendation:** product tips on by default, one-click opt-out on every email |
-| 3 | WhatsApp replies by tier | **Free 200, Growth 1,000, Pro 1,000.** Starter assumed 1,000. Top-up pack sizes and prices are **still open** |
+| 3 | WhatsApp replies by tier | **Free 200, Starter 1,000, Growth 1,000, Pro 1,000.** Top-up pack sizes and prices: **to be decided later** (P10 and P11 on paid plans offer Telegram only until then) |
 | 4 | Telegram vs WhatsApp cap | **Confirmed by the owner and verified in code:** Telegram does not count against the WhatsApp cap. It shares the token budget |
 | 5 | Upgrade CTA while billing is off | **Checkout is being switched on now**, so upgrade plays link to real checkout |
 | 6 | Free plan | **Every business starts on Free.** True in code once the owner-billing switch is on. Businesses created before that stay on the Starter launch default, and the owner still has to decide how to move them |
-| 7 | Lifecycle mail subdomain | **Still open.** Recommended: a separate sending subdomain so marketing complaints cannot hurt login-code delivery. Needed before W1 day 4 |
+| 7 | Lifecycle mail subdomain | **Approved: a dedicated sending subdomain** for lifecycle mail. The owner adds the DNS records and verifies the domain in Resend |
 
 The owner also asked to split the phases into 3–4 workstreams for faster implementation
 (Section 7).

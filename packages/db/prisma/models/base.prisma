@@ -1,4 +1,6 @@
 model Tenant {
+  growthSnapshots BusinessGrowthSnapshot[]
+  lifecycleMessages LifecycleMessage[]
   catalogStorefrontPolicies CatalogStorefrontPolicy[]
   manualPaymentAlertSettings ManualPaymentAlertSetting[]
   paymentNotificationQuotas PaymentNotificationQuota[]
@@ -387,6 +389,8 @@ model LeadCapture {
 }
 
 model User {
+  lifecycleMessages LifecycleMessage[] @relation("LifecycleMessageRecipient")
+  marketingPreference MarketingPreference?
   assistantWhatsAppUsage AssistantWhatsAppUsageBucket[]
   assistantWhatsAppIdentities AssistantWhatsAppIdentity[]
   assistantWhatsAppLinks AssistantWhatsAppLink[]
