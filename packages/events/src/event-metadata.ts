@@ -1,5 +1,6 @@
 import { eventNameSchema } from "@ishaqyusuf/logly-core"
 import { z } from "zod"
+import { GROWTH_INTENT_FEATURES } from "./growth-intent"
 
 // Product-owned, scalar metadata. Add fields intentionally; never dump form data.
 export const eventMetadataSchema = z.object({
@@ -12,6 +13,8 @@ export const eventMetadataSchema = z.object({
   duration_ms: z.number().finite().nonnegative().optional(),
   success: z.boolean().optional(),
   assistant_mode: z.enum(["setup", "product", "general"]).optional(),
+  /** Lifecycle intent events: a fixed feature label, never free text. */
+  feature: z.enum(GROWTH_INTENT_FEATURES).optional(),
 })
 export type EventMetadata = z.infer<typeof eventMetadataSchema>
 export function safeEventMetadata(input: unknown): EventMetadata {
