@@ -65,6 +65,7 @@ import {
   timeLabel,
 } from "./green-till-home-model"
 import { HOME_METRIC_LOADING } from "./home-journey-metrics"
+import { LifecycleNudgeCard } from "./lifecycle-nudge-card"
 import { useHomeJourney } from "./use-home-journey"
 
 export function OperationsDashboardSurface({
@@ -559,6 +560,7 @@ export function OperationsDashboardSurface({
       title="Today"
     >
       {!isAttendant ? <OrderVisibilityCard review /> : null}
+      {!isAttendant ? <LifecycleNudgeCard /> : null}
       {isOffline && !isClassicOwner ? (
         <StatusBanner
           icon="Wind"

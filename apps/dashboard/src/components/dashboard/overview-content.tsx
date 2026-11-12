@@ -1,5 +1,6 @@
 import { CollapsibleSummary } from "@/components/collapsible-summary"
 import { GettingStarted } from "@/components/dashboard/getting-started"
+import { LifecycleNudgeCard } from "@/components/dashboard/lifecycle-nudge-card"
 import {
   OverviewMetrics,
   OverviewMetricsSkeleton,
@@ -117,6 +118,8 @@ export async function OverviewContent({
         timeZone={timeZone}
       />
     ) : null
+  // One lifecycle nudge at a time, chosen by the server sweep (Owner/Admin).
+  const nudge = store && isOwner ? <LifecycleNudgeCard key="nudge" /> : null
   const recent =
     availability?.hasOrders && store ? (
       <section
@@ -172,8 +175,8 @@ export async function OverviewContent({
       <OwnerBusinesses key={`businesses:${tenant.id}`} />
     ) : null
   const sections = availability?.hasOrders
-    ? [numbers, needsYou, recent, setup, storeLink, businesses]
-    : [setup, needsYou, storeLink, numbers, businesses]
+    ? [numbers, needsYou, nudge, recent, setup, storeLink, businesses]
+    : [setup, needsYou, nudge, storeLink, numbers, businesses]
 
   return <>{sections}</>
 }
