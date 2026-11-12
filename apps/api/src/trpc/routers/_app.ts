@@ -14,10 +14,11 @@ import { customerMessagesRouter } from "./customer-messages"
 import { customersRouter } from "./customers"
 import { domainsRouter } from "./domains"
 import { financeRouter } from "./finance"
-import { growthIntentRouter } from "./growth-intent"
 import { growthRouter } from "./growth"
+import { growthIntentRouter } from "./growth-intent"
 import { inventoryRouter } from "./inventory"
 import { locationRouter } from "./location"
+import { marketingPreferencesRouter } from "./marketing-preferences"
 import { offlineRouter } from "./offline"
 import { ordersRouter } from "./orders"
 import { prescriptionAccessRouter } from "./prescription-access"
@@ -66,6 +67,7 @@ export const appRouter = createTRPCRouter({
   finance: financeRouter,
   growthIntent: growthIntentRouter,
   growth: growthRouter,
+  marketingPreferences: marketingPreferencesRouter,
   customerLedger: customerLedgerRouter,
   domains: domainsRouter,
   orders: ordersRouter,

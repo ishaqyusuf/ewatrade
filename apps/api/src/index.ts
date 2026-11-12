@@ -48,6 +48,7 @@ import {
   prepareFinanceExpenseReceiptDelivery,
 } from "./finance/expense-receipt-delivery-context"
 import { registerFinanceExpenseReceiptUploadRoutes } from "./finance/expense-receipt-upload"
+import { registerLifecycleRoutes } from "./growth/lifecycle-routes"
 import { registerHealthRoutes } from "./health-routes"
 import { captureApiError } from "./observability/sentry"
 import { registerOrderAttachmentRoutes } from "./orders/order-attachment-routes"
@@ -215,6 +216,7 @@ registerAppUpdateRoutes(app, appUpdateDependencies)
 registerBillingProviderEventRoutes(app)
 registerAccountPrivacyResendWebhook(app)
 registerStaffInvitationResendWebhook(app)
+registerLifecycleRoutes(app)
 registerStoreNotificationRoutes(app)
 registerPaystackSubscriptionWebhook(app)
 registerCatalogPhotoUploadRoutes(app)
