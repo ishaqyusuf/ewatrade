@@ -2,8 +2,9 @@
 
 Date: 12 November 2026. Source audited: current `main` checkout.
 
-Status: planning only. Nothing here is implemented or approved. Prices, payer scope and
-the WhatsApp quota are owner decisions that are still open (see the last section).
+Status: planning only. Nothing is implemented yet. The owner answered most decisions
+on 12 November 2026 (Section 8). Two remain open: top-up pack pricing and the sending
+subdomain.
 
 ## 1. Short answer: what exists today
 
@@ -79,8 +80,8 @@ earliest send after the condition becomes true, then normal caps apply.
 | P07 | Staff | 30+ orders a month and 0 staff, or the owner records 90% of orders while working 6+ days a week | Email | "Let a sales rep record sales; you keep control" | Invite staff | Invitation accepted |
 | P08 | **Tier upgrade: limit** | Any limit at 80% or more (products 80/100, staff 2/2, orders 40/50 on Free, storefront items) | In-app banner at 80%, email at 90%, and a block screen with plan comparison at 100% | "You've added 85 of 100 products" | See plans | Plan change |
 | P09 | **Tier upgrade: success** | Milestone: 100th order, best month so far, or monthly sales at the 3× median | Email | Congratulate with their numbers, then show what Growth adds (more staff, 180-day history, customer messages) | See Growth | Plan change, or a click if billing is off |
-| P10 | **WhatsApp cap: 80%** | 800 of 1,000 replies used this month | WhatsApp footer + in-app + email to owner | "200 replies left, resets on 1 Dec" | Top up / Use Telegram | Top-up or Telegram link |
-| P11 | **WhatsApp cap: exhausted** | Cap reached (the final-notice reply from the quota plan) | Final WhatsApp reply + email | Three options: top-up pack, higher tier, or Telegram (not counted against the WhatsApp cap) | Top up / Upgrade / Connect Telegram | Any of the three within 72h |
+| P10 | **WhatsApp cap: 80%** | 80% of the plan's monthly replies used (160 of 200 on Free, 800 of 1,000 on paid) | WhatsApp footer + in-app + email to owner | "40 replies left, resets on 1 Dec" | Free: Upgrade / Use Telegram. Paid: Top up / Use Telegram | Upgrade, top-up or Telegram link |
+| P11 | **WhatsApp cap: exhausted** | Cap reached (the final-notice reply from the quota plan) | Final WhatsApp reply + email | Free: Starter gives 5× the replies, or use Telegram. Paid: top-up pack or Telegram. Telegram is not counted against the WhatsApp cap | Upgrade / Top up / Connect Telegram | Any option within 72h |
 | P12 | Second business | Growth trigger: 2+ stores' worth of orders, or the owner asks the assistant about another shop | Email | "Run your second shop from the same account" | Add business | Second business created |
 | P13 | Monthly value report | Day 1 of each month, Habit stage and above | Email | Last month's sales, top items, time saved | Open report | Open rate, and retention as a proxy |
 | P14 | At risk | Was Habit, now 10 days inactive | Email | Their last numbers plus one tip | Open app | Active again within 7 days |
@@ -101,19 +102,43 @@ P03 are the main retention plays, because businesses that use depth features chu
   signal, and send one email within 24h of the third tap.
 - **Recommend the right tier.** Pick the smallest plan that removes the limit they hit.
   Never offer Pro to someone who only hit the Free order cap.
-- **While paid billing is off (today):** run P08 and P09 as "join the Growth early list"
-  and count clicks. That gives real willingness-to-pay data before checkout is
-  switched on.
+- **Checkout is being switched on now** (Paystack web subscriptions, in a separate
+  session). Upgrade plays link straight to checkout. As a safety net, if checkout is
+  unavailable when a play fires, the CTA falls back to Plan and billing. It never
+  shows a dead button.
+- **New businesses start on Free.** This applies once the owner-billing switch is on.
+  In code, `ownerBillingRuntime()` stamps new businesses into the Free cohort. With the
+  switch off, they fall back to `RETAIL_OPS_LAUNCH_DEFAULT_PLAN_ID = "starter"`.
+  Businesses created before the switch stay on the Starter launch default until the
+  owner decides how to move them.
 
 ### WhatsApp cap playbook (P10, P11)
 
-The order of the offer matters:
+Monthly WhatsApp replies by plan (owner decision, 12 Nov 2026):
 
-1. **Top-up pack.** This is the cheapest decision and keeps them on WhatsApp.
-2. **Upgrade tier**, if a higher tier includes more replies. This needs a decision: does
-   the reply allowance scale by tier?
-3. **Telegram.** Free and unlimited on our side, a good retention escape valve. Present
-   it as "keep working tonight", not as a downgrade.
+| Plan | Replies per month |
+| --- | --- |
+| Free | 200 |
+| Starter | 1,000 (assumed: the "normal usage" figure) |
+| Growth | 1,000 |
+| Pro | 1,000 |
+
+Growth and Pro do not get more replies, so a tier upgrade only solves the cap for Free
+businesses. The order of the offer depends on the plan:
+
+- **Free:** (1) Upgrade to Starter (5× the replies, plus every paid feature). This is
+  the strongest Free→paid lever in the whole catalogue. (2) Telegram.
+- **Paid:** (1) Top-up pack, the cheapest decision, keeps them on WhatsApp. (2) Telegram.
+- **Telegram** is presented as "keep working tonight", not as a downgrade.
+
+**Telegram is outside the WhatsApp cap (verified 12 Nov 2026).** Telegram has its own
+runtime and outbox (`apps/api/src/assistant/telegram-runtime.ts`,
+`packages/db/src/queries/assistant-telegram/*`). It does not go through the WhatsApp
+turn path (`channel-turn.ts`, `assistant-whatsapp/*`), which is where the quota plan
+puts its admission hook. Telegram does share the business's General token budget (5M
+tokens per month), so very heavy Telegram use can still hit the token ceiling. The
+quota implementation must keep its hook WhatsApp-only and add a test proving a
+Telegram turn leaves the WhatsApp count unchanged.
 
 This depends on the quota ledger in the WhatsApp quota plan. The marketing system only
 reads `used / cap` from that ledger and never counts replies itself.
@@ -301,21 +326,85 @@ holdout is the number to decide on. Click-attributed conversions are a secondary
   button, a plain-text alternative, and a mobile-first layout that reuses the email
   design system.
 
-## 7. Phased scope
+## 7. Implementation: four workstreams
 
-| Phase | Scope | Est. effort | Depends on |
-| --- | --- | --- | --- |
-| 0. Decisions + instrumentation | Owner answers in Section 8. Add Logly intent events to locked-feature sheets and plan pages | 1 day | none |
-| 1. Foundation | `growth.prisma` (3 models), snapshot builder, daily sweep, ledger, policy (caps, holdout, consent), unsubscribe route + preferences, flag off | 3–4 days | Phase 0 |
-| 2. Adoption plays (no billing needed) | P02, P03, P04, P06, P07, P13 with email templates + Home card. Click redirect + Resend webhook join | 3–4 days | Phase 1 |
-| 3. Growth dashboard | Oversight page with the Section 5.2 panels (excluding revenue) | 2 days | Phase 1 (data begins accruing) |
-| 4. Upgrade plays | P08 real-time thresholds, P09 milestones, P12. While billing is off: "early list" CTA. After billing: plan comparison + checkout link | 2–3 days | Paystack activation for real checkout |
-| 5. WhatsApp cap plays | P10, P11 reading the quota ledger, top-up offer, Telegram path | 2 days | WhatsApp quota plan implemented + top-up pricing |
-| 6. Retention | P05, P14, P15, variant testing, revenue panel | 2–3 days | Phases 2–4 live for 4+ weeks |
+The seven phases are regrouped into four workstreams so they can run in parallel.
+W1 goes first, but only its first day blocks the others: the schema plus the play
+contract. After that, W2, W3 and W4 touch different files and can be built at the same
+time by separate sessions.
 
-Recommended order: 0 → 1 → 2 → 3, then ship and watch for two weeks before 4 and 5.
-Phases 1–3 are valuable today even with billing off: they drive activation and give the
-real demand numbers for the pricing decision.
+```
+W1 day 1: schema + play contract ──┬──► W2 Adoption & retention plays
+W1 days 2–4: engine, consent,      ├──► W3 Revenue plays (needs checkout; cap plays need quota)
+             tracking, email layout└──► W4 Metrics & Oversight dashboard
+```
+
+### W1. Foundation and email plumbing (4 days, first)
+
+| Day | Deliverable | Files |
+| --- | --- | --- |
+| 1 | `growth.prisma` (`BusinessGrowthSnapshot`, `LifecycleMessage`, `MarketingPreference`) and migration. Play contract type (`id`, `periodKey()`, `eligible(snapshot)`, `successPredicate`, `channels`, `priority`, template key). Snapshot fixture builder for tests | `packages/db/prisma/models/growth.prisma`, `packages/growth/src/contract.ts`, `packages/growth/src/fixtures.ts` |
+| 2 | Snapshot builder (paged grouped reads, reusing plan-limit and feature-availability queries). Daily `sweep("growth-lifecycle")` step in the existing cadence, behind `GROWTH_LIFECYCLE_ENABLED` | `packages/db/src/queries/growth-snapshot.ts`, `packages/jobs/src/tasks/scheduled-cadences.ts` |
+| 3 | Policy (caps, quiet hours, priority, stable 10% holdout, consent). Ledger insert-if-absent, claim and send fence. Inline send after commit, with leftovers sent by the sweep | `packages/growth/src/policy.ts`, `packages/db/src/queries/lifecycle-messages.ts` |
+| 4 | Lifecycle email layout signed "Ishaq from EwaTrade" with `List-Unsubscribe` headers. Signed `/go/:token` click redirect. Resend webhook join for delivered, bounced and complained. One-click unsubscribe page and Account preference toggles | `packages/email/components/lifecycle-layout.tsx`, API route, Resend webhook handler, Dashboard route |
+
+Done means a fixture play runs end to end on Preview, delivers to QA routing only, and
+records delivered and clicked.
+
+### W2. Adoption and retention plays (3–4 days, after W1 day 1)
+
+P02 first sale, P03 assistant channel, P04 site setup, P05 custom domain, P06 money
+accounts, P07 staff, P13 monthly value report, P14 at risk, P15 win-back. This also
+covers the `growth.activeNudge` read and the Home card on Dashboard and mobile.
+
+Files: `packages/growth/src/plays/adoption/*`, `packages/email/emails/21-…` to `29-…`,
+the nudge tRPC procedure and the Home card components.
+
+These plays need no billing. They can go live as soon as W1 ships.
+
+### W3. Revenue plays (3–4 days, after W1 day 1)
+
+| Play | Depends on |
+| --- | --- |
+| P08 limit pressure (80% banner, 90% email, 100% plan comparison), using a real-time insert in the limit-checking commands | Checkout live (payment session) |
+| P09 success milestones and P12 second business | Checkout live |
+| Feature-intent email (third "See plans" tap) | W4 intent events |
+| P10 and P11 WhatsApp cap, with plan-aware offers (Free → Starter, paid → top-up), and the Telegram connect path | WhatsApp quota ledger with Free 200 / paid 1,000, and top-up pricing |
+
+Files: `packages/growth/src/plays/revenue/*`, `packages/email/emails/30-…` onward, and
+the threshold hooks in the order, catalog and staff limit checks.
+
+Build P08, P09 and P12 as soon as checkout is live. Build P10 and P11 straight after
+the WhatsApp quota ships. That quota is its own plan
+(`docs/plans/2026-11-09-whatsapp-response-quota.md`) and is not part of this workstream.
+
+### W4. Metrics and Oversight (3 days, after W1 day 2)
+
+- Logly intent events: `plan_sheet_opened`, `upgrade_cta_clicked`, `nudge_shown`,
+  `nudge_dismissed`, using fixed labels only.
+- Oversight Growth page with the Section 5.2 panels: north star, stage funnel,
+  activation cohorts, limit pressure, product-qualified leads list, feature adoption,
+  WhatsApp usage, per-play scorecard with lift, and MRR once checkout is live.
+- Conversion check in the sweep (`convertedAt` via each play's success predicate).
+
+Files: `packages/oversight/src/*`, the Oversight app page, and the analytics event
+whitelist.
+
+### Later: Oversight marketing console
+
+This was requested for after the automation is running. Each Oversight login can open
+a business's snapshot, choose or approve messages, and send them under the operator's
+own name. W1's ledger already stores the channel, play and sender per message, so this
+adds a `senderUserId` column and a manual `periodKey`, not a new system. Until then,
+everything is automatic and signed by Ishaq.
+
+### Order
+
+1. W1 day 1 lands and is committed.
+2. W2, W3 (P08, P09, P12) and W4 run in parallel. W1 days 2–4 continue alongside.
+3. Turn on W2 plays first, then W3 once checkout is live.
+4. P10 and P11 follow the WhatsApp quota.
+5. Review the play scorecard after two weeks.
 
 ### Testing
 
@@ -326,22 +415,20 @@ real demand numbers for the pricing decision.
 - Email preview fixtures for each new template in the existing gallery.
 - QA routing check: lifecycle mail in Preview goes only to QA addresses.
 
-## 8. Decisions needed from the owner
+## 8. Owner decisions (answered 12 November 2026)
 
-1. **Sender identity:** your name ("Ishaq from EwaTrade") or the brand only?
-   Founder name usually gets higher reply and open rates.
-2. **Opt-in default:** product tips on by default with one-click opt-out (recommended),
-   or opt-in only?
-3. **WhatsApp allowance by tier:** do Growth and Pro get more than 1,000 replies? Set
-   the top-up pack sizes and prices (for example 500 replies for ₦X).
-4. **Telegram positioning:** confirm that Telegram replies do not count against the
-   WhatsApp cap. They still use the shared token budget.
-5. **Upgrade CTA while billing is off:** "join Growth early list" (recommended), or
-   hide upgrade plays until Paystack goes live?
-6. **Free plan:** new businesses default to Starter during launch, so limit-based
-   upgrade pressure on Free mostly appears after launch. Confirm when the launch
-   default ends.
-7. **Lifecycle mail subdomain:** approve a separate sending subdomain and DNS changes.
+| # | Question | Decision |
+| --- | --- | --- |
+| 1 | Sender identity | **"Ishaq from EwaTrade"** for now, fully automated. Later, the Oversight marketing console lets each operator choose messages and send under their own name |
+| 2 | Opt-in default | Not answered directly. **Using the recommendation:** product tips on by default, one-click opt-out on every email |
+| 3 | WhatsApp replies by tier | **Free 200, Growth 1,000, Pro 1,000.** Starter assumed 1,000. Top-up pack sizes and prices are **still open** |
+| 4 | Telegram vs WhatsApp cap | **Confirmed by the owner and verified in code:** Telegram does not count against the WhatsApp cap. It shares the token budget |
+| 5 | Upgrade CTA while billing is off | **Checkout is being switched on now**, so upgrade plays link to real checkout |
+| 6 | Free plan | **Every business starts on Free.** True in code once the owner-billing switch is on. Businesses created before that stay on the Starter launch default, and the owner still has to decide how to move them |
+| 7 | Lifecycle mail subdomain | **Still open.** Recommended: a separate sending subdomain so marketing complaints cannot hurt login-code delivery. Needed before W1 day 4 |
+
+The owner also asked to split the phases into 3–4 workstreams for faster implementation
+(Section 7).
 
 ## 9. Explicitly out of scope for now
 

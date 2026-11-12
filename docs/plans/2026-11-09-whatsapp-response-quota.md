@@ -4,6 +4,23 @@ Date: 9 November 2026. Source audited: `529a4499879995383273113ef99d01e8192d209f
 
 Status: planning deliverable only. No runtime, schema, quota, payment, Workshop publication or release change is authorized by this document. The requested policy is 1,000 monthly WhatsApp responses and one exhaustion notice with the final reply. Recommendations below are proposals, not approved commercial policy. Current deployed configuration was not queried.
 
+## Owner decision on 12 November 2026: replies by plan
+
+- Monthly WhatsApp replies: **Free 200, Growth 1,000, Pro 1,000.** Starter is assumed
+  to be 1,000 (the "normal usage" figure); confirm it before implementation.
+- The base limit therefore comes from the payer's resolved plan, not a single constant.
+  Store the applied limit on `AssistantWhatsAppQuotaPeriod` when the period opens. A
+  plan change during the month raises (or keeps) the current period's limit; it never
+  claws back replies already used.
+- Telegram replies do not count. Telegram uses its own runtime and outbox, not
+  `channel-turn.ts` or `assistant-whatsapp/*`. Keep the admission hook WhatsApp-only,
+  and add a test that a Telegram turn leaves the WhatsApp count unchanged.
+- Top-up pack sizes and prices are still open.
+- Exhaustion and 80% notices feed lifecycle plays P10 and P11
+  (`docs/plans/2026-11-12-lifecycle-marketing-plan.md`). On Free they offer Starter
+  first; on paid plans they offer a top-up first; on every plan they also offer
+  Telegram.
+
 ## Follow-up proposal on 10 November 2026
 
 The [response handoff and alternate delivery plan](2026-11-10-whatsapp-assistant-response-handoff.md)
