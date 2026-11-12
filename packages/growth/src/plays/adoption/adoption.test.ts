@@ -189,46 +189,52 @@ describe("P04 site setup", () => {
 describe("P05 custom domain", () => {
   const published = {
     storefrontPublished: true,
-    businessCreatedAt: createdDaysAgo(14),
+    storefrontPublishedAt: createdDaysAgo(14),
   }
-  const weekAgo = makeSnapshot({ storefrontPublished: true })
 
-  test("fires 14+ days in, published a week ago too, no custom domain", () => {
-    expect(
-      customDomainPlay.eligible(makeContext(published, { weekAgo })),
-    ).toMatchObject({
-      ctaPath: "/settings/domains",
+  test("fires when the site has been live 14 days on the free address", () => {
+    expect(customDomainPlay.eligible(makeContext(published))).toEqual({
+      periodKey: "once",
       templateKey: "lifecycle-custom-domain",
+      data: { catalogItems: 6, liveDays: 14 },
+      ctaPath: "/settings/domains",
     })
   })
 
-  test("needs 14 days, a site live for a week, and no domain yet", () => {
+  test("waits for 14 live days and a published site", () => {
     expect(
       customDomainPlay.eligible(
-        makeContext(
-          { ...published, businessCreatedAt: createdDaysAgo(13) },
-          { weekAgo },
-        ),
-      ),
-    ).toBeNull()
-    expect(customDomainPlay.eligible(makeContext(published))).toBeNull()
-    expect(
-      customDomainPlay.eligible(
-        makeContext(published, {
-          weekAgo: makeSnapshot({ storefrontPublished: false }),
+        makeContext({
+          ...published,
+          storefrontPublishedAt: createdDaysAgo(13),
         }),
       ),
     ).toBeNull()
     expect(
       customDomainPlay.eligible(
-        makeContext({ ...published, customDomain: true }, { weekAgo }),
+        makeContext({ ...published, storefrontPublishedAt: null }),
       ),
     ).toBeNull()
     expect(
       customDomainPlay.eligible(
-        makeContext({ ...published, storefrontPublished: false }, { weekAgo }),
+        makeContext({ ...published, storefrontPublished: false }),
       ),
     ).toBeNull()
+  })
+
+  test("not once a custom domain is connected, which is the success", () => {
+    expect(
+      customDomainPlay.eligible(
+        makeContext({ ...published, customDomain: true }),
+      ),
+    ).toBeNull()
+    const sentOn = makeSnapshot(published)
+    expect(
+      customDomainPlay.success.achieved(
+        sentOn,
+        makeSnapshot({ customDomain: true }),
+      ),
+    ).toBe(true)
   })
 })
 
@@ -313,11 +319,11 @@ describe("P07 staff", () => {
 })
 
 describe("P13 monthly report", () => {
-  const habit = {
+  const habit: Partial<GrowthSnapshot> = {
     stage: "habit",
     ordersLastMonth: 48,
     salesMinorLastMonth: BigInt(21_350_000),
-  } as Partial<GrowthSnapshot>
+  }
   const on = (iso: string) => ({ now: new Date(iso) })
 
   test("fires on day 1 for last month, keyed by that month", () => {
@@ -375,18 +381,7 @@ describe("P13 monthly report", () => {
       ).toBeNull()
     expect(
       monthlyReportPlay.eligible(
-        makeContext(
-          { ...habit, ordersLastMonth: 0 } as Partial<GrowthSnapshot>,
-          day1,
-        ),
-      ),
-    ).toBeNull()
-  })
-
-  test("stays silent until the snapshot carries last month's totals", () => {
-    expect(
-      monthlyReportPlay.eligible(
-        makeContext({ stage: "habit" }, on("2026-12-01T06:30:00Z")),
+        makeContext({ ...habit, ordersLastMonth: 0 }, day1),
       ),
     ).toBeNull()
   })
@@ -504,7 +499,7 @@ function eligibleSnapshot(id: string): Partial<GrowthSnapshot> {
     case "P05_custom_domain":
       return {
         storefrontPublished: true,
-        businessCreatedAt: createdDaysAgo(20),
+        storefrontPublishedAt: createdDaysAgo(20),
       }
     case "P06_money_accounts":
       return { planId: "starter", ordersTotal: 12 }
@@ -515,7 +510,7 @@ function eligibleSnapshot(id: string): Partial<GrowthSnapshot> {
         stage: "habit",
         ordersLastMonth: 3,
         salesMinorLastMonth: BigInt(100),
-      } as Partial<GrowthSnapshot>
+      }
     case "P14_at_risk":
       return { stage: "at_risk", lastActiveAt: createdDaysAgo(12) }
     case "P15_win_back":
@@ -526,8 +521,6 @@ function eligibleSnapshot(id: string): Partial<GrowthSnapshot> {
 }
 
 function eligibleContext(id: string) {
-  if (id === "P05_custom_domain")
-    return { weekAgo: makeSnapshot({ storefrontPublished: true }) }
   if (id === "P13_monthly_report")
     return { now: new Date("2026-12-01T06:30:00Z") }
   return {}

@@ -126,11 +126,15 @@ export const siteSetupEmail: LifecycleTemplate = (input) => {
 /** 24 · P05: site live 14+ days, free address. */
 export const customDomainEmail: LifecycleTemplate = (input) => {
   const items = num(input.data.catalogItems)
+  const liveDays = num(input.data.liveDays)
   return {
     subject: "Give your site its own name",
     content: shell(input, {
       preview: "A short name is easier to share than a long address.",
-      lead: `Your site has ${count(items, "product")} online.`,
+      lead:
+        liveDays > 0
+          ? `Your site has been live for ${liveDays} days with ${count(items, "product")} on it.`
+          : `Your site has ${count(items, "product")} online.`,
       body: [
         "A name like yourshop.com.ng fits on a flyer, a receipt or a WhatsApp status, and customers remember it. You can search for one and buy it inside EwaTrade.",
       ],

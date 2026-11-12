@@ -14,7 +14,10 @@ export const lifecycleAdoptionPreviews = {
   "lifecycle-first-sale": { ...base, data: { catalogItems: 6 } },
   "lifecycle-assistant-channel": { ...base, data: { ordersTotal: 9 } },
   "lifecycle-site-setup": { ...base, data: { catalogItems: 12 } },
-  "lifecycle-custom-domain": { ...base, data: { catalogItems: 12 } },
+  "lifecycle-custom-domain": {
+    ...base,
+    data: { catalogItems: 12, liveDays: 21 },
+  },
   "lifecycle-money-accounts": {
     ...base,
     data: { ordersTotal: 27, moneyAccounts: 1 },
