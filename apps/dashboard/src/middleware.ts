@@ -75,6 +75,8 @@ export function middleware(request: NextRequest) {
     request.nextUrl.pathname,
   )
   const signupChat = request.nextUrl.pathname === "/signup/chat"
+  // Lifecycle email preferences: a signed token in the link, no login.
+  const emailPreferences = request.nextUrl.pathname === "/email-preferences"
   // Short payment links are public only for an exact short code, never other /p/* paths.
   const shortPaymentCode = /^\/p\/([^/]+)(?:\/image)?\/?$/.exec(
     request.nextUrl.pathname,
@@ -114,7 +116,8 @@ export function middleware(request: NextRequest) {
       signupChat ||
       paymentPage ||
       paymentLogin ||
-      passwordRecovery
+      passwordRecovery ||
+      emailPreferences
     ) {
       response.headers.set("Cache-Control", "private, no-store, max-age=0")
       response.headers.set("Referrer-Policy", "no-referrer")
@@ -168,6 +171,7 @@ export function middleware(request: NextRequest) {
     !isPublicAppAssociation &&
     !paymentPage &&
     !passwordRecovery &&
+    !emailPreferences &&
     !["/login", "/signup", "/signup/chat", "/staff-onboarding"].includes(
       request.nextUrl.pathname,
     )
