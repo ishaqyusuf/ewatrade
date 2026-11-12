@@ -14,6 +14,12 @@ export {
 } from "./authority"
 export { expireAssistantTelegramWork } from "./expiry"
 export {
+  type AssistantTelegramHandoffMessage,
+  readAssistantTelegramChatScope,
+  readAssistantTelegramHandoffMessages,
+  referencesTelegramHandoffProposal,
+} from "./handoff"
+export {
   type TelegramInboundContent,
   type TelegramUpdateInput,
   acceptAssistantTelegramUpdate,
