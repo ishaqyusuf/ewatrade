@@ -7,6 +7,7 @@ import {
 } from "@ewatrade/db/oversight"
 import { Hono } from "hono"
 import { z } from "zod"
+import { createAssistantUsageOversightRoutes } from "./assistant-usage"
 import { createCatalogAiOversightRoutes } from "./catalog-ai-images"
 import { createGrowthOversightRoutes } from "./growth"
 import { createPaymentNotificationOversightRoutes } from "./payment-notifications"
@@ -42,6 +43,10 @@ export function createOversightRoutes(
     await next()
   })
   oversightRoutes.route("/growth", createGrowthOversightRoutes(getDb))
+  oversightRoutes.route(
+    "/assistant-usage",
+    createAssistantUsageOversightRoutes(getDb),
+  )
   const list = z.object({
     search: z.string().trim().max(100).default(""),
     cursor: z.string().max(200).optional(),

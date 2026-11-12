@@ -87,7 +87,8 @@
     "./growth-snapshot": "./src/queries/growth-snapshot.ts",
     "./lifecycle-limit-hooks": "./src/queries/lifecycle-limit-hooks.ts",
     "./growth-intent": "./src/queries/growth-intent.ts",
-    "./growth-metrics": "./src/queries/growth-metrics.ts"
+    "./growth-metrics": "./src/queries/growth-metrics.ts",
+    "./oversight-assistant-usage": "./src/queries/oversight-assistant-usage.ts"
   },
   "scripts": {
     "seed:category-suggestion-config": "bun scripts/seed-category-suggestion-config.ts",
