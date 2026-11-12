@@ -43,6 +43,7 @@ import { TRPCError } from "@trpc/server"
 import { z } from "zod"
 import { requireBrowserIdentity } from "../../assistant/channel-principal"
 import type { GeneralContext } from "../../assistant/general-context"
+import { showTelegramReconnected } from "../../assistant/telegram-connected"
 import {
   closeTelegramClaim,
   showTelegramConnected,
@@ -189,16 +190,29 @@ export const assistantChannelsRouter = createTRPCRouter({
         const scope = actor(ctx)
         const config = telegramConfiguration(scope)
         try {
-          const { id, maskedSender, claimMessage } =
+          const { id, maskedSender, claimMessage, previousScope } =
             await confirmAssistantTelegramLink(ctx.db, scope, {
               ...input,
               botId: config.botId,
             })
+          const business = {
+            businessName: ctx.tenantContext.tenant.name,
+            storeName: ctx.tenantContext.activeStore?.name ?? "Store",
+          }
+          // Phase 2 (c-switch): a chat that was already connected swaps its pin.
           if (claimMessage)
-            await showTelegramConnected(telegramChat(config), claimMessage, {
-              businessName: ctx.tenantContext.tenant.name,
-              storeName: ctx.tenantContext.activeStore?.name ?? "Store",
-            })
+            await (previousScope
+              ? showTelegramReconnected(
+                  telegramChat(config),
+                  claimMessage,
+                  business,
+                  previousScope,
+                )
+              : showTelegramConnected(
+                  telegramChat(config),
+                  claimMessage,
+                  business,
+                ))
           return { id, maskedSender }
         } catch (error) {
           // Expiry is applied on the next touch: close the bot's claim message once.
