@@ -17,11 +17,11 @@ import {
   readAssistantTelegramWebhookConfig,
 } from "@ewatrade/communications"
 import type { OpenAPIHono } from "@hono/zod-openapi"
+import type { TelegramControlReceipt } from "../assistant/telegram-control"
 import {
-  type TelegramControlReceipt,
   isTelegramControlCallback,
-} from "../assistant/telegram-control"
-import { telegramCallbackToast } from "../assistant/telegram-review"
+  telegramCallbackToast,
+} from "../assistant/telegram-presentation"
 import type { TelegramNotice } from "../assistant/telegram-runtime"
 import { safeCompare } from "../utils/safe-compare"
 

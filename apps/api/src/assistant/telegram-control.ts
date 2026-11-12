@@ -17,6 +17,7 @@ import {
 import { isWhatsAppCredentialSubmission } from "../communications/whatsapp-credential-guard"
 import {
   type TelegramChatEffects,
+  isTelegramControlCallback,
   openEwaTradeButtons,
   showTelegramDisconnected,
   telegramAppOrigin,
@@ -66,9 +67,8 @@ export const telegramControlCopy = {
 const askLifetimeMs = 15 * 60_000
 const controlPattern = /^tgx:([dk]):([0-9a-z]{1,10}):([A-Za-z0-9_-]{22})$/
 
-/** Callback data in the control namespace (`tgx:`), signed or not. */
-export const isTelegramControlCallback = (data: string) =>
-  data.startsWith("tgx:")
+// The pure helper lives in telegram-presentation so the webhook route stays DB-free.
+export { isTelegramControlCallback }
 
 type Chat = { botId: string; chatId: string; userId: string }
 type ControlAction = "d" | "k"

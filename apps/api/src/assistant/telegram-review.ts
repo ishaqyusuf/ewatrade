@@ -33,8 +33,11 @@ import { canUseCapability, requireGeneralScope } from "./general-context"
  * every decision still goes through the canonical proposal → review → Confirm path.
  */
 
-export const telegramCallbackPattern =
-  /^(confirm|cancel|edit|again):([A-Za-z0-9_-]{1,48})$/
+// Pure callback helpers live in telegram-presentation so the webhook route stays DB-free.
+export {
+  telegramCallbackPattern,
+  telegramCallbackToast,
+} from "./telegram-presentation"
 
 /** The one status line a decided review keeps under its facts. */
 export const telegramReviewStatus = {
@@ -49,25 +52,6 @@ export const telegramReviewCopy = {
     "This review expired. Nothing was saved, and your draft is still here.",
   reviewingAgain: "Reviewing again ✓",
 } as const
-
-/**
- * Toasts the webhook can show before the turn runs. They describe the tap only,
- * never an outcome the webhook cannot know.
- */
-export function telegramCallbackToast(data: string) {
-  switch (telegramCallbackPattern.exec(data)?.[1]) {
-    case "confirm":
-      return "Saving…"
-    case "edit":
-      return "Send your change"
-    case "cancel":
-      return "Cancelling…"
-    case "again":
-      return "Getting a fresh review…"
-    default:
-      return undefined
-  }
-}
 
 /** "9:50 AM" in the Business's time zone; UTC (labelled) if the zone is unusable. */
 export function telegramReviewExpiry(expiresAt: Date, timeZone: string) {

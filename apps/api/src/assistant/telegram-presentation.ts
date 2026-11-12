@@ -116,3 +116,29 @@ export function showTelegramDisconnected(
     bot.setChatCommands(chatId, null),
   ])
 }
+
+export const telegramCallbackPattern =
+  /^(confirm|cancel|edit|again):([A-Za-z0-9_-]{1,48})$/
+
+/**
+ * Toasts the webhook can show before the turn runs. They describe the tap only,
+ * never an outcome the webhook cannot know.
+ */
+export function telegramCallbackToast(data: string) {
+  switch (telegramCallbackPattern.exec(data)?.[1]) {
+    case "confirm":
+      return "Saving…"
+    case "edit":
+      return "Send your change"
+    case "cancel":
+      return "Cancelling…"
+    case "again":
+      return "Getting a fresh review…"
+    default:
+      return undefined
+  }
+}
+
+/** Callback data in the control namespace (`tgx:`), signed or not. */
+export const isTelegramControlCallback = (data: string) =>
+  data.startsWith("tgx:")
