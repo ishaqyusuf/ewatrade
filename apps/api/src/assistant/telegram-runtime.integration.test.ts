@@ -205,6 +205,7 @@ suite("Telegram assistant against guarded development QA", () => {
           status: "accepted",
           messageId: target.messageId,
         }),
+        deleteMessage: async () => true,
         pinChatMessage: async () => true,
         unpinAllChatMessages: async () => true,
         setChatCommands: async () => true,

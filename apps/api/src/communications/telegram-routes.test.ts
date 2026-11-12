@@ -52,6 +52,15 @@ function createRoutes(
           },
         }
       if (event.kind === "callback" && event.data === "confirm:stale") return {}
+      if (
+        (event.kind === "callback" && event.data.startsWith("tgx:")) ||
+        event.kind === "member"
+      )
+        return {
+          effects: async (bot) => {
+            await bot.deleteMessage({ chatId: event.chatId, messageId: "17" })
+          },
+        }
       return { ingressId: "ingress-1" }
     },
     enqueueTurn: async (id) => {
@@ -77,6 +86,10 @@ function createRoutes(
         return { status: "accepted", messageId: "5" }
       },
       editMessageText: async () => ({ status: "accepted", messageId: "5" }),
+      deleteMessage: async ({ messageId }) => {
+        calls.push(`delete:${messageId}`)
+        return true
+      },
       pinChatMessage: async () => true,
       unpinAllChatMessages: async (chatId) => {
         calls.push(`unpin:${chatId}`)
@@ -164,6 +177,33 @@ test("disabled Telegram admits only signed disconnect", async () => {
     "accept:message:10",
     "notice:Disconnected",
     "unpin:456",
+  ])
+})
+
+test("disabled Telegram still admits a signed Disconnect tap and Stop bot, and runs their chat effects", async () => {
+  const { app, calls } = createRoutes({ enabled: false })
+  const tap = {
+    update_id: 30,
+    callback_query: { ...callback.callback_query, data: "tgx:d:abc:sig" },
+  }
+  const stopped = {
+    update_id: 31,
+    my_chat_member: {
+      chat: message.chat,
+      from: user,
+      date: message.date,
+      old_chat_member: { status: "member" },
+      new_chat_member: { status: "kicked" },
+    },
+  }
+  expect((await postWebhook(app, tap)).status).toBe(200)
+  expect((await postWebhook(app, stopped)).status).toBe(200)
+  expect(calls).toEqual([
+    "accept:callback:30",
+    "delete:17",
+    "ack:10",
+    "accept:member:31",
+    "delete:17",
   ])
 })
 

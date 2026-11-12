@@ -17,6 +17,10 @@ import {
   readAssistantTelegramWebhookConfig,
 } from "@ewatrade/communications"
 import type { OpenAPIHono } from "@hono/zod-openapi"
+import {
+  type TelegramControlReceipt,
+  isTelegramControlCallback,
+} from "../assistant/telegram-control"
 import { telegramCallbackToast } from "../assistant/telegram-review"
 import type { TelegramNotice } from "../assistant/telegram-runtime"
 import { safeCompare } from "../utils/safe-compare"
@@ -70,6 +74,7 @@ type TelegramRouteDependencies = {
     | "answerCallbackQuery"
     | "sendMessage"
     | "editMessageText"
+    | "deleteMessage"
     | "pinChatMessage"
     | "unpinAllChatMessages"
     | "setChatCommands"
@@ -77,7 +82,11 @@ type TelegramRouteDependencies = {
   accept: (
     config: AssistantTelegramConfig,
     event: NormalizedAssistantTelegramUpdate,
-  ) => Promise<{ ingressId?: string; notice?: TelegramNotice }>
+  ) => Promise<{
+    ingressId?: string
+    notice?: TelegramNotice
+    effects?: TelegramControlReceipt["effects"]
+  }>
   enqueueTurn: (ingressId: string) => Promise<unknown>
   processTurn: (ingressId: string) => Promise<AssistantChannelTurnResult>
   processDelivery: (outboxId: string) => Promise<AssistantChannelDeliveryResult>
@@ -114,11 +123,16 @@ export function registerAssistantTelegramRoutes(
         body.error,
       )
     const event = parseAssistantTelegramUpdate(body.data)
+    // Switched off: only access removal still runs (disconnect, its signed
+    // confirmation and Stop bot), never assistant work.
     if (
       !event ||
       (!current.enabled &&
-        (event.kind !== "message" ||
-          !isAssistantTelegramDisconnect(event.text)))
+        !(event.kind === "message"
+          ? isAssistantTelegramDisconnect(event.text)
+          : event.kind === "callback"
+            ? isTelegramControlCallback(event.data)
+            : event.kind === "member"))
     )
       return c.json({ ok: true })
 
@@ -136,8 +150,9 @@ export function registerAssistantTelegramRoutes(
           console.error("[assistant] Telegram dispatch deferred to recovery")
         }),
       )
-    if (event.kind === "callback" || accepted.notice) {
+    if (event.kind === "callback" || accepted.notice || accepted.effects) {
       const bot = provider(current)
+      if (accepted.effects) effects.push(accepted.effects(bot))
       if (event.kind === "callback")
         effects.push(
           bot.answerCallbackQuery(
