@@ -69,7 +69,7 @@ Each case lists its states in order. Each state is a config panel jump. **TG** i
 
 | Case | States | Telegram detail (direction 02) |
 | --- | --- | --- |
-| **2a** `o-hello` | TG empty-chat card + START → TG `/start` with no payload → “Connect EwaTrade to use me here.” + **Open EwaTrade ↗** → user types “Hi” → the same reply, edited into the latest message rather than repeated | The unlinked menu shows only `/start` and `/help`. The current bot replies to bare `/start` and drops plain text. The greeting for plain text is proposed. |
+| **2a** `o-hello` | TG empty-chat card + START → TG `/start` with no payload → “Connect EwaTrade to use me here.” + **Open EwaTrade ↗** → user types “Hi” → the same reply again, with the button removed from the earlier one so only the latest message can act | The unlinked menu shows only `/start` and `/help`. The current bot replies to bare `/start` and drops plain text. The greeting for plain text is proposed. |
 | **2b** `o-one` | 2a → **Open EwaTrade** → in-app browser sheet: EW sign-in → EW Account → Telegram with the one Business and Store → 1a from link created onward | In 03: **Connect with EwaTrade** → Telegram login confirm → EW sign-in → confirm → TG “Connected ✓”, without the link and START round trip. |
 | **2c** `o-many` | 2b through sign-in → EW Business and Store picker (Mama Ada Provisions → Yaba Main / Surulere; Ada Fabrics → Balogun) → link created → confirmation shows the picked scope → TG “Connected ✓ Mama Ada Provisions · Surulere”, pinned | The chat never lists businesses. Scope is picked only in EwaTrade. |
 | **2d** `o-none` | 2b through sign-in → EW “No Business or Store you can use with the assistant yet” + **Create a business** → TG unchanged | The TG reply is identical to 2a. |
@@ -94,6 +94,23 @@ All copy is short, phone-first and uses the product's existing words where they 
 3. Build the three directions on one scene graph, plus a comparison page, following the WhatsApp layout. The config panel provides direction, case (1a–2e), state, theme, mobile size, Preview or Production bot icon, and reset. No descriptions appear on the pages.
 4. Author with Claude Opus 5.5 at high effort, as the owner requires. Publish once through the catalog helper, with the recommendation set on 02 and no selection.
 5. QA: every case plays to its end in all three directions. Check that 1c expired and used are identical, that 2a and 2e copy is identical, a state jump, light and dark themes, a mobile size change, panel collapse and reopen, and preference retention across navigation. Serve the folder locally for screenshots, because the browser pane blocks catalog preview assets.
+
+## Workshop — batch 1 published
+
+Published 12 November 2026 at [workshop.localhost/ewatrade/assistant/telegram-system](https://workshop.localhost/ewatrade/assistant/telegram-system), authored by Claude Opus 5.5 at high effort. 02 is marked recommended. Nothing has been selected or implemented.
+
+| Direction | Revision |
+| --- | --- |
+| Comparison | `5bcbb858-d6eb-47cc-bd21-afd333d9cd38` |
+| 01 · Today+ | `2b4e44bf-a617-4295-966e-4779c37a4a87` |
+| 02 · Telegram-native | `a1d386e1-584b-4044-8252-24370d11b3fb` |
+| 03 · Telegram sign-in | `3fd73509-3700-4296-b9ae-01699efcf265` |
+
+The source is in `workshop/work/ewatrade/assistant/telegram-system/`. Edit the files in `common/` and run `python3 build.py`. Each case is a list of steps, and each step names the control that advances it.
+
+Two parts of the build differ from the plan above. The EwaTrade side is shown in the phone, in Chrome and in Telegram's in-app browser, rather than as a separate desktop frame. The Dashboard step still shows the QR. 1c plays both variants in one chat: an expired link, then an already-used link, which receive identical replies.
+
+Local QA covered all 24 case and direction runs, played to the last step through the advancing controls. It also checked each step's advancing control, light and dark themes, the Preview and Production bot icons, the compact size, panel collapse with focus return, and screen navigation. All published assets returned 200. The viewer kept the workshop's own config panel.
 
 ## Open decisions for the owner
 
