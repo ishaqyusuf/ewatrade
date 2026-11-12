@@ -190,14 +190,23 @@ export function assistantProcedureEvents(input: {
     ]
   }
   if (!decisionPaths.has(input.path)) return []
-  const proposal = proposalOutput.safeParse(input.output)
+  return assistantDecisionEvents(
+    input.output,
+    input.path === "assistant.decideReviewLink" ? "whatsapp" : undefined,
+  )
+}
+
+/** A settled proposal decision → fixed action events (proposal+revision key). */
+export function assistantDecisionEvents(
+  output: unknown,
+  handoffFrom?: "whatsapp" | "telegram",
+): AssistantEventSpec[] {
+  const proposal = proposalOutput.safeParse(output)
   if (!proposal.success) return []
   const key = `proposal:${proposal.data.id}:${proposal.data.revision}`
   const details: AssistantEventDetails = {
     action: proposal.data.payload.action,
-    ...(input.path === "assistant.decideReviewLink"
-      ? { handoff_from: "whatsapp" as const }
-      : {}),
+    ...(handoffFrom ? { handoff_from: handoffFrom } : {}),
   }
   switch (proposal.data.status) {
     case "COMPLETED":

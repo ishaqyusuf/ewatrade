@@ -29,6 +29,7 @@ import {
 import { TRPCError } from "@trpc/server"
 import { z } from "zod"
 import { paymentLinkOrigin } from "../banking/config"
+import { assistantDecisionEvents, emitAssistantEvents } from "./analytics"
 import { isLinkedWhatsAppIdentity } from "./channel-principal"
 import type { GeneralContext } from "./general-context"
 import {
@@ -81,8 +82,11 @@ export async function processAssistantWhatsAppAction(
   )
     throw new AssistantWhatsAppError("UNAUTHORIZED")
 
+  // Analytics only: the decided proposal, emitted after the transaction commits.
+  let decided: unknown
   const execute = (refusal = false) =>
     deps.transaction(ctx, async (fresh) => {
+      decided = undefined
       if (!deps.linked(fresh.session))
         throw new AssistantWhatsAppError("UNAUTHORIZED")
       const principal = fresh.session.principal
@@ -168,6 +172,7 @@ export async function processAssistantWhatsAppAction(
               }
             : {}),
         })
+        decided = proposal
         resultRef = outcomeSchema.parse({
           proposalId: proposal.id,
           revision: proposal.revision,
@@ -255,7 +260,9 @@ export async function processAssistantWhatsAppAction(
       return { status: "completed" as const, outboxId: firstOutboxId }
     })
   try {
-    return await execute()
+    const completed = await execute()
+    emitAssistantEvents(ctx, assistantDecisionEvents(decided))
+    return completed
   } catch (error) {
     // Only a known rolled-back business refusal may produce a fresh safe response.
     if (

@@ -7,6 +7,7 @@ mock.module("@ewatrade/jobs/assistant-events", () => ({
   },
 }))
 const {
+  assistantDecisionEvents,
   assistantEventScope,
   assistantInputKind,
   assistantProcedureEvents,
@@ -230,4 +231,12 @@ test("input kind is coarse and content-free", () => {
   )
   expect(assistantInputKind([{ kind: "IMAGE" }])).toBe("image")
   expect(assistantInputKind([{ kind: "PDF" }])).toBe("document")
+})
+
+test("WhatsApp/Telegram inline decisions reuse the proposal events", () => {
+  expect(
+    assistantDecisionEvents(proposal("COMPLETED")).map((event) => event.name),
+  ).toEqual(["assistant_action_confirmed", "assistant_action_executed"])
+  expect(assistantDecisionEvents(undefined)).toEqual([])
+  expect(assistantDecisionEvents(proposal("PENDING"))).toEqual([])
 })

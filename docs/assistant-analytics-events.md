@@ -31,17 +31,21 @@ EwaTrade ledger through `apps/oversight-api`, never from these events.
    Queued assistant events are dropped, not sent, if the flag is later turned off.
 2. Not a QA principal (QA session, QA workspace, mapped QA email); rechecked
    again at delivery.
-3. Channel consent basis:
+3. Channel basis (owner decision 12 Nov 2026: product usage analytics are
+   covered by EwaTrade's terms; no separate per-user consent):
    - `web`: `x-ewatrade-client` is `web` or missing, exact Dashboard Origin and
-     `x-ewatrade-analytics: allowed` (browser policy, DNT/GPC, signed context).
-   - `mobile`: `x-ewatrade-client: mobile` and `x-ewatrade-analytics: allowed`,
-     which the app sends only while its own analytics runtime may collect
-     (Production Android analytics is currently disabled for the 13–17 age gate,
-     so mobile emits nothing there until that changes).
-   - `whatsapp`, `telegram`: **fail closed**. No durable per-user analytics
-     consent exists server-side for webhook turns. Needs an owner decision.
+     `x-ewatrade-analytics: allowed` (browser policy incl. DNT/GPC, signed context).
+   - `mobile`: `x-ewatrade-client: mobile`, no explicit
+     `x-ewatrade-analytics: denied`, and the account declared 18+ (`ageBand` ADULT).
+   - `whatsapp`, `telegram`: the account declared 18+ (`ageBand` ADULT).
+   The ADULT check (one `User.ageBand` read in the recorder, non-web only)
+   mirrors the 13–17 mobile analytics gate. No stored per-user analytics
+   opt-out exists anywhere today (searched schema, mobile and dashboard
+   settings); the only explicit opt-outs are browser DNT/GPC on web.
    `x-ewatrade-client` is analytics-only and never used for authorization.
-   Unknown values drop the event.
+   Unknown values drop the event. Internal (platform admin) accounts are
+   tagged `audience: internal`, as with dashboard events, not dropped.
+   Proposed Privacy/Terms wording: [legal draft for review](legal/2026-11-12-assistant-usage-analytics-clause.md).
 
 ## Event catalogue
 
@@ -66,7 +70,7 @@ Project `ewatrade-dashboard`, `source: server`, `version: 1`. Every event has
 | `assistant_turn_failed` | same + `error_code` (`STREAM_FAILED`, `ABORTED`) | LLM run saved FAILED | run id |
 | `assistant_turn_blocked` | `block_reason` (`quota`), `input_kind`, `provider`, `model`, `error_code` `BUDGET_EXHAUSTED` | allowance refused the run | run id |
 | `assistant_action_proposed` | `action` | draft proposal committed | proposal id + revision |
-| `assistant_action_confirmed` | `action`, `handoff_from`? | confirm succeeded | proposal id + revision |
+| `assistant_action_confirmed` | `action`, `handoff_from`? | confirm succeeded (app, review link, WhatsApp/Telegram inline) | proposal id + revision |
 | `assistant_action_executed` | `action`, `handoff_from`? | proposal COMPLETED (with confirmed) | proposal id + revision |
 | `assistant_action_cancelled` | `action`, `handoff_from`? | cancel decision | proposal id + revision |
 | `assistant_action_expired` | `action` | confirm refused on a lapsed draft, or decision returns EXPIRED | proposal id + revision |
@@ -95,10 +99,12 @@ ids/usernames, emails, raw user/tenant/run/proposal/link ids, amounts, payloads.
 - Web `assistant.decideProposal` also still emits the existing
   `dashboard_assistant_<action>_<phase>` events; Oversight should count assistant
   decisions from the `assistant_action_*` names only.
-- WhatsApp/Telegram inline confirmations (`channel-action-turn`, `telegram-runtime`)
-  and deterministic channel drafts (`channel-flow-turn`) are not wired; they would
-  fail closed today. Telegram's "Review in EwaTrade" opens the dashboard draft
-  directly, so it has no `review_link_opened` event.
+- WhatsApp inline decisions (`channel-action-turn`) and Telegram button
+  decisions (`telegram-runtime`) emit confirmed/executed/cancelled after their
+  transaction commits. Refused inline confirms and deterministic channel drafts
+  (`channel-flow-turn`, inside a transaction) emit nothing yet. Telegram's
+  "Review in EwaTrade" opens the dashboard draft directly, so it has no
+  `review_link_opened` event.
 - Phase 5 reconciliation: turn events cover general and setup LLM runs; WhatsApp
   setup-purpose workflow turns (`channel-workflow-turn`) pass no observer.
 - Not verified against a live collector, real database queue or device.

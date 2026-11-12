@@ -15,7 +15,17 @@ import {
 export async function recordAssistantEvent(input: AssistantEventInput) {
   if (!assistantEventsEnabled()) return
   try {
-    const envelope = createAssistantEvent(input)
+    // Outside web, collection is limited to accounts that declared 18+.
+    const adultAccount =
+      input.channel === "web"
+        ? undefined
+        : (
+            await prisma.user.findUnique({
+              where: { id: input.principal.userId },
+              select: { ageBand: true },
+            })
+          )?.ageBand === "ADULT"
+    const envelope = createAssistantEvent({ ...input, adultAccount })
     if (!envelope) return
     await persistProductAnalyticsEvent(prisma, {
       id: envelope.eventId,

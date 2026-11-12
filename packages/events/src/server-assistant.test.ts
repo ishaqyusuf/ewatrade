@@ -37,11 +37,7 @@ const webHeaders = () =>
     "x-ewatrade-client": "web",
     "x-ewatrade-analytics": "allowed",
   })
-const mobileHeaders = () =>
-  new Headers({
-    "x-ewatrade-client": "mobile",
-    "x-ewatrade-analytics": "allowed",
-  })
+const mobileHeaders = () => new Headers({ "x-ewatrade-client": "mobile" })
 function turn(
   overrides: Partial<AssistantEventInput> = {},
 ): AssistantEventInput {
@@ -99,7 +95,9 @@ test("web and mobile turns carry assistant_channel, pseudonyms and fixed propert
   })
   expect(web.actorId).toMatch(/^usr_[a-f0-9]{64}$/)
   expect(web.groups.business?.key).toMatch(/^grp_[a-f0-9]{64}$/)
-  const mobile = required(turn({ channel: "mobile", headers: mobileHeaders() }))
+  const mobile = required(
+    turn({ channel: "mobile", headers: mobileHeaders(), adultAccount: true }),
+  )
   expect(mobile.properties.assistant_channel).toBe("mobile")
 })
 
@@ -146,11 +144,22 @@ test("webhook retries and repeated decisions share one event id per source and n
   expect(required(turn({ key: "run:other" })).eventId).not.toBe(first.eventId)
 })
 
-test("WhatsApp and Telegram fail closed: no stored consent basis exists", () => {
-  for (const channel of ["whatsapp", "telegram"] as const)
+test("WhatsApp and Telegram webhooks collect under the terms basis for adult accounts only", () => {
+  for (const channel of ["whatsapp", "telegram"] as const) {
+    const webhook = turn({ channel, headers: new Headers() })
     expect(
-      createAssistantEvent(turn({ channel, headers: webHeaders() })),
+      required({ ...webhook, adultAccount: true }).properties.assistant_channel,
+    ).toBe(channel)
+    expect(createAssistantEvent(webhook)).toBeNull()
+    expect(createAssistantEvent({ ...webhook, adultAccount: false })).toBeNull()
+    expect(
+      createAssistantEvent({
+        ...webhook,
+        adultAccount: true,
+        principal: { ...webhook.principal, dataClassification: "QA" },
+      }),
     ).toBeNull()
+  }
 })
 
 test("collection needs flags, consent header, matching client and non-QA principal", () => {
@@ -173,23 +182,22 @@ test("collection needs flags, consent header, matching client and non-QA princip
     }),
   ])
     expect(createAssistantEvent({ ...request, headers })).toBeNull()
-  expect(
-    createAssistantEvent({
-      ...request,
-      channel: "mobile",
+  // Mobile: explicit opt-out, missing client header or non-adult account drop.
+  for (const mobile of [
+    {
       headers: new Headers({
         "x-ewatrade-client": "mobile",
         "x-ewatrade-analytics": "denied",
       }),
-    }),
-  ).toBeNull()
-  expect(
-    createAssistantEvent({
-      ...request,
-      channel: "mobile",
-      headers: new Headers({ "x-ewatrade-analytics": "allowed" }),
-    }),
-  ).toBeNull()
+      adultAccount: true,
+    },
+    { headers: new Headers(), adultAccount: true },
+    { headers: mobileHeaders(), adultAccount: false },
+    { headers: mobileHeaders() },
+  ])
+    expect(
+      createAssistantEvent({ ...request, channel: "mobile", ...mobile }),
+    ).toBeNull()
   for (const principal of [
     { ...request.principal, qaSession: true },
     { ...request.principal, dataClassification: "QA" },
@@ -202,6 +210,7 @@ test("collection needs flags, consent header, matching client and non-QA princip
         principal,
         channel: "mobile",
         headers: mobileHeaders(),
+        adultAccount: true,
       }),
     ).toBeNull()
   }

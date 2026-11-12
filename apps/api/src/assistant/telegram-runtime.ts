@@ -38,6 +38,7 @@ import {
 import { enqueueAssistantTelegramDelivery } from "@ewatrade/jobs/assistant-telegram"
 import { TRPCError } from "@trpc/server"
 import { paymentLinkOrigin } from "../banking/config"
+import { assistantDecisionEvents, emitAssistantEvents } from "./analytics"
 import {
   createTelegramAssistantContext,
   resolveLinkedTelegramIdentity,
@@ -357,8 +358,11 @@ async function executeCallback(
     return
   }
   const replyTo = inbox.messageId
+  // Analytics only: the decided proposal, emitted after the transaction commits.
+  let decided: unknown
   try {
     await inFreshGeneralTransaction(ctx, async (fresh) => {
+      decided = undefined
       // Phase 4 (t-review-expired): Review it again, once, for the same draft.
       if (decision === "again") {
         if (
@@ -463,6 +467,7 @@ async function executeCallback(
             }
           : {}),
       })
+      decided = proposal
       if (!proof.decision)
         await finishAssistantTelegramActionReview(fresh.db, proof.id, {
           decision,
@@ -497,6 +502,7 @@ async function executeCallback(
         },
       )
     })
+    emitAssistantEvents(ctx, assistantDecisionEvents(decided))
   } catch (error) {
     if (
       !(error instanceof TRPCError) &&

@@ -43,14 +43,18 @@ export function assistantClientChannel(
 }
 
 /**
- * Collection basis per channel. Web and mobile carry the client's live
- * collection decision (`x-ewatrade-analytics`). WhatsApp and Telegram webhooks
- * have no stored per-user analytics consent, so they fail closed.
+ * Collection basis per channel (owner decision, 12 Nov 2026): product usage
+ * analytics are covered by EwaTrade's terms, so mobile, WhatsApp and Telegram
+ * need no separate per-request consent. Web keeps the browser's live decision
+ * (`x-ewatrade-analytics`, which carries DNT/GPC). Mobile honours an explicit
+ * `x-ewatrade-analytics: denied`. Outside web, only accounts that declared
+ * 18+ (`ageBand` ADULT) are collected, matching the 13–17 mobile analytics gate.
  */
 export function assistantCaptureAllowed(input: {
   channel: AssistantEventChannel
   headers: Headers
   principal: DashboardPrincipal
+  adultAccount?: boolean
 }) {
   if (!assistantEventsEnabled() || isQaAnalyticsPrincipal(input.principal))
     return false
@@ -62,9 +66,13 @@ export function assistantCaptureAllowed(input: {
       )
     case "mobile":
       return (
+        input.adultAccount === true &&
         input.headers.get("x-ewatrade-client") === "mobile" &&
-        input.headers.get("x-ewatrade-analytics") === "allowed"
+        input.headers.get("x-ewatrade-analytics") !== "denied"
       )
+    case "whatsapp":
+    case "telegram":
+      return input.adultAccount === true
     default:
       return false
   }
@@ -77,6 +85,8 @@ export type AssistantEventInput = {
   principal: DashboardPrincipal
   /** Stable source record (run, proposal+revision, link, grant). Never sent. */
   key: string
+  /** Server-read `ageBand === "ADULT"`; required outside web. */
+  adultAccount?: boolean
   details?: AssistantEventDetails
 }
 
