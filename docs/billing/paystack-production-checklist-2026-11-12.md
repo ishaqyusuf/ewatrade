@@ -45,7 +45,9 @@
    `WEB_BILLING_RELEASE_APPROVED=true` — confirm with the owner right before.
    Leave `PAYSTACK_INTERNATIONAL_ENABLED`, `PAYSTACK_USD_ENABLED` and the QA
    adapter off. Native Apple/Google billing stays deferred.
-3. Curated squash of the billing changes onto origin/main (confirm before push),
+3. Curated squash of the billing changes onto origin/main (confirm before push).
+   Candidate 5b19283c5 built on origin/main b0e29c66d, typechecked and tested,
+   not pushed; rebuild if origin/main has moved,
    then `bun release --production --mobile skip` from `../ewatrade-release`.
 4. Check Production shows the plans and opens a real Paystack checkout. The
    owner makes the first real payment.
