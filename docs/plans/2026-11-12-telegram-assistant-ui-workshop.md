@@ -87,7 +87,7 @@ On 12 November 2026 the owner selected 02 v4 (`a722c2e1`) and said "Start implem
 | 2 · Connected entry, roles, access ending | 4–6 | Next |
 | 3 · Telegram HTML renderer, chats and reads | 7–8, 17 | Planned |
 | 4 · Review status lines and receipts | 9–10 | Planned |
-| 5 · Media and EwaTrade handoff | 11–13 | Planned |
+| 5 · Media and EwaTrade handoff | 11–13 | **Done locally**, commits `94b875bc1` and `d83cc66f9`. Not deployed. Photos, files, albums, videos and voice notes get a text-only reply that quotes them (`f-today`, `v-today`), one per album. Approve, cancel or edit in EwaTrade edits the Telegram review-link message (`x-review`, `x-link-cancel`, `x-link-edited`, `x-link-used`). Uploads, attaching, transcription, the voice budget and length limit, PDF receipts and expired-link edits are pending owner decisions 4 and 5. |
 | 6 · Control, safety, Mini App forms, payment links | 14–16, 18 | Planned. Payment links stay gated. |
 
 ## Open owner decisions
