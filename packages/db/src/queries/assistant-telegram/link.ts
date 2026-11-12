@@ -753,7 +753,7 @@ export function disconnectAssistantTelegram(
         occurredAt.getTime() > now.getTime() + 30_000 ||
         occurredAt.getTime() <= now.getTime() - maxAge))
   )
-    return Promise.resolve({ revoked: false })
+    return Promise.resolve({ revoked: false as const })
   return runInOwnSerializableTransaction(db, async (tx) => {
     await lockTelegramSender(tx, input)
     if (
@@ -763,7 +763,7 @@ export function disconnectAssistantTelegram(
         select: { id: true },
       }))
     )
-      return { revoked: false }
+      return { revoked: false as const }
     await tx.assistantTelegramLink.updateMany({
       where: {
         botId: input.botId,
@@ -785,7 +785,7 @@ export function disconnectAssistantTelegram(
       },
       select: { id: true },
     })
-    if (!identity) return { revoked: false }
+    if (!identity) return { revoked: false as const }
     const binding = await tx.assistantTelegramBinding.findFirst({
       where: { identityId: identity.id },
       orderBy: { selectionGeneration: "desc" },
@@ -794,7 +794,7 @@ export function disconnectAssistantTelegram(
     // Provider dates are rounded to seconds. An event from the second of a
     // newer selection has ambiguous ordering and must be sent again.
     if (binding && occurredAt && binding.createdAt >= occurredAt)
-      return { revoked: false }
+      return { revoked: false as const }
     if (binding && updateId) {
       const next = await tx.assistantTelegramBinding.update({
         where: { id: binding.id },
@@ -834,7 +834,7 @@ export function disconnectAssistantTelegram(
     })
     await cancelTelegramWork(tx, { identityId: identity.id }, now)
     return {
-      revoked: true,
+      revoked: true as const,
       connectedMessage: await connectedMessage(tx, {
         botId: input.botId,
         telegramUserId: input.userId,
