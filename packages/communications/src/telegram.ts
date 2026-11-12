@@ -78,16 +78,24 @@ type TelegramUpdateIdentity = {
   occurredAt: Date
 }
 
-export type NormalizedAssistantTelegramUpdate = TelegramUpdateIdentity &
-  (
-    | {
-        kind: "message"
-        text: string
-        /** Profile text from Telegram, used only to label a pending link claim. */
-        sender?: { name: string | null; username: string | null }
-      }
-    | { kind: "callback"; callbackId: string; data: string }
-  )
+export type NormalizedAssistantTelegramUpdate =
+  | (TelegramUpdateIdentity &
+      (
+        | {
+            kind: "message"
+            text: string
+            /** Profile text from Telegram, used only to label a pending link claim. */
+            sender?: { name: string | null; username: string | null }
+            /** Present when the message was forwarded; the original author when Telegram shares it. */
+            forward?: { userId: string | null; isBot: boolean }
+          }
+        | { kind: "callback"; callbackId: string; data: string }
+      ))
+  | (Omit<TelegramUpdateIdentity, "messageId"> & {
+      /** `my_chat_member`: the user stopped (blocked) or restarted the bot. */
+      kind: "member"
+      status: "stopped" | "restarted"
+    })
 
 function record(value: unknown): Record<string, unknown> | null {
   return typeof value === "object" && value !== null && !Array.isArray(value)
@@ -108,6 +116,10 @@ export function parseAssistantTelegramUpdate(
     ("message" in update && "callback_query" in update)
   )
     return null
+  if ("my_chat_member" in update)
+    return "message" in update || "callback_query" in update
+      ? null
+      : parseMemberUpdate(updateId, record(update.my_chat_member))
 
   const callback = record(update.callback_query)
   const message = record(callback ? callback.message : update.message)
@@ -171,7 +183,67 @@ export function parseAssistantTelegramUpdate(
     kind: "message",
     text,
     sender: { name: name || null, username: username || null },
+    ...forwardOrigin(message),
   }
+}
+
+function forwardOrigin(message: Record<string, unknown> | null) {
+  const origin = record(message?.forward_origin)
+  const legacy = record(message?.forward_from)
+  if (!origin && !legacy && message?.forward_date === undefined) return {}
+  const author =
+    origin?.type === "user"
+      ? record(origin.sender_user)
+      : origin
+        ? null
+        : legacy
+  return {
+    forward: {
+      userId: positiveId(author?.id),
+      isBot: author?.is_bot === true,
+    },
+  }
+}
+
+/** A private chat's own member change: Stop bot (kicked) or RESTART after it. */
+function parseMemberUpdate(
+  updateId: string,
+  member: Record<string, unknown> | null,
+): NormalizedAssistantTelegramUpdate | null {
+  const chat = record(member?.chat)
+  const user = record(member?.from)
+  const chatId = positiveId(chat?.id)
+  const userId = positiveId(user?.id)
+  const date = member?.date
+  const before = record(member?.old_chat_member)?.status
+  const after = record(member?.new_chat_member)?.status
+  if (
+    chat?.type !== "private" ||
+    !chatId ||
+    chatId !== userId ||
+    user?.is_bot !== false ||
+    typeof date !== "number" ||
+    !Number.isSafeInteger(date) ||
+    date <= 0 ||
+    date > 253402300799
+  )
+    return null
+  const status =
+    after === "kicked"
+      ? "stopped"
+      : before === "kicked" && after === "member"
+        ? "restarted"
+        : null
+  return status
+    ? {
+        updateId,
+        chatId,
+        userId,
+        occurredAt: new Date(date * 1000),
+        kind: "member",
+        status,
+      }
+    : null
 }
 
 /** Escape user or business text placed inside Telegram HTML messages. */
@@ -205,6 +277,7 @@ type TelegramMethod =
   | "answerCallbackQuery"
   | "editMessageReplyMarkup"
   | "editMessageText"
+  | "deleteMessage"
   | "pinChatMessage"
   | "unpinAllChatMessages"
   | "setMyCommands"
@@ -337,6 +410,23 @@ export class DirectTelegramBotProvider {
     return result.status === "accepted" && result.messageId !== input.messageId
       ? { status: "uncertain" }
       : result
+  }
+
+  /** Delete a message in the private chat, e.g. a password the user sent by mistake. */
+  async deleteMessage(input: { chatId: string; messageId: string }) {
+    const chatId = Number(input.chatId)
+    const messageId = Number(input.messageId)
+    if (
+      positiveId(chatId) !== input.chatId ||
+      positiveId(messageId) !== input.messageId
+    )
+      return false
+    return this.ok(
+      await this.request("deleteMessage", {
+        chat_id: chatId,
+        message_id: messageId,
+      }),
+    )
   }
 
   /** Pin quietly: the pinned bar shows the connected Business and Store. */

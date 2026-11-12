@@ -102,6 +102,8 @@ export async function acceptAssistantTelegramUpdate(
     userId: event.userId,
     chatId: event.chatId,
   }
+  // Stop bot and RESTART are handled by the control hook (phase 6).
+  if (event.kind === "member") return {}
   const occurredAt = event.kind === "message" ? event.occurredAt : new Date()
   if (event.kind === "message") {
     const message = event.text.trim()

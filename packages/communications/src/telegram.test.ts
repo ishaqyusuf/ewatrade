@@ -275,3 +275,94 @@ test("edits, pins and scopes commands with exact Bot API payloads", async () => 
   ).toBe(false)
   expect(calls).toHaveLength(5)
 })
+
+test("reads forwarded origins and Stop bot or RESTART member updates", () => {
+  const forwarded = (extra: Record<string, unknown>) => {
+    const parsed = parseAssistantTelegramUpdate({
+      update_id: 12,
+      message: { ...message, ...extra },
+    })
+    return parsed?.kind === "message" ? parsed.forward : "not a message"
+  }
+  expect(forwarded({})).toBeUndefined()
+  expect(
+    forwarded({
+      forward_origin: {
+        type: "user",
+        date: message.date,
+        sender_user: { id: 123, is_bot: true },
+      },
+    }),
+  ).toEqual({ userId: "123", isBot: true })
+  expect(
+    forwarded({
+      forward_origin: {
+        type: "hidden_user",
+        date: message.date,
+        sender_user_name: "Kemi",
+      },
+    }),
+  ).toEqual({ userId: null, isBot: false })
+  expect(
+    forwarded({ forward_from: { id: 77, is_bot: false }, forward_date: 1 }),
+  ).toEqual({ userId: "77", isBot: false })
+
+  const member = (before: string, after: string, extra = {}) =>
+    parseAssistantTelegramUpdate({
+      update_id: 13,
+      my_chat_member: {
+        chat: message.chat,
+        from: message.from,
+        date: message.date,
+        old_chat_member: { status: before, user: { id: 123, is_bot: true } },
+        new_chat_member: { status: after, user: { id: 123, is_bot: true } },
+        ...extra,
+      },
+    })
+  expect(member("member", "kicked")).toEqual({
+    updateId: "13",
+    chatId: "4501234567890",
+    userId: "4501234567890",
+    occurredAt: new Date(message.date * 1000),
+    kind: "member",
+    status: "stopped",
+  })
+  expect(member("kicked", "member")).toMatchObject({ status: "restarted" })
+  expect(member("member", "member")).toBeNull()
+  expect(
+    member("member", "kicked", { chat: { id: -5, type: "group" } }),
+  ).toBeNull()
+  expect(
+    member("member", "kicked", { from: { id: 99, is_bot: false } }),
+  ).toBeNull()
+  expect(
+    parseAssistantTelegramUpdate({
+      update_id: 14,
+      message,
+      my_chat_member: { chat: message.chat },
+    }),
+  ).toBeNull()
+})
+
+test("deletes one message in a valid private chat", async () => {
+  const calls: { method: string; body: Record<string, unknown> }[] = []
+  const provider = new DirectTelegramBotProvider(config, async (url, init) => {
+    calls.push({
+      method: String(url).split("/").pop() ?? "",
+      body: JSON.parse(String(init.body)),
+    })
+    return Response.json({ ok: true, result: true })
+  })
+  expect(
+    await provider.deleteMessage({ chatId: "4501234567890", messageId: "18" }),
+  ).toBe(true)
+  expect(await provider.deleteMessage({ chatId: "-1", messageId: "18" })).toBe(
+    false,
+  )
+  expect(calls).toEqual([
+    {
+      method: "deleteMessage",
+      body: { chat_id: 4501234567890, message_id: 18 },
+    },
+  ])
+})
