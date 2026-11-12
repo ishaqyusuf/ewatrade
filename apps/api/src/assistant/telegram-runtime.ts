@@ -11,7 +11,6 @@ import {
   DirectTelegramBotProvider,
   type NormalizedAssistantTelegramUpdate,
   type TelegramButton,
-  isAssistantTelegramDisconnect,
   readAssistantTelegramConfig,
 } from "@ewatrade/communications"
 import { prisma } from "@ewatrade/db"
@@ -23,13 +22,13 @@ import {
   claimAssistantTelegramInbox,
   claimAssistantTelegramLink,
   claimAssistantTelegramOutbox,
-  disconnectAssistantTelegram,
   endAssistantTelegramAccess,
   finishAssistantTelegramActionReview,
   nextAssistantTelegramInbox,
   nextAssistantTelegramOutbox,
   readAssistantTelegramActionReview,
   readAssistantTelegramConnection,
+  readAssistantTelegramDraftState,
   recordAssistantTelegramClaimMessage,
   retryAssistantTelegramInbox,
   settleAssistantTelegramInbox,
@@ -39,7 +38,6 @@ import {
 import { enqueueAssistantTelegramDelivery } from "@ewatrade/jobs/assistant-telegram"
 import { TRPCError } from "@trpc/server"
 import { paymentLinkOrigin } from "../banking/config"
-import { isWhatsAppCredentialSubmission } from "../communications/whatsapp-credential-guard"
 import {
   createTelegramAssistantContext,
   resolveLinkedTelegramIdentity,
@@ -61,17 +59,23 @@ import { proposalApprovalToken } from "./proposal-security"
 import { acceptTelegramChatsUpdate } from "./telegram-chats"
 import { pickTelegramChoice, telegramChoiceExpired } from "./telegram-choices"
 import {
+  type TelegramControlReply,
   telegramAccessEndedNotice,
   telegramConnectedControl,
   telegramPhase2Copy,
   telegramRoleChangedRefusal,
 } from "./telegram-connected"
+import {
+  type TelegramControlReceipt,
+  acceptTelegramControl,
+  telegramTypedDecision,
+  telegramTypedDecisionReply,
+} from "./telegram-control"
 import { retireTelegramHandoffLinks } from "./telegram-handoff"
 import { acceptAssistantTelegramMedia } from "./telegram-media"
 import {
   type TelegramChatEffects,
   openEwaTradeButtons,
-  showTelegramDisconnected,
   telegramAppOrigin,
   telegramCopy,
 } from "./telegram-presentation"
@@ -95,8 +99,6 @@ import {
 } from "./telegram-review"
 
 const callbackPattern = telegramCallbackPattern
-const useReview =
-  "Use the buttons on the exact draft review to confirm, edit or cancel."
 const unavailableReview =
   "This review has expired or changed. Ask me for the current draft."
 const appOrigin = telegramAppOrigin
@@ -115,7 +117,11 @@ export type TelegramNotice = {
   /** Runs after the reply whatever its outcome. */
   after?: (bot: TelegramChatEffects) => Promise<unknown>
 }
-type IngressReceipt = { ingressId?: string; notice?: TelegramNotice }
+type IngressReceipt = {
+  ingressId?: string
+  notice?: TelegramNotice
+  effects?: TelegramControlReceipt["effects"]
+}
 const entryNotice = (): TelegramNotice => ({
   text: telegramCopy.entry,
   buttons: openEwaTradeButtons(),
@@ -141,7 +147,10 @@ export async function acceptAssistantTelegramUpdate(
     userId: event.userId,
     chatId: event.chatId,
   }
-  // Stop bot and RESTART are handled by the control hook (phase 6).
+  // Phase 6 (k-disc, k-stop, s-pw, s-forward): disconnect, Stop bot, passwords
+  // and forwarded reviews are answered here and never enter the inbox.
+  const control = await acceptTelegramControl(config, event)
+  if (control) return control
   if (event.kind === "member") return {}
   // Phase 5 (f-today, v-today): media gets a text-only reply and never enters the inbox.
   if (event.kind === "media")
@@ -152,27 +161,6 @@ export async function acceptAssistantTelegramUpdate(
   const occurredAt = event.kind === "message" ? event.occurredAt : new Date()
   if (event.kind === "message") {
     const message = event.text.trim()
-    if (isAssistantTelegramDisconnect(message)) {
-      const result = await disconnectAssistantTelegram(prisma, {
-        ...sender,
-        updateId: event.updateId,
-        messageId: event.messageId,
-        occurredAt,
-      })
-      return result.revoked
-        ? {
-            notice: {
-              text: "Telegram disconnected from EwaTrade.",
-              after: (bot) =>
-                showTelegramDisconnected(
-                  bot,
-                  event.chatId,
-                  result.connectedMessage ?? null,
-                ),
-            },
-          }
-        : {}
-    }
     if (!config.enabled) return {}
     if (/^\/start(?:\s|$)/u.test(message)) {
       const link = /^\/start ([A-Za-z0-9_-]{43})$/u.exec(message)
@@ -219,8 +207,6 @@ export async function acceptAssistantTelegramUpdate(
           : ((await accessEndedNotice(config, sender)) ?? entryNotice()),
       }
     }
-    // Credential content and its digest stay outside the durable assistant inbox.
-    if (isWhatsAppCredentialSubmission(message)) return {}
   }
   // Phase 3 (l-new, l-chats): switching chats moves the binding, so it is
   // answered here like /disconnect rather than from the inbox.
@@ -710,14 +696,28 @@ export async function processAssistantTelegramTurn(
       // Change in EwaTrade button (c-switch).
       const connected =
         content.kind === "message" ? telegramConnectedControl(ctx, text) : null
-      const control =
+      // Phase 6 (k-cancel, k-cancel-draft, s-old): typed words never decide a
+      // review; the reply says what to tap instead and quotes an open review.
+      const typed =
+        content.kind === "message" && !connected
+          ? telegramTypedDecision(text)
+          : null
+      const draft = typed
+        ? await readAssistantTelegramDraftState(ctx.db, lease.bindingId)
+        : null
+      const control: (TelegramControlReply & { replyTo?: string }) | undefined =
         content.kind !== "message"
           ? undefined
           : (connected ??
-            (/^(?:proceed|confirm|cancel|yes|go ahead|done|save(?: it| sale)?)[.!]*$/i.test(
-              text,
-            )
-              ? { text: useReview }
+            (typed && draft
+              ? {
+                  text: telegramTypedDecisionReply(
+                    typed,
+                    draft.state,
+                    `${ctx.tenantContext.tenant.name} · ${ctx.tenantContext.activeStore?.name ?? "Store"}`,
+                  ),
+                  replyTo: draft.reviewMessageId,
+                }
               : text.startsWith("/")
                 ? { text: "Use /help to see the available commands." }
                 : undefined))
@@ -725,6 +725,9 @@ export async function processAssistantTelegramTurn(
         await inFreshGeneralTransaction(ctx, async (fresh) => {
           await stageAssistantTelegramOutbox(fresh.db, lease, {
             text: control.text,
+            ...("replyTo" in control && control.replyTo
+              ? { replyToMessageId: control.replyTo }
+              : {}),
             // Control replies carry URL buttons only (Change in EwaTrade).
             ...(control.buttons
               ? {
