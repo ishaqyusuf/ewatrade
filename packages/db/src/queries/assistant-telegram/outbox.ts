@@ -18,36 +18,40 @@ import {
 
 const maxAttempts = 5
 const outboxLeaseTime = 45_000
+const buttonsSchema = z
+  .array(
+    z
+      .array(
+        z.union([
+          z
+            .object({
+              text: z.string().min(1).max(64),
+              data: z
+                .string()
+                .min(1)
+                .refine((value) => Buffer.byteLength(value) <= 64),
+            })
+            .strict(),
+          z
+            .object({
+              text: z.string().min(1).max(64),
+              url: z.url({ protocol: /^https$/ }).max(2048),
+            })
+            .strict(),
+        ]),
+      )
+      .min(1)
+      .max(5),
+  )
+  .max(20)
+  .optional()
+/** Telegram HTML; the renderer escapes all user, model and business text. */
+const htmlSchema = z.literal(true).optional()
 const messagePayloadSchema = z
   .object({
     text: z.string().min(1).max(4096),
-    buttons: z
-      .array(
-        z
-          .array(
-            z.union([
-              z
-                .object({
-                  text: z.string().min(1).max(64),
-                  data: z
-                    .string()
-                    .min(1)
-                    .refine((value) => Buffer.byteLength(value) <= 64),
-                })
-                .strict(),
-              z
-                .object({
-                  text: z.string().min(1).max(64),
-                  url: z.url({ protocol: /^https$/ }).max(2048),
-                })
-                .strict(),
-            ]),
-          )
-          .min(1)
-          .max(5),
-      )
-      .max(20)
-      .optional(),
+    html: htmlSchema,
+    buttons: buttonsSchema,
     /** Quote the bot's earlier message, e.g. a receipt under its review. */
     replyToMessageId: z.string().refine(isTelegramId).optional(),
   })
@@ -62,6 +66,9 @@ const payloadSchema = z.union([
     .object({
       editMessageId: z.string().refine(isTelegramId),
       text: z.string().min(1).max(4096),
+      html: htmlSchema,
+      /** Kept buttons, e.g. URL buttons after a choice; absent removes the keyboard. */
+      buttons: buttonsSchema,
     })
     .strict(),
 ])

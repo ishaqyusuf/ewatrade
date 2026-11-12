@@ -12,6 +12,14 @@ export {
   resolveAssistantTelegramConversation,
   stampAssistantTelegramExecution,
 } from "./authority"
+export {
+  TELEGRAM_CHATS_LISTED,
+  type TelegramChatSelection,
+  type TelegramChatSelectionResult,
+  listAssistantTelegramChats,
+  selectAssistantTelegramChat,
+} from "./chats"
+export { resolveAssistantTelegramReplyChoice } from "./choices"
 export { expireAssistantTelegramWork } from "./expiry"
 export {
   type AssistantTelegramHandoffMessage,
