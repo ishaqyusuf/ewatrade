@@ -97,6 +97,8 @@ export const PLAY_IDS = [
   "P13_monthly_report",
   "P14_at_risk",
   "P15_win_back",
+  /** Third "See plans" tap on locked-feature sheets (W3, not in the v1 table). */
+  "P16_feature_intent",
 ] as const
 export type PlayId = (typeof PLAY_IDS)[number]
 
@@ -121,6 +123,31 @@ export type PlayContext = {
   weekAgo: GrowthSnapshot | null
   /** True when Paystack web checkout is live for this business's territory. */
   checkoutAvailable: boolean
+  /**
+   * Monthly sales history before the current month (P09). Undefined or null
+   * when the engine has not loaded it; plays that need it stay dormant.
+   */
+  salesHistory?: SalesHistory | null
+  /** "See plans" taps on locked-feature sheets (P16). Null = not loaded. */
+  featureIntent?: FeatureIntentSummary | null
+}
+
+export type SalesHistory = {
+  /** Completed calendar months with at least one order, before this month. */
+  priorMonths: number
+  /** Highest completed-month sales, integer minor units. */
+  bestPriorMonthMinor: bigint
+  /** Median completed-month sales, integer minor units. */
+  medianPriorMonthMinor: bigint
+}
+
+export type FeatureIntentSummary = {
+  /** Lifetime "See plans" taps on locked-feature sheets for this business. */
+  taps: number
+  /** When the third tap happened; null below three taps. */
+  thirdTapAt: Date | null
+  /** Locked features tapped, most recent first (plan catalogue feature keys). */
+  features: readonly string[]
 }
 
 /** Values a template may interpolate. Never free text from users. */
@@ -141,6 +168,13 @@ export type PlayDecision = {
   data: PlayTemplateData
   /** App-relative path the CTA opens (wrapped by the signed `/go/:token` redirect). */
   ctaPath: string
+  /**
+   * Overrides the play's static consent for this one decision, e.g. P08 is
+   * `offers` below 100% of a limit and `transactional` at 100%.
+   */
+  consent?: ConsentCategory
+  /** Overrides the play's channels for this one decision (P08 per threshold). */
+  channels?: readonly LifecycleChannel[]
 }
 
 export type LifecyclePlay = {
