@@ -7,10 +7,40 @@ import { useTRPC } from "@/trpc/client"
 import { useMutation, useQuery } from "@tanstack/react-query"
 import { useEffect, useState } from "react"
 
+type TermsCopy = {
+  label: string
+  heading: string
+  /** Shown before the links; the version is appended. */
+  before: string
+  after: string
+  paused: string
+}
+
+const CONVERSATION_COPY: TermsCopy = {
+  label: "Terms required before posting",
+  heading: "Before you reply",
+  before: "Review and accept the effective Terms",
+  after:
+    "before posting. You can still read, report, or restrict this conversation.",
+  paused:
+    "Posting is paused until the EwaTrade Terms are approved and effective. You can still read or report this conversation.",
+}
+
+export const BILLING_TERMS_COPY: TermsCopy = {
+  label: "Terms required before payment",
+  heading: "Before you pay",
+  before: "Review and accept the current Terms",
+  after: "before choosing a paid plan.",
+  paused:
+    "Paid plans are paused until the EwaTrade Terms are approved and effective.",
+}
+
 export function ConversationAccountTerms({
   onAllowedChange,
+  copy = CONVERSATION_COPY,
 }: {
   onAllowedChange: (allowed: boolean) => void
+  copy?: TermsCopy
 }) {
   const trpc = useTRPC()
   const status = useQuery(
@@ -36,15 +66,13 @@ export function ConversationAccountTerms({
   return (
     <section
       className="grid gap-3 rounded-none border border-border bg-muted/30 p-4"
-      aria-label="Terms required before posting"
+      aria-label={copy.label}
     >
-      <h3 className="font-medium">Before you reply</h3>
+      <h3 className="font-medium">{copy.heading}</h3>
       {status.data?.effective && status.data.version ? (
         <>
           <p className="text-sm text-muted-foreground">
-            Review and accept the effective Terms (version {status.data.version}
-            ) before posting. You can still read, report, or restrict this
-            conversation.
+            {copy.before} (version {status.data.version}) {copy.after}
           </p>
           <div className="flex flex-wrap gap-4 text-sm">
             <a
@@ -102,10 +130,7 @@ export function ConversationAccountTerms({
           </Button>
         </>
       ) : (
-        <p className="text-sm text-muted-foreground">
-          Posting is paused until the EwaTrade Terms are approved and effective.
-          You can still read or report this conversation.
-        </p>
+        <p className="text-sm text-muted-foreground">{copy.paused}</p>
       )}
       {status.isError || error ? (
         <FormFeedback appearance="dashboard">

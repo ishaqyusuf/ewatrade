@@ -9,6 +9,10 @@ import {
 } from "@/components/settings/settings-page"
 import { SettingsStatusPill } from "@/components/settings/settings-status-pill"
 import {
+  BILLING_TERMS_COPY,
+  ConversationAccountTerms,
+} from "@/components/store-conversations/conversation-account-terms"
+import {
   isPaystackSubscriptionReturn,
   openSubscriptionCheckout,
 } from "@/lib/subscription-checkout-navigation"
@@ -262,6 +266,7 @@ function limitNotice(snapshot: SubscriptionSnapshot) {
 export function RetailOpsSubscriptionSettings() {
   const trpc = useTRPC()
   const [checkoutError, setCheckoutError] = useState<string | null>(null)
+  const [termsAccepted, setTermsAccepted] = useState(false)
   const subscriptionQuery = useQuery(
     trpc.retailOps.subscription.queryOptions(undefined, {
       retry: false,
@@ -395,6 +400,13 @@ export function RetailOpsSubscriptionSettings() {
         </div>
       ) : null}
 
+      {snapshot?.webBilling ? (
+        <ConversationAccountTerms
+          copy={BILLING_TERMS_COPY}
+          onAllowedChange={setTermsAccepted}
+        />
+      ) : null}
+
       {checkoutError ? (
         <div role="alert">
           <SettingsNotice tone="warning">{checkoutError}</SettingsNotice>
@@ -496,7 +508,10 @@ export function RetailOpsSubscriptionSettings() {
               key={plan.id}
               plan={plan}
               current={plan.id === snapshot?.plan.id}
-              disabled={upgrade.isPending}
+              disabled={
+                upgrade.isPending ||
+                (Boolean(snapshot?.webBilling) && !termsAccepted)
+              }
               upgrade={currentIndex >= 0 && index > currentIndex}
               pending={
                 upgrade.isPending && upgrade.variables?.planId === plan.id
