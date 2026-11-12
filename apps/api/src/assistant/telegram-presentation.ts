@@ -47,6 +47,8 @@ export const telegramCopy = {
 /** Commands shown in a connected chat; unconnected chats use the bot's defaults. */
 export const telegramConnectedCommands: readonly TelegramBotCommand[] = [
   { command: "help", description: "What I can do" },
+  { command: "new", description: "Start a new chat" },
+  { command: "chats", description: "Continue a saved chat" },
   { command: "scope", description: "Your Business and Store" },
   { command: "disconnect", description: "Remove Telegram access" },
 ]
