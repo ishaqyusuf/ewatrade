@@ -12,6 +12,7 @@
     "./assistant-attachments": "./src/assistant-attachments.ts",
     "./order-attachments": "./src/order-attachments.ts",
     "./order-videos": "./src/order-videos.ts",
+    "./service-evidence": "./src/service-evidence.ts",
     "./local-test-object-port": "./src/local-test-object-port.ts",
     "./verified-upload": "./src/verified-upload.ts",
     "./tenant-object-erasure": "./src/tenant-object-erasure.ts"

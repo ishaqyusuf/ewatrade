@@ -45,6 +45,7 @@ import {
 import {
   assertServiceCommercePolicyAllowedInTransaction,
   evaluateServiceCommercePolicy,
+  evaluateServiceCommercePolicyBatchReadOnlyInTransaction,
 } from "./service-commerce-policy"
 import {
   projectPublicServiceRequestForm,
@@ -1032,6 +1033,33 @@ export async function getPublicServiceQuote(
     if (error instanceof CommerceQuoteError) throw mapCommerceQuoteError(error)
     throw error
   }
+}
+
+/**
+ * Whether the public tracking page would open for this job's store. Uses the
+ * same policy scope as the page, read-only, so staff don't share dead links.
+ */
+export async function getServiceTrackingAvailability(
+  db: PrismaClient,
+  input: { actorUserId: string; jobId: string; tenantId: string },
+) {
+  const job = await db.serviceJob.findFirst({
+    select: { storeId: true },
+    where: { id: input.jobId, tenantId: input.tenantId },
+  })
+  if (!job) throw new CatalogError("SERVICE_JOB_NOT_FOUND", "Job not found.")
+  const [evaluation] = await db.$transaction((tx) =>
+    evaluateServiceCommercePolicyBatchReadOnlyInTransaction(tx, {
+      actorUserId: input.actorUserId,
+      purpose: "service_tracking_link_availability",
+      scopes: [
+        { channel: "web", subject: "service_completion", vertical: "service" },
+      ],
+      storeId: job.storeId,
+      tenantId: input.tenantId,
+    }),
+  )
+  return { available: evaluation?.outcome === "allowed" }
 }
 
 export async function createCustomerTrackingAccess(

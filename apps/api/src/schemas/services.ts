@@ -148,9 +148,17 @@ export const serviceJobRescheduleSchema = z
 
 export const serviceJobHandoffSchema = z
   .object({
+    /** The exact balance staff confirmed stays owing after hand-over. */
+    acceptOutstandingBalanceMinor: z
+      .number()
+      .int()
+      .positive()
+      .max(100_000_000)
+      .optional(),
     clientCommandId: z.string().trim().min(8).max(160),
     expectedRevision: z.number().int().nonnegative(),
     jobId: z.string().trim().min(1),
+    method: z.enum(["collected", "delivered"]).optional(),
     note: z.string().trim().max(500).optional(),
     payment: z
       .object({
@@ -165,6 +173,8 @@ export const serviceJobHandoffSchema = z
   .strict()
 
 export const serviceJobCompleteSchema = serviceJobHandoffSchema.omit({
+  acceptOutstandingBalanceMinor: true,
+  method: true,
   payment: true,
 })
 
@@ -263,6 +273,30 @@ export const serviceEvidenceCaptureSchema = z
       "progress",
     ]),
     uploadStatus: z.enum(["failed", "local", "queued"]).optional(),
+  })
+  .strict()
+
+/** Matches @ewatrade/private-media/service-evidence; kept client-safe here. */
+const SERVICE_EVIDENCE_PHOTO_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/heic",
+  "image/heif",
+] as const
+const SERVICE_EVIDENCE_PHOTO_MAX_BYTES = 4 * 1024 * 1024
+
+/** A private job photo; its bytes follow by PUT to the returned path. */
+export const serviceEvidencePhotoStartSchema = z
+  .object({
+    clientEvidenceId: z.string().trim().min(8).max(160),
+    contentDigest: z.string().regex(/^[a-f0-9]{64}$/),
+    contentType: z.enum(SERVICE_EVIDENCE_PHOTO_TYPES),
+    jobId: z.string().trim().min(1),
+    label: z.string().trim().max(160).optional(),
+    lineId: z.string().trim().min(1).optional(),
+    purpose: z.enum(["completion", "exception", "handoff", "other", "progress"]),
+    sizeBytes: z.number().int().positive().max(SERVICE_EVIDENCE_PHOTO_MAX_BYTES),
   })
   .strict()
 

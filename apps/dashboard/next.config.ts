@@ -42,6 +42,10 @@ export function getDashboardApiRewrites(apiOrigin = getApiOrigin()) {
       destination: `${apiOrigin}/api/orders/attachments/:path*`,
     },
     {
+      source: "/api/services/evidence/:path*",
+      destination: `${apiOrigin}/api/services/evidence/:path*`,
+    },
+    {
       source: "/api/catalog/photos/:path*",
       destination: `${apiOrigin}/api/catalog/photos/:path*`,
     },

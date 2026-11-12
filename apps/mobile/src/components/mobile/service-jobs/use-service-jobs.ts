@@ -6,6 +6,10 @@ import {
 } from "@/internal-tooling/fixture-recipes"
 import { LIST_PAGE_SIZE, shouldShowListSearch } from "@/lib/list-pagination"
 import { canManageMobileOperations, isSalesRepRole } from "@/lib/mobile-roles"
+import {
+  readOrderAttachmentFile,
+  uploadOrderAttachment,
+} from "@/lib/order-attachment-upload"
 import { useOperationalModeStore } from "@/store/operationalModeStore"
 import { useTRPC } from "@/trpc/client"
 import type { RouterInputs } from "@ewatrade/api/trpc/routers/_app"
@@ -43,6 +47,16 @@ import { useServiceStatusEditor } from "./service-status-sheet"
 import { useServiceTextEditor } from "./service-text-sheet"
 import { useServiceActions } from "./use-service-actions"
 import { useServiceCommand } from "./use-service-command"
+
+const JOB_PHOTO_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/heic",
+  "image/heif",
+]
+/** Same cap as the API's private job photo upload. */
+const JOB_PHOTO_MAX_BYTES = 4 * 1024 * 1024
 
 export function useServiceJobs(focusedJob?: FocusedServiceJob) {
   const trpc = useTRPC()
@@ -299,7 +313,11 @@ export function useServiceJobs(focusedJob?: FocusedServiceJob) {
       return recordPayment(draft.job, draft, backToEdit)
     return handoff(draft.job, draft, backToEdit)
   })
-  function openPaymentEditor(job: WorkJob, kind: ServicePaymentKind) {
+  function openPaymentEditor(
+    job: WorkJob,
+    kind: ServicePaymentKind,
+    handoverMethod?: "collected" | "delivered",
+  ) {
     if (history.kind) return
     if (
       !requireJob(job) ||
@@ -308,7 +326,12 @@ export function useServiceJobs(focusedJob?: FocusedServiceJob) {
       textEditor.draft
     )
       return
-    paymentEditor.open(job, kind)
+    paymentEditor.open(job, kind, {
+      amount: "",
+      method: "cash",
+      reference: "",
+      handoverMethod,
+    })
   }
   const statusEditor = useServiceStatusEditor((draft) => {
     if (draft.jobId !== selectedJob?.id) {
@@ -352,6 +375,9 @@ export function useServiceJobs(focusedJob?: FocusedServiceJob) {
   }, [settingsQuery.data])
   const evidenceMutation = useMutation(
     trpc.services.captureEvidence.mutationOptions({ retry: false }),
+  )
+  const photoUploadMutation = useMutation(
+    trpc.services.startPhotoUpload.mutationOptions({ retry: false }),
   )
   const intakeMutation = useMutation(
     trpc.services.createAndConfirmIntake.mutationOptions({ retry: false }),
@@ -686,6 +712,92 @@ export function useServiceJobs(focusedJob?: FocusedServiceJob) {
     })
     if (!staged) discardRetainedEvidence(evidence)
   }
+  /** A work photo from the camera or gallery, uploaded privately. */
+  async function addJobPhoto(job: WorkJob, source: "camera" | "library") {
+    if (!requireJob(job) || !requireOnlineServiceWork()) return
+    captureRef.current = true
+    setCaptureBusy(true)
+    let asset: ImagePicker.ImagePickerAsset | undefined
+    try {
+      if (source === "camera") {
+        const permission = await ImagePicker.requestCameraPermissionsAsync()
+        if (!command.canAct()) return
+        if (!permission.granted) {
+          setError(
+            "Camera access is off. Choose a photo instead, or enable camera access in Settings.",
+          )
+          return
+        }
+      }
+      const options: ImagePicker.ImagePickerOptions = {
+        mediaTypes: ["images"],
+        allowsEditing: false,
+        quality: 0.7,
+      }
+      const result =
+        source === "camera"
+          ? await ImagePicker.launchCameraAsync(options)
+          : await ImagePicker.launchImageLibraryAsync(options)
+      asset = result.canceled ? undefined : result.assets[0]
+    } catch (failure) {
+      if (command.canAct())
+        setError(
+          failure instanceof Error
+            ? failure.message
+            : "This photo could not be opened.",
+        )
+      return
+    } finally {
+      captureRef.current = false
+      if (command.isMounted()) setCaptureBusy(false)
+    }
+    if (!command.canAct() || !asset) return
+    const contentType = asset.mimeType ?? "image/jpeg"
+    if (!JOB_PHOTO_TYPES.includes(contentType)) {
+      setError("Choose a photo (JPG, PNG, WebP or HEIC).")
+      return
+    }
+    if ((asset.fileSize ?? 0) > JOB_PHOTO_MAX_BYTES) {
+      setError("This photo is too large. Choose one under 4 MB.")
+      return
+    }
+    const uri = asset.uri
+    // Fixed at review, so a retry resumes this same photo.
+    const clientEvidenceId = `photo-${Crypto.randomUUID()}`
+    command.stage({
+      kind: "evidence",
+      title: "Review private photo",
+      facts: [
+        { label: "Job", value: job.orderNumber },
+        { label: "File", value: "Work photo" },
+        {
+          label: "Visibility",
+          value: "Private · Uploaded for your team only",
+        },
+      ],
+      execute: async () => {
+        const file = await readOrderAttachmentFile(uri)
+        if (file.sizeBytes > JOB_PHOTO_MAX_BYTES)
+          throw new Error("This photo is too large. Choose one under 4 MB.")
+        const route = await photoUploadMutation.mutateAsync({
+          clientEvidenceId,
+          contentDigest: file.contentDigest,
+          contentType: contentType as "image/jpeg",
+          jobId: job.id,
+          label: "Work photo",
+          purpose: "progress",
+          sizeBytes: file.sizeBytes,
+        })
+        if (!route.uploaded)
+          await uploadOrderAttachment({
+            path: route.path,
+            buffer: file.buffer,
+            contentType,
+          })
+        return acceptedAction("Photo uploaded. Only your team can see it.")
+      },
+    })
+  }
   async function captureIntakeEvidence(mediaType: "photo" | "video") {
     if (!intakeCreatesTrackedWork) {
       setError("Select tracked Service work before adding private evidence.")
@@ -853,6 +965,7 @@ export function useServiceJobs(focusedJob?: FocusedServiceJob) {
     handoff,
     notifyCustomer,
     captureEvidence,
+    addJobPhoto,
     captureIntakeEvidence,
     showQueueSearch,
     fillIntake,

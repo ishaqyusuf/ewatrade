@@ -69,7 +69,10 @@ export function workDueLabel(due: Date | string | null, now = new Date()) {
   return at.toLocaleDateString("en-GB", { day: "numeric", month: "short" })
 }
 
-export function workQueueStatus(summary: string): {
+export function workQueueStatus(
+  summary: string,
+  handedOff = false,
+): {
   label: string
   tint: GreenTillTint
   tone: StatusPillTone
@@ -85,7 +88,9 @@ export function workQueueStatus(summary: string): {
   if (summary === "blocked")
     return { label: "Blocked", tint: "rose", tone: "danger" }
   if (summary === "completed")
-    return { label: "Collected", tint: "mint", tone: "muted" }
+    return handedOff
+      ? { label: "Handed over", tint: "mint", tone: "muted" }
+      : { label: "To hand over", tint: "mint", tone: "ok" }
   if (summary === "cancelled")
     return { label: "Cancelled", tint: "lilac", tone: "muted" }
   return { label: "Queued", tint: "amber", tone: "muted" }
@@ -101,7 +106,7 @@ export function ServiceJobRow({
   const palette = GREEN_TILL_THEME[colorScheme]
   const large = useLargeTextLayout()
   const late = overdueWork(job, Date.now())
-  const status = workQueueStatus(job.summary)
+  const status = workQueueStatus(job.summary, Boolean(job.handedOffAt))
   const name = job.customerName || "Walk-in customer"
   const due = workDueLabel(job.dueCommitmentAt)
   const tint = late ? "rose" : status.tint

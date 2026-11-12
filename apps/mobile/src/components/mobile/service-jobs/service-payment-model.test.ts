@@ -1,5 +1,8 @@
 import { expect, test } from "bun:test"
-import { projectServicePayment } from "./service-payment-model"
+import {
+  projectServicePayment,
+  serviceHandoffOwedMinor,
+} from "./service-payment-model"
 
 const job = {
   summary: "ready_for_handoff" as const,
@@ -66,7 +69,7 @@ test("recorded payments still require positive amount no greater than outstandin
     }),
   ).toEqual({ amountMinor: 100, error: null })
 })
-test("handoff preserves blank/zero semantics and requires exactly the outstanding balance", () => {
+test("handoff collects up to the balance; the rest stays owed", () => {
   for (const amount of ["", " ", "0", "0.00"])
     expect(
       projectServicePayment({ ...job, balanceDueMinor: 0 }, "handoff", {
@@ -74,13 +77,35 @@ test("handoff preserves blank/zero semantics and requires exactly the outstandin
         amount,
       }),
     ).toEqual({ amountMinor: 0, error: null })
-  for (const amount of ["", "0", "1.22", "1.24", "1.230"])
+  for (const [amount, minor] of [
+    ["", 0],
+    ["0", 0],
+    ["1.22", 122],
+  ] as const) {
+    const projection = projectServicePayment(
+      { ...job, balanceDueMinor: 123 },
+      "handoff",
+      { ...fields, amount },
+    )
+    expect(projection).toEqual({ amountMinor: minor, error: null })
+    expect(serviceHandoffOwedMinor({ balanceDueMinor: 123 }, minor)).toBe(
+      123 - minor,
+    )
+  }
+  for (const amount of ["1.24", "1.230"])
     expect(
       projectServicePayment({ ...job, balanceDueMinor: 123 }, "handoff", {
         ...fields,
         amount,
       }).amountMinor,
     ).toBeNull()
+  expect(
+    projectServicePayment(
+      { ...job, summary: "completed", balanceDueMinor: 123 },
+      "handoff",
+      { ...fields, amount: "" },
+    ),
+  ).toEqual({ amountMinor: 0, error: null })
   expect(
     projectServicePayment({ ...job, balanceDueMinor: 123 }, "handoff", {
       ...fields,

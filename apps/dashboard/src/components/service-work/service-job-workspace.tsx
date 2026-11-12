@@ -60,11 +60,17 @@ import {
   parseJobStep,
   toneClass,
 } from "@/components/service-work/service-utils"
+import {
+  JOB_PHOTO_ACCEPT,
+  jobPhotoProblem,
+  jobPhotoSource,
+  useJobPhotoUpload,
+} from "@/components/service-work/use-job-photo-upload"
 import { useJobQuickStep } from "@/components/service-work/use-job-quick-step"
 import { useTRPC, useTRPCClient } from "@/trpc/client"
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { type ReactNode, useRef, useState } from "react"
+import { type ReactNode, useEffect, useRef, useState } from "react"
 
 type Job = WorkJob
 type Line = Job["lines"][number]
@@ -273,6 +279,12 @@ function JobSummary({
     ? (assigneeName(job.currentAssigneeUserId) ?? "Someone")
     : null
   const openProblem = job.exceptions.find((entry) => entry.outcome === "OPEN")
+  const trackingAvailability = useQuery(
+    trpc.serviceAccess.trackingAvailability.queryOptions(
+      { jobId: job.id },
+      { enabled: canManage, retry: false },
+    ),
+  )
   const publish = useMutation(
     trpc.services.publishEvidence.mutationOptions({
       onError: (failure) => toast(failure.message),
@@ -334,7 +346,9 @@ function JobSummary({
       }`
       break
     case "completed":
-      nextText = `Completed${job.completedAt ? ` ${formatWhen(job.completedAt).toLowerCase()}` : ""}.${job.balanceDueMinor > 0 ? ` ${formatPrice(job.balanceDueMinor, job.currencyCode)} still to pay.` : ""}`
+      nextText = job.handoff?.method
+        ? `${job.handoff.method === "delivered" ? "Delivered" : "Collected"} ${formatWhen(job.handoff.at).toLowerCase()}${job.handoff.byName ? ` · by ${job.handoff.byName}` : ""}.${job.balanceDueMinor > 0 ? ` ${formatPrice(job.balanceDueMinor, job.currencyCode)} still owed.` : ""}`
+        : `Completed${job.completedAt ? ` ${formatWhen(job.completedAt).toLowerCase()}` : ""}.${job.balanceDueMinor > 0 ? ` ${formatPrice(job.balanceDueMinor, job.currencyCode)} still to pay.` : ""}`
       break
     default:
       nextText = "This work was cancelled."
@@ -344,9 +358,7 @@ function JobSummary({
   if (next) {
     nextButtons.push({
       label:
-        next.action === "handover" && job.balanceDueMinor > 0 && !signOff
-          ? `Collect ${formatPrice(job.balanceDueMinor, job.currencyCode)} and hand over`
-          : next.action === "approve"
+        next.action === "approve"
             ? "Approve the start"
             : next.action === "start"
               ? "Start work"
@@ -357,6 +369,8 @@ function JobSummary({
           : goTo(next.action),
     })
   }
+  if (next?.action === "handover" && job.deliveryApplies)
+    nextButtons.push({ label: "Mark delivered", onClick: () => goTo("deliver") })
   if (job.summary === "in_progress" || job.summary === "partially_ready")
     nextButtons.push({ label: "Mark stuck", onClick: () => goTo("stuck") })
   if (job.summary === "queued" && !jobGate(job) && canManage)
@@ -384,7 +398,7 @@ function JobSummary({
   const nextTone =
     job.summary === "blocked"
       ? "border-warning-border bg-warning text-warning-foreground"
-      : job.summary === "ready_for_handoff"
+      : job.summary === "ready_for_handoff" || next?.action === "handover"
         ? "border-primary/30 bg-primary/5"
         : "border-border bg-card"
 
@@ -521,12 +535,19 @@ function JobSummary({
               <ToolButton icon={Message01Icon} onClick={() => goTo("message")}>
                 Message customer
               </ToolButton>
-              <ToolButton icon={Link01Icon} onClick={() => goTo("track")}>
-                Tracking link
-              </ToolButton>
+              {trackingAvailability.data?.available ? (
+                <ToolButton icon={Link01Icon} onClick={() => goTo("track")}>
+                  Tracking link
+                </ToolButton>
+              ) : null}
             </>
           ) : null}
         </div>
+        {trackingAvailability.data?.reason ? (
+          <p className="text-xs text-muted-foreground">
+            No tracking link: {trackingAvailability.data.reason}
+          </p>
+        ) : null}
         <JobActivity
           job={job}
           canManage={canManage}
@@ -716,6 +737,22 @@ function JobActivity({
         icon: Camera01Icon,
         body: (
           <>
+            {entry.hasFile ? (
+              <a
+                className="mb-1.5 block w-fit"
+                href={jobPhotoSource(entry.id)}
+                rel="noreferrer"
+                target="_blank"
+              >
+                {/* Authenticated, uncached content; next/image cannot optimise it. */}
+                <img
+                  alt={entry.label || "Job photo"}
+                  className="h-24 w-32 border border-border object-cover"
+                  loading="lazy"
+                  src={jobPhotoSource(entry.id)}
+                />
+              </a>
+            ) : null}
             <span className="font-medium">Photo</span> {entry.label || ""}{" "}
             <span className="text-muted-foreground">
               ·{" "}
@@ -727,7 +764,7 @@ function JobActivity({
                     ? "upload failed"
                     : "still uploading"}
             </span>
-            {canManage && ready ? (
+            {canManage && ready && (shown || entry.customerSafe) ? (
               <LinkButton
                 className="ml-2"
                 onClick={() =>
@@ -846,10 +883,24 @@ function JobStepView({
   const [when, setWhen] = useState<"now" | "later">("now")
   const [sendAt, setSendAt] = useState("")
   const [evidenceLabel, setEvidenceLabel] = useState("")
-  const [evidenceReference, setEvidenceReference] = useState("")
+  const [photo, setPhoto] = useState<File | null>(null)
+  const [handoverMethod, setHandoverMethod] = useState<
+    "collected" | "delivered"
+  >(step === "deliver" ? "delivered" : "collected")
   const [trackingUrl, setTrackingUrl] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
   const admission = useRef(false)
+  // Kept for this step, so retrying after a failure repeats the same command.
+  const commandId = useRef(crypto.randomUUID())
+  // A note or problem already saved is not saved again when its photo retries.
+  const textSaved = useRef(false)
+  const photoUpload = useJobPhotoUpload(job.id)
+  const trackingAvailability = useQuery(
+    trpc.serviceAccess.trackingAvailability.queryOptions(
+      { jobId: job.id },
+      { enabled: step === "track" && canManage, retry: false },
+    ),
+  )
   const fail = (failure: { message: string }) => setError(failure.message)
 
   const recordPayment = useMutation(
@@ -878,9 +929,6 @@ function JobStepView({
   )
   const note = useMutation(
     trpc.services.addNote.mutationOptions({ onError: fail }),
-  )
-  const evidence = useMutation(
-    trpc.services.captureEvidence.mutationOptions({ onError: fail }),
   )
   const message = useMutation(
     trpc.serviceCommunications.createIntent.mutationOptions({ onError: fail }),
@@ -944,6 +992,48 @@ function JobStepView({
       setPending(false)
     }
   }
+
+  /** Uploads the chosen photo privately; failures stay on the step. */
+  async function uploadPhoto(label: string, purpose: "exception" | "progress") {
+    if (!photo) return
+    if (admission.current) throw new Error("busy")
+    admission.current = true
+    try {
+      if (!(await attachments.allow())) throw new Error("not allowed")
+      await photoUpload.upload({ file: photo, label, purpose })
+    } catch (failure) {
+      if (
+        failure instanceof Error &&
+        !["busy", "not allowed"].includes(failure.message)
+      )
+        setError(failure.message)
+      throw failure
+    } finally {
+      admission.current = false
+    }
+  }
+
+  const photoField = (required: boolean) => (
+    <ControlField
+      label={
+        required ? (
+          "Photo"
+        ) : (
+          <>
+            Photo{" "}
+            <span className="font-normal text-muted-foreground">Optional</span>
+          </>
+        )
+      }
+      error={fieldErrors.photo}
+    >
+      <JobPhotoInput
+        disabled={attachments.knownFree || pending}
+        file={photo}
+        onChange={setPhoto}
+      />
+    </ControlField>
+  )
 
   const activeLines = (statuses: Line["status"][]) =>
     (line ? [line] : job.lines).filter((entry) =>
@@ -1094,63 +1184,97 @@ function JobStepView({
         : null
       break
     }
-    case "handover": {
+    case "handover":
+    case "deliver": {
       const ready =
         ["ready_for_handoff", "completed"].includes(job.summary) &&
         !job.handedOffAt
+      const collecting =
+        balance > 0 && amountMinor !== null && amountMinor > 0 ? amountMinor : 0
+      const owed = Math.max(0, balance - collecting)
+      const delivered = handoverMethod === "delivered"
+      const who = job.customerName || "the customer"
       body = (
         <>
-          <p className="text-sm">
-            {signOff
-              ? "Confirm the customer has checked the finished cleaning."
-              : `${job.customerName || "The customer"} collects the work.`}
-          </p>
+          {signOff ? (
+            <p className="text-sm">
+              Confirm the customer has checked the finished cleaning.
+            </p>
+          ) : (
+            <ControlField label="How did it reach the customer?">
+              <ChoiceButtons
+                label="How did it reach the customer?"
+                value={handoverMethod}
+                onChange={setHandoverMethod}
+                options={[
+                  { value: "collected", label: "Customer collected" },
+                  { value: "delivered", label: "Delivered" },
+                ]}
+              />
+            </ControlField>
+          )}
           {moneyList}
           {amountFields(true)}
-          {balance > 0 ? (
-            <p className="text-xs text-muted-foreground">
-              Hand over needs the full amount. To take part of it, use Take
-              payment and keep the job open.
-            </p>
+          {owed > 0 ? (
+            <FormFeedback appearance="dashboard">
+              {formatPrice(owed, job.currencyCode)} still owed. It stays on the
+              order as owed after the hand-over.
+            </FormFeedback>
           ) : null}
-          {!ready ? (
+          {job.handedOffAt ? (
+            <FormFeedback appearance="dashboard">
+              This job was already handed over.
+            </FormFeedback>
+          ) : !ready ? (
             <FormFeedback appearance="dashboard">
               Every part must be ready before you hand over.
             </FormFeedback>
           ) : null}
         </>
       )
+      const verb = delivered ? "Mark delivered" : "Mark collected"
       primary = ready
         ? {
             label: signOff
               ? "Complete job"
-              : balance > 0
-                ? `Collect ${formatPrice(amountMinor && amountMinor > 0 ? amountMinor : balance, job.currencyCode)} and hand over`
-                : "Hand over",
+              : owed > 0
+                ? `${verb} · ${formatPrice(owed, job.currencyCode)} owed`
+                : collecting > 0
+                  ? `Collect ${formatPrice(collecting, job.currencyCode)} and ${verb.toLowerCase()}`
+                  : verb,
             onClick: () =>
               void save(
-                { amount: moneyError(true), account: accountError },
+                {
+                  amount: amount.trim() ? moneyError(false) : null,
+                  account: collecting > 0 ? accountError : null,
+                },
                 async () => {
                   await handoff.mutateAsync({
-                    clientCommandId: crypto.randomUUID(),
+                    acceptOutstandingBalanceMinor: owed > 0 ? owed : undefined,
+                    clientCommandId: commandId.current,
                     expectedRevision: job.revision,
                     jobId: job.id,
+                    method: signOff ? undefined : handoverMethod,
                     note: signOff
                       ? "Cleaning completed after customer sign-off"
-                      : "Collected by customer",
+                      : undefined,
                     payment:
-                      balance > 0
+                      collecting > 0
                         ? {
-                            amountMinor: amountMinor ?? 0,
+                            amountMinor: collecting,
                             method,
                             moneyAccountId: account.payloadAccountId,
                             reference: reference.trim() || undefined,
                           }
                         : undefined,
                   })
-                  return signOff
-                    ? "Job completed."
-                    : `Handed over to ${job.customerName || "the customer"}.`
+                  if (signOff) return "Job completed."
+                  const done = delivered
+                    ? `Delivered to ${who}.`
+                    : `Collected by ${who}.`
+                  return owed > 0
+                    ? `${done} ${formatPrice(owed, job.currencyCode)} still owed.`
+                    : done
                 },
               ),
           }
@@ -1172,7 +1296,7 @@ function JobStepView({
             error={fieldErrors.why}
           >
             <Textarea
-              placeholder="e.g. Disinfectant ran out"
+              placeholder="e.g. Waiting for a part"
               value={why}
               onChange={(event) => setWhy(event.target.value)}
             />
@@ -1224,7 +1348,7 @@ function JobStepView({
           }
         >
           <Textarea
-            placeholder="e.g. Disinfectant arrived"
+            placeholder="e.g. The part arrived"
             value={text}
             onChange={(event) => setText(event.target.value)}
           />
@@ -1443,7 +1567,7 @@ function JobStepView({
           </ControlField>
           <ControlField label="Why is it changing?" error={fieldErrors.why}>
             <Input
-              placeholder="e.g. Waiting for disinfectant"
+              placeholder="e.g. Waiting for a part"
               value={why}
               onChange={(event) => setWhy(event.target.value)}
             />
@@ -1475,30 +1599,44 @@ function JobStepView({
     }
     case "note": {
       body = (
-        <ControlField
-          label="Note"
-          description="Only your team sees this."
-          error={fieldErrors.text}
-        >
-          <Textarea
-            rows={4}
-            value={text}
-            onChange={(event) => setText(event.target.value)}
-          />
-        </ControlField>
+        <>
+          {attachments.dialog}
+          <ControlField
+            label="Note"
+            description="Only your team sees this."
+            error={fieldErrors.text}
+          >
+            <Textarea
+              rows={4}
+              placeholder="e.g. Customer asked for extra care with the buttons"
+              value={text}
+              onChange={(event) => setText(event.target.value)}
+            />
+          </ControlField>
+          {photoField(false)}
+        </>
       )
       primary = {
-        label: "Add note",
+        label: photo ? "Add note and photo" : "Add note",
         onClick: () =>
           void save(
-            { text: !text.trim() && "Write the note first." },
+            {
+              text: !text.trim() && "Write the note first.",
+              photo: jobPhotoProblem(photo),
+            },
             async () => {
-              await note.mutateAsync({
-                body: text.trim(),
-                clientCommandId: crypto.randomUUID(),
-                jobId: job.id,
-              })
-              return "Note added."
+              if (!textSaved.current) {
+                await note.mutateAsync({
+                  body: text.trim(),
+                  clientCommandId: commandId.current,
+                  jobId: job.id,
+                })
+                textSaved.current = true
+              }
+              await uploadPhoto(text.trim().slice(0, 160), "progress")
+              return photo
+                ? "Note and photo added. Only your team can see them."
+                : "Note added."
             },
           ),
       }
@@ -1518,24 +1656,38 @@ function JobStepView({
           </ControlField>
           <ControlField label="What happened?" error={fieldErrors.why}>
             <Textarea
-              placeholder="e.g. 20 birds missed, will finish tomorrow"
+              placeholder="e.g. Part of the work is left, will finish tomorrow"
               value={why}
               onChange={(event) => setWhy(event.target.value)}
             />
           </ControlField>
+          {attachments.dialog}
+          {photoField(false)}
         </>
       )
       primary = {
-        label: "Report problem",
+        label: photo ? "Report problem with photo" : "Report problem",
         onClick: () =>
-          void save({ why: !why.trim() && "Say what happened." }, async () => {
-            await exception.mutateAsync({
-              description: why.trim(),
-              jobId: job.id,
-              type: problemType,
-            })
-            return "Problem recorded."
-          }),
+          void save(
+            {
+              why: !why.trim() && "Say what happened.",
+              photo: jobPhotoProblem(photo),
+            },
+            async () => {
+              if (!textSaved.current) {
+                await exception.mutateAsync({
+                  description: why.trim(),
+                  jobId: job.id,
+                  type: problemType,
+                })
+                textSaved.current = true
+              }
+              await uploadPhoto(why.trim().slice(0, 160), "exception")
+              return photo
+                ? "Problem and photo recorded. Only your team can see the photo."
+                : "Problem recorded."
+            },
+          ),
       }
       break
     }
@@ -1543,6 +1695,7 @@ function JobStepView({
       body = (
         <>
           {attachments.dialog}
+          {photoField(true)}
           <ControlField
             label={
               <>
@@ -1554,58 +1707,38 @@ function JobStepView({
             }
           >
             <Input
-              placeholder="e.g. Layer pen after vaccination"
+              placeholder="e.g. Before the work started"
               disabled={attachments.knownFree}
+              maxLength={160}
               value={evidenceLabel}
               onChange={(event) => setEvidenceLabel(event.target.value)}
             />
           </ControlField>
-          <ControlField
-            label={
-              <>
-                File reference{" "}
-                <span className="font-normal text-muted-foreground">
-                  Optional
-                </span>
-              </>
-            }
-            description="Only if your photo storage gives you one."
-          >
-            <Input
-              disabled={attachments.knownFree}
-              value={evidenceReference}
-              onChange={(event) => setEvidenceReference(event.target.value)}
-            />
-          </ControlField>
           <p className="text-xs text-muted-foreground">
             Photos stay private to your team. A manager can show one to the
-            customer after it passes the safety check.
+            customer only after it passes the safety check.
           </p>
         </>
       )
       primary = {
         label: attachments.knownFree ? "Add photo · Locked" : "Add photo",
         onClick: () =>
-          void save({}, async () => {
-            if (admission.current) throw new Error("busy")
-            admission.current = true
-            try {
-              if (!(await attachments.allow())) throw new Error("not allowed")
-              await evidence.mutateAsync({
-                assetReference: evidenceReference.trim() || undefined,
-                capturedAt: new Date(),
-                clientEvidenceId: crypto.randomUUID(),
-                jobId: job.id,
-                label: evidenceLabel.trim() || undefined,
-                mediaType: "photo",
-                purpose: "progress",
-                uploadStatus: "local",
-              })
+          void save(
+            {
+              photo:
+                (!photo && !attachments.knownFree && "Choose a photo first.") ||
+                jobPhotoProblem(photo),
+            },
+            async () => {
+              if (!photo) {
+                // Free plans see the upgrade explanation instead.
+                if (!(await attachments.allow())) throw new Error("not allowed")
+                throw new Error("Choose a photo first.")
+              }
+              await uploadPhoto(evidenceLabel.trim(), "progress")
               return "Photo added. Only your team can see it."
-            } finally {
-              admission.current = false
-            }
-          }),
+            },
+          ),
       }
       break
     }
@@ -1693,6 +1826,11 @@ function JobStepView({
             Send the customer a page that shows progress and the due date.
             Notes, problems and private photos stay hidden.
           </p>
+          {trackingAvailability.data?.reason ? (
+            <FormFeedback appearance="dashboard">
+              {trackingAvailability.data.reason}
+            </FormFeedback>
+          ) : null}
           {trackingUrl ? (
             <div className="flex items-center gap-3 border border-border px-3 py-2.5">
               <a
@@ -1722,7 +1860,7 @@ function JobStepView({
       )
       secondaryLabel = trackingUrl ? "Done" : "Back"
       primary =
-        canManage && !trackingUrl
+        canManage && !trackingUrl && trackingAvailability.data?.available
           ? {
               label: "Create tracking link",
               onClick: () =>
@@ -1766,7 +1904,7 @@ function JobStepView({
           <ControlField label="Why?" error={fieldErrors.why}>
             <Input
               placeholder={
-                isSplit ? "e.g. Second pen on Friday" : "e.g. 10 birds missed"
+                isSplit ? "e.g. The rest on Friday" : "e.g. Two items need redoing"
               }
               value={why}
               onChange={(event) => setWhy(event.target.value)}
@@ -1918,5 +2056,74 @@ function ToolButton({
       <HugeiconsIcon icon={icon} data-icon="inline-start" aria-hidden="true" />
       {children}
     </Button>
+  )
+}
+
+/** Choose one photo; on phones the picker also offers the camera. */
+function JobPhotoInput({
+  disabled,
+  file,
+  onChange,
+}: {
+  disabled: boolean
+  file: File | null
+  onChange: (file: File | null) => void
+}) {
+  const input = useRef<HTMLInputElement>(null)
+  const [preview, setPreview] = useState<string | null>(null)
+  useEffect(() => {
+    if (!file || !file.type.startsWith("image/")) {
+      setPreview(null)
+      return
+    }
+    const url = URL.createObjectURL(file)
+    setPreview(url)
+    return () => URL.revokeObjectURL(url)
+  }, [file])
+  return (
+    <div className="flex flex-wrap items-center gap-3">
+      <input
+        ref={input}
+        aria-label="Photo"
+        accept={JOB_PHOTO_ACCEPT}
+        className="sr-only"
+        disabled={disabled}
+        type="file"
+        onChange={(event) => {
+          onChange(event.target.files?.[0] ?? null)
+          event.target.value = ""
+        }}
+      />
+      {preview ? (
+        // A local object URL; next/image cannot optimise it.
+        <img
+          alt="Selected for upload"
+          className="size-16 border border-border object-cover"
+          src={preview}
+        />
+      ) : null}
+      <Button
+        type="button"
+        size="sm"
+        variant="outline"
+        disabled={disabled}
+        onClick={() => input.current?.click()}
+      >
+        <HugeiconsIcon
+          icon={Camera01Icon}
+          data-icon="inline-start"
+          aria-hidden="true"
+        />
+        {file ? "Choose another" : "Choose photo"}
+      </Button>
+      {file ? (
+        <>
+          <span className="min-w-0 truncate text-sm text-muted-foreground">
+            {file.name}
+          </span>
+          <LinkButton onClick={() => onChange(null)}>Remove</LinkButton>
+        </>
+      ) : null}
+    </div>
   )
 }

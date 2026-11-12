@@ -1,7 +1,9 @@
 import { Modal, useModal } from "@/components/ui/modal"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
+import { serviceEvidenceSource } from "@/lib/order-attachment-upload"
 import { BottomSheetFlatList } from "@gorhom/bottom-sheet"
+import { Image } from "expo-image"
 import { useEffect, useRef, useState } from "react"
 import { Keyboard, useWindowDimensions } from "react-native"
 import { ServiceAction } from "./service-action"
@@ -34,6 +36,8 @@ type RecordRow = {
   title: string
   detail: string
   removable: boolean
+  /** Uploaded private photo to show. */
+  photoId?: string
 }
 export function ServiceHistorySheet({ model }: { model: ServiceJobsModel }) {
   const { height } = useWindowDimensions()
@@ -60,6 +64,7 @@ export function ServiceHistorySheet({ model }: { model: ServiceJobsModel }) {
               title: entry.label || textLabel(entry.purpose),
               detail: `${textLabel(entry.mediaType)} · ${textLabel(entry.uploadStatus)} · Private work record`,
               removable: false,
+              photoId: entry.hasFile ? entry.id : undefined,
             }))
   const title =
     history.kind === "pending"
@@ -101,6 +106,14 @@ export function ServiceHistorySheet({ model }: { model: ServiceJobsModel }) {
         }
         renderItem={({ item }) => (
           <View className="mx-5 gap-3 border-b border-border py-4">
+            {item.photoId ? (
+              <Image
+                accessibilityLabel={item.title}
+                contentFit="cover"
+                source={serviceEvidenceSource(item.photoId)}
+                style={{ borderRadius: 12, height: 160, width: "100%" }}
+              />
+            ) : null}
             <Text className="text-sm text-foreground">{item.title}</Text>
             <Text className="text-xs text-muted-foreground">{item.detail}</Text>
             {item.removable ? (

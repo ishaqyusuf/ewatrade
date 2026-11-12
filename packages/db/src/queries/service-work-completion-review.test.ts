@@ -398,12 +398,20 @@ test("native handoff preserves financial lock order, distinct owning event and o
   let replayEvent: unknown
   await recordServiceHandoffInTransaction(
     f.tx,
-    { ...scope, clientCommandId: "later-key", expectedRevision: 0 },
+    { ...scope, clientCommandId: "command-handoff", expectedRevision: 0 },
     (event) => {
       replayEvent = event
     },
   )
   expect(replayEvent).toEqual(result.event)
+  // A different command is a second hand-over, which is refused.
+  await expect(
+    recordServiceHandoffInTransaction(f.tx, {
+      ...scope,
+      clientCommandId: "later-key",
+      expectedRevision: 0,
+    }),
+  ).rejects.toThrow("already handed over")
   expect(f.state.writes).toBe(writes)
 })
 test("fresh preparation refuses unpaid, unready, unauthorized, cancelled-only and already handed-off work", async () => {

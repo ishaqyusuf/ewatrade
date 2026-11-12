@@ -8,6 +8,8 @@ export type ServicePaymentFields = {
   /** Where money received now lands; unset when Finance isn't set up. */
   moneyAccountId?: string
   moneyAccountName?: string
+  /** Hand-over only: the customer collected it, or it was delivered. */
+  handoverMethod?: "collected" | "delivered"
 }
 export type ServicePaymentKind = "payment" | "handoff"
 export type ServicePaymentDraft = ServicePaymentFields & {
@@ -36,11 +38,14 @@ export function projectServicePayment(
     }
   if (
     kind === "handoff" &&
-    (job.summary !== "ready_for_handoff" || job.handedOffAt)
+    ((job.summary !== "ready_for_handoff" && job.summary !== "completed") ||
+      job.handedOffAt)
   )
     return {
       amountMinor: null,
-      error: "All active work must be ready before collection.",
+      error: job.handedOffAt
+        ? "This job was already handed over."
+        : "All active work must be ready before hand-over.",
     }
   const amount = fields.amount.trim()
   const amountMinor = amount
@@ -63,10 +68,19 @@ export function projectServicePayment(
       amountMinor: null,
       error: "Enter a payment within the outstanding balance.",
     }
-  if (kind === "handoff" && amountMinor !== job.balanceDueMinor)
+  // Hand-over may leave a balance owing; the review says how much.
+  if (kind === "handoff" && amountMinor > job.balanceDueMinor)
     return {
       amountMinor: null,
-      error: "Collect exactly the outstanding balance before handoff.",
+      error: "Enter no more than the outstanding balance.",
     }
   return { amountMinor, error: null }
+}
+
+/** What stays owing after a hand-over collects `amountMinor`. */
+export function serviceHandoffOwedMinor(
+  job: Pick<WorkJob, "balanceDueMinor">,
+  amountMinor: number,
+) {
+  return Math.max(0, job.balanceDueMinor - amountMinor)
 }

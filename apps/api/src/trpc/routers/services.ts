@@ -25,6 +25,7 @@ import {
   rescheduleServiceJob,
   revokeServiceEvidencePublication,
   splitServiceJobLine,
+  startServiceEvidencePhotoUpload,
   transitionServiceJobLine,
   updateServiceEvidenceUpload,
   updateServiceStoreSettings,
@@ -36,6 +37,7 @@ import {
   assistantServiceJobCardSchema,
   serviceBatchUpdateSchema,
   serviceEvidenceCaptureSchema,
+  serviceEvidencePhotoStartSchema,
   serviceEvidencePublishSchema,
   serviceEvidenceRevokeSchema,
   serviceEvidenceUploadSchema,
@@ -194,6 +196,25 @@ export const servicesRouter = createTRPCRouter({
           tenantId: ctx.tenantContext.tenant.id,
         }),
       )
+    }),
+
+  /** Starts a private job photo; the client then PUTs the bytes to `path`. */
+  startPhotoUpload: protectedProcedure
+    .input(serviceEvidencePhotoStartSchema)
+    .mutation(async ({ ctx, input }) => {
+      assertServiceOperator(ctx.tenantContext.membership.role)
+      const evidence = await run(() =>
+        startServiceEvidencePhotoUpload(ctx.db, {
+          actorUserId: ctx.session.user.id,
+          ...input,
+          tenantId: ctx.tenantContext.tenant.id,
+        }),
+      )
+      return {
+        evidenceId: evidence.id,
+        path: `/api/services/evidence/${encodeURIComponent(evidence.id)}/upload`,
+        uploaded: evidence.uploadStatus === "AVAILABLE",
+      }
     }),
 
   confirmIntake: protectedProcedure

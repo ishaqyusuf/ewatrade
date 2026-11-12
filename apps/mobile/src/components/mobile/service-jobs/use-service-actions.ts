@@ -7,6 +7,7 @@ import type { WorkJob } from "./service-jobs-model"
 import {
   type ServicePaymentFields,
   projectServicePayment,
+  serviceHandoffOwedMinor,
 } from "./service-payment-model"
 import type { ServiceTextFields } from "./service-text-sheet"
 import type {
@@ -263,11 +264,15 @@ export function useServiceActions({
       return false
     }
     const { amountMinor } = projection
+    const owedMinor = serviceHandoffOwedMinor(job, amountMinor)
+    const delivered = fields.handoverMethod === "delivered"
+    // Built once at review: a retry resends this same command id.
     const input: RouterInputs["services"]["handoff"] = {
+      acceptOutstandingBalanceMinor: owedMinor > 0 ? owedMinor : undefined,
       clientCommandId: `handoff-${Crypto.randomUUID()}`,
       expectedRevision: job.revision,
       jobId: job.id,
-      note: "Collected by customer",
+      method: delivered ? "delivered" : "collected",
       payment:
         amountMinor > 0
           ? {
@@ -280,15 +285,26 @@ export function useServiceActions({
     }
     return command.stage({
       kind: "handoff",
-      title: "Review collection",
+      title: delivered ? "Review delivery" : "Review collection",
       onDiscard,
       facts: [
         { label: "Job", value: job.orderNumber },
         {
-          label: "Final payment",
+          label: "Collect now",
           value: formatMinorMoney(amountMinor, job.currencyCode),
         },
-        { label: "Result", value: "Mark collected and close the work" },
+        ...(owedMinor > 0
+          ? [
+              {
+                label: "Still owed",
+                value: `${formatMinorMoney(owedMinor, job.currencyCode)} stays on the order`,
+              },
+            ]
+          : []),
+        {
+          label: "Result",
+          value: delivered ? "Mark delivered" : "Mark collected",
+        },
         ...(amountMinor > 0
           ? [
               { label: "Method", value: fields.method },
@@ -304,7 +320,13 @@ export function useServiceActions({
       ],
       execute: async () => {
         await handoffMutation.mutateAsync(input)
-        return acceptedAction("Order collected and closed.", onCollected)
+        const done = delivered ? "Marked delivered." : "Marked collected."
+        return acceptedAction(
+          owedMinor > 0
+            ? `${done} ${formatMinorMoney(owedMinor, job.currencyCode)} still owed.`
+            : done,
+          onCollected,
+        )
       },
     })
   }

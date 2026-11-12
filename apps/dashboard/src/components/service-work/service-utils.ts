@@ -218,7 +218,10 @@ export function jobStage(job: JobLike): { label: string; tone: StatusTone } {
         tone: "ready",
       }
     case "completed":
-      return { label: "Completed", tone: "ready" }
+      return {
+        label: job.handedOffAt && !signOff ? "Handed over" : "Completed",
+        tone: "ready",
+      }
     default:
       return { label: "Cancelled", tone: "muted" }
   }
@@ -250,6 +253,7 @@ export type JobStep =
   | "complete"
   | "pay"
   | "handover"
+  | "deliver"
   | "stuck"
   | "resume"
   | "cancel"
@@ -275,6 +279,7 @@ export const JOB_STEP_TITLES: Record<JobStep, string> = {
   complete: "Complete job",
   pay: "Take payment",
   handover: "Hand over to the customer",
+  deliver: "Mark delivered",
   stuck: "Mark stuck",
   resume: "Continue work",
   cancel: "Cancel this work",
@@ -321,6 +326,11 @@ export function jobNextStep(
         action: "complete",
         label: "Complete job",
       }
+    case "completed":
+      // Finished work still has to reach the customer.
+      return job.handedOffAt || signOff
+        ? null
+        : { action: "handover", label: "Mark collected" }
     default:
       return null
   }

@@ -57,6 +57,7 @@ import { registerSelfServiceStoreDetectionRoutes } from "./self-service/store-de
 import { registerStoreConversationAttachmentRoutes } from "./service-commerce/conversation-attachments-routes"
 import { registerServiceCommerceMediaDeliveryRoutes } from "./service-commerce/media-delivery"
 import { registerServiceCommerceMediaUploadRoutes } from "./service-commerce/media-upload"
+import { registerServiceEvidencePhotoRoutes } from "./service-commerce/service-evidence-photo-routes"
 import { registerStaffInvitationResendWebhook } from "./staff/resend-webhook"
 import { createTRPCContext } from "./trpc/init"
 import { appRouter } from "./trpc/routers/_app"
@@ -226,6 +227,7 @@ registerAssistantChatRoutes(app)
 registerAssistantAttachmentRoutes(app)
 registerAssistantPrivateExportRoute(app)
 registerOrderAttachmentRoutes(app)
+registerServiceEvidencePhotoRoutes(app)
 registerVoiceGatewayRoutes(app)
 registerGeneralAssistantChatRoutes(app)
 registerAssistantChannelTurnRoute(app)

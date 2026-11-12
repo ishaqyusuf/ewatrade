@@ -21,12 +21,13 @@ import { ServiceWorkLines } from "./service-work-lines"
 import { overdueWork } from "./service-work-summary"
 import type { ServiceJobsModel } from "./use-service-jobs"
 
-const TRACK = ["Received", "Working", "Ready", "Collected"] as const
+const TRACK = ["Received", "Working", "Ready", "Handed over"] as const
 
 /** How far along the Received → Working → Ready → Collected track a job is. */
 function trackStep(summary: string, handedOff: boolean) {
-  if (handedOff || summary === "completed") return 4
-  if (summary === "ready_for_handoff") return 3
+  if (handedOff) return 4
+  // Completed work waits at Ready until the customer has it.
+  if (summary === "ready_for_handoff" || summary === "completed") return 3
   if (["in_progress", "partially_ready", "blocked"].includes(summary)) return 2
   return 1
 }
@@ -90,7 +91,10 @@ export function ClassicServiceJobWorkspace({
     !canAct || (!mediaLocked && (model.captureBusy || media !== "allowed"))
   const late = overdueWork(job, Date.now())
   const handedOff = Boolean(job.handedOffAt)
-  const ready = job.summary === "ready_for_handoff" && !handedOff
+  // Ready or completed work still has to reach the customer.
+  const ready =
+    (job.summary === "ready_for_handoff" || job.summary === "completed") &&
+    !handedOff
   const step = trackStep(job.summary, handedOff)
   const money = (minor: number) => formatMinorMoney(minor, job.currencyCode)
   const mine = model.profile?.id
@@ -111,9 +115,11 @@ export function ClassicServiceJobWorkspace({
         }}
         title={
           job.balanceDueMinor > 0
-            ? `${money(job.balanceDueMinor)} due`
+            ? `${money(job.balanceDueMinor)} ${handedOff ? "still owed" : "due"}`
             : handedOff
-              ? "Collected"
+              ? job.handoff?.method === "delivered"
+                ? "Delivered"
+                : "Collected"
               : "Paid in full"
         }
         sub={`${money(job.amountPaidMinor)} of ${money(job.orderTotalMinor)} paid`}
@@ -164,21 +170,33 @@ export function ClassicServiceJobWorkspace({
           ))}
         </View>
         {ready || (job.balanceDueMinor > 0 && !handedOff) ? (
-          <View className="mt-4">
+          <View className="mt-4 gap-2">
             <ActionButton
               tone="cream"
               icon={ready ? "Wallet" : "CreditCard"}
               disabled={!canAct}
               onPress={() =>
-                model.openPaymentEditor(job, ready ? "handoff" : "payment")
+                model.openPaymentEditor(
+                  job,
+                  ready ? "handoff" : "payment",
+                  "collected",
+                )
               }
             >
-              {ready
-                ? job.balanceDueMinor > 0
-                  ? "Collect balance and hand over"
-                  : "Hand over"
-                : "Record payment"}
+              {ready ? "Mark collected" : "Record payment"}
             </ActionButton>
+            {ready && job.deliveryApplies ? (
+              <ActionButton
+                tone="cream"
+                icon="Truck"
+                disabled={!canAct}
+                onPress={() =>
+                  model.openPaymentEditor(job, "handoff", "delivered")
+                }
+              >
+                Mark delivered
+              </ActionButton>
+            ) : null}
           </View>
         ) : null}
       </HeroCard>
@@ -317,8 +335,21 @@ export function ClassicServiceJobWorkspace({
             locked={mediaLocked}
             onPress={() =>
               void access.attempt(
-                () => model.captureEvidence(job, "photo"),
+                () => model.addJobPhoto(job, "camera"),
                 "camera",
+              )
+            }
+          />
+          <RecordTile
+            icon="Image"
+            label="Gallery"
+            tint="sky"
+            disabled={mediaDisabled}
+            locked={mediaLocked}
+            onPress={() =>
+              void access.attempt(
+                () => model.addJobPhoto(job, "library"),
+                "gallery",
               )
             }
           />
@@ -351,8 +382,8 @@ export function ClassicServiceJobWorkspace({
           </Text>
         ) : null}
         <Text className="px-0.5 text-xs text-muted-foreground">
-          Notes and evidence stay private unless a manager publishes reviewed
-          evidence.
+          Notes and photos stay private to your team unless a manager shares a
+          safety-reviewed photo.
         </Text>
       </View>
       <AttachmentLockSheet

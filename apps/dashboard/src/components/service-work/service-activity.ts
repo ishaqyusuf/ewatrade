@@ -1,4 +1,4 @@
-import { type WorkJob, lineStage } from "./service-utils"
+import { type WorkJob, formatPrice, lineStage } from "./service-utils"
 
 const EVENT_LABELS: Record<string, string> = {
   CREATED: "Job created",
@@ -18,9 +18,35 @@ const EVENT_LABELS: Record<string, string> = {
   CANCELLED: "Work cancelled",
 }
 
+/** "Collected by customer · by Ada · ₦2,000 still owed" */
+function handoffEntry(
+  job: Pick<WorkJob, "currencyCode" | "handoff">,
+): { title: string; detail: string } | null {
+  const handoff = job.handoff
+  if (!handoff?.method) return null
+  return {
+    title:
+      handoff.method === "delivered"
+        ? "Delivered to customer"
+        : "Collected by customer",
+    detail: [
+      handoff.byName ? `by ${handoff.byName}` : null,
+      handoff.balanceOwedMinor > 0
+        ? `${formatPrice(handoff.balanceOwedMinor, job.currencyCode)} still owed`
+        : null,
+    ]
+      .filter(Boolean)
+      .join(" · "),
+  }
+}
+
 export function serviceActivityEvents(
-  job: Pick<WorkJob, "events" | "lines" | "createdAt">,
+  job: Pick<
+    WorkJob,
+    "events" | "lines" | "createdAt" | "currencyCode" | "handoff"
+  >,
 ) {
+  const handoff = handoffEntry(job)
   const events = job.events
     .filter(
       (event) =>
@@ -36,6 +62,12 @@ export function serviceActivityEvents(
     )
     .map((event) => {
       const line = job.lines.find((line) => line.id === event.lineId)
+      if (event.type === "REMOTE_HANDOFF" && handoff)
+        return {
+          id: event.id,
+          at: new Date(event.effectiveAt ?? event.createdAt),
+          ...handoff,
+        }
       const title =
         event.type === "STATUS_CHANGED" &&
         !event.lineId &&

@@ -908,14 +908,14 @@ export function ServiceIntakeForm({
                 <ControlField label={<>What to do {optional}</>}>
                   <Textarea
                     value={instructions}
-                    placeholder="e.g. Vaccinate the layer pen first"
+                    placeholder="e.g. Do the urgent items first"
                     onChange={(event) => setInstructions(event.target.value)}
                   />
                 </ControlField>
                 <ControlField label={<>How it came in {optional}</>}>
                   <Textarea
                     value={conditionNote}
-                    placeholder="e.g. 3 birds look weak"
+                    placeholder="e.g. Small mark on one item"
                     onChange={(event) => setConditionNote(event.target.value)}
                   />
                 </ControlField>

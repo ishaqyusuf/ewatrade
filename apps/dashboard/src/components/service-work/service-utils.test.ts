@@ -73,11 +73,26 @@ describe("jobStage and jobNextStep", () => {
     expect(jobNextStep(cleaning, false)?.label).toBe("Complete job")
   })
 
-  test("stuck work continues; finished work has no next step", () => {
+  test("stuck work continues; cancelled work has no next step", () => {
     expect(jobNextStep(job("blocked", [line("BLOCKED")]), false)?.action).toBe(
       "resume",
     )
-    expect(jobNextStep(job("completed", [line("COMPLETED")]), true)).toBeNull()
+    expect(jobNextStep(job("cancelled", [line("CANCELLED")]), true)).toBeNull()
+  })
+
+  test("completed work is handed over once", () => {
+    const done = job("completed", [line("COMPLETED")], 2_000)
+    expect(jobNextStep(done, false)).toEqual({
+      action: "handover",
+      label: "Mark collected",
+    })
+    expect(jobStage(done).label).toBe("Completed")
+    const handed = {
+      ...(done as object),
+      handedOffAt: new Date("2026-11-12T10:00:00.000Z"),
+    } as never
+    expect(jobNextStep(handed, true)).toBeNull()
+    expect(jobStage(handed).label).toBe("Handed over")
   })
 })
 

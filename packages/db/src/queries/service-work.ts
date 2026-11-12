@@ -142,7 +142,10 @@ function assertSchemaVersion(version: number) {
 const jobGraph = {
   assignments: { orderBy: { assignedAt: "asc" } },
   commercialOrder: {
-    include: { payments: { orderBy: { recordedAt: "asc" } } },
+    include: {
+      payments: { orderBy: { recordedAt: "asc" } },
+      storefrontOrderRequest: { select: { fulfilment: true } },
+    },
   },
   dueCommitments: { orderBy: { effectiveAt: "asc" } },
   evidence: { orderBy: { createdAt: "asc" } },
@@ -216,6 +219,32 @@ function customerMilestone(summary: ReturnType<typeof derivedJobSummary>) {
   return "cancelled" as const
 }
 
+/** The recorded hand-over; older sign-off completions carry no method. */
+function serializeHandoff(job: JobGraph) {
+  if (!job.handedOffAt) return null
+  const event = job.events.find(
+    (entry) => entry.type === ServiceWorkEventType.REMOTE_HANDOFF,
+  )
+  const payload =
+    event?.payload && typeof event.payload === "object"
+      ? (event.payload as Record<string, unknown>)
+      : {}
+  return {
+    at: job.handedOffAt,
+    balanceOwedMinor:
+      typeof payload.balanceOwedMinor === "number"
+        ? payload.balanceOwedMinor
+        : 0,
+    byUserId: job.handedOffByUserId,
+    /** Filled by getServiceJob; list reads skip the name lookup. */
+    byName: null as string | null,
+    method:
+      payload.method === "delivered" || payload.method === "collected"
+        ? payload.method
+        : null,
+  }
+}
+
 function serializeJob(job: JobGraph) {
   const summary = derivedJobSummary(job.lines)
   const currentDue = [...job.dueCommitments]
@@ -248,6 +277,9 @@ function serializeJob(job: JobGraph) {
     currentAssigneeUserId: job.currentAssigneeUserId,
     customerName: job.commercialOrder.customerName,
     customerMilestone: customerMilestone(summary),
+    /** The customer asked for delivery when ordering online. */
+    deliveryApplies:
+      job.commercialOrder.storefrontOrderRequest?.fulfilment === "DELIVERY",
     dueCommitmentAt: currentDue?.promisedAt ?? null,
     dueHistory: job.dueCommitments.map((commitment) => ({
       effectiveAt: commitment.effectiveAt,
@@ -269,7 +301,16 @@ function serializeJob(job: JobGraph) {
     })),
     evidence: job.evidence.map((evidence) => ({
       capturedAt: evidence.capturedAt,
+      contentType: evidence.contentType,
+      /** Passed the trusted safety check, so tracking rules allow sharing it. */
+      customerSafe: Boolean(
+        evidence.safePublicAssetId && evidence.safetyMetadata,
+      ),
       failureReason: evidence.failureReason,
+      /** Uploaded private bytes the team can open. */
+      hasFile:
+        evidence.uploadStatus === ServiceEvidenceUploadStatus.AVAILABLE &&
+        Boolean(evidence.storagePath),
       id: evidence.id,
       label: evidence.label,
       mediaType: evidence.mediaType,
@@ -288,6 +329,7 @@ function serializeJob(job: JobGraph) {
     })),
     id: job.id,
     handedOffAt: job.handedOffAt,
+    handoff: serializeHandoff(job),
     handoffNote: job.handoffNote,
     lines: job.lines.map((line) => ({
       allocatedQuantity: line.allocatedQuantity.toString(),
@@ -1960,6 +2002,161 @@ export async function updateServiceEvidenceUpload(
   })
 }
 
+export type StartServiceEvidencePhotoInput = {
+  actorUserId: string
+  clientEvidenceId: string
+  contentDigest: string
+  contentType: string
+  jobId: string
+  label?: string
+  lineId?: string
+  purpose: "exception" | "progress" | "completion" | "handoff" | "other"
+  sizeBytes: number
+  tenantId: string
+}
+
+/**
+ * Records the promised private photo before its bytes arrive. Retrying the
+ * same clientEvidenceId resumes it; a different file under it is refused.
+ */
+export async function startServiceEvidencePhotoUpload(
+  db: PrismaClient,
+  input: StartServiceEvidencePhotoInput,
+) {
+  const job = await db.serviceJob.findFirst({
+    select: { id: true },
+    where: { id: input.jobId, tenantId: input.tenantId },
+  })
+  if (!job) throw new CatalogError("SERVICE_JOB_NOT_FOUND", "Job not found.")
+  return db.$transaction(async (tx) => {
+    await assertAttachmentEntitlement(tx, input)
+    const existing = await tx.serviceEvidence.findUnique({
+      where: {
+        tenantId_clientEvidenceId: {
+          clientEvidenceId: input.clientEvidenceId,
+          tenantId: input.tenantId,
+        },
+      },
+    })
+    if (existing) {
+      if (
+        existing.serviceJobId !== job.id ||
+        existing.contentDigest !== input.contentDigest ||
+        existing.contentType !== input.contentType ||
+        existing.sizeBytes !== input.sizeBytes
+      )
+        throw new CatalogError(
+          "IDEMPOTENCY_MISMATCH",
+          "This photo upload was started with a different file.",
+        )
+      return existing
+    }
+    const evidence = await tx.serviceEvidence.create({
+      data: {
+        capturedAt: new Date(),
+        clientEvidenceId: input.clientEvidenceId,
+        contentDigest: input.contentDigest,
+        contentType: input.contentType,
+        label: input.label?.trim() || null,
+        mediaType: ServiceEvidenceMediaType.PHOTO,
+        purpose: evidencePurpose(input.purpose),
+        serviceJobId: job.id,
+        serviceJobLineId: input.lineId,
+        sizeBytes: input.sizeBytes,
+        tenantId: input.tenantId,
+        uploadStatus: ServiceEvidenceUploadStatus.QUEUED,
+        uploaderUserId: input.actorUserId,
+        visibility: ServiceEvidenceVisibility.PRIVATE,
+      },
+    })
+    await tx.serviceEvidenceAuditEvent.createMany({
+      data: [
+        ServiceEvidenceAuditAction.CAPTURED,
+        ServiceEvidenceAuditAction.UPLOAD_QUEUED,
+      ].map((action) => ({
+        action,
+        actorUserId: input.actorUserId,
+        evidenceId: evidence.id,
+      })),
+    })
+    return evidence
+  })
+}
+
+/** A tenant's private photo with the promised bytes, for upload or viewing. */
+export async function readServiceEvidenceFile(
+  db: PrismaClient,
+  input: { evidenceId: string; tenantId: string },
+) {
+  const evidence = await db.serviceEvidence.findFirst({
+    where: {
+      contentDigest: { not: null },
+      id: input.evidenceId,
+      tenantId: input.tenantId,
+    },
+  })
+  if (
+    !evidence?.contentDigest ||
+    !evidence.contentType ||
+    !evidence.sizeBytes
+  )
+    throw new CatalogError(
+      "SERVICE_EVIDENCE_UNAVAILABLE",
+      "This photo is not available.",
+    )
+  return {
+    ...evidence,
+    contentDigest: evidence.contentDigest,
+    contentType: evidence.contentType,
+    sizeBytes: evidence.sizeBytes,
+  }
+}
+
+/** Verified bytes are stored; the photo stays private to the business. */
+export async function markServiceEvidencePhotoUploaded(
+  db: PrismaClient,
+  input: {
+    actorUserId: string
+    evidenceId: string
+    storagePath: string
+    storageProvider: string
+    storageStoreId: string | null
+    tenantId: string
+  },
+) {
+  return db.$transaction(async (tx) => {
+    const updated = await tx.serviceEvidence.updateMany({
+      data: {
+        storagePath: input.storagePath,
+        storageProvider: input.storageProvider,
+        storageStoreId: input.storageStoreId,
+        uploadStatus: ServiceEvidenceUploadStatus.AVAILABLE,
+        uploadedAt: new Date(),
+      },
+      where: {
+        id: input.evidenceId,
+        tenantId: input.tenantId,
+        uploadStatus: {
+          in: [
+            ServiceEvidenceUploadStatus.QUEUED,
+            ServiceEvidenceUploadStatus.UPLOADING,
+            ServiceEvidenceUploadStatus.FAILED,
+          ],
+        },
+      },
+    })
+    if (updated.count !== 1) return false
+    await tx.serviceEvidenceAuditEvent.create({
+      data: {
+        action: ServiceEvidenceAuditAction.UPLOAD_SUCCEEDED,
+        actorUserId: input.actorUserId,
+        evidenceId: input.evidenceId,
+      },
+    })
+    return true
+  })
+}
+
 export async function publishServiceEvidence(
   db: PrismaClient,
   input: {
@@ -2062,7 +2259,17 @@ export async function getServiceJob(
     include: jobGraph,
     where: { id: input.jobId, tenantId: input.tenantId },
   })
-  return job ? serializeJob(job) : null
+  if (!job) return null
+  const serialized = serializeJob(job)
+  if (!serialized.handoff?.byUserId) return serialized
+  const handedOffBy = await db.user.findUnique({
+    select: { name: true },
+    where: { id: serialized.handoff.byUserId },
+  })
+  return {
+    ...serialized,
+    handoff: { ...serialized.handoff, byName: handedOffBy?.name || null },
+  }
 }
 
 export async function listServiceWorkQueue(
@@ -2581,9 +2788,16 @@ export async function createAutomaticReadyNotificationIntent(
 
 export type RecordServiceHandoffInput = {
   actorUserId: string
+  /**
+   * The exact balance the staff member saw and confirmed would stay owing.
+   * Without it, hand-over still needs the full amount settled.
+   */
+  acceptOutstandingBalanceMinor?: number
   clientCommandId: string
   expectedRevision: number
   jobId: string
+  /** Customer collected it, or it was delivered. Defaults to collected. */
+  method?: "collected" | "delivered"
   note?: string
   payment?: {
     amountMinor: number
@@ -2623,7 +2837,7 @@ export function assertServiceHandoffReady(
 
 export type CompleteServiceJobInput = Omit<
   RecordServiceHandoffInput,
-  "payment"
+  "acceptOutstandingBalanceMinor" | "method" | "payment"
 > & { storeId: string }
 
 /** Shared locked fulfillment path; completing work never records collection or payment. */
@@ -2692,8 +2906,19 @@ async function finishServiceJobInTransaction(
       (event) => event.type === ServiceWorkEventType.REMOTE_HANDOFF,
     )
     const [event] = original
-    if (original.length === 1 && event) onEvent?.(event)
-    return serializeJob(job)
+    // Only a retry of the same command replays; another hand-over is refused.
+    if (
+      original.length === 1 &&
+      event &&
+      event.clientCommandId === input.clientCommandId
+    ) {
+      onEvent?.(event)
+      return serializeJob(job)
+    }
+    throw new CatalogError(
+      "INVALID_SERVICE_TRANSITION",
+      "This job was already handed over to the customer.",
+    )
   }
   if (!isCommercialOrderFulfillmentAllowed(financialOrder.order.status))
     throw new CatalogError(
@@ -2712,6 +2937,7 @@ async function finishServiceJobInTransaction(
   }
   assertServiceHandoffReady(job.lines)
   let paymentStatus = financialOrder.order.paymentStatus
+  let balanceOwedMinor = 0
   if (isHandoff) {
     if (input.payment) {
       await recordCommercialOrderPaymentInTransaction(tx, {
@@ -2736,17 +2962,32 @@ async function finishServiceJobInTransaction(
       paymentStatus: settledOrder.paymentStatus,
       totalMinor: settledOrder.totalMinor,
     })
-    if (settledAmountPaidMinor < settledOrder.totalMinor) {
+    balanceOwedMinor = Math.max(
+      0,
+      settledOrder.totalMinor - settledAmountPaidMinor,
+    )
+    // Unpaid hand-over is allowed only against the exact balance confirmed.
+    if (
+      balanceOwedMinor > 0 &&
+      input.acceptOutstandingBalanceMinor !== balanceOwedMinor
+    ) {
       throw new CatalogError(
         "INVALID_ORDER",
-        "Collect the outstanding balance before handing over this order.",
+        input.acceptOutstandingBalanceMinor === undefined
+          ? "Collect the outstanding balance before handing over this order."
+          : "The amount still owed changed. Review it before handing over.",
       )
     }
   }
   const finishedAt = new Date()
+  const handoffMethod = input.method ?? "collected"
   const reason =
     input.note?.trim() ||
-    (isHandoff ? "Collected by customer" : "Service work completed")
+    (isHandoff
+      ? handoffMethod === "delivered"
+        ? "Delivered to customer"
+        : "Collected by customer"
+      : "Service work completed")
   const source = isHandoff ? "customer_handoff" : "work_completion"
   for (const line of job.lines) {
     if (line.status !== ServiceJobLineStatus.READY_FOR_HANDOFF) continue
@@ -2778,7 +3019,13 @@ async function finishServiceJobInTransaction(
       actorUserId: input.actorUserId,
       clientCommandId: input.clientCommandId,
       ...(isHandoff
-        ? { payload: json({ paymentStatus }) }
+        ? {
+            payload: json({
+              balanceOwedMinor,
+              method: handoffMethod,
+              paymentStatus,
+            }),
+          }
         : {
             fromStatus: ServiceJobLineStatus.READY_FOR_HANDOFF,
             toStatus: ServiceJobLineStatus.COMPLETED,

@@ -108,6 +108,14 @@ export function orderAttachmentSource(attachmentId: string) {
   }
 }
 
+/** A private Service job photo; only the business's team can load it. */
+export function serviceEvidenceSource(evidenceId: string) {
+  return {
+    uri: `${getBaseUrl()}/api/services/evidence/${encodeURIComponent(evidenceId)}/content`,
+    headers: authHeaders(),
+  }
+}
+
 /** A photo sent in an assistant chat; only its sender can load it. */
 export function chatAttachmentSource(attachmentId: string) {
   return {

@@ -17,6 +17,7 @@ import {
   type ServicePaymentFields,
   type ServicePaymentKind,
   projectServicePayment,
+  serviceHandoffOwedMinor,
 } from "./service-payment-model"
 
 export function useServicePaymentEditor(
@@ -44,6 +45,7 @@ export function useServicePaymentEditor(
       amount: fields?.amount ?? "",
       method: fields?.method ?? "cash",
       reference: fields?.reference ?? "",
+      handoverMethod: fields?.handoverMethod,
     }
     current.current = next
     setDraft(next)
@@ -110,6 +112,13 @@ export function ServicePaymentSheet({
   })
   const disabled =
     !allowed || !projection || Boolean(projection.error) || !account.ready
+  const handoff = draft?.kind === "handoff"
+  const delivered = draft?.handoverMethod === "delivered"
+  const collectMinor = projection?.amountMinor ?? null
+  const owedMinor =
+    draft && handoff && collectMinor !== null
+      ? serviceHandoffOwedMinor(draft.job, collectMinor)
+      : 0
   const chosen = account.chosen
   const review = useCallback(() => {
     // The sole eligible account is preselected without a tap; send what shows.
@@ -119,7 +128,7 @@ export function ServicePaymentSheet({
   const footer = (
     <View className="gap-2">
       <ServiceAction disabled={disabled} onPress={review}>
-        Review {draft?.kind === "handoff" ? "collection" : "payment"}
+        Review {handoff ? "hand-over" : "payment"}
       </ServiceAction>
       <ServiceAction variant="outline" onPress={editor.modal.dismiss}>
         Cancel
@@ -131,7 +140,11 @@ export function ServicePaymentSheet({
     <FullScreenModal
       ref={editor.modal.ref}
       title={
-        draft?.kind === "handoff" ? "Collect and hand over" : "Record payment"
+        handoff
+          ? delivered
+            ? "Mark delivered"
+            : "Mark collected"
+          : "Record payment"
       }
       onDismiss={editor.afterDismiss}
       footer={footer}
@@ -160,6 +173,24 @@ export function ServicePaymentSheet({
               <Text className={`${ink} font-bold`}>
                 {draft.job.orderNumber}
               </Text>
+              {handoff ? (
+                <View className="gap-2">
+                  {(
+                    [
+                      ["collected", "Customer collected"],
+                      ["delivered", "Delivered"],
+                    ] as const
+                  ).map(([value, title]) => (
+                    <Choice
+                      key={value}
+                      title={title}
+                      selected={(draft.handoverMethod ?? "collected") === value}
+                      disabled={!allowed}
+                      onPress={() => editor.edit({ handoverMethod: value })}
+                    />
+                  ))}
+                </View>
+              ) : null}
               <Text className={`${ink} text-sm`}>
                 {formatMinorMoney(
                   draft.job.balanceDueMinor,
@@ -171,7 +202,11 @@ export function ServicePaymentSheet({
                 <>
                   <FormField
                     variant="filled"
-                    label={`Amount received (${draft.job.currencyCode})`}
+                    label={
+                      handoff
+                        ? `Collect now (${draft.job.currencyCode}, optional)`
+                        : `Amount received (${draft.job.currencyCode})`
+                    }
                     leadingText={getCurrencySymbol(draft.job.currencyCode)}
                     keyboardType="decimal-pad"
                     value={draft.amount}
@@ -221,8 +256,7 @@ export function ServicePaymentSheet({
                 </>
               ) : (
                 <Text className={`${ink} text-sm`}>
-                  No additional payment is due. Review collection before marking
-                  the order collected.
+                  Fully paid. Review the hand-over before marking it done.
                 </Text>
               )}
               {projection?.error && draft.amount.trim() ? (
@@ -233,9 +267,18 @@ export function ServicePaymentSheet({
                   {projection.error}
                 </Text>
               ) : null}
+              {owedMinor > 0 ? (
+                <Text
+                  accessibilityRole="alert"
+                  className="text-sm font-bold text-destructive"
+                >
+                  {formatMinorMoney(owedMinor, draft.job.currencyCode)} still
+                  owed. It stays on the order as owed after the hand-over.
+                </Text>
+              ) : null}
               <Text className="text-xs text-muted-foreground">
-                {draft.kind === "handoff"
-                  ? "Collection requires the exact remaining balance and all active work ready."
+                {handoff
+                  ? "All active work must be ready. Record only money you have actually received."
                   : "Record only money you have actually received. This does not charge the customer."}
               </Text>
             </>

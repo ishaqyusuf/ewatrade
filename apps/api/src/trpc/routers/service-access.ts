@@ -9,6 +9,7 @@ import {
   getPublicServiceQuote,
   getPublicServiceRequestForm,
   getPublicServiceTracking,
+  getServiceTrackingAvailability,
   issueServiceQuote,
   listServiceRequestForms,
   listServiceRequests,
@@ -27,6 +28,7 @@ import {
   publicServiceRequestFormSchema,
   publicServiceRequestSubmitSchema,
   publicServiceTrackingSchema,
+  serviceJobGetSchema,
   serviceQuoteIssueSchema,
   serviceRequestDispositionSchema,
   serviceRequestFormCreateSchema,
@@ -41,6 +43,9 @@ import {
   assertServiceManager,
   resolveServiceStoreId,
 } from "./service-permissions"
+
+const TRACKING_UNAVAILABLE =
+  "Tracking pages aren't open for this business yet. Online service requests and tracking need Service Commerce turned on first."
 
 function publicFailure(cause: unknown) {
   return new TRPCError({
@@ -158,13 +163,48 @@ export const serviceAccessRouter = createTRPCRouter({
 
   createTracking: protectedProcedure
     .input(serviceTrackingCreateSchema)
-    .mutation(({ ctx, input }) => {
+    .mutation(async ({ ctx, input }) => {
       assertServiceManager(ctx.tenantContext.membership.role)
-      return createCustomerTrackingAccess(ctx.db, {
-        actorUserId: ctx.session.user.id,
-        ...input,
-        tenantId: ctx.tenantContext.tenant.id,
-      })
+      try {
+        // A link the public page would refuse is never issued.
+        const { available } = await getServiceTrackingAvailability(ctx.db, {
+          actorUserId: ctx.session.user.id,
+          jobId: input.jobId,
+          tenantId: ctx.tenantContext.tenant.id,
+        })
+        if (!available)
+          throw new TRPCError({
+            code: "PRECONDITION_FAILED",
+            message: TRACKING_UNAVAILABLE,
+          })
+        return await createCustomerTrackingAccess(ctx.db, {
+          actorUserId: ctx.session.user.id,
+          ...input,
+          tenantId: ctx.tenantContext.tenant.id,
+        })
+      } catch (error) {
+        if (error instanceof TRPCError) throw error
+        mapProtectedPolicyError(error)
+      }
+    }),
+
+  /** Whether customer tracking pages open for this job's store right now. */
+  trackingAvailability: protectedProcedure
+    .input(serviceJobGetSchema)
+    .query(async ({ ctx, input }) => {
+      assertServiceManager(ctx.tenantContext.membership.role)
+      try {
+        const { available } = await getServiceTrackingAvailability(ctx.db, {
+          actorUserId: ctx.session.user.id,
+          jobId: input.jobId,
+          tenantId: ctx.tenantContext.tenant.id,
+        })
+        return available
+          ? { available: true as const, reason: null }
+          : { available: false as const, reason: TRACKING_UNAVAILABLE }
+      } catch (error) {
+        mapProtectedPolicyError(error)
+      }
     }),
 
   issueQuote: protectedProcedure
