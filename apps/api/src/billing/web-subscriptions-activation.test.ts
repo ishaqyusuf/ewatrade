@@ -5,6 +5,7 @@ import { PrismaClient } from "../../../../packages/db/generated/prisma/client"
 import {
   checkWebSubscriptionPayment,
   createWebSubscriptionCheckout,
+  paystackPayerEmail,
   processPaystackSubscriptionEvent,
   reconcileInitialWebCheckout,
 } from "./web-subscriptions"
@@ -162,4 +163,17 @@ test("only a QA business in Test Mode skips the terms step", async () => {
       "Accept the current terms before starting payment.",
     )
   }
+})
+
+test("only a QA Test Mode payer with a .test email gets a placeholder address", () => {
+  const account = "5e882a1e-d161-44cc-844c-4c0e94410002"
+  expect(paystackPayerEmail("pilot@ishaq.qa.test", account, true)).toBe(
+    `qa-${account}@example.com`,
+  )
+  expect(paystackPayerEmail("pilot@ishaq.qa.test", account, false)).toBe(
+    "pilot@ishaq.qa.test",
+  )
+  expect(paystackPayerEmail("owner@shop.ng", account, true)).toBe(
+    "owner@shop.ng",
+  )
 })

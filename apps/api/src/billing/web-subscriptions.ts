@@ -85,6 +85,21 @@ function billingReturnUrl(env: BillingEnvironment) {
   return url.toString()
 }
 
+/**
+ * Paystack refuses reserved .test addresses, which every QA identity uses.
+ * In a QA Test Mode checkout the payer becomes a per-account example.com
+ * address (reserved, never delivered). Real owners always keep their email.
+ */
+export function paystackPayerEmail(
+  email: string,
+  accountId: string,
+  qaTestCheckout: boolean,
+) {
+  return qaTestCheckout && /\.test$/i.test(email)
+    ? `qa-${accountId}@example.com`
+    : email
+}
+
 export async function createWebSubscriptionCheckout(
   db: PrismaClient,
   input: {
@@ -149,7 +164,7 @@ export async function createWebSubscriptionCheckout(
       product,
       accountId: account.id,
       checkoutId: prepared.session.id,
-      email: input.email,
+      email: paystackPayerEmail(input.email, account.id, qaTestCheckout),
       returnUrl,
       usdApproved: env.PAYSTACK_USD_ENABLED === "true",
     })
