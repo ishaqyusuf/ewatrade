@@ -58,6 +58,10 @@ model LifecycleMessage {
   suppressedReason  String?
   /// Null = automated, signed by the founder. Later: the Oversight operator who sent it.
   senderUserId      String?
+  /// Email template key from the play decision (`packages/email` lifecycle templates).
+  templateKey       String?
+  /// Frozen play decision for the sender: { data, ctaPath, inAppKey }. Never free text from users.
+  payload           Json?
   providerMessageId String?   @unique
   attempts          Int       @default(0)
   claimedAt         DateTime?

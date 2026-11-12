@@ -53,7 +53,17 @@ export type LifecycleMessageInsert = {
   >
   suppressedReason?: string | null
   senderUserId?: string | null
+  /** Email template key from the play decision. */
+  templateKey?: string | null
+  /** Frozen decision the sender renders from: plain values only. */
+  payload?: LifecycleMessagePayload | null
   now?: Date
+}
+
+export type LifecycleMessagePayload = {
+  data: Record<string, string | number | boolean | null>
+  ctaPath: string
+  inAppKey?: string | null
 }
 
 /**
@@ -78,6 +88,8 @@ export async function insertLifecycleMessageIfAbsent(
         status: input.status,
         suppressedReason: input.suppressedReason ?? null,
         senderUserId: input.senderUserId ?? null,
+        templateKey: input.templateKey ?? null,
+        ...(input.payload ? { payload: input.payload } : {}),
         // An in-app nudge is "sent" the moment it becomes visible.
         sentAt: input.status === "sent" ? now : null,
         createdAt: now,
@@ -234,6 +246,8 @@ export const lifecycleMessageSendSelect = {
   periodKey: true,
   variant: true,
   channel: true,
+  templateKey: true,
+  payload: true,
   createdAt: true,
 } satisfies Prisma.LifecycleMessageSelect
 
