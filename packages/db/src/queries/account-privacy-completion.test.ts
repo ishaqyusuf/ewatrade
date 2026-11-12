@@ -216,6 +216,8 @@ function fixture(
         "message",
         "automationEvent",
         "productAnalyticsEvent",
+        "lifecycleMessage",
+        "marketingPreference",
       ].map((model) => [
         model,
         { count: async () => (live.additional === model ? 1 : 0) },

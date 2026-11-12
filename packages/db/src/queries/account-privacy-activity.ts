@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto"
 import type { PrismaClient } from "../../generated/prisma/client"
+import { eraseLifecycleDataForUser } from "./lifecycle-messages"
 import { runInOwnSerializableTransaction } from "./own-transaction"
 
 export class AccountPrivacyActivityError extends Error {
@@ -135,9 +136,12 @@ export async function processAccountPrivacyActivity(
     const result = await tx.productAnalyticsEvent.deleteMany({
       where: { userId: subjectId },
     })
+    // Lifecycle marketing: the per-user ledger and email preferences.
+    const lifecycle = await eraseLifecycleDataForUser(tx, subjectId)
     if (await tx.productAnalyticsEvent.count({ where: { userId: subjectId } }))
       throw new AccountPrivacyActivityError("NOT_READY")
-    if (result.count) {
+    const removed = result.count + lifecycle.messages + lifecycle.preferences
+    if (removed) {
       const previous =
         request.outcome &&
         typeof request.outcome === "object" &&
@@ -155,6 +159,8 @@ export async function processAccountPrivacyActivity(
               policyDigest: policy.digest,
               operatorUserId: input.operatorUserId,
               removed: result.count,
+              lifecycleMessagesRemoved: lifecycle.messages,
+              marketingPreferencesRemoved: lifecycle.preferences,
               processedAt: now.toISOString(),
             },
           },
@@ -164,7 +170,8 @@ export async function processAccountPrivacyActivity(
     return {
       requestId: request.id,
       analyticsRemoved: result.count,
-      replay: result.count === 0,
+      lifecycleRemoved: lifecycle.messages + lifecycle.preferences,
+      replay: removed === 0,
     }
   })
 }

@@ -67,6 +67,7 @@ function database(
     residual?: number
     removed?: number
     leased?: number
+    lifecycle?: number
   } = {},
 ) {
   const writes: unknown[] = []
@@ -90,6 +91,18 @@ function database(
       }),
       update: async (value: unknown) => {
         writes.push(value)
+      },
+    },
+    lifecycleMessage: {
+      deleteMany: async (value: unknown) => {
+        writes.push({ lifecycleMessage: value })
+        return { count: overrides.lifecycle ?? 0 }
+      },
+    },
+    marketingPreference: {
+      deleteMany: async (value: unknown) => {
+        writes.push({ marketingPreference: value })
+        return { count: overrides.lifecycle ? 1 : 0 }
       },
     },
     productAnalyticsEvent: {
@@ -138,7 +151,7 @@ test("cleanup scopes deletion to immutable subject and preserves prior result da
     replay: false,
   })
   expect(writes[0]).toEqual({ where: { userId: "subject" } })
-  expect(writes[1]).toMatchObject({
+  expect(writes[3]).toMatchObject({
     where: { id: "request" },
     data: {
       outcome: {
@@ -179,12 +192,12 @@ test("empty replays are harmless and reappearing analytics is checked", async ()
     analyticsRemoved: 0,
     replay: true,
   })
-  expect(replay.writes).toHaveLength(1)
+  expect(replay.writes).toHaveLength(3)
   const residual = database({ residual: 1 })
   await expect(
     processAccountPrivacyActivity(residual.db, input),
   ).rejects.toMatchObject({ code: "NOT_READY" })
-  expect(residual.writes).toHaveLength(1)
+  expect(residual.writes).toHaveLength(3)
 })
 
 test("even expired unresolved provider claims prevent local erasure", async () => {
@@ -194,4 +207,30 @@ test("even expired unresolved provider claims prevent local erasure", async () =
     code: "ACTIVITY_PROVIDER_RECONCILIATION_REQUIRED",
   })
   expect(writes).toEqual([])
+})
+
+test("lifecycle marketing ledger and email preferences are erased with analytics", async () => {
+  configure()
+  const { db, writes } = database({ removed: 0, lifecycle: 3 })
+  expect(await processAccountPrivacyActivity(db, input)).toMatchObject({
+    analyticsRemoved: 0,
+    lifecycleRemoved: 4,
+    replay: false,
+  })
+  expect(writes).toContainEqual({
+    lifecycleMessage: { where: { userId: "subject" } },
+  })
+  expect(writes).toContainEqual({
+    marketingPreference: { where: { userId: "subject" } },
+  })
+  expect(writes.at(-1)).toMatchObject({
+    data: {
+      outcome: {
+        activityCleanup: {
+          lifecycleMessagesRemoved: 3,
+          marketingPreferencesRemoved: 1,
+        },
+      },
+    },
+  })
 })

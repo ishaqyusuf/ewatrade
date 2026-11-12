@@ -119,6 +119,8 @@ function fixture(
         "message",
         "automationEvent",
         "productAnalyticsEvent",
+        "lifecycleMessage",
+        "marketingPreference",
         "retailOpsStaffProfile",
       ].map((model) => [
         model,

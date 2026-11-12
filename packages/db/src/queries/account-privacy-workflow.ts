@@ -152,9 +152,12 @@ export async function getAccountPrivacyWorkflow(
     )
   )
     throw new AccountPrivacyWorkflowError("REQUEST_NOT_PROCESSING")
-  const analyticsEvents = await db.productAnalyticsEvent.count({
-    where: { userId: subjectId },
-  })
+  // First-party activity erased by the ERASE_ANALYTICS step: product
+  // analytics plus the lifecycle marketing ledger and email preferences.
+  const analyticsEvents =
+    (await db.productAnalyticsEvent.count({ where: { userId: subjectId } })) +
+    (await db.lifecycleMessage.count({ where: { userId: subjectId } })) +
+    (await db.marketingPreference.count({ where: { userId: subjectId } }))
   const activeConversationLinks = await db.storeConversationAccountAccess.count(
     { where: { accountUserId: subjectId, status: "ACTIVE" } },
   )

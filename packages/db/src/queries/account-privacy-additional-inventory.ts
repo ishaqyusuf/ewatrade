@@ -14,6 +14,8 @@ export type AccountPrivacyAdditionalInventoryClient = Pick<
   | "message"
   | "automationEvent"
   | "productAnalyticsEvent"
+  | "lifecycleMessage"
+  | "marketingPreference"
   | "retailOpsStaffProfile"
   | "$queryRaw"
 >
@@ -47,6 +49,13 @@ export async function getAccountPrivacyAdditionalInventory(
   const analyticsEvents = await db.productAnalyticsEvent.count({
     where: { userId: subjectId },
   })
+  // Lifecycle marketing ledger and email preferences; erased with analytics.
+  const lifecycleMessages = await db.lifecycleMessage.count({
+    where: { userId: subjectId },
+  })
+  const marketingPreferences = await db.marketingPreference.count({
+    where: { userId: subjectId },
+  })
   // Removed staff access is not erasure of its optional directory/profile fields.
   // Staff records require a separate controller disposition; ordinary-chat clocks do not apply.
   const staffProfiles = await db.retailOpsStaffProfile.count({
@@ -78,6 +87,8 @@ export async function getAccountPrivacyAdditionalInventory(
     legacyMessages,
     automationEvents,
     analyticsEvents,
+    lifecycleMessages,
+    marketingPreferences,
     staffProfiles,
     ...staffInvitations,
     ...customerMessages,

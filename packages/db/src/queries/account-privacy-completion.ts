@@ -119,6 +119,8 @@ export async function assessAccountPrivacyCompletion(
     | "message"
     | "automationEvent"
     | "productAnalyticsEvent"
+    | "lifecycleMessage"
+    | "marketingPreference"
     | "$queryRaw"
     | "user"
     | "membership"

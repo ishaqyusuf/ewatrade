@@ -149,6 +149,8 @@ function database(
       },
     ],
     productAnalyticsEvent: { count: async () => input.count ?? 0 },
+    lifecycleMessage: { count: async () => 0 },
+    marketingPreference: { count: async () => 0 },
     storeConversationAccountAccess: { count: async () => 0 },
     $transaction: () => {
       throw Error("mutation must not be called")
