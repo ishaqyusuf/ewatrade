@@ -29,11 +29,33 @@ Current Preview evidence establishes a signed-in link flow and two enabled custo
 
 The current bot responds to a bare `/start` with account-settings instructions, replies to successful claims with the masked ID, and silently drops invalid link claims and ordinary unlinked text. The prototype proposes an inline URL button on the entry and claim messages, a neutral greeting for unlinked text, and neutral invalid-link recovery copy. The mismatch recovery uses EwaTrade's existing ability to create a fresh scoped link. The app-side sign-in and scope screens show the handoff in context. Once linked, use a supported command such as `/scope` to demonstrate access with a user-initiated reply. [Link and authority source](../../packages/db/src/queries/assistant-telegram/link.ts) · [Telegram ingress](../../apps/api/src/assistant/telegram-runtime.ts)
 
+## Sequencing
+
+Owner instruction, 12 November 2026: finish every design batch before starting implementation. The owner selected 02 · Telegram-native for batch 1, and later batches extend that direction only.
+
+## Batch 2 · Families 3–6 (published)
+
+Published 12 November 2026 as 02 · Telegram-native v2, revision `41fb3d27-d0eb-456e-8c61-c2e89e5d4a29`. It contains 16 new cases. The selection stays on v1 (`a1d386e1`) until the owner reviews v2.
+
+| WhatsApp case | Telegram |
+| --- | --- |
+| `v-stale`, `v-session` | Designed. When someone confirms after the 5-minute link has expired, or taps an old Open EwaTrade button, EwaTrade says the link expired and the bot edits the claim message to the same text. Expiry is applied on the next touch, so it needs no scheduled job. |
+| `v-email`, `v-wrong`, `v-expired`, `v-cool`, `v-locked`, `v-nomail`, `v-sendfail` | Adapted. These belong to EwaTrade's existing sign-in in Telegram's in-app browser. The bot is not involved. |
+| `v-old` | Covered by 1c. An older link gets the same neutral stale-link reply. |
+| `c-return`, `c-help`, `c-register`, `c-addbiz` | Designed. The connected chat keeps the pinned scope and the linked command menu. `/help` lists tappable commands, and `/start` while connected confirms the scope without changing it. Adding a business hands off to EwaTrade. |
+| `c-switch` | Designed. `/scope` → **Change in EwaTrade** → choose the Store → new link → START → confirm. The claim message is edited to the new scope, and the pin is replaced. |
+| `c-second` | Designed. A second EwaTrade account tries to connect a Telegram account that is already connected. The bot and EwaTrade both say nothing changed and point to `/disconnect`. |
+| `c-addbiz-n` | Deferred to batch 6 (forms and Mini Apps). |
+| `r-full` | Designed. Sign-up happens in EwaTrade (Create your store → email code → workspace), followed by the normal connection. |
+| `r-dup`, `r-under13`, `r-cancel`, `r-resume`, `r-lapsed` | Adapted. EwaTrade's existing sign-up rules apply. The bot keeps its unlinked reply. |
+| `a-cashier`, `a-cashier-menu`, `a-mgr`, `a-other` | Designed. Refusals use the WhatsApp copy. `/help` lists only what the role can use. Questions about another Store or business get a **Change Store** or **Change in EwaTrade** button. |
+| `a-lost`, `a-expired` | Designed. The pinned Connected message is edited to Disconnected and unpinned, the menu returns to the unlinked commands, and the next message explains what happened, with an EwaTrade button. |
+| `a-role` | Designed. Confirm shows Telegram's callback toast “Not saved”, clears the review buttons and replies with the WhatsApp refusal copy. |
+
 ## Remaining batches
 
 | Batch | Scenario families | Telegram design questions |
 | --- | --- | --- |
-| 2 | 3–6 · Verification problems, returning users, new accounts, roles and scope | Keep login recovery and sign-up in EwaTrade. Cover linked commands, workspace changes, access removal and role refusals. |
 | 3 | 7–8 · Saved chats, long answers and reads | Show how Telegram chat continues, how compact results open the exact saved answer and where paging belongs. Map only released reads to the current baseline. |
 | 4 | 9–10 · Writes, setup and imports | Design callback buttons for exact draft review, corrections and receipt replay. Route complex forms and setup to authenticated EwaTrade. |
 | 5 | 11–13 · Files, voice and continuation links | Map media handling and retry states. Separate currently supported text from proposed uploads and transcription. Design saved answer and review handoff. |
