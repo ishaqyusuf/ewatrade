@@ -65,6 +65,7 @@ import {
 import { lockCommerceFinancialContext } from "./customer-ledger/commerce-locks"
 import { FinanceError } from "./finance/rules"
 import { recordInventoryOpeningValuationInTransaction } from "./finance/valuation-openings"
+import { reportProductLimitUsage } from "./lifecycle-limit-hooks"
 import { assertRetailOpsProductAllowance } from "./retail-ops-subscriptions"
 import { assertStoreConversationTextScreened } from "./store-conversation-text-safety"
 import { StoreConversationError } from "./store-conversations-core"
@@ -947,6 +948,7 @@ export async function createCatalogItemInTransaction(
       tenantId: input.tenantId,
     },
   })
+  await reportProductLimitUsage(tx, { tenantId: input.tenantId })
 
   const unitIdsByKey = new Map<string, string>()
   const optionGroupIdsByKey = new Map<string, string>()

@@ -84,6 +84,7 @@
     "./own-transaction": "./src/queries/own-transaction.ts",
     "./manual-payment-assessments": "./src/queries/manual-payment-assessments.ts",
     "./lifecycle-messages": "./src/queries/lifecycle-messages.ts",
+    "./lifecycle-limit-hooks": "./src/queries/lifecycle-limit-hooks.ts",
     "./growth-intent": "./src/queries/growth-intent.ts",
     "./growth-metrics": "./src/queries/growth-metrics.ts"
   },

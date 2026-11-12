@@ -11,6 +11,7 @@ import {
   RetailOpsStaffInviteTokenStatus as DurableRetailOpsStaffInviteTokenStatus,
   RetailOpsStaffLifecycleEventType as DurableRetailOpsStaffLifecycleEventType,
 } from "../../generated/prisma/enums"
+import { reportStaffLimitUsage } from "./lifecycle-limit-hooks"
 import { assertQaTenantIdentity } from "./qa-maintenance"
 import { assertQaTenantPhoneIdentity } from "./qa-tenant-phone"
 import { assertRetailOpsEntitlementAvailable } from "./retail-ops-subscriptions"
@@ -1302,12 +1303,13 @@ export async function inviteRetailOpsStaffInTransaction(
       recipientProblem.message,
     )
 
-  if (!existingMembership || !isCountedStaffMembership(existingMembership)) {
-    await assertRetailOpsEntitlementAvailable(tx, {
-      key: "staff",
-      tenantId: input.tenantId,
-    })
-  }
+  const staffAccess =
+    !existingMembership || !isCountedStaffMembership(existingMembership)
+      ? await assertRetailOpsEntitlementAvailable(tx, {
+          key: "staff",
+          tenantId: input.tenantId,
+        })
+      : null
 
   const membership = existingMembership
     ? await tx.membership.update({
@@ -1346,6 +1348,16 @@ export async function inviteRetailOpsStaffInTransaction(
           status: true,
         },
       })
+  const staffSeat = staffAccess?.entitlements.find(
+    (entitlement) => entitlement.key === "staff",
+  )
+  if (staffAccess && staffSeat)
+    await reportStaffLimitUsage(tx, {
+      tenantId: input.tenantId,
+      planId: staffAccess.plan.id,
+      used: staffSeat.used + 1,
+      cap: staffSeat.limit,
+    })
 
   const acceptanceToken = await writeDurableRetailOpsStaffInvite(tx, {
     email: user.email,

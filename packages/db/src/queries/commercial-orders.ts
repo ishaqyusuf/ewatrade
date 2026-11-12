@@ -78,6 +78,7 @@ import { ensureOrderCustomerInTransaction } from "./customers"
 import { postProductReturnFinanceJournalInTransaction } from "./finance/posting"
 import { recordProductFulfillmentValuationInTransaction } from "./finance/valuation-issues"
 import { recordProductReturnValuationInTransaction } from "./finance/valuation-returns"
+import { reportOrderLimitUsage } from "./lifecycle-limit-hooks"
 import {
   type ListSortKey,
   buildScopedListCursorWhere,
@@ -1006,6 +1007,7 @@ export async function createCommercialOrderGraphInTransaction(
       totalMinor,
     },
   })
+  await reportOrderLimitUsage(tx, { now, tenantId: input.tenantId })
 
   const offeringIdsWithValidatedBalanceRevision = new Set<string>()
 

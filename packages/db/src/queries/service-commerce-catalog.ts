@@ -29,6 +29,7 @@ import {
   WorkAuthorizationPolicy,
 } from "../../generated/prisma/enums"
 import { getConfiguredCatalogOfferingAvailability } from "./catalog-inventory"
+import { reportProductLimitUsage } from "./lifecycle-limit-hooks"
 import { assertPrescriptionStoreRole } from "./prescription-settings"
 import { assertRetailOpsProductAllowance } from "./retail-ops-subscriptions"
 import {
@@ -629,6 +630,7 @@ export async function createServiceCommerceCatalogDraft(
           tenantId: input.tenantId,
         },
       })
+      await reportProductLimitUsage(tx, { tenantId: input.tenantId })
       if (input.draftKind === "product") {
         await tx.catalogProduct.create({ data: { catalogItemId: item.id } })
       } else {

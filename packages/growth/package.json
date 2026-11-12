@@ -8,14 +8,17 @@
     "./fixtures": "./src/fixtures.ts",
     "./registry": "./src/registry.ts",
     "./policy": "./src/policy.ts",
-    "./stage": "./src/stage.ts"
+    "./stage": "./src/stage.ts",
+    "./revenue/realtime-limit": "./src/plays/revenue/realtime-limit.ts",
+    "./revenue/checkout-availability": "./src/plays/revenue/checkout-availability.ts"
   },
   "scripts": {
     "test": "bun test src",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@ewatrade/db": "workspace:*"
+    "@ewatrade/db": "workspace:*",
+    "@ewatrade/payments": "workspace:*"
   },
   "devDependencies": {
     "@ewatrade/tsconfig": "workspace:*",
