@@ -113,6 +113,7 @@ export * from "../templates/play-refund-review-alert"
 export * from "./qa-email-routing"
 export * from "../components/lifecycle-layout"
 export * from "./lifecycle"
+export * from "../templates/lifecycle-adoption"
 
 export function createEmailMessage(message: EmailMessage) {
   return message
