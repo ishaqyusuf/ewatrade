@@ -140,8 +140,8 @@ test("requires the source-matched legal policy, surface and invalid-token/app-li
     legal: {
       effective: true,
       signupAvailable: true,
-      version: "2026-10-15-adult-chat-1",
-      effectiveDate: "2026-10-15",
+      version: "2026-11-12-web-subscriptions-1",
+      effectiveDate: "2026-11-12",
     },
     rootMode: "factory-unavailable",
     rootResponse:

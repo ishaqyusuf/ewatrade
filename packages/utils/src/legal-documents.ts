@@ -1,5 +1,5 @@
 /** Source versions stay immutable once approved and used for acceptance. */
-export const LEGAL_DOCUMENT_VERSION = "2026-10-15-adult-chat-1"
+export const LEGAL_DOCUMENT_VERSION = "2026-11-12-web-subscriptions-1"
 export const LEGAL_DOCUMENT_STATUS: "draft" | "approved" = "approved"
 
 export type LegalDocumentKey =
@@ -140,15 +140,20 @@ export const LEGAL_DOCUMENTS: Record<LegalDocumentKey, LegalDocument> = {
   "billing-policy": {
     title: "Software billing policy",
     description:
-      "Current mobile pricing and separate merchant transaction payments.",
+      "Website software subscriptions, mobile plans and separate merchant transaction payments.",
     sections: [
       {
         title: "Separate types of payment",
-        text: "The EwaTrade mobile app is free to download. Its first release does not offer an in-app EwaTrade software subscription purchase. Payments to merchants for physical goods or services are separate transactions governed by the merchant’s sale, fulfilment and refund policies. Payment-provider charges may also be separate.",
+        text: "The EwaTrade mobile app is free to download. A business owner can pay for a paid EwaTrade software plan (Starter, Growth or Pro) on the EwaTrade website by card through our payment provider, Paystack. The mobile app does not sell software plans in this release. Payments to merchants for physical goods or services are separate transactions governed by the merchant’s sale, fulfilment and refund policies. Payment-provider charges may also be separate.",
       },
       {
         title: "Before purchase",
         text: "If paid EwaTrade mobile software plans are introduced in a later release, the purchase surface must show the selected plan, currency, billing interval, applicable taxes, renewal terms, any trial conversion and the cancellation process before confirmation. Published pricing must match checkout and the resulting entitlement. No such plan can be purchased in the current mobile release.",
+      },
+      {
+        title: "Website software subscriptions",
+        text: "Paid plans bought on the EwaTrade website are monthly subscriptions in Nigerian naira (NGN). The checkout shows the plan, price and billing interval before you pay. Your card is charged when you subscribe and then once a month on the same date until you cancel. A paid plan covers the number of businesses your plan allows; you choose which of your businesses it applies to on Plan and billing. If a renewal payment fails, your paid plan ends at the end of the period you have already paid for, and the business goes back to the plan it had before you paid (for new businesses, the Free plan). Your data stays in your account. Cancel at any time from Plan and billing, Manage subscription. Cancelling stops future charges; you keep the paid plan until the end of the period you already paid for. We do not give partial refunds for unused days. If you were charged in error, contact EwaTrade support within 14 days and we will review it. A refunded payment ends the plan it paid for. If we change a plan's price, we will tell you before your next renewal at the new price, and you can cancel before then.",
+        contactEmail: "support@ewatrade.com",
       },
       {
         title: "Mobile software subscriptions",
@@ -156,7 +161,7 @@ export const LEGAL_DOCUMENTS: Record<LegalDocumentKey, LegalDocument> = {
       },
       {
         title: "Renewals, cancellation and refunds",
-        text: "The current mobile release has no EwaTrade software-subscription renewal or app-store software refund to manage. If a later release introduces a mobile software subscription, its app-store offer will show the price, currency, billing period and any introductory terms before purchase. Apple or Google will manage renewal, payment method and cancellation; cancel through the same store and use its refund process for that purchase. Cancellation of a software plan will not itself cancel an unrelated merchant order or close a business workspace. Contact EwaTrade support about a future software-entitlement mismatch. For a merchant order or service refund, contact the seller identified in that transaction.",
+        text: "For website subscriptions, see Website software subscriptions above. The current mobile release has no EwaTrade software-subscription renewal or app-store software refund to manage. If a later release introduces a mobile software subscription, its app-store offer will show the price, currency, billing period and any introductory terms before purchase. Apple or Google will manage renewal, payment method and cancellation; cancel through the same store and use its refund process for that purchase. Cancellation of a software plan will not itself cancel an unrelated merchant order or close a business workspace. Contact EwaTrade support about a future software-entitlement mismatch. For a merchant order or service refund, contact the seller identified in that transaction.",
       },
     ],
   },

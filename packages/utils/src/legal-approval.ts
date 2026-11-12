@@ -8,13 +8,13 @@ import {
 } from "./legal-documents"
 
 // Set these only after the owner approves the exact versioned document snapshot.
-export const LEGAL_DOCUMENT_EFFECTIVE_DATE: string | null = "2026-10-15"
+export const LEGAL_DOCUMENT_EFFECTIVE_DATE: string | null = "2026-11-12"
 export const LEGAL_DOCUMENT_APPROVED_SHA256: string | null =
-  "302a4b24da5303e09f91b57724cb4d1e66b3cabc01d25cc4855d4335776e8cff"
+  "e34660a9cb4b96168ad512dfbc9c229b57f328cba1fd82f15cd6794e31065dc2"
 export const LEGAL_DOCUMENT_APPROVED_AT: string | null =
-  "2026-10-15T14:06:00.454Z"
+  "2026-11-12T15:47:52.000Z"
 export const LEGAL_DOCUMENT_APPROVAL_REFERENCE: string | null =
-  "owner-approval-2026-10-15-adult-chat-b4c57354"
+  "owner-approval-2026-11-12-web-subscriptions"
 
 type LegalPublication = {
   status: "draft" | "approved"

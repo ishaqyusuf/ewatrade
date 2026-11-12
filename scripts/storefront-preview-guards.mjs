@@ -163,8 +163,8 @@ export function assertStorefrontPreviewSmoke({
     rootMode === "factory-unavailable"
       ? legal?.effective === true &&
         legal?.signupAvailable === true &&
-        legal?.version === "2026-10-15-adult-chat-1" &&
-        legal?.effectiveDate === "2026-10-15"
+        legal?.version === "2026-11-12-web-subscriptions-1" &&
+        legal?.effectiveDate === "2026-11-12"
       : legal?.effective === false && legal?.signupAvailable === false
   if (!legalMatches) throw new Error("STOREFRONT_PREVIEW_LEGAL_GATE_MISMATCH")
   if (

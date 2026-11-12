@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test"
 import { GET } from "./route"
 
-test("production storefront advertises the approved adult-chat publication without caching", async () => {
+test("production storefront advertises the approved legal publication without caching", async () => {
   const previousAppEnv = process.env.APP_ENV
   process.env.APP_ENV = "production"
   try {
@@ -10,8 +10,8 @@ test("production storefront advertises the approved adult-chat publication witho
     expect(await response.json()).toEqual({
       effective: true,
       signupAvailable: true,
-      version: "2026-10-15-adult-chat-1",
-      effectiveDate: "2026-10-15",
+      version: "2026-11-12-web-subscriptions-1",
+      effectiveDate: "2026-11-12",
     })
   } finally {
     process.env.APP_ENV = previousAppEnv ?? ""
