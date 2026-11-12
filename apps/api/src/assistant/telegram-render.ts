@@ -31,6 +31,9 @@ export const TELEGRAM_MESSAGE_MAX = 4096
 /** A run of list lines longer than this goes in an expandable blockquote. */
 export const TELEGRAM_EXPAND_AFTER = 5
 export const TELEGRAM_CHOICE_PREFIX = "ch:"
+/** `ch:1` to `ch:3`: a position in the saved answer's choices, never its text. */
+export const isTelegramChoiceCallback = (data: string) =>
+  /^ch:[1-3]$/.test(data)
 
 export type TelegramOutboxButton =
   | { text: string; data: string }
