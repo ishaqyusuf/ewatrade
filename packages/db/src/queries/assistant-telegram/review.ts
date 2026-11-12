@@ -12,7 +12,8 @@ import { stageAssistantTelegramOutbox } from "./outbox"
 
 type ReviewDecision = "confirm" | "cancel" | "edit"
 
-async function currentReviewAuthority(
+/** The current authority digest for this inbox lease, or null if access changed. */
+export async function currentReviewAuthority(
   tx: Prisma.TransactionClient,
   lease: TelegramInboxLease,
   now: Date,

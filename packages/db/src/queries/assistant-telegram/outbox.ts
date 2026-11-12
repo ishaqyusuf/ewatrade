@@ -48,12 +48,21 @@ const messagePayloadSchema = z
       )
       .max(20)
       .optional(),
+    /** Quote the bot's earlier message, e.g. a receipt under its review. */
+    replyToMessageId: z.string().refine(isTelegramId).optional(),
   })
   .strict()
 const payloadSchema = z.union([
   messagePayloadSchema,
   z
     .object({ clearKeyboardMessageId: z.string().refine(isTelegramId) })
+    .strict(),
+  // A decided review edited in place: its proven facts plus one status line.
+  z
+    .object({
+      editMessageId: z.string().refine(isTelegramId),
+      text: z.string().min(1).max(4096),
+    })
     .strict(),
 ])
 export type TelegramOutboxPayload = z.infer<typeof payloadSchema>
