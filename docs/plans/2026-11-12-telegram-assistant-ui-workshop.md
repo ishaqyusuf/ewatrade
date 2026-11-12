@@ -52,11 +52,25 @@ Published 12 November 2026 as 02 · Telegram-native v2, revision `41fb3d27-d0eb-
 | `a-lost`, `a-expired` | Designed. The pinned Connected message is edited to Disconnected and unpinned, the menu returns to the unlinked commands, and the next message explains what happened, with an EwaTrade button. |
 | `a-role` | Designed. Confirm shows Telegram's callback toast “Not saved”, clears the review buttons and replies with the WhatsApp refusal copy. |
 
+## Batch 3 · Families 7–8 (published)
+
+Published 12 November 2026 as 02 · Telegram-native v3, revision `f2ede755-8c49-4a13-8cf2-8b9c668e287b`. It adds 19 cases. Comparison, 01 and 03 were republished at the same time (`ccb8c814`, `a73c2f90`, `7ba9c980`), with no design change, because every Preview panel dropdown now has ‹ › chevrons.
+
+| WhatsApp case | Telegram |
+| --- | --- |
+| `l-chats`, `l-new` | `/chats` and `/new` join the connected command menu. `/chats` lists saved chats in one inline keyboard, which WhatsApp's three-button limit did not allow. Choosing a chat edits the list to show the chat being continued, so its buttons cannot be reused. |
+| `l-long`, `rd-products` | Shows the first three items and **View full response**, which opens the same saved answer in EwaTrade in Telegram's browser. |
+| `rd-open` | **‹ Previous / Next ›** callback buttons edit the same message in place, ten rows a page. This is the alternative to the full-response handoff. |
+| `l-ambig` | Two Chinedus appear as buttons. The choice edits the question to “Which Chinedu? Chinedu Eze ✓”. |
+| `l-correct` | The user sends the correction as a Telegram reply to the answer, and the bot answers for yesterday. |
+| `rd-item` | **Recent moves** opens an expandable blockquote. Callback buttons never post a user message. |
+| `rd-search`, `rd-price`, `rd-low`, `rd-today`, `rd-debts`, `rd-sup`, `rd-bal`, `rd-svc`, `rd-count` | Use the WhatsApp Hybrid content. The scope footer is dropped because the pinned message already shows it, and “as of” stays for live figures. Follow-ups are callback buttons, and app handoffs are URL buttons. |
+| `rd-staff`, `rd-rep` | Hand off to EwaTrade, as in WhatsApp. |
+
 ## Remaining batches
 
 | Batch | Scenario families | Telegram design questions |
 | --- | --- | --- |
-| 3 | 7–8 · Saved chats, long answers and reads | Show how Telegram chat continues, how compact results open the exact saved answer and where paging belongs. Map only released reads to the current baseline. |
 | 4 | 9–10 · Writes, setup and imports | Design callback buttons for exact draft review, corrections and receipt replay. Route complex forms and setup to authenticated EwaTrade. |
 | 5 | 11–13 · Files, voice and continuation links | Map media handling and retry states. Separate currently supported text from proposed uploads and transcription. Design saved answer and review handoff. |
 | 6 | 14–18 · Recovery, safety, forms, formatting and payment links | Cover disconnect, stale actions and outages. Compare native buttons with Mini Apps where the form calls for it. Keep money effects behind the existing canonical review and label unsupported cases as proposals. |
