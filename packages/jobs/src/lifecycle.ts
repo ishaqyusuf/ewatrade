@@ -14,6 +14,7 @@
 // GROWTH_LIFECYCLE_PLAYS=P04_site_setup,P06_money_accounts.
 
 import { prisma } from "@ewatrade/db/client"
+import { featureIntentTapsForTenant } from "@ewatrade/db/growth-intent"
 import {
   type GrowthSnapshotRow,
   buildGrowthSnapshots,
@@ -21,6 +22,8 @@ import {
   listGrowthRecipients,
   listGrowthSnapshotsForDay,
   pruneGrowthSnapshots,
+  readGrowthBillingCountries,
+  readGrowthSalesHistory,
   readGrowthSnapshots,
 } from "@ewatrade/db/growth-snapshot"
 import {
@@ -51,6 +54,7 @@ import {
   lifecycleEmailSender,
 } from "@ewatrade/email"
 import type {
+  ConsentCategory,
   GrowthSnapshot,
   LifecyclePlay,
   PlayContext,
@@ -66,8 +70,9 @@ import {
   planLifecycleMessages,
 } from "@ewatrade/growth/policy"
 import { LIFECYCLE_PLAYS } from "@ewatrade/growth/registry"
+import { isLifecycleCheckoutAvailable } from "@ewatrade/growth/revenue/checkout-availability"
+import { featureIntentSummaryFromTaps } from "@ewatrade/growth/revenue/feature-intent"
 import { computeStage } from "@ewatrade/growth/stage"
-import { isWebCheckoutEnabled } from "@ewatrade/payments/web-subscriptions"
 import { getQaPolicyEnvironment } from "@ewatrade/utils/qa-policy-server"
 import { assertQaJobProviderAllowed } from "./qa-provider-guard"
 
@@ -180,7 +185,12 @@ function parsePayload(value: unknown): LifecycleMessagePayload | null {
   if (typeof payload.ctaPath !== "string") return null
   const data =
     payload.data && typeof payload.data === "object" ? payload.data : {}
-  return { data, ctaPath: payload.ctaPath, inAppKey: payload.inAppKey ?? null }
+  return {
+    data,
+    ctaPath: payload.ctaPath,
+    inAppKey: payload.inAppKey ?? null,
+    consent: typeof payload.consent === "string" ? payload.consent : null,
+  }
 }
 
 export type LifecycleSendOutcome =
@@ -237,14 +247,16 @@ export async function sendLifecycleEmail(
     if (!play) return settle("failed", "play_missing")
     const recipient = await readLifecycleRecipient(db, row)
     if (!recipient) return settle("suppressed", "recipient_ineligible")
+    const payload = parsePayload(row.payload)
+    // The decision's consent (frozen in the payload) wins over the play's.
+    const category = (payload?.consent ?? play.consent) as ConsentCategory
     const preference = await readMarketingPreference(db, row.userId)
-    if (!consentAllows(preference, play.consent, "email"))
+    if (!consentAllows(preference, category, "email"))
       return settle(
         "suppressed",
         preference.unsubscribedAllAt ? "unsubscribed" : "consent",
       )
     const template = row.templateKey ? deps.templates[row.templateKey] : null
-    const payload = parsePayload(row.payload)
     if (!template || !payload) return settle("failed", "template_missing")
 
     const env = await getQaPolicyEnvironment(deps.env)
@@ -377,7 +389,6 @@ export async function evaluateLifecyclePlays(
   const runtime = lifecycleRuntime(deps.env)
   const now = deps.now()
   const day = input.day ?? growthSnapshotDay(now)
-  const checkoutAvailable = isWebCheckoutEnabled(deps.env)
   const createdEmailIds: string[] = []
   const counts = { tenants: 0, planned: 0, created: 0, deferred: 0 }
   let cursor: string | null = null
@@ -395,10 +406,23 @@ export async function evaluateLifecyclePlays(
         [...recipientsByTenant.values()].flat().map((entry) => entry.userId),
       ),
     ]
-    const [preferences, history] = await Promise.all([
-      readMarketingPreferences(db, userIds),
-      readLifecycleHistory(db, userIds, now),
-    ])
+    const [preferences, history, salesHistory, countries, featureTaps] =
+      await Promise.all([
+        readMarketingPreferences(db, userIds),
+        readLifecycleHistory(db, userIds, now),
+        readGrowthSalesHistory(db, tenantIds, now),
+        readGrowthBillingCountries(db, tenantIds),
+        Promise.all(
+          tenantIds.map(
+            async (tenantId) =>
+              [
+                tenantId,
+                await featureIntentTapsForTenant(db, tenantId),
+              ] as const,
+          ),
+        ),
+      ])
+    const featureIntent = new Map(featureTaps)
 
     const decided = rows.map((row) => {
       const snapshot = toContractSnapshot(row.snapshot)
@@ -406,7 +430,19 @@ export async function evaluateLifecyclePlays(
         now,
         snapshot,
         weekAgo: row.weekAgo ? toContractSnapshot(row.weekAgo) : null,
-        checkoutAvailable,
+        checkoutAvailable: isLifecycleCheckoutAvailable(
+          {
+            business: countries.get(snapshot.tenantId) ?? {
+              countryCode: null,
+              currencyCode: snapshot.currencyCode,
+            },
+          },
+          deps.env,
+        ),
+        salesHistory: salesHistory.get(snapshot.tenantId) ?? null,
+        featureIntent: featureIntentSummaryFromTaps(
+          featureIntent.get(snapshot.tenantId) ?? [],
+        ),
       }
       return {
         tenantId: snapshot.tenantId,
@@ -488,6 +524,7 @@ export async function evaluateLifecyclePlays(
             data: message.decision.data,
             ctaPath: message.decision.ctaPath,
             inAppKey: message.decision.inAppKey ?? null,
+            consent: message.consent,
           },
           now,
         })

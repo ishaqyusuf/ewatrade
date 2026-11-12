@@ -40,15 +40,21 @@ export type GrowthSnapshot = {
   activeDays28: number
   ordersLast7: number
   ordersThisMonth: number
+  /** Orders in the previous UTC calendar month (P13 reports on day 1). */
+  ordersLastMonth: number
   ordersTotal: number
   /** Integer minor units (kobo for NGN). */
   salesMinorThisMonth: bigint
+  /** Previous UTC calendar month's sales, integer minor units. */
+  salesMinorLastMonth: bigint
   currencyCode: string
   catalogItems: number
   staffCount: number
   businessesOwned: number
   moneyAccounts: number
   storefrontPublished: boolean
+  /** First release of a site that is published now; null when none is live. */
+  storefrontPublishedAt: Date | null
   customDomain: boolean
   whatsappLinked: boolean
   telegramLinked: boolean

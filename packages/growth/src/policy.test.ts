@@ -255,3 +255,46 @@ describe("planLifecycleMessages", () => {
     expect(planned.map((row) => row.playId)).toEqual(["P08_limit:products"])
   })
 })
+
+describe("per-decision overrides (P08 thresholds)", () => {
+  test("decision consent and channels win over the play's", () => {
+    const tenantId = treatedTenant("P08_limit")
+    const p08 = play("P08_limit", { consent: "offers", channels: ["in_app"] })
+    const optedOut = recipient({
+      consent: { ...consent, offers: false, unsubscribedAllAt: now },
+      history: { emailSentAt: [now], inAppVisible: true },
+    })
+    const reached = planLifecycleMessages({
+      now,
+      tenantId,
+      eligible: [
+        {
+          play: p08,
+          decision: {
+            ...decision,
+            consent: "transactional",
+            channels: ["email"],
+          },
+        },
+      ],
+      recipients: [optedOut],
+    })
+    // 100%: transactional email bypasses opt-out and the cap.
+    expect(reached.planned[0]).toMatchObject({
+      channel: "email",
+      status: "pending",
+      consent: "transactional",
+    })
+    const warning = planLifecycleMessages({
+      now,
+      tenantId,
+      eligible: [{ play: p08, decision }],
+      recipients: [optedOut],
+    })
+    // 80%: the play's own offers/in-app applies, and offers are off.
+    expect(warning.planned[0]).toMatchObject({
+      status: "suppressed",
+      consent: "offers",
+    })
+  })
+})

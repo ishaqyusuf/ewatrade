@@ -15,14 +15,19 @@ model BusinessGrowthSnapshot {
   activeDays28        Int
   ordersLast7         Int
   ordersThisMonth     Int
+  /// Previous UTC calendar month (monthly report on day 1).
+  ordersLastMonth     Int      @default(0)
   ordersTotal         Int
   salesMinorThisMonth BigInt
+  salesMinorLastMonth BigInt   @default(0)
   currencyCode        String
   catalogItems        Int
   staffCount          Int
   businessesOwned     Int
   moneyAccounts       Int
   storefrontPublished Boolean
+  /// First release of a site that is published now; null when none is live.
+  storefrontPublishedAt DateTime?
   customDomain        Boolean
   whatsappLinked      Boolean
   telegramLinked      Boolean

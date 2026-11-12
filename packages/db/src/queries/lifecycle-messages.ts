@@ -64,6 +64,8 @@ export type LifecycleMessagePayload = {
   data: Record<string, string | number | boolean | null>
   ctaPath: string
   inAppKey?: string | null
+  /** Effective consent category when the decision overrode the play's. */
+  consent?: string | null
 }
 
 /**

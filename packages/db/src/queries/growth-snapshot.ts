@@ -101,28 +101,48 @@ export async function readGrowthFacts(
   const week = new Date(now.getTime() - 7 * DAY_MS)
   const day28 = new Date(growthSnapshotDay(now).getTime() - 27 * DAY_MS)
   const month = monthStart(now)
+  const lastMonth = new Date(
+    Date.UTC(month.getUTCFullYear(), month.getUTCMonth() - 1, 1),
+  )
 
-  const [orders, activeDays, lastActive, money, sites, domains, wa, tg, owned] =
-    await Promise.all([
-      db.$queryRaw<
-        Array<{
-          tenantId: string
-          last7: bigint
-          total: bigint
-          salesMonth: bigint | null
-          currencyCode: string | null
-        }>
-      >`SELECT "tenantId",
+  const [
+    orders,
+    activeDays,
+    lastActive,
+    money,
+    sites,
+    domains,
+    wa,
+    tg,
+    owned,
+    publishedAt,
+  ] = await Promise.all([
+    db.$queryRaw<
+      Array<{
+        tenantId: string
+        last7: bigint
+        lastMonth: bigint
+        total: bigint
+        salesMonth: bigint | null
+        salesLastMonth: bigint | null
+        currencyCode: string | null
+      }>
+    >`SELECT "tenantId",
           count(*) FILTER (WHERE "createdAt" >= ${week}) AS "last7",
+          count(*) FILTER (WHERE "createdAt" >= ${lastMonth}
+            AND "createdAt" < ${month}) AS "lastMonth",
           count(*) AS "total",
           sum("totalMinor") FILTER (WHERE "createdAt" >= ${month}
             AND status NOT IN ('DRAFT','CANCELLED','REFUNDED'))::bigint AS "salesMonth",
+          sum("totalMinor") FILTER (WHERE "createdAt" >= ${lastMonth}
+            AND "createdAt" < ${month}
+            AND status NOT IN ('DRAFT','CANCELLED','REFUNDED'))::bigint AS "salesLastMonth",
           (array_agg("currencyCode" ORDER BY "createdAt" DESC))[1] AS "currencyCode"
         FROM "CommercialOrder" WHERE "tenantId" = ANY(${ids})
         GROUP BY "tenantId"`,
-      db.$queryRaw<
-        CountRow[]
-      >`SELECT "tenantId", count(DISTINCT d) AS value FROM (
+    db.$queryRaw<
+      CountRow[]
+    >`SELECT "tenantId", count(DISTINCT d) AS value FROM (
           SELECT "tenantId", date_trunc('day', "createdAt") AS d FROM "CommercialOrder"
             WHERE "tenantId" = ANY(${ids}) AND "createdAt" >= ${day28}
           UNION ALL
@@ -132,7 +152,7 @@ export async function readGrowthFacts(
           SELECT "tenantId", date_trunc('day', "createdAt") FROM "CatalogItem"
             WHERE "tenantId" = ANY(${ids}) AND "createdAt" >= ${day28}
         ) activity GROUP BY "tenantId"`,
-      db.$queryRaw<Array<{ tenantId: string; at: Date | null }>>`
+    db.$queryRaw<Array<{ tenantId: string; at: Date | null }>>`
         SELECT "tenantId", max(at) AS at FROM (
           SELECT "tenantId", max("createdAt") AS at FROM "CommercialOrder"
             WHERE "tenantId" = ANY(${ids}) GROUP BY "tenantId"
@@ -143,30 +163,30 @@ export async function readGrowthFacts(
           SELECT "tenantId", max("createdAt") FROM "CatalogItem"
             WHERE "tenantId" = ANY(${ids}) GROUP BY "tenantId"
         ) latest GROUP BY "tenantId"`,
-      db.$queryRaw<CountRow[]>`SELECT b."tenantId", count(*) AS value
+    db.$queryRaw<CountRow[]>`SELECT b."tenantId", count(*) AS value
         FROM "FinanceAccount" a JOIN "FinanceBook" b ON b.id = a."bookId"
         WHERE b."tenantId" = ANY(${ids}) AND a."archivedAt" IS NULL
           AND a.purpose IN ('CASH','BANK')
         GROUP BY b."tenantId"`,
-      db.$queryRaw<CountRow[]>`SELECT "tenantId", count(*) AS value FROM "Site"
+    db.$queryRaw<CountRow[]>`SELECT "tenantId", count(*) AS value FROM "Site"
         WHERE "tenantId" = ANY(${ids}) AND status = 'PUBLISHED' GROUP BY "tenantId"`,
-      db.$queryRaw<
-        CountRow[]
-      >`SELECT "tenantId", count(*) AS value FROM "TenantHostname"
+    db.$queryRaw<
+      CountRow[]
+    >`SELECT "tenantId", count(*) AS value FROM "TenantHostname"
         WHERE "tenantId" = ANY(${ids}) AND "isCustom" = true AND "verifiedAt" IS NOT NULL
         GROUP BY "tenantId"`,
-      db.$queryRaw<
-        CountRow[]
-      >`SELECT "tenantId", count(*) AS value FROM "AssistantWhatsAppGrant"
+    db.$queryRaw<
+      CountRow[]
+    >`SELECT "tenantId", count(*) AS value FROM "AssistantWhatsAppGrant"
         WHERE "tenantId" = ANY(${ids}) AND "revokedAt" IS NULL AND "expiresAt" > ${now}
         GROUP BY "tenantId"`,
-      db.$queryRaw<
-        CountRow[]
-      >`SELECT "tenantId", count(*) AS value FROM "AssistantTelegramGrant"
+    db.$queryRaw<
+      CountRow[]
+    >`SELECT "tenantId", count(*) AS value FROM "AssistantTelegramGrant"
         WHERE "tenantId" = ANY(${ids}) AND "revokedAt" IS NULL AND "expiresAt" > ${now}
         GROUP BY "tenantId"`,
-      // Businesses the owner of each tenant owns (active owner memberships).
-      db.$queryRaw<CountRow[]>`SELECT m."tenantId", max(owned.value) AS value
+    // Businesses the owner of each tenant owns (active owner memberships).
+    db.$queryRaw<CountRow[]>`SELECT m."tenantId", max(owned.value) AS value
         FROM "Membership" m
         JOIN LATERAL (
           SELECT count(DISTINCT m2."tenantId") AS value FROM "Membership" m2
@@ -175,7 +195,13 @@ export async function readGrowthFacts(
         ) owned ON true
         WHERE m."tenantId" = ANY(${ids}) AND m.role = 'OWNER' AND m.status = 'ACTIVE'
         GROUP BY m."tenantId"`,
-    ])
+    // First release of each site that is published now.
+    db.$queryRaw<Array<{ tenantId: string; at: Date | null }>>`
+        SELECT s."tenantId", min(r."createdAt") AS at
+        FROM "Site" s JOIN "SiteRelease" r ON r."siteId" = s.id
+        WHERE s."tenantId" = ANY(${ids}) AND s.status = 'PUBLISHED'
+        GROUP BY s."tenantId"`,
+  ])
 
   const maps = {
     orders: byTenant(orders),
@@ -187,19 +213,23 @@ export async function readGrowthFacts(
     wa: byTenant(wa),
     tg: byTenant(tg),
     owned: byTenant(owned),
+    publishedAt: byTenant(publishedAt),
   }
   const facts = new Map<string, GrowthFacts>()
   for (const tenantId of ids) {
     const order = maps.orders.get(tenantId)
     facts.set(tenantId, {
       ordersLast7: toNumber(order?.last7),
+      ordersLastMonth: toNumber(order?.lastMonth),
       ordersTotal: toNumber(order?.total),
       salesMinorThisMonth: BigInt(order?.salesMonth ?? 0),
+      salesMinorLastMonth: BigInt(order?.salesLastMonth ?? 0),
       currencyCode: order?.currencyCode ?? null,
       activeDays28: toNumber(maps.activeDays.get(tenantId)?.value),
       lastActiveAt: maps.lastActive.get(tenantId)?.at ?? null,
       moneyAccounts: toNumber(maps.money.get(tenantId)?.value),
       storefrontPublished: toNumber(maps.sites.get(tenantId)?.value) > 0,
+      storefrontPublishedAt: maps.publishedAt.get(tenantId)?.at ?? null,
       customDomain: toNumber(maps.domains.get(tenantId)?.value) > 0,
       whatsappLinked: toNumber(maps.wa.get(tenantId)?.value) > 0,
       telegramLinked: toNumber(maps.tg.get(tenantId)?.value) > 0,
@@ -211,13 +241,16 @@ export async function readGrowthFacts(
 
 export type GrowthFacts = {
   ordersLast7: number
+  ordersLastMonth: number
   ordersTotal: number
   salesMinorThisMonth: bigint
+  salesMinorLastMonth: bigint
   currencyCode: string | null
   activeDays28: number
   lastActiveAt: Date | null
   moneyAccounts: number
   storefrontPublished: boolean
+  storefrontPublishedAt: Date | null
   customDomain: boolean
   whatsappLinked: boolean
   telegramLinked: boolean
@@ -335,14 +368,17 @@ export async function buildGrowthSnapshots(
           activeDays28: fact.activeDays28,
           ordersLast7: fact.ordersLast7,
           ordersThisMonth: plan.ordersThisMonth,
+          ordersLastMonth: fact.ordersLastMonth,
           ordersTotal: fact.ordersTotal,
           salesMinorThisMonth: fact.salesMinorThisMonth,
+          salesMinorLastMonth: fact.salesMinorLastMonth,
           currencyCode: fact.currencyCode ?? "NGN",
           catalogItems: plan.catalogItems,
           staffCount: plan.staffCount,
           businessesOwned: fact.businessesOwned,
           moneyAccounts: fact.moneyAccounts,
           storefrontPublished: fact.storefrontPublished,
+          storefrontPublishedAt: fact.storefrontPublishedAt,
           customDomain: fact.customDomain,
           whatsappLinked: fact.whatsappLinked,
           telegramLinked: fact.telegramLinked,
@@ -382,14 +418,17 @@ export const growthSnapshotSelect = {
   activeDays28: true,
   ordersLast7: true,
   ordersThisMonth: true,
+  ordersLastMonth: true,
   ordersTotal: true,
   salesMinorThisMonth: true,
+  salesMinorLastMonth: true,
   currencyCode: true,
   catalogItems: true,
   staffCount: true,
   businessesOwned: true,
   moneyAccounts: true,
   storefrontPublished: true,
+  storefrontPublishedAt: true,
   customDomain: true,
   whatsappLinked: true,
   telegramLinked: true,
@@ -500,4 +539,72 @@ export async function pruneGrowthSnapshots(db: Db, now = new Date()) {
     where: { day: { lt: cutoff } },
   })
   return deleted.count
+}
+
+/**
+ * Completed-month sales before the current UTC month, per tenant (P09).
+ * Shape matches `@ewatrade/growth/contract` `SalesHistory`.
+ */
+export async function readGrowthSalesHistory(
+  db: Db,
+  tenantIds: readonly string[],
+  now: Date,
+) {
+  const history = new Map<
+    string,
+    {
+      priorMonths: number
+      bestPriorMonthMinor: bigint
+      medianPriorMonthMinor: bigint
+    }
+  >()
+  const ids = [...tenantIds]
+  if (ids.length === 0) return history
+  const rows = await db.$queryRaw<
+    Array<{ tenantId: string; month: Date; sales: bigint | null }>
+  >`SELECT "tenantId", date_trunc('month', "createdAt") AS month,
+      sum("totalMinor")::bigint AS sales
+    FROM "CommercialOrder"
+    WHERE "tenantId" = ANY(${ids}) AND "createdAt" < ${monthStart(now)}
+      AND status NOT IN ('DRAFT','CANCELLED','REFUNDED')
+    GROUP BY "tenantId", date_trunc('month', "createdAt")`
+  const byTenantMonths = new Map<string, bigint[]>()
+  for (const row of rows) {
+    const list = byTenantMonths.get(row.tenantId) ?? []
+    list.push(BigInt(row.sales ?? 0))
+    byTenantMonths.set(row.tenantId, list)
+  }
+  for (const [tenantId, months] of byTenantMonths) {
+    const sorted = [...months].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0))
+    const middle = Math.floor(sorted.length / 2)
+    const median =
+      sorted.length % 2
+        ? (sorted[middle] ?? 0n)
+        : ((sorted[middle - 1] ?? 0n) + (sorted[middle] ?? 0n)) / 2n
+    history.set(tenantId, {
+      priorMonths: sorted.length,
+      bestPriorMonthMinor: sorted.at(-1) ?? 0n,
+      medianPriorMonthMinor: median,
+    })
+  }
+  return history
+}
+
+/** Country and currency per tenant, for checkout availability. */
+export async function readGrowthBillingCountries(
+  db: Db,
+  tenantIds: readonly string[],
+) {
+  const tenants = tenantIds.length
+    ? await db.tenant.findMany({
+        where: { id: { in: [...tenantIds] } },
+        select: { id: true, countryCode: true, currencyCode: true },
+      })
+    : []
+  return new Map(
+    tenants.map((tenant) => [
+      tenant.id,
+      { countryCode: tenant.countryCode, currencyCode: tenant.currencyCode },
+    ]),
+  )
 }

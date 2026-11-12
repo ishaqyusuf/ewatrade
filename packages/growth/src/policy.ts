@@ -70,6 +70,8 @@ export type PlannedLifecycleMessage = {
   channel: LifecycleChannel
   status: "pending" | "sent" | "holdout" | "suppressed"
   suppressedReason: string | null
+  /** Effective consent category (`decision.consent ?? play.consent`). */
+  consent: ConsentCategory
   play: LifecyclePlay
   decision: PlayDecision
 }
@@ -177,17 +179,20 @@ export function planLifecycleMessages(input: PolicyInput) {
       if (input.alreadyRecorded?.(recipient.userId, playId, decision.periodKey))
         continue
 
-      const channels = play.channels.filter((channel) =>
+      // A decision may override the play's consent and channels (P08 per threshold).
+      const category = decision.consent ?? play.consent
+      const channels = (decision.channels ?? play.channels).filter((channel) =>
         DELIVERABLE_CHANNELS.includes(channel),
       )
       const consented = channels.filter((channel) =>
-        consentAllows(recipient.consent, play.consent, channel),
+        consentAllows(recipient.consent, category, channel),
       )
       const base = {
         tenantId: input.tenantId,
         userId: recipient.userId,
         playId,
         periodKey: decision.periodKey,
+        consent: category,
         play,
         decision,
       }
@@ -216,7 +221,7 @@ export function planLifecycleMessages(input: PolicyInput) {
 
       const channel = consented.find((candidate) =>
         candidate === "email"
-          ? emailCapAllows(emailHistory, input.now, play.consent)
+          ? emailCapAllows(emailHistory, input.now, category)
           : !inAppVisible,
       )
       if (!channel) {
