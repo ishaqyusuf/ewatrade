@@ -172,7 +172,10 @@ export type TelegramSendResult =
   | { status: "failed" }
   | { status: "uncertain" }
 
-type TelegramMethod = "sendMessage" | "answerCallbackQuery"
+type TelegramMethod =
+  | "sendMessage"
+  | "answerCallbackQuery"
+  | "editMessageReplyMarkup"
 type TelegramFetch = (url: string, init: RequestInit) => Promise<Response>
 type TelegramRequest = {
   status: number
@@ -228,8 +231,41 @@ export class DirectTelegramBotProvider {
           }
         : {}),
     })
-    if (!response) return { status: "uncertain" }
+    return this.messageResult(response)
+  }
 
+  async clearInlineKeyboard(input: {
+    chatId: string
+    messageId: string
+  }): Promise<TelegramSendResult> {
+    const chatId = Number(input.chatId)
+    const messageId = Number(input.messageId)
+    if (
+      positiveId(chatId) !== input.chatId ||
+      positiveId(messageId) !== input.messageId
+    )
+      return { status: "failed" }
+
+    const response = await this.request("editMessageReplyMarkup", {
+      chat_id: chatId,
+      message_id: messageId,
+      reply_markup: { inline_keyboard: [] },
+    })
+    if (
+      response?.status === 400 &&
+      response.body?.ok === false &&
+      typeof response.body.description === "string" &&
+      /^Bad Request: message is not modified\b/i.test(response.body.description)
+    )
+      return { status: "accepted", messageId: input.messageId }
+    const result = this.messageResult(response)
+    return result.status === "accepted" && result.messageId !== input.messageId
+      ? { status: "uncertain" }
+      : result
+  }
+
+  private messageResult(response: TelegramRequest | null): TelegramSendResult {
+    if (!response) return { status: "uncertain" }
     const { status, body, retryAfter } = response
     if (status === 429 || (body?.ok === false && body.error_code === 429)) {
       const parameter = record(body?.parameters)?.retry_after

@@ -160,9 +160,14 @@ async function stageText(
   fresh: GeneralTransactionContext,
   lease: TelegramClaim["lease"],
   messages: readonly string[],
+  clearKeyboardMessageId?: string,
 ) {
   for (const message of messages)
     await stageAssistantTelegramOutbox(fresh.db, lease, { text: message })
+  if (clearKeyboardMessageId)
+    await stageAssistantTelegramOutbox(fresh.db, lease, {
+      clearKeyboardMessageId,
+    })
   await settleAssistantTelegramInbox(fresh.db, lease, {})
 }
 
@@ -221,9 +226,12 @@ async function executeCallback(
           await finishAssistantTelegramActionReview(fresh.db, proof.id, {
             decision,
           })
-        await stageText(fresh, lease, [
-          "What would you like to change in this draft?",
-        ])
+        await stageText(
+          fresh,
+          lease,
+          ["What would you like to change in this draft?"],
+          proof.decision ? undefined : inbox.messageId,
+        )
         return
       }
       const proposal = await decideGeneralProposalInTransaction(fresh, {
@@ -258,6 +266,7 @@ async function executeCallback(
               ? paymentLinkOrigin()
               : undefined,
         }),
+        proof.decision ? undefined : inbox.messageId,
       )
     })
   } catch (error) {
@@ -519,7 +528,10 @@ async function dispatchAssistantTelegramReply(
 
 export async function processAssistantTelegramDelivery(
   outboxId: string,
-  deps: { send?: DirectTelegramBotProvider["sendMessage"] } = {},
+  deps: {
+    send?: DirectTelegramBotProvider["sendMessage"]
+    clearInlineKeyboard?: DirectTelegramBotProvider["clearInlineKeyboard"]
+  } = {},
 ): Promise<AssistantChannelDeliveryResult> {
   const config = readAssistantTelegramConfig()
   if (!config) return { status: "disabled" }
@@ -548,21 +560,38 @@ export async function processAssistantTelegramDelivery(
   }
   const provider = new DirectTelegramBotProvider(config)
   const send = deps.send ?? provider.sendMessage.bind(provider)
-  const result = await send({
-    chatId: principal.chatId,
-    text: payload.text,
-    buttons: payload.buttons?.map((row) =>
-      row.map((button) =>
-        "url" in button
-          ? { text: button.text, url: button.url }
-          : { text: button.text, callbackData: button.data },
-      ),
-    ),
-  })
+  const clearInlineKeyboard =
+    deps.clearInlineKeyboard ?? provider.clearInlineKeyboard.bind(provider)
+  const isKeyboardEdit = "clearKeyboardMessageId" in payload
+  const result = isKeyboardEdit
+    ? await clearInlineKeyboard({
+        chatId: principal.chatId,
+        messageId: payload.clearKeyboardMessageId,
+      })
+    : await send({
+        chatId: principal.chatId,
+        text: payload.text,
+        buttons: payload.buttons?.map((row) =>
+          row.map((button) =>
+            "url" in button
+              ? { text: button.text, url: button.url }
+              : { text: button.text, callbackData: button.data },
+          ),
+        ),
+      })
   if (result.status === "retry") {
     await settleAssistantTelegramOutbox(prisma, lease, {
       status: "retry",
       retryAt: new Date(Date.now() + result.retryAfterMs),
+    })
+    return { status: "busy" }
+  }
+  if (isKeyboardEdit && result.status === "uncertain") {
+    // Retrying the same markup edit is safe even if Telegram applied it.
+    await settleAssistantTelegramOutbox(prisma, lease, {
+      status: "retry",
+      retryAt: new Date(Date.now() + 30_000),
+      errorCode: "KEYBOARD_EDIT_UNCERTAIN",
     })
     return { status: "busy" }
   }

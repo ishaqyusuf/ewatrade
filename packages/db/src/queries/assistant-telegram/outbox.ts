@@ -18,7 +18,7 @@ import {
 
 const maxAttempts = 5
 const outboxLeaseTime = 45_000
-const payloadSchema = z
+const messagePayloadSchema = z
   .object({
     text: z.string().min(1).max(4096),
     buttons: z
@@ -50,6 +50,12 @@ const payloadSchema = z
       .optional(),
   })
   .strict()
+const payloadSchema = z.union([
+  messagePayloadSchema,
+  z
+    .object({ clearKeyboardMessageId: z.string().refine(isTelegramId) })
+    .strict(),
+])
 export type TelegramOutboxPayload = z.infer<typeof payloadSchema>
 export type TelegramOutboxLease = {
   outboxId: string
@@ -254,7 +260,7 @@ export async function assertAssistantTelegramDeliveryAuthority(
 
 type DeliveryResult =
   | { status: "sent"; providerMessageId: string }
-  | { status: "retry"; retryAt: Date }
+  | { status: "retry"; retryAt: Date; errorCode?: string }
   | { status: "failed" | "unknown" | "cancelled"; errorCode?: string }
 
 export async function settleAssistantTelegramOutbox(
@@ -275,7 +281,7 @@ export async function settleAssistantTelegramOutbox(
             nextAttemptAt: result.retryAt,
             leaseOwner: null,
             leaseExpiresAt: null,
-            errorCode: "RATE_LIMITED",
+            errorCode: result.errorCode ?? "RATE_LIMITED",
           }
         : {
             state:

@@ -49,6 +49,7 @@ type Delivery = Parameters<DirectTelegramBotProvider["sendMessage"]>[0] & {
 const queuedTurns: string[] = []
 const queuedDeliveries: string[] = []
 const deliveries: Delivery[] = []
+const clearedKeyboards: Array<{ chatId: string; messageId: string }> = []
 const acknowledged: string[] = []
 let update = 0
 let externalCalls = 0
@@ -179,7 +180,14 @@ suite("Telegram assistant against guarded development QA", () => {
           },
         }),
       processDelivery: (id) =>
-        runtime.processAssistantTelegramDelivery(id, { send }),
+        runtime.processAssistantTelegramDelivery(id, {
+          send,
+          clearInlineKeyboard: async (target) => {
+            expect(deliveries.at(-1)?.text).toContain("Customer added")
+            clearedKeyboards.push(target)
+            return { status: "accepted", messageId: target.messageId }
+          },
+        }),
       provider: () => ({
         sendMessage: send,
         answerCallbackQuery: async (id) => {
@@ -332,6 +340,7 @@ suite("Telegram assistant against guarded development QA", () => {
     expect(wrong.map(({ text }) => text).join("\n")).toContain(
       "review has expired or changed",
     )
+    expect(clearedKeyboards).toHaveLength(0)
     expect(
       await db.customer.count({ where: { tenantId, name: addedName } }),
     ).toBe(0)
@@ -346,6 +355,9 @@ suite("Telegram assistant against guarded development QA", () => {
     expect(duplicate.map(({ text }) => text)).toEqual(
       first.map(({ text }) => text),
     )
+    expect(clearedKeyboards).toEqual([
+      { chatId: String(telegramId), messageId: review.messageId },
+    ])
     expect(
       await db.customer.count({ where: { tenantId, name: addedName } }),
     ).toBe(1)

@@ -151,3 +151,28 @@ test("sends plain text and opaque inline controls and classifies Telegram outcom
     status: "uncertain",
   })
 })
+
+test("clears only the original message's inline keyboard and accepts a repeated edit", async () => {
+  const target = { chatId: "456", messageId: "55" }
+  const provider = new DirectTelegramBotProvider(config, async (url, init) => {
+    expect(url).toEndWith("/editMessageReplyMarkup")
+    expect(JSON.parse(String(init.body))).toEqual({
+      chat_id: 456,
+      message_id: 55,
+      reply_markup: { inline_keyboard: [] },
+    })
+    return Response.json({ ok: true, result: { message_id: 55 } })
+  })
+  const repeated = new DirectTelegramBotProvider(config, async () =>
+    Response.json(
+      { ok: false, description: "Bad Request: message is not modified" },
+      { status: 400 },
+    ),
+  )
+  const accepted = { status: "accepted", messageId: target.messageId }
+  expect(await provider.clearInlineKeyboard(target)).toEqual(accepted)
+  expect(await repeated.clearInlineKeyboard(target)).toEqual(accepted)
+  expect(
+    await provider.clearInlineKeyboard({ ...target, messageId: "invalid" }),
+  ).toEqual({ status: "failed" })
+})
