@@ -9,6 +9,7 @@
     "./registry": "./src/registry.ts",
     "./policy": "./src/policy.ts",
     "./stage": "./src/stage.ts",
+    "./links": "./src/links.ts",
     "./revenue/realtime-limit": "./src/plays/revenue/realtime-limit.ts",
     "./revenue/checkout-availability": "./src/plays/revenue/checkout-availability.ts",
     "./revenue/feature-intent": "./src/plays/revenue/feature-intent.ts"
