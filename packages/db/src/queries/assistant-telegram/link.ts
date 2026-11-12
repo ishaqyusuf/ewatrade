@@ -66,21 +66,65 @@ async function connectedMessage(
 }
 export { connectedMessage as connectedTelegramMessage }
 
+/** Still connected for real: identity not revoked and a grant that has not ended. */
+const liveIdentity = (now: Date) =>
+  ({
+    revokedAt: null,
+    grants: {
+      some: {
+        revokedAt: null,
+        expiresAt: { gt: now },
+        idleExpiresAt: { gt: now },
+      },
+    },
+  }) satisfies Prisma.AssistantTelegramIdentityWhereInput
+
 /**
- * Workshop c-second: this Telegram account is already connected to a different
- * EwaTrade user. Only a yes/no leaves this function; the other account is never named.
+ * Workshop c-second: this Telegram account is still connected to a different
+ * EwaTrade user. Only a yes/no leaves this function; the other account is never
+ * named. Once that access has ended, the account can be handed over instead.
  */
 async function heldByOtherAccount(
   db: DbClient,
   key: { botId: string; telegramUserId: string },
   userId: string,
+  now: Date,
 ) {
   return Boolean(
     await db.assistantTelegramIdentity.findFirst({
-      where: { ...key, userId: { not: userId } },
+      where: { ...key, userId: { not: userId }, ...liveIdentity(now) },
       select: { id: true },
     }),
   )
+}
+
+/**
+ * Hand-over without deleting: retire the previous user's identity so the
+ * (botId, telegramUserId) key is free. Its grants, bindings, chats and reviews
+ * stay with that user; the real Telegram ID moves to detachedTelegramUserId.
+ */
+async function detachTelegramIdentity(
+  tx: Prisma.TransactionClient,
+  identity: { id: string; telegramUserId: string; revokedAt: Date | null },
+  now: Date,
+) {
+  await tx.assistantTelegramIdentity.update({
+    where: { id: identity.id },
+    data: {
+      telegramUserId: `detached:${identity.id}`,
+      detachedTelegramUserId: identity.telegramUserId,
+      detachedAt: now,
+      revokedAt: identity.revokedAt ?? now,
+      activeBindingId: null,
+      generation: { increment: 1 },
+      selectionGeneration: { increment: 1 },
+    },
+  })
+  await tx.assistantTelegramGrant.updateMany({
+    where: { identityId: identity.id, revokedAt: null },
+    data: { revokedAt: now, generation: { increment: 1 } },
+  })
+  await cancelTelegramWork(tx, { identityId: identity.id }, now)
 }
 
 /** Display details exist only while a claim waits for the merchant's decision. */
@@ -225,6 +269,7 @@ export function claimAssistantTelegramLink(
         tx,
         { botId: input.botId, telegramUserId: input.userId },
         link.userId,
+        now,
       ))
         ? { busy: true as const }
         : {}),
@@ -313,6 +358,7 @@ export async function readAssistantTelegramLink(
           db,
           { botId: link.botId, telegramUserId: link.claimedTelegramUserId },
           actor.userId,
+          now,
         )),
     ),
     ...(link.claimedTelegramUserId &&
@@ -375,19 +421,29 @@ export function confirmAssistantTelegramLink(
         maskedSender: maskAssistantTelegramSender(key.telegramUserId),
         claimMessage: null,
         previousScope: null,
+        handedOver: false,
       }
     }
     if (link.expiresAt <= now) throw new AssistantTelegramError("EXPIRED")
     if (link.revision !== input.revision)
       throw new AssistantTelegramError("CONFLICT")
-    const existing = await tx.assistantTelegramIdentity.findUnique({
+    let existing = await tx.assistantTelegramIdentity.findUnique({
       where: { botId_telegramUserId: key },
     })
-    if (
-      existing &&
-      (existing.userId !== actor.userId ||
-        existing.chatId !== link.claimedChatId)
-    )
+    // Workshop c-second: another EwaTrade user held this Telegram account. While
+    // that access is live nothing changes; once it has ended, hand it over.
+    const handedOver = Boolean(existing && existing.userId !== actor.userId)
+    if (existing && handedOver) {
+      if (
+        await tx.assistantTelegramIdentity.count({
+          where: { id: existing.id, ...liveIdentity(now) },
+        })
+      )
+        throw new AssistantTelegramError("CONFLICT")
+      await detachTelegramIdentity(tx, existing, now)
+      existing = null
+    }
+    if (existing && existing.chatId !== link.claimedChatId)
       throw new AssistantTelegramError("CONFLICT")
     // Workshop c-switch: the scope this chat used until now, read before the
     // grant upsert below can move a same-business grant to the new Store.
@@ -506,6 +562,8 @@ export function confirmAssistantTelegramLink(
       maskedSender: maskAssistantTelegramSender(key.telegramUserId),
       claimMessage: claimMessage(link),
       previousScope,
+      /** The chat may still show the previous user's pin: clear it first. */
+      handedOver,
     }
   })
 }
@@ -672,7 +730,9 @@ export async function listAssistantTelegramGrants(
       revokedAt: true,
       tenant: { select: { name: true } },
       store: { select: { name: true } },
-      identity: { select: { telegramUserId: true } },
+      identity: {
+        select: { telegramUserId: true, detachedTelegramUserId: true },
+      },
     },
   })
   const items = rows
@@ -681,7 +741,9 @@ export async function listAssistantTelegramGrants(
       ...row,
       tenantName: tenant.name,
       storeName: store.name,
-      maskedSender: maskAssistantTelegramSender(identity.telegramUserId),
+      maskedSender: maskAssistantTelegramSender(
+        identity.detachedTelegramUserId ?? identity.telegramUserId,
+      ),
     }))
   return {
     items,
