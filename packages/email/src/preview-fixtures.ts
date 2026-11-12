@@ -121,3 +121,23 @@ export const playRefundReviewAlert = {
   overdue: 1,
   earliestDue: "2026-10-03T10:30:00.000Z",
 }
+
+export const lifecycleLayoutFixture = {
+  preview: "You sold ₦450,000 this month. Your site can sell while you sleep.",
+  firstName: "Ada Obi",
+  lead: "You recorded 184 orders this month, and none came from a website yet.",
+  stat: { label: "Orders this month", value: "184" },
+  body: [
+    "A free EwaTrade site shows your catalogue with live prices and takes orders straight into your till.",
+    "Most shops finish setup in about ten minutes.",
+  ],
+  cta: {
+    href: "https://api.ewatrade.test/go/preview-token",
+    label: "Open your site setup",
+  },
+  postscript: "Reply and tell me what is stopping you.",
+  businessName: "Ada's Provisions",
+  unsubscribeUrl:
+    "https://dash.ewatrade.test/email-preferences?token=preview&unsubscribe=1",
+  preferencesUrl: "https://dash.ewatrade.test/email-preferences?token=preview",
+}

@@ -30,6 +30,8 @@ export type EmailMessage = {
   text: string
   to: string
   tags?: Array<{ name: string; value: string }>
+  /** Extra MIME headers, e.g. RFC 8058 `List-Unsubscribe` for lifecycle mail. */
+  headers?: Record<string, string>
   qaOriginalRecipient?: string
   qaRouted?: boolean
 }
@@ -109,6 +111,8 @@ export * from "../templates/account-privacy-outcome"
 export * from "../templates/account-privacy-notice-alert"
 export * from "../templates/play-refund-review-alert"
 export * from "./qa-email-routing"
+export * from "../components/lifecycle-layout"
+export * from "./lifecycle"
 
 export function createEmailMessage(message: EmailMessage) {
   return message
@@ -426,6 +430,7 @@ async function appendCapturedEmail(captureFile: string, message: EmailMessage) {
     `${JSON.stringify({
       capturedAt,
       from: message.from,
+      headers: message.headers ?? null,
       html: message.html,
       replyTo: message.replyTo ?? null,
       subject: message.subject,
@@ -487,6 +492,7 @@ export const resendEmailTransport: EmailTransport = {
         text: message.text,
         to: [message.to],
         tags: message.tags,
+        ...(message.headers ? { headers: message.headers } : {}),
       }),
       headers: {
         Authorization: `Bearer ${apiKey}`,
