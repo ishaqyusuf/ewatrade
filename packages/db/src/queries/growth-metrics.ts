@@ -218,8 +218,9 @@ export const RETENTION_WEEKS = [1, 4, 8, 12] as const
 
 /**
  * Share of each signup-month cohort active (an order in the last 7 days) at
- * week 1, 4, 8 and 12 after signup. The denominator is businesses with a
- * snapshot on that exact day, so weeks not reached yet are null.
+ * week 1, 4, 8 and 12 after signup, read from the snapshot nearest that day
+ * (within 3 days). The denominator is businesses with such a snapshot, so
+ * weeks not reached yet are null.
  */
 export async function growthRetentionCurve(
   db: DbClient,
@@ -244,8 +245,17 @@ export async function growthRetentionCurve(
            count(s."id") FILTER (WHERE s."ordersLast7" > 0) AS "active"
       FROM cohort c
       CROSS JOIN week w
-      LEFT JOIN "BusinessGrowthSnapshot" s
-        ON s."tenantId" = c."id" AND s."day" = c."createdDay" + 7 * w."week"
+      LEFT JOIN LATERAL (
+        -- Nearest snapshot within 3 days of the target, so one missed sweep
+        -- does not blank a cell. Uses the (tenantId, day) unique index.
+        SELECT x."id", x."ordersLast7"
+          FROM "BusinessGrowthSnapshot" x
+         WHERE x."tenantId" = c."id"
+           AND x."day" BETWEEN c."createdDay" + 7 * w."week" - 3
+                           AND c."createdDay" + 7 * w."week" + 3
+         ORDER BY abs(x."day" - (c."createdDay" + 7 * w."week")), x."day"
+         LIMIT 1
+      ) s ON TRUE
      GROUP BY c."cohort", w."week"
      ORDER BY c."cohort", w."week"`
   const cohorts = new Map<

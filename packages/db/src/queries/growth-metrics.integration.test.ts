@@ -117,6 +117,8 @@ describeWithDatabase("growth metrics on fixture snapshots", () => {
           snap(a, "2099-03-03", "activated", { ordersLast7: 1 }),
           snap(b, "2099-03-03", "signed_up"),
           snap(c, "2099-03-17", "habit", { ordersLast7: 2 }),
+          // Week 1 for c is 22 Mar; this row is 2 days off and still counts.
+          snap(c, "2099-03-24", "habit"),
           snap(d, "2099-03-28", "signed_up"),
           // Retention: a and b at week 4 (1 Mar + 28 = 29 Mar), a active.
           snap(a, "2099-03-08", "habit", { ordersLast7: 2 }),
@@ -207,9 +209,9 @@ describeWithDatabase("growth metrics on fixture snapshots", () => {
       const march = retention.find((r) => r.cohortMonth === "2099-03")
       expect(march?.weeks.find((w) => w.week === 1)).toEqual({
         week: 1,
-        eligible: 2,
+        eligible: 3,
         active: 1,
-        rate: 50,
+        rate: 33.3,
       })
       expect(march?.weeks.find((w) => w.week === 4)).toMatchObject({
         eligible: 2,
