@@ -1030,7 +1030,10 @@ function JobStepView({
       <JobPhotoInput
         disabled={attachments.knownFree || pending}
         file={photo}
-        onChange={setPhoto}
+        onChange={(file) => {
+          setPhoto(file)
+          setFieldErrors(({ photo: _, ...rest }) => rest)
+        }}
       />
     </ControlField>
   )

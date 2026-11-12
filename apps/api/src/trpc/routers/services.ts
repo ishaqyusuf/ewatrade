@@ -30,6 +30,7 @@ import {
   updateServiceEvidenceUpload,
   updateServiceStoreSettings,
 } from "@ewatrade/db/queries"
+import { ruleRejectedError } from "@ewatrade/errors"
 import { enqueueServiceNotificationIntent } from "@ewatrade/jobs"
 import { TRPCError } from "@trpc/server"
 
@@ -70,13 +71,15 @@ import {
   resolveServiceStoreId,
 } from "./service-permissions"
 
-function serviceError(error: CatalogError) {
+function serviceError(error: CatalogError, showReason = false) {
+  // Refusals staff act on (repeat hand-over, changed balance) keep their text.
+  const cause = showReason ? ruleRejectedError(error) : error
   if (
     error.code === "SERVICE_JOB_NOT_FOUND" ||
     error.code === "SERVICE_INTAKE_NOT_FOUND"
   ) {
     return new TRPCError({
-      cause: error,
+      cause,
       code: "NOT_FOUND",
       message: error.message,
     })
@@ -89,23 +92,23 @@ function serviceError(error: CatalogError) {
     error.code === "SERVICE_WORK_NOT_AUTHORIZED"
   ) {
     return new TRPCError({
-      cause: error,
+      cause,
       code: "CONFLICT",
       message: error.message,
     })
   }
   return new TRPCError({
-    cause: error,
+    cause,
     code: "BAD_REQUEST",
     message: error.message,
   })
 }
 
-async function run<T>(action: () => Promise<T>) {
+async function run<T>(action: () => Promise<T>, showReason = false) {
   try {
     return await action()
   } catch (error) {
-    if (error instanceof CatalogError) throw serviceError(error)
+    if (error instanceof CatalogError) throw serviceError(error, showReason)
     throw error
   }
 }
@@ -203,12 +206,14 @@ export const servicesRouter = createTRPCRouter({
     .input(serviceEvidencePhotoStartSchema)
     .mutation(async ({ ctx, input }) => {
       assertServiceOperator(ctx.tenantContext.membership.role)
-      const evidence = await run(() =>
-        startServiceEvidencePhotoUpload(ctx.db, {
-          actorUserId: ctx.session.user.id,
-          ...input,
-          tenantId: ctx.tenantContext.tenant.id,
-        }),
+      const evidence = await run(
+        () =>
+          startServiceEvidencePhotoUpload(ctx.db, {
+            actorUserId: ctx.session.user.id,
+            ...input,
+            tenantId: ctx.tenantContext.tenant.id,
+          }),
+        true,
       )
       return {
         evidenceId: evidence.id,
@@ -399,12 +404,14 @@ export const servicesRouter = createTRPCRouter({
     .input(serviceJobHandoffSchema)
     .mutation(({ ctx, input }) => {
       assertServiceOperator(ctx.tenantContext.membership.role)
-      return run(() =>
-        recordServiceHandoff(ctx.db, {
-          actorUserId: ctx.session.user.id,
-          ...input,
-          tenantId: ctx.tenantContext.tenant.id,
-        }),
+      return run(
+        () =>
+          recordServiceHandoff(ctx.db, {
+            actorUserId: ctx.session.user.id,
+            ...input,
+            tenantId: ctx.tenantContext.tenant.id,
+          }),
+        true,
       )
     }),
 
