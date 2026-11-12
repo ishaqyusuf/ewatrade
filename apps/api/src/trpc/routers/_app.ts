@@ -14,6 +14,7 @@ import { customerMessagesRouter } from "./customer-messages"
 import { customersRouter } from "./customers"
 import { domainsRouter } from "./domains"
 import { financeRouter } from "./finance"
+import { growthRouter } from "./growth"
 import { inventoryRouter } from "./inventory"
 import { locationRouter } from "./location"
 import { offlineRouter } from "./offline"
@@ -62,6 +63,7 @@ export const appRouter = createTRPCRouter({
   inventory: inventoryRouter,
   location: locationRouter,
   finance: financeRouter,
+  growth: growthRouter,
   customerLedger: customerLedgerRouter,
   domains: domainsRouter,
   orders: ordersRouter,
