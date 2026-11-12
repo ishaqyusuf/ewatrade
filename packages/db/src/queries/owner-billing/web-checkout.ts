@@ -46,15 +46,19 @@ async function assertOwner(
   accountId: string,
   actorUserId: string,
   tenantId: string,
+  environment: WebCheckoutFacts["environment"],
 ) {
+  // QA businesses may only pay in Paystack Test Mode, never with live money.
+  const classifications = environment === "sandbox" ? ["LIVE", "QA"] : ["LIVE"]
   const rows = await tx.$queryRaw<{ id: string }[]>`
     SELECT a."id" FROM "OwnerBillingAccount" a
     JOIN "User" u ON u."id" = a."ownerUserId"
     JOIN "Membership" m ON m."userId" = u."id" AND m."tenantId" = ${tenantId}
     JOIN "Tenant" t ON t."id" = m."tenantId"
+      AND t."dataClassification"::text = ANY(${classifications})
     WHERE a."id" = ${accountId} AND a."ownerUserId" = ${actorUserId}
       AND m."role" = 'OWNER' AND m."status" = 'ACTIVE' AND t."isActive" = true
-      AND t."dataClassification" = 'LIVE' AND t."qaPurgeStartedAt" IS NULL
+      AND t."qaPurgeStartedAt" IS NULL
     FOR SHARE OF u, m, t`
   if (rows.length !== 1)
     throw new Error(
@@ -76,7 +80,13 @@ export async function prepareOwnerWebCheckout(
   },
 ) {
   return runOwnerBillingTransaction(db, input.accountId, async (tx) => {
-    await assertOwner(tx, input.accountId, input.actorUserId, input.tenantId)
+    await assertOwner(
+      tx,
+      input.accountId,
+      input.actorUserId,
+      input.tenantId,
+      input.environment,
+    )
     const current = await tx.ownerBillingSubscription.findUnique({
       where: { accountId: input.accountId },
     })

@@ -148,3 +148,24 @@ export function webBillingOwnerCountry(
     return null
   }
 }
+
+/**
+ * Reviewed owner territory first; otherwise a Nigerian business bills as NG.
+ * Safe without review: NG is the base price, and a non-Nigerian card cannot pay
+ * an NGN checkout until Paystack approves international payments. Every other
+ * territory still needs a reviewed WEB_BILLING_OWNER_COUNTRIES entry.
+ */
+export function webBillingCountry(
+  input: {
+    accountId: string
+    business: { countryCode: string | null; currencyCode: string | null }
+  },
+  env: BillingEnvironment = process.env,
+) {
+  const reviewed = webBillingOwnerCountry(input.accountId, env)
+  if (reviewed) return reviewed
+  const { countryCode, currencyCode } = input.business
+  if (countryCode === "NG") return "NG"
+  if (!countryCode && currencyCode === "NGN") return "NG"
+  return null
+}

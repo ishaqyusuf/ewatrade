@@ -29,8 +29,8 @@ import {
   paystackRecord,
   verifiedPaystackCharge,
   verifiedPaystackSubscription,
+  webBillingCountry,
   webBillingEnvironment,
-  webBillingOwnerCountry,
   webBillingProduct,
   webBillingProducts,
 } from "@ewatrade/payments/web-subscriptions"
@@ -55,6 +55,20 @@ function paymentClient(env: BillingEnvironment = process.env) {
     environment,
     env.PAYSTACK_SUBSCRIPTION_SECRET_KEY ?? "",
   )
+}
+
+async function billingCountry(
+  db: PrismaClient,
+  accountId: string,
+  tenantId: string,
+  env: BillingEnvironment,
+) {
+  const business = await db.tenant.findUnique({
+    where: { id: tenantId },
+    select: { countryCode: true, currencyCode: true },
+  })
+  if (!business) return null
+  return webBillingCountry({ accountId, business }, env)
 }
 
 function billingReturnUrl(env: BillingEnvironment) {
@@ -91,7 +105,7 @@ export async function createWebSubscriptionCheckout(
       "Accept the current terms before starting payment.",
     )
   const account = await getOrCreateOwnerBillingAccount(db, input.actorUserId)
-  const country = webBillingOwnerCountry(account.id, env)
+  const country = await billingCountry(db, account.id, input.tenantId, env)
   const product = webBillingProduct(input.planId, country, env)
   const environment = webBillingEnvironment(env)
   if (
@@ -230,7 +244,9 @@ export async function getWebBillingSettings(
   const pending = account
     ? await findPendingOwnerWebCheckout(db, account.id)
     : null
-  const country = account ? webBillingOwnerCountry(account.id, env) : null
+  const country = account
+    ? await billingCountry(db, account.id, tenantId, env)
+    : null
   return {
     pending: Boolean(pending),
     hasSubscription: state?.hasSubscription ?? false,

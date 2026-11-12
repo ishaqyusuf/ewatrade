@@ -1,5 +1,8 @@
 import { expect, test } from "bun:test"
-import { openSubscriptionCheckout } from "./subscription-checkout-navigation"
+import {
+  isPaystackSubscriptionReturn,
+  openSubscriptionCheckout,
+} from "./subscription-checkout-navigation"
 
 function run(checkoutUrl: string | null, status = "provider_not_configured") {
   const visits: string[] = []
@@ -51,4 +54,13 @@ test("invalid payment destinations fail without leaving the dashboard", () => {
     expect(result.notices).toEqual([])
     expect(result.errors).toHaveLength(1)
   }
+})
+
+test("only a subscription checkout reference counts as a Paystack return", () => {
+  const id = "0f8fad5b-d9cb-469f-a165-70867728950e"
+  expect(
+    isPaystackSubscriptionReturn(`?trxref=ewasub-${id}&reference=ewasub-${id}`),
+  ).toBe(true)
+  expect(isPaystackSubscriptionReturn("")).toBe(false)
+  expect(isPaystackSubscriptionReturn("?reference=domain-123")).toBe(false)
 })

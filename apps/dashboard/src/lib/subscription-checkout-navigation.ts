@@ -29,3 +29,9 @@ export function openSubscriptionCheckout(
   if (result.intent.status === "active_plan") actions.notify(result.message)
   else actions.error(result.message)
 }
+
+/** Paystack returns to Plan and billing with ?trxref=…&reference=ewasub-<id>. */
+export function isPaystackSubscriptionReturn(search: string) {
+  const reference = new URLSearchParams(search).get("reference")
+  return Boolean(reference && /^ewasub-[0-9a-f-]{36}$/.test(reference))
+}

@@ -5,6 +5,7 @@ import {
   isWebCheckoutEnabled,
   isWebProviderConfigured,
   isWebReconciliationConfigured,
+  webBillingCountry,
   webBillingOwnerCountry,
   webBillingProduct,
   webBillingProducts,
@@ -379,6 +380,35 @@ test("only explicitly reviewed opaque owner country bindings select regional bil
       WEB_BILLING_OWNER_COUNTRIES: JSON.stringify({ [accountId]: "NG" }),
     }),
   ).toBeNull()
+})
+
+test("a Nigerian business bills as NG; other countries need a reviewed binding", () => {
+  const ng = { countryCode: "NG", currencyCode: "NGN" }
+  expect(webBillingCountry({ accountId, business: ng }, {})).toBe("NG")
+  expect(
+    webBillingCountry(
+      { accountId, business: { countryCode: null, currencyCode: "NGN" } },
+      {},
+    ),
+  ).toBe("NG")
+  expect(
+    webBillingCountry(
+      { accountId, business: { countryCode: "GB", currencyCode: "NGN" } },
+      {},
+    ),
+  ).toBeNull()
+  expect(
+    webBillingCountry(
+      { accountId, business: { countryCode: null, currencyCode: "USD" } },
+      {},
+    ),
+  ).toBeNull()
+  expect(
+    webBillingCountry(
+      { accountId, business: ng },
+      { WEB_BILLING_OWNER_COUNTRIES: JSON.stringify({ [accountId]: "GB" }) },
+    ),
+  ).toBe("GB")
 })
 
 test.each([international, usd])(

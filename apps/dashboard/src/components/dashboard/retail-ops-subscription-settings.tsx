@@ -8,7 +8,10 @@ import {
   SettingsSection,
 } from "@/components/settings/settings-page"
 import { SettingsStatusPill } from "@/components/settings/settings-status-pill"
-import { openSubscriptionCheckout } from "@/lib/subscription-checkout-navigation"
+import {
+  isPaystackSubscriptionReturn,
+  openSubscriptionCheckout,
+} from "@/lib/subscription-checkout-navigation"
 import { useTRPC } from "@/trpc/client"
 import { cn } from "@/utils"
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
@@ -27,7 +30,7 @@ import {
 } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 
 type SubscriptionSnapshot = RouterOutputs["retailOps"]["subscription"]
 type Entitlement = SubscriptionSnapshot["entitlements"][number]
@@ -303,6 +306,51 @@ export function RetailOpsSubscriptionSettings() {
     }),
   )
   const snapshot = subscriptionQuery.data
+  // Back from Paystack: verify the payment, then apply the plan to this
+  // business, so the owner does not have to find two more buttons.
+  const [paystackReturn, setPaystackReturn] = useState<
+    "unknown" | "check" | "apply" | "done"
+  >("unknown")
+  const webBilling = snapshot?.webBilling
+  const settled = !subscriptionQuery.isFetching
+  useEffect(() => {
+    if (!webBilling || !settled) return
+    if (paystackReturn === "unknown") {
+      if (!isPaystackSubscriptionReturn(window.location.search)) {
+        setPaystackReturn("done")
+        return
+      }
+      window.history.replaceState(null, "", window.location.pathname)
+      setPaystackReturn("check")
+      return
+    }
+    if (paystackReturn === "check") {
+      if (!webBilling.pending) {
+        setPaystackReturn("apply")
+        return
+      }
+      setPaystackReturn("done")
+      checkPayment.mutate(undefined, {
+        onSuccess: () =>
+          void queryClient
+            .invalidateQueries()
+            .then(() => setPaystackReturn("apply")),
+      })
+      return
+    }
+    if (paystackReturn === "apply") {
+      setPaystackReturn("done")
+      if (webBilling.hasSubscription && !webBilling.covered)
+        enrollBusiness.mutate()
+    }
+  }, [
+    webBilling,
+    settled,
+    paystackReturn,
+    checkPayment,
+    enrollBusiness,
+    queryClient,
+  ])
   const notice = snapshot ? limitNotice(snapshot) : null
   const currentIndex = snapshot
     ? snapshot.plans.findIndex((plan) => plan.id === snapshot.plan.id)
