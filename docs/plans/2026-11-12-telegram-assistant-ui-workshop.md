@@ -77,6 +77,19 @@ Published 12 November 2026 as 02 · Telegram-native v4, revision `a722c2e1-5caf-
 | 5 | 11 Files and photos · 12 Voice notes · 13 Continue in the app | 41 | Photo, document, album and voice bubbles with upload states. Transcript review. Header chat actions. The EwaTrade review handoff edits the same message into the receipt or a new link. Today the bot answers no media. |
 | 6 | 14 Control · 15 Safety · 16 Forms · 17 Formatting · 18 Payment links | 44 | Disconnect asks first. Stop bot and RESTART. Outage retries are edited in place. Password messages are deleted. Forwarded reviews are refused. Pidgin replies. A Mini App compared with native buttons for the six forms. A Telegram HTML formatter. Payment links with `copy_text`. |
 
+## Implementation
+
+On 12 November 2026 the owner selected 02 v4 (`a722c2e1`) and said "Start implementation". The work goes in six phases, in family order:
+
+| Phase | Families | Status |
+| --- | --- | --- |
+| 1 · Linking and first contact | 1–3 | **Done locally**, commit `9fbe45403`, Workshop implementation recorded. Not deployed. BotFather description and default commands are pending a release-time provider action. |
+| 2 · Connected entry, roles, access ending | 4–6 | Next |
+| 3 · Telegram HTML renderer, chats and reads | 7–8, 17 | Planned |
+| 4 · Review status lines and receipts | 9–10 | Planned |
+| 5 · Media and EwaTrade handoff | 11–13 | Planned |
+| 6 · Control, safety, Mini App forms, payment links | 14–16, 18 | Planned. Payment links stay gated. |
+
 ## Open owner decisions
 
 Collected from every batch. None of these blocks the design review.
