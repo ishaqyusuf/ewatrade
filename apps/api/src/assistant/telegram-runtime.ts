@@ -1,8 +1,6 @@
 import { capabilityForAction } from "@ewatrade/assistant/capabilities/manifest"
-import { renderWhatsAppActionResultChunks } from "@ewatrade/assistant/channels/action-result"
 import { conversationAppLink } from "@ewatrade/assistant/channels/conversation-links"
 import type { AssistantChannelDeliveryResult } from "@ewatrade/assistant/channels/delivery"
-import { renderWhatsAppFinalReply } from "@ewatrade/assistant/channels/render"
 import type { AssistantChannelTurnResult } from "@ewatrade/assistant/channels/worker"
 import {
   generalActionSchema,
@@ -60,6 +58,8 @@ import {
 import { createGeneralAssistantTurn } from "./general-turn"
 import { GeneralTurnError } from "./general-turn-contract"
 import { proposalApprovalToken } from "./proposal-security"
+import { acceptTelegramChatsUpdate } from "./telegram-chats"
+import { pickTelegramChoice, telegramChoiceExpired } from "./telegram-choices"
 import {
   telegramAccessEndedNotice,
   telegramConnectedControl,
@@ -75,6 +75,13 @@ import {
   telegramAppOrigin,
   telegramCopy,
 } from "./telegram-presentation"
+import {
+  type TelegramRenderedMessage,
+  type TelegramReplyOptions,
+  isTelegramChoiceCallback,
+  renderTelegramActionResult,
+  renderTelegramFinalReply,
+} from "./telegram-render"
 import {
   answerExpiredTelegramReview,
   deliverTelegramOutboxPayload,
@@ -101,6 +108,8 @@ export type TelegramNotice = {
   buttons?: TelegramButton[][]
   /** Quote this user message at the top of the reply (`reply_parameters`). */
   replyTo?: string
+  /** Phase 3: edit this bot message in place instead of sending, e.g. a spent /chats list. */
+  editMessageId?: string
   /** Runs after Telegram accepts the reply, with the bot for follow-up chat effects. */
   onSent?: (messageId: string, bot: TelegramChatEffects) => Promise<unknown>
   /** Runs after the reply whatever its outcome. */
@@ -213,9 +222,17 @@ export async function acceptAssistantTelegramUpdate(
     // Credential content and its digest stay outside the durable assistant inbox.
     if (isWhatsAppCredentialSubmission(message)) return {}
   }
+  // Phase 3 (l-new, l-chats): switching chats moves the binding, so it is
+  // answered here like /disconnect rather than from the inbox.
+  if (config.enabled) {
+    const chats = await acceptTelegramChatsUpdate(prisma, config, event)
+    if (chats) return chats
+  }
   if (
     !config.enabled ||
-    (event.kind === "callback" && !callbackPattern.test(event.data))
+    (event.kind === "callback" &&
+      !callbackPattern.test(event.data) &&
+      !isTelegramChoiceCallback(event.data))
   )
     return {}
   const row = await acceptTelegramInbox(prisma, {
@@ -291,6 +308,20 @@ function savedChat(ctx: GeneralContext) {
   }
 }
 
+/** Phase 3: links, saved answer and "as of" zone for the Telegram HTML renderer. */
+function telegramReplyOptions(
+  ctx: GeneralContext,
+  messageId?: string,
+): TelegramReplyOptions {
+  const { options, conversation } = savedChat(ctx)
+  return {
+    ...options,
+    conversation,
+    messageId,
+    timeZone: ctx.tenantContext.tenant.timezone ?? undefined,
+  }
+}
+
 /** Phase 4: replies quote the review, and a decided review keeps a status line. */
 type CallbackReply = {
   replyTo?: string
@@ -300,13 +331,13 @@ type CallbackReply = {
 async function stageText(
   fresh: GeneralTransactionContext,
   lease: TelegramClaim["lease"],
-  messages: readonly string[],
+  messages: readonly (string | TelegramRenderedMessage)[],
   clearKeyboardMessageId?: string,
   reply: CallbackReply = {},
 ) {
   for (const message of messages)
     await stageAssistantTelegramOutbox(fresh.db, lease, {
-      text: message,
+      ...(typeof message === "string" ? { text: message } : message),
       ...(reply.replyTo ? { replyToMessageId: reply.replyTo } : {}),
     })
   if (clearKeyboardMessageId)
@@ -458,7 +489,9 @@ async function executeCallback(
       await stageText(
         fresh,
         lease,
-        renderWhatsAppActionResultChunks(proposal, savedChat(ctx).link?.href, {
+        // Phase 3 (fmt-receipt): Telegram HTML receipt with URL buttons.
+        renderTelegramActionResult(proposal, {
+          appLink: savedChat(ctx).link?.href,
           appOrigin: appOrigin(),
           paymentOrigin:
             proposal.receipt?.kind === "payment_links"
@@ -589,7 +622,7 @@ async function stageRunReply(
         return
       }
     }
-    const { options, conversation, link } = savedChat(ctx)
+    const { link } = savedChat(ctx)
     if (proposal && link) {
       const reviewUrl = new URL(link.href)
       reviewUrl.searchParams.set("proposalId", proposal.id)
@@ -612,14 +645,14 @@ async function stageRunReply(
       })
       return
     }
-    const rendered = renderWhatsAppFinalReply(message.parts, {
-      ...options,
-      conversation,
-      scopeLabel: `${fresh.tenantContext.tenant.name} · ${fresh.tenantContext.activeStore?.name ?? "Store"}`,
-    })
-    for (const text of rendered.chunks)
+    // Phase 3: one Telegram HTML message; the pinned message shows the scope.
+    const rendered = renderTelegramFinalReply(
+      message.parts,
+      telegramReplyOptions(ctx, message.id),
+    )
+    for (const reply of rendered)
       await stageAssistantTelegramOutbox(fresh.db, claim.lease, {
-        text,
+        ...reply,
         runId: run.id,
         messageId: message.id,
       })
@@ -655,22 +688,39 @@ export async function processAssistantTelegramTurn(
       inbox.requestId,
       lease,
     )
+    let text: string | undefined
     if (content.kind === "callback") {
-      await executeCallback(ctx, claim, content.data)
-    } else {
-      const text = content.text.trim()
+      // Phase 3 (l-ambig): a saved choice runs as the user's next message.
+      if (isTelegramChoiceCallback(content.data)) {
+        text =
+          (await pickTelegramChoice(
+            ctx,
+            claim,
+            content.data,
+            telegramReplyOptions(ctx),
+          )) ?? undefined
+        if (text === undefined)
+          await inFreshGeneralTransaction(ctx, (fresh) =>
+            stageText(fresh, lease, [telegramChoiceExpired]),
+          )
+      } else await executeCallback(ctx, claim, content.data)
+    } else text = content.text.trim()
+    if (text !== undefined) {
       // Phase 2: /help by role (c-help, a-cashier-menu), /scope with a
       // Change in EwaTrade button (c-switch).
-      const connected = telegramConnectedControl(ctx, text)
+      const connected =
+        content.kind === "message" ? telegramConnectedControl(ctx, text) : null
       const control =
-        connected ??
-        (/^(?:proceed|confirm|cancel|yes|go ahead|done|save(?: it| sale)?)[.!]*$/i.test(
-          text,
-        )
-          ? { text: useReview }
-          : text.startsWith("/")
-            ? { text: "Use /help to see the available commands." }
-            : undefined)
+        content.kind !== "message"
+          ? undefined
+          : (connected ??
+            (/^(?:proceed|confirm|cancel|yes|go ahead|done|save(?: it| sale)?)[.!]*$/i.test(
+              text,
+            )
+              ? { text: useReview }
+              : text.startsWith("/")
+                ? { text: "Use /help to see the available commands." }
+                : undefined))
       if (control) {
         await inFreshGeneralTransaction(ctx, async (fresh) => {
           await stageAssistantTelegramOutbox(fresh.db, lease, {

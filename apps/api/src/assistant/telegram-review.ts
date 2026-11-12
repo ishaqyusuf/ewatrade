@@ -357,6 +357,19 @@ export type TelegramDeliveryBot = Pick<
   "sendMessage" | "editMessageText" | "clearInlineKeyboard"
 >
 
+/** Outbox buttons to provider buttons (callback `data` becomes `callbackData`). */
+function telegramButtons(
+  rows: Extract<TelegramOutboxPayload, { text: string }>["buttons"],
+) {
+  return rows?.map((row) =>
+    row.map((button) =>
+      "url" in button
+        ? { text: button.text, url: button.url }
+        : { text: button.text, callbackData: button.data },
+    ),
+  )
+}
+
 /**
  * Send one outbox payload. Edits (keyboard or text) are idempotent, so the worker
  * may retry an uncertain edit; an uncertain send is never repeated.
@@ -381,6 +394,8 @@ export async function deliverTelegramOutboxPayload(
         chatId,
         messageId: payload.editMessageId,
         text: payload.text,
+        html: payload.html,
+        buttons: telegramButtons(payload.buttons),
       }),
     }
   return {
@@ -388,14 +403,9 @@ export async function deliverTelegramOutboxPayload(
     result: await bot.sendMessage({
       chatId,
       text: payload.text,
+      html: payload.html,
       replyToMessageId: payload.replyToMessageId,
-      buttons: payload.buttons?.map((row) =>
-        row.map((button) =>
-          "url" in button
-            ? { text: button.text, url: button.url }
-            : { text: button.text, callbackData: button.data },
-        ),
-      ),
+      buttons: telegramButtons(payload.buttons),
     }),
   }
 }
