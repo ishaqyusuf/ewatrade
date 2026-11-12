@@ -545,6 +545,7 @@ export async function growthPlayScorecard(
     {
       play: string
       sent: bigint
+      emailSent: bigint
       delivered: bigint
       clicked: bigint
       suppressed: bigint
@@ -556,7 +557,8 @@ export async function growthPlayScorecard(
   >`
     SELECT split_part(m."playId", ':', 1) AS "play",
            count(*) FILTER (WHERE m."sentAt" IS NOT NULL) AS "sent",
-           count(*) FILTER (WHERE m."sentAt" IS NOT NULL AND m."deliveredAt" IS NOT NULL) AS "delivered",
+           count(*) FILTER (WHERE m."sentAt" IS NOT NULL AND m."channel" = 'email') AS "emailSent",
+           count(*) FILTER (WHERE m."sentAt" IS NOT NULL AND m."channel" = 'email' AND m."deliveredAt" IS NOT NULL) AS "delivered",
            count(*) FILTER (WHERE m."sentAt" IS NOT NULL AND m."clickedAt" IS NOT NULL) AS "clicked",
            count(*) FILTER (WHERE m."status" = 'suppressed') AS "suppressed",
            count(DISTINCT m."tenantId") FILTER (WHERE m."sentAt" IS NOT NULL) AS "treated",
@@ -586,7 +588,8 @@ export async function growthPlayScorecard(
         suppressed: num(r.suppressed),
         treated,
         holdout,
-        deliveredPercent: pct(num(r.delivered), sent),
+        /** Email only: in-app and channel footers have no delivery event. */
+        deliveredPercent: pct(num(r.delivered), num(r.emailSent)),
         clickPercent: pct(num(r.clicked), sent),
         conversionPercent: conversion,
         holdoutConversionPercent: holdoutConversion,
