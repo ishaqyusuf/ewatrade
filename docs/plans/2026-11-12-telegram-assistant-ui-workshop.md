@@ -12,6 +12,8 @@ Use Claude Opus 5.5 (`claude-opus-5-5`) at explicit `high` effort for each desig
 
 ## First batch · Scenarios 1 and 2
 
+The [screen plan for scenarios 1 and 2](./2026-11-12-telegram-workshop-scenarios-1-2.md) sets out the Telegram features, kit styling, three directions, per-case states and copy for this batch.
+
 Current Preview evidence establishes a signed-in link flow and two enabled customer capabilities. The Dashboard creates a five-minute, single-use link scoped to the current Business and Store. Telegram **Start** claims the link and shows a masked Telegram account ID. An authenticated EwaTrade session confirms the same mask and scope before the bot can access business data. [Telegram feature record](../../.brain/features/assistant-telegram.md) · [Account link implementation](../../apps/dashboard/src/components/assistant-telegram/connect-telegram.tsx) · [Telegram ingress](../../apps/api/src/assistant/telegram-runtime.ts)
 
 | Case | Telegram design and expected result |
