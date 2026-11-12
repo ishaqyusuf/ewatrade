@@ -17,6 +17,7 @@ import {
   readAssistantTelegramWebhookConfig,
 } from "@ewatrade/communications"
 import type { OpenAPIHono } from "@hono/zod-openapi"
+import { telegramCallbackToast } from "../assistant/telegram-review"
 import type { TelegramNotice } from "../assistant/telegram-runtime"
 import { safeCompare } from "../utils/safe-compare"
 
@@ -138,7 +139,13 @@ export function registerAssistantTelegramRoutes(
     if (event.kind === "callback" || accepted.notice) {
       const bot = provider(current)
       if (event.kind === "callback")
-        effects.push(bot.answerCallbackQuery(event.callbackId))
+        effects.push(
+          bot.answerCallbackQuery(
+            event.callbackId,
+            // Phase 4: a toast for the tap only once the turn is queued.
+            accepted.ingressId ? telegramCallbackToast(event.data) : undefined,
+          ),
+        )
       const notice = accepted.notice
       if (notice)
         effects.push(

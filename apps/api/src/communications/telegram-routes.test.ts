@@ -51,6 +51,7 @@ function createRoutes(
             },
           },
         }
+      if (event.kind === "callback" && event.data === "confirm:stale") return {}
       return { ingressId: "ingress-1" }
     },
     enqueueTurn: async (id) => {
@@ -65,8 +66,8 @@ function createRoutes(
       return { status: "sent" }
     },
     provider: () => ({
-      answerCallbackQuery: async (id) => {
-        calls.push(`ack:${id}`)
+      answerCallbackQuery: async (id, toast) => {
+        calls.push(`ack:${id}${toast ? `:${toast}` : ""}`)
         return true
       },
       sendMessage: async ({ text, html, buttons }) => {
@@ -116,6 +117,27 @@ test("authenticates Telegram and commits before scheduling or acknowledging the 
   expect(calls).toEqual([])
   expect((await postWebhook(app, callback)).status).toBe(200)
   expect(calls).toEqual(["accept:callback:9", "enqueue:ingress-1", "ack:10"])
+})
+
+test("a queued review tap gets a toast for the tap; an ignored tap gets none", async () => {
+  const { app, calls } = createRoutes()
+  const tap = (data: string, update_id: number) => ({
+    update_id,
+    callback_query: { id: `cb-${update_id}`, from: user, message, data },
+  })
+  await postWebhook(app, tap("confirm:abc", 20))
+  await postWebhook(app, tap("edit:abc", 21))
+  await postWebhook(app, tap("confirm:stale", 22))
+  expect(calls).toEqual([
+    "accept:callback:20",
+    "enqueue:ingress-1",
+    "ack:cb-20:Saving…",
+    "accept:callback:21",
+    "enqueue:ingress-1",
+    "ack:cb-21:Send your change",
+    "accept:callback:22",
+    "ack:cb-22",
+  ])
 })
 
 test("leaves callback unacknowledged when persistence fails", async () => {

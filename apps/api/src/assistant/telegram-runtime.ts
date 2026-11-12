@@ -1,7 +1,5 @@
-import { createHash } from "node:crypto"
 import { capabilityForAction } from "@ewatrade/assistant/capabilities/manifest"
 import { renderWhatsAppActionResultChunks } from "@ewatrade/assistant/channels/action-result"
-import { renderWhatsAppActionReviewBody } from "@ewatrade/assistant/channels/action-review"
 import { conversationAppLink } from "@ewatrade/assistant/channels/conversation-links"
 import type { AssistantChannelDeliveryResult } from "@ewatrade/assistant/channels/delivery"
 import { renderWhatsAppFinalReply } from "@ewatrade/assistant/channels/render"
@@ -38,7 +36,6 @@ import {
   retryAssistantTelegramInbox,
   settleAssistantTelegramInbox,
   settleAssistantTelegramOutbox,
-  stageAssistantTelegramActionReview,
   stageAssistantTelegramOutbox,
 } from "@ewatrade/db/assistant-telegram"
 import { enqueueAssistantTelegramDelivery } from "@ewatrade/jobs/assistant-telegram"
@@ -49,7 +46,6 @@ import {
   createTelegramAssistantContext,
   resolveLinkedTelegramIdentity,
 } from "./channel-principal"
-import { buildChannelProposalReview } from "./channel-proposal-review"
 import type { GeneralTransactionContext } from "./general-actions"
 import {
   type GeneralContext,
@@ -79,8 +75,19 @@ import {
   telegramAppOrigin,
   telegramCopy,
 } from "./telegram-presentation"
+import {
+  answerExpiredTelegramReview,
+  deliverTelegramOutboxPayload,
+  provenTelegramReviewBody,
+  refusedTelegramReview,
+  renewTelegramReview,
+  stageTelegramProposalReview,
+  stageTelegramReviewStatus,
+  telegramCallbackPattern,
+  telegramReviewStatus,
+} from "./telegram-review"
 
-const callbackPattern = /^(confirm|cancel|edit):([A-Za-z0-9_-]{1,48})$/
+const callbackPattern = telegramCallbackPattern
 const useReview =
   "Use the buttons on the exact draft review to confirm, edit or cancel."
 const unavailableReview =
@@ -284,17 +291,29 @@ function savedChat(ctx: GeneralContext) {
   }
 }
 
+/** Phase 4: replies quote the review, and a decided review keeps a status line. */
+type CallbackReply = {
+  replyTo?: string
+  status?: { body: string | null; line: string }
+}
+
 async function stageText(
   fresh: GeneralTransactionContext,
   lease: TelegramClaim["lease"],
   messages: readonly string[],
   clearKeyboardMessageId?: string,
+  reply: CallbackReply = {},
 ) {
   for (const message of messages)
-    await stageAssistantTelegramOutbox(fresh.db, lease, { text: message })
-  if (clearKeyboardMessageId)
     await stageAssistantTelegramOutbox(fresh.db, lease, {
-      clearKeyboardMessageId,
+      text: message,
+      ...(reply.replyTo ? { replyToMessageId: reply.replyTo } : {}),
+    })
+  if (clearKeyboardMessageId)
+    await stageTelegramReviewStatus(fresh, lease, {
+      messageId: clearKeyboardMessageId,
+      body: reply.status?.body ?? null,
+      status: reply.status?.line ?? "",
     })
   await settleAssistantTelegramInbox(fresh.db, lease, {})
 }
@@ -310,19 +329,47 @@ async function executeCallback(
   const reviewId = callback?.[2]
   if (
     !reviewId ||
-    (decision !== "confirm" && decision !== "edit" && decision !== "cancel")
+    (decision !== "confirm" &&
+      decision !== "edit" &&
+      decision !== "cancel" &&
+      decision !== "again")
   ) {
     await inFreshGeneralTransaction(ctx, (fresh) =>
       stageText(fresh, lease, [unavailableReview]),
     )
     return
   }
+  const replyTo = inbox.messageId
   try {
     await inFreshGeneralTransaction(ctx, async (fresh) => {
+      // Phase 4 (t-review-expired): Review it again, once, for the same draft.
+      if (decision === "again") {
+        if (
+          await renewTelegramReview(fresh, lease, {
+            reviewId,
+            messageId: inbox.messageId,
+            inboxExpiresAt: inbox.expiresAt,
+          })
+        )
+          await settleAssistantTelegramInbox(fresh.db, lease, {})
+        else await stageText(fresh, lease, [unavailableReview])
+        return
+      }
       const proof = await readAssistantTelegramActionReview(fresh.db, lease, {
         reviewId,
         providerMessageId: inbox.messageId,
       })
+      // Phase 4: a tap after expiry marks the review Expired in place.
+      if (
+        !proof &&
+        (await answerExpiredTelegramReview(fresh, lease, {
+          reviewId,
+          messageId: inbox.messageId,
+        }))
+      ) {
+        await settleAssistantTelegramInbox(fresh.db, lease, {})
+        return
+      }
       const scope = requireGeneralScope(fresh)
       const row = proof
         ? await fresh.db.assistantActionProposal.findFirst({
@@ -377,9 +424,15 @@ async function executeCallback(
           lease,
           ["What would you like to change in this draft?"],
           proof.decision ? undefined : inbox.messageId,
+          { replyTo },
         )
         return
       }
+      // The exact body as sent, so the decided review keeps its facts.
+      const reviewBody =
+        proof.decision || row.status !== "PENDING"
+          ? null
+          : await provenTelegramReviewBody(fresh, row, proof)
       const proposal = await decideGeneralProposalInTransaction(fresh, {
         proposalId: row.id,
         revision: row.revision,
@@ -413,6 +466,16 @@ async function executeCallback(
               : undefined,
         }),
         proof.decision ? undefined : inbox.messageId,
+        {
+          replyTo,
+          status: {
+            body: reviewBody,
+            line:
+              proposal.status === "CANCELLED"
+                ? telegramReviewStatus.cancelled
+                : telegramReviewStatus.confirmed,
+          },
+        },
       )
     })
   } catch (error) {
@@ -424,9 +487,28 @@ async function executeCallback(
       )
     )
       throw error
-    await inFreshGeneralTransaction(ctx, (fresh) =>
-      stageText(fresh, lease, [unavailableReview]),
-    )
+    await inFreshGeneralTransaction(ctx, async (fresh) => {
+      // Phase 4: a refused Confirm or Cancel says "Not saved" on the review.
+      const refused =
+        decision === "confirm" || decision === "cancel"
+          ? await refusedTelegramReview(fresh, lease, {
+              reviewId,
+              messageId: inbox.messageId,
+            })
+          : null
+      await stageText(
+        fresh,
+        lease,
+        [unavailableReview],
+        refused ? inbox.messageId : undefined,
+        {
+          replyTo,
+          status: refused
+            ? { body: refused.body, line: telegramReviewStatus.notSaved }
+            : undefined,
+        },
+      )
+    })
   }
 }
 
@@ -485,8 +567,6 @@ async function stageRunReply(
       proposal &&
       canUseCapability(fresh, capabilityForAction(proposal.action))
     ) {
-      const projection = await buildChannelProposalReview(fresh, proposal)
-      const now = Date.now()
       const expiresAt = new Date(
         Math.min(
           proposal.expiresAt.getTime(),
@@ -494,32 +574,19 @@ async function stageRunReply(
           (run.completedAt ?? run.startedAt).getTime() + 5 * 60_000,
         ),
       )
+      // Phase 4: the Telegram review layout (Draft N, local expiry).
       if (
-        projection.kind === "review" &&
-        !projection.pages &&
-        expiresAt.getTime() > now
-      ) {
-        const review = renderWhatsAppActionReviewBody(
-          {
-            ...projection.review,
-            expiresAt: expiresAt.toISOString(),
-          },
-          { now },
+        await stageTelegramProposalReview(
+          fresh,
+          claim.lease,
+          proposal,
+          expiresAt,
         )
-        if (review.kind === "review") {
-          await stageAssistantTelegramActionReview(fresh.db, claim.lease, {
-            ...review.source,
-            expiresAt,
-            text: review.body,
-            reviewDigest: createHash("sha256")
-              .update(review.body)
-              .digest("hex"),
-          })
-          await settleAssistantTelegramInbox(fresh.db, claim.lease, {
-            runId: run.id,
-          })
-          return
-        }
+      ) {
+        await settleAssistantTelegramInbox(fresh.db, claim.lease, {
+          runId: run.id,
+        })
+        return
       }
     }
     const { options, conversation, link } = savedChat(ctx)
@@ -712,6 +779,7 @@ export async function processAssistantTelegramDelivery(
   deps: {
     send?: DirectTelegramBotProvider["sendMessage"]
     clearInlineKeyboard?: DirectTelegramBotProvider["clearInlineKeyboard"]
+    editMessageText?: DirectTelegramBotProvider["editMessageText"]
   } = {},
 ): Promise<AssistantChannelDeliveryResult> {
   const config = readAssistantTelegramConfig()
@@ -740,26 +808,17 @@ export async function processAssistantTelegramDelivery(
     return { status: "cancelled", ...(next ? { nextOutboxId: next.id } : {}) }
   }
   const provider = new DirectTelegramBotProvider(config)
-  const send = deps.send ?? provider.sendMessage.bind(provider)
-  const clearInlineKeyboard =
-    deps.clearInlineKeyboard ?? provider.clearInlineKeyboard.bind(provider)
-  const isKeyboardEdit = "clearKeyboardMessageId" in payload
-  const result = isKeyboardEdit
-    ? await clearInlineKeyboard({
-        chatId: principal.chatId,
-        messageId: payload.clearKeyboardMessageId,
-      })
-    : await send({
-        chatId: principal.chatId,
-        text: payload.text,
-        buttons: payload.buttons?.map((row) =>
-          row.map((button) =>
-            "url" in button
-              ? { text: button.text, url: button.url }
-              : { text: button.text, callbackData: button.data },
-          ),
-        ),
-      })
+  const { result, edit: isEdit } = await deliverTelegramOutboxPayload(
+    {
+      sendMessage: deps.send ?? provider.sendMessage.bind(provider),
+      clearInlineKeyboard:
+        deps.clearInlineKeyboard ?? provider.clearInlineKeyboard.bind(provider),
+      editMessageText:
+        deps.editMessageText ?? provider.editMessageText.bind(provider),
+    },
+    principal.chatId,
+    payload,
+  )
   if (result.status === "retry") {
     await settleAssistantTelegramOutbox(prisma, lease, {
       status: "retry",
@@ -767,12 +826,15 @@ export async function processAssistantTelegramDelivery(
     })
     return { status: "busy" }
   }
-  if (isKeyboardEdit && result.status === "uncertain") {
-    // Retrying the same markup edit is safe even if Telegram applied it.
+  if (isEdit && result.status === "uncertain") {
+    // Retrying the same edit is safe even if Telegram applied it.
     await settleAssistantTelegramOutbox(prisma, lease, {
       status: "retry",
       retryAt: new Date(Date.now() + 30_000),
-      errorCode: "KEYBOARD_EDIT_UNCERTAIN",
+      errorCode:
+        "clearKeyboardMessageId" in payload
+          ? "KEYBOARD_EDIT_UNCERTAIN"
+          : "REVIEW_EDIT_UNCERTAIN",
     })
     return { status: "busy" }
   }

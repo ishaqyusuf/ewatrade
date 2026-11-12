@@ -194,6 +194,19 @@ const appReview = (): WhatsAppRenderedActionReview => ({
 
 export const WHATSAPP_ACTION_INSTRUCTION_RESERVE_UNITS = 500
 
+/**
+ * The exact fact lines of a complete review (presentation, then canonical lines),
+ * shared by every chat channel's layout. Null when the review must go to the app.
+ */
+export function actionReviewFactLines(review: WhatsAppActionReview) {
+  if (!review.complete || (review.requiresPresentation && !review.presentation))
+    return null
+  const presented = review.presentation
+    ? presentationLines(review.presentation)
+    : []
+  return presented ? [...presented, ...review.reviewLines] : null
+}
+
 /** Token-free canonical body: safe for the immutable outbox; dispatch appends opaque actions. */
 export function renderWhatsAppActionReviewBody(
   input: unknown,
@@ -211,23 +224,15 @@ export function renderWhatsAppActionReviewBody(
   )
     return appReview()
   const review = parsed.data
-  if (
-    !review.complete ||
-    (review.requiresPresentation && !review.presentation) ||
-    Date.parse(review.expiresAt) <= now
-  )
-    return appReview()
-  const presented = review.presentation
-    ? presentationLines(review.presentation)
-    : []
-  if (!presented) return appReview()
+  if (Date.parse(review.expiresAt) <= now) return appReview()
+  const lines = actionReviewFactLines(review)
+  if (!lines) return appReview()
   const facts = [
     review.title,
     `Business: ${review.businessName}`,
     `Store: ${review.storeName}`,
     `Draft revision: ${review.source.revision}`,
-    ...presented,
-    ...review.reviewLines,
+    ...lines,
     `Review expires: ${review.expiresAt} (UTC).`,
   ]
   if (facts.some((fact) => !exactPlainText(fact))) return appReview()
