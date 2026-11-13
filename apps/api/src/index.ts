@@ -4,6 +4,7 @@ import { createOfficePrivacyRoutes } from "./account-privacy/office-routes"
 import { appUpdateDependencies } from "./app-update/context"
 import { registerAppUpdateRoutes } from "./app-update/routes"
 import { oversightRoutes } from "./oversight/routes"
+import { createQaOfficeRoutes } from "./qa-office/routes"
 
 import { auth } from "@ewatrade/auth"
 import { prisma } from "@ewatrade/db"
@@ -152,6 +153,10 @@ app.route("/api/oversight/v1", oversightRoutes)
 app.route(
   "/api/office/privacy",
   createOfficePrivacyRoutes(() => prisma),
+)
+app.route(
+  "/api/office/qa",
+  createQaOfficeRoutes(() => prisma),
 )
 
 const debugPerf = process.env.DEBUG_PERF === "true"
