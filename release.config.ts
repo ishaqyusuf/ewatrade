@@ -190,7 +190,11 @@ export default {
           ...loglyMarketing,
           "MARKETING_INBOX_EMAILS", // team notifications fall back to EMAIL_REPLY_TO
         ],
-        ignoreIn: { preview: previewOnly },
+        ignoreIn: {
+          preview: previewOnly,
+          // Oversight's QA data route is refused in production; never set it there.
+          production: ["OVERSIGHT_QA_KEY"],
+        },
       },
     },
     {
