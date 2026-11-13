@@ -6,6 +6,9 @@ import {
 
 export const WHATSAPP_START_URL = `https://wa.me/2349047125343?text=${encodeURIComponent("Hi, I’d like to set up my business on EwaTrade.")}`
 
+/** Production bot. A chat that is not connected is pointed to Account › Telegram in EwaTrade. */
+export const TELEGRAM_START_URL = "https://t.me/EwaTradeBot"
+
 export function WhatsAppIcon() {
   return (
     <svg

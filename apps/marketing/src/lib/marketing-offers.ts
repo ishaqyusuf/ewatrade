@@ -16,6 +16,7 @@ export const MARKETING_OFFERS = [
       "Sales, orders, stock and customer balances",
       "Simple sales for money received",
       "Public storefront, up to 10 items",
+      "Assistant on WhatsApp and Telegram",
       "Mobile app with offline sales · Coming soon",
     ],
   },

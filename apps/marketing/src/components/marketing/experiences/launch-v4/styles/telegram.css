@@ -1,0 +1,692 @@
+/* Telegram: rotating announcement, the mirrored Telegram band and pricing
+   feature lists (Workshop marketing/midnight-site 01 v2, a86ca68c). */
+
+/* Announcement: only the mark and the app name roll, always upward. */
+.ewm .launch-announcement .ann-mark {
+  display: inline-grid;
+  flex: none;
+  margin-left: 0;
+  width: 23px;
+  height: 23px;
+  overflow: hidden;
+}
+.ewm .launch-announcement .ann-mark > svg {
+  grid-area: 1 / 1;
+  width: 23px;
+  height: 23px;
+}
+.ewm .telegram-mark {
+  fill: #2aabee;
+  stroke: none;
+}
+.ewm .launch-announcement .ann-rotor {
+  display: inline-grid;
+  vertical-align: bottom;
+  overflow: hidden;
+  margin-left: 0;
+  font-size: inherit;
+  color: inherit;
+}
+.ewm .launch-announcement .ann-rotor > span {
+  display: block;
+  grid-area: 1 / 1;
+  margin-left: 0;
+  font-size: inherit;
+}
+.ewm .launch-announcement .ann-rotor .ann-wa {
+  color: #25d366;
+}
+.ewm .launch-announcement .ann-rotor .ann-tg {
+  color: #2aabee;
+}
+.ewm .launch-announcement .is-off {
+  opacity: 0;
+  transform: translateY(110%);
+}
+.ewm .launch-announcement .is-in {
+  animation: ewm-ann-in 0.5s cubic-bezier(0.2, 0.75, 0.2, 1) both;
+}
+.ewm .launch-announcement .is-out {
+  animation: ewm-ann-out 0.5s cubic-bezier(0.2, 0.75, 0.2, 1) both;
+}
+@keyframes ewm-ann-in {
+  from {
+    opacity: 0;
+    transform: translateY(110%);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes ewm-ann-out {
+  from {
+    opacity: 1;
+    transform: none;
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-110%);
+  }
+}
+.ewm .launch-announcement .ann-both {
+  display: none;
+  margin-left: 0;
+  font-size: inherit;
+  color: inherit;
+}
+.ewm .launch-announcement .ann-sub {
+  margin-left: auto;
+  color: #ccd1da;
+  font-size: 13px;
+}
+.ewm .launch-announcement.is-still .ann-rotor {
+  display: none;
+}
+.ewm .launch-announcement.is-still .ann-both {
+  display: inline;
+}
+.ewm .launch-announcement.is-still .ann-mark {
+  width: auto;
+  display: inline-flex;
+  gap: 6px;
+}
+.ewm .launch-announcement.is-still .ann-mark > svg {
+  opacity: 1;
+  transform: none;
+  animation: none;
+}
+.ewm .launch-announcement:hover strong {
+  text-decoration: none;
+}
+.ewm .launch-announcement:hover .ann-sub {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+/* Telegram band: the WhatsApp band mirrored on a light Telegram tint. */
+.ewm .tg-launch {
+  --tg-blue: #2aabee;
+  --tg-accent: #1670b0;
+  --tg-band: #e8f2fa;
+  --tg-rule: #cfdeeb;
+  --tg-note: #fff;
+  background: var(--tg-band);
+  color: var(--ink);
+  scroll-margin-top: 0;
+}
+.ewm[data-theme="dark"] .tg-launch {
+  --tg-accent: #5cbcf2;
+  --tg-band: #0f1a26;
+  --tg-rule: #22344a;
+  --tg-note: #151b25;
+}
+.ewm .tg-layout {
+  display: grid;
+  grid-template-columns: minmax(350px, 1fr) minmax(0, 1.4fr);
+  gap: 42px 64px;
+  padding-block: 72px;
+  align-items: center;
+}
+.ewm .tg-proof {
+  width: min(100%, 350px);
+  margin: 0;
+  justify-self: start;
+  scroll-margin-top: 95px;
+  min-width: 0;
+}
+.ewm .tg-copy {
+  align-self: start;
+  padding-top: 18px;
+  justify-self: end;
+  max-width: 700px;
+  width: 100%;
+}
+.ewm .tg-copy h2 {
+  font-size: clamp(66px, 7.2vw, 96px);
+  line-height: 1.02;
+  letter-spacing: -0.035em;
+  text-wrap: balance;
+}
+.ewm .tg-copy h2 span {
+  color: var(--tg-accent);
+}
+.ewm .tg-argument {
+  margin-top: 32px;
+  max-width: 410px;
+}
+.ewm .tg-argument h3 {
+  font-family: EwmFigtree, EwmInter, sans-serif;
+  font-weight: 600;
+  font-size: 28px;
+  line-height: 1.16;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+.ewm .tg-argument p {
+  font-size: 17px;
+  line-height: 1.65;
+  color: var(--muted);
+  margin-top: 14px;
+}
+.ewm .tg-actions {
+  margin-top: 29px;
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  flex-wrap: wrap;
+}
+.ewm .tg-primary {
+  background: var(--tg-blue);
+  color: #04263b;
+  border: 0;
+  font-size: 15px;
+  min-height: 52px;
+  padding-inline: 22px;
+}
+.ewm .tg-primary:hover {
+  background: #5cc0f2;
+  color: #04263b;
+}
+.ewm .tg-primary .telegram-mark {
+  fill: currentColor;
+  width: 20px;
+  height: 20px;
+}
+.ewm .tg-watch {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  font-size: 14px;
+  text-decoration: none;
+  color: var(--ink);
+}
+.ewm .tg-watch:hover {
+  text-decoration: underline;
+}
+.ewm .tg-watch svg {
+  width: 18px;
+  height: 18px;
+}
+.ewm .tg-approval {
+  color: var(--muted);
+  margin-top: 18px;
+  max-width: 42ch;
+  font-size: 13px;
+}
+.ewm .tg-launch :focus-visible {
+  outline-color: var(--tg-accent);
+}
+
+/* Telegram for Android, light (the phone stays light in dark mode, like WhatsApp's). */
+.ewm .tg-window {
+  width: 100%;
+  height: 758px;
+  border: 6px solid #1a2130;
+  border-radius: 38px;
+  display: flex;
+  flex-direction: column;
+  overflow: clip;
+  background: #a8c99a;
+  box-shadow: 0 24px 45px -32px #141b2b55;
+  font: 400 14.5px / 1.42 Roboto, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+  color: #000;
+}
+.ewm .tg-window [hidden],
+.ewm .tg-note[hidden] {
+  display: none !important;
+}
+.ewm .tg-status {
+  height: 34px;
+  flex: none;
+  padding: 8px 21px 4px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #4a7399;
+  color: #fff;
+  font-size: 11px;
+}
+.ewm .tg-bar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px 9px;
+  background: #517da2;
+  color: #fff;
+}
+.ewm .tg-bar > svg {
+  width: 22px;
+  height: 22px;
+  flex: none;
+}
+.ewm .tg-bar > div {
+  flex: 1;
+  min-width: 0;
+  line-height: 1.25;
+}
+.ewm .tg-bar strong {
+  display: block;
+  font-size: 16px;
+  font-weight: 500;
+}
+.ewm .tg-bar small {
+  display: block;
+  font-size: 13px;
+  color: #d5e4f1;
+}
+.ewm .tg-avatar {
+  width: 38px;
+  height: 38px;
+  flex: none;
+  border-radius: 50%;
+  background: #faf7ec;
+  color: #1c2e68;
+  display: grid;
+  place-items: center;
+}
+.ewm .tg-avatar svg {
+  width: 24px;
+  height: 24px;
+}
+.ewm .tg-wall {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 14px 10px;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' fill='none' stroke='rgba(48,82,44,.09)' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M14 18l3 6 6 1-4.5 4 1 6-5.5-3-5.5 3 1-6L5 25l6-1z'/%3E%3Ccircle cx='62' cy='16' r='7'/%3E%3Cpath d='M98 10c4 0 7 3 7 7 0 5-7 10-7 10s-7-5-7-10c0-4 3-7 7-7zM12 62c6-6 12 6 18 0s12 6 18 0'/%3E%3Crect x='72' y='50' width='16' height='12' rx='3'/%3E%3Cpath d='M104 56l8 8m0-8l-8 8M64 92l10 16H54z'/%3E%3Ccircle cx='30' cy='100' r='4'/%3E%3C/svg%3E"),
+    linear-gradient(160deg, #d6e2b8, #a8c99a 40%, #cfd99a 72%, #9cc39e);
+}
+.ewm .tg-date {
+  align-self: center;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: #fff;
+  background: #3c4c3a52;
+  padding: 2px 10px;
+  border-radius: 12px;
+  margin-bottom: 4px;
+}
+.ewm .tg-msg {
+  max-width: 86%;
+  padding: 6px 9px 6px 10px;
+  border-radius: 15px;
+  box-shadow: 0 1px 1px #0000001f;
+  animation: ewm-tg-in 0.26s ease-out;
+}
+.ewm .tg-msg p {
+  margin: 0;
+  color: #000;
+  font-size: 14.5px;
+  line-height: 1.42;
+}
+.ewm .tg-msg b {
+  font-weight: 600;
+}
+.ewm .tg-msg em {
+  display: block;
+  margin-top: 4px;
+  font-style: italic;
+  font-size: 13px;
+  color: #5f6a74;
+}
+.ewm .tg-out {
+  align-self: end;
+  background: #effedd;
+  border-bottom-right-radius: 5px;
+}
+.ewm .tg-in {
+  align-self: start;
+  background: #fff;
+  border-bottom-left-radius: 5px;
+}
+.ewm .tg-meta {
+  float: right;
+  margin: 7px -2px -5px 12px;
+  font-size: 11.5px;
+  line-height: 1.6;
+  color: #a1aab3;
+}
+.ewm .tg-out .tg-meta {
+  color: #6aad5b;
+}
+.ewm .tg-meta i {
+  font-style: normal;
+  color: #5fbf4d;
+  letter-spacing: -3px;
+  margin-left: 3px;
+}
+.ewm .tg-group {
+  align-self: start;
+  max-width: 86%;
+  display: grid;
+  gap: 4px;
+  animation: ewm-tg-in 0.26s ease-out;
+}
+.ewm .tg-group .tg-msg {
+  max-width: none;
+  animation: none;
+}
+.ewm .tg-kb {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+}
+.ewm .tg-kb button {
+  min-height: 38px;
+  border: 0;
+  border-radius: 9px;
+  background: #3c4c3a52;
+  color: #fff;
+  font: 500 14px / 1.2 Roboto, -apple-system, BlinkMacSystemFont, sans-serif;
+  cursor: pointer;
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+.ewm .tg-kb button:hover {
+  background: #3c4c3a70;
+}
+.ewm .tg-kb button:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: -3px;
+}
+.ewm .tg-typing {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 14px;
+}
+.ewm .tg-typing i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #8fb6d6;
+  animation: ewm-tg-dot 1s infinite ease-in-out;
+}
+.ewm .tg-typing i:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.ewm .tg-typing i:nth-child(3) {
+  animation-delay: 0.3s;
+}
+.ewm .tg-compose {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 10px;
+  background: #fff;
+  color: #8a959e;
+}
+.ewm .tg-compose > svg {
+  width: 22px;
+  height: 22px;
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.ewm .tg-menu {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: #3d8fd6;
+  color: #fff;
+  border-radius: 16px;
+  padding: 5px 11px 5px 8px;
+  font-size: 13.5px;
+  font-weight: 500;
+}
+.ewm .tg-menu svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+}
+.ewm .tg-input {
+  flex: 1;
+  color: #a1aab3;
+  font-size: 15px;
+}
+.ewm .tg-home {
+  height: 17px;
+  flex: none;
+  background: #fff;
+  position: relative;
+}
+.ewm .tg-home:after {
+  content: "";
+  width: 100px;
+  height: 4px;
+  background: #1a2130;
+  border-radius: 99px;
+  position: absolute;
+  bottom: 5px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+.ewm .tg-note {
+  margin-top: 12px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--ink);
+  background: var(--tg-note);
+  border: 1px solid var(--tg-rule);
+  padding: 12px;
+  border-radius: 8px;
+}
+@keyframes ewm-tg-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes ewm-tg-dot {
+  0%,
+  80%,
+  100% {
+    opacity: 0.35;
+    transform: translateY(0);
+  }
+  40% {
+    opacity: 1;
+    transform: translateY(-3px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ewm .tg-msg,
+  .ewm .tg-group,
+  .ewm .tg-typing i,
+  .ewm .launch-announcement .is-in,
+  .ewm .launch-announcement .is-out {
+    animation: none;
+  }
+}
+
+/* Pricing: each card carries its full feature list. */
+.ewm .plan .plan-limits {
+  margin: 22px 0 0;
+}
+.ewm .plan-features {
+  width: 100%;
+  margin: 22px 0 30px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+}
+.ewm .plan-features > p {
+  font-size: 13px;
+  font-weight: 550;
+  color: var(--ink);
+}
+.ewm .plan .plan-features ul {
+  margin: 12px 0 0;
+  gap: 9px;
+  grid-template-columns: 1fr;
+}
+.ewm .plan-features li {
+  position: relative;
+  padding-left: 21px;
+  color: var(--muted);
+}
+.ewm .plan-features li:before {
+  content: "";
+  position: absolute;
+  left: 2px;
+  top: 0.42em;
+  width: 10px;
+  height: 5px;
+  border-left: 1.7px solid var(--accent);
+  border-bottom: 1.7px solid var(--accent);
+  transform: rotate(-45deg);
+}
+.ewm .plan-soon {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 0 6px;
+  border-radius: 99px;
+  background: var(--wash);
+  border: 1px solid var(--line);
+  font-size: 11px;
+  line-height: 18px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+@media (max-width: 1080px) {
+  .ewm .tg-layout {
+    grid-template-columns: 350px minmax(0, 1fr);
+    gap: 45px;
+  }
+  .ewm .tg-copy h2 {
+    font-size: 70px;
+  }
+  .ewm .tg-actions {
+    gap: 15px;
+  }
+  .ewm .launch-announcement .ann-sub {
+    font-size: 12px;
+  }
+}
+@media (max-width: 900px) {
+  .ewm .tg-layout {
+    grid-template-columns: 320px minmax(0, 1fr);
+    gap: 40px 28px;
+    padding-block: 65px;
+  }
+  .ewm .tg-proof {
+    width: 320px;
+  }
+  .ewm .tg-copy h2 {
+    font-size: 56px;
+  }
+  .ewm .tg-copy h2 span {
+    white-space: nowrap;
+  }
+  .ewm .tg-argument h3 {
+    font-size: 26px;
+  }
+  .ewm .tg-argument p {
+    font-size: 16px;
+  }
+  .ewm .tg-actions {
+    margin-top: 24px;
+  }
+  .ewm .tg-primary {
+    font-size: 14px;
+    padding-inline: 17px;
+  }
+  .ewm .tg-approval {
+    font-size: 12px;
+  }
+}
+@media (max-width: 700px) {
+  .ewm .tg-layout {
+    grid-template-columns: 1fr;
+    gap: 40px;
+    padding-block: 55px;
+  }
+  .ewm .tg-copy {
+    order: -1;
+    padding-top: 0;
+    justify-self: start;
+  }
+  .ewm .tg-copy h2 {
+    font-size: clamp(47px, 8.8vw, 66px);
+    max-width: 570px;
+  }
+  .ewm .tg-argument {
+    margin-top: 30px;
+    max-width: 470px;
+  }
+  .ewm .tg-argument h3 {
+    font-size: 27px;
+  }
+  .ewm .tg-argument p {
+    font-size: 16px;
+    margin-top: 13px;
+  }
+  .ewm .tg-actions {
+    gap: 15px;
+    margin-top: 24px;
+  }
+  .ewm .tg-proof {
+    justify-self: center;
+    width: min(100%, 350px);
+  }
+}
+@media (max-width: 600px) {
+  .ewm .plan-features {
+    grid-column: 1 / -1;
+    grid-row: 4;
+    margin: 4px 0 6px;
+    padding-top: 16px;
+  }
+  .ewm .plan .plan-features ul {
+    font-size: 13px;
+    gap: 9px;
+    grid-template-columns: 1fr;
+  }
+  .ewm .plan .button {
+    grid-row: 5;
+  }
+}
+@media (max-width: 350px) {
+  .ewm .launch-announcement .ann-mark,
+  .ewm .launch-announcement .ann-mark > svg {
+    width: 20px;
+    height: 20px;
+  }
+  .ewm .tg-copy h2 {
+    font-size: 43px;
+  }
+  .ewm .tg-argument h3 {
+    font-size: 25px;
+  }
+  .ewm .tg-actions {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 11px;
+  }
+  .ewm .tg-copy h2 span {
+    white-space: normal;
+  }
+  .ewm .tg-window {
+    height: 785px;
+    border-radius: 32px;
+    border-width: 5px;
+  }
+}

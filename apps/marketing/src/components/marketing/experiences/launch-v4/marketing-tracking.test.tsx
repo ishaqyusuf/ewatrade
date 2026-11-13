@@ -3,11 +3,12 @@ import { marketingInteraction } from "@/lib/marketing-interactions"
 import { safeBatch } from "@ewatrade/events/policy"
 import { renderToStaticMarkup } from "react-dom/server"
 import { BusinessTypesV15 } from "./business-types-v15"
-import { HeaderV15, WhatsAppAnnouncement } from "./header-v15"
+import { ChannelAnnouncement, HeaderV15 } from "./header-v15"
 import { HeroV15 } from "./hero-v15"
 import { NativePreview } from "./native-preview"
 import { ClosingV15, FaqV15, FeatureSuite, FooterV15 } from "./page-sections"
 import { PricingV15 } from "./pricing-v15"
+import { TelegramV15 } from "./telegram-v15"
 import { Walkthrough } from "./walkthrough"
 import { WhatsAppV15 } from "./whatsapp-v15"
 
@@ -16,9 +17,10 @@ test("landing controls carry accepted Logly labels, without collecting their tex
   const html = renderToStaticMarkup(
     <>
       <HeaderV15 signupEnabled dark={false} onToggleTheme={() => {}} />
-      <WhatsAppAnnouncement />
+      <ChannelAnnouncement />
       <HeroV15 signupEnabled />
       <WhatsAppV15 />
+      <TelegramV15 />
       <Walkthrough request={null} />
       <FeatureSuite />
       <NativePreview />
@@ -112,6 +114,6 @@ test("landing controls carry accepted Logly labels, without collecting their tex
     true,
   )
   expect(JSON.stringify(batch)).not.toMatch(
-    /Amina|Jawdah|4,500|Search preview|Search orders|wa.me/,
+    /Amina|Jawdah|4,500|184,500|Search preview|Search orders|wa.me|t\.me\//,
   )
 })

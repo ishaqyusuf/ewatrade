@@ -15,7 +15,7 @@ export function PricingV15({ signupEnabled }: { signupEnabled: boolean }) {
         </p>
       </div>
       <div className="plans">
-        {MARKETING_OFFERS.map((plan) => {
+        {MARKETING_OFFERS.map((plan, index) => {
           const cta = getMarketingPlanCta(plan.id, signupEnabled)
           return (
             <article className="plan" key={plan.id}>
@@ -25,7 +25,7 @@ export function PricingV15({ signupEnabled }: { signupEnabled: boolean }) {
                 <span>{plan.price === 0 ? "forever" : "/ month"}</span>
               </p>
               <p className="plan-for">{plan.description}</p>
-              <ul>
+              <ul className="plan-limits">
                 <li>
                   {count(plan.businesses)}{" "}
                   {plan.businesses === 1 ? "business" : "businesses"}
@@ -44,6 +44,26 @@ export function PricingV15({ signupEnabled }: { signupEnabled: boolean }) {
                     : `Owner + ${count(plan.staff)} staff`}
                 </li>
               </ul>
+              <div className="plan-features">
+                <p>
+                  {index > 0
+                    ? `Everything in ${MARKETING_OFFERS[index - 1]?.name}, plus:`
+                    : "Includes:"}
+                </p>
+                <ul>
+                  {plan.included.map((item) => {
+                    const [label, soon] = item.split(" · ")
+                    return (
+                      <li key={item}>
+                        {label}
+                        {soon ? (
+                          <span className="plan-soon">{soon}</span>
+                        ) : null}
+                      </li>
+                    )
+                  })}
+                </ul>
+              </div>
               <a
                 className={`button ${plan.id === "free" ? "primary" : "secondary"}`}
                 href={cta.href}
@@ -60,28 +80,6 @@ export function PricingV15({ signupEnabled }: { signupEnabled: boolean }) {
         Review plans and checkout availability in your dashboard. No payment is
         taken on this page.
       </p>
-      <details className="plan-comparison">
-        <summary {...marketingAttrs("compare", "pricing")}>
-          Compare all features
-        </summary>
-        <div className="plan-comparison-grid">
-          {MARKETING_OFFERS.map((plan, i) => (
-            <article key={plan.id}>
-              <h3>{plan.name}</h3>
-              <p>
-                {i > 0
-                  ? `Everything in ${MARKETING_OFFERS[i - 1]?.name}, plus:`
-                  : "Includes:"}
-              </p>
-              <ul>
-                {plan.included.map((item) => (
-                  <li key={item}>{item}</li>
-                ))}
-              </ul>
-            </article>
-          ))}
-        </div>
-      </details>
     </section>
   )
 }

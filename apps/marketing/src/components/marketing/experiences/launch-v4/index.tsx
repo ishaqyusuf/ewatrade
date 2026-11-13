@@ -9,7 +9,7 @@ import { preload } from "react-dom"
 import type { MarketingExperienceProps } from "../../marketing-experience-contract"
 import { AssistantFab } from "./assistant-fab"
 import { BusinessTypesV15 } from "./business-types-v15"
-import { HeaderV15, WhatsAppAnnouncement } from "./header-v15"
+import { ChannelAnnouncement, HeaderV15 } from "./header-v15"
 import { HeroV15 } from "./hero-v15"
 import { NativePreview } from "./native-preview"
 import {
@@ -20,6 +20,7 @@ import {
   WorkspaceSection,
 } from "./page-sections"
 import { PricingV15 } from "./pricing-v15"
+import { TelegramV15 } from "./telegram-v15"
 import { Walkthrough } from "./walkthrough"
 import { WhatsAppV15 } from "./whatsapp-v15"
 import "./styles/base.css"
@@ -28,6 +29,7 @@ import "./styles/whatsapp-launch.css"
 import "./styles/sections.css"
 import "./styles/integration.css"
 import "./styles/refinements.css"
+import "./styles/telegram.css"
 export function LaunchV4Landing({ signupEnabled }: MarketingExperienceProps) {
   const { track } = useEvents()
   const engagedInputs = useRef(new WeakSet<Element>())
@@ -109,9 +111,10 @@ export function LaunchV4Landing({ signupEnabled }: MarketingExperienceProps) {
         onToggleTheme={toggleTheme}
       />
       <main id="main">
-        <WhatsAppAnnouncement />
+        <ChannelAnnouncement />
         <HeroV15 signupEnabled={signupEnabled} />
         <WhatsAppV15 />
+        <TelegramV15 />
         <Walkthrough request={walkRequest} />
         <FeatureSuite />
         <WorkspaceSection />

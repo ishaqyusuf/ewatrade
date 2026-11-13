@@ -475,6 +475,12 @@ export function FooterV15({
               WhatsApp
             </a>
             <a
+              {...marketingAttrs("navigation", "footer", "telegram")}
+              href="#telegram"
+            >
+              Telegram
+            </a>
+            <a
               {...marketingAttrs("navigation", "footer", "mobile")}
               href="#mobile-preview"
             >

@@ -1,6 +1,12 @@
 import type { EventMetadata } from "@ewatrade/events/metadata"
 
-const ctaActions = ["signup", "contact", "login", "whatsapp"] as const
+const ctaActions = [
+  "signup",
+  "contact",
+  "login",
+  "whatsapp",
+  "telegram",
+] as const
 const demoActions = [
   "navigation",
   "search",
@@ -90,6 +96,7 @@ const categories = [
   "web",
   "mobile",
   "whatsapp",
+  "telegram",
   "setup",
   "sales",
   "product",

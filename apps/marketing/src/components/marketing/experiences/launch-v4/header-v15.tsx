@@ -3,7 +3,7 @@ import { getDashboardLoginUrl } from "@/lib/auth-navigation"
 import { marketingAttrs } from "@/lib/marketing-interactions"
 import { useEffect, useRef, useState } from "react"
 import { WebSignupCta } from "./cta"
-import { BrandMark, Icon, WhatsAppMark } from "./icons"
+import { BrandMark, Icon, TelegramMark, WhatsAppMark } from "./icons"
 export function HeaderV15({
   signupEnabled,
   dark,
@@ -50,7 +50,7 @@ export function HeaderV15({
           >
             {(
               [
-                ["WhatsApp", "assistant", "whatsapp"],
+                ["Assistant", "assistant", "whatsapp"],
                 ["How it works", "journey", "journey"],
                 ["Features", "features", "features"],
                 ["Pricing", "pricing", "pricing"],
@@ -134,17 +134,74 @@ export function HeaderV15({
     </>
   )
 }
-export function WhatsAppAnnouncement() {
+const announcementChannels = {
+  wa: { href: "#assistant", category: "whatsapp" },
+  tg: { href: "#telegram", category: "telegram" },
+} as const
+type AnnouncementChannel = keyof typeof announcementChannels
+
+/** Rolls the app name between WhatsApp and Telegram; still for reduced motion. */
+export function ChannelAnnouncement() {
+  const [channel, setChannel] = useState<AnnouncementChannel>("wa")
+  const [swapped, setSwapped] = useState(false)
+  const [still, setStill] = useState(false)
+  const [paused, setPaused] = useState(false)
+  useEffect(() => {
+    const media = matchMedia("(prefers-reduced-motion: reduce)")
+    const sync = () => setStill(media.matches)
+    sync()
+    media.addEventListener("change", sync)
+    return () => media.removeEventListener("change", sync)
+  }, [])
+  useEffect(() => {
+    if (still || paused) return
+    const timer = window.setInterval(() => {
+      if (document.hidden) return
+      setSwapped(true)
+      setChannel((current) => (current === "wa" ? "tg" : "wa"))
+    }, 3200)
+    return () => window.clearInterval(timer)
+  }, [still, paused])
+  const state = (key: AnnouncementChannel) =>
+    key === channel
+      ? swapped
+        ? "is-in"
+        : "is-on"
+      : swapped
+        ? "is-out"
+        : "is-off"
+  const shown = still ? "wa" : channel
   return (
     <a
-      className="launch-announcement"
-      href="#assistant"
-      {...marketingAttrs("navigation", "header", "whatsapp")}
+      className={`launch-announcement${still ? " is-still" : ""}`}
+      href={announcementChannels[shown].href}
+      aria-label="Meet EwaTrade on WhatsApp and Telegram. Record a sale or ask how today went."
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
+      onFocus={() => setPaused(true)}
+      onBlur={() => setPaused(false)}
+      {...marketingAttrs(
+        "navigation",
+        "header",
+        announcementChannels[shown].category,
+      )}
     >
       <span className="wrap">
-        <WhatsAppMark className="whatsapp-mark" />
-        <strong>Meet EwaTrade on WhatsApp</strong>
-        <span>See how a message becomes an order draft</span>
+        <span className="ann-mark" aria-hidden="true">
+          <WhatsAppMark className={`whatsapp-mark ann-wa ${state("wa")}`} />
+          <TelegramMark className={`telegram-mark ann-tg ${state("tg")}`} />
+        </span>
+        <strong>
+          Meet EwaTrade on{" "}
+          <span className="ann-rotor" aria-hidden="true">
+            <span className={`ann-wa ${state("wa")}`}>WhatsApp</span>
+            <span className={`ann-tg ${state("tg")}`}>Telegram</span>
+          </span>
+          <span className="ann-both" aria-hidden="true">
+            WhatsApp &amp; Telegram
+          </span>
+        </strong>
+        <span className="ann-sub">Record a sale or ask how today went</span>
         <Icon name="arrowRight" />
       </span>
     </a>
