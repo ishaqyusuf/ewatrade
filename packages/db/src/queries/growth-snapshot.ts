@@ -579,32 +579,81 @@ export async function readGrowthSalesHistory(
     const middle = Math.floor(sorted.length / 2)
     const median =
       sorted.length % 2
-        ? (sorted[middle] ?? 0n)
-        : ((sorted[middle - 1] ?? 0n) + (sorted[middle] ?? 0n)) / 2n
+        ? (sorted[middle] ?? BigInt(0))
+        : ((sorted[middle - 1] ?? BigInt(0)) + (sorted[middle] ?? BigInt(0))) /
+          BigInt(2)
     history.set(tenantId, {
       priorMonths: sorted.length,
-      bestPriorMonthMinor: sorted.at(-1) ?? 0n,
+      bestPriorMonthMinor: sorted.at(-1) ?? BigInt(0),
       medianPriorMonthMinor: median,
     })
   }
   return history
 }
 
-/** Country and currency per tenant, for checkout availability. */
+/**
+ * Country, currency and owner billing account per tenant, for checkout
+ * availability. The account carries the reviewed-country override
+ * (`WEB_BILLING_OWNER_COUNTRIES`): the account actively covering the business,
+ * else the business owner's own account, else none.
+ */
 export async function readGrowthBillingCountries(
-  db: Db,
+  db: Db | Prisma.TransactionClient,
   tenantIds: readonly string[],
 ) {
-  const tenants = tenantIds.length
-    ? await db.tenant.findMany({
-        where: { id: { in: [...tenantIds] } },
-        select: { id: true, countryCode: true, currencyCode: true },
+  if (tenantIds.length === 0) return new Map<string, GrowthBillingCountry>()
+  const ids = [...tenantIds]
+  const [tenants, coverage, owners] = await Promise.all([
+    db.tenant.findMany({
+      where: { id: { in: ids } },
+      select: { id: true, countryCode: true, currencyCode: true },
+    }),
+    db.ownerBusinessCoverage.findMany({
+      where: { activeTenantId: { in: ids } },
+      select: { tenantId: true, accountId: true },
+    }),
+    db.membership.findMany({
+      where: { tenantId: { in: ids }, role: "OWNER", status: "ACTIVE" },
+      orderBy: { createdAt: "asc" },
+      select: { tenantId: true, userId: true },
+    }),
+  ])
+  const ownerByTenant = new Map<string, string>()
+  for (const owner of owners)
+    if (!ownerByTenant.has(owner.tenantId))
+      ownerByTenant.set(owner.tenantId, owner.userId)
+  const ownerAccounts = ownerByTenant.size
+    ? await db.ownerBillingAccount.findMany({
+        where: { ownerUserId: { in: [...new Set(ownerByTenant.values())] } },
+        select: { id: true, ownerUserId: true },
       })
     : []
-  return new Map(
-    tenants.map((tenant) => [
-      tenant.id,
-      { countryCode: tenant.countryCode, currencyCode: tenant.currencyCode },
-    ]),
+  const accountByOwner = new Map(
+    ownerAccounts.map((account) => [account.ownerUserId, account.id]),
   )
+  const coveredBy = new Map(
+    coverage.map((row) => [row.tenantId, row.accountId]),
+  )
+  return new Map<string, GrowthBillingCountry>(
+    tenants.map((tenant) => {
+      const owner = ownerByTenant.get(tenant.id)
+      return [
+        tenant.id,
+        {
+          countryCode: tenant.countryCode,
+          currencyCode: tenant.currencyCode,
+          billingAccountId:
+            coveredBy.get(tenant.id) ??
+            (owner ? accountByOwner.get(owner) : undefined) ??
+            null,
+        },
+      ]
+    }),
+  )
+}
+
+export type GrowthBillingCountry = {
+  countryCode: string | null
+  currencyCode: string | null
+  billingAccountId: string | null
 }

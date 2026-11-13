@@ -10,15 +10,32 @@ type Insert = Record<string, unknown>
 function fakeTx(options: {
   members?: { role: string; userId: string }[]
   unsubscribed?: string[]
+  business?: { countryCode: string | null; currencyCode: string | null }
+  /** Owner billing account id of `owner_1`, when one exists. */
+  ownerAccountId?: string
 }) {
   const inserts: Insert[] = []
   const tx = {
     tenant: {
-      findUnique: async () => ({ countryCode: "NG", currencyCode: "NGN" }),
+      findMany: async () => [
+        {
+          id: tenantId,
+          ...(options.business ?? { countryCode: "NG", currencyCode: "NGN" }),
+        },
+      ],
+    },
+    ownerBusinessCoverage: { findMany: async () => [] },
+    ownerBillingAccount: {
+      findMany: async () =>
+        options.ownerAccountId
+          ? [{ id: options.ownerAccountId, ownerUserId: "owner_1" }]
+          : [],
     },
     membership: {
       findMany: async () =>
-        options.members ?? [{ role: "OWNER", userId: "owner_1" }],
+        (options.members ?? [{ role: "OWNER", userId: "owner_1" }]).map(
+          (member) => ({ ...member, tenantId }),
+        ),
     },
     marketingPreference: {
       findMany: async () =>
@@ -188,6 +205,51 @@ describe("real-time P08 payload and inline send", () => {
       { sendEmail: async () => {}, schedule: (run) => scheduled.push(run) },
     )(tx, usage(45))
     expect(scheduled).toHaveLength(0)
+  })
+})
+
+describe("real-time P08 billing account", () => {
+  const accountId = "0b6f3c2e-8d1a-4c5b-9e7f-1a2b3c4d5e6f"
+  const products = JSON.stringify(
+    (["starter", "growth", "pro"] as const).map((planId, index) => ({
+      provider: "paystack",
+      productId: `PLN_${planId}`,
+      planId,
+      countries: ["NG"],
+      currency: "NGN",
+      amountMinor: [500_000, 1_500_000, 3_000_000][index],
+      referenceNgnMinor: [500_000, 1_500_000, 3_000_000][index],
+    })),
+  )
+  const env = {
+    WEB_BILLING_ENVIRONMENT: "sandbox",
+    WEB_BILLING_ENABLED: "true",
+    WEB_BILLING_RECONCILIATION_ENABLED: "true",
+    OWNER_BILLING_ENABLED: "true",
+    STORE_BILLING_ENVIRONMENT: "sandbox",
+    PAYSTACK_SUBSCRIPTION_SECRET_KEY: "sk_test_x",
+    WEB_BILLING_PRODUCTS: products,
+    WEB_BILLING_OWNER_COUNTRIES: JSON.stringify({ [accountId]: "NG" }),
+  }
+  const checkoutIn = (insert: Insert | undefined) =>
+    (insert?.payload as { data?: { checkoutAvailable?: boolean } } | undefined)
+      ?.data?.checkoutAvailable
+
+  test("the owner's reviewed country turns checkout on", async () => {
+    const { tx, inserts } = fakeTx({
+      business: { countryCode: "GH", currencyCode: "GHS" },
+      ownerAccountId: accountId,
+    })
+    await createLimitPressureHandler(env)(tx, usage(45))
+    expect(checkoutIn(inserts[0])).toBe(true)
+  })
+
+  test("without a billing account the same business has no checkout", async () => {
+    const { tx, inserts } = fakeTx({
+      business: { countryCode: "GH", currencyCode: "GHS" },
+    })
+    await createLimitPressureHandler(env)(tx, usage(45))
+    expect(checkoutIn(inserts[0])).toBe(false)
   })
 })
 

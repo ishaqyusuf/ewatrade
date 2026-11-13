@@ -14,6 +14,7 @@
 // row left pending. The sender is injected because @ewatrade/jobs depends on
 // this package.
 
+import { readGrowthBillingCountries } from "@ewatrade/db/growth-snapshot"
 import {
   type LimitPressureHandler,
   setLimitPressureHandler,
@@ -59,18 +60,17 @@ export function createLimitPressureHandler(
       setTimeout(run, delayMs)
     })
   return async (tx, usage) => {
-    const tenant = await tx.tenant.findUnique({
-      where: { id: usage.tenantId },
-      select: { countryCode: true, currencyCode: true },
-    })
-    if (!tenant) return
+    const billing = (
+      await readGrowthBillingCountries(tx, [usage.tenantId])
+    ).get(usage.tenantId)
+    if (!billing) return
     const decision = limitPressureDecision({
       planId: usage.planId,
       limit: usage.limit,
       used: usage.used,
       now: usage.now,
       checkoutAvailable: isLifecycleCheckoutAvailable(
-        { business: tenant },
+        { business: billing, billingAccountId: billing.billingAccountId },
         env,
       ),
     })

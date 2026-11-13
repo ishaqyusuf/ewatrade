@@ -436,6 +436,8 @@ export async function evaluateLifecyclePlays(
               countryCode: null,
               currencyCode: snapshot.currencyCode,
             },
+            billingAccountId: countries.get(snapshot.tenantId)
+              ?.billingAccountId,
           },
           deps.env,
         ),
