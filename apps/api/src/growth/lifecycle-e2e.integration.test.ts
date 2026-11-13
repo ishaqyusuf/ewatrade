@@ -235,7 +235,7 @@ suite("lifecycle engine end to end (fixture play, QA routing)", () => {
     // 5. RFC 8058 one-click unsubscribe from the List-Unsubscribe header.
     if (!hadPreference) {
       const unsubscribeUrl = new URL(
-        /<([^>]+)>/.exec(mail.headers["List-Unsubscribe"])?.[1] ?? "",
+        /<([^>]+)>/.exec(mail.headers["List-Unsubscribe"] ?? "")?.[1] ?? "",
       )
       const unsubscribe = await app.request(
         unsubscribeUrl.pathname + unsubscribeUrl.search,
