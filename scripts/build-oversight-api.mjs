@@ -23,6 +23,10 @@ try {
       join(root, "apps/oversight-api/src/service.ts"),
       "--target=node",
       "--format=esm",
+      // sharp loads a platform binary at runtime, so it cannot be inlined;
+      // Vercel traces it from node_modules like any other dependency.
+      "--external",
+      "sharp",
       "--outfile",
       join(root, "apps/oversight-api/src/bundle.js"),
     ],
