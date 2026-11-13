@@ -50,6 +50,11 @@ const queuedTurns: string[] = []
 const queuedDeliveries: string[] = []
 const deliveries: Delivery[] = []
 const clearedKeyboards: Array<{ chatId: string; messageId: string }> = []
+const editedReviews: Array<{
+  chatId: string
+  messageId: string
+  text: string
+}> = []
 const typingSignals: AbortSignal[] = []
 const acknowledged: string[] = []
 let update = 0
@@ -192,6 +197,16 @@ suite("Telegram assistant against guarded development QA", () => {
           clearInlineKeyboard: async (target) => {
             expect(deliveries.at(-1)?.text).toContain("Customer added")
             clearedKeyboards.push(target)
+            return { status: "accepted", messageId: target.messageId }
+          },
+          // Telegram-native phase 4: a decided review is edited to its outcome.
+          editMessageText: async (target) => {
+            expect(deliveries.at(-1)?.text).toContain("Customer added")
+            editedReviews.push({
+              chatId: target.chatId,
+              messageId: target.messageId,
+              text: target.text,
+            })
             return { status: "accepted", messageId: target.messageId }
           },
         }),
@@ -341,7 +356,8 @@ suite("Telegram assistant against guarded development QA", () => {
     )
     const readText = read.map(({ text }) => text).join("\n")
     expect(readText).toContain(existingName)
-    expect(readText).toContain(storeName)
+    // Telegram-native phase 3: no scope footer; the pinned message shows the Store.
+    expect(readText).not.toContain(storeName)
     expect(typingSignals.length).toBeGreaterThan(0)
     expect(typingSignals.every((signal) => signal.aborted)).toBe(true)
 
@@ -368,6 +384,7 @@ suite("Telegram assistant against guarded development QA", () => {
       "review has expired or changed",
     )
     expect(clearedKeyboards).toHaveLength(0)
+    expect(editedReviews).toHaveLength(0)
     expect(
       await db.customer.count({ where: { tenantId, name: addedName } }),
     ).toBe(0)
@@ -383,9 +400,15 @@ suite("Telegram assistant against guarded development QA", () => {
       first.map(({ text }) => text),
     )
     expect(typingSignals).toHaveLength(beforeCallbacks)
-    expect(clearedKeyboards).toEqual([
-      { chatId: String(telegramId), messageId: review.messageId },
+    expect(clearedKeyboards).toEqual([])
+    expect(editedReviews).toEqual([
+      {
+        chatId: String(telegramId),
+        messageId: review.messageId,
+        text: expect.stringContaining("✓ Confirmed"),
+      },
     ])
+    expect(editedReviews[0]?.text).toContain(addedName)
     expect(
       await db.customer.count({ where: { tenantId, name: addedName } }),
     ).toBe(1)
