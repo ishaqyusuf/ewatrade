@@ -17,6 +17,17 @@ const actor = {
   sessionId: `${marker}-session`,
 }
 const email = `${marker}@example.test`
+// Workshop c-second: a second EwaTrade user on the same Telegram account.
+const second = {
+  userId: `${marker}-second-user`,
+  tenantId: `${marker}-second-tenant`,
+  storeId: `${marker}-second-store`,
+  membershipId: `${marker}-second-membership`,
+  sessionId: `${marker}-second-session`,
+}
+const secondEmail = `${marker}-second@example.test`
+const secondBusiness = "Second Telegram business"
+const secondCustomer = `Second customer ${marker.slice(-8)}`
 const botId = randomInt(1_000_000_000, 9_999_999_999)
 const telegramId = randomInt(10_000_000_000, 99_999_999_999)
 const webhookSecret = "synthetic-telegram-webhook-secret"
@@ -33,8 +44,8 @@ const environment = {
   ASSISTANT_TELEGRAM_BOT_USERNAME: "ewatrade_rehearsal_bot",
   ASSISTANT_TELEGRAM_BOT_TOKEN: `${botId}:synthetic-telegram-bot-token`,
   ASSISTANT_TELEGRAM_WEBHOOK_SECRET: webhookSecret,
-  ASSISTANT_TELEGRAM_PILOT_USER_IDS: actor.userId,
-  ASSISTANT_TELEGRAM_PILOT_TENANT_IDS: actor.tenantId,
+  ASSISTANT_TELEGRAM_PILOT_USER_IDS: `${actor.userId},${second.userId}`,
+  ASSISTANT_TELEGRAM_PILOT_TENANT_IDS: `${actor.tenantId},${second.tenantId}`,
   ASSISTANT_TELEGRAM_RELEASED_CAPABILITY_IDS: "customers.page,customers.create",
   ASSISTANT_APPROVAL_SIGNING_KEY: "synthetic-telegram-approval-signing-key",
   ASSISTANT_APPROVAL_SIGNING_KEY_VERSION: "v1",
@@ -273,6 +284,44 @@ suite("Telegram assistant against guarded development QA", () => {
       await tx.customer.create({
         data: { name: existingName, tenantId: actor.tenantId },
       })
+      await tx.user.create({
+        data: { id: second.userId, email: secondEmail, ageBand: "ADULT" },
+      })
+      await tx.tenant.create({
+        data: {
+          id: second.tenantId,
+          slug: second.tenantId,
+          name: secondBusiness,
+          type: "MERCHANT",
+          enabledModes: ["MERCHANT"],
+          currencyCode: "NGN",
+          metadata: { retailOps: { subscription: { planId: "pro" } } },
+          dataClassification: "QA",
+          qaMarkedAt: new Date(),
+          qaSourceDomain: source,
+        },
+      })
+      await tx.membership.create({
+        data: {
+          id: second.membershipId,
+          userId: second.userId,
+          tenantId: second.tenantId,
+          role: "OWNER",
+          status: "ACTIVE",
+        },
+      })
+      await tx.store.create({
+        data: {
+          id: second.storeId,
+          tenantId: second.tenantId,
+          slug: second.storeId,
+          name: "Second Telegram Store",
+          status: "ACTIVE",
+        },
+      })
+      await tx.customer.create({
+        data: { name: secondCustomer, tenantId: second.tenantId },
+      })
     })
     created = true
   }, 90_000)
@@ -297,11 +346,35 @@ suite("Telegram assistant against guarded development QA", () => {
           expect([existingName, addedName]).toContain(customer.name)
         expect(await db.commercialOrder.count({ where: { tenantId } })).toBe(0)
         expect(await db.financeBook.count({ where: { tenantId } })).toBe(0)
+        const secondScopeKey = {
+          startsWith: `assistant:${second.tenantId}:GENERAL:`,
+        }
+        const secondOwned = {
+          id: second.tenantId,
+          slug: second.tenantId,
+          qaSourceDomain: source,
+          dataClassification: "QA" as const,
+        }
         await db.$transaction([
           db.assistantBudget.deleteMany({ where: { scopeKey } }),
+          db.assistantBudget.deleteMany({
+            where: { scopeKey: secondScopeKey },
+          }),
           db.tenant.deleteMany({ where: owned }),
+          db.tenant.deleteMany({ where: secondOwned }),
           db.user.deleteMany({ where: { id: userId, email } }),
+          db.user.deleteMany({
+            where: { id: second.userId, email: secondEmail },
+          }),
         ])
+        expect(await db.tenant.count({ where: { id: second.tenantId } })).toBe(
+          0,
+        )
+        expect(
+          await db.assistantTelegramIdentity.count({
+            where: { userId: second.userId },
+          }),
+        ).toBe(0)
         expect(await db.tenant.count({ where: { id: tenantId } })).toBe(0)
         expect(await db.user.count({ where: { id: userId } })).toBe(0)
         expect(
@@ -429,6 +502,147 @@ suite("Telegram assistant against guarded development QA", () => {
       { provider: "ewatrade-rehearsal", status: "COMPLETED" },
     ])
     expect(acknowledged).toHaveLength(4)
+    expect(externalCalls).toBe(0)
+  }, 240_000)
+
+  test("hands the Telegram account to a second EwaTrade user only after the first loses access", async () => {
+    if (!db) throw Error("Guarded Telegram fixture unavailable")
+    const providerBot = String(botId)
+    const telegramUserId = String(telegramId)
+    const first = await db.assistantTelegramIdentity.findUniqueOrThrow({
+      where: {
+        botId_telegramUserId: { botId: providerBot, telegramUserId },
+      },
+    })
+    expect(first).toMatchObject({ userId: actor.userId, revokedAt: null })
+    // A fresh web session: confirming needs a recent sign-in.
+    await db.session.create({
+      data: {
+        id: second.sessionId,
+        userId: second.userId,
+        token: randomUUID(),
+        expiresAt: new Date(Date.now() + 60 * 60_000),
+      },
+    })
+
+    // While the first user's access is live: busy in Telegram and EwaTrade.
+    const busyLink = await links.createAssistantTelegramLink(
+      db,
+      second,
+      providerBot,
+    )
+    await webhook(messageUpdate(`/start ${busyLink.code}`))
+    const busyReply = deliveries.at(-1)?.text ?? ""
+    expect(busyReply).toContain("already connected to another EwaTrade account")
+    expect(busyReply).toContain("/disconnect")
+    expect(busyReply).not.toContain(businessName)
+    const busy = await links.readAssistantTelegramLink(
+      db,
+      second,
+      busyLink.id,
+      providerBot,
+    )
+    expect(busy).toMatchObject({ state: "awaiting_confirmation", busy: true })
+    await expect(
+      links.confirmAssistantTelegramLink(db, second, {
+        linkId: busyLink.id,
+        revision: busy.revision,
+        botId: providerBot,
+      }),
+    ).rejects.toMatchObject({ code: "CONFLICT" })
+    expect(
+      await db.assistantTelegramIdentity.findUniqueOrThrow({
+        where: { id: first.id },
+      }),
+    ).toMatchObject({ telegramUserId, revokedAt: null, detachedAt: null })
+
+    // The Telegram holder ends the first user's access.
+    expect(
+      await links.disconnectAssistantTelegram(db, {
+        botId: providerBot,
+        userId: telegramUserId,
+        chatId: telegramUserId,
+      }),
+    ).toMatchObject({ revoked: true })
+    const firstBindings = await db.assistantTelegramBinding.count({
+      where: { identityId: first.id },
+    })
+    expect(firstBindings).toBeGreaterThan(0)
+
+    // A new link from the second user now hands the account over.
+    const link = await links.createAssistantTelegramLink(
+      db,
+      second,
+      providerBot,
+    )
+    await webhook(messageUpdate(`/start ${link.code}`))
+    expect(deliveries.at(-1)?.text).toContain(secondBusiness)
+    const pending = await links.readAssistantTelegramLink(
+      db,
+      second,
+      link.id,
+      providerBot,
+    )
+    expect(pending).toMatchObject({
+      state: "awaiting_confirmation",
+      busy: false,
+    })
+    const confirmed = await links.confirmAssistantTelegramLink(db, second, {
+      linkId: link.id,
+      revision: pending.revision,
+      botId: providerBot,
+    })
+    expect(confirmed.handedOver).toBe(true)
+
+    // The first user's record is re-keyed and kept, with its history.
+    const detached = await db.assistantTelegramIdentity.findUniqueOrThrow({
+      where: { id: first.id },
+    })
+    expect(detached).toMatchObject({
+      userId: actor.userId,
+      telegramUserId: `detached:${first.id}`,
+      detachedTelegramUserId: telegramUserId,
+      activeBindingId: null,
+    })
+    expect(detached.detachedAt).toBeInstanceOf(Date)
+    expect(detached.revokedAt).toBeInstanceOf(Date)
+    expect(
+      await db.assistantTelegramBinding.count({
+        where: { identityId: first.id },
+      }),
+    ).toBe(firstBindings)
+    expect(
+      await db.assistantTelegramGrant.count({
+        where: { identityId: first.id, revokedAt: null },
+      }),
+    ).toBe(0)
+    expect(
+      await db.assistantConversation.count({
+        where: { tenantId: actor.tenantId, ownerUserId: actor.userId },
+      }),
+    ).toBeGreaterThan(0)
+
+    // The second user owns a fresh identity, and the chat answers for them.
+    const handedOver = await db.assistantTelegramIdentity.findUniqueOrThrow({
+      where: {
+        botId_telegramUserId: { botId: providerBot, telegramUserId },
+      },
+    })
+    expect(handedOver).toMatchObject({
+      userId: second.userId,
+      chatId: telegramUserId,
+      revokedAt: null,
+      detachedAt: null,
+    })
+    expect(handedOver.id).not.toBe(first.id)
+    expect(handedOver.activeBindingId).toBeTruthy()
+
+    const read = await exchange(
+      messageUpdate(`list customers matching ${secondCustomer}`),
+    )
+    const readText = read.map(({ text }) => text).join("\n")
+    expect(readText).toContain(secondCustomer)
+    expect(readText).not.toContain(existingName)
     expect(externalCalls).toBe(0)
   }, 240_000)
 })
