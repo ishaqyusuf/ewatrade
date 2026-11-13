@@ -3,7 +3,9 @@ import { parseQaPolicy } from "./qa-policy"
 import {
   getQaPolicy,
   getQaPolicyEnvironment,
+  managedQaDomainEnabled,
   managedQaIdentity,
+  qaPolicyTarget,
 } from "./qa-policy-server"
 const originalFetch = globalThis.fetch
 const originalNow = Date.now
@@ -12,7 +14,7 @@ let clock = originalNow()
 const policy = {
   projectId: "ewatrade",
   revision: 1,
-  environments: { development: true, preview: true, production: false },
+  environments: { development: true, preview: true },
   entries: [
     {
       id: "57da5d46-6b28-44ef-8be7-d29eb6171f3f",
@@ -38,7 +40,12 @@ beforeEach(() => {
 afterEach(() => {
   globalThis.fetch = originalFetch
   Date.now = originalNow
-  for (const k of ["APP_ENV", "QA_POLICY_URL", "QA_POLICY_READ_KEY"]) {
+  for (const k of [
+    "APP_ENV",
+    "QA_POLICY_URL",
+    "QA_POLICY_READ_KEY",
+    "VERCEL_ENV",
+  ]) {
     if (originalEnv[k] === undefined) delete process.env[k]
     else process.env[k] = originalEnv[k]
   }
@@ -50,7 +57,14 @@ test("disabled and mismatched selected phones deny QA, without falling back to d
       phone: "+2348111111111",
     }),
   ).rejects.toThrow("no longer matches")
-  process.env.APP_ENV = "production"
+  globalThis.fetch = Object.assign(
+    async () =>
+      Response.json({
+        ...policy,
+        environments: { development: true, preview: false },
+      }),
+    { preconnect: originalFetch.preconnect },
+  ) as typeof fetch
   process.env.QA_POLICY_READ_KEY = crypto.randomUUID()
   await expect(
     managedQaIdentity({ phone: policy.entries[0]?.phone }),
@@ -106,4 +120,60 @@ test("revoked entries deny QA and duplicate phone bindings cannot be stored", as
       ],
     }),
   ).toThrow()
+})
+test("production never enables QA, even when an old policy says it may", async () => {
+  const legacy = parseQaPolicy({
+    ...policy,
+    environments: { development: true, preview: true, production: true },
+  })
+  expect(legacy.environments).toEqual({ development: true, preview: true })
+  globalThis.fetch = Object.assign(
+    async () =>
+      Response.json({
+        ...policy,
+        environments: { development: true, preview: true, production: true },
+      }),
+    { preconnect: originalFetch.preconnect },
+  ) as typeof fetch
+  for (const runtime of [
+    { APP_ENV: "production" },
+    { APP_ENV: "preview", VERCEL_ENV: "production" },
+    { NODE_ENV: "production" },
+  ]) {
+    const env = {
+      QA_POLICY_URL: process.env.QA_POLICY_URL,
+      QA_POLICY_READ_KEY: process.env.QA_POLICY_READ_KEY,
+      QA_ACCELERATOR_ENABLED: "true",
+      EMAIL_QA_DOMAIN_ROUTES: '{"sample.qa.test":"tester@example.com"}',
+      ...runtime,
+    }
+    expect(qaPolicyTarget(env)).toBeNull()
+    await expect(getQaPolicy(env)).rejects.toThrow(
+      "not available in production",
+    )
+    const managed = await getQaPolicyEnvironment(env)
+    expect(managed.QA_TOOLS_ENABLED).toBe("false")
+    expect(managed.QA_ACCELERATOR_ENABLED).toBe("false")
+    expect(managed.EMAIL_QA_DOMAIN_ROUTES).toBe("{}")
+  }
+  process.env.APP_ENV = "production"
+  await expect(
+    managedQaIdentity({ email: "owner@sample.qa.test" }),
+  ).rejects.toThrow("not available in production")
+  await expect(
+    managedQaIdentity({
+      entryId: policy.entries[0]?.id,
+      phone: policy.entries[0]?.phone,
+    }),
+  ).rejects.toThrow("not available in production")
+  expect(
+    await managedQaIdentity({ phone: policy.entries[0]?.phone }),
+  ).toBeNull()
+  expect(await managedQaDomainEnabled("sample.qa.test")).toBe(false)
+})
+test("Development and Preview keep reading their own flags", () => {
+  expect(qaPolicyTarget({ APP_ENV: "local" })).toBe("development")
+  expect(qaPolicyTarget({ APP_ENV: "preview", VERCEL_ENV: "preview" })).toBe(
+    "preview",
+  )
 })

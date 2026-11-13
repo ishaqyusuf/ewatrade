@@ -25,6 +25,7 @@ import {
   getTrustedPrivacyNetworkSource,
   getTrustedQaNetworkSource,
 } from "@ewatrade/utils/qa-network-source"
+import { isQaForbiddenRuntime } from "@ewatrade/utils/qa-policy"
 import { evaluateQaProviderPolicy } from "@ewatrade/utils/qa-provider-policy"
 import { TRPCError, initTRPC } from "@trpc/server"
 import type { Context } from "hono"
@@ -395,6 +396,18 @@ function assertEligibleAccountAge(eligible: boolean) {
   }
 }
 
+/** QA businesses never open in production, whatever session reached them. */
+function assertTenantAllowedInRuntime(tenantContext: TenantContext) {
+  if (
+    tenantContext.tenant.dataClassification === "QA" &&
+    isQaForbiddenRuntime()
+  )
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "QA businesses are not available in production.",
+    })
+}
+
 /** Shared by protected tRPC and authenticated byte transports. */
 export async function resolveProtectedTenantContext(
   ctx: TRPCContext,
@@ -416,6 +429,7 @@ export async function resolveProtectedTenantContext(
         code: "FORBIDDEN",
         message: "Assistant channel scope changed.",
       })
+    assertTenantAllowedInRuntime(resolved.tenantContext)
     return {
       ...ctx,
       session: resolved.identity,
@@ -466,6 +480,7 @@ export async function resolveProtectedTenantContext(
       message: "This QA tenant is being permanently purged.",
     })
   }
+  assertTenantAllowedInRuntime(tenantContext)
 
   return { ...ctx, session, tenantContext, tenantId: tenantContext.tenant.id }
 }

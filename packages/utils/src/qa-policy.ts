@@ -7,10 +7,31 @@ export type QaPolicyEntry = {
   accountId: string | null
   active: boolean
 }
+/**
+ * QA runs only in Development and Preview (owner decision, 13 Nov 2026).
+ * Production is not a QA environment and cannot be switched on.
+ */
+export const QA_ENVIRONMENTS = ["development", "preview"] as const
+export type QaEnvironment = (typeof QA_ENVIRONMENTS)[number]
+
+/**
+ * True on any production deploy. Any production signal wins, so a stray
+ * APP_ENV cannot reopen QA on a production server.
+ */
+export function isQaForbiddenRuntime(
+  env: Record<string, string | undefined> = process.env,
+) {
+  const appEnv = env.APP_ENV?.trim().toLowerCase()
+  return (
+    appEnv === "production" ||
+    env.VERCEL_ENV?.trim().toLowerCase() === "production" ||
+    (!appEnv && env.NODE_ENV?.trim().toLowerCase() === "production")
+  )
+}
 export type QaPolicy = {
   projectId: "ewatrade"
   revision: number
-  environments: Record<"development" | "preview" | "production", boolean>
+  environments: Record<QaEnvironment, boolean>
   entries: QaPolicyEntry[]
 }
 
@@ -23,11 +44,7 @@ export function parseQaPolicy(value: unknown): QaPolicy {
     !Number.isInteger(p.revision) ||
     p.revision < 0 ||
     !p.environments ||
-    ["development", "preview", "production"].some(
-      (k) =>
-        typeof p.environments?.[k as keyof QaPolicy["environments"]] !==
-        "boolean",
-    ) ||
+    QA_ENVIRONMENTS.some((k) => typeof p.environments?.[k] !== "boolean") ||
     !Array.isArray(p.entries) ||
     p.entries.length > 100
   )
@@ -77,5 +94,12 @@ export function parseQaPolicy(value: unknown): QaPolicy {
     if (e.phone) phones.add(e.phone)
     if (e.accountId) accounts.add(e.accountId)
   }
-  return p as QaPolicy
+  // Older policies may still carry `production`; it is dropped, never honoured.
+  return {
+    ...(p as QaPolicy),
+    environments: {
+      development: p.environments.development,
+      preview: p.environments.preview,
+    },
+  }
 }

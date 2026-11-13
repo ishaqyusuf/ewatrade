@@ -6,6 +6,7 @@ import {
 } from "@ewatrade/utils/legal-approval"
 import {
   getQaPolicy,
+  isQaForbiddenRuntime,
   managedQaIdentity,
 } from "@ewatrade/utils/qa-policy-server"
 import type { PrismaClient } from "../../generated/prisma/client"
@@ -116,7 +117,9 @@ export async function createPhoneOtp(
     input.mode === "sign_up"
       ? resolveLegalSignupChoice(input, currentEffectiveLegalPublication())
       : null
-  if (input.mode === "sign_up") await getQaPolicy()
+  // Outside production a signup must read the QA policy so a tester phone is
+  // never adopted as live. Production has no QA, so there is nothing to check.
+  if (input.mode === "sign_up" && !isQaForbiddenRuntime()) await getQaPolicy()
   const entry =
     input.qaEntryId || input.mode === "sign_up"
       ? await managedQaIdentity({ phone, entryId: input.qaEntryId })

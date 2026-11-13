@@ -3,7 +3,10 @@ import type {
   OperatingCurrencyCode,
 } from "@ewatrade/utils"
 import { getStorefrontDomain, withQaWorkspaceSuffix } from "@ewatrade/utils"
-import { managedQaIdentity } from "@ewatrade/utils/qa-policy-server"
+import {
+  isQaForbiddenRuntime,
+  managedQaIdentity,
+} from "@ewatrade/utils/qa-policy-server"
 import { isClaimableStoreLink } from "@ewatrade/utils/store-link"
 import { Prisma } from "../../generated/prisma/client"
 import { AccountAgeBand } from "../../generated/prisma/enums"
@@ -148,6 +151,8 @@ async function createUniqueTenant(
     qaSourceDomain?: string | null
   },
 ) {
+  if (input.qaSourceDomain && isQaForbiddenRuntime())
+    throw new Error("QA businesses cannot be created in production.")
   if (input.requestedSlug !== undefined) {
     const requestedSlug = withQaWorkspaceSuffix(
       input.requestedSlug,

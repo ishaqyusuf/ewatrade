@@ -74,6 +74,21 @@ describe("QA accelerator contract", () => {
         APP_ENV: "production",
       }),
     ).toThrow("cannot be enabled")
+    expect(() =>
+      assertQaAcceleratorStartupSafety({
+        ...enabledEnv,
+        VERCEL_ENV: "production",
+      }),
+    ).toThrow("cannot be enabled")
+    expect(
+      getQaAcceleratorAvailability({
+        env: {
+          ...enabledEnv,
+          QA_ACCELERATOR_ENABLED: "false",
+          VERCEL_ENV: "production",
+        },
+      }),
+    ).toMatchObject({ available: false, category: "environment_not_allowed" })
   })
 
   test("generates deterministic exact-domain safe identities", () => {

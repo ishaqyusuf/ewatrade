@@ -1,23 +1,36 @@
-import { type QaPolicy, type QaPolicyEntry, parseQaPolicy } from "./qa-policy"
+import {
+  type QaEnvironment,
+  type QaPolicy,
+  type QaPolicyEntry,
+  isQaForbiddenRuntime,
+  parseQaPolicy,
+} from "./qa-policy"
 
 const validityMs = 60_000
 let cached: { key: string; policy: QaPolicy; fetchedAt: number } | undefined
 let pending: { key: string; promise: Promise<QaPolicy> } | undefined
+type RuntimeEnv = Record<string, string | undefined>
+export { isQaForbiddenRuntime }
+
+/** The QA environment this server belongs to; never production. */
 export function qaPolicyTarget(
-  env: Record<string, string | undefined> = process.env,
-) {
+  env: RuntimeEnv = process.env,
+): QaEnvironment | null {
+  if (isQaForbiddenRuntime(env)) return null
   const value = (env.APP_ENV || env.NODE_ENV || "").trim().toLowerCase()
-  if (["local", "dev", "development"].includes(value))
-    return "development" as const
-  if (value === "preview" || value === "production") return value
+  if (["local", "dev", "development"].includes(value)) return "development"
+  if (value === "preview") return "preview"
   return null
 }
+
+const qaUnavailableInProduction = "QA is not available in production."
 
 /** Server-only central read. A failed refresh never extends the 60-second validity. */
 export async function getQaPolicy(
   env: Record<string, string | undefined> = process.env,
 ): Promise<QaPolicy> {
   if (typeof window !== "undefined") throw new Error("QA policy is server-only")
+  if (isQaForbiddenRuntime(env)) throw new Error(qaUnavailableInProduction)
   const target = qaPolicyTarget(env)
   const rawUrl = env.QA_POLICY_URL?.trim()
   const secret = env.QA_POLICY_READ_KEY?.trim()
@@ -74,13 +87,14 @@ export async function getQaPolicy(
 export async function getQaPolicyEnvironment(
   env: Record<string, string | undefined> = process.env,
 ) {
-  let policy: QaPolicy | null = null
-  try {
-    policy = await getQaPolicy(env)
-  } catch {
-    /* QA fails closed; ordinary authentication remains available. */
-  }
   const target = qaPolicyTarget(env)
+  let policy: QaPolicy | null = null
+  if (target)
+    try {
+      policy = await getQaPolicy(env)
+    } catch {
+      /* QA fails closed; ordinary authentication remains available. */
+    }
   const enabled = !!(target && policy?.environments[target])
   const routes = Object.fromEntries(
     (enabled ? (policy?.entries ?? []) : [])
@@ -91,7 +105,7 @@ export async function getQaPolicyEnvironment(
     ...env,
     EMAIL_QA_DOMAIN_ROUTES: JSON.stringify(routes),
     QA_TOOLS_ENABLED: String(enabled),
-    QA_ACCELERATOR_ENABLED: String(enabled && target !== "production"),
+    QA_ACCELERATOR_ENABLED: String(enabled),
   }
 }
 
@@ -105,6 +119,12 @@ export async function managedQaIdentity(
   options: { requireActive?: boolean } = {},
 ): Promise<QaPolicyEntry | null> {
   const reserved = input.email?.trim().toLowerCase().endsWith(".test")
+  // Production has no QA identities: reserved QA logins are refused and every
+  // other identity is ordinary, whatever an old policy or client says.
+  if (isQaForbiddenRuntime()) {
+    if (reserved || input.entryId) throw new Error(qaUnavailableInProduction)
+    return null
+  }
   let policy: QaPolicy
   try {
     policy = await getQaPolicy()

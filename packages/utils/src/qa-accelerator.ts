@@ -1,3 +1,5 @@
+import { isQaForbiddenRuntime } from "./qa-policy"
+
 export const QA_ACCELERATOR_CONTRACT_VERSION = 1 as const
 
 export const QA_ACCELERATOR_CLIENT_PLATFORMS = ["mobile", "web"] as const
@@ -28,6 +30,7 @@ export type QaAcceleratorServerEnv = {
   QA_ACCELERATOR_ALLOWED_ORIGINS?: string
   QA_ACCELERATOR_ENABLED?: string
   QA_ACCELERATOR_SECRET?: string
+  VERCEL_ENV?: string
 }
 
 export type QaFormCoverageKind = "excluded" | "prerequisite" | "recipe"
@@ -133,13 +136,7 @@ export function isConfiguredQaDomain(
 }
 
 export function assertQaAcceleratorStartupSafety(env: QaAcceleratorServerEnv) {
-  const appEnvironment = normalizeEnvironment(env.APP_ENV)
-  const nodeEnvironment = normalizeEnvironment(env.NODE_ENV)
-  const effectiveEnvironment = appEnvironment || nodeEnvironment
-  if (
-    env.QA_ACCELERATOR_ENABLED === "true" &&
-    effectiveEnvironment === "production"
-  ) {
+  if (env.QA_ACCELERATOR_ENABLED === "true" && isQaForbiddenRuntime(env)) {
     throw new Error(
       "QA accelerator cannot be enabled in a production server environment.",
     )
@@ -158,7 +155,7 @@ export function getQaAcceleratorAvailability(input: {
   const effectiveEnvironment = appEnvironment || nodeEnvironment
 
   if (
-    effectiveEnvironment === "production" ||
+    isQaForbiddenRuntime(input.env) ||
     !["local", "dev", "development", "preview"].includes(effectiveEnvironment)
   ) {
     return {

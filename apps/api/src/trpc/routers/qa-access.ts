@@ -13,10 +13,7 @@ import {
   getQaAcceleratorAvailability,
   isConfiguredQaDomain,
 } from "@ewatrade/utils/qa-accelerator"
-import {
-  getQaPolicyEnvironment,
-  qaPolicyTarget,
-} from "@ewatrade/utils/qa-policy-server"
+import { getQaPolicyEnvironment } from "@ewatrade/utils/qa-policy-server"
 import { TRPCError } from "@trpc/server"
 import { z } from "zod"
 import { createTRPCRouter, protectedProcedure, publicProcedure } from "../init"
@@ -178,13 +175,8 @@ export const qaAccessRouter = createTRPCRouter({
         .strict(),
     )
     .mutation(async ({ ctx, input }) => {
-      if (qaPolicyTarget() !== "production")
-        await requireAvailability(input.contractVersion)
-      else if (!input.credential)
-        throw new TRPCError({
-          code: "UNAUTHORIZED",
-          message: "A tester access key is required.",
-        })
+      // QA is Development and Preview only; production never reaches a grant.
+      await requireAvailability(input.contractVersion)
       if (!(await isAcceptedQaDomain(input.qaDomain))) {
         throw new TRPCError({
           code: "BAD_REQUEST",
