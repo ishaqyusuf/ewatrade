@@ -2,8 +2,8 @@
 
 Owner decision 7 (12 Nov 2026): lifecycle mail goes out from its own sending
 subdomain, so marketing complaints cannot hurt login-code delivery from
-`ewatrade.com`. Proposed subdomain: **`mail.ewatrade.com`**. Nothing below has been
-created or changed; the owner adds it.
+`ewatrade.com`. Subdomain: **`mail.ewatrade.com`** (confirmed by the owner on
+13 Nov 2026). Nothing below has been created or changed yet; the owner adds it.
 
 ## 1. Add the domain in Resend
 
