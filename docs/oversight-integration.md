@@ -42,3 +42,9 @@ GRANT SELECT ("inboxId", "state", "createdAt") ON "AssistantTelegramOutbox" TO o
 ```
 
 Column grants keep message content, phone/sender identifiers and payloads unreadable. `Tenant` (`id`, `dataClassification`, `qaPurgeStartedAt`) is already in the reader's scope. Until the grant is applied the endpoint returns the sanitized 503, which Oversight must show as unavailable, never as zero.
+
+## QA data (Oversight QA page) — 13 November 2026
+
+`POST /api/office/qa` on the main API lists QA testers' businesses with counts and deletes one tester's QA businesses (all of them, or selected ones). Requests are signed with `OVERSIGHT_QA_KEY` (HMAC envelope, header `X-Oversight-Signature`, 60-second window); the key must be at least 32 characters and differ from the read and privacy keys. The route answers 404 on a production runtime: QA never runs in production.
+
+Hosted setup: `OVERSIGHT_QA_KEY` is set on Vercel `ewatrade-api` for Preview (branch `preview`) only, and in the local `.env.preview`. Oversight's Production project holds the same value as `EWATRADE_QA_PREVIEW_KEY`, with `EWATRADE_QA_PREVIEW_URL=https://preview-api.ewatrade.com/api/office/qa`. Development has no hosted API, so hosted Oversight shows Development as not connected; a local Oversight can point `EWATRADE_QA_DEVELOPMENT_URL` at a local API.
