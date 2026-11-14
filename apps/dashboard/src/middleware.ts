@@ -93,6 +93,7 @@ export function middleware(request: NextRequest) {
     request.nextUrl.pathname.startsWith("/assistant/c/") ||
     request.nextUrl.pathname === "/assistant-review" ||
     request.nextUrl.pathname.startsWith("/r/") ||
+    request.nextUrl.pathname.startsWith("/receipt-approval/") ||
     request.nextUrl.pathname === "/storefront-preview" ||
     request.nextUrl.pathname === "/storefront" ||
     request.nextUrl.pathname.startsWith("/storefront/updates/") ||
@@ -103,7 +104,10 @@ export function middleware(request: NextRequest) {
         request.nextUrl.searchParams
           .get("next")
           ?.startsWith("/open/assistant-response/") ||
-        request.nextUrl.searchParams.get("next")?.startsWith("/r/")))
+        request.nextUrl.searchParams.get("next")?.startsWith("/r/") ||
+        request.nextUrl.searchParams
+          .get("next")
+          ?.startsWith("/receipt-approval/")))
   const withReviewPrivacy = (response: NextResponse) => {
     if (signupChat) {
       response.headers.set(

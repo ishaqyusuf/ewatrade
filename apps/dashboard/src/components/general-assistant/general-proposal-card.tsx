@@ -148,12 +148,14 @@ export function GeneralProposalCard({
   onReply,
   expanded = false,
   confirmLabel,
+  cancelLabel,
 }: {
   proposal: GeneralProposal
   currencyCode: string
   /** Focused reviews show the complete record before confirmation. */
   expanded?: boolean
   confirmLabel?: string
+  cancelLabel?: string
   disabled: boolean
   onConfirm: () => void
   onCancel: () => void
@@ -372,7 +374,7 @@ export function GeneralProposalCard({
                 disabled={disabled}
                 onClick={onCancel}
               >
-                {quick ? "Cancel" : "Cancel draft"}
+                {cancelLabel ?? (quick ? "Cancel" : "Cancel draft")}
               </Button>
             ) : null}
           </div>
