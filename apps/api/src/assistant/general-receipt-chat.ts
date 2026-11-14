@@ -41,6 +41,10 @@ import {
 } from "./general-context"
 import { draftGeneralProposal } from "./general-proposals"
 import {
+  handleReceiptApprovalReply,
+  offerReceiptApproval,
+} from "./general-receipt-approval"
+import {
   type ReceiptEnvironment as Environment,
   receiptReadingAvailable,
   receiptReadingConfig,
@@ -308,6 +312,19 @@ async function act(
       "Recording this needs an owner or admin. Forward the receipt to them.",
     ].join("\n"),
   }
+  /** Staff without the permission: offer to send the exact draft for approval (19l). */
+  const askOwner = async (
+    payload: GeneralAction,
+    summary: string,
+    detail?: string,
+  ) =>
+    (await offerReceiptApproval(ctx, {
+      rowId: row.id,
+      payload,
+      summary,
+      detail,
+      outcome,
+    })) ?? needsOwner
   switch (outcome.kind) {
     case "unreadable":
       await setRow(ctx, row.id, { status: "UNREADABLE" })
@@ -366,8 +383,25 @@ async function act(
       }
     }
     case "order_payment": {
-      if (!can("payment_record")) return needsOwner
       const { order, account, excessMinor } = outcome
+      if (!can("payment_record"))
+        return askOwner(
+          {
+            action: "payment_record",
+            orderId: order.id,
+            amountMinor: outcome.amountMinor,
+            moneyAccountId: account.id,
+            method: "bank_transfer",
+            note: [
+              receiptNote(extraction, currency),
+              "Receipt sent in chat for approval",
+            ]
+              .join(" · ")
+              .slice(0, 500),
+          } as GeneralAction,
+          `${naira(outcome.amountMinor, currency)} · ${from} → ${account.name}`,
+          `For ${order.orderNumber} · ${order.customerName ?? "Walk-in"}${excessMinor > 0 ? ` · ${naira(excessMinor, currency)} extra not recorded` : ""}`,
+        )
       // Kept on the order only when the sent file is stored and ready.
       const stored = await ctx.db.assistantAttachment.findUnique({
         where: { id: row.attachmentId },
@@ -402,23 +436,29 @@ async function act(
           : {},
       )
     }
-    case "own_transfer":
-      if (!can("money_transfer_simple")) return needsOwner
+    case "own_transfer": {
+      const transfer = {
+        action: "money_transfer_simple",
+        amountMinor: amount,
+        fromMoneyAccountId: outcome.from.id,
+        fromAccountName: outcome.from.name,
+        toMoneyAccountId: outcome.to.id,
+        toAccountName: outcome.to.name,
+        note: (
+          title(extraction.narration) || receiptNote(extraction, currency)
+        ).slice(0, 400),
+        effectiveAt: effectiveAt(extraction),
+      } as GeneralAction
+      if (!can("money_transfer_simple"))
+        return askOwner(
+          transfer,
+          `${money} · ${outcome.from.name} → ${outcome.to.name}`,
+        )
       return draft(
-        {
-          action: "money_transfer_simple",
-          amountMinor: amount,
-          fromMoneyAccountId: outcome.from.id,
-          fromAccountName: outcome.from.name,
-          toMoneyAccountId: outcome.to.id,
-          toAccountName: outcome.to.name,
-          note: (
-            title(extraction.narration) || receiptNote(extraction, currency)
-          ).slice(0, 400),
-          effectiveAt: effectiveAt(extraction),
-        },
+        transfer,
         `🔁 ${money} from ${outcome.from.name} to ${outcome.to.name}.`,
       )
+    }
     case "money_out": {
       if (!outcome.purpose) {
         await setRow(ctx, row.id, {
@@ -443,38 +483,51 @@ async function act(
       (purpose.type === "expense" ? purpose.categoryName : "Owner withdrawal")
     ).slice(0, 200)
     if (purpose.type === "owner_withdrawal") {
-      if (!can("money_movement") || !bookId) return needsOwner
+      if (!bookId) return needsOwner
+      const withdrawal = {
+        action: "money_movement",
+        kind: "OWNER_WITHDRAWAL",
+        bookId,
+        accountId: account.id,
+        amountMinor: String(amount),
+        description: `${description} · to ${to}`.slice(0, 400),
+        effectiveAt: effectiveAt(extraction) ?? new Date().toISOString(),
+        movementAlreadyCompleted: true,
+      } as GeneralAction
+      if (!can("money_movement"))
+        return askOwner(
+          withdrawal,
+          `${money} from ${account.name} · owner withdrawal`,
+          `To ${to}`,
+        )
       return draft(
-        {
-          action: "money_movement",
-          kind: "OWNER_WITHDRAWAL",
-          bookId,
-          accountId: account.id,
-          amountMinor: String(amount),
-          description: `${description} · to ${to}`.slice(0, 400),
-          effectiveAt: effectiveAt(extraction) ?? new Date().toISOString(),
-          movementAlreadyCompleted: true,
-        },
+        withdrawal,
         `💸 Owner withdrawal · ${money} from ${account.name}.`,
       )
     }
-    if (!can("expense_record_simple")) return needsOwner
     const saved = categoryNames.find(
       (name) => name.toLowerCase() === purpose.categoryName.toLowerCase(),
     )
+    const expense = {
+      action: "expense_record_simple",
+      amountMinor: amount,
+      description,
+      moneyAccountId: account.id,
+      accountName: account.name,
+      // Only a saved category; otherwise the Book’s Operating expenses fallback.
+      ...(saved ? { categoryName: saved } : {}),
+      payeeName: to.slice(0, 160),
+      paid: true,
+      effectiveAt: effectiveAt(extraction),
+    } as GeneralAction
+    if (!can("expense_record_simple"))
+      return askOwner(
+        expense,
+        `${money} from ${account.name} · ${saved ?? "Operating expenses"}`,
+        `To ${to}`,
+      )
     return draft(
-      {
-        action: "expense_record_simple",
-        amountMinor: amount,
-        description,
-        moneyAccountId: account.id,
-        accountName: account.name,
-        // Only a saved category; otherwise the Book’s Operating expenses fallback.
-        ...(saved ? { categoryName: saved } : {}),
-        payeeName: to.slice(0, 160),
-        paid: true,
-        effectiveAt: effectiveAt(extraction),
-      },
+      expense,
       `💸 Expense · ${saved ?? "Operating expenses"} · ${money} from ${account.name}.`,
     )
   }
@@ -683,6 +736,12 @@ export async function handleReceiptFollowUp(
 ): Promise<ReceiptChatReply | null> {
   const text = input.text.trim()
   if (!text || text.length > 120 || !receiptReadingConfig(env)) return null
+  // `ask` / `cancel` after a staff approval offer (19l) comes first.
+  const approval = await handleReceiptApprovalReply(ctx, {
+    conversationId: input.conversationId,
+    text,
+  })
+  if (approval) return approval
   if (/^(?:proceed|confirm|cancel|yes|go ahead|done|save)[.!]*$/i.test(text))
     return null
   const scope = requireGeneralScope(ctx)

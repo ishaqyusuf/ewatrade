@@ -1,11 +1,5 @@
 import { assistantProviderApiKey } from "@ewatrade/ai/provider"
-import { capabilityForAction } from "@ewatrade/assistant/capabilities/manifest"
-import type { GeneralAction } from "@ewatrade/assistant/general/contracts"
-import {
-  type GeneralContext,
-  canDraftGeneralCapability,
-  requireGeneralScope,
-} from "./general-context"
+import { type GeneralContext, requireGeneralScope } from "./general-context"
 
 export type ReceiptEnvironment = Readonly<Record<string, string | undefined>>
 type Environment = ReceiptEnvironment
@@ -42,14 +36,7 @@ export function receiptReadingAvailable(
     return false
   }
   if (classification === "QA" && !config.qaLive) return false
-  return [
-    "payment_record",
-    "money_transfer_simple",
-    "expense_record_simple",
-  ].some((action) =>
-    canDraftGeneralCapability(
-      ctx,
-      capabilityForAction(action as GeneralAction["action"]),
-    ),
-  )
+  // Staff who can't record the money still send receipts: they ask an
+  // Owner/Admin to approve (general-receipt-approval). Customers never reach here.
+  return true
 }

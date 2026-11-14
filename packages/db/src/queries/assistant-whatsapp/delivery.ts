@@ -101,6 +101,10 @@ import {
 import { nativeOrderReviewPageInfo } from "./order-review-pages"
 import { assistantWhatsAppReadPaginationButtons } from "./read-pagination"
 import { assistantWhatsAppReplyChoiceButtons } from "./reply-choices"
+import {
+  WHATSAPP_SERVER_NOTICE_KIND,
+  WHATSAPP_SERVER_NOTICE_VERSION,
+} from "./server-notice"
 import { reserveAssistantWhatsAppTransportInTransaction } from "./usage"
 import { resolveAssistantWhatsAppWebReviewDispatch } from "./web-review-dispatch"
 import { resolveAssistantWhatsAppWebReviewOutcome } from "./web-review-outcome"
@@ -669,6 +673,20 @@ export function beginAssistantWhatsAppDelivery(
             if (expected !== body)
               return cancel("cancelled", "SAVED_RESULT_CHANGED")
           }
+        } else if (row.renderKind === WHATSAPP_SERVER_NOTICE_KIND) {
+          // A later server message (a receipt approval result or request) on the
+          // user's own recent inbox; the text was fixed and hashed when staged.
+          if (
+            row.inbox.kind !== "TURN" ||
+            row.runId ||
+            row.messageId ||
+            row.rendererVersion !== WHATSAPP_SERVER_NOTICE_VERSION ||
+            row.chunkCount !== 1 ||
+            row.chunkIndex !== 0 ||
+            !body ||
+            body.length > 4096
+          )
+            return cancel("cancelled", "SAVED_REPLY_CHANGED")
         } else if (row.renderKind === "notice") {
           const notice = whatsAppNoticeContentSchema.safeParse(
             row.inbox.content,
@@ -1313,7 +1331,8 @@ export function beginAssistantWhatsAppDelivery(
                   ? "transcript"
                   : row.renderKind === "app_review"
                     ? "handoff"
-                    : row.renderKind === "notice"
+                    : row.renderKind === "notice" ||
+                        row.renderKind === WHATSAPP_SERVER_NOTICE_KIND
                       ? "notice"
                       : "reply",
     }

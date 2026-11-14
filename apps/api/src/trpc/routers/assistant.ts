@@ -30,6 +30,11 @@ import {
   editGeneralProposal,
   generalProposalWithReview,
 } from "../../assistant/general-proposals"
+import {
+  decideReceiptApproval,
+  listReceiptApprovals,
+  openReceiptApproval,
+} from "../../assistant/general-receipt-approval"
 import { simpleExpenseOptions } from "../../assistant/general-simple-expense"
 import { simpleSaleOptions } from "../../assistant/general-simple-sale"
 import { simpleTransferOptions } from "../../assistant/general-simple-transfer"
@@ -268,6 +273,27 @@ export const assistantRouter = createTRPCRouter({
       await showTelegramHandoffOutcome(ctx, proposal)
       return proposal
     }),
+  // Cashier receipts waiting on an Owner/Admin (Workshop 19l).
+  receiptApprovals: protectedProcedure.query(({ ctx }) =>
+    listReceiptApprovals(ctx),
+  ),
+  // POST: opening drafts the approver's own reviewed proposal.
+  openReceiptApproval: protectedProcedure
+    .input(z.object({ id }).strict())
+    .mutation(({ ctx, input }) => openReceiptApproval(ctx, input.id)),
+  decideReceiptApproval: protectedProcedure
+    .input(
+      z
+        .object({
+          id,
+          decision: z.enum(["approve", "decline"]),
+          proposalId: id.optional(),
+          revision: z.number().int().positive().optional(),
+          approvalToken: z.string().max(128).optional(),
+        })
+        .strict(),
+    )
+    .mutation(({ ctx, input }) => decideReceiptApproval(ctx, input)),
   editProposal: protectedProcedure
     .input(
       z

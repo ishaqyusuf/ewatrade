@@ -27,6 +27,16 @@ model AssistantReceiptRead {
   inputTokens       Int?
   outputTokens      Int?
   errorCode         String?
+  // Staff without the permission ask an Owner/Admin: the exact action to approve,
+  // its one-line summary, and who decided. The approver records it as themselves.
+  approvalAction        Json?
+  approvalSummary       String?
+  approvalRequestedAt   DateTime?
+  approvalExpiresAt     DateTime?
+  approvalDecidedByUserId String?
+  approvalDecidedAt     DateTime?
+  // Set once the cashier's chat was told the result (or it could not be).
+  approvalNotifiedAt    DateTime?
   createdAt         DateTime                   @default(now())
   updatedAt         DateTime                   @updatedAt
 
@@ -35,6 +45,7 @@ model AssistantReceiptRead {
   @@index([tenantId, bankReference])
   @@index([conversationId, actorUserId, createdAt])
   @@index([tenantId, createdAt])
+  @@index([tenantId, storeId, status, approvalExpiresAt])
 }
 
 enum AssistantReceiptReadStatus {
@@ -48,4 +59,10 @@ enum AssistantReceiptReadStatus {
   DRAFTED
   DUPLICATE
   RESOLVED
+  // Staff approval request: offered in chat, sent to Owners/Admins, then decided.
+  APPROVAL_OFFERED
+  APPROVAL_PENDING
+  APPROVED
+  DECLINED
+  CANCELLED
 }

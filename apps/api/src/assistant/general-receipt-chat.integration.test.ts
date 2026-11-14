@@ -22,6 +22,11 @@ import {
   generalProposalWithReview,
 } from "./general-proposals"
 import {
+  decideReceiptApproval,
+  listReceiptApprovals,
+  openReceiptApproval,
+} from "./general-receipt-approval"
+import {
   handleReceiptChat,
   handleReceiptFollowUp,
 } from "./general-receipt-chat"
@@ -107,6 +112,7 @@ if (enabled) setDefaultTimeout(240_000)
       const marker = randomUUID()
       let tenantId: string | undefined
       let userId: string | undefined
+      let cashierId: string | undefined
       try {
         const user = await db.user.create({
           data: {
@@ -246,14 +252,19 @@ if (enabled) setDefaultTimeout(240_000)
         })
         const contentDigest = createHash("sha256").update(RECEIPT).digest("hex")
         let sent = 0
-        async function receipt() {
+        async function receipt(
+          owner: { userId: string; conversationId: string } = {
+            userId: user.id,
+            conversationId: conversation.id,
+          },
+        ) {
           sent += 1
           const row = await db.assistantAttachment.create({
             data: {
-              actorUserId: user.id,
+              actorUserId: owner.userId,
               contentDigest,
               contentType: "image/jpeg",
-              conversationId: conversation.id,
+              conversationId: owner.conversationId,
               fileName: `receipt-${sent}.jpg`,
               kind: "IMAGE",
               messageId: `msg_${marker}_${sent}`,
@@ -475,8 +486,182 @@ if (enabled) setDefaultTimeout(240_000)
           where: { tenantId },
         })
         expect(reads).toBe(sent)
+
+        // 19l: a cashier can't record transfers; Ada (the owner) approves by link.
+        const cashier = await db.user.create({
+          data: {
+            email: `chat-receipt-cashier-${marker}@example.test`,
+            name: "Bisi Ojo",
+            ageBand: "ADULT",
+          },
+        })
+        cashierId = cashier.id
+        await db.membership.create({
+          data: { tenantId, userId: cashier.id, role: "CASHIER" },
+        })
+        const cashierSession = await db.session.create({
+          data: {
+            userId: cashier.id,
+            token: `chat-receipt-cashier-${marker}`,
+            expiresAt: new Date(Date.now() + 60 * 60_000),
+          },
+        })
+        const cashierTenant = await getActiveTenantForUser(db, {
+          userId: cashier.id,
+          tenantSlug: tenant.slug,
+          storeId: store.id,
+        })
+        if (!cashierTenant) throw Error("Cashier context missing")
+        const cashierCtx: GeneralContext = {
+          ...ctx,
+          session: { session: cashierSession, user: cashier },
+          tenantContext: cashierTenant,
+        }
+        const till = await db.assistantConversation.create({
+          data: {
+            ownerUserId: cashier.id,
+            purpose: "GENERAL",
+            status: "ACTIVE",
+            storeId: store.id,
+            tenantId,
+          },
+        })
+        const silent = {
+          telegramConfig: () => null,
+          enqueue: async () => undefined,
+        }
+        const fromBisi = async (amountText: string) =>
+          handleReceiptChat(
+            cashierCtx,
+            {
+              conversationId: till.id,
+              text: "today sales",
+              attachments: [
+                await receipt({ userId: cashier.id, conversationId: till.id }),
+              ],
+            },
+            {
+              env,
+              read: read({
+                amountText,
+                senderName: "BISI OJO",
+                senderAccount: "810****051",
+                senderBank: "OPay",
+                narration: "today sales",
+              }),
+            },
+          )
+        const offered = await fromBisi("180,000")
+        expect(offered?.proposalId).toBeUndefined()
+        expect(offered?.text).toContain("Transfer to approve")
+        expect(offered?.text).toContain("Receipt approves transfers")
+        const asking = await handleReceiptFollowUp(
+          cashierCtx,
+          { conversationId: till.id, text: "ask" },
+          env,
+        )
+        expect(asking?.text).toContain("Waiting for Receipt to approve")
+        // The cashier can't open or approve it themselves.
+        expect(await listReceiptApprovals(cashierCtx)).toEqual([])
+        const waiting = await listReceiptApprovals(ctx)
+        expect(waiting).toHaveLength(1)
+        expect(waiting[0]).toMatchObject({
+          requestedBy: "Bisi",
+          kind: "transfer",
+        })
+        const requestId = waiting[0]?.id as string
+        expect(await openReceiptApproval(cashierCtx, requestId)).toEqual({
+          status: "forbidden",
+        })
+        const opened = await openReceiptApproval(ctx, requestId)
+        if (opened.status !== "ready") throw Error(opened.status)
+        expect(opened.proposal.payload).toMatchObject({
+          action: "money_transfer_simple",
+          amountMinor: 18_000_000,
+          fromMoneyAccountId: bisi.id,
+          toMoneyAccountId: bank.id,
+        })
+        expect(opened.facts.map((fact) => fact.label)).toContain("From")
+        const approved = await decideReceiptApproval(
+          ctx,
+          {
+            id: requestId,
+            decision: "approve",
+            proposalId: opened.proposal.id,
+            revision: opened.proposal.revision,
+            approvalToken: opened.proposal.approvalToken,
+          },
+          silent,
+        )
+        expect(approved.status).toBe("approved")
+        expect(approved.proposal?.status).toBe("COMPLETED")
+        await expect(
+          decideReceiptApproval(
+            ctx,
+            {
+              id: requestId,
+              decision: "approve",
+              proposalId: opened.proposal.id,
+              revision: opened.proposal.revision,
+              approvalToken: opened.proposal.approvalToken,
+            },
+            silent,
+          ),
+        ).rejects.toThrow()
+        expect(await openReceiptApproval(ctx, requestId)).toMatchObject({
+          status: "approved",
+          decidedBy: "Receipt",
+        })
+        const told = await db.assistantMessage.findMany({
+          where: { conversationId: till.id, role: "assistant" },
+        })
+        expect(JSON.stringify(told.at(-1)?.parts)).toContain(
+          "Approved by Receipt",
+        )
+        expect(
+          await db.assistantReceiptRead.findUniqueOrThrow({
+            where: { id: requestId },
+          }),
+        ).toMatchObject({
+          status: "APPROVED",
+          approvalDecidedByUserId: user.id,
+        })
+
+        // Declined, and cancelled before asking: nothing is recorded.
+        await fromBisi("40,000")
+        await handleReceiptFollowUp(
+          cashierCtx,
+          { conversationId: till.id, text: "ask" },
+          env,
+        )
+        const second = (await listReceiptApprovals(ctx))[0]?.id as string
+        const reopened = await openReceiptApproval(ctx, second)
+        if (reopened.status !== "ready") throw Error(reopened.status)
+        expect(
+          await decideReceiptApproval(
+            ctx,
+            {
+              id: second,
+              decision: "decline",
+              proposalId: reopened.proposal.id,
+              revision: reopened.proposal.revision,
+            },
+            silent,
+          ),
+        ).toMatchObject({ status: "declined" })
+        expect((await proposal(reopened.proposal.id)).status).toBe("CANCELLED")
+        await fromBisi("5,000")
+        expect(
+          await handleReceiptFollowUp(
+            cashierCtx,
+            { conversationId: till.id, text: "cancel" },
+            env,
+          ),
+        ).toEqual({ text: "❌ Cancelled. Nothing was changed." })
+        expect(await listReceiptApprovals(ctx)).toEqual([])
       } finally {
         await removeReceiptFixtures(db)
+        if (cashierId) await db.user.deleteMany({ where: { id: cashierId } })
         if (userId) await db.user.deleteMany({ where: { id: userId } })
         await db.$disconnect()
       }
