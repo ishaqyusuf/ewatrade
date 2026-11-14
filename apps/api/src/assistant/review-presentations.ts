@@ -76,6 +76,10 @@ export function saleReviewPresentation(input: {
     accountName?: string | null
     note?: string
   }
+  /** Returnables going out with the order ("To come back"). */
+  returnables?:
+    | NonNullable<GeneralReviewPresentation["sections"]>[number]
+    | null
 }): GeneralReviewPresentation {
   const money = (minor: number) => generalMoney(minor, input.currencyCode)
   const remaining = input.totalMinor - (input.payment?.amountMinor ?? 0)
@@ -125,6 +129,7 @@ export function saleReviewPresentation(input: {
       total: { label: "Total", value: money(input.totalMinor) },
       preview: 6,
     },
+    ...(input.returnables ? { sections: [input.returnables] } : {}),
     ...(input.payment
       ? {
           note: [

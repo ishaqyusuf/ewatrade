@@ -32,6 +32,7 @@ export const nativeEditorActions: ReadonlySet<GeneralActionName> = new Set([
   "commerce_quote_reject",
   ...nativeServiceWorkActions,
   "order_attachment_add",
+  "returnable_movement_record",
   "payment_links_create",
   ...nativeChangeActions,
   ...nativeOrderActions,

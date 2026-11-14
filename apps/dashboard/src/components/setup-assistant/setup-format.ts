@@ -111,6 +111,7 @@ export function entityPayload(entity: SetupDraftEntity) {
 const USAGE_LABEL = {
   INTERNAL_USE: "Used, not sold",
   BOTH: "Sold and used",
+  RETURNABLE: "Returnable, not sold",
 } as const
 
 export function entityQuestions(entity: SetupDraftEntity) {

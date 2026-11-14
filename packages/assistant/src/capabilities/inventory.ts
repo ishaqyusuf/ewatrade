@@ -517,3 +517,8 @@ formOnly(
   "Native work completion independently of payment; no model-executable command or WhatsApp/mobile rollout added.",
   ["services.completeJob"],
 )
+formOnly(
+  "customers",
+  "Returnables history screens: the assistant reads balances and items (returnables.read) and records movements (returnables.movement.record).",
+  ["returnables.movements", "returnables.forOrder"],
+)

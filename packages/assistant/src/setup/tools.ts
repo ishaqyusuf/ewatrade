@@ -347,10 +347,10 @@ const itemInputSchema = z.object({
       "Products only: attachmentId of a product photo the owner sent for this item.",
     ),
   usage: z
-    .enum(["sell", "use", "both"])
+    .enum(["sell", "use", "both", "returnable"])
     .optional()
     .describe(
-      "Products only. sell (default): sold to customers. use: used in the business but not sold, e.g. feed, packaging, fuel; needs no selling price. both: used and also sold.",
+      "Products only. sell (default): sold to customers. use: used in the business but not sold, e.g. feed, packaging, fuel; needs no selling price. both: used and also sold. returnable: goes out with orders and comes back, e.g. egg crates, gas cylinders, bottles; no price or stock.",
     ),
   quote: quoteField,
   followUps: followUpsField,
@@ -493,11 +493,13 @@ function itemPayload(
     usage:
       input.usage === "use"
         ? ("INTERNAL_USE" as const)
-        : input.usage === "both"
-          ? ("BOTH" as const)
-          : input.usage === "sell"
-            ? ("FOR_SALE" as const)
-            : undefined,
+        : input.usage === "returnable"
+          ? ("RETURNABLE" as const)
+          : input.usage === "both"
+            ? ("BOTH" as const)
+            : input.usage === "sell"
+              ? ("FOR_SALE" as const)
+              : undefined,
   })
   warnings.push(...vocabulary)
   const sellingUnits = [...(prior?.sellingUnits ?? [])]

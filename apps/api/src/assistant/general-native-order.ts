@@ -25,6 +25,7 @@ import {
   assertGeneralOrderInitialPayment,
   requireGeneralScope,
 } from "./general-context"
+import { orderReturnablesReview } from "./general-returnables"
 import { proposalDigest } from "./proposal-security"
 
 type Order = Extract<GeneralAction, { action: "order_create" }>
@@ -138,6 +139,9 @@ export async function nativeCatalogOrderReview(
     `Received: ${money(received)}${p.initialPayment ? ` · ${p.initialPayment.method.replaceAll("_", " ")}` : " · unpaid"}`,
     `Received into: ${account}`,
     `Balance: ${money(read.totalMinor - received)}`,
+    ...(await orderReturnablesReview(ctx, p, customer?.name ?? "Walk-in")).map(
+      (row) => row.line,
+    ),
     `Handover: ${p.fulfillNow ? "handed over now; product stock is deducted" : "collect later; on-hand stays unchanged and product stock is reserved"}`,
     "Nothing is saved until you confirm.",
   )

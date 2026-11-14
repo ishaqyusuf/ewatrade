@@ -5,6 +5,11 @@ import {
 } from "@ewatrade/utils/exact-decimal"
 import type { SetupOpenQuestion, SetupProductPayload } from "./contracts"
 
+/** Shop-use and Returnable items carry no selling price. */
+export function setupUsageNeedsPrice(usage: SetupProductPayload["usage"]) {
+  return usage !== "INTERNAL_USE" && usage !== "RETURNABLE"
+}
+
 export const setupNameEqual = (left: string, right: string) =>
   left.trim().toLowerCase() === right.trim().toLowerCase()
 export type SetupVariant = NonNullable<SetupProductPayload["variants"]>[number]
@@ -245,7 +250,12 @@ export function setupProductQuestions(
     )
       need("stock", `Enter a valid stock quantity for ${payload.name}.`)
   }
-  if (payload.usage !== "INTERNAL_USE") {
+  if (payload.usage === "RETURNABLE" && payload.openingStock !== undefined)
+    need(
+      "stock",
+      `${payload.name} is Returnable: customers' balances are counted in Returnables, not stock. Remove the opening stock.`,
+    )
+  if (setupUsageNeedsPrice(payload.usage)) {
     for (const row of rows) {
       const missing = [
         row.priceMinor === undefined ? payload.unitName : null,

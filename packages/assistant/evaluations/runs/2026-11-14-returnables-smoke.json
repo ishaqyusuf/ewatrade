@@ -1,0 +1,143 @@
+[
+  {
+    "case": "returnables-farm",
+    "promptVersion": "general-v39",
+    "model": "deepseek-flash",
+    "provider": "deepseek",
+    "firstDraftMs": 1718,
+    "totalMs": 2683,
+    "text": "Ready to review.",
+    "order": {
+      "lines": [
+        {
+          "name": "Big eggs",
+          "quantity": "80",
+          "unitName": "crate",
+          "choices": [
+            {
+              "optionName": "Size",
+              "value": "Big"
+            }
+          ]
+        }
+      ],
+      "customerChoice": "saved",
+      "paymentChoice": "partial",
+      "customerName": "Musa Ibrahim",
+      "payment": {
+        "paid": true,
+        "percent": 70
+      },
+      "returnables": [
+        {
+          "name": "crates",
+          "quantity": 58
+        }
+      ]
+    },
+    "usage": {
+      "inputTokens": 24465,
+      "inputTokenDetails": {
+        "noCacheTokens": 12305,
+        "cacheReadTokens": 12160
+      },
+      "outputTokens": 147,
+      "outputTokenDetails": {
+        "textTokens": 147,
+        "reasoningTokens": 0
+      },
+      "totalTokens": 24612,
+      "reasoningTokens": 0,
+      "cachedInputTokens": 12160
+    }
+  },
+  {
+    "case": "returnables-gas",
+    "promptVersion": "general-v39",
+    "model": "deepseek-flash",
+    "provider": "deepseek",
+    "firstDraftMs": 1503,
+    "totalMs": 2669,
+    "text": "Ready to review.",
+    "order": {
+      "lines": [
+        {
+          "name": "Gas refill",
+          "quantity": "3",
+          "unitName": "12.5kg refill",
+          "choices": []
+        }
+      ],
+      "customerChoice": "saved",
+      "paymentChoice": "partial",
+      "customerName": "Mama Bisi",
+      "payment": {
+        "paid": true,
+        "amount": "45000",
+        "method": "cash"
+      },
+      "returnables": [
+        {
+          "name": "gas cylinders",
+          "quantity": 3
+        }
+      ]
+    },
+    "usage": {
+      "inputTokens": 24474,
+      "inputTokenDetails": {
+        "noCacheTokens": 410,
+        "cacheReadTokens": 24064
+      },
+      "outputTokens": 135,
+      "outputTokenDetails": {
+        "textTokens": 135,
+        "reasoningTokens": 0
+      },
+      "totalTokens": 24609,
+      "reasoningTokens": 0,
+      "cachedInputTokens": 24064
+    }
+  },
+  {
+    "case": "returnables-none",
+    "promptVersion": "general-v39",
+    "model": "deepseek-flash",
+    "provider": "deepseek",
+    "firstDraftMs": 1337,
+    "totalMs": 2592,
+    "text": "Ready to review.",
+    "order": {
+      "lines": [
+        {
+          "name": "Big eggs",
+          "quantity": "10",
+          "unitName": "crate",
+          "choices": []
+        }
+      ],
+      "customerChoice": "saved",
+      "paymentChoice": "full",
+      "customerName": "Musa Ibrahim",
+      "payment": {
+        "paid": true,
+        "method": "bank_transfer"
+      }
+    },
+    "usage": {
+      "inputTokens": 24415,
+      "inputTokenDetails": {
+        "noCacheTokens": 479,
+        "cacheReadTokens": 23936
+      },
+      "outputTokens": 106,
+      "outputTokenDetails": {
+        "textTokens": 106,
+        "reasoningTokens": 0
+      },
+      "totalTokens": 24521,
+      "reasoningTokens": 0,
+      "cachedInputTokens": 23936
+    }
+  }
+]

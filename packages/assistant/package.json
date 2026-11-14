@@ -39,6 +39,7 @@
     "./general/receipt-match": "./src/general/receipt-match.ts",
     "./general/allowance": "./src/general/allowance.ts",
     "./general/product-create": "./src/general/product-create.ts",
+    "./general/returnables": "./src/general/returnables.ts",
     "./general/prompt": "./src/general/prompt.ts",
     "./general/rehearsal": "./src/general/rehearsal.ts",
     "./general/snapshot": "./src/general/snapshot.ts",

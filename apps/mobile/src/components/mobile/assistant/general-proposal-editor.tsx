@@ -625,6 +625,44 @@ function GeneralRecordEditor({
                 />
               </>
             ) : null}
+            {payload.action === "returnable_movement_record" ? (
+              <>
+                <FormField
+                  label={payload.itemName ?? "Quantity"}
+                  value={payload.quantity ? String(payload.quantity) : ""}
+                  editable={!disabled}
+                  keyboardType="number-pad"
+                  onChangeText={(value) =>
+                    patch({ quantity: Number(value.replace(/\D/g, "")) || 0 })
+                  }
+                />
+                <View className="flex-row flex-wrap gap-2">
+                  {(
+                    [
+                      ["RETURNED", "Returned"],
+                      ["WRITTEN_OFF", "Lost"],
+                    ] as const
+                  ).map(([kind, label]) => (
+                    <ActionButton
+                      key={kind}
+                      disabled={disabled}
+                      variant={payload.kind === kind ? "default" : "outline"}
+                      onPress={() => patch({ kind })}
+                    >
+                      {label}
+                    </ActionButton>
+                  ))}
+                </View>
+                <FormField
+                  label="Note"
+                  value={payload.note ?? ""}
+                  editable={!disabled}
+                  onChangeText={(note) =>
+                    patch({ note: note.trim() || undefined })
+                  }
+                />
+              </>
+            ) : null}
             {payload.action === "order_create" ? (
               <>
                 <Text className="text-sm text-muted-foreground">

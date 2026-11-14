@@ -20,6 +20,7 @@ import {
   simpleTransferStep,
 } from "@ewatrade/assistant/general/contracts"
 import { isSimpleProductCreate } from "@ewatrade/assistant/general/product-create"
+import { orderReturnableIssues } from "@ewatrade/assistant/general/returnables"
 import { parseExactDecimal } from "@ewatrade/utils/exact-decimal"
 import type { GeneralTransactionContext } from "./general-actions"
 import type { generalProposalWithReview } from "./general-proposals"
@@ -57,6 +58,7 @@ const linesOnlyReviewActions: ReadonlySet<GeneralAction["action"]> = new Set([
   "payment_record",
   "order_create",
   "order_attachment_add",
+  "returnable_movement_record",
   "service_intake",
   "service_job_line_transition",
   "service_job_assign",
@@ -141,12 +143,16 @@ function completeFacts(
   switch (payload.action) {
     case "order_create": {
       const count = payload.lines.length
+      // "To come back" lines sit between Balance and Handover, one per returnable.
+      const back = payload.returnables?.length ?? 0
       if (
         nativeOrderChoiceIssues(payload).length ||
+        orderReturnableIssues(payload).length ||
         presentation ||
         lines.length !==
           count * 3 +
             7 +
+            back +
             (payload.notes ? 1 : 0) +
             (payload.initialPayment?.note ? 1 : 0)
       )
@@ -175,11 +181,16 @@ function completeFacts(
         ) &&
         (lines[count * 3 + 3] ?? "").startsWith("Received into: ") &&
         (lines[count * 3 + 4] ?? "").startsWith("Balance: ") &&
-        lines[count * 3 + 5] ===
+        (payload.returnables ?? []).every((entry, index) =>
+          (lines[count * 3 + 5 + index] ?? "").startsWith(
+            `To come back: ${entry.quantity} ${entry.name} · `,
+          ),
+        ) &&
+        lines[count * 3 + 5 + back] ===
           `Handover: ${payload.fulfillNow ? "handed over now; product stock is deducted" : "collect later; on-hand stays unchanged and product stock is reserved"}` &&
-        lines[count * 3 + 6] === "Nothing is saved until you confirm." &&
+        lines[count * 3 + 6 + back] === "Nothing is saved until you confirm." &&
         (!payload.initialPayment?.note ||
-          lines[count * 3 + 7] ===
+          lines[count * 3 + 7 + back] ===
             `Payment note: ${payload.initialPayment.note}`) &&
         (!payload.notes || lines.at(-1) === `Note: ${payload.notes}`)
       )
@@ -376,6 +387,17 @@ function completeFacts(
         lines.at(-1) ===
           "Adds it to the order's Notes & photos. The order's items, totals and payments do not change."
       )
+    case "returnable_movement_record":
+      // What moves, whose balance before → after, and that nothing else changes.
+      return (
+        Boolean(payload.customerName && payload.itemName) &&
+        (lines[0] ?? "").startsWith(`${payload.quantity} `) &&
+        lines[1] === `Customer: ${payload.customerName}` &&
+        lines.some((line) => /^.+ holds: \d+ → \d+$/.test(line)) &&
+        (!payload.note || lines.includes(`Note: ${payload.note}`)) &&
+        lines.at(-1) ===
+          "Records it in Returnables. Stock, sales and payments do not change."
+      )
     case "service_intake": {
       // Customer, every line with its price and work, total, payment and balance, promise, effects.
       const count = payload.lines.length
@@ -507,6 +529,7 @@ const titles: Partial<Record<GeneralAction["action"], string>> = {
   payment_record: "🧾 Review payment already received",
   product_price_update: "🧾 Review price change",
   order_attachment_add: "🧾 Review addition to order",
+  returnable_movement_record: "🧾 Review returnables",
   service_intake: "🧾 Review job",
   service_job_line_transition: "🧾 Review work update",
   service_job_assign: "🧾 Review work assignment",

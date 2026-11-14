@@ -20,6 +20,10 @@ import {
   productCreateIssues,
   productCreatePayload,
 } from "@ewatrade/assistant/general/product-create"
+import {
+  orderReturnableIssues,
+  percentOfTotalMinor,
+} from "@ewatrade/assistant/general/returnables"
 import { majorAmountToMinor } from "@ewatrade/assistant/setup/contracts"
 import {
   lockGeneralPaymentOrder,
@@ -104,6 +108,13 @@ import { purchaseRecognitionReverse } from "./general-purchase-recognition-rever
 import { purchaseRecord } from "./general-purchase-recording"
 import { purchaseRegister } from "./general-purchase-registration"
 import { quoteApprovalDecision } from "./general-quote-decision"
+import {
+  bindOrderReturnables,
+  orderReturnablesReview,
+  orderReturnablesSection,
+  returnableCount,
+  returnableMovementRecord,
+} from "./general-returnables"
 import { serviceLineAction } from "./general-service-fulfillment"
 import { serviceIntake } from "./general-service-intake"
 import { serviceMessageShare } from "./general-service-message"
@@ -577,6 +588,7 @@ const productCreate: GeneralActionAdapter<Action<"product_create">> = {
             priceMinor: payload.priceMinor,
             openingStockQuantity: payload.openingStock,
             kind: "product",
+            ...(payload.usage ? { usage: payload.usage } : {}),
             storeId: scope.storeId,
             clientOperationId: key,
           }),
@@ -673,12 +685,16 @@ export const orderCreate: GeneralActionAdapter<Action<"order_create">> = {
           : undefined
       const amountMinor = payment?.amount
         ? majorAmountToMinor(payment.amount)
-        : isNativeCatalogOrder(ctx)
-          ? (previousPayment?.amountMinor ??
-            (payload.preparation.paymentChoice === "full"
-              ? prepared.totalMinor
-              : null))
-          : prepared.totalMinor
+        : payment?.percent !== undefined
+          ? prepared.totalMinor === null
+            ? null
+            : percentOfTotalMinor(prepared.totalMinor, payment.percent)
+          : isNativeCatalogOrder(ctx)
+            ? (previousPayment?.amountMinor ??
+              (payload.preparation.paymentChoice === "full"
+                ? prepared.totalMinor
+                : null))
+            : prepared.totalMinor
       let moneyAccountId = payment?.moneyAccountId
       if (
         payment?.method &&
@@ -719,10 +735,20 @@ export const orderCreate: GeneralActionAdapter<Action<"order_create">> = {
           )
         }
       }
+      const returnables = prepared.returnables?.map((entry) =>
+        entry.status === "resolved" && entry.catalogItemId
+          ? {
+              name: entry.itemName ?? entry.name,
+              quantity: entry.quantity,
+              catalogItemId: entry.catalogItemId,
+            }
+          : { name: entry.name, quantity: entry.quantity },
+      )
       return {
         ...payload,
         prepared,
         lines,
+        returnables,
         customerChoice:
           payload.preparation.customerChoice ?? payload.customerChoice,
         paymentChoice:
@@ -796,11 +822,19 @@ export const orderCreate: GeneralActionAdapter<Action<"order_create">> = {
           : line
       }),
     )
-    return { ...payload, prepared: undefined, lines }
+    return {
+      ...payload,
+      prepared: undefined,
+      lines,
+      returnables: await bindOrderReturnables(ctx, payload.returnables),
+    }
   },
   async validate(ctx, payload, lock) {
     const scope = requireGeneralScope(ctx)
-    const preparationIssue = orderPreparationIssues(payload)[0]
+    const preparationIssue = [
+      ...orderPreparationIssues(payload),
+      ...orderReturnableIssues(payload),
+    ][0]
     if (preparationIssue) {
       if (lock)
         throw new TRPCError({ code: "BAD_REQUEST", message: preparationIssue })
@@ -859,8 +893,11 @@ export const orderCreate: GeneralActionAdapter<Action<"order_create">> = {
   },
   async review(ctx, payload) {
     const issues = [
-      ...orderPreparationIssues(payload),
-      ...(isNativeCatalogOrder(ctx) ? nativeOrderChoiceIssues(payload) : []),
+      ...new Set([
+        ...orderPreparationIssues(payload),
+        ...orderReturnableIssues(payload),
+        ...(isNativeCatalogOrder(ctx) ? nativeOrderChoiceIssues(payload) : []),
+      ]),
     ]
     if (issues.length) {
       const rows = payload.prepared?.lines ?? []
@@ -926,10 +963,13 @@ export const orderCreate: GeneralActionAdapter<Action<"order_create">> = {
       ? await paymentAccountName(ctx, payload.initialPayment)
       : undefined
     const descriptionError = generalOrderDescriptionError(payload)
+    const customerName = customer?.name ?? payload.customerName ?? "Walk-in"
+    const returnables = await orderReturnablesReview(ctx, payload, customerName)
     return {
       target: null,
       ...(descriptionError ? { question: descriptionError } : {}),
       presentation: saleReviewPresentation({
+        returnables: orderReturnablesSection(returnables, customerName),
         rows: review.rows,
         totalMinor: review.totalMinor,
         currencyCode: currency(ctx),
@@ -976,6 +1016,7 @@ export const orderCreate: GeneralActionAdapter<Action<"order_create">> = {
           : [
               `Remaining balance: ${generalMoney(review.totalMinor, currency(ctx))} · no payment recorded`,
             ]),
+        ...returnables.map((row) => row.line),
         ...(payload.notes ? [payload.notes] : []),
       ],
     }
@@ -1047,8 +1088,17 @@ async function executeCanonicalOrder(
     prepared: _prepared,
     customerChoice: _customerChoice,
     paymentChoice: _paymentChoice,
+    returnables,
     ...input
   } = payload
+  const issued = (returnables ?? []).map((entry) => {
+    if (!entry.catalogItemId)
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: `${entry.quantity} ${entry.name}: choose a Returnable item, or add one first.`,
+      })
+    return { catalogItemId: entry.catalogItemId, quantity: entry.quantity }
+  })
   const customer = payload.customerId
     ? await ctx.db.customer.findFirst({
         where: { id: payload.customerId, tenantId: scope.tenantId },
@@ -1077,7 +1127,9 @@ async function executeCanonicalOrder(
       storeId: scope.storeId,
       clientOrderId: key,
       schemaVersion: 1,
+      ...(issued.length ? { returnables: issued } : {}),
     }),
+    ...(issued.length ? { returnablesSource: "assistant" as const } : {}),
     storeId: scope.storeId,
     tenantId: scope.tenantId,
     actorUserId: scope.userId,
@@ -1087,7 +1139,7 @@ async function executeCanonicalOrder(
     recordId: result.id,
     orderId: result.id,
     title: "Order created",
-    detail: `${result.orderNumber} · total ${generalMoney(result.totalMinor, currency(ctx))} · received ${generalMoney(result.amountPaidMinor, currency(ctx))} · remaining ${generalMoney(result.balanceDueMinor, currency(ctx))}`,
+    detail: `${result.orderNumber} · total ${generalMoney(result.totalMinor, currency(ctx))} · received ${generalMoney(result.amountPaidMinor, currency(ctx))} · remaining ${generalMoney(result.balanceDueMinor, currency(ctx))}${(returnables ?? []).map((entry) => ` · ${returnableCount(entry.quantity, entry.name)} to come back`).join("")}`,
   }
 }
 
@@ -1211,6 +1263,7 @@ const adapters: {
   order_metadata_update: orderMetadataUpdate,
   order_replace: orderReplace,
   order_attachment_add: orderAttachmentAdd,
+  returnable_movement_record: returnableMovementRecord,
   sale_record: simpleSaleRecord,
   inventory_closeout_create: closeoutCreate,
   inventory_closeout_finalize: closeoutFinalize,

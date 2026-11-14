@@ -17,6 +17,7 @@ import {
   setupProductQuestions,
   setupProductVariants,
   setupSelectionsEqual,
+  setupUsageNeedsPrice,
 } from "../setup/variants"
 
 const setup = setupProductPayloadSchema.shape
@@ -51,6 +52,11 @@ const productCreateFields = z
     illustrationId: setup.illustrationId,
     /** A Catalog photo the owner uploaded on this draft's card. */
     photoAssetId: z.string().trim().min(1).max(128).optional(),
+    /**
+     * Omitted = for sale. RETURNABLE: crates, cylinders or bottles that go out
+     * with orders and come back; counted per customer, never priced or stocked.
+     */
+    usage: setup.usage,
   })
   .strict()
 
@@ -62,6 +68,14 @@ export function productCreateIssues(action: ProductCreateAction): string[] {
   const issues = setupProductQuestions(productCreatePayload(action)).map(
     (question) => question.question,
   )
+  if (action.usage === "RETURNABLE" && !isSimpleProductCreate(action))
+    issues.push(
+      `${action.name} is Returnable: keep it to one counting unit with no options or packs.`,
+    )
+  if (action.usage === "RETURNABLE" && action.priceMinor !== undefined)
+    issues.push(
+      `${action.name} is Returnable and is not sold. Remove the price; charge for a lost one with a normal sale.`,
+    )
   if (action.options?.length && action.openingStock !== undefined)
     issues.push(
       `Stock for ${action.name} is counted per option. Give stock for each option instead of one total.`,
@@ -71,7 +85,9 @@ export function productCreateIssues(action: ProductCreateAction): string[] {
     !productCategoryLabel(action.categoryKey, action.categoryLabel)
   )
     issues.push("Choose a valid product category and subcategory.")
-  for (const row of productCreateVariants(action))
+  for (const row of setupUsageNeedsPrice(action.usage)
+    ? productCreateVariants(action)
+    : [])
     for (const unit of row.sellingUnits)
       if (unit.priceMinor === undefined)
         issues.push(
@@ -121,6 +137,7 @@ export function productCreatePayload(
     variants: action.variants,
     // Catalog keeps a photo or an illustration, never both.
     illustrationId: action.photoAssetId ? undefined : action.illustrationId,
+    usage: action.usage,
   }
 }
 
@@ -215,6 +232,14 @@ export function productCreateSummary(
     quantity === undefined
       ? "opening stock not supplied"
       : `stock ${quantity} ${unit}`
+  if (action.usage === "RETURNABLE" && isSimpleProductCreate(action))
+    return [
+      `${action.name} · Returnable, counted in ${unit}`,
+      "No price, stock or storefront; customers' balances are counted in Returnables.",
+      picture,
+    ]
+      .filter(Boolean)
+      .join("\n")
   if (isSimpleProductCreate(action))
     return [
       `${action.name} · ${action.priceMinor === undefined ? "price needed" : `${money(action.priceMinor)} per ${unit}`}`,

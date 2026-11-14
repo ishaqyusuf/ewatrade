@@ -6,12 +6,12 @@ Tickets refer to the Brain plan `.brain/plans/2026-10-09-assistant-business-oper
 
 ## Summary
 
-- Router procedures: 840 (638 merchant, 202 public/account/internal)
-- Merchant supported by a capability: 185
+- Router procedures: 845 (643 merchant, 202 public/account/internal)
+- Merchant supported by a capability: 188
 - Merchant planned: 144
-- Merchant form-only: 235
+- Merchant form-only: 237
 - Merchant excluded: 74
-- Capabilities: 169 (88 read, 81 write)
+- Capabilities: 171 (89 read, 82 write)
 
 ## Capabilities
 
@@ -128,6 +128,8 @@ Tickets refer to the Brain plan `.brain/plans/2026-10-09-assistant-business-oper
 | `sales.order.metadata.update` | 1 | write (`order_metadata_update`) | `draftAction` | OWNER, ADMIN, MANAGER | reconciliation, reconciliation | dashboard, mobile, whatsapp | source | `orders.amendMetadata`, `orders.metadataReview` |
 | `sales.order.replace` | 1 | write (`order_replace`) | `draftAction` | OWNER, ADMIN, MANAGER | reconciliation, reconciliation | dashboard, mobile, whatsapp | source | `orders.replace`, `orders.replacementReview` |
 | `sales.order.attachment.add` | 1 | write (`order_attachment_add`) | `draftAction` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | orders | dashboard, mobile, whatsapp | source | `orders.activity.add` |
+| `returnables.read` | 1 | read | `readReturnableBalances` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | Owner/Admin only, Owner/Admin only | dashboard, mobile, whatsapp | source | `returnables.balances`, `returnables.items` |
+| `returnables.movement.record` | 1 | write (`returnable_movement_record`) | `draftAction` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | Owner/Admin only | dashboard, mobile, whatsapp | source | `returnables.record` |
 | `search.records` | 1 | read | `searchRecords` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | read | dashboard, mobile, whatsapp | source | `search.global` |
 | `catalog.history.read` | 1 | read | `readCatalogHistory` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | read, read | dashboard, mobile, whatsapp | source | `catalog.detail.orders`, `catalog.detail.activity` |
 | `catalog.item.read` | 1 | read | `readCatalogItem` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | read | dashboard, mobile, whatsapp | source | `catalog.detail.overview` |
@@ -311,6 +313,8 @@ track conversational evaluation separately from these source test links.
 | `sales.order.metadata.update` | Update order details | [apps/api/src/assistant/general-order-amendment.integration-check.ts](../../../../apps/api/src/assistant/general-order-amendment.integration-check.ts) |
 | `sales.order.replace` | Replace reviewed order quantities and prices | [apps/api/src/assistant/general-order-amendment.integration-check.ts](../../../../apps/api/src/assistant/general-order-amendment.integration-check.ts) |
 | `sales.order.attachment.add` | Attach this receipt to order 1042<br>Note on order 1042: customer collects at 5pm | [packages/db/src/queries/commercial-order-activity.integration.test.ts](../../../../packages/db/src/queries/commercial-order-activity.integration.test.ts) |
+| `returnables.read` | How many crates does Chidi still have?<br>Who still has our gas cylinders? | [apps/api/src/assistant/general-returnables.test.ts](../../../../apps/api/src/assistant/general-returnables.test.ts)<br>[packages/assistant/src/general/returnables.test.ts](../../../../packages/assistant/src/general/returnables.test.ts) |
+| `returnables.movement.record` | 78 crates returned by Chidi<br>30 crates came back on order 1035<br>Musa lost 5 crates, write them off | [apps/api/src/assistant/general-returnables.test.ts](../../../../apps/api/src/assistant/general-returnables.test.ts)<br>[packages/assistant/src/general/returnables.test.ts](../../../../packages/assistant/src/general/returnables.test.ts)<br>[packages/db/src/queries/returnables.integration.test.ts](../../../../packages/db/src/queries/returnables.integration.test.ts) |
 | `search.records` | Find Amina<br>Do we have eggs? | [apps/api/src/assistant/general-availability.test.ts](../../../../apps/api/src/assistant/general-availability.test.ts)<br>[apps/api/src/assistant/channel-principal.integration.test.ts](../../../../apps/api/src/assistant/channel-principal.integration.test.ts)<br>[apps/api/src/assistant/channel-turn.integration.test.ts](../../../../apps/api/src/assistant/channel-turn.integration.test.ts)<br>[packages/assistant/src/channels/render.test.ts](../../../../packages/assistant/src/channels/render.test.ts)<br>[packages/assistant/src/channels/policy.test.ts](../../../../packages/assistant/src/channels/policy.test.ts) |
 | `catalog.history.read` | Show this item's history | [apps/api/src/assistant/channel-principal.integration.test.ts](../../../../apps/api/src/assistant/channel-principal.integration.test.ts)<br>[apps/api/src/assistant/channel-principal.test.ts](../../../../apps/api/src/assistant/channel-principal.test.ts)<br>[apps/api/src/assistant/general-catalog-history.test.ts](../../../../apps/api/src/assistant/general-catalog-history.test.ts)<br>[apps/api/src/assistant/general-proposals.integration.test.ts](../../../../apps/api/src/assistant/general-proposals.integration.test.ts)<br>[packages/assistant/src/general/contracts.test.ts](../../../../packages/assistant/src/general/contracts.test.ts) |
 | `catalog.item.read` | How much is a crate of eggs? | [apps/api/src/assistant/channel-principal.integration.test.ts](../../../../apps/api/src/assistant/channel-principal.integration.test.ts)<br>[apps/api/src/assistant/channel-principal.test.ts](../../../../apps/api/src/assistant/channel-principal.test.ts) |
@@ -838,6 +842,11 @@ track conversational evaluation separately from these source test links.
 | `retailOps.staffStoreAccessReview` | query | Owner/Admin only | staff | supported | staff.access.change, staff.access.review |
 | `retailOps.subscription` | query | Owner/Admin only | platform | form_only | Subscription purchase and verification use the billing checkout. |
 | `retailOps.updateStaffStatus` | mutation | Owner/Admin only | staff | supported | staff.status.change |
+| `returnables.balances` | query | Owner/Admin only | customers | supported | returnables.read |
+| `returnables.forOrder` | query | Owner/Admin only | customers | form_only | Returnables history screens: the assistant reads balances and items (returnables.read) and records movements (returnables.movement.record). |
+| `returnables.items` | query | Owner/Admin only | customers | supported | returnables.read |
+| `returnables.movements` | query | Owner/Admin only | customers | form_only | Returnables history screens: the assistant reads balances and items (returnables.read) and records movements (returnables.movement.record). |
+| `returnables.record` | mutation | Owner/Admin only | customers | supported | returnables.movement.record |
 | `search.global` | query | read | search | supported | search.records |
 | `serviceAccess.createRequestForm` | mutation | Owner/Admin only | commerce | planned | G03 |
 | `serviceAccess.createStaffQuote` | mutation | Owner/Admin only | commerce | form_only | Dashboard manager-reviewed staff quote cart. No assistant write or channel activation is added; existing canonical quote authority and customer acceptance remain required. |

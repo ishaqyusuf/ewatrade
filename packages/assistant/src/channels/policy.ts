@@ -98,6 +98,7 @@ export const stagedNativeReviewActions = [
   "payment_record",
   "product_price_update",
   "order_attachment_add",
+  "returnable_movement_record",
   "service_intake",
   "service_job_line_transition",
   "service_job_assign",

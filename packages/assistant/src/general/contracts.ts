@@ -188,6 +188,12 @@ import {
 import { productLineReturnAction } from "./product-return"
 import { purchaseRegistrationAction } from "./purchase-registration"
 import {
+  ORDER_RETURNABLES_MAX,
+  orderReturnableLineSchema,
+  returnableMovementRecordAction,
+  returnableMovementSummary,
+} from "./returnables"
+import {
   serviceAuthorizeAction,
   serviceFulfillAction,
 } from "./service-fulfillment"
@@ -266,6 +272,11 @@ export const generalActionSchema = z.discriminatedUnion("action", [
         .optional(),
       customerId: id.optional(),
       notes: z.string().trim().max(2000).optional(),
+      /** Returnable items going out with this order; a saved customer is required. */
+      returnables: z
+        .array(orderReturnableLineSchema)
+        .max(ORDER_RETURNABLES_MAX)
+        .optional(),
       lines: z
         .array(
           z.union([
@@ -492,6 +503,7 @@ export const generalActionSchema = z.discriminatedUnion("action", [
   orderMetadataAction,
   orderReplaceAction,
   orderAttachmentAddAction,
+  returnableMovementRecordAction,
   closeoutCreateAction,
   closeoutFinalizeAction,
   staffInvitationAction,
@@ -984,7 +996,9 @@ export function generalActionSummary(
     case "sale_record":
       return `Productless sale draft\nAccount: ${action.accountName ?? "Pending"}\nCustomer: ${action.customerChoice === "walk_in" ? "Walk-in" : (action.customerName ?? "Pending")}\nReceived: ${action.receivedMinor === undefined ? "Pending" : amount(action.receivedMinor)}`
     case "order_create":
-      return `${action.lines.length} line${action.lines.length === 1 ? "" : "s"} on the order\n${action.customerId ? "Saved customer" : "Walk-in customer"}${action.notes ? `\n${action.notes}` : ""}${action.initialPayment ? `\nRecord received: ${amount(action.initialPayment.amountMinor)} · ${action.initialPayment.method.replaceAll("_", " ")}` : "\nNo initial payment"}`
+      return `${action.lines.length} line${action.lines.length === 1 ? "" : "s"} on the order\n${action.customerId ? "Saved customer" : "Walk-in customer"}${action.notes ? `\n${action.notes}` : ""}${action.initialPayment ? `\nRecord received: ${amount(action.initialPayment.amountMinor)} · ${action.initialPayment.method.replaceAll("_", " ")}` : "\nNo initial payment"}${(action.returnables ?? []).map((entry) => `\nTo come back: ${entry.quantity} ${entry.name}`).join("")}`
+    case "returnable_movement_record":
+      return returnableMovementSummary(action)
     case "customer_update":
       return [
         `Customer ${action.customerId}`,

@@ -37,7 +37,9 @@ export function parseSetupAreaMarks(value: unknown) {
 export function setupEntityArea(payload: SetupEntityPayload): SetupArea {
   switch (payload.kind) {
     case "product":
-      return payload.usage === "INTERNAL_USE" ? "use" : "sell"
+      return payload.usage === "INTERNAL_USE" || payload.usage === "RETURNABLE"
+        ? "use"
+        : "sell"
     case "service":
       return "sell"
     case "customer":

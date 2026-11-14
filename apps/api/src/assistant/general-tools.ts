@@ -232,6 +232,10 @@ import {
   generalReceivablesAnswers,
   generalReceivablesInput,
 } from "./general-receivables"
+import {
+  filterReturnableBalances,
+  returnableBalanceAnswers,
+} from "./general-returnables"
 import { generalSalesAnswer } from "./general-sales-answer"
 import {
   generalServiceIntakeOptionsInput,
@@ -2515,6 +2519,34 @@ export function createGeneralTools(
           ))
             onAnswer(answer)
           return page
+        }),
+    }),
+    readReturnableBalances: tool({
+      description:
+        "Read what customers still hold of Returnable items (egg crates, gas cylinders, bottles): outstanding count per customer and item, number of orders and the oldest date still out. All Stores. Filter by customerName and/or itemName as the owner said them. Use for 'how many crates does Chidi still have' or 'who still has our cylinders'; never guess a balance.",
+      inputSchema: z
+        .object({
+          customerName: z.string().trim().min(1).max(160).optional(),
+          itemName: z.string().trim().min(1).max(160).optional(),
+        })
+        .strict(),
+      execute: (input) =>
+        wrap("readReturnableBalances", async (fresh) => {
+          const caller = createGeneralDomainCaller(fresh)
+          const [items, balances] = await Promise.all([
+            caller.returnables.items(),
+            caller.returnables.balances({}),
+          ])
+          const rows = filterReturnableBalances(balances, input).sort(
+            (a, b) => b.out - a.out,
+          )
+          for (const answer of returnableBalanceAnswers(rows, input, items))
+            onAnswer(answer)
+          return {
+            items: items.map((item) => ({ id: item.id, name: item.name })),
+            balances: rows.slice(0, 20),
+            more: rows.length > 20,
+          }
         }),
     }),
     readCustomerAccounts: tool({

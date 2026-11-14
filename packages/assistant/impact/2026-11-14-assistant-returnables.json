@@ -1,0 +1,91 @@
+{
+  "version": 1,
+  "id": "2026-11-14-assistant-returnables",
+  "tickets": ["H02"],
+  "summary": "Returnables in the business assistant (in-app, WhatsApp and Telegram share the tools). New orders take returnables going out (\"58 crates to be returned\") through prepareOrder.request.returnables or order_create.returnables, bound to a Returnable catalog item by name and issued atomically with the order (returnablesSource assistant); a paid share (\"70% paid\") is payment.percent, converted after pricing. New draft action returnable_movement_record (RETURNED, WRITTEN_OFF or ISSUED, by customer name or order number) with a balance before → after review, and a read tool readReturnableBalances. product_create and Setup accept usage RETURNABLE (no price or stock). Walk-in orders, unknown items and returns above the customer's balance are refused before anything is saved. Prompt general-v39. Design: Workshop assistant/conversations v19 (rev 11e8ecad, selected by the owner 14 Nov 2026).",
+  "capabilities": [
+    {
+      "id": "returnables.read",
+      "change": "added",
+      "rollout": "source",
+      "note": "readReturnableBalances: outstanding balances per customer and Returnable item (orders, oldest date out) and the items set up, through returnables.balances and returnables.items. Gated by assertCanOperateOrders like the router; scoped staff stay denied because staff-procedure-policy does not list returnables.* (same as the app)."
+    },
+    {
+      "id": "returnables.movement.record",
+      "change": "added",
+      "rollout": "source",
+      "note": "returnable_movement_record drafts one ledger entry; prepare resolves customer, order (ORD-1035 from \"#1035\") and item; review shows the balance before → after and refuses more back than held; Confirm calls recordReturnableMovement with source assistant and an idempotent clientMovementId. Native WhatsApp review is staged (ASSISTANT_WHATSAPP_NATIVE_REVIEW_ACTIONS) and app review meanwhile; mobile edits quantity, Returned/Lost and note; receipt opens the customer."
+    }
+  ],
+  "procedures": [
+    {
+      "path": "returnables.balances",
+      "status": "supported",
+      "reason": "returnables.read (readReturnableBalances)."
+    },
+    {
+      "path": "returnables.forOrder",
+      "status": "form_only",
+      "reason": "Order Returnables card in the app; the assistant review reads the same per-order allocation directly."
+    },
+    {
+      "path": "returnables.items",
+      "status": "supported",
+      "reason": "returnables.read lists the Returnable items so the model can name them; order preparation binds names to the same list."
+    },
+    {
+      "path": "returnables.movements",
+      "status": "form_only",
+      "reason": "Movement history screens on the customer and Returnables list; the assistant answers with balances."
+    },
+    {
+      "path": "returnables.record",
+      "status": "supported",
+      "reason": "returnables.movement.record (returnable_movement_record)."
+    }
+  ],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/returnables-ledger.md"
+    },
+    {
+      "topic": "capability",
+      "status": "updated",
+      "path": "packages/assistant/src/capabilities/COVERAGE.md"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/assistant/src/general/returnables.test.ts",
+      "executed": true,
+      "result": "19 tests pass: name resolution (crates → Egg crate, cylinders, ambiguity, not set up), order returnables and issues (walk-in, unbound, duplicates), whole quantities, paid percent (70% of ₦480,000 = ₦336,000, rounds down), movement action schema and summary."
+    },
+    {
+      "kind": "test",
+      "path": "apps/api/src/assistant/general-returnables.test.ts",
+      "executed": true,
+      "result": "5 tests pass: counts, order card section (holds 12 → 70), balance filters and answers (total first, none, not set up)."
+    },
+    {
+      "kind": "test",
+      "path": "apps/api/src/assistant/general-returnables.integration.test.ts",
+      "executed": true,
+      "result": "Guarded Neon development QA (ewatrade_qa_v1, own tenant removed after): not-set-up order and refused movement, prepared order binds 58 crates, walk-in refused, direct order_create issues 58 with the order (12 → 70, source assistant), walk-in order cannot confirm, 78 back from \"Chidi\" (96 → 18), 30 back on \"#n\" (74 → 44), 200 over balance refused with Record 70, 5 written off (70 → 65). 1 test, 24 assertions pass."
+    },
+    {
+      "kind": "test",
+      "path": "packages/assistant/evaluations/commerce-preparation-smoke.ts",
+      "executed": true,
+      "result": "Model smoke returnables-farm, returnables-gas, returnables-none pass on deepseek-flash with general-v39 (runs/2026-11-14-returnables-smoke.json): sale line kept separate from crates out, percent 70 with no worked-out amount, 3 gas cylinders out, no returnables when crates are only the unit."
+    },
+    {
+      "kind": "fixture",
+      "path": "packages/assistant/evaluations/fixtures/returnables.v1.md",
+      "executed": false,
+      "result": "RT-01–RT-12 defined: farm, gas, walk-in, not set up, by customer, by order, balances, write-off, over-return, sold-goods and no-returnables negatives, injection and authority."
+    }
+  ]
+}

@@ -5,7 +5,12 @@ import {
   orderPreparationDraftSchema,
   resolveOrderPreparation,
 } from "@ewatrade/assistant/general/order-preparation"
-import { listCatalogItemsPage, listCustomersPage } from "@ewatrade/db/queries"
+import { resolveOrderReturnables } from "@ewatrade/assistant/general/returnables"
+import {
+  listCatalogItemsPage,
+  listCustomersPage,
+  listReturnableItems,
+} from "@ewatrade/db/queries"
 import type { PrismaClient } from "@ewatrade/db/types"
 import { subtractExactDecimals } from "@ewatrade/utils/exact-decimal"
 import { isSaleEligibleProduct } from "@ewatrade/utils/product-usage"
@@ -149,8 +154,26 @@ export async function prepareGeneralOrder(
         ...(exact[0] ? { id: exact[0].id } : {}),
       }
   }
+  const returnables = request.returnables?.length
+    ? resolveOrderReturnables(
+        request.returnables,
+        await listReturnableItems(ctx.db as PrismaClient, {
+          tenantId: scope.tenantId,
+        }),
+      )
+    : undefined
+  if (returnables) {
+    resolved.issues.push(...returnables.issues)
+    if (!customer?.id)
+      resolved.issues.push(
+        request.customerName
+          ? `Returnables need a saved customer. Add ${request.customerName} as a customer first, or sell without returnables.`
+          : "Returnables can't go out on a walk-in sale. Choose a saved customer, or sell without returnables.",
+      )
+  }
   const draft = orderPreparationDraftSchema.parse({
     customer,
+    ...(returnables ? { returnables: returnables.returnables } : {}),
     origin: { tenantId: scope.tenantId, storeId: scope.storeId },
     currencyCode:
       ctx.tenantContext.activeStore?.currencyCode ??

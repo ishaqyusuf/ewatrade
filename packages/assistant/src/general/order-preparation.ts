@@ -6,6 +6,11 @@ import {
 } from "@ewatrade/utils/exact-decimal"
 import { z } from "zod"
 import { readRecordOriginSchema } from "./read-record-target"
+import {
+  ORDER_RETURNABLES_MAX,
+  orderReturnableRequestSchema,
+  orderReturnableResolutionSchema,
+} from "./returnables"
 import { serviceNameKey } from "./service-job-draft"
 
 /** Explicit new orders must reach catalog-aware preparation when that tool is available. */
@@ -90,6 +95,14 @@ export const orderPreparationRequestSchema = z
             "The owner said money was received. Retain this even when amount, method or account is unknown; those remain editable in the form.",
           ),
         amount: amount.optional(),
+        percent: z
+          .number()
+          .gt(0)
+          .max(100)
+          .optional()
+          .describe(
+            "Only when the owner gave the paid share as a percentage, e.g. 70 for '70% paid'. Never together with amount; the server converts it after pricing.",
+          ),
         method: z
           .enum(["cash", "bank_transfer", "pos", "card", "other"])
           .optional(),
@@ -102,6 +115,13 @@ export const orderPreparationRequestSchema = z
     stockAlreadyRecorded: z.boolean().optional(),
     occurredAt: z.string().datetime({ offset: true }).optional(),
     notes: z.string().max(1000).optional(),
+    returnables: z
+      .array(orderReturnableRequestSchema)
+      .max(ORDER_RETURNABLES_MAX)
+      .optional()
+      .describe(
+        "Returnable containers going out with this order that the customer must bring back, e.g. '58 crates to be returned' → [{name:'crates', quantity:58}]. Not sale lines. Needs a saved customer.",
+      ),
   })
   .strict()
 export type OrderPreparationRequest = z.infer<
@@ -145,6 +165,10 @@ export const orderPreparationDraftSchema = z
     request: orderPreparationRequestSchema,
     paymentAccountSuggested: z.boolean().optional(),
     lines: z.array(orderPreparationLineSchema).max(30),
+    returnables: z
+      .array(orderReturnableResolutionSchema)
+      .max(ORDER_RETURNABLES_MAX)
+      .optional(),
     totalMinor: z.number().int().nonnegative().safe().nullable(),
     issues: z.array(z.string().max(500)).max(30),
   })

@@ -1,4 +1,5 @@
 import { buildCatalogVariantCombinations } from "@ewatrade/utils/catalog-options"
+import { productUsages } from "@ewatrade/utils/product-usage"
 import { z } from "zod"
 import {
   deriveSetupEntityState,
@@ -24,7 +25,7 @@ export const productFormSnapshotSchema = z
         unitName: text,
         price: amount,
         openingStockQuantity: amount,
-        usage: z.enum(["FOR_SALE", "INTERNAL_USE", "BOTH"]),
+        usage: z.enum(productUsages),
       })
       .strict(),
     storeId: id,

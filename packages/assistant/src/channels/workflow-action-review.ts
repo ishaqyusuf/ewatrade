@@ -298,6 +298,7 @@ const usageLabel = {
   FOR_SALE: null,
   INTERNAL_USE: "Shop use only, not for sale",
   BOTH: "For sale and shop use",
+  RETURNABLE: "Returnable, not for sale",
 } as const
 function simpleRecordLines(
   record: WhatsAppWorkflowActionReview["records"][number],

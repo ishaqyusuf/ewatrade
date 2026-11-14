@@ -10,6 +10,7 @@ const everyone: CapabilityRole[] = [
 ]
 const managers: CapabilityRole[] = ["OWNER", "ADMIN", "MANAGER"]
 const brain = ".brain/features/assistant-business-operations.md"
+const returnablesBrain = ".brain/features/returnables-ledger.md"
 const actionSchema = (action: string) => {
   const schema = generalActionSchema.options.find(
     (option) => option.shape.action.value === action,
@@ -2510,6 +2511,58 @@ export const capabilityManifest = [
     brain,
   },
   {
+    id: "returnables.read",
+    version: 1,
+    mode: "read",
+    title: "Read returnable balances",
+    domain: "customers",
+    tool: "readReturnableBalances",
+    policy: { roles: everyone },
+    scope: "tenant",
+    clients: ["dashboard", "mobile", "whatsapp"],
+    rollout: "source",
+    whatsapp: { mode: "native", rollout: "source" },
+    procedures: ["returnables.balances", "returnables.items"],
+    examples: [
+      "How many crates does Chidi still have?",
+      "Who still has our gas cylinders?",
+    ],
+    tests: [
+      "apps/api/src/assistant/general-returnables.test.ts",
+      "packages/assistant/src/general/returnables.test.ts",
+    ],
+    brain: returnablesBrain,
+  },
+  {
+    id: "returnables.movement.record",
+    version: 1,
+    mode: "write",
+    action: "returnable_movement_record",
+    schema: actionSchema("returnable_movement_record"),
+    effect: "record",
+    receipt: "customer",
+    title: "Record returnables coming back or written off",
+    domain: "customers",
+    tool: "draftAction",
+    policy: { roles: everyone },
+    scope: "store",
+    clients: ["dashboard", "mobile", "whatsapp"],
+    whatsapp: { mode: "native", rollout: "source" },
+    rollout: "source",
+    procedures: ["returnables.record"],
+    examples: [
+      "78 crates returned by Chidi",
+      "30 crates came back on order 1035",
+      "Musa lost 5 crates, write them off",
+    ],
+    tests: [
+      "apps/api/src/assistant/general-returnables.test.ts",
+      "packages/assistant/src/general/returnables.test.ts",
+      "packages/db/src/queries/returnables.integration.test.ts",
+    ],
+    brain: returnablesBrain,
+  },
+  {
     id: "search.records",
     version: 1,
     mode: "read",
@@ -2858,6 +2911,7 @@ export const capabilityManifest = [
   },
   {
     id: "sales.order.create",
+    // Returnables and a paid percentage are optional draft fields; the protocol stays v1.
     version: 1,
     mode: "write",
     action: "order_create",

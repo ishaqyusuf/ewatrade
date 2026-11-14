@@ -7,6 +7,7 @@ import { financeRouter } from "../trpc/routers/finance"
 import { inventoryRouter } from "../trpc/routers/inventory"
 import { ordersRouter } from "../trpc/routers/orders"
 import { retailOpsRouter } from "../trpc/routers/retail-ops"
+import { returnablesRouter } from "../trpc/routers/returnables"
 import { searchRouter } from "../trpc/routers/search"
 import { serviceAssistantRequestsRouter } from "../trpc/routers/service-assistant-requests"
 import { serviceAssistantWorkRouter } from "../trpc/routers/service-assistant-work"
@@ -25,6 +26,7 @@ const assistantDomainRouter = createTRPCRouter({
   inventory: inventoryRouter,
   orders: ordersRouter,
   retailOps: retailOpsRouter,
+  returnables: returnablesRouter,
   search: searchRouter,
   serviceAssistantWork: serviceAssistantWorkRouter,
   serviceAssistantRequests: serviceAssistantRequestsRouter,

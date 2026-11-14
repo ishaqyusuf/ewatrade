@@ -91,6 +91,7 @@ test("current native actions and other eligible writes receive explicit honest c
       "inventory.transfer.cancel",
       "inventory.transfer.dispatch",
       "inventory.transfer.receive",
+      "returnables.movement.record",
       "sales.order.cancel",
       "sales.order.create",
       "sales.order.metadata.update",

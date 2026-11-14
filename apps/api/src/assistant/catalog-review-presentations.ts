@@ -107,6 +107,18 @@ export function productCreatePresentation(
   const unit = action.canonicalUnitName
   const stock = (quantity: string | undefined) =>
     quantity === undefined ? "Not supplied" : `${quantity} ${unit}`
+  if (action.usage === "RETURNABLE" && isSimpleProductCreate(action))
+    return {
+      summary: {
+        party: clip(action.name, 240),
+        context: `Returnable · counted in ${clip(unit, 80)}`,
+      },
+      facts: [
+        { label: "Type", value: "Returnable, not for sale" },
+        { value: "No price, stock or storefront" },
+      ],
+      note,
+    }
   if (isSimpleProductCreate(action))
     return {
       summary: {

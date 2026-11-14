@@ -100,6 +100,7 @@ const cancelSafetyLines: Record<string, string> = {
   payment_record: "Nothing was recorded.",
   product_price_update: "The price is unchanged.",
   order_attachment_add: "Nothing was attached.",
+  returnable_movement_record: "No returnables were recorded.",
 }
 /** Only canonical, already-authorized receipt labels. No credentials or internal identities. */
 export function renderWhatsAppActionResult(

@@ -79,6 +79,19 @@ cases.push(
     id: "sealed-stock",
     text: "Add eggs sold only as sealed crates of 30. We have 10 sealed crates, 6000 naira per crate. Do not open the crates or pool their stock.",
   },
+  // fixtures/returnables.v1.md RT-01, RT-11 and RT-10.
+  {
+    id: "returnables-farm",
+    text: "create an order to Musa Ibrahim, 80 crates of big eggs, 70% paid, 58 crates to be returned",
+  },
+  {
+    id: "returnables-gas",
+    text: "New order: Mama Bisi bought 3 refills of 12.5kg gas, paid 45000 cash, she took 3 cylinders and will bring them back",
+  },
+  {
+    id: "returnables-none",
+    text: "New order for Musa Ibrahim: 10 crates of big eggs, paid in full by bank transfer",
+  },
 )
 const selectedCases = process.argv.slice(2)
 const evidence: unknown[] = []
@@ -234,6 +247,35 @@ for (const scenario of cases.filter(
       ),
       "Retain the actual sealed package count",
     )
+  } else if (scenario.id === "returnables-farm") {
+    assert(order)
+    assert.equal(order.lines.length, 1, "The crates out are not a sale line")
+    assert.equal(order.lines[0]?.quantity, "80")
+    assert.equal(order.customerName, "Musa Ibrahim")
+    assert.deepEqual(
+      order.returnables?.map((entry) => entry.quantity),
+      [58],
+    )
+    assert(/crate/i.test(order.returnables?.[0]?.name ?? ""))
+    assert.equal(order.payment?.paid, true)
+    assert.equal(order.payment?.percent, 70)
+    assert.equal(order.payment?.amount, undefined, "Never work out the amount")
+  } else if (scenario.id === "returnables-gas") {
+    assert(order)
+    assert.equal(order.lines.length, 1)
+    assert.equal(order.lines[0]?.quantity, "3")
+    assert.equal(order.customerName, "Mama Bisi")
+    assert.equal(order.payment?.amount, "45000")
+    assert.equal(order.payment?.method, "cash")
+    assert.deepEqual(
+      order.returnables?.map((entry) => entry.quantity),
+      [3],
+    )
+    assert(/cylinder/i.test(order.returnables?.[0]?.name ?? ""))
+  } else if (scenario.id === "returnables-none") {
+    assert(order)
+    assert.equal(order.lines[0]?.quantity, "10")
+    assert.equal(order.returnables, undefined, "Crates here are only the unit")
   } else if (scenario.id === "partial-delivery") {
     assert(order)
     assert.equal(order.partialDelivery, true)

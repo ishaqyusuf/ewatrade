@@ -2,8 +2,9 @@ import { findCatalogCategoryPreset } from "@ewatrade/utils/catalog-category-pres
 import { findCatalogIllustration } from "@ewatrade/utils/catalog-illustrations"
 import { findCatalogSetupHelper } from "@ewatrade/utils/catalog-setup-helpers"
 import { isExactDecimal } from "@ewatrade/utils/exact-decimal"
+import { productUsages } from "@ewatrade/utils/product-usage"
 import { z } from "zod"
-import { setupProductQuestions } from "./variants"
+import { setupProductQuestions, setupUsageNeedsPrice } from "./variants"
 
 export const SETUP_ASSISTANT_PROMPT_VERSION = "ewatrade-setup-assistant-v14"
 export const SETUP_DRAFT_MAX_ENTITIES = 200
@@ -178,7 +179,7 @@ export const setupProductPayloadSchema = z
       )
       .max(36)
       .optional(),
-    usage: z.enum(["FOR_SALE", "INTERNAL_USE", "BOTH"]).optional(),
+    usage: z.enum(productUsages).optional(),
     /** A product photo the owner sent in this setup; attached only on add. */
     photoAttachmentId: z.string().max(64).optional(),
     illustrationId: illustrationIdField,
@@ -344,7 +345,7 @@ function answered(payload: SetupEntityPayload, field: SetupFollowUpField) {
               (question) => question.field === "price",
             )
           : payload.priceMinor !== undefined) ||
-          (payload.kind === "product" && payload.usage === "INTERNAL_USE"))
+          (payload.kind === "product" && !setupUsageNeedsPrice(payload.usage)))
       )
     case "stock":
       return (
