@@ -112,12 +112,7 @@ export function OwnerTypeStep({
   return (
     <>
       <header>
-        <p className="signup-eyebrow">Step 2 of 3 · Business type</p>
-        <h1>What kind of business is it?</h1>
-        <p className="signup-intro">
-          Pick all that apply. We use it to suggest products, categories and
-          tips. It never locks features.
-        </p>
+        <h1>What do you run?</h1>
       </header>
       <div className="owner-ref-typewide">
         <nav className="owner-ref-gindex" aria-label="Jump to group">
@@ -196,27 +191,16 @@ export function OwnerTypeStep({
                 placeholder="e.g. Event rentals, car wash, POS agent"
                 onChange={(event) => onOther(event.target.value)}
               />
-              <small className="owner-ref-help">
-                We’ll register it as you type it. {other.length}/60 · At least 2
-                characters
-              </small>
+              <small className="owner-ref-help">{other.length}/60</small>
             </label>
           )}
         </div>
       </div>
       <footer className="owner-step-actions">
-        <button
-          className="signup-secondary"
-          type="button"
-          disabled
-          aria-label="Account already verified"
-        >
-          <OwnerSignupIcon name="arrowRight" className="owner-back-icon" />
-        </button>
         <div className="owner-ref-hint">
           {selected.length
             ? `${selected.length} ${selected.length === 1 ? "type" : "types"} picked`
-            : "Can’t find yours? “Something else” is at the end."}
+            : "Not listed? Pick “Something else” at the end."}
         </div>
         {first && (
           <button
@@ -224,7 +208,7 @@ export function OwnerTypeStep({
             type="button"
             onClick={() => setMulti(true)}
           >
-            Select more types
+            Add another
           </button>
         )}
         <button
@@ -234,7 +218,7 @@ export function OwnerTypeStep({
           onClick={onNext}
         >
           {first
-            ? "Proceed"
+            ? "Continue"
             : selected.length > 1
               ? `Continue with ${selected.length} types`
               : "Continue"}

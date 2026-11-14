@@ -877,3 +877,18 @@
 .owner-type-card:has(:focus-visible) { outline: 2px solid var(--primary); outline-offset: 3px; }
 .owner-type-card:has(input) > span:nth-child(3) { flex: 1; min-width: 0; }
 .owner-frame { transition: grid-template-columns .22s ease; }.owner-preview { transition: width .22s ease,padding .22s ease; }.owner-setup-main:focus { outline: none; }
+
+/* Midnight Paper (dashboard ADR-0060). The app's Appearance class on <html> wins over the device. */
+.signup-shell {--background:#f5f6f8;--foreground:#151b28;--primary:#2747b4;--primary-foreground:#fff;--muted:#eef0f3;--muted-foreground:#545c69;--border:#dfe3e8;--ring:#2747b4;font-size:16px;}
+.signup-shell .signup-primary {background:#151b28;color:#fff;}
+.signup-header a:last-child,.signup-footer,.signup-progress ol,.signup-progress li {font-size:14px;}
+@media(prefers-color-scheme:dark){
+ .signup-shell {--background:#10141c;--foreground:#eff1f5;--primary:#a7bbff;--primary-foreground:#10141c;--muted:#242a35;--muted-foreground:#b0b8c7;--border:#2d3340;--ring:#a7bbff;}
+ .signup-shell .signup-primary {background:#eff1f5;color:#10141c;}
+}
+.dark .signup-shell {--background:#10141c;--foreground:#eff1f5;--primary:#a7bbff;--primary-foreground:#10141c;--muted:#242a35;--muted-foreground:#b0b8c7;--border:#2d3340;--ring:#a7bbff;color-scheme:dark;}
+.dark .signup-shell .signup-primary {background:#eff1f5;color:#10141c;}
+.dark .signup-shell .signup-header img {filter:brightness(0) invert(1);}
+.light .signup-shell {--background:#f5f6f8;--foreground:#151b28;--primary:#2747b4;--primary-foreground:#fff;--muted:#eef0f3;--muted-foreground:#545c69;--border:#dfe3e8;--ring:#2747b4;color-scheme:light;}
+.light .signup-shell .signup-primary {background:#151b28;color:#fff;}
+.light .signup-shell .signup-header img {filter:none;}

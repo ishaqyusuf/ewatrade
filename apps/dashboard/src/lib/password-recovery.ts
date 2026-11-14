@@ -19,7 +19,7 @@ const responseHeaders = {
   "Referrer-Policy": "no-referrer",
 }
 const requestMessage =
-  "If an account exists for that email, you will receive a password reset link. Check your inbox and spam folder."
+  "If an account exists for that email, a reset link is on its way. Check spam too."
 
 export function passwordRecoveryOrigin() {
   const url = new URL(

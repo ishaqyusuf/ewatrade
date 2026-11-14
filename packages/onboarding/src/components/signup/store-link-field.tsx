@@ -176,24 +176,21 @@ export function StoreLinkField({
           <>
             <OwnerSignupIcon name="alert" />
             <span>
-              <b>{check.slug}</b>.{storefrontDomain} is taken. The name is fine;
-              pick a different link:
+              <b>{check.slug}</b>.{storefrontDomain} is taken. Pick another:
             </span>
           </>
         ) : reserved ? (
           <>
             <OwnerSignupIcon name="alert" />
             <span>
-              <b>{value}</b>.{storefrontDomain} is reserved. The name is fine;
-              pick a different link:
+              <b>{value}</b>.{storefrontDomain} is reserved. Pick another:
             </span>
           </>
         ) : value ? (
-          <span>Use 2–40 letters, numbers and hyphens for your link.</span>
+          <span>Use 2–40 letters, numbers or hyphens.</span>
         ) : (
           <span>
-            Your store gets its own free link, like{" "}
-            <b>your-business.{storefrontDomain}</b>
+            Free store link: <b>your-business.{storefrontDomain}</b>
           </span>
         )}
         {value && !editing && (

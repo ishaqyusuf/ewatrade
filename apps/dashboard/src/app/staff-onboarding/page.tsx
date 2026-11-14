@@ -26,13 +26,11 @@ export default async function StaffOnboardingPage({
   if (!invite)
     return (
       <AuthShell
-        title="Invitation unavailable"
-        description="This link is invalid, expired or already accepted. Ask the business owner for a new invitation."
-        asideTitle="Work together."
-        asideDescription="Join your business workspace with an invitation from its owner."
+        title="This invite has expired"
+        description="Ask the business owner to send a new one."
       >
-        <Button variant="outline" render={<Link href="/login" />}>
-          Back to sign in
+        <Button render={<Link href="/login" />} className="w-full">
+          Go to sign in
         </Button>
       </AuthShell>
     )

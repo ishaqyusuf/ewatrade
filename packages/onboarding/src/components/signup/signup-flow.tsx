@@ -10,7 +10,6 @@ import { phoneCountry as phoneCountryHint } from "../../lib/international-phone"
 import type { EligibleAgeBand } from "../../lib/signup-age"
 import { getMarketingUrl } from "../../lib/signup-navigation"
 import { LegacySignupFlow } from "./legacy-signup-flow"
-import { OwnerSignupIcon } from "./owner-signup-artwork"
 import { OwnerSignupFrame } from "./owner-signup-frame"
 import { SignupGoogle } from "./signup-google"
 import { SignupPhoneInput } from "./signup-phone-input"
@@ -70,8 +69,9 @@ function AccountFirstSignup() {
   const [settings, setSettings] = useState<Settings | null>(null)
   // Connect with Email | WhatsApp | Both. With Both, one code goes to the chosen
   // channel and the other contact is saved as the business contact.
-  const [connect, setConnect] = useState<"email" | "whatsapp" | "both">("email")
-  const [codeBy, setCodeBy] = useState<"email" | "phone">("phone")
+  // Sign in with Email or WhatsApp. One contact keeps the first screen short;
+  // the other can be added later in Settings.
+  const [connect, setConnect] = useState<"email" | "whatsapp">("email")
   const [phoneCountry, setPhoneCountry] = useState("")
   const [link, setLink] = useState<StoreLinkCheck | null>(null)
   const [slugEdited, setSlugEdited] = useState(false)
@@ -128,17 +128,10 @@ function AccountFirstSignup() {
     return () => clearInterval(timer)
   }, [step])
   const phoneEnabled = Boolean(settings?.phoneEnabled)
-  const connection = !phoneEnabled && connect === "whatsapp" ? "both" : connect
-  const mode: "email" | "phone" =
-    connection === "email"
-      ? "email"
-      : connection === "whatsapp"
-        ? "phone"
-        : phoneEnabled
-          ? codeBy
-          : "email"
-  const showEmail = connection !== "whatsapp"
-  const showPhone = connection !== "email"
+  const connection = phoneEnabled ? connect : "email"
+  const mode: "email" | "phone" = connection === "email" ? "email" : "phone"
+  const showEmail = connection === "email"
+  const showPhone = connection === "whatsapp"
   const linkEmailDomain = showEmail
     ? account.email.trim().split("@")[1]?.toLowerCase()
     : undefined
@@ -258,24 +251,11 @@ function AccountFirstSignup() {
       step={step}
     >
       <main className="signup-main owner-account">
-        <p className="signup-eyebrow">
-          {step === "account"
-            ? "Step 1 of 3 · Account"
-            : mode === "email"
-              ? "Check your email"
-              : "Check WhatsApp"}
-        </p>
-        <h1>
-          {step === "account"
-            ? "Start your business on ẸwáTrade"
-            : "Enter the 6-digit code"}
-        </h1>
-        <p className="signup-intro">
-          {step === "account" ? (
-            "Your business name and how you’ll sign in. Takes about a minute."
-          ) : (
+        <h1>{step === "account" ? "Create your store" : "Enter the code"}</h1>
+        {step === "code" && (
+          <p className="signup-intro">
             <>
-              We sent it to {mode === "email" ? account.email : account.phone}.{" "}
+              Sent to {mode === "email" ? account.email : account.phone}.{" "}
               <button
                 type="button"
                 className="owner-ref-lnk"
@@ -290,8 +270,8 @@ function AccountFirstSignup() {
                 Change
               </button>
             </>
-          )}
-        </p>
+          </p>
+        )}
         {error && (
           <p role="alert" className="owner-error">
             {error}
@@ -362,43 +342,40 @@ function AccountFirstSignup() {
                   }
                 />
               </label>
-              <fieldset className="owner-age owner-connect">
-                <legend>Connect with</legend>
-                <div
-                  className="owner-chips"
-                  style={{
-                    gridTemplateColumns: `repeat(${phoneEnabled ? 3 : 2}, minmax(0, 1fr))`,
-                  }}
-                >
-                  {(
-                    [
-                      ["email", "Email"],
-                      ...(phoneEnabled
-                        ? [["whatsapp", "WhatsApp"] as const]
-                        : []),
-                      ["both", "Both"],
-                    ] as const
-                  ).map(([value, label]) => (
-                    <label
-                      className={`owner-chip ${connection === value ? "is-selected" : ""}`}
-                      key={value}
-                    >
-                      <input
-                        type="radio"
-                        name="connect-with"
-                        checked={connection === value}
-                        value={value}
-                        onChange={() => {
-                          setConnect(value)
-                          setError("")
-                        }}
-                      />
-                      {value === "whatsapp" && <WhatsAppMark size={18} />}
-                      {label}
-                    </label>
-                  ))}
-                </div>
-              </fieldset>
+              {phoneEnabled && (
+                <fieldset className="owner-age owner-connect">
+                  <legend>Sign in with</legend>
+                  <div
+                    className="owner-chips"
+                    style={{ gridTemplateColumns: "repeat(2, minmax(0, 1fr))" }}
+                  >
+                    {(
+                      [
+                        ["email", "Email"],
+                        ["whatsapp", "WhatsApp"],
+                      ] as const
+                    ).map(([value, label]) => (
+                      <label
+                        className={`owner-chip ${connection === value ? "is-selected" : ""}`}
+                        key={value}
+                      >
+                        <input
+                          type="radio"
+                          name="connect-with"
+                          checked={connection === value}
+                          value={value}
+                          onChange={() => {
+                            setConnect(value)
+                            setError("")
+                          }}
+                        />
+                        {value === "whatsapp" && <WhatsAppMark size={18} />}
+                        {label}
+                      </label>
+                    ))}
+                  </div>
+                </fieldset>
+              )}
               {showEmail && (
                 <label className="signup-label" htmlFor="owner-email">
                   Email
@@ -409,11 +386,6 @@ function AccountFirstSignup() {
                     type="email"
                     autoComplete="email"
                     required
-                    aria-describedby={
-                      connection === "both" && mode !== "email"
-                        ? "owner-email-note"
-                        : undefined
-                    }
                     value={account.email}
                     onChange={(event) =>
                       setAccount((current) => ({
@@ -422,11 +394,6 @@ function AccountFirstSignup() {
                       }))
                     }
                   />
-                  {connection === "both" && mode !== "email" && (
-                    <span id="owner-email-note" className="owner-ref-help">
-                      Saved as your business contact. You can verify it later.
-                    </span>
-                  )}
                 </label>
               )}
               {showPhone && (
@@ -440,51 +407,9 @@ function AccountFirstSignup() {
                     onChange={(phone) =>
                       setAccount((current) => ({ ...current, phone }))
                     }
-                    describedBy={
-                      connection === "both" && mode !== "phone"
-                        ? "owner-phone-note"
-                        : undefined
-                    }
                   />
-                  {connection === "both" && mode !== "phone" && (
-                    <span id="owner-phone-note" className="owner-ref-help">
-                      Saved as your business contact. You can verify it later.
-                    </span>
-                  )}
                 </label>
               )}
-              {connection === "both" &&
-                (phoneEnabled ? (
-                  <fieldset className="owner-codeby">
-                    <legend>Send my code by</legend>
-                    {(
-                      [
-                        ["phone", "WhatsApp"],
-                        ["email", "Email"],
-                      ] as const
-                    ).map(([value, label]) => (
-                      <label
-                        className={`owner-chip ${mode === value ? "is-selected" : ""}`}
-                        key={value}
-                      >
-                        <input
-                          type="radio"
-                          name="send-code-by"
-                          checked={mode === value}
-                          value={value}
-                          onChange={() => {
-                            setCodeBy(value)
-                            setError("")
-                          }}
-                        />
-                        {value === "phone" && <WhatsAppMark size={15} />}
-                        {label}
-                      </label>
-                    ))}
-                  </fieldset>
-                ) : (
-                  <p className="owner-codeby">We’ll send your code by email.</p>
-                ))}
             </fieldset>
             <fieldset className="owner-age" disabled={pending}>
               <legend>Your age</legend>
@@ -514,26 +439,18 @@ function AccountFirstSignup() {
                   </label>
                 ))}
               </div>
-              {age !== "UNDER_13" && (
-                <span className="owner-ref-help">
-                  ẸwáTrade accounts are for people aged 13 or older.
-                </span>
-              )}
             </fieldset>
             {age === "UNDER_13" ? (
               <output className="owner-age-warning">
-                <b>Not available under 13</b>
-                <span>
-                  ẸwáTrade is available from age 13. Nothing you typed has been
-                  saved.
-                </span>
-                <a href="/login">Close setup</a>
+                <b>ẸwáTrade is for ages 13 and up</b>
+                <span>Nothing you typed was saved.</span>
+                <a href="/login">Close</a>
               </output>
             ) : (
               <label className="owner-terms">
                 <input
                   type="checkbox"
-                  aria-label="I agree to the Terms and acknowledge the Privacy Notice"
+                  aria-label="I agree to the Terms and Privacy Notice"
                   checked={account.terms}
                   disabled={pending}
                   onChange={(event) =>
@@ -552,7 +469,7 @@ function AccountFirstSignup() {
                   >
                     Terms
                   </a>{" "}
-                  and acknowledge the{" "}
+                  and{" "}
                   <a
                     href={`${getMarketingUrl()}/privacy`}
                     target="_blank"
@@ -560,14 +477,12 @@ function AccountFirstSignup() {
                   >
                     Privacy Notice
                   </a>
-                  .
                 </span>
               </label>
             )}
             {settings && !settings.publication.signupAvailable && (
               <output className="owner-error">
-                Signup is unavailable until the current Terms and Privacy Notice
-                are effective.
+                Sign-up is paused while our Terms are updated. Try again soon.
               </output>
             )}
             {age !== "UNDER_13" && (
@@ -580,9 +495,9 @@ function AccountFirstSignup() {
                   type="submit"
                 >
                   {pending
-                    ? "Sending your code…"
+                    ? "Sending code…"
                     : mode === "email"
-                      ? "Send code to email"
+                      ? "Email me a code"
                       : "Send code on WhatsApp"}
                 </button>
                 <div className="owner-divider">or</div>
@@ -593,13 +508,11 @@ function AccountFirstSignup() {
                     if (ready) void submit("google", idToken)
                   }}
                 />
-                <p className="owner-ref-help owner-ref-center">
-                  {!ready
-                    ? "Google needs your business name, age and the Terms above first."
-                    : showPhone
-                      ? "Google fills in your name and email. Your WhatsApp number is saved as your business contact."
-                      : "Google fills in your name and email."}
-                </p>
+                {!ready && (
+                  <p className="owner-ref-help owner-ref-center">
+                    Add your business name, age and Terms first.
+                  </p>
+                )}
               </>
             )}
           </form>
@@ -673,7 +586,7 @@ function AccountFirstSignup() {
               {devCode && (
                 <>
                   {" "}
-                  · Local development code: <code>{devCode}</code>
+                  · Test code: <code>{devCode}</code>
                 </>
               )}
             </div>
@@ -684,13 +597,6 @@ function AccountFirstSignup() {
             >
               {pending ? "Verifying…" : "Verify"}
             </button>
-            <div className="owner-ref-banner owner-ref-t-sky">
-              <OwnerSignupIcon name="lock" />
-              <div>
-                Your account is created once the code checks out. If you leave
-                after this, your progress is saved.
-              </div>
-            </div>
           </form>
         )}
       </main>

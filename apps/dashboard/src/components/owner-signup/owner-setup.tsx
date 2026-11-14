@@ -41,7 +41,7 @@ export function OwnerSetupEntry() {
   if (query.error)
     return (
       <main className="signup-main">
-        <h1>Your setup is saved.</h1>
+        <h1>Setup could not load</h1>
         <p role="alert">{query.error.message}</p>
         <button
           type="button"
@@ -100,7 +100,7 @@ function StartOwnerSetup({ onPending }: { onPending: () => unknown }) {
       <main className="signup-main">
         {start.error ? (
           <>
-            <h1>Your setup could not start.</h1>
+            <h1>Setup could not start</h1>
             <p role="alert">{start.error.message}</p>
             <button
               type="button"
@@ -118,11 +118,7 @@ function StartOwnerSetup({ onPending }: { onPending: () => unknown }) {
   return (
     <OwnerSignupFrame name={businessName} slug={link?.slug ?? ""} step="type">
       <main className="signup-main owner-account">
-        <p className="signup-eyebrow">Your business</p>
         <h1>Name your business</h1>
-        <p className="signup-intro">
-          Your store gets its own free link. You choose the type next.
-        </p>
         {start.error && (
           <p role="alert" className="owner-error">
             {start.error.message}
@@ -295,10 +291,10 @@ function OwnerSetupForm({ setup }: { setup: OwnerSetup }) {
         <div className="owner-save-status">
           <output aria-live="polite">
             {storage.state === "saving"
-              ? "Saving progress…"
+              ? "Saving…"
               : storage.state === "saved"
-                ? "Progress saved"
-                : "Progress not saved"}
+                ? "Saved"
+                : "Not saved"}
           </output>
           {storage.state === "error" && (
             <button
@@ -306,7 +302,7 @@ function OwnerSetupForm({ setup }: { setup: OwnerSetup }) {
               className="owner-text-button"
               onClick={() => void storage.retry().catch(() => undefined)}
             >
-              Retry save
+              Retry
             </button>
           )}
         </div>

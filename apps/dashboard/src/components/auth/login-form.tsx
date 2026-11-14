@@ -2,10 +2,10 @@
 import { FormFeedback } from "@/components/forms/form-feedback"
 import { useDashboardWorkflow } from "@ewatrade/events/dashboard-client"
 import {
+  Button,
   Field,
   FieldGroup,
   FieldLabel,
-  FormActions,
   Input,
   InputGroup,
   InputGroupAddon,
@@ -13,7 +13,7 @@ import {
   InputGroupInput,
   SubmitButton,
 } from "@ewatrade/ui"
-import { AuthShell } from "./auth-shell"
+import { AuthLink, AuthShell } from "./auth-shell"
 
 import { getLoginDestination } from "@/lib/login-navigation"
 
@@ -49,7 +49,7 @@ export function LoginForm({
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(
     initialError === "no_tenant"
-      ? "Your account does not have an active workspace. Contact your workspace owner or create your own store."
+      ? "This account has no business yet. Create your store, or ask your business owner for an invite."
       : null,
   )
 
@@ -128,8 +128,8 @@ export function LoginForm({
     setPreviewQaCode(body.previewQaCode ?? null)
     setNotice(
       body.previewQaCode
-        ? `Use ${body.previewQaCode} to sign in. It expires in 10 minutes.`
-        : `We sent a 6-digit code to ${email}. It expires in 10 minutes.`,
+        ? `Use ${body.previewQaCode}. It works for 10 minutes.`
+        : `Code sent to ${email}. It works for 10 minutes.`,
     )
   }
 
@@ -158,163 +158,139 @@ export function LoginForm({
 
   return (
     <AuthShell
-      title="Welcome back"
-      description="Sign in to your EwaTrade workspace."
-      asideTitle="Your business, in view."
-      asideDescription="Manage your catalog, sales, service work and team from one workspace."
+      title="Sign in"
       brandHref={marketingUrl}
       footer={
-        <p className="mt-6 text-center text-sm text-muted-foreground">
-          New to EwaTrade?{" "}
-          <a
-            href="/signup"
-            className="font-medium text-foreground underline-offset-2 hover:underline"
-          >
-            Create your store
-          </a>
+        <p>
+          New to ẸwáTrade? <AuthLink href="/signup">Create your store</AuthLink>
         </p>
       }
     >
       <form onSubmit={handleSubmit} className="min-w-0">
         <FieldGroup className="min-w-0 gap-5">
-          <div className="flex flex-col gap-4">
-            {/* Email */}
-            <Field className="flex flex-col gap-1.5">
-              <FieldLabel htmlFor="email" className="text-sm font-medium">
-                {accountEntry?.label ?? "Email address"}
-              </FieldLabel>
-              {accountEntry?.emailField ?? (
-                <Input
-                  disabled={loading}
-                  id="email"
-                  name="email"
-                  type="email"
-                  required
-                  autoComplete="username"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="you@example.com"
-                />
-              )}
-            </Field>
-
-            {/* Password */}
-            {!accountEntry && method === "password" && (
-              <Field className="gap-1.5">
-                <div className="flex items-center justify-between">
-                  <FieldLabel htmlFor="password">Password</FieldLabel>
-                  <a
-                    href="/forgot-password"
-                    className="text-xs text-muted-foreground hover:text-foreground"
-                  >
-                    Forgot password?
-                  </a>
-                </div>
-                <InputGroup appearance="form">
-                  <InputGroupInput
-                    disabled={loading}
-                    id="password"
-                    name="password"
-                    type={showPassword ? "text" : "password"}
-                    required
-                    autoComplete="current-password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••"
-                  />
-                  <InputGroupAddon align="inline-end">
-                    <InputGroupButton
-                      disabled={loading}
-                      type="button"
-                      onClick={() => setShowPassword((v) => !v)}
-                      size="icon-sm"
-                      aria-label={
-                        showPassword ? "Hide password" : "Show password"
-                      }
-                    >
-                      {showPassword ? (
-                        <HugeiconsIcon icon={ViewOffSlashIcon} />
-                      ) : (
-                        <HugeiconsIcon icon={ViewIcon} />
-                      )}
-                    </InputGroupButton>
-                  </InputGroupAddon>
-                </InputGroup>
-              </Field>
-            )}
-
-            {/* Login code */}
-            {awaitingCode && (
-              <Field className="gap-1.5">
-                <div className="flex items-center justify-between">
-                  <FieldLabel htmlFor="login-code">Login code</FieldLabel>
-                  <button
-                    type="button"
-                    disabled={loading}
-                    onClick={() => void resendCode()}
-                    className="text-xs text-muted-foreground hover:text-foreground"
-                  >
-                    {previewQaCode ? "Refresh code" : "Send a new code"}
-                  </button>
-                </div>
-                <Input
-                  disabled={loading}
-                  id="login-code"
-                  name="code"
-                  inputMode="numeric"
-                  autoComplete="one-time-code"
-                  pattern="[0-9]{6}"
-                  maxLength={6}
-                  required
-                  value={code}
-                  onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
-                  placeholder="123456"
-                />
-              </Field>
-            )}
-
-            {awaitingCode && notice && !error && (
-              <FormFeedback appearance="dashboard" variant="default">
-                {notice}
-              </FormFeedback>
-            )}
-
-            {error && (
-              <FormFeedback appearance="dashboard">{error}</FormFeedback>
-            )}
-
-            <FormActions>
-              <SubmitButton
-                isSubmitting={loading}
-                type="submit"
-                disabled={loading || (accountEntry && !accountEntry.canSignIn)}
-                className="mt-1 w-full"
-              >
-                {method === "code" && !awaitingCode && !accountEntry
-                  ? loading
-                    ? "Getting code…"
-                    : "Get login code"
-                  : loading
-                    ? "Signing in…"
-                    : "Sign in"}
-              </SubmitButton>
-            </FormActions>
-
-            {!accountEntry && (
-              <button
-                type="button"
+          <Field>
+            <FieldLabel htmlFor="email">
+              {accountEntry?.label ?? "Email"}
+            </FieldLabel>
+            {accountEntry?.emailField ?? (
+              <Input
                 disabled={loading}
-                onClick={() =>
-                  switchMethod(method === "password" ? "code" : "password")
-                }
-                className="text-center text-sm text-muted-foreground hover:text-foreground"
-              >
-                {method === "password"
-                  ? "Use a login code instead"
-                  : "Sign in with a password instead"}
-              </button>
+                id="email"
+                name="email"
+                type="email"
+                required
+                autoComplete="username"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
             )}
-          </div>
+          </Field>
+
+          {!accountEntry && method === "password" && (
+            <Field>
+              <div className="flex items-center justify-between gap-3">
+                <FieldLabel htmlFor="password">Password</FieldLabel>
+                <AuthLink href="/forgot-password" className="text-xs">
+                  Forgot password?
+                </AuthLink>
+              </div>
+              <InputGroup appearance="form">
+                <InputGroupInput
+                  disabled={loading}
+                  id="password"
+                  name="password"
+                  type={showPassword ? "text" : "password"}
+                  required
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+                <InputGroupAddon align="inline-end">
+                  <InputGroupButton
+                    disabled={loading}
+                    type="button"
+                    onClick={() => setShowPassword((v) => !v)}
+                    size="icon-sm"
+                    aria-label={
+                      showPassword ? "Hide password" : "Show password"
+                    }
+                  >
+                    <HugeiconsIcon
+                      icon={showPassword ? ViewOffSlashIcon : ViewIcon}
+                    />
+                  </InputGroupButton>
+                </InputGroupAddon>
+              </InputGroup>
+            </Field>
+          )}
+
+          {awaitingCode && (
+            <Field>
+              <div className="flex items-center justify-between gap-3">
+                <FieldLabel htmlFor="login-code">Code</FieldLabel>
+                <button
+                  type="button"
+                  disabled={loading}
+                  onClick={() => void resendCode()}
+                  className="text-xs font-medium text-[var(--link)] underline-offset-4 hover:underline"
+                >
+                  {previewQaCode ? "Refresh code" : "Send a new code"}
+                </button>
+              </div>
+              <Input
+                disabled={loading}
+                id="login-code"
+                name="code"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                pattern="[0-9]{6}"
+                maxLength={6}
+                required
+                value={code}
+                onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
+                className="tabular-nums tracking-[0.3em]"
+              />
+            </Field>
+          )}
+
+          {awaitingCode && notice && !error && (
+            <FormFeedback appearance="dashboard" variant="default">
+              {notice}
+            </FormFeedback>
+          )}
+
+          {error && <FormFeedback appearance="dashboard">{error}</FormFeedback>}
+
+          <SubmitButton
+            isSubmitting={loading}
+            type="submit"
+            disabled={loading || (accountEntry && !accountEntry.canSignIn)}
+            className="w-full"
+          >
+            {method === "code" && !awaitingCode && !accountEntry
+              ? loading
+                ? "Sending code…"
+                : "Email me a code"
+              : loading
+                ? "Signing in…"
+                : "Sign in"}
+          </SubmitButton>
+
+          {!accountEntry && (
+            <Button
+              type="button"
+              variant="ghost"
+              disabled={loading}
+              onClick={() =>
+                switchMethod(method === "password" ? "code" : "password")
+              }
+              className="w-full"
+            >
+              {method === "password"
+                ? "Sign in with an email code"
+                : "Sign in with a password"}
+            </Button>
+          )}
         </FieldGroup>
       </form>
     </AuthShell>

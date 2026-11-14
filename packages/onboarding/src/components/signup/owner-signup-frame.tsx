@@ -41,13 +41,30 @@ export function OwnerSignupFrame({
   planId?: string
   step?: "account" | "code" | "type" | "group" | "store" | "home"
 }) {
-  const [theme, setTheme] = useState<"dark" | "light">("dark")
+  const [theme, setTheme] = useState<"dark" | "light">("light")
   useEffect(() => {
+    // Follow the app's Appearance (next-themes class on <html>); without one,
+    // follow the device.
+    const root = document.documentElement
     const media = matchMedia("(prefers-color-scheme: dark)")
-    const update = () => setTheme(media.matches ? "dark" : "light")
+    const update = () =>
+      setTheme(
+        root.classList.contains("dark")
+          ? "dark"
+          : root.classList.contains("light")
+            ? "light"
+            : media.matches
+              ? "dark"
+              : "light",
+      )
     update()
     media.addEventListener("change", update)
-    return () => media.removeEventListener("change", update)
+    const observer = new MutationObserver(update)
+    observer.observe(root, { attributes: true, attributeFilter: ["class"] })
+    return () => {
+      media.removeEventListener("change", update)
+      observer.disconnect()
+    }
   }, [])
   const at =
     step === "account" || step === "code"

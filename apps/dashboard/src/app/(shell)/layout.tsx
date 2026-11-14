@@ -48,8 +48,13 @@ async function ResolvedShell({ children }: { children: React.ReactNode }) {
     redirect("/setup")
   }
 
-  // No store yet: first-time setup.
-  if (ctx && ctx.stores.length === 0 && ctx.staffAccess?.mode === "SCOPED")
+  // No store yet: the owner sets one up; staff can't, so /setup would only
+  // send them back here.
+  if (
+    ctx &&
+    ctx.stores.length === 0 &&
+    (ctx.staffAccess?.mode === "SCOPED" || ctx.membership.role !== "OWNER")
+  )
     redirect("/access-unavailable")
   if (ctx && ctx.stores.length === 0) {
     redirect("/setup")

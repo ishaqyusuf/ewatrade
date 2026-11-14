@@ -2,15 +2,16 @@
 
 import { FormFeedback } from "@/components/forms/form-feedback"
 import {
+  Button,
   Field,
   FieldGroup,
   FieldLabel,
-  FormActions,
   Input,
   SubmitButton,
 } from "@ewatrade/ui"
+import Link from "next/link"
 import { useEffect, useRef, useState } from "react"
-import { AuthShell } from "./auth-shell"
+import { AuthLink, AuthShell } from "./auth-shell"
 
 export function PasswordRecoveryForm({ mode }: { mode: "request" | "reset" }) {
   const [email, setEmail] = useState("")
@@ -83,13 +84,13 @@ export function PasswordRecoveryForm({ mode }: { mode: "request" | "reset" }) {
       setMessage(
         mode === "request"
           ? result.message
-          : "Your password has been reset. Sign in with your new password.",
+          : "Password saved. Sign in with your new password.",
       )
       setPassword("")
       setConfirmation("")
       setToken(null)
     } catch {
-      setError("Network error. Please check your connection and try again.")
+      setError("Network error. Check your connection and try again.")
     } finally {
       setLoading(false)
     }
@@ -97,50 +98,38 @@ export function PasswordRecoveryForm({ mode }: { mode: "request" | "reset" }) {
 
   return (
     <AuthShell
-      title={
-        mode === "request" ? "Forgot your password?" : "Choose a new password"
-      }
+      title={mode === "request" ? "Reset your password" : "New password"}
       description={
-        mode === "request"
-          ? "Enter your account email and we’ll send you a reset link."
-          : "Use 8–128 characters for your new password."
+        message || invalidLink
+          ? undefined
+          : mode === "request"
+            ? "We’ll email you a reset link."
+            : "At least 8 characters."
       }
-      asideTitle="Back to your business."
-      asideDescription="Recover access to your EwaTrade workspace securely."
       brandHref={
         process.env.NEXT_PUBLIC_MARKETING_URL ?? "https://ewatrade.com"
       }
-      footer={
-        <p className="mt-6 text-center text-sm">
-          <a
-            href="/login"
-            className="font-medium underline-offset-2 hover:underline"
-          >
-            Back to sign in
-          </a>
-        </p>
-      }
+      footer={<AuthLink href="/login">Back to sign in</AuthLink>}
     >
       {message ? (
         <FormFeedback appearance="dashboard" variant="default">
           {message}
         </FormFeedback>
       ) : invalidLink ? (
-        <div className="space-y-4">
+        <div className="flex flex-col gap-4">
           <FormFeedback appearance="dashboard">
-            This reset link is missing, expired or already used. Open the link
-            in your email again, or request a new one.
+            This link has expired or was already used.
           </FormFeedback>
-          <a href="/forgot-password" className="text-sm font-medium underline">
-            Request a new reset link
-          </a>
+          <Button render={<Link href="/forgot-password" />} className="w-full">
+            Get a new link
+          </Button>
         </div>
       ) : (
         <form onSubmit={submit}>
           <FieldGroup className="gap-5">
             {mode === "request" ? (
               <Field>
-                <FieldLabel htmlFor="recovery-email">Email address</FieldLabel>
+                <FieldLabel htmlFor="recovery-email">Email</FieldLabel>
                 <Input
                   id="recovery-email"
                   name="email"
@@ -151,7 +140,6 @@ export function PasswordRecoveryForm({ mode }: { mode: "request" | "reset" }) {
                   disabled={loading}
                   value={email}
                   onChange={(event) => setEmail(event.target.value)}
-                  placeholder="you@example.com"
                 />
               </Field>
             ) : (
@@ -173,7 +161,7 @@ export function PasswordRecoveryForm({ mode }: { mode: "request" | "reset" }) {
                 </Field>
                 <Field>
                   <FieldLabel htmlFor="confirm-password">
-                    Confirm new password
+                    Type it again
                   </FieldLabel>
                   <Input
                     id="confirm-password"
@@ -193,20 +181,18 @@ export function PasswordRecoveryForm({ mode }: { mode: "request" | "reset" }) {
             {error && (
               <FormFeedback appearance="dashboard">{error}</FormFeedback>
             )}
-            <FormActions>
-              <SubmitButton
-                type="submit"
-                isSubmitting={loading}
-                disabled={loading || !ready}
-                className="w-full"
-              >
-                {loading
-                  ? "Please wait…"
-                  : mode === "request"
-                    ? "Send reset link"
-                    : "Reset password"}
-              </SubmitButton>
-            </FormActions>
+            <SubmitButton
+              type="submit"
+              isSubmitting={loading}
+              disabled={loading || !ready}
+              className="w-full"
+            >
+              {loading
+                ? "Please wait…"
+                : mode === "request"
+                  ? "Send reset link"
+                  : "Save password"}
+            </SubmitButton>
           </FieldGroup>
         </form>
       )}

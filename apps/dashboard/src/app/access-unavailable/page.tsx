@@ -1,22 +1,25 @@
-import Link from "next/link"
+import { AuthLink, AuthShell } from "@/components/auth/auth-shell"
+import { SignOut } from "@/components/dashboard/sign-out"
+import type { Metadata } from "next"
+
+export const metadata: Metadata = {
+  title: "No store access — EwaTrade",
+  robots: { index: false, follow: false },
+}
 
 export default function AccessUnavailablePage() {
   return (
-    <main className="mx-auto grid max-w-md gap-4 p-8">
-      <h1 className="text-xl font-semibold">No Store access</h1>
-      <p>
-        Your Store access has been removed or is unavailable. Contact your
-        business administrator.
-      </p>
-      <Link href="/account/whatsapp" className="underline">
-        Manage your WhatsApp assistant access
-      </Link>
-      <Link href="/account/telegram" className="underline">
-        Manage your Telegram assistant access
-      </Link>
-      <Link href="/login" className="underline">
-        Return to sign in
-      </Link>
-    </main>
+    <AuthShell
+      title="No store access"
+      description="Ask your business owner to give you access to a store."
+      footer={
+        <p className="flex flex-wrap justify-center gap-x-4 gap-y-2">
+          <AuthLink href="/account/whatsapp">WhatsApp assistant</AuthLink>
+          <AuthLink href="/account/telegram">Telegram assistant</AuthLink>
+        </p>
+      }
+    >
+      <SignOut appearance="button" />
+    </AuthShell>
   )
 }

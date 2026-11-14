@@ -92,16 +92,7 @@ export function OwnerStoreStep({
   return (
     <>
       <header>
-        <p className="signup-eyebrow">
-          Step 3 of 3 ·{" "}
-          {setupNow.length > 1
-            ? `Business ${index + 1} of ${setupNow.length}`
-            : "Store"}
-        </p>
         <h1>Set up {business.name}</h1>
-        <p className="signup-intro">
-          Almost done. You can change all of this later in Settings.
-        </p>
       </header>
       {setupNow.length > 1 && (
         <nav className="owner-ref-biztabs" aria-label="Businesses">
@@ -146,12 +137,7 @@ export function OwnerStoreStep({
         </button>
       </div>
       <fieldset className="owner-offer-fieldset">
-        <legend className="owner-ref-glbl">
-          What does your business do?{" "}
-          {!business.offerTouched && (
-            <small>· picked for {types.toLowerCase()}</small>
-          )}
-        </legend>
+        <legend className="owner-ref-glbl">What do you do?</legend>
         <div className="owner-ref-offeropts">
           {offers.map((offer) => (
             <label
@@ -183,7 +169,7 @@ export function OwnerStoreStep({
         </div>
       </fieldset>
       <div className="owner-ref-glbl">
-        Where you trade <small>· optional, helps customers find you</small>
+        Location <small>· optional</small>
       </div>
       {address ? (
         <>
@@ -334,7 +320,7 @@ export function OwnerStoreStep({
         htmlFor={`${id}-about`}
       >
         <span>
-          About this store <small>· optional</small>
+          About <small>· optional</small>
           <em className="owner-ref-counter">
             {business.description?.length ?? 0}/280
           </em>
@@ -345,12 +331,9 @@ export function OwnerStoreStep({
           rows={3}
           maxLength={280}
           value={business.description ?? ""}
-          placeholder="A line or two about what you offer. Shown on your store page."
+          placeholder="A line or two about what you offer"
           onChange={(event) => patch({ description: event.target.value })}
         />
-        <small className="owner-ref-help">
-          Shown on your store page. Skip it now if you like.
-        </small>
       </label>
       <div className="owner-ref-banner owner-ref-t-mint owner-free-store-banner">
         <OwnerSignupIcon name="store" />
@@ -359,16 +342,9 @@ export function OwnerStoreStep({
           <b>
             {business.slug}.{storefrontDomain}
           </b>
-          {upgraded ? (
-            `On ${draft.planId === "growth" ? "Growth" : "Pro"} it can list all your items. Customer messages are included once your store chat is set up.`
-          ) : (
-            <>
-              On Starter it shows your{" "}
-              <b className="owner-inline-bold">first 3 items</b>. Upgrade to
-              show everything and let customers message you once your store chat
-              is set up.
-            </>
-          )}
+          {upgraded
+            ? "It lists all your items."
+            : "Starter shows your first 3 items."}
         </div>
       </div>
       <footer className="owner-step-actions">
@@ -388,7 +364,7 @@ export function OwnerStoreStep({
               ? `Next: ${setupNow[index + 1]?.name}`
               : draft.businesses.length > setupNow.length
                 ? `${draft.businesses.length - setupNow.length} more wait on Home`
-                : "Last step"}
+                : ""}
         </div>
         <button
           className="signup-primary"

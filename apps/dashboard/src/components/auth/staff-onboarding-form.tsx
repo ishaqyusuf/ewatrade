@@ -8,7 +8,6 @@ import {
   Field,
   FieldGroup,
   FieldLabel,
-  FormActions,
   Input,
   SelectControl,
   SubmitButton,
@@ -85,7 +84,7 @@ export function StaffOnboardingForm({
       )
       const body = await result.json()
       if (!result.ok) {
-        setError(body.error ?? "Staff setup could not be completed.")
+        setError(body.error ?? "Could not join. Try again.")
         return
       }
       if (operation === "request-code") setSent(true)
@@ -96,20 +95,15 @@ export function StaffOnboardingForm({
       setPending(false)
     }
   }
+  const role = invite.role.charAt(0) + invite.role.slice(1).toLowerCase()
   return (
     <AuthShell
       title={<>Join {invite.businessName}</>}
       description={
-        <>
-          <p>
-            You’re invited as{" "}
-            <span className="capitalize">{invite.role.toLowerCase()}</span>.
-          </p>
-          <p className="mt-2 break-all">{invite.email}</p>
-        </>
+        <p className="break-words">
+          {invite.email} · {role}
+        </p>
       }
-      asideTitle="Work together."
-      asideDescription="Complete your staff setup to join your business workspace."
       brandHref={marketingUrl}
     >
       <form
@@ -121,27 +115,16 @@ export function StaffOnboardingForm({
           void submit(sent ? "complete" : "request-code")
         }}
       >
-        <FieldGroup>
-          <Field>
-            <FieldLabel htmlFor="staff-email">Email address</FieldLabel>
-            <Input
-              id="staff-email"
-              name="username"
-              type="email"
-              autoComplete="username"
-              value={invite.email}
-              readOnly
-            />
-            <p className="text-xs text-muted-foreground">
-              This invitation is for this email address.
-            </p>
-          </Field>
-          {qaInvitation ? (
-            <p className="text-sm text-muted-foreground">
-              QA invitation verified. Complete setup here without checking
-              email.
-            </p>
-          ) : null}
+        {/* Lets password managers save the new password against this email. */}
+        <input
+          type="email"
+          name="username"
+          autoComplete="username"
+          value={invite.email}
+          readOnly
+          hidden
+        />
+        <FieldGroup className="gap-5">
           <ControlField label={<>Your name</>}>
             <Input
               id="staff-name"
@@ -152,14 +135,14 @@ export function StaffOnboardingForm({
             />
           </ControlField>
           {invite.needsAge ? (
-            <ControlField label={<>Age range</>}>
+            <ControlField label={<>Your age</>}>
               <SelectControl
                 id="staff-age"
                 required
                 value={ageBand}
                 onValueChange={(value) => setAgeBand(value)}
                 options={[
-                  { value: "", label: <>Choose your age range</> },
+                  { value: "", label: <>Choose</> },
                   { value: "AGE_13_TO_15", label: <>13–15</> },
                   { value: "AGE_16_TO_17", label: <>16–17</> },
                   { value: "ADULT", label: <>18 or older</> },
@@ -168,29 +151,25 @@ export function StaffOnboardingForm({
             </ControlField>
           ) : null}
           {sent && !qaInvitation ? (
-            <>
-              <FormFeedback appearance="dashboard" variant="default">
-                A verification code was sent to {invite.email}.
-              </FormFeedback>
-              <ControlField label={<>Verification code</>}>
-                <Input
-                  id="staff-code"
-                  inputMode="numeric"
-                  autoComplete="one-time-code"
-                  maxLength={6}
-                  value={code}
-                  onChange={(event) => setCode(event.target.value)}
-                  required
-                />
-              </ControlField>
-            </>
+            <ControlField label={<>Code from your email</>}>
+              <Input
+                id="staff-code"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                maxLength={6}
+                value={code}
+                onChange={(event) =>
+                  setCode(event.target.value.replace(/\D/g, ""))
+                }
+                className="tabular-nums tracking-[0.3em]"
+                required
+              />
+            </ControlField>
           ) : null}
           {sent && invite.needsPassword ? (
             <>
               <Field>
-                <FieldLabel htmlFor="staff-password">
-                  Create password
-                </FieldLabel>
+                <FieldLabel htmlFor="staff-password">Password</FieldLabel>
                 <Input
                   id="staff-password"
                   name="password"
@@ -198,18 +177,15 @@ export function StaffOnboardingForm({
                   autoComplete="new-password"
                   minLength={8}
                   maxLength={128}
+                  placeholder="At least 8 characters"
                   required
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
                 />
-                <p className="text-xs text-muted-foreground">
-                  Use at least 8 characters. You’ll use this password to sign
-                  in.
-                </p>
               </Field>
               <Field>
                 <FieldLabel htmlFor="staff-confirm-password">
-                  Confirm password
+                  Type it again
                 </FieldLabel>
                 <Input
                   id="staff-confirm-password"
@@ -231,23 +207,22 @@ export function StaffOnboardingForm({
                 <span>
                   I agree to the{" "}
                   <a
-                    className="underline"
+                    className="font-medium text-[var(--link)] underline-offset-4 hover:underline"
                     href={`${marketingUrl}/terms`}
                     target="_blank"
                     rel="noreferrer"
                   >
                     Terms
                   </a>{" "}
-                  and acknowledge the{" "}
+                  and{" "}
                   <a
-                    className="underline"
+                    className="font-medium text-[var(--link)] underline-offset-4 hover:underline"
                     href={`${marketingUrl}/privacy`}
                     target="_blank"
                     rel="noreferrer"
                   >
                     Privacy Notice
                   </a>
-                  .
                 </span>
               }
             >
@@ -259,28 +234,32 @@ export function StaffOnboardingForm({
           ) : null}
           {error ? (
             <FormFeedback appearance="dashboard">{error}</FormFeedback>
+          ) : sent && !qaInvitation ? (
+            <FormFeedback appearance="dashboard" variant="default">
+              Code sent to {invite.email}.
+            </FormFeedback>
           ) : null}
-          <FormActions>
-            <SubmitButton
-              isSubmitting={pending}
-              type="submit"
-              disabled={pending || (sent && Boolean(legalVersion) && !agreed)}
-            >
-              {pending
-                ? "Please wait…"
-                : sent
-                  ? "Complete staff setup"
-                  : "Send verification code"}
-            </SubmitButton>
-          </FormActions>
+          <SubmitButton
+            isSubmitting={pending}
+            type="submit"
+            className="w-full"
+            disabled={pending || (sent && Boolean(legalVersion) && !agreed)}
+          >
+            {pending
+              ? "Please wait…"
+              : sent
+                ? `Join ${invite.businessName}`
+                : "Email me a code"}
+          </SubmitButton>
           {sent && !qaInvitation ? (
             <Button
               type="button"
               variant="ghost"
+              className="w-full"
               disabled={pending}
               onClick={() => void submit("request-code")}
             >
-              Resend code
+              Send a new code
             </Button>
           ) : null}
         </FieldGroup>

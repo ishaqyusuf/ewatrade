@@ -50,10 +50,7 @@ export function OwnerSetupRail({ draft }: { draft: OwnerSetupDraft }) {
               ))}
             </div>
           ) : (
-            <div className="owner-ref-rl-empty">
-              Pick one or more types. If they’re separate businesses, you’ll
-              sort them next.
-            </div>
+            <div className="owner-ref-rl-empty">Nothing picked yet.</div>
           )}
         </>
       ) : (
@@ -110,9 +107,6 @@ export function OwnerSetupRail({ draft }: { draft: OwnerSetupDraft }) {
           )}
         </>
       )}
-      <p className="owner-ref-gp-cap owner-rail-caption">
-        Each business gets its own free store link.
-      </p>
     </>
   )
 }

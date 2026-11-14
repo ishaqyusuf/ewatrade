@@ -117,7 +117,7 @@ export function QaLoginEntry(props: {
     document.addEventListener("visibilitychange", activityChanged)
     window.addEventListener("online", activityChanged)
     window.addEventListener("offline", activityChanged)
-    const interval = window.setInterval(() => void refresh(), 60_000)
+    // No timer: focus, visibility and reconnect refresh; expiry clears below.
     return () => {
       generation.current += 1
       cancelRefresh()
@@ -125,7 +125,6 @@ export function QaLoginEntry(props: {
       document.removeEventListener("visibilitychange", activityChanged)
       window.removeEventListener("online", activityChanged)
       window.removeEventListener("offline", activityChanged)
-      window.clearInterval(interval)
     }
   }, [cancelRefresh, refresh])
 

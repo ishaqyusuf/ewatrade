@@ -118,11 +118,9 @@ export function OwnerGroupStep({
   return (
     <>
       <header>
-        <p className="signup-eyebrow">Step 2 of 3 · Your businesses</p>
         <h1>How do you run these?</h1>
         <p className="signup-intro">
-          Types in the same card are one business. Drag a type to another card,
-          or onto “New business” to run it separately.
+          Each card is one business. Drag a type, or use Move.
         </p>
       </header>
       <fieldset
@@ -140,10 +138,7 @@ export function OwnerGroupStep({
           />
           <span>
             <b>All one business</b>
-            <small>
-              One name, one store link, one stock list. Like a phone shop that
-              also does repairs.
-            </small>
+            <small>One name, one store link, one stock list.</small>
           </span>
         </button>
         <button
@@ -159,16 +154,12 @@ export function OwnerGroupStep({
             <b>
               Each separate <em className="owner-ref-recpill">Suggested</em>
             </b>
-            <small>
-              Each gets its own name, store link, stock and reports. One login
-              switches between them.
-            </small>
+            <small>Own name, link and stock for each. One login.</small>
           </span>
         </button>
       </fieldset>
       <h2 className="owner-ref-sl">
         {count} {count === 1 ? "business" : "businesses"}
-        <small>Drag, or use Move (works with the keyboard)</small>
       </h2>
       <output className="sr-only" aria-live="polite">
         {announcement}
@@ -325,7 +316,7 @@ export function OwnerGroupStep({
           <OwnerSignupIcon name="plus" />
           <span>
             <b>New business</b>
-            <small>Drag a type here to run it on its own</small>
+            <small>Drop a type here</small>
           </span>
         </section>
       </div>
@@ -339,10 +330,9 @@ export function OwnerGroupStep({
             </b>
           </div>
           <p>
-            Starter, your plan now, includes 1 business.{" "}
-            {neededPlan === "growth" ? "Growth" : "Pro"} runs up to{" "}
-            {OWNER_PLAN_LIMITS[neededPlan]} and is free during launch. You can
-            change plans anytime.
+            Starter includes 1. {neededPlan === "growth" ? "Growth" : "Pro"}{" "}
+            runs up to {OWNER_PLAN_LIMITS[neededPlan]} and is free during
+            launch.
           </p>
           <div className="owner-ref-chips">
             <button
@@ -364,8 +354,8 @@ export function OwnerGroupStep({
           </div>
           <span className="owner-ref-help">
             {draft.planId === "starter"
-              ? `We’ll set up ${draft.businesses[0]?.name} now. The others wait on Home until you upgrade.`
-              : `You’ll set up all ${count} now, one after another. Nothing is charged.`}
+              ? `Only ${draft.businesses[0]?.name} is set up now. The rest wait until you upgrade.`
+              : `All ${count} are set up now. Nothing is charged.`}
           </span>
         </section>
       )}
@@ -378,10 +368,7 @@ export function OwnerGroupStep({
         >
           <OwnerSignupIcon name="arrowRight" className="owner-back-icon" />
         </button>
-        <div className="owner-ref-hint">
-          {issue ||
-            `${count} ${count === 1 ? "business" : "businesses"} · ${draft.planId === "starter" ? `setting up ${draft.businesses[0]?.name} now` : `setting up all ${count} now`}`}
-        </div>
+        <div className="owner-ref-hint">{issue}</div>
         <button
           className="signup-primary"
           disabled={!canProceed || disabled}

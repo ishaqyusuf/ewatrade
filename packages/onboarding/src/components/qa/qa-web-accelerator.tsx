@@ -185,7 +185,8 @@ export function QaWebAccelerator({ children }: { children: ReactNode }) {
     const onVisibility = () => {
       if (document.visibilityState === "visible") void revalidate()
     }
-    const interval = window.setInterval(() => void revalidate(), 60_000)
+    // No timer: revalidate on focus and when the tab is shown again. The server
+    // checks QA access on every QA action, so an idle tab needs no polling.
     channel?.addEventListener("message", (event) => {
       if (event.data !== "revoked") return
       setAuthorization(null)
@@ -196,7 +197,6 @@ export function QaWebAccelerator({ children }: { children: ReactNode }) {
     document.addEventListener("visibilitychange", onVisibility)
     return () => {
       active = false
-      window.clearInterval(interval)
       channel?.close()
       window.removeEventListener("focus", onFocus)
       document.removeEventListener("visibilitychange", onVisibility)
