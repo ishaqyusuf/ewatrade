@@ -6,13 +6,6 @@ export const productUsages = [
 ] as const
 export type ProductUsage = (typeof productUsages)[number]
 
-/** Usages the dashboard item form offers; Returnable joins when its dashboard screens ship. */
-export const selectableProductUsages: readonly ProductUsage[] = [
-  "FOR_SALE",
-  "INTERNAL_USE",
-  "BOTH",
-]
-
 export const productUsageLabels: Record<ProductUsage, string> = {
   FOR_SALE: "For sale",
   INTERNAL_USE: "Internal use",

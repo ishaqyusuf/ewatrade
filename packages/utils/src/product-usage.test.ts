@@ -4,7 +4,6 @@ import {
   isReturnableProduct,
   isSaleEligibleProduct,
   productUsages,
-  selectableProductUsages,
 } from "./product-usage"
 
 describe("product usage", () => {
@@ -20,9 +19,5 @@ describe("product usage", () => {
     expect(isSaleEligibleProduct("RETURNABLE")).toBe(false)
     expect(isInternalUseProduct("RETURNABLE")).toBe(false)
     expect(isReturnableProduct("RETURNABLE")).toBe(true)
-  })
-
-  test("the dashboard form does not offer Returnable yet", () => {
-    expect(selectableProductUsages).not.toContain("RETURNABLE")
   })
 })

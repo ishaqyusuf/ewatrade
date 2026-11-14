@@ -1537,6 +1537,7 @@ export function CatalogItemForm({
 
   if (!form.kind) return null
   const itemKind = form.kind
+  const returnable = itemKind === "product" && form.usage === "RETURNABLE"
   const suggestionsDisabled =
     restoringForm ||
     Boolean(catalogConversation && (!formVersion || !productData)) ||
@@ -1637,8 +1638,10 @@ export function CatalogItemForm({
       done: !showAdvanced && Boolean(sku || barcode),
     },
   }
-  const sectionOrder: CatalogSectionId[] =
-    form.kind === "product"
+  // A Returnable is never sold or stocked: only its look and description apply.
+  const sectionOrder: CatalogSectionId[] = returnable
+    ? ["images", "description"]
+    : form.kind === "product"
       ? ["images", "options", "units", "stock", "description", "codes"]
       : ["images", "pricing", "options", "work", "description"]
 
@@ -2443,14 +2446,35 @@ export function CatalogItemForm({
                 {form.kind === "product" ? (
                   <ProductUsageField
                     value={form.usage}
-                    onChange={(usage) =>
+                    onChange={(usage) => {
+                      if (usage === "RETURNABLE") {
+                        if (showAdvanced || additionalUnits.length) {
+                          setError(
+                            "Remove customer choices and selling units before making this item Returnable.",
+                          )
+                          return
+                        }
+                        // Returnables are never sold or stocked: drop a typed price, opening stock and codes.
+                        setShowOpeningStock(false)
+                        setSku("")
+                        setBarcode("")
+                        setForm((current) => ({
+                          ...current,
+                          usage,
+                          price: "",
+                          openingStockQuantity: "",
+                        }))
+                        setError(null)
+                        return
+                      }
                       setForm((current) => ({ ...current, usage }))
-                    }
+                    }}
                   />
                 ) : null}
                 <div
                   hidden={
                     showAdvanced ||
+                    returnable ||
                     (form.kind === "service" && defaultQuoteRequired)
                   }
                 >
@@ -2496,7 +2520,7 @@ export function CatalogItemForm({
                   </Alert>
                 ) : null}
 
-                {editing ? (
+                {editing && !returnable ? (
                   <Field
                     htmlFor="catalog-price-reason"
                     label="Reason for price changes (optional)"
