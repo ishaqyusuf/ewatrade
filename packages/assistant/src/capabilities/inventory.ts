@@ -294,6 +294,11 @@ formOnly(
   "Stock history pages and category totals behind the Stock history page filters; the assistant reads recent operations with readStockOperations and one original with readStockOperation.",
   ["inventory.operationHistoryPage", "inventory.operationTotals"],
 )
+formOnly(
+  "inventory",
+  "Transfers page by page behind the Transfers page filters (status, Coming in / Going out, search); the assistant lists Store transfers with readStockTransfers (inventory.transfers) and opens one with transferReview.",
+  ["inventory.transfersPage"],
+)
 planned("inventory", "C05", ["inventory.reconciliationReport"])
 planned("inventory", "G04", [
   "inventory.*Reservation",
