@@ -285,7 +285,7 @@ export function RecordReturnScreen(props: {
                 />
               ) : null}
               <Text className="mt-2 text-center text-xs font-bold text-muted-foreground">
-                {`${balance.customerName} · ${balance.out} → ${Math.max(0, balance.out - count)} ${balance.itemName.toLowerCase()} out`}
+                {`${balance.customerName} · ${balance.out} → ${Math.max(0, balance.out - count)} out`}
               </Text>
               <ActionButton
                 disabled={!valid || isOffline}

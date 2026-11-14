@@ -4,9 +4,11 @@ import { Icon } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
+import { useColors } from "@/hooks/use-color"
 import { useRouter } from "expo-router"
 import { daysOut, daysOutLabel } from "./returnables-screen"
 import {
+  returnableCount,
   useOrderReturnables,
   useReturnableBalances,
   useReturnableItems,
@@ -28,6 +30,7 @@ export function OrderReturnablesCard({
   isOffline: boolean
 }) {
   const router = useRouter()
+  const colors = useColors()
   const query = useOrderReturnables(orderId)
   const customerId = query.data?.customerId
   if (!query.data?.items.length) return null
@@ -69,8 +72,11 @@ export function OrderReturnablesCard({
             </View>
             <View className="h-2 overflow-hidden rounded-full bg-muted">
               <View
-                className="h-full rounded-full bg-primary"
+                // `style` drops className styles on this View, so all of it goes in style.
                 style={{
+                  backgroundColor: colors.primary,
+                  borderRadius: 999,
+                  height: "100%",
                   width: `${item.issued ? Math.min(100, (back / item.issued) * 100) : 0}%`,
                 }}
               />
@@ -135,7 +141,7 @@ export function CustomerReturnablesCard({
           <ReturnableBadge />
           <View className="min-w-0 flex-1">
             <Text className="text-base font-extrabold tabular-nums text-foreground">
-              {`${row.out} ${row.itemName.toLowerCase()} out`}
+              {`${returnableCount(row.out, row.itemName)} out`}
             </Text>
             <Text className="text-xs text-muted-foreground">
               {`Oldest ${daysOutLabel(daysOut(row.oldestOutAt)).toLowerCase()}${row.orderCount ? ` · ${row.orderCount} ${row.orderCount === 1 ? "order" : "orders"}` : ""}`}

@@ -66,7 +66,9 @@ export function OperationSuccessScreen({
       : "order"
 
   if (kind === "order") return <SaleSuccess params={params} />
-  const internalUse = kind === "product" && params.usage === "INTERNAL_USE"
+  const returnable = kind === "product" && params.usage === "RETURNABLE"
+  const internalUse =
+    returnable || (kind === "product" && params.usage === "INTERNAL_USE")
   return (
     <View className="flex-1 bg-background px-[18px]">
       <View
@@ -77,32 +79,44 @@ export function OperationSuccessScreen({
       >
         <HeroCard
           cta={
-            internalUse
+            returnable
               ? {
                   icon: "Package",
-                  label: "Open catalog",
-                  onPress: () =>
-                    router.replace("/catalog-items-modal" as never),
-                  testID: "item-success-catalog",
+                  label: "Open Returnables",
+                  onPress: () => router.replace("/returnables-modal" as never),
+                  testID: "item-success-returnables",
                 }
-              : {
-                  icon: "Receipt",
-                  label: "Take your first order",
-                  onPress: () => router.replace("/create-sale-modal" as never),
-                  testID: "item-success-first-order",
-                }
+              : internalUse
+                ? {
+                    icon: "Package",
+                    label: "Open catalog",
+                    onPress: () =>
+                      router.replace("/catalog-items-modal" as never),
+                    testID: "item-success-catalog",
+                  }
+                : {
+                    icon: "Receipt",
+                    label: "Take your first order",
+                    onPress: () =>
+                      router.replace("/create-sale-modal" as never),
+                    testID: "item-success-first-order",
+                  }
           }
           done
           sub={
-            internalUse
-              ? "Hidden from customer orders. Record its stock with Stock in."
-              : "Available in your catalog. You can change it any time."
+            returnable
+              ? "Add it at checkout when it goes out with an order. Never sold."
+              : internalUse
+                ? "Hidden from customer orders. Record its stock with Stock in."
+                : "Available in your catalog. You can change it any time."
           }
           testID="item-success-hero"
           title={
-            internalUse
-              ? `${params.name || "Your item"} is saved for business use`
-              : `${params.name || "Your item"} is ready to sell`
+            returnable
+              ? `${params.name || "Your item"} is saved as a returnable`
+              : internalUse
+                ? `${params.name || "Your item"} is saved for business use`
+                : `${params.name || "Your item"} is ready to sell`
           }
         />
         <QuickActionRow

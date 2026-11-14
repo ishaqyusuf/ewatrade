@@ -340,9 +340,15 @@ export function CatalogSetupView({ model }: { model: CatalogSetupModel }) {
               <Classic.CatalogLivePreview
                 currencyCode={model.currencyCode}
                 kind={kind}
+                label={
+                  kind === "product" && model.usage === "RETURNABLE"
+                    ? "Returnable"
+                    : undefined
+                }
                 name={model.name}
                 price={model.price}
                 quoteRequired={model.defaultQuoteRequired}
+                returnable={kind === "product" && model.usage === "RETURNABLE"}
                 unitName={model.unitName}
               />
             ) : null}

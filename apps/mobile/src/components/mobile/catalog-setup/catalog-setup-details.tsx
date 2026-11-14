@@ -63,6 +63,9 @@ export const CATALOG_EDITOR_TITLES: Record<CatalogEditorKey, string> = {
   review: "Review item",
 }
 
+/** A Returnable is never sold or stocked: only its look and description apply. */
+const RETURNABLE_ROWS = new Set<string>(["images", "category", "description"])
+
 export function CatalogDetailRow({
   label,
   description,
@@ -283,7 +286,10 @@ function ClassicDetailRows({
           card edge to edge without spilling past the corners. */}
       <View className="rounded-[20px] bg-card shadow-sm">
         <View className="overflow-hidden rounded-[20px] px-3.5">
-          {rows.map(({ key, ...row }, index) => (
+          {(model.kind === "product" && model.usage === "RETURNABLE"
+            ? rows.filter(({ key }) => RETURNABLE_ROWS.has(key))
+            : rows
+          ).map(({ key, ...row }, index) => (
             <ClassicDetailRow
               key={key}
               border={index > 0}
@@ -526,11 +532,18 @@ export function CatalogFocusedEditor({
             <CatalogLivePreview
               currencyCode={model.currencyCode}
               kind={model.kind}
-              label="Ready to sell"
+              label={
+                model.kind === "product" && model.usage === "RETURNABLE"
+                  ? "Returnable"
+                  : "Ready to sell"
+              }
               name={model.name}
               pill={model.hasAttempt ? "Not confirmed" : "Draft"}
               price={model.price}
               quoteRequired={model.defaultQuoteRequired}
+              returnable={
+                model.kind === "product" && model.usage === "RETURNABLE"
+              }
               unitName={model.unitName}
             />
           ) : null}

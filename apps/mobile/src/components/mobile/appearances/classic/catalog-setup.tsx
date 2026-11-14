@@ -615,11 +615,14 @@ export function CatalogLivePreview({
   pill = "Draft",
   price,
   quoteRequired,
+  returnable = false,
   unitName,
 }: {
   currencyCode: string
   kind: CatalogItemKind
   label?: string
+  /** Returnable items are never sold, so the preview shows no price. */
+  returnable?: boolean
   name: string
   pill?: string
   price: string
@@ -630,8 +633,9 @@ export function CatalogLivePreview({
   const palette = GREEN_TILL_THEME[colorScheme]
   const trimmedName = name.trim()
   const amount = Number(price.replace(/,/g, ""))
-  const priceLine =
-    kind === "service" && quoteRequired
+  const priceLine = returnable
+    ? "Not sold · goes out with orders"
+    : kind === "service" && quoteRequired
       ? "Quote each job"
       : price.trim() && Number.isFinite(amount)
         ? `${getCurrencySymbol(currencyCode)}${amount.toLocaleString("en-US", { maximumFractionDigits: 2 })}${kind === "product" && unitName.trim() ? ` per ${unitName.trim().toLowerCase()}` : ""}`
