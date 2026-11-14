@@ -5,7 +5,6 @@ import {
   Separator,
   Sheet,
   SheetContent,
-  SheetDescription,
   SheetHeader,
   SheetTitle,
 } from "@ewatrade/ui"
@@ -177,10 +176,9 @@ export function CatalogItemDetailModal({
                 }
               />
               <Separator className="shrink-0" />
-              <div className="flex shrink-0 flex-wrap justify-between gap-2 px-6 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] text-xs text-muted-foreground">
-                <span>Created {dateTime(detail.item.createdAt)}</span>
-                <span>Item updated {dateTime(detail.item.updatedAt)}</span>
-              </div>
+              <p className="shrink-0 px-6 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] text-sm text-muted-foreground">
+                Updated {dateTime(detail.item.updatedAt)}
+              </p>
             </>
           ) : (
             <>
@@ -189,9 +187,6 @@ export function CatalogItemDetailModal({
                   <SheetTitle className="text-xl font-medium">
                     Catalog item
                   </SheetTitle>
-                  <SheetDescription>
-                    Overview, orders and retained activity.
-                  </SheetDescription>
                 </div>
                 <CatalogDetailClose />
               </SheetHeader>

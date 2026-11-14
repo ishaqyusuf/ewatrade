@@ -411,10 +411,15 @@ export function CatalogItemForm({
     ? `/api/catalog/photos/${encodeURIComponent(savedPhoto.assetId)}/preview?storeId=${encodeURIComponent(storeId)}&variant=thumbnail`
     : null
   const savedIllustrationId = editItem?.illustrations[0]?.illustrationId ?? null
-  const savedPrice = useMemo(
-    () => (editItem ? savedItemToFormState(editItem).price : null),
-    [editItem],
-  )
+  const savedPrices = useMemo(() => {
+    if (!editItem) return null
+    const saved = savedItemToFormState(editItem)
+    return {
+      price: saved.price,
+      choices: JSON.stringify(saved.variantDrafts),
+      units: JSON.stringify(saved.additionalUnits),
+    }
+  }, [editItem])
   const savedIds = useMemo(
     () => (editItem ? savedCatalogIds(editItem) : null),
     [editItem],
@@ -2495,10 +2500,10 @@ export function CatalogItemForm({
                 </div>
                 {showAdvanced ? (
                   <p className="text-sm text-muted-foreground">
-                    Set each choice’s price in{" "}
+                    Each choice has its own price under{" "}
                     {form.kind === "service"
-                      ? "Packages or customer choices"
-                      : "Customer choices"}
+                      ? "Packages or choices"
+                      : "Sizes, colours or other choices"}
                     .
                   </p>
                 ) : null}
@@ -2514,7 +2519,10 @@ export function CatalogItemForm({
 
                 {editing &&
                 !returnable &&
-                (showAdvanced || form.price !== savedPrice) ? (
+                savedPrices &&
+                (form.price !== savedPrices.price ||
+                  JSON.stringify(variantDrafts) !== savedPrices.choices ||
+                  JSON.stringify(additionalUnits) !== savedPrices.units) ? (
                   <Field
                     htmlFor="catalog-price-reason"
                     label="Reason for the new price (optional)"
