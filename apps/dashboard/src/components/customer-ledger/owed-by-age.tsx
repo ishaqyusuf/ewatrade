@@ -67,12 +67,10 @@ export function OwedByAge({ accountId }: { accountId: string }) {
   return (
     <section
       aria-label="What they owe, by age"
-      className="grid gap-3 border border-border p-4"
+      className="grid gap-3 rounded-[var(--ui-radius-surface)] border border-border bg-card p-4"
     >
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 className="text-sm font-semibold">
-          Owes you {money(aging.totalOwedMinor)} in all
-        </h2>
+        <h2 className="text-sm font-semibold">By age</h2>
         {aging.oldestOwedAt ? (
           <span className="text-sm text-muted-foreground">
             Oldest since {day.format(new Date(aging.oldestOwedAt))}

@@ -1,6 +1,5 @@
 "use client"
 import { loadSheetCode } from "@/components/sheets/load-sheet-code"
-import { SheetFrame } from "@/components/sheets/sheet-frame"
 import {
   STATEMENT_PDF_PRESETS,
   type StatementPdfPreset,
@@ -15,13 +14,16 @@ import {
   Button,
   Checkbox,
   DatePicker,
-  Sheet,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
   ToggleGroup,
   ToggleGroupItem,
 } from "@ewatrade/ui"
 import { useQuery } from "@tanstack/react-query"
 import dynamic from "next/dynamic"
-import { useEffect, useId, useRef, useState } from "react"
+import { useEffect, useId, useMemo, useRef, useState } from "react"
 
 const StatementPdfPreview = dynamic(
   () =>
@@ -37,11 +39,11 @@ const StatementPdfPreview = dynamic(
 )
 
 /**
- * Print or save one customer's statement as a PDF for chosen dates
- * (Workshop customers-pages 07). The PDF is rendered by the API from the same
- * snapshot the statement page shows.
+ * Share, print or save one customer's statement as a PDF for chosen dates.
+ * A modal (export/share), not a record sheet. The PDF is rendered by the API
+ * from the same snapshot the statement page shows.
  */
-export function StatementPdfSheet({
+export function StatementPdfDialog({
   open,
   onOpenChange,
   accountId,
@@ -57,7 +59,7 @@ export function StatementPdfSheet({
   currencyCode: string
 }) {
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       {open ? (
         <StatementPdfFrame
           accountId={accountId}
@@ -66,7 +68,7 @@ export function StatementPdfSheet({
           currencyCode={currencyCode}
         />
       ) : null}
-    </Sheet>
+    </Dialog>
   )
 }
 
@@ -150,25 +152,44 @@ function StatementPdfFrame({
     workflow.track("report_print", "completed")
   }
 
+  const file = useMemo(
+    () =>
+      data && typeof File !== "undefined"
+        ? new File([pdfBytes(data.pdfBase64)], data.filename, {
+            type: "application/pdf",
+          })
+        : null,
+    [data],
+  )
+  const canShare = Boolean(
+    file &&
+      typeof navigator !== "undefined" &&
+      navigator.canShare?.({ files: [file] }),
+  )
+  async function share() {
+    if (!file) return
+    setError(null)
+    try {
+      await navigator.share({ files: [file], title: file.name })
+      workflow.track("customer_statement_export", "completed", {
+        channel: "share",
+      })
+    } catch (failure) {
+      if ((failure as Error)?.name !== "AbortError")
+        setError("Couldn’t share. Download the PDF instead.")
+    }
+  }
+
   const ready = Boolean(url && data && !query.isFetching)
   const invalid = range.from > range.through
   return (
-    <SheetFrame
-      title="Statement PDF"
-      description={[customerName, currencyCode].filter(Boolean).join(" · ")}
-      popupClassName="sm:max-w-[960px]"
-      contentClassName="px-0 pb-0"
-      footer={
-        <>
-          <Button variant="outline" disabled={!ready} onClick={print}>
-            Print
-          </Button>
-          <Button disabled={!ready} onClick={download}>
-            Download PDF
-          </Button>
-        </>
-      }
-    >
+    <DialogContent className="flex max-w-[960px] flex-col gap-0 p-0 sm:w-[90vw]">
+      <div className="grid gap-1 px-6 pt-6 pb-4 pr-14">
+        <DialogTitle className="text-lg font-semibold">Statement</DialogTitle>
+        <DialogDescription className="text-sm text-muted-foreground">
+          {[customerName, currencyCode].filter(Boolean).join(" · ")}
+        </DialogDescription>
+      </div>
       <div className="grid gap-3 border-b border-border px-6 pb-4">
         <ToggleGroup<StatementPdfPreset>
           variant="outline"
@@ -183,7 +204,7 @@ function StatementPdfFrame({
             <ToggleGroupItem
               key={option.key}
               value={option.key}
-              className="rounded-none"
+              className="h-11"
             >
               {option.label}
             </ToggleGroupItem>
@@ -235,15 +256,15 @@ function StatementPdfFrame({
           />
           <span className="grid">
             <span>Show how to pay</span>
-            <small className="text-xs text-muted-foreground">
-              {showPaymentDetails && data && data.paymentAccountCount === 0
-                ? "Add bank details to a money account in Finance to show them here."
-                : "Bank accounts set up in Finance"}
-            </small>
+            {showPaymentDetails && data && data.paymentAccountCount === 0 ? (
+              <small className="text-xs text-muted-foreground">
+                No bank details in Finance yet.
+              </small>
+            ) : null}
           </span>
         </label>
       </div>
-      <div className="grid gap-3 bg-muted p-5">
+      <div className="grid min-h-0 flex-1 gap-3 overflow-y-auto bg-muted p-5">
         {error ? (
           <p role="alert" className="text-sm text-destructive">
             {error}
@@ -277,6 +298,23 @@ function StatementPdfFrame({
           </output>
         )}
       </div>
-    </SheetFrame>
+      <div className="flex flex-col-reverse gap-2 border-t border-border px-6 py-4 sm:flex-row sm:justify-end">
+        <Button variant="outline" disabled={!ready} onClick={print}>
+          Print
+        </Button>
+        <Button
+          variant={canShare ? "outline" : "default"}
+          disabled={!ready}
+          onClick={download}
+        >
+          Download PDF
+        </Button>
+        {canShare ? (
+          <Button disabled={!ready} onClick={() => void share()}>
+            Share
+          </Button>
+        ) : null}
+      </div>
+    </DialogContent>
   )
 }

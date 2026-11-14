@@ -1,6 +1,7 @@
 "use client"
 import { CustomerLedgerDataTable } from "@/components/tables/customer-ledger/data-table"
 import { CustomerLedgerEmptyState } from "@/components/tables/customer-ledger/empty-states"
+import { CustomerLedgerEntryList } from "@/components/tables/customer-ledger/entry-list"
 import { CustomerLedgerSkeleton } from "@/components/tables/customer-ledger/skeleton"
 import { useCustomerLedgerParams } from "@/hooks/use-customer-ledger-params"
 import { useTRPC } from "@/trpc/client"
@@ -23,7 +24,7 @@ import { type ReactNode, useCallback, useEffect, useState } from "react"
 import { EarlierOrdersBanner } from "./earlier-orders"
 import { OwedByAge } from "./owed-by-age"
 import { useCustomerLedgerExport } from "./statement-export"
-import { StatementPdfSheet } from "./statement-pdf-sheet"
+import { StatementPdfDialog } from "./statement-pdf-sheet"
 
 type LedgerMode =
   | "receipt"
@@ -199,7 +200,7 @@ export function CustomerLedgerStatement({
           {book ? (
             <>
               <DropdownMenuItem onClick={() => startAction("apply")}>
-                Use on an Order
+                Use on an order
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => startAction("opening")}>
                 Add starting balance
@@ -211,26 +212,23 @@ export function CustomerLedgerStatement({
           ) : null}
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => startAction("summary")}>
-            Share account summary
+            Share summary
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => startAction("link")}>
-            Link earlier Orders
+            Link earlier orders
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem
             disabled={!query.data}
             onClick={() => setPrinting(true)}
           >
-            Print or save as PDF
+            Share or print PDF
           </DropdownMenuItem>
           <DropdownMenuItem
             disabled={!query.data || exporter.busy}
             onClick={() => void exporter.download()}
           >
             {exporter.busy ? "Preparing file…" : "Download statement (CSV)"}
-          </DropdownMenuItem>
-          <DropdownMenuItem disabled={busy} onClick={() => void refresh()}>
-            {refreshing ? "Refreshing…" : "Refresh"}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -275,7 +273,7 @@ export function CustomerLedgerStatement({
   return (
     <section className="flex min-w-0 flex-col gap-5">
       {renderHeader(actions)}
-      <StatementPdfSheet
+      <StatementPdfDialog
         open={printing}
         onOpenChange={setPrinting}
         accountId={accountId}
@@ -290,101 +288,67 @@ export function CustomerLedgerStatement({
           onReview={() => startAction("link")}
         />
       ) : null}
-      <dl
-        data-summary-grid
-        data-summary-money
-        className="grid gap-3 sm:grid-cols-3"
+      <section
+        aria-label="Balance"
+        className="grid gap-2 rounded-[var(--ui-radius-surface)] border border-border bg-card p-4"
       >
-        <div className="border border-border p-4">
-          <dt className="text-sm text-muted-foreground">Owes you</dt>
-          <dd
-            className={`mt-1 text-2xl font-semibold tabular-nums ${owed > BigInt(0) ? "text-amber-700 dark:text-amber-300" : ""}`}
-          >
-            {money(statement.totals.outstandingDebtMinor)}
-          </dd>
-          <dd className="text-sm text-muted-foreground">
-            Orders and starting balance on this statement
-          </dd>
-        </div>
-        <div className="border border-border p-4">
-          <dt className="text-sm text-muted-foreground">Paid ahead</dt>
-          <dd
-            className={`mt-1 text-2xl font-semibold tabular-nums ${paidAhead > BigInt(0) ? "text-primary" : ""}`}
-          >
-            {money(statement.totals.availableCreditMinor)}
-          </dd>
-          <dd className="text-sm text-muted-foreground">
-            Paid before an Order, not used yet
-          </dd>
-          {current ? (
-            BigInt(current.reservedCreditMinor) > BigInt(0) ? (
-              <dd className="mt-1 text-sm text-amber-700 dark:text-amber-300">
-                Now {money(current.reservedCreditMinor)} is held for a refund.{" "}
-                {money(current.totals.availableCreditMinor)} can be used.
-              </dd>
-            ) : null
-          ) : detail.isError ? (
-            <dd className="mt-1 grid justify-items-start gap-1 text-sm text-destructive">
-              Current refund holds couldn’t load, so what can be used now is
-              unknown.
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={detail.isFetching}
-                onClick={() => void detail.refetch()}
-              >
-                Try again
-              </Button>
-            </dd>
-          ) : (
-            <dd className="mt-1 text-sm text-muted-foreground">
-              Checking current refund holds…
-            </dd>
-          )}
-        </div>
-        <div className="border border-border bg-muted p-4">
-          <dt className="text-sm text-muted-foreground">Balance</dt>
-          <dd className="mt-1 text-2xl font-semibold tabular-nums">
+        <p className="text-3xl font-semibold tabular-nums">
+          {money(net < BigInt(0) ? (-net).toString() : net.toString())}
+          <span className="ml-2 text-base font-normal text-muted-foreground">
             {net > BigInt(0)
-              ? money(net.toString())
+              ? "owes you"
               : net < BigInt(0)
-                ? money((-net).toString())
-                : money("0")}
-            {net !== BigInt(0) ? (
-              <span className="ml-1.5 text-sm font-normal text-muted-foreground">
-                {net > BigInt(0) ? "owed" : "paid ahead"}
-              </span>
-            ) : null}
-          </dd>
-          <dd className="text-sm text-muted-foreground">
-            {net > BigInt(0)
-              ? "Owes you, minus paid ahead"
-              : net < BigInt(0)
-                ? "Paid ahead, minus what they owe"
-                : owed > BigInt(0) || paidAhead > BigInt(0)
-                  ? "Evens out, but the paid-ahead money hasn’t been used on what they owe yet."
-                  : "Nothing owed"}
-          </dd>
-        </div>
-      </dl>
-      <OwedByAge accountId={accountId} />
-      <p className="text-sm text-muted-foreground">
-        Shows only what’s been added to this statement: Orders, payments and any
-        starting balance. Orders not added here aren’t counted. A payment stays
-        as paid ahead until it’s used on something they owe.
-      </p>
+                ? "paid ahead"
+                : "nothing owed"}
+          </span>
+        </p>
+        {owed > BigInt(0) && paidAhead > BigInt(0) ? (
+          <p className="text-sm text-muted-foreground tabular-nums">
+            {`Owes ${money(owed.toString())}, paid ahead ${money(paidAhead.toString())} not used yet`}
+          </p>
+        ) : null}
+        {current && BigInt(current.reservedCreditMinor) > BigInt(0) ? (
+          <p className="text-sm text-amber-700 dark:text-amber-300">
+            {`${money(current.reservedCreditMinor)} held for a refund; ${money(current.totals.availableCreditMinor)} can be used.`}
+          </p>
+        ) : null}
+        {detail.isError ? (
+          <div className="flex flex-wrap items-center gap-2 text-sm text-destructive">
+            Couldn’t check refund holds.
+            <Button
+              variant="outline"
+              disabled={detail.isFetching}
+              onClick={() => void detail.refetch()}
+            >
+              Try again
+            </Button>
+          </div>
+        ) : null}
+      </section>
+      {owed > BigInt(0) ? <OwedByAge accountId={accountId} /> : null}
       {error || exporter.error ? (
         <Alert appearance="dashboard" variant="destructive">
           <AlertDescription>{error ?? exporter.error}</AlertDescription>
         </Alert>
       ) : null}
       {statement.entries.length ? (
-        <CustomerLedgerDataTable
-          initialSettings={initialSettings}
-          entries={statement.entries}
-          currencyCode={statement.currencyCode}
-          onOpen={open}
-        />
+        <>
+          <div className="md:hidden">
+            <CustomerLedgerEntryList
+              entries={statement.entries}
+              currencyCode={statement.currencyCode}
+              onOpen={open}
+            />
+          </div>
+          <div className="max-md:hidden">
+            <CustomerLedgerDataTable
+              initialSettings={initialSettings}
+              entries={statement.entries}
+              currencyCode={statement.currencyCode}
+              onOpen={open}
+            />
+          </div>
+        </>
       ) : (
         <CustomerLedgerEmptyState
           customerName={customerName}

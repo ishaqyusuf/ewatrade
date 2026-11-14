@@ -1,5 +1,6 @@
 "use client"
 import { FormCombobox } from "@/components/forms/form-controls"
+import { OrderDialog } from "@/components/orders/overview/order-dialog-frame"
 import { useCustomerLedgerCommand } from "@/hooks/use-customer-ledger-command"
 import {
   type CustomerLedgerMode,
@@ -223,7 +224,12 @@ export function CustomerLedgerCommandForm({
       )
     }
   }
+  // Money going back out, or undoing a line, is confirmed in an alert that
+  // names the customer and the amount; other records save from the review.
+  const [asking, setAsking] = useState(false)
+  const needsAlert = mode === "refund" || mode === "reverse"
   async function confirm() {
+    setAsking(false)
     if (!review) return
     const attempt = review
     await command.run(attempt.operation, attempt.payload, (id) => {
@@ -255,6 +261,14 @@ export function CustomerLedgerCommandForm({
     if (metadata?.expectedSnapshotSequence)
       form.setValue("revision", metadata.expectedSnapshotSequence)
   }, [command.retained, form])
+  const reviewAmount = review
+    ? formatFinanceMoney(
+        "amountMinor" in review.payload
+          ? review.payload.amountMinor
+          : (detail.data?.entry.amountMinor ?? "0"),
+        account.currencyCode,
+      )
+    : ""
   const label = (s: NonNullable<typeof credits.data>["sources"][number]) =>
     `${s.order ? `Order ${s.order.orderNumber}` : (ledgerLabels[s.kind] ?? "Entry")} · ${formatFinanceMoney(s.remainingAmountMinor, account.currencyCode)} left`
   const text = (
@@ -392,14 +406,7 @@ export function CustomerLedgerCommandForm({
       ) : review ? (
         <>
           <h3 className="text-lg font-medium">Check and save</h3>
-          <p className="text-2xl tabular-nums">
-            {formatFinanceMoney(
-              "amountMinor" in review.payload
-                ? review.payload.amountMinor
-                : (detail.data?.entry.amountMinor ?? "0"),
-              account.currencyCode,
-            )}
-          </p>
+          <p className="text-2xl tabular-nums">{reviewAmount}</p>
           <div className="grid gap-2 text-sm">
             {review.operation === "recordOpening" ? (
               <p>
@@ -510,11 +517,44 @@ export function CustomerLedgerCommandForm({
               type="button"
               isSubmitting={command.pending}
               disabled={!command.ready || command.pending}
-              onClick={() => void confirm()}
+              onClick={() => (needsAlert ? setAsking(true) : void confirm())}
             >
-              Save
+              {needsAlert
+                ? mode === "refund"
+                  ? "Return money"
+                  : "Undo"
+                : "Save"}
             </SubmitButton>
           </FormActions>
+          {needsAlert ? (
+            <OrderDialog
+              open={asking}
+              onOpenChange={setAsking}
+              alert
+              title={`${mode === "refund" ? "Return" : "Undo"} ${reviewAmount} ${mode === "refund" ? "to" : "for"} ${account.customer.name}?`}
+              description={
+                mode === "refund"
+                  ? "Record that this money was paid back to them."
+                  : "Adds an undo line to the statement."
+              }
+              footer={
+                <>
+                  <Button variant="outline" onClick={() => setAsking(false)}>
+                    Go back
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    disabled={!command.ready || command.pending}
+                    onClick={() => void confirm()}
+                  >
+                    {mode === "refund" ? `Return ${reviewAmount}` : "Undo"}
+                  </Button>
+                </>
+              }
+            >
+              {null}
+            </OrderDialog>
+          ) : null}
         </>
       ) : (
         <form onSubmit={form.handleSubmit(prepare)}>

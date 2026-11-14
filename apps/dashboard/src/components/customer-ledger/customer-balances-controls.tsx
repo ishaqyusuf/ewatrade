@@ -53,7 +53,7 @@ export function CustomerBalanceSearch() {
   )
   return (
     <SearchFilter
-      placeholder="Search Customers..."
+      placeholder="Search name or phone"
       value={params.customerSearch}
       onSearch={(value) => void setParams({ customerSearch: value || null })}
       onClear={() =>
@@ -64,7 +64,7 @@ export function CustomerBalanceSearch() {
           {
             id: "show",
             label: "Show",
-            allLabel: "All Customers",
+            allLabel: "All customers",
             options: customerBalanceFilters.map((item) => ({
               value: item.id,
               label: item.label,
@@ -125,11 +125,7 @@ export function CustomerBalanceSortMenu() {
     customerBalanceSorts[0]
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger
-        render={
-          <Button type="button" variant="outline" className="rounded-none" />
-        }
-      >
+      <DropdownMenuTrigger render={<Button type="button" variant="outline" />}>
         {current.label}
         <HugeiconsIcon
           icon={ArrowDown01Icon}
@@ -140,7 +136,7 @@ export function CustomerBalanceSortMenu() {
       </DropdownMenuTrigger>
       <DropdownMenuContent appearance="dashboard" align="end">
         <DropdownMenuRadioGroup
-          aria-label="Sort Customers"
+          aria-label="Sort customers"
           value={current.id}
           onValueChange={(value) => {
             const option = customerBalanceSorts.find(

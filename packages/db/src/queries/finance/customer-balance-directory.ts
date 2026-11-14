@@ -184,7 +184,12 @@ export async function customerBalanceDirectoryInTransaction(
       SELECT id, name, phone, email, "sortName", owed::text AS "owedMinor", credit::text AS "creditMinor",
         "owingSince", "lastPaidAt", "lastPaidMinor"::text AS "lastPaidMinor"
       FROM rows WHERE TRUE ${filter} ${after} ${order} LIMIT ${limit + 1}`),
-    tx.$queryRaw<Array<{ count: string; owed: string }>>(Prisma.sql`${rowsSql}
+    // Totals cover the whole book; later pages reuse the first page's.
+    cursor
+      ? Promise.resolve(null)
+      : tx.$queryRaw<
+          Array<{ count: string; owed: string }>
+        >(Prisma.sql`${rowsSql}
       SELECT COUNT(*)::text AS count, COALESCE(SUM(owed), 0)::text AS owed
       FROM rows WHERE TRUE ${filter}`),
   ])
@@ -192,8 +197,9 @@ export async function customerBalanceDirectoryInTransaction(
   const last = page.at(-1)
   return {
     currencyCode: tenant.currencyCode,
-    count: Number(totals[0]?.count ?? 0),
-    owedMinor: totals[0]?.owed ?? "0",
+    /** Null on later pages; the first page carries the totals. */
+    count: totals ? Number(totals[0]?.count ?? 0) : null,
+    owedMinor: totals ? (totals[0]?.owed ?? "0") : null,
     nextCursor:
       rows.length > limit && last
         ? encodeCursor({
