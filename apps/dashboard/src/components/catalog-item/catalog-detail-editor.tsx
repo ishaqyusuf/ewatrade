@@ -122,6 +122,7 @@ export function CatalogSections({
   return (
     <Accordion
       appearance="dashboard"
+      className="min-w-0 rounded-[var(--ui-radius-surface)]"
       multiple
       value={value}
       onValueChange={(next) => onValueChange(next as string[])}
@@ -146,14 +147,15 @@ export function CatalogSection({
 }) {
   return (
     <AccordionItem value={id} data-section={id} className="scroll-mt-2">
-      <AccordionTrigger className="items-center gap-3 px-4 py-3 hover:no-underline">
+      {/* min-w-0: the trigger is a flex child; without it a long summary pushes the chevron out. */}
+      <AccordionTrigger className="min-w-0 items-center gap-3 px-4 py-3 hover:no-underline">
         <HugeiconsIcon
           icon={icon}
           className="size-4 shrink-0 text-muted-foreground"
         />
         <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-          <span className="text-sm font-medium">{title}</span>
-          <span className="truncate text-xs font-normal text-muted-foreground">
+          <span className="text-base font-medium">{title}</span>
+          <span className="line-clamp-2 text-sm font-normal text-muted-foreground">
             {summary}
           </span>
         </span>

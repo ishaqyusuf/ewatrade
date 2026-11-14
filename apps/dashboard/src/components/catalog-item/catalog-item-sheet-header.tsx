@@ -8,18 +8,22 @@ export function CatalogItemSheetHeader() {
   const { setParams } = useCatalogItemParams()
   const { form, setForm } = useCatalogItemForm()
   if (!form.kind) return null
+  // One line under the title: the type, and a way to change it.
   return (
-    <Button
-      type="button"
-      size="sm"
-      variant="ghost"
-      className="mt-1 -ml-2 text-muted-foreground"
-      onClick={() => {
-        setForm((current) => ({ ...current, kind: null }))
-        void setParams({ catalogCreateKind: null })
-      }}
-    >
-      Change type
-    </Button>
+    <p className="flex items-center gap-1.5 text-muted-foreground">
+      {form.kind === "service" ? "Service" : "Goods"}
+      <span aria-hidden="true">·</span>
+      <Button
+        type="button"
+        variant="link"
+        className="h-auto p-0 text-[var(--link)]"
+        onClick={() => {
+          setForm((current) => ({ ...current, kind: null }))
+          void setParams({ catalogCreateKind: null })
+        }}
+      >
+        Change type
+      </Button>
+    </p>
   )
 }
