@@ -27,10 +27,12 @@ test("exact source reads bind tenant, Store and ID without scanning, initializin
         {
           async findFirst(args: {
             where: { id: string; tenantId: string; storeId: string }
-            include: unknown
+            select: unknown
           }) {
             predicates.push(args.where)
-            expect(args.include).toHaveProperty("inventoryUnit")
+            // Explicit columns only: no whole catalog or store rows.
+            expect(args.select).toHaveProperty("inventoryUnit")
+            expect(args.select).not.toHaveProperty("product.catalogItem.select.description")
             return (
               rows.find(
                 (row) =>
@@ -78,6 +80,7 @@ test("exact source reads bind tenant, Store and ID without scanning, initializin
     inventoryUnitName: "Piece",
     inventoryUnitTransactionScale: 3,
     kind: "SHARED_POOL",
+    lowStockLevel: null,
     onHandQuantity: "2",
     productId: "product",
     productName: "Eggs",

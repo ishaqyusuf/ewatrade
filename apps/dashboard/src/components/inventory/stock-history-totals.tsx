@@ -23,6 +23,8 @@ import { useId, useState } from "react"
 /**
  * Net change for the Store and category filter, between the toolbar and the
  * Stock history list. Search and the change group narrow only the list.
+ * It starts closed, and is not added up, until opened or a category is
+ * picked: most visits only need the list.
  */
 export function StockHistoryTotals({
   storeId,
@@ -34,14 +36,17 @@ export function StockHistoryTotals({
   const trpc = useTRPC()
   const id = useId()
   const mobile = useMobileOverlay()
-  const [open, setOpen] = useState(true)
+  const [chosenOpen, setOpen] = useState<boolean | null>(null)
   const [all, setAll] = useState(false)
   const { params } = useInventoryLedgerParams()
   const { filter } = useStockHistoryCategoryParams()
+  const open =
+    chosenOpen ?? (filter.uncategorized || filter.categoryNameIds.length > 0)
   const nameOf = useStockCategoryNames(filter.categoryNameIds)
   const totals = useQuery(
     trpc.inventory.operationTotals.queryOptions(
       stockHistoryTotalsInput({ storeId, categories: filter }),
+      { enabled: open },
     ),
   )
   const scope = filter.uncategorized
@@ -63,14 +68,17 @@ export function StockHistoryTotals({
   const limit = mobile ? 2 : 3
   const shown = all ? rows : rows.slice(0, limit)
   return (
-    <section aria-label="Net change" className="border border-border">
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-3">
+    <section
+      aria-label="Net change"
+      className="overflow-hidden rounded-[var(--ui-radius-surface)] border border-border bg-card"
+    >
+      <div className="flex min-h-12 flex-wrap items-center gap-x-4 gap-y-1 px-4 py-2">
         <button
           type="button"
           aria-expanded={open}
           aria-controls={id}
           onClick={() => setOpen(!open)}
-          className="flex min-w-0 items-center gap-2 text-left text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="flex min-h-11 min-w-0 flex-1 items-center gap-2 text-left text-sm"
         >
           <HugeiconsIcon
             icon={ArrowDown01Icon}
@@ -84,13 +92,15 @@ export function StockHistoryTotals({
             {scope} · {storeLabel}
           </span>
         </button>
-        <span className="ml-auto text-xs text-muted-foreground">
-          {totals.data ? stockTotalsFromText(totals.data) : null}
-        </span>
+        {open && totals.data ? (
+          <span className="ml-auto text-xs text-muted-foreground">
+            {stockTotalsFromText(totals.data)}
+          </span>
+        ) : null}
       </div>
       <div id={id} hidden={!open} className="border-t border-border">
         {note ? (
-          <p className="flex items-start gap-2 bg-muted/50 px-4 py-2 text-xs text-muted-foreground">
+          <p className="flex items-start gap-2 bg-[var(--hover)] px-4 py-2 text-xs text-muted-foreground">
             <HugeiconsIcon
               icon={InformationCircleIcon}
               className="mt-0.5 size-3.5 shrink-0"
@@ -127,9 +137,9 @@ export function StockHistoryTotals({
                 return (
                   <li
                     key={`${row.storeId}:${row.variantId}:${row.configurationVersionId}`}
-                    className="flex flex-wrap items-baseline gap-x-4 gap-y-1 px-4 py-2 text-sm"
+                    className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-4 px-4 py-2 text-sm sm:grid-cols-[minmax(0,1fr)_auto_8rem]"
                   >
-                    <span className="min-w-0 flex-1 truncate">
+                    <span className="min-w-0 truncate">
                       {row.productName ?? "Product"}
                       {row.variantName && row.variantName !== row.productName
                         ? ` · ${row.variantName}`
@@ -153,7 +163,7 @@ export function StockHistoryTotals({
                         row.canonicalUnitName,
                       )}
                     </b>
-                    <span className="w-28 text-right text-xs text-muted-foreground">
+                    <span className="text-xs text-muted-foreground max-sm:col-span-2 sm:text-right">
                       From {row.operationCount} change
                       {row.operationCount === 1 ? "" : "s"}
                     </span>
@@ -166,7 +176,7 @@ export function StockHistoryTotals({
                 type="button"
                 aria-expanded={all}
                 onClick={() => setAll(!all)}
-                className="w-full border-t border-border px-4 py-2 text-left text-sm underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="min-h-11 w-full border-t border-border px-4 text-left text-sm underline-offset-4 hover:underline"
               >
                 {all ? "Show less" : `Show all ${rows.length}`}
               </button>

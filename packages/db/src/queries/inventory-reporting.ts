@@ -27,16 +27,40 @@ import {
   serializeOperationHistoryRow,
 } from "./inventory-operation-history"
 
+/** Only the columns a stock line needs (the report read thousands of unused catalog columns). */
 const balanceReportGraph = {
-  inventoryUnit: { include: { configurationVersion: true } },
-  product: { include: { catalogItem: true } },
-  store: true,
-  variant: true,
-} as const
+  id: true,
+  custodyReferenceId: true,
+  custodyType: true,
+  inventoryUnitId: true,
+  kind: true,
+  onHandQuantity: true,
+  productId: true,
+  reservedQuantity: true,
+  revision: true,
+  storeId: true,
+  variantId: true,
+  inventoryUnit: {
+    select: {
+      configurationVersionId: true,
+      factor: true,
+      name: true,
+      transactionScale: true,
+    },
+  },
+  product: {
+    select: {
+      lowStockLevel: true,
+      catalogItem: { select: { id: true, name: true } },
+    },
+  },
+  store: { select: { name: true } },
+  variant: { select: { name: true } },
+} as const satisfies Prisma.StockBalanceSourceSelect
 
 function serializeInventoryBalanceRow(
   balance: Prisma.StockBalanceSourceGetPayload<{
-    include: typeof balanceReportGraph
+    select: typeof balanceReportGraph
   }>,
 ) {
   return {
@@ -76,7 +100,7 @@ export async function getInventoryBalanceSource(
   input: { tenantId: string; storeId: string; balanceSourceId: string },
 ) {
   const balance = await db.stockBalanceSource.findFirst({
-    include: balanceReportGraph,
+    select: balanceReportGraph,
     where: {
       id: input.balanceSourceId,
       tenantId: input.tenantId,
@@ -123,7 +147,7 @@ export async function listInventoryBalancePage(
     )
   const rows = await db.stockBalanceSource.findMany({
     where: { ...where, ...(input.cursor ? { id: { gt: input.cursor } } : {}) },
-    include: balanceReportGraph,
+    select: balanceReportGraph,
     orderBy: { id: "asc" },
     take: limit + 1,
   })
@@ -144,7 +168,7 @@ export async function listInventoryBalanceReport(
   },
 ) {
   const balances = await db.stockBalanceSource.findMany({
-    include: balanceReportGraph,
+    select: balanceReportGraph,
     orderBy: [
       { store: { name: "asc" } },
       { product: { catalogItem: { name: "asc" } } },
@@ -258,7 +282,7 @@ export async function getStockOperationAudit(
       linkedOperations: { select: { id: true, type: true } },
       movements: {
         include: {
-          balanceSource: { include: balanceReportGraph },
+          balanceSource: { select: balanceReportGraph },
           enteredInventoryUnit: true,
           reversalOfMovement: { select: { id: true } },
           reversals: { select: { id: true } },
@@ -403,7 +427,7 @@ export async function exportInventoryAuditRows(
 ) {
   const movements = await db.stockMovement.findMany({
     include: {
-      balanceSource: { include: balanceReportGraph },
+      balanceSource: { select: balanceReportGraph },
       enteredInventoryUnit: true,
       operation: { include: { categories: stockOperationCategoryGraph } },
     },

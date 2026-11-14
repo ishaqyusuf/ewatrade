@@ -21,7 +21,10 @@ export function productsChangedText(count: number) {
   return `${count} product${count === 1 ? "" : "s"}`
 }
 
-export function operationColumns(): ColumnDef<InventoryOperation>[] {
+/** One store's history has no Store column; the header names the store. */
+export function operationColumns({
+  showStore = true,
+}: { showStore?: boolean } = {}): ColumnDef<InventoryOperation>[] {
   return [
     {
       id: "identity",
@@ -49,7 +52,16 @@ export function operationColumns(): ColumnDef<InventoryOperation>[] {
       meta: { headerLabel: "When", sortField: "effectiveAt" },
       cell: ({ row }) => stockDate(row.original.effectiveAt),
     },
-    { id: "store", accessorKey: "storeName", header: "Store", size: 170 },
+    ...(showStore
+      ? [
+          {
+            id: "store",
+            accessorKey: "storeName",
+            header: "Store",
+            size: 170,
+          } satisfies ColumnDef<InventoryOperation>,
+        ]
+      : []),
     {
       id: "reason",
       accessorFn: operationReason,

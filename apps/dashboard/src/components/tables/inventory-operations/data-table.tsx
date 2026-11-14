@@ -24,12 +24,15 @@ import { OperationsEmpty } from "./empty-states"
 const getOperationLabel = (row: InventoryOperation) =>
   `${stockChangeLabel(row.type)}, ${stockDate(row.effectiveAt)}`
 
-function describeOperation(row: InventoryOperation) {
+/** Phone and List rows: what, when, why; the store only for all stores. */
+function describeOperation(row: InventoryOperation, allStores: boolean) {
+  const reason = operationReason(row)
   return {
     title: stockChangeLabel(row.type),
-    description: `${stockDate(row.effectiveAt)} · ${row.storeName}`,
     details: [
-      { label: "Reason and note", value: operationReason(row) || "—" },
+      { label: "When", value: stockDate(row.effectiveAt) },
+      ...(allStores ? [{ label: "Store", value: row.storeName }] : []),
+      ...(reason ? [{ label: "Reason and note", value: reason }] : []),
       {
         label: "Products changed",
         value: productsChangedText(row.movementCount),
@@ -69,11 +72,18 @@ export function OperationsDataTable({
     () => query.data.pages.flatMap((page) => page.rows),
     [query.data.pages],
   )
+  const describeRecord = useCallback(
+    (row: InventoryOperation) => describeOperation(row, !storeId),
+    [storeId],
+  )
   const open = useCallback(
     (row: InventoryOperation) => void setParams({ record: row.id }),
     [setParams],
   )
-  const columns = useMemo(() => operationColumns(), [])
+  const columns = useMemo(
+    () => operationColumns({ showStore: !storeId }),
+    [storeId],
+  )
   const record = rows.find((row) => row.id === params.record) ?? null
   return (
     <div className="grid gap-4">
@@ -100,7 +110,7 @@ export function OperationsDataTable({
         summary={`${rows.length} change${rows.length === 1 ? "" : "s"}${query.hasNextPage ? " loaded" : ""}`}
         view={view}
         getRecordLabel={getOperationLabel}
-        describeRecord={describeOperation}
+        describeRecord={describeRecord}
         onOpen={open}
         pagination={{
           hasNextPage: query.hasNextPage,

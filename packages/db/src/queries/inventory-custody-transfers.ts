@@ -1170,17 +1170,24 @@ export async function listStockTransfers(
   },
 ) {
   const transfers = await db.stockTransfer.findMany({
-    include: {
-      inventoryUnit: true,
+    // Only the columns the list shows.
+    select: {
+      createdAt: true,
+      enteredQuantity: true,
+      id: true,
+      status: true,
+      inventoryUnit: { select: { name: true } },
       sourceBalanceSource: {
-        include: {
-          product: { include: { catalogItem: true } },
-          variant: true,
+        select: {
+          product: { select: { catalogItem: { select: { name: true } } } },
+          variant: { select: { name: true } },
         },
       },
-      sourceStore: true,
-      targetStore: true,
-      transitBalanceSource: true,
+      sourceStore: { select: { id: true, name: true } },
+      targetStore: { select: { id: true, name: true } },
+      transitBalanceSource: {
+        select: { onHandQuantity: true, revision: true },
+      },
     },
     orderBy: { createdAt: "desc" },
     take: Math.min(Math.max(input.limit ?? 100, 1), 200),
