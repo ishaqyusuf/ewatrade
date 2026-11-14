@@ -330,7 +330,6 @@ function CustomerFormFrame({
                 </span>
               </>
             }
-            description="Used to find them and to send Order updates on WhatsApp."
             error={errors.phone}
           >
             <Input
