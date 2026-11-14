@@ -48,6 +48,18 @@ const window = {
   clearInterval(id: number) {
     timers.delete(id)
   },
+  // The hook schedules its bounded checks one at a time.
+  setTimeout(callback: () => void) {
+    const id = ++timerId
+    timers.set(id, () => {
+      timers.delete(id)
+      callback()
+    })
+    return id
+  },
+  clearTimeout(id: number | undefined) {
+    if (id !== undefined) timers.delete(id)
+  },
 }
 Object.assign(document, {
   defaultView: window,

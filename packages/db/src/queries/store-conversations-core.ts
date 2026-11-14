@@ -294,56 +294,77 @@ export async function loadStoreConversationRequestSummaries(
   db: DbClient,
   input: { conversationId: string; storeId: string; tenantId: string },
 ): Promise<StoreConversationRequestSummaryProjection[]> {
+  const byConversation = await loadStoreConversationRequestSummariesForMany(
+    db,
+    {
+      conversationIds: [input.conversationId],
+      storeId: input.storeId,
+      tenantId: input.tenantId,
+    },
+  )
+  return byConversation.get(input.conversationId) ?? []
+}
+
+/**
+ * Request summaries for a page of conversations in at most four statements
+ * (links, then one read per request kind that is present), instead of four
+ * per conversation.
+ */
+export async function loadStoreConversationRequestSummariesForMany(
+  db: DbClient,
+  input: { conversationIds: string[]; storeId: string; tenantId: string },
+): Promise<Map<string, StoreConversationRequestSummaryProjection[]>> {
+  const result = new Map<string, StoreConversationRequestSummaryProjection[]>()
+  if (input.conversationIds.length === 0) return result
   const links = await db.storeConversationRequestLink.findMany({
-    distinct: ["kind", "sourceId"],
+    distinct: ["conversationId", "kind", "sourceId"],
     orderBy: { createdAt: "asc" },
-    select: { createdAt: true, kind: true, sourceId: true },
-    take: 200,
+    select: {
+      conversationId: true,
+      createdAt: true,
+      kind: true,
+      sourceId: true,
+    },
+    take: 200 * input.conversationIds.length,
     where: {
-      conversationId: input.conversationId,
+      conversationId: { in: input.conversationIds },
       storeId: input.storeId,
       tenantId: input.tenantId,
     },
   })
-  const commerceIds = links
-    .filter((link) => link.kind === "COMMERCE_INQUIRY")
-    .map((link) => link.sourceId)
-  const serviceIds = links
-    .filter((link) => link.kind === "SERVICE_REQUEST")
-    .map((link) => link.sourceId)
-  const prescriptionIds = links
-    .filter((link) => link.kind === "PRESCRIPTION_REQUEST")
-    .map((link) => link.sourceId)
+  const idsOf = (kind: string) => [
+    ...new Set(
+      links.filter((link) => link.kind === kind).map((link) => link.sourceId),
+    ),
+  ]
+  const commerceIds = idsOf("COMMERCE_INQUIRY")
+  const serviceIds = idsOf("SERVICE_REQUEST")
+  const prescriptionIds = idsOf("PRESCRIPTION_REQUEST")
+  const scope = { storeId: input.storeId, tenantId: input.tenantId }
   const [commerce, service, prescription] = await Promise.all([
-    db.commerceInquiry.findMany({
-      select: { createdAt: true, id: true, revision: true, status: true },
-      where: {
-        id: { in: commerceIds },
-        storeId: input.storeId,
-        tenantId: input.tenantId,
-      },
-    }),
-    db.serviceRequest.findMany({
-      select: { createdAt: true, id: true, revision: true, status: true },
-      where: {
-        id: { in: serviceIds },
-        storeId: input.storeId,
-        tenantId: input.tenantId,
-      },
-    }),
-    db.prescriptionRequest.findMany({
-      select: {
-        createdAt: true,
-        currentMediaRevision: true,
-        id: true,
-        status: true,
-      },
-      where: {
-        id: { in: prescriptionIds },
-        storeId: input.storeId,
-        tenantId: input.tenantId,
-      },
-    }),
+    commerceIds.length
+      ? db.commerceInquiry.findMany({
+          select: { createdAt: true, id: true, revision: true, status: true },
+          where: { id: { in: commerceIds }, ...scope },
+        })
+      : [],
+    serviceIds.length
+      ? db.serviceRequest.findMany({
+          select: { createdAt: true, id: true, revision: true, status: true },
+          where: { id: { in: serviceIds }, ...scope },
+        })
+      : [],
+    prescriptionIds.length
+      ? db.prescriptionRequest.findMany({
+          select: {
+            createdAt: true,
+            currentMediaRevision: true,
+            id: true,
+            status: true,
+          },
+          where: { id: { in: prescriptionIds }, ...scope },
+        })
+      : [],
   ])
   const rows = new Map<string, StoreConversationRequestSummaryProjection>()
   for (const source of commerce) {
@@ -382,10 +403,18 @@ export async function loadStoreConversationRequestSummaries(
       status,
     })
   }
-  return links.flatMap((link) => {
+  // With one conversation every link is that conversation's.
+  const only =
+    input.conversationIds.length === 1 ? input.conversationIds[0] : undefined
+  for (const link of links) {
     const row = rows.get(`${link.kind}:${link.sourceId}`)
-    return row ? [row] : []
-  })
+    if (!row) continue
+    const conversationId = only ?? link.conversationId
+    const list = result.get(conversationId) ?? []
+    if (list.length < 200) list.push(row)
+    result.set(conversationId, list)
+  }
+  return result
 }
 
 export async function resolveStoreConversationGuestCredential(

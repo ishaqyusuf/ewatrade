@@ -9,8 +9,6 @@ import {
 import { getServerSession } from "@/lib/session"
 import { getActiveTenant } from "@/lib/tenant"
 import { HydrateClient, prefetch, trpc } from "@/trpc/server"
-import { getInitialTableSettings } from "@/utils/columns"
-import { getInitialDirectoryView } from "@/utils/directory-views"
 import type { Metadata } from "next"
 import { redirect } from "next/navigation"
 import { Suspense } from "react"
@@ -31,15 +29,8 @@ export default async function ConversationsPage({
   if (!activeStore) redirect("/setup")
 
   const params = await loadStoreConversationParams(searchParams)
-  const identity = { userId: session.user.id, tenantId: ctx.tenant.id }
-  const [initialSettings, initialViewSettings] = await Promise.all([
-    getInitialTableSettings("store-conversations", identity),
-    getInitialDirectoryView("store-conversations", identity),
-  ])
-  const selectedStore =
-    params.store && ctx.stores.some((store) => store.id === params.store)
-      ? params.store
-      : activeStore.id
+  // The top bar store picker chooses the inbox's store.
+  const selectedStore = activeStore.id
   const input = getStoreConversationQueueInput(
     { ...params, store: selectedStore },
     activeStore.id,
@@ -61,20 +52,10 @@ export default async function ConversationsPage({
 
   return (
     <HydrateClient>
-      <Suspense
-        fallback={
-          <ConversationQueueSkeleton initialSettings={initialSettings} />
-        }
-      >
+      <Suspense fallback={<ConversationQueueSkeleton />}>
         <ConversationWorkspace
           activeStoreId={activeStore.id}
-          stores={ctx.stores.map((store) => ({
-            id: store.id,
-            name: store.name,
-          }))}
           timeZone={ctx.tenant.timezone}
-          initialSettings={initialSettings}
-          initialViewSettings={initialViewSettings}
         />
       </Suspense>
     </HydrateClient>

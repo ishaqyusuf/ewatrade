@@ -1,163 +1,112 @@
 "use client"
 
-import { PageHeader, PageToolbar } from "@/components/page-header"
 import { ScrollableContent } from "@/components/scrollable-content"
-import { StoreConversationDataTable } from "@/components/tables/store-conversations/data-table"
 import {
   StoreConversationAccessState,
   StoreConversationEmptyState,
   StoreConversationErrorState,
 } from "@/components/tables/store-conversations/empty-states"
-import { StoreConversationTableSkeleton } from "@/components/tables/store-conversations/skeleton"
-import { StoreConversationTableHeader } from "@/components/tables/store-conversations/table-header"
-import { ViewSwitcher, directoryViewOptions } from "@/components/view-switcher"
-import { useDirectoryView } from "@/hooks/use-directory-view"
 import {
   getStoreConversationQueueInput,
   hasStoreConversationFilters,
   useStoreConversationParams,
 } from "@/hooks/use-store-conversation-params"
+import { INBOX_CHECK_MS, boundedCheckInterval } from "@/lib/bounded-refresh"
 import { useTRPC } from "@/trpc/client"
-import { readPollInterval } from "@/trpc/query-read-errors"
-import type { DirectoryViewSettings } from "@/utils/directory-view-settings"
-import type { TableSettings } from "@/utils/table-settings"
-import { Alert, AlertDescription, Button } from "@ewatrade/ui"
+import { Button } from "@ewatrade/ui"
 import { useQuery } from "@tanstack/react-query"
+import {
+  ConversationInboxList,
+  ConversationInboxSkeleton,
+  InboxFilterPills,
+  inboxFilterOf,
+  inboxFilterParams,
+} from "./conversation-inbox"
 
+/**
+ * Customer conversations for the active store, newest message first. The top
+ * bar store picker chooses the store; rows open the chat sheet.
+ */
 export function ConversationWorkspace({
   activeStoreId,
-  stores,
   timeZone,
-  initialSettings,
-  initialViewSettings,
 }: {
   activeStoreId: string
-  stores: Array<{ id: string; name: string }>
   timeZone: string
-  initialSettings?: Partial<TableSettings>
-  initialViewSettings: DirectoryViewSettings
 }) {
-  const { view, setView, persistenceError, retryPersistence } =
-    useDirectoryView({
-      pageId: "store-conversations",
-      queryKey: "conversationView",
-      initialSettings: initialViewSettings,
-    })
   const trpc = useTRPC()
   const params = useStoreConversationParams()
-  const selectedStore =
-    params.store && stores.some((store) => store.id === params.store)
-      ? params.store
-      : activeStoreId
-  const input = getStoreConversationQueueInput(
-    { ...params, store: selectedStore },
-    activeStoreId,
-  )
-  const filtered = hasStoreConversationFilters(
-    { ...params, store: selectedStore },
-    activeStoreId,
-  )
+  const scoped = { ...params, store: activeStoreId }
+  const input = getStoreConversationQueueInput(scoped, activeStoreId)
+  const filtered = hasStoreConversationFilters(scoped, activeStoreId)
   const queue = useQuery(
     trpc.serviceCommerce.storeConversationQueue.queryOptions(input, {
       retry: false,
-      refetchInterval: (query) => readPollInterval(query.state.error, 5_000),
+      // Focus, after actions, and one check a minute while visible and in use
+      // (see lib/bounded-refresh). Was every 5s with no end.
+      refetchInterval: (query) =>
+        boundedCheckInterval(query.state.error, INBOX_CHECK_MS),
       refetchIntervalInBackground: false,
+      refetchOnWindowFocus: "always",
     }),
   )
-  const toggleSort = (field: "last_customer_activity" | "response_due_at") => {
-    const direction =
-      input.sort[0] === field && input.sort[1] === "asc" ? "desc" : "asc"
-    void params.setFilters({ sort: field, direction })
-  }
+  const filter = inboxFilterOf(params)
+  const forbidden = queue.isError && queue.error.data?.code === "FORBIDDEN"
 
   return (
     <ScrollableContent>
-      <div className="flex min-w-0 flex-1 flex-col gap-5 pt-6">
-        <PageHeader
-          eyebrow="Store operations"
-          title="Conversations"
-          description="Claim customer requests, respond, and hand work to another active attendant. Customer content stays out of this queue."
-        >
-          <PageToolbar
-            actions={
-              <ViewSwitcher
-                label="Conversation view"
-                value={view}
-                options={directoryViewOptions}
-                onValueChange={setView}
-              />
-            }
-          >
-            <StoreConversationTableHeader
-              input={input}
-              params={params}
-              stores={stores}
-            />
-          </PageToolbar>
-        </PageHeader>
-        {persistenceError ? (
-          <Alert appearance="dashboard" role="alert">
-            <AlertDescription>{persistenceError}</AlertDescription>
-            <Button variant="outline" size="sm" onClick={retryPersistence}>
-              Retry saving view
-            </Button>
-          </Alert>
-        ) : null}
-        {queue.isLoading ? (
-          <StoreConversationTableSkeleton
-            initialSettings={initialSettings}
-            view={view}
+      <div className="flex min-w-0 flex-1 flex-col gap-4 pt-6 pb-10">
+        {forbidden ? null : (
+          <InboxFilterPills
+            value={filter}
+            onChange={(next) => void params.setFilters(inboxFilterParams(next))}
           />
-        ) : null}
-        {queue.isError && queue.error.data?.code === "FORBIDDEN" ? (
-          <StoreConversationAccessState />
-        ) : null}
-        {queue.isError && queue.error.data?.code !== "FORBIDDEN" ? (
+        )}
+        {queue.isLoading ? <ConversationInboxSkeleton /> : null}
+        {forbidden ? <StoreConversationAccessState /> : null}
+        {queue.isError && !forbidden ? (
           <StoreConversationErrorState retry={() => void queue.refetch()} />
         ) : null}
         {!queue.isError && queue.data?.items.length === 0 ? (
           <StoreConversationEmptyState
-            filtered={filtered}
+            filtered={filtered || Boolean(params.cursor)}
             onClearFilters={() =>
               void params.setFilters({
-                assignment: "all",
-                q: null,
-                requestKinds: null,
-                sla: "all",
-                store: null,
+                ...inboxFilterParams("all"),
+                cursor: null,
               })
             }
           />
         ) : null}
         {!queue.isError && queue.data?.items.length ? (
-          <StoreConversationDataTable
+          <ConversationInboxList
             items={queue.data.items}
-            view={view}
-            selectionScope={JSON.stringify({
-              ...input,
-              cursor: undefined,
-              sort: undefined,
-            })}
             onOpen={(conversationId) =>
               void params.setSelection(conversationId)
             }
             timeZone={timeZone}
-            sort={input.sort}
-            toggleSort={toggleSort}
-            retry={() => void queue.refetch()}
-            initialSettings={initialSettings}
           />
         ) : null}
-        {queue.data?.nextCursor ? (
-          <div className="flex justify-end">
-            <Button
-              onClick={() =>
-                void params.setFilters({ cursor: queue.data?.nextCursor })
-              }
-              variant="outline"
-            >
-              Next page
-            </Button>
+        {params.cursor || queue.data?.nextCursor ? (
+          <div className="flex flex-wrap justify-end gap-2">
+            {params.cursor ? (
+              <Button
+                variant="outline"
+                onClick={() => void params.setFilters({ cursor: null })}
+              >
+                Newest
+              </Button>
+            ) : null}
+            {queue.data?.nextCursor ? (
+              <Button
+                variant="outline"
+                onClick={() =>
+                  void params.setFilters({ cursor: queue.data?.nextCursor })
+                }
+              >
+                Older
+              </Button>
+            ) : null}
           </div>
         ) : null}
       </div>
@@ -165,4 +114,4 @@ export function ConversationWorkspace({
   )
 }
 
-export { StoreConversationTableSkeleton as ConversationQueueSkeleton }
+export { ConversationInboxSkeleton as ConversationQueueSkeleton }

@@ -88,6 +88,9 @@ function caller(input?: { attendant?: boolean; stores?: string[] }) {
     storeConversationMessage: {
       count: async () => 1,
       findMany: async () => [],
+      groupBy: async () => [
+        { _count: { _all: 1 }, conversationId: conversation.id },
+      ],
     },
   }
   return {

@@ -1,5 +1,10 @@
 "use client"
 
+import {
+  lastUserInputAt,
+  onInputAfterIdle,
+  threadCheckDelay,
+} from "@/lib/bounded-refresh"
 import { getDataCacheGeneration, useTRPC } from "@/trpc/client"
 import { mountOwnedRead } from "@ewatrade/assistant/general/staff-activity-target"
 import type { StoreConversationMessageProjection } from "@ewatrade/service-commerce"
@@ -45,6 +50,18 @@ export function useStoreConversationRealtime(input: {
       latest.current.messages,
     )
     let operation: { id: string; sequence: number } | null = null
+    // Bounded checks (lib/bounded-refresh): 10s while messages arrive, 30s
+    // after two quiet minutes, none after 15 idle minutes or while hidden.
+    let lastChangeAt = Date.now()
+    let timer: number | undefined
+    const schedule = () => {
+      window.clearTimeout(timer)
+      timer = undefined
+      if (stopped || document.visibilityState !== "visible") return
+      // Typing or tapping in the thread counts as activity too.
+      const delay = threadCheckDelay(Math.max(lastChangeAt, lastUserInputAt()))
+      if (delay !== null) timer = window.setTimeout(() => void poll(), delay)
+    }
     const currentScope = () =>
       !stopped &&
       cacheGeneration === getDataCacheGeneration() &&
@@ -109,6 +126,7 @@ export function useStoreConversationRealtime(input: {
           )
         if (!current()) return
         if (recovery.messages.length > 0) {
+          lastChangeAt = Date.now()
           latest.current.onMessages(recovery.messages)
           if (!current()) return
           if (
@@ -144,17 +162,19 @@ export function useStoreConversationRealtime(input: {
           queued = false
           if (canRecover()) queueMicrotask(() => void poll())
         }
+        schedule()
       }
     }
     const resume = () => {
       if (!canRecover()) {
         queued = false
         cancelRead()
+        window.clearTimeout(timer)
         return
       }
       void poll()
     }
-    const interval = window.setInterval(() => void poll(), 5_000)
+    const stopIdleListener = onInputAfterIdle(resume)
     window.addEventListener("focus", resume)
     window.addEventListener("online", resume)
     window.addEventListener("offline", resume)
@@ -164,7 +184,8 @@ export function useStoreConversationRealtime(input: {
       stopped = true
       queued = false
       cancelRead()
-      window.clearInterval(interval)
+      window.clearTimeout(timer)
+      stopIdleListener()
       window.removeEventListener("focus", resume)
       window.removeEventListener("online", resume)
       window.removeEventListener("offline", resume)

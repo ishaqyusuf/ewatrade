@@ -1,4 +1,6 @@
 "use client"
+
+import { formatStoreConversationStatus } from "@/components/tables/store-conversations/columns"
 import {
   Button,
   ControlField,
@@ -201,6 +203,15 @@ export function StoreConversationSheetContent({
       ) ?? [],
     [timeline.data?.requests],
   )
+  // One open request: reply to it without asking which.
+  const onlyRequest =
+    activeRequests.length === 1
+      ? `${activeRequests[0]?.kind}:${activeRequests[0]?.id}:${activeRequests[0]?.revision}`
+      : null
+  useEffect(() => {
+    if (onlyRequest && !replyForm.getValues("request"))
+      replyForm.setValue("request", onlyRequest)
+  }, [onlyRequest, replyForm])
   const eligibleAttendants = useMemo(
     () =>
       attendants.data?.filter(
@@ -279,7 +290,7 @@ export function StoreConversationSheetContent({
       setOlderCursor(page.nextCursor)
     } catch {
       if (paginationScopeRef.current !== paginationScope) return
-      setNotice("Older messages are temporarily unavailable. Try again.")
+      setNotice("Couldn’t load older messages. Try again.")
     } finally {
       if (paginationScopeRef.current === paginationScope) {
         setLoadingOlder(false)
@@ -290,23 +301,20 @@ export function StoreConversationSheetContent({
   return (
     <>
       {!hydrated || timeline.isLoading ? (
-        <div className="h-80 animate-pulse rounded-none bg-muted" />
+        <div className="h-80 animate-pulse rounded-[var(--ui-radius-surface)] bg-muted" />
       ) : null}
       {hydrated && timeline.isError ? (
         <div
-          className="rounded-none border border-destructive/30 p-4"
+          className="rounded-[var(--ui-radius-surface)] border border-destructive/30 p-4"
           role="alert"
         >
-          <p className="font-medium">This conversation is unavailable.</p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Refresh the authorized Store timeline and try again.
-          </p>
+          <p className="font-medium">Couldn’t open this chat.</p>
           <Button
             className="mt-3"
             onClick={() => void timeline.refetch()}
             variant="outline"
           >
-            Retry
+            Try again
           </Button>
         </div>
       ) : null}
@@ -344,7 +352,8 @@ export function StoreConversationSheetContent({
                 {message.attachments.length === 0 ? (
                   <>
                     <p className="text-xs font-medium opacity-70">
-                      {message.author.label} · {message.channel}
+                      {message.author.label}
+                      {message.channel === "whatsapp" ? " · WhatsApp" : ""}
                       {message.whatsAppObservation
                         ? ` · ${storeConversationWhatsAppObservedStatusLabel(
                             message.whatsAppObservation.status,
@@ -404,7 +413,7 @@ export function StoreConversationSheetContent({
                 })
               }}
             >
-              Claim conversation
+              I’ll answer this
             </Button>
           ) : null}
 
@@ -447,9 +456,7 @@ export function StoreConversationSheetContent({
                   onFill={(context) => {
                     const request = activeRequests[0]
                     if (!request) {
-                      setNotice(
-                        "An active Request is required before filling a reply draft.",
-                      )
+                      setNotice("There is no open request to reply to.")
                       return
                     }
                     replyQuickFillSnapshot.current = replyForm.getValues()
@@ -468,28 +475,30 @@ export function StoreConversationSheetContent({
                     setCanUndoReplyQuickFill(false)
                   }}
                 />
-                <ControlField label={<>Request</>}>
-                  <FormSelectControl
-                    control={replyForm.control}
-                    name={"request"}
-                    options={[
-                      { value: "", label: <>Choose the exact Request</> },
-                      ...(activeRequests.map((request) => ({
-                        value: `${request.kind}:${request.id}:${request.revision}`,
-                        label: (
-                          <>
-                            {request.label} ·{" "}
-                            {request.status.replaceAll("_", " ")}
-                          </>
-                        ),
-                      })) ?? []),
-                    ]}
-                  />
-                </ControlField>
+                {onlyRequest ? null : (
+                  <ControlField label={<>Request</>}>
+                    <FormSelectControl
+                      control={replyForm.control}
+                      name={"request"}
+                      options={[
+                        { value: "", label: <>Choose a request</> },
+                        ...(activeRequests.map((request) => ({
+                          value: `${request.kind}:${request.id}:${request.revision}`,
+                          label: (
+                            <>
+                              {request.label} ·{" "}
+                              {formatStoreConversationStatus(request.status)}
+                            </>
+                          ),
+                        })) ?? []),
+                      ]}
+                    />
+                  </ControlField>
+                )}
                 <ControlField label={<>Reply</>}>
                   <Textarea
                     maxLength={2_000}
-                    placeholder="Write a clear Store response"
+                    placeholder="Write a reply"
                     {...replyForm.register("text")}
                   />
                 </ControlField>
@@ -535,7 +544,7 @@ export function StoreConversationSheetContent({
               })}
             >
               <FieldGroup className="min-w-0 grid gap-3">
-                <h3 className="font-medium">Assignment</h3>
+                <h3 className="font-medium">Hand over</h3>
                 <QaDashboardQuickFill
                   canUndo={canUndoAssignmentQuickFill}
                   formId="dashboard.store-conversation.assignment"
@@ -545,9 +554,7 @@ export function StoreConversationSheetContent({
                     const canRelease = timeline.data.permissions.canRelease
                     const canReassign = timeline.data.permissions.canReassign
                     if (!target && !canRelease) {
-                      setNotice(
-                        "An eligible attendant is required before filling this assignment draft.",
-                      )
+                      setNotice("Nobody else can take this chat yet.")
                       return
                     }
                     assignmentQuickFillSnapshot.current =
@@ -589,7 +596,7 @@ export function StoreConversationSheetContent({
                 </ControlField>
                 {assignmentAction !== "release" ? (
                   <ControlField
-                    label={<>Attendant</>}
+                    label={<>To</>}
                     error={
                       assignmentForm.formState.errors.targetMembershipId
                         ?.message
@@ -599,7 +606,7 @@ export function StoreConversationSheetContent({
                       control={assignmentForm.control}
                       name={"targetMembershipId"}
                       options={[
-                        { value: "", label: <>Choose an active attendant</> },
+                        { value: "", label: <>Choose who answers</> },
                         ...(eligibleAttendants.map((attendant) => ({
                           value: attendant.membershipId,
                           label: attendant.label,
@@ -651,22 +658,29 @@ export function StoreConversationSheetContent({
             </form>
           ) : null}
 
-          <ConversationReportForm
-            conversationId={timeline.data.conversation.id}
-            key={`${resolvedStoreId}:${timeline.data.conversation.id}`}
-            onMessage={setNotice}
-            storeId={resolvedStoreId}
-          />
+          <details className="group border-t border-border pt-3">
+            <summary className="flex min-h-11 cursor-pointer items-center text-sm font-medium text-muted-foreground hover:text-foreground">
+              Report or pause this chat
+            </summary>
+            <div className="grid gap-5 pt-3">
+              <ConversationReportForm
+                conversationId={timeline.data.conversation.id}
+                key={`${resolvedStoreId}:${timeline.data.conversation.id}`}
+                onMessage={setNotice}
+                storeId={resolvedStoreId}
+              />
 
-          {timeline.data.permissions.canModerate ? (
-            <ConversationModerationForm
-              conversationId={timeline.data.conversation.id}
-              moderation={timeline.data.conversation.moderation}
-              onChanged={refresh}
-              onMessage={setNotice}
-              storeId={resolvedStoreId}
-            />
-          ) : null}
+              {timeline.data.permissions.canModerate ? (
+                <ConversationModerationForm
+                  conversationId={timeline.data.conversation.id}
+                  moderation={timeline.data.conversation.moderation}
+                  onChanged={refresh}
+                  onMessage={setNotice}
+                  storeId={resolvedStoreId}
+                />
+              ) : null}
+            </div>
+          </details>
 
           {notice ? (
             <output className="text-sm text-muted-foreground">{notice}</output>

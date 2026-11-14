@@ -16,17 +16,15 @@ export function StoreConversationEmptyState({
 }) {
   useDashboardEmptyState("conversations")
   return (
-    <section className="grid justify-items-center gap-2 rounded-none border border-dashed border-border bg-background p-10 text-center">
+    <section className="grid justify-items-center gap-2 rounded-[var(--ui-radius-surface)] border border-dashed border-border bg-card p-10 text-center">
       <h2 className="font-semibold">
-        {filtered
-          ? "No conversations match these filters"
-          : "No conversations in this queue"}
+        {filtered ? "Nothing here" : "No conversations yet"}
       </h2>
-      <p className="max-w-md text-sm text-muted-foreground">
-        {filtered
-          ? "Clear the filters or choose another Store to see more conversations."
-          : "New customer conversations will appear here when they reach this Store."}
-      </p>
+      {filtered ? null : (
+        <p className="max-w-md text-sm text-muted-foreground">
+          Customer chats show here.
+        </p>
+      )}
       {filtered ? (
         <Button
           className="mt-2"
@@ -34,7 +32,7 @@ export function StoreConversationEmptyState({
           type="button"
           variant="outline"
         >
-          Clear filters
+          Show all
         </Button>
       ) : null}
     </section>
@@ -44,16 +42,19 @@ export function StoreConversationEmptyState({
 export function StoreConversationAccessState() {
   return (
     <section
-      className="grid justify-items-center gap-3 rounded-none border border-border bg-background p-8 text-center"
+      className="grid justify-items-center gap-3 rounded-[var(--ui-radius-surface)] border border-border bg-card p-8 text-center"
       role="alert"
     >
-      <h2 className="font-semibold">Active Store attendant access required</h2>
+      <h2 className="font-semibold">You don’t answer chats for this store</h2>
       <p className="max-w-md text-sm text-muted-foreground">
-        An active Store attendant assignment is required to access
-        conversations. Ask an Owner or Admin to assign you in Customer channels.
+        An owner can add you in Customer channels.
       </p>
-      <Button className="mt-1" render={<Link href="/settings/channels" />}>
-        Open Customer channels
+      <Button
+        className="mt-1"
+        variant="outline"
+        render={<Link href="/settings/channels" />}
+      >
+        Customer channels
       </Button>
     </section>
   )
@@ -63,14 +64,10 @@ export function StoreConversationErrorState({ retry }: { retry: () => void }) {
   const workflow = useDashboardWorkflow()
   return (
     <div
-      className="rounded-none border border-destructive/30 bg-destructive/5 p-5"
+      className="rounded-[var(--ui-radius-surface)] border border-destructive/30 bg-destructive/5 p-5"
       role="alert"
     >
-      <p className="font-medium">Conversations are temporarily unavailable.</p>
-      <p className="mt-1 text-sm text-muted-foreground">
-        Retry the queue. If the problem continues, contact your Store
-        administrator.
-      </p>
+      <p className="font-medium">Couldn’t load conversations.</p>
       <Button
         className="mt-4"
         onClick={() => {
@@ -79,7 +76,7 @@ export function StoreConversationErrorState({ retry }: { retry: () => void }) {
         }}
         variant="outline"
       >
-        Retry
+        Try again
       </Button>
     </div>
   )

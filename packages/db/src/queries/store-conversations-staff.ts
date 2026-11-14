@@ -40,6 +40,7 @@ import {
   StoreConversationError,
   assertStoreConversationAttendant,
   loadStoreConversationRequestSummaries,
+  loadStoreConversationRequestSummariesForMany,
   lockStoreConversation,
   projectStoreConversationMessage,
   storeConversationPayloadHash,
@@ -571,76 +572,88 @@ export async function listStoreConversationQueue(
   } as const
   const hasMore = conversations.length > parsed.pageSize
   const rows = conversations.slice(0, parsed.pageSize)
-  const staffWatermarks = await db.storeConversationStaffWatermark.findMany({
-    select: { conversationId: true, readThroughSequence: true },
-    where: {
-      conversationId: { in: rows.map((conversation) => conversation.id) },
-      membershipId: membership.id,
-    },
-  })
+  const rowIds = rows.map((conversation) => conversation.id)
+  const staffWatermarks = rowIds.length
+    ? await db.storeConversationStaffWatermark.findMany({
+        select: { conversationId: true, readThroughSequence: true },
+        where: { conversationId: { in: rowIds }, membershipId: membership.id },
+      })
+    : []
   const readThroughByConversation = new Map(
     staffWatermarks.map((watermark) => [
       watermark.conversationId,
       watermark.readThroughSequence,
     ]),
   )
-  const items = await Promise.all(
-    rows.map(async (conversation) => {
-      const [requests, unreadCustomerMessages] = await Promise.all([
-        loadStoreConversationRequestSummaries(db, {
-          conversationId: conversation.id,
-          storeId: input.storeId,
-          tenantId: input.tenantId,
-        }),
-        db.storeConversationMessage.count({
+  // One statement each for request summaries and unread counts across the
+  // page, not two or more per conversation.
+  const [summariesByConversation, unreadGroups] = await Promise.all([
+    loadStoreConversationRequestSummariesForMany(db, {
+      conversationIds: rowIds,
+      storeId: input.storeId,
+      tenantId: input.tenantId,
+    }),
+    rowIds.length
+      ? db.storeConversationMessage.groupBy({
+          by: ["conversationId"],
+          _count: { _all: true },
           where: {
             authorKind: StoreConversationMessageAuthorKind.CUSTOMER,
-            conversationId: conversation.id,
-            sequence: {
-              gt: readThroughByConversation.get(conversation.id) ?? 0,
-            },
             storeId: input.storeId,
             tenantId: input.tenantId,
+            OR: rows.map((conversation) => ({
+              conversationId: conversation.id,
+              sequence: {
+                gt: readThroughByConversation.get(conversation.id) ?? 0,
+              },
+            })),
           },
-        }),
-      ])
-      return {
-        assignment: {
-          label: conversation.assignedMembership
-            ? conversation.assignedMembership.user.displayName || "Team member"
-            : null,
-          revision: conversation.assignmentRevision,
-        },
-        assignedToCurrentUser:
-          conversation.assignedMembershipId === membership.id,
-        conversationId: conversation.id,
-        lastCustomerActivityAt:
-          conversation.lastCustomerMessageAt ?? conversation.lastActivityAt,
-        lastMessageSequence: conversation.lastMessageSequence,
-        requests: requests.map(({ id, kind, label, lifecycle, status }) => ({
-          id,
-          kind,
-          label,
-          lifecycle,
-          status,
-        })),
-        requestKinds: [
-          ...new Set(
-            conversation.requestLinks.map((link) => requestKinds[link.kind]),
-          ),
-        ],
-        sla: projectStoreConversationSla({
-          lastCustomerMessageAt: conversation.lastCustomerMessageAt,
-          lastStoreReplyAt: conversation.lastStoreReplyAt,
-          now,
-        }),
-        state: conversation.assignedMembershipId
-          ? ("assigned" as const)
-          : ("new" as const),
-        unreadCustomerMessages,
-      }
-    }),
+        })
+      : [],
+  ])
+  const unreadByConversation = new Map(
+    unreadGroups.map((group) => [group.conversationId, group._count._all]),
   )
+  const items = rows.map((conversation) => {
+    const requests = summariesByConversation.get(conversation.id) ?? []
+    const unreadCustomerMessages =
+      unreadByConversation.get(conversation.id) ?? 0
+    return {
+      assignment: {
+        label: conversation.assignedMembership
+          ? conversation.assignedMembership.user.displayName || "Team member"
+          : null,
+        revision: conversation.assignmentRevision,
+      },
+      assignedToCurrentUser:
+        conversation.assignedMembershipId === membership.id,
+      conversationId: conversation.id,
+      lastCustomerActivityAt:
+        conversation.lastCustomerMessageAt ?? conversation.lastActivityAt,
+      lastMessageSequence: conversation.lastMessageSequence,
+      requests: requests.map(({ id, kind, label, lifecycle, status }) => ({
+        id,
+        kind,
+        label,
+        lifecycle,
+        status,
+      })),
+      requestKinds: [
+        ...new Set(
+          conversation.requestLinks.map((link) => requestKinds[link.kind]),
+        ),
+      ],
+      sla: projectStoreConversationSla({
+        lastCustomerMessageAt: conversation.lastCustomerMessageAt,
+        lastStoreReplyAt: conversation.lastStoreReplyAt,
+        now,
+      }),
+      state: conversation.assignedMembershipId
+        ? ("assigned" as const)
+        : ("new" as const),
+      unreadCustomerMessages,
+    }
+  })
   return {
     items,
     nextCursor: hasMore ? (rows.at(-1)?.id ?? null) : null,

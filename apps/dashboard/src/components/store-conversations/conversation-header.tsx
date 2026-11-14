@@ -1,3 +1,4 @@
+import { formatStoreConversationStatus } from "@/components/tables/store-conversations/columns"
 import { Badge } from "@ewatrade/ui"
 
 export function StoreConversationHeader({
@@ -13,19 +14,20 @@ export function StoreConversationHeader({
 }) {
   return (
     <header className="grid gap-3">
-      <p className="text-sm text-muted-foreground">{storeName}</p>
       <div className="flex flex-wrap items-center gap-2">
         <Badge variant={assignmentLabel ? "secondary" : "outline"}>
-          {assignmentLabel ?? "Unassigned"}
+          {assignmentLabel ? `Answered by ${assignmentLabel}` : "Nobody yet"}
         </Badge>
-        <Badge variant={slaState === "overdue" ? "destructive" : "outline"}>
-          {slaState.replaceAll("_", " ")}
-        </Badge>
+        {slaState === "responded" ? null : (
+          <Badge variant={slaState === "overdue" ? "destructive" : "outline"}>
+            {formatStoreConversationStatus(slaState)}
+          </Badge>
+        )}
+        <span className="text-sm text-muted-foreground">{storeName}</span>
       </div>
       {escalationOpen ? (
-        <div className="rounded-none border border-warning-border bg-warning p-3 text-sm text-warning-foreground">
-          This conversation needs operational attention. A successful reply
-          records the recovery automatically.
+        <div className="rounded-[var(--ui-radius-item)] border border-warning-border bg-warning p-3 text-sm text-warning-foreground">
+          This customer is waiting. Reply now.
         </div>
       ) : null}
     </header>

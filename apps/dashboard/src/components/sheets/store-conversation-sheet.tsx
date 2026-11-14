@@ -1,5 +1,4 @@
 "use client"
-import { FormFeedback } from "@/components/forms/form-feedback"
 
 import { SheetFrame } from "@/components/sheets/sheet-frame"
 import {
@@ -14,7 +13,6 @@ import {
 import { useTRPC } from "@/trpc/client"
 import { Sheet } from "@ewatrade/ui"
 import { useQueryClient } from "@tanstack/react-query"
-import { useState } from "react"
 
 export function StoreConversationSheet({
   storeId,
@@ -67,7 +65,6 @@ function StoreConversationSheetDialog({
   const trpc = useTRPC()
   const queryClient = useQueryClient()
   const { resetAssignment, resetReply } = useStoreConversationForms()
-  const [closeError, setCloseError] = useState<string | null>(null)
   const timelineInput =
     open && conversationId
       ? { conversationId, limit: 50, storeId: resolvedStoreId }
@@ -108,29 +105,15 @@ function StoreConversationSheetDialog({
       open={open}
       onOpenChange={(nextOpen) => {
         if (nextOpen) return
-        setCloseError(null)
-        void (async () => {
-          try {
-            await refresh()
-            resetReply()
-            resetAssignment()
-            await params.setSelection(null)
-          } catch {
-            setCloseError(
-              "Conversation data could not be refreshed. Try closing again.",
-            )
-          }
-        })()
+        // Close at once; the inbox refreshes behind the sheet.
+        resetReply()
+        resetAssignment()
+        void params.setSelection(null)
+        void refresh().catch(() => undefined)
       }}
     >
       {open && conversationId ? (
-        <SheetFrame
-          description="Read the Store timeline, claim primary ownership, reply to the exact Request, or transfer work with an auditable reason."
-          title="Conversation"
-        >
-          {closeError ? (
-            <FormFeedback appearance="dashboard">{closeError}</FormFeedback>
-          ) : null}
+        <SheetFrame title="Chat">
           <StoreConversationSheetContent
             conversationId={conversationId}
             queueInput={queueInput}
