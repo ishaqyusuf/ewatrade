@@ -91,7 +91,10 @@ mock.module("@/hooks/use-catalog-item-params", () => ({
     hasFilters: Boolean(filter.query || filter.kind || filter.status),
   }),
 }))
+// Keep the real URL parsers: bun shares module mocks across test files in one run.
+const catalogDetailParams = await import("@/hooks/use-catalog-detail-params")
 mock.module("@/hooks/use-catalog-detail-params", () => ({
+  ...catalogDetailParams,
   useCatalogDetailParams: () => ({ open() {} }),
 }))
 mock.module("@/hooks/use-sort-params", () => ({
