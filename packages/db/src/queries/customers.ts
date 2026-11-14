@@ -343,7 +343,8 @@ export async function listCustomerOrderDirectory(
       )`
     : Prisma.empty
   // Orders linked to a saved customer group under that customer; the rest
-  // group by the contact typed on the order, and walk-ins stay one per order.
+  // group by the contact typed on the order, and all walk-in sales share one
+  // row (one row per walk-in order made the book grow with every sale).
   const customerIdentityKey = Prisma.sql`COALESCE(
     'customer:' || "customerId",
     NULLIF(
@@ -354,7 +355,7 @@ export async function listCustomerOrderDirectory(
       ))),
       ''
     ),
-    'walk-in:' || "id"
+    'walk-in:all'
   )`
 
   const rows = await db.$queryRaw<
@@ -420,7 +421,7 @@ export async function listCustomerOrderDirectory(
     SELECT
       "identityKey" AS "id",
       CASE
-        WHEN "identityKey" LIKE 'walk-in:%' THEN 'walk-in'
+        WHEN "identityKey" = 'walk-in:all' THEN 'walk-in'
         WHEN COALESCE(NULLIF(saved.phone, ''), NULLIF("customerPhone", '')) IS NOT NULL THEN 'phone'
         WHEN COALESCE(NULLIF(saved.email, ''), NULLIF("customerEmail", '')) IS NOT NULL THEN 'email'
         ELSE 'name'
@@ -458,7 +459,10 @@ export async function listCustomerOrderDirectory(
       totalMinor: row.lastOrderTotalMinor,
     },
     lastSeenAt: row.lastSeenAt,
-    name: row.name || row.phone || row.email || "Walk-in customer",
+    name:
+      row.identityType === "walk-in"
+        ? "Walk-in sales"
+        : row.name || row.phone || row.email || "Walk-in customer",
     orderCount: row.orderCount,
     phone: row.phone,
     totalMinor: row.totalMinor,

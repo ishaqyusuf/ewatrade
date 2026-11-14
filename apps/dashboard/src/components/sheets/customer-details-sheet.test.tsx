@@ -31,7 +31,7 @@ const rpc = createTRPCClient<AppRouter>({
       ({ op }) =>
         observable((observer) => {
           ops.push({ path: op.path, type: op.type, input: op.input })
-          if (op.path === "customers.contact" && refuse) {
+          if (op.path === "customers.summary" && refuse) {
             observer.error(
               new TRPCClientError(denial, {
                 result: {
@@ -57,8 +57,13 @@ const rpc = createTRPCClient<AppRouter>({
             return
           }
           const data =
-            op.path === "customers.contact"
-              ? { ...contact }
+            op.path === "customers.summary"
+              ? {
+                  ...contact,
+                  canSeeBalance: false,
+                  currencyCode: "NGN",
+                  balance: null,
+                }
               : op.path === "customers.getById"
                 ? {
                     ...contact,
@@ -94,6 +99,10 @@ mock.module("@ewatrade/ui", () => ({
     <div>{children}</div>
   ),
   Input: (props: ComponentProps<"input">) => <input {...props} />,
+  MoneyInput: (props: ComponentProps<"input">) => <input {...props} />,
+  RadioGroup: Pass,
+  RadioGroupItem: () => null,
+  cn: (...names: unknown[]) => names.filter(Boolean).join(" "),
   Sheet: ({
     open,
     onOpenChange,
@@ -239,12 +248,14 @@ afterEach(async () => {
   changeSheet = undefined
 })
 
-test("the contact sheet reads only the contact projection and closes without commands", async () => {
+const customerOps = () => ops.filter((op) => op.path.startsWith("customers."))
+
+test("the details sheet reads only the customer summary and closes without commands", async () => {
   await mount({ customerDetail: "customer-a" }, <CustomerDetailsSheet />)
   await waitForContact()
-  expect(ops).toEqual([
+  expect(customerOps()).toEqual([
     {
-      path: "customers.contact",
+      path: "customers.summary",
       type: "query",
       input: { customerId: "customer-a" },
     },
@@ -256,7 +267,8 @@ test("the contact sheet reads only the contact projection and closes without com
     await settle()
   })
   expect(host.textContent).not.toContain("Halima")
-  expect(ops).toHaveLength(1)
+  expect(customerOps()).toHaveLength(1)
+  expect(ops.every((op) => op.type === "query")).toBe(true)
 })
 
 test("a fresh refusal erases contact details after broad customer invalidation", async () => {
@@ -267,7 +279,7 @@ test("a fresh refusal erases contact details after broad customer invalidation",
     await client.invalidateQueries({ queryKey: trpc.customers.pathKey() })
     await settle()
   })
-  expect(ops.filter((op) => op.path === "customers.contact")).toHaveLength(2)
+  expect(ops.filter((op) => op.path === "customers.summary")).toHaveLength(2)
   expect(host.textContent).toContain(denial)
   expect(host.textContent).not.toContain("Halima")
   expect(host.textContent).not.toContain("halima@example.invalid")
@@ -298,7 +310,7 @@ test("saving the Customer form refreshes an open contact sheet", async () => {
   expect(
     ops.filter((op) => op.type === "mutation").map((op) => op.path),
   ).toEqual(["customers.update"])
-  expect(ops.filter((op) => op.path === "customers.contact")).toHaveLength(2)
+  expect(ops.filter((op) => op.path === "customers.summary")).toHaveLength(2)
   expect(host.textContent).toContain("Halima Musa")
   expect(saved).toEqual([{ name: "Halima Musa", created: false }])
 })

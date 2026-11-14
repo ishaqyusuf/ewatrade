@@ -87,6 +87,8 @@ const reads = new Set([
   "customers.getById",
   // Same admission as getById, contact fields only.
   "customers.contact",
+  // Same admission as contact; the balance is only filled for owners/admins.
+  "customers.summary",
   "orders.list",
   "orders.listPage",
   "orders.listTotals",

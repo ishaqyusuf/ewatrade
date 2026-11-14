@@ -219,3 +219,38 @@ test("signed-out callers are refused and scoped staff share getById's audited gr
     staffProcedureAction("customers.getById", "query"),
   )
 })
+
+test("the details summary shares contact admission and shows a balance only to owners and admins", async () => {
+  const results: Record<string, string> = {}
+  for (const role of [
+    "OWNER",
+    "ADMIN",
+    "MANAGER",
+    "CASHIER",
+    "OPERATOR",
+    "MEMBER",
+  ]) {
+    const contact = await outcome(() =>
+      fixture({ role }).caller.contact({ customerId: "customer-a" }),
+    )
+    const f = fixture({ role })
+    const summary = await outcome(() =>
+      f.caller.summary({ customerId: "customer-a" }),
+    )
+    expect(summary).toBe(contact)
+    expect(f.reads).not.toContain("history")
+    results[role] = summary
+  }
+  expect(results.MEMBER).toBe("FORBIDDEN")
+  const owner = await fixture({ role: "OWNER" }).caller.summary({
+    customerId: "customer-a",
+  })
+  expect(owner).toMatchObject({ name: "Halima", canSeeBalance: true })
+  const cashier = await fixture({ role: "CASHIER" }).caller.summary({
+    customerId: "customer-a",
+  })
+  expect(cashier).toMatchObject({ canSeeBalance: false, balance: null })
+  expect(staffProcedureAction("customers.summary")).toBe(
+    staffProcedureAction("customers.contact"),
+  )
+})

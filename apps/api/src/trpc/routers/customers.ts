@@ -5,6 +5,7 @@ import {
   createCustomer,
   customerRevision,
   getCustomerById,
+  listCustomerLedgerBalances,
   listCustomersPage,
   lookupCommercialOrders,
   updateCustomerInTransaction,
@@ -84,6 +85,43 @@ export const customersRouter = createTRPCRouter({
         name: customer.name,
         email: customer.email,
         phone: customer.phone,
+      }
+    }),
+  /**
+   * Customer details sheet: contact, plus the balance in the active store's
+   * currency for owners and admins (one extra statement). No order history.
+   */
+  summary: protectedProcedure
+    .input(customerGetByIdSchema)
+    .query(async ({ ctx, input }) => {
+      const { customer } = await readAdmittedCustomer(ctx, input.customerId)
+      const role = String(ctx.tenantContext.membership.role).toUpperCase()
+      const canSeeBalance = role === "OWNER" || role === "ADMIN"
+      const currencyCode = ctx.tenantContext.activeStore?.currencyCode ?? null
+      const balance =
+        canSeeBalance && currencyCode
+          ? (
+              await listCustomerLedgerBalances(ctx.db, {
+                tenantId: ctx.tenantContext.tenant.id,
+                currencyCode,
+                customerIds: [customer.id],
+              })
+            ).get(customer.id)
+          : undefined
+      return {
+        id: customer.id,
+        name: customer.name,
+        email: customer.email,
+        phone: customer.phone,
+        canSeeBalance,
+        currencyCode,
+        balance: balance
+          ? {
+              owedMinor: balance.outstandingDebtMinor,
+              paidAheadMinor: balance.availableCreditMinor,
+              netMinor: balance.netBalanceMinor,
+            }
+          : null,
       }
     }),
   count: protectedProcedure

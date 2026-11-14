@@ -1,109 +1,80 @@
 "use client"
 
-import { CollapsibleSummary } from "@/components/collapsible-summary"
 import { CustomerFormSheet } from "@/components/customers/customer-form-sheet"
+import {
+  CustomerList,
+  filterCustomers,
+} from "@/components/customers/customer-list"
 import { CustomerDirectoryHeader } from "@/components/dashboard/customer-directory-header"
-import { MetricCard } from "@/components/reports/metric-card"
 import { ReturnablesEntry } from "@/components/returnables/returnables-page"
+import {
+  returnableCount,
+  useReturnableBalances,
+  useReturnableItems,
+} from "@/components/returnables/use-returnables"
 import { ScrollableContent } from "@/components/scrollable-content"
-import { TableToolbarSlotProvider } from "@/components/tables/core"
 import { describeCustomerBalance } from "@/components/tables/customers/columns"
-import { CustomerDataTable } from "@/components/tables/customers/data-table"
 import { useCustomerDirectoryParams } from "@/hooks/use-customer-directory-params"
 import { useCustomerSheetParams } from "@/hooks/use-customer-sheet-params"
-import { useDirectoryView } from "@/hooks/use-directory-view"
 import type { DashboardCustomerRow } from "@/lib/sales-operations"
-import type { DirectoryViewSettings } from "@/utils/directory-view-settings"
-import type { TableSettings } from "@/utils/table-settings"
 import { Alert, AlertDescription, Button } from "@ewatrade/ui"
 import { formatFinanceMoney } from "@ewatrade/utils/finance-money"
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { ArrowRight01Icon } from "@hugeicons/core-free-icons"
+import { HugeiconsIcon } from "@hugeicons/react"
+import Link from "next/link"
+import { parseAsString, useQueryStates } from "nuqs"
+import { useCallback, useEffect, useMemo, useState } from "react"
 
 type CustomersResponse = {
   customers: DashboardCustomerRow[]
-  store: {
-    currencyCode: string
-    id: string
-    name: string
-  }
 }
 
 const LOAD_ERROR =
   "Couldn’t load customers. Check your connection and try again."
 
-async function fetchCustomers(search: string, signal?: AbortSignal) {
-  const params = new URLSearchParams()
-  if (search) params.set("search", search)
-  const response = await fetch(`/api/customers?${params.toString()}`, {
-    signal,
-  })
+async function fetchCustomers() {
+  const response = await fetch("/api/customers")
   if (!response.ok) throw new Error(LOAD_ERROR)
   return ((await response.json()) as CustomersResponse).customers
 }
 
+/**
+ * The customer book: search and filter happen on the device over the loaded
+ * book (no request per letter); a row opens the customer's details sheet.
+ */
 export function CustomersPage({
   initialCustomers,
-  initialQuery,
-  initialSettings,
-  initialViewSettings,
   canSeeBalances,
   store,
 }: {
   initialCustomers: DashboardCustomerRow[]
-  initialQuery: string
-  initialSettings?: Partial<TableSettings>
-  initialViewSettings: DirectoryViewSettings
   canSeeBalances: boolean
-  store: CustomersResponse["store"]
+  store: { currencyCode: string; id: string; name: string }
 }) {
-  const { view, setView, persistenceError, retryPersistence } =
-    useDirectoryView({
-      pageId: "customers",
-      queryKey: "customerView",
-      initialSettings: initialViewSettings,
-    })
-  const { customerQuery, setCustomerQuery } = useCustomerDirectoryParams()
+  const { customerQuery, setCustomerQuery, customerFilter, setCustomerFilter } =
+    useCustomerDirectoryParams()
   const [customers, setCustomers] = useState(initialCustomers)
-  const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
-  const { openCreate, openEdit: openEditSheet } = useCustomerSheetParams()
-  const lastFilter = useRef(initialQuery.trim())
-
-  useEffect(() => {
-    const search = customerQuery.trim()
-    if (lastFilter.current === search) return
-    lastFilter.current = search
-    setError(null)
-    setIsLoading(true)
-    const controller = new AbortController()
-    const timeout = setTimeout(async () => {
-      try {
-        setCustomers(await fetchCustomers(search, controller.signal))
-      } catch {
-        if (!controller.signal.aborted) setError(LOAD_ERROR)
-      } finally {
-        if (!controller.signal.aborted) setIsLoading(false)
-      }
-    }, 250)
-
-    return () => {
-      clearTimeout(timeout)
-      controller.abort()
-    }
-  }, [customerQuery])
+  const { openCreate } = useCustomerSheetParams()
+  const [, setDetail] = useQueryStates(
+    { customerDetail: parseAsString },
+    { history: "push" },
+  )
+  // Same reads as the Returnables card above, so no extra request.
+  const returnableItems = useReturnableItems()
+  const returnables = useReturnableBalances({
+    enabled: Boolean(returnableItems.data?.length),
+  })
 
   const reload = useCallback(async () => {
     setError(null)
-    setIsLoading(true)
     try {
-      setCustomers(await fetchCustomers(customerQuery.trim()))
+      setCustomers(await fetchCustomers())
     } catch {
       setError(LOAD_ERROR)
-    } finally {
-      setIsLoading(false)
     }
-  }, [customerQuery])
+  }, [])
 
   useEffect(() => {
     if (!notice) return
@@ -111,105 +82,91 @@ export function CustomersPage({
     return () => clearTimeout(timer)
   }, [notice])
 
-  const summary = useMemo(() => {
-    let orders = 0
-    let ordered = 0
-    let sales = BigInt(0)
-    let owed = BigInt(0)
-    let owing = 0
+  const owed = useMemo(() => {
+    let total = BigInt(0)
+    let count = 0
     for (const customer of customers) {
-      orders += customer.orderCount
-      if (customer.orderCount) ordered += 1
-      sales += BigInt(customer.totalMinor)
-      const balance = customer.balance
+      const view = customer.balance
         ? describeCustomerBalance(customer.balance)
         : null
-      if (balance?.kind === "owes") {
-        owed += BigInt(balance.amountMinor)
-        owing += 1
-      }
+      if (view?.kind !== "owes") continue
+      total += BigInt(view.amountMinor)
+      count += 1
     }
-    return { orders, ordered, sales: sales.toString(), owed, owing }
+    return { total: total.toString(), count }
   }, [customers])
 
-  const openEdit = useCallback(
-    (customerId: string) => void openEditSheet(customerId),
-    [openEditSheet],
+  const returnablesOut = useMemo(() => {
+    const byCustomer = new Map<string, string[]>()
+    for (const row of returnables.data ?? []) {
+      if (!row.out) continue
+      const list = byCustomer.get(row.customerId) ?? []
+      list.push(`${returnableCount(row.out, row.itemName)} out`)
+      byCustomer.set(row.customerId, list)
+    }
+    return new Map(
+      [...byCustomer].map(([id, parts]) => [id, parts.join(", ")] as const),
+    )
+  }, [returnables.data])
+
+  const rows = useMemo(
+    () =>
+      filterCustomers(
+        customers,
+        customerQuery,
+        canSeeBalances ? customerFilter : "all",
+      ),
+    [customers, customerQuery, customerFilter, canSeeBalances],
   )
-  const openAdd = useCallback(() => void openCreate(), [openCreate])
+  const filtered = Boolean(customerQuery.trim()) || customerFilter !== "all"
 
   return (
-    <TableToolbarSlotProvider>
+    <>
       <ScrollableContent>
-        <div className="flex min-w-0 flex-1 flex-col gap-6 pt-6">
-          <CollapsibleSummary>
-            <div
-              data-summary-grid
-              className={
-                canSeeBalances
-                  ? "grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
-                  : "grid gap-4 sm:grid-cols-3"
-              }
-            >
-              <MetricCard
-                label="Customers"
-                value={customers.length}
-                hint={
-                  customers.length !== summary.ordered
-                    ? `${summary.ordered} have ordered`
-                    : undefined
-                }
-              />
-              <MetricCard label="Orders" value={summary.orders} />
-              <MetricCard
-                label="Total sales"
-                value={formatFinanceMoney(summary.sales, store.currencyCode)}
-                money
-              />
+        <div className="flex min-w-0 flex-1 flex-col gap-4 pt-6 pb-24 sm:pb-10">
+          {canSeeBalances || returnableItems.data?.length ? (
+            <div className="grid gap-3 md:grid-cols-2">
               {canSeeBalances ? (
-                <MetricCard
-                  label="Owed to you"
-                  value={formatFinanceMoney(
-                    summary.owed.toString(),
-                    store.currencyCode,
-                  )}
-                  money
-                  hint={
-                    summary.owing
-                      ? `by ${summary.owing} ${summary.owing === 1 ? "customer" : "customers"}`
-                      : "Nobody owes you"
-                  }
-                />
+                <Link
+                  href="/customer-ledger?customerFilter=owe"
+                  className="flex min-h-14 items-center gap-3 rounded-[var(--ui-radius-surface)] border border-border bg-card px-4 py-2.5 transition-colors hover:bg-[var(--hover)] focus-visible:bg-[var(--hover)]"
+                >
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-sm text-muted-foreground">
+                      Owed to you
+                    </span>
+                    <span className="block text-lg font-semibold tabular-nums">
+                      {formatFinanceMoney(owed.total, store.currencyCode)}
+                      <span className="ml-2 text-sm font-normal text-muted-foreground">
+                        {owed.count
+                          ? `${owed.count} ${owed.count === 1 ? "customer" : "customers"}`
+                          : "Nobody owes you"}
+                      </span>
+                    </span>
+                  </span>
+                  <HugeiconsIcon
+                    icon={ArrowRight01Icon}
+                    className="size-4 text-muted-foreground"
+                  />
+                </Link>
               ) : null}
+              <ReturnablesEntry />
             </div>
-          </CollapsibleSummary>
-          <ReturnablesEntry />
+          ) : null}
 
           <CustomerDirectoryHeader
             query={customerQuery}
-            storeName={store.name}
             canSeeBalances={canSeeBalances}
             onSearch={(value) => void setCustomerQuery(value.trim())}
-            view={view}
-            onViewChange={setView}
-            onAddCustomer={openAdd}
+            filter={customerFilter}
+            onFilterChange={(next) => void setCustomerFilter(next)}
+            onAddCustomer={() => void openCreate()}
           />
-          {persistenceError ? (
-            <Alert appearance="dashboard" role="alert">
-              <AlertDescription>Your view wasn’t saved.</AlertDescription>
-              <Button variant="outline" size="sm" onClick={retryPersistence}>
-                Try again
-              </Button>
-            </Alert>
-          ) : null}
 
           {error ? (
             <Alert appearance="dashboard" variant="destructive" role="alert">
-              <AlertDescription>
-                {error}
-                {customers.length ? " The list below may be out of date." : ""}
-              </AlertDescription>
-              <Button variant="outline" size="sm" onClick={() => void reload()}>
+              <AlertDescription>{error}</AlertDescription>
+              <Button variant="outline" onClick={() => void reload()}>
                 Try again
               </Button>
             </Alert>
@@ -217,33 +174,52 @@ export function CustomersPage({
           {notice ? (
             <output
               aria-live="polite"
-              className="border border-border px-4 py-3 text-sm"
+              className="rounded-[var(--ui-radius-item)] border border-border bg-card px-4 py-3 text-sm"
             >
               {notice}
             </output>
           ) : null}
 
-          <CustomerDataTable
-            rows={customers}
-            view={view}
-            currencyCode={store.currencyCode}
-            canSeeBalances={canSeeBalances}
-            isLoading={isLoading}
-            query={customerQuery}
-            onClearSearch={() => void setCustomerQuery("")}
-            onAddCustomer={openAdd}
-            onEdit={openEdit}
-            initialSettings={initialSettings}
-          />
+          {rows.length ? (
+            <CustomerList
+              key={`${customerQuery}:${customerFilter}`}
+              rows={rows}
+              currencyCode={store.currencyCode}
+              canSeeBalances={canSeeBalances}
+              returnablesOut={returnablesOut}
+              onOpen={(customerId) =>
+                void setDetail({ customerDetail: customerId })
+              }
+            />
+          ) : (
+            <div className="grid justify-items-center gap-3 rounded-[var(--ui-radius-surface)] border border-dashed border-border bg-card px-4 py-12 text-center">
+              <p className="font-medium">
+                {filtered ? "No customers match" : "No customers yet"}
+              </p>
+              {filtered ? (
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    void setCustomerQuery("")
+                    void setCustomerFilter("all")
+                  }}
+                >
+                  Show all
+                </Button>
+              ) : (
+                <Button onClick={() => void openCreate()}>Add customer</Button>
+              )}
+            </div>
+          )}
         </div>
       </ScrollableContent>
       <CustomerFormSheet
         canAddStartingBalance={canSeeBalances}
         onSaved={({ name, created }) => {
-          setNotice(created ? `Added ${name}.` : `Saved ${name}’s details.`)
+          setNotice(created ? `Added ${name}.` : `Saved ${name}.`)
           void reload()
         }}
       />
-    </TableToolbarSlotProvider>
+    </>
   )
 }

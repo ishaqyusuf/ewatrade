@@ -239,6 +239,9 @@ function CustomerFormFrame({
           queryKey: trpc.customers.getById.queryKey({ customerId }),
         }),
         client.invalidateQueries({
+          queryKey: trpc.customers.summary.queryKey({ customerId }),
+        }),
+        client.invalidateQueries({
           queryKey: trpc.customers.contact.queryKey({ customerId }),
         }),
       ])
