@@ -286,6 +286,7 @@ export function SetupAssistant({
       {banner ? (
         <ResumeBanner
           mediaEnabled={mediaEnabled}
+          offer={offerSetup}
           followUp={conversation ? followUp : undefined}
           areas={conversation ? areas : []}
           pending={start.isPending || begin.isPending}
@@ -385,8 +386,10 @@ function resumeCopy(
       ? {
           text: `Still to set up: ${openAreas.map((entry) => entry.label).join(", ")}. All optional.`,
           action: "Continue setup",
+          pending: true,
         }
       : {
+          pending: false,
           text: mediaEnabled
             ? "Describe your business by chat, voice note or a photo of your price list. The assistant adds your items for you."
             : "Describe your business by chat. The assistant adds your items for you.",
@@ -405,36 +408,44 @@ function resumeCopy(
     ? {
         text: `Your setup list: ${notes.join(", ")}.`,
         action: "Continue setup",
+        pending: true,
       }
     : {
+        pending: false,
         text: "Need more products, services or customers? The assistant can add them.",
         action: "Add with assistant",
       }
 }
 
+/**
+ * Overview row for the setup list. Shows while a setup has something waiting,
+ * or while the business is still on its first steps (`offer`); a finished
+ * setup no longer advertises the assistant here.
+ */
 function ResumeBanner({
   followUp,
   areas,
   mediaEnabled,
+  offer,
   pending,
   onResume,
 }: {
   followUp?: SetupFollowUpState
   areas?: SetupAreaState[]
   mediaEnabled: boolean
+  offer: boolean
   pending: boolean
   onResume: () => void
 }) {
   const copy = resumeCopy(followUp, areas, mediaEnabled)
+  if (!copy.pending && !offer) return null
   return (
-    <div className="flex flex-wrap items-center gap-3 rounded-xl border border-border px-4 py-3">
-      <span className="flex size-8 items-center justify-center rounded-full bg-primary/10 text-primary">
-        <HugeiconsIcon icon={SparklesIcon} className="size-4" />
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-3 rounded-[var(--ui-radius-surface)] border border-border bg-card px-4 py-4 sm:px-5">
+      <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-muted text-foreground">
+        <HugeiconsIcon icon={SparklesIcon} className="size-5" />
       </span>
-      <p className="min-w-0 flex-1 text-sm text-muted-foreground">
-        {copy.text}
-      </p>
-      <Button type="button" size="sm" disabled={pending} onClick={onResume}>
+      <p className="min-w-0 flex-[1_1_14rem]">{copy.text}</p>
+      <Button type="button" disabled={pending} onClick={onResume}>
         {copy.action}
       </Button>
     </div>

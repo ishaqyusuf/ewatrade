@@ -1,9 +1,11 @@
 import { OverviewActions } from "@/components/dashboard/overview-actions"
-import { OverviewContent } from "@/components/dashboard/overview-content"
+import {
+  OverviewContent,
+  OverviewTodayHeading,
+} from "@/components/dashboard/overview-content"
 import { OverviewFab } from "@/components/dashboard/overview-fab"
 import { OverviewMetricsSkeleton } from "@/components/dashboard/overview-metrics"
 import { OverviewSheets } from "@/components/dashboard/overview-sheets"
-import { PageHeader } from "@/components/page-header"
 import { canOperateInventory } from "@/lib/inventory-operations"
 import {
   canAccessDashboardPath,
@@ -12,16 +14,25 @@ import {
 import { canUseSalesOperations } from "@/lib/sales-operations"
 import { getServerSession } from "@/lib/session"
 import { getActiveTenant } from "@/lib/tenant"
+import { RETAIL_OPS_SUBSCRIPTION_PLANS } from "@ewatrade/db/subscription-plans"
 import type { Metadata } from "next"
 import { Suspense } from "react"
 
 export const metadata: Metadata = { title: "Overview | EwaTrade" }
 
+/** The Free plan is the one plan without paid features and the one with an online item limit. */
+function storefrontItemLimit(planFeatures: readonly string[] | undefined) {
+  if (!planFeatures || planFeatures.length > 0) return null
+  return (
+    RETAIL_OPS_SUBSCRIPTION_PLANS.find((plan) => plan.id === "free")?.limits
+      .storefrontItems ?? null
+  )
+}
+
 export default async function DashboardHomePage() {
   const session = await getServerSession()
   const ctx = session ? await getActiveTenant(session.user.id) : null
   const store = ctx?.activeStore
-  const tenant = ctx?.tenant
   const canCreateOrder = canUseSalesOperations(ctx?.membership.role)
   const canUpdateStock = canOperateInventory(
     ctx?.membership.role,
@@ -40,26 +51,35 @@ export default async function DashboardHomePage() {
     ctx?.membership.role,
     navigationContext,
   )
+  const hasActions = Boolean(
+    store && (canCreateOrder || canUpdateStock || canAddCatalog),
+  )
 
+  // The top bar holds the page title; the store picker and business switcher
+  // already name the business, so the page repeats neither.
   return (
-    <div className="flex min-w-0 flex-1 flex-col gap-5 pt-6">
-      <div className="flex min-w-0 items-center justify-between gap-4">
-        <PageHeader
-          title="Overview"
-          description={
-            store && tenant
-              ? `${tenant.name} · ${store.name}`
-              : "Your business at a glance"
-          }
-        />
-        {store ? (
-          <OverviewActions
-            orders={canCreateOrder}
-            stock={canUpdateStock}
-            catalog={canAddCatalog}
-          />
-        ) : null}
-      </div>
+    <div className="flex min-w-0 flex-1 flex-col gap-5 pt-6 pb-24 sm:gap-6">
+      {ctx && store ? (
+        // Streams before any private read. Phones show it only for the
+        // "Today" heading; the + button carries the actions there.
+        <div className="hidden min-w-0 items-end justify-between gap-4 has-[[data-overview-today]]:flex sm:flex">
+          <Suspense fallback={<span />}>
+            <OverviewTodayHeading
+              role={ctx.membership.role}
+              storeId={store.id}
+              tenantId={ctx.tenant.id}
+              timeZone={ctx.tenant.timezone ?? "Africa/Lagos"}
+            />
+          </Suspense>
+          {hasActions ? (
+            <OverviewActions
+              orders={canCreateOrder}
+              stock={canUpdateStock}
+              catalog={canAddCatalog}
+            />
+          ) : null}
+        </div>
+      ) : null}
       {ctx && session ? (
         <Suspense fallback={<OverviewMetricsSkeleton />}>
           <OverviewContent
@@ -75,6 +95,7 @@ export default async function DashboardHomePage() {
               name: ctx.tenant.name,
               slug: ctx.tenant.slug,
               timezone: ctx.tenant.timezone,
+              storefrontItemLimit: storefrontItemLimit(ctx.tenant.planFeatures),
             }}
             userId={session.user.id}
           />
@@ -93,6 +114,7 @@ export default async function DashboardHomePage() {
         <OverviewFab
           catalog={canAddCatalog}
           orders={canCreateOrder}
+          stock={canUpdateStock}
           assistant={getDashboardNavigation(
             ctx?.membership.role,
             navigationContext,

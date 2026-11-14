@@ -2,55 +2,50 @@
 
 import { useCatalogItemParams } from "@/hooks/use-catalog-item-params"
 import type { GettingStartedAction } from "@/lib/dashboard-overview"
-import { ArrowRight01Icon, SparklesIcon } from "@hugeicons/core-free-icons"
+import { ArrowRight01Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import Link from "next/link"
 
+const ROW =
+  "flex min-h-14 w-full items-center gap-3 px-4 py-3 text-left font-medium sm:px-5"
+
+/** Overview before the first order: a short list of first steps. */
 export function GettingStarted({
   actions,
 }: {
   actions: GettingStartedAction[]
-  store: { businessProfileKey: string | null; currencyCode: string; id: string }
 }) {
   const { setParams } = useCatalogItemParams()
   if (actions.length === 0) return null
-
+  const arrow = (
+    <HugeiconsIcon
+      icon={ArrowRight01Icon}
+      className="ml-auto size-5 shrink-0 text-muted-foreground"
+    />
+  )
   return (
-    <>
-      <section className="border-y border-border bg-background">
-        <div className="flex items-start gap-3 border-b border-border px-4 py-5 sm:px-5">
-          <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-            <HugeiconsIcon icon={SparklesIcon} className="size-4" />
-          </div>
-          <div>
-            <h2 className="font-semibold text-foreground">
-              Set up your business
-            </h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Start with any of these.
-            </p>
-          </div>
-        </div>
-
-        <div className="divide-y divide-border">
-          {actions.map((action) =>
-            action.disabled ? (
-              <div
-                key={action.href}
-                aria-disabled="true"
-                className="flex items-center gap-3 px-4 py-4 opacity-55 sm:px-5"
-              >
-                <ActionCopy action={action} />
-                <HugeiconsIcon
-                  icon={ArrowRight01Icon}
-                  className="size-4 shrink-0 text-muted-foreground"
-                />
+    <section
+      aria-labelledby="getting-started-title"
+      className="overflow-hidden rounded-[var(--ui-radius-surface)] border border-border bg-card"
+    >
+      <h2
+        id="getting-started-title"
+        className="border-b border-border px-4 py-4 text-lg font-semibold sm:px-5"
+      >
+        Set up your business
+      </h2>
+      <ul className="divide-y divide-border">
+        {actions.map((action) => (
+          <li key={action.href}>
+            {action.disabled ? (
+              <div aria-disabled="true" className={`${ROW} opacity-55`}>
+                {action.label}
+                {arrow}
               </div>
             ) : action.catalogCreateKind ? (
               <button
-                key={action.href}
                 type="button"
-                className="flex w-full items-center gap-3 px-4 py-4 text-left transition hover:bg-muted/50 sm:px-5"
+                className={`${ROW} hover:bg-[var(--hover)]`}
                 onClick={() => {
                   void setParams({
                     catalogItem: "create",
@@ -58,39 +53,21 @@ export function GettingStarted({
                   })
                 }}
               >
-                <ActionCopy action={action} />
-                <HugeiconsIcon
-                  icon={ArrowRight01Icon}
-                  className="size-4 shrink-0 text-muted-foreground"
-                />
+                {action.label}
+                {arrow}
               </button>
             ) : (
               <Link
-                key={action.href}
                 href={action.href}
-                className="flex items-center gap-3 px-4 py-4 transition hover:bg-muted/50 sm:px-5"
+                className={`${ROW} hover:bg-[var(--hover)]`}
               >
-                <ActionCopy action={action} />
-                <HugeiconsIcon
-                  icon={ArrowRight01Icon}
-                  className="size-4 shrink-0 text-muted-foreground"
-                />
+                {action.label}
+                {arrow}
               </Link>
-            ),
-          )}
-        </div>
-      </section>
-    </>
-  )
-}
-
-function ActionCopy({ action }: { action: GettingStartedAction }) {
-  return (
-    <div className="min-w-0 flex-1">
-      <p className="text-sm font-medium text-foreground">{action.label}</p>
-      <p className="mt-0.5 text-xs text-muted-foreground">
-        {action.description}
-      </p>
-    </div>
+            )}
+          </li>
+        ))}
+      </ul>
+    </section>
   )
 }

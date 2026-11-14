@@ -1,4 +1,3 @@
-import { CollapsibleSummary } from "@/components/collapsible-summary"
 import { GettingStarted } from "@/components/dashboard/getting-started"
 import { LifecycleNudgeCard } from "@/components/dashboard/lifecycle-nudge-card"
 import {
@@ -16,7 +15,10 @@ import {
   OverviewOrdersError,
 } from "@/components/dashboard/workspace-error"
 import { SetupAssistant } from "@/components/setup-assistant/setup-assistant"
-import { getGettingStartedActions } from "@/lib/dashboard-overview"
+import {
+  getGettingStartedActions,
+  getOverviewAccess,
+} from "@/lib/dashboard-overview"
 import { canAccessDashboardPath } from "@/lib/navigation"
 import type { TenantContext, TenantStore } from "@/lib/tenant"
 import { getDashboardFeatureAvailability } from "@/lib/workspace-feature-availability"
@@ -28,6 +30,49 @@ import { ErrorBoundary } from "next/dist/client/components/error-boundary"
 import Link from "next/link"
 import { Suspense } from "react"
 
+/**
+ * "Today" and the date above the numbers, for people who see sales once the
+ * Store has orders. Reuses the request's cached presence read.
+ */
+export async function OverviewTodayHeading({
+  role,
+  storeId,
+  tenantId,
+  timeZone,
+}: {
+  role: string
+  storeId: string
+  tenantId: string
+  timeZone: string
+}) {
+  if (!getOverviewAccess(role).sales) return null
+  // The content below reports a failed read; the heading just stays away.
+  const availability = await getDashboardFeatureAvailability(
+    storeId,
+    tenantId,
+  ).catch(() => null)
+  if (!availability?.hasOrders) return null
+  return (
+    <div data-overview-today className="min-w-0">
+      <h2 className="text-lg font-semibold">Today</h2>
+      <p className="text-sm text-muted-foreground">
+        {new Date().toLocaleDateString("en-NG", {
+          timeZone,
+          weekday: "long",
+          day: "numeric",
+          month: "long",
+        })}
+      </p>
+    </div>
+  )
+}
+
+/**
+ * Overview, top to bottom: today's numbers, what needs the owner (approvals,
+ * the setup list, one nudge), recent orders, then the online store. Before the
+ * first order the setup list leads instead. Each card is shown only to roles
+ * that may see it (`getOverviewAccess`).
+ */
 export async function OverviewContent({
   allowedStoreIds,
   membership,
@@ -41,76 +86,71 @@ export async function OverviewContent({
     "role" | "staffAccessMode" | "catalogEditor"
   >
   store: TenantStore | null
-  tenant: Pick<TenantContext["tenant"], "id" | "name" | "slug" | "timezone">
+  tenant: Pick<TenantContext["tenant"], "id" | "name" | "slug" | "timezone"> & {
+    storefrontItemLimit: number | null
+  }
   userId: string
 }) {
+  const access = getOverviewAccess(membership.role)
   const availabilityRead = store
     ? getDashboardFeatureAvailability(store.id, tenant.id)
     : Promise.resolve(null)
-  const scopeRead = store
-    ? resolveOrderScope(prisma, {
-        role: membership.role,
-        userId,
-        tenantId: tenant.id,
-        storeId: store.id,
-        allowedStoreIds,
-      })
-    : Promise.resolve(undefined)
+  const scopeRead =
+    store && access.sales
+      ? resolveOrderScope(prisma, {
+          role: membership.role,
+          userId,
+          tenantId: tenant.id,
+          storeId: store.id,
+          allowedStoreIds,
+        })
+      : Promise.resolve(undefined)
   const [scope, availability] = await Promise.all([scopeRead, availabilityRead])
   // Matches the shell's catalog sheet and assistant launcher gating.
   const navigationContext = {
     staffAccessMode: membership.staffAccessMode,
     catalogEditor: membership.catalogEditor,
   }
-  const actions =
+  const firstSteps =
     availability && !availability.hasOrders
       ? getGettingStartedActions(membership.role, availability, membership)
       : []
-  const role = membership.role
-  const isOwner = ["OWNER", "ADMIN"].includes(role)
-  const timeZone = tenant?.timezone ?? "Africa/Lagos"
-  // Overview order (workshop direction 02, "Numbers first"): numbers, what
-  // needs the owner, recent orders, then setup and the online store link.
-  // While there are no orders, setup leads instead.
-  const setup = store ? (
-    <SetupAssistant
-      key="setup"
-      hasCatalogItems={availability?.hasCatalogItems ?? false}
-      offerSetup={actions.length > 0}
-      fallback={
-        actions.length === 0 ? null : (
-          <GettingStarted
-            actions={actions}
-            store={{
-              businessProfileKey:
-                store.businessOnboarding?.businessProfileKey ?? null,
-              id: store.id,
-              currencyCode: store.currencyCode,
-            }}
-          />
-        )
-      }
-    />
+  const timeZone = tenant.timezone ?? "Africa/Lagos"
+  const hasSales = Boolean(store && access.sales && availability?.hasOrders)
+  const own = scope?.createdByUserId !== undefined
+
+  const gettingStarted = firstSteps.length ? (
+    <GettingStarted actions={firstSteps} />
   ) : null
+  // Owners and Admins get the setup list banner beside the first steps; the
+  // API answers nobody else, so other roles never ask.
+  const setup =
+    store && access.owner ? (
+      <SetupAssistant
+        key="setup"
+        hasCatalogItems={availability?.hasCatalogItems ?? false}
+        offerSetup={firstSteps.length > 0}
+        fallback={gettingStarted}
+      />
+    ) : gettingStarted ? (
+      <div key="setup">{gettingStarted}</div>
+    ) : null
   const numbers =
-    availability && store && tenant ? (
-      <CollapsibleSummary key="numbers">
-        <ErrorBoundary errorComponent={OverviewNumbersError}>
-          <Suspense
-            fallback={<OverviewMetricsSkeleton availability={availability} />}
-          >
-            <OverviewMetrics
-              availability={availability}
-              store={store}
-              tenantId={tenant.id}
-              createdByUserId={scope?.createdByUserId}
-            />
-          </Suspense>
-        </ErrorBoundary>
-      </CollapsibleSummary>
+    hasSales && store ? (
+      <ErrorBoundary key="numbers" errorComponent={OverviewNumbersError}>
+        <Suspense fallback={<OverviewMetricsSkeleton />}>
+          <OverviewMetrics
+            storeId={store.id}
+            tenantId={tenant.id}
+            currencyCode={store.currencyCode}
+            timeZone={timeZone}
+            createdByUserId={scope?.createdByUserId}
+          />
+        </Suspense>
+      </ErrorBoundary>
     ) : null
   const needsYou =
-    store && isOwner ? (
+    store && access.owner ? (
       <OverviewNeedsYou
         key="needs-you"
         storeId={store.id}
@@ -119,18 +159,18 @@ export async function OverviewContent({
       />
     ) : null
   // One lifecycle nudge at a time, chosen by the server sweep (Owner/Admin).
-  const nudge = store && isOwner ? <LifecycleNudgeCard key="nudge" /> : null
+  const nudge =
+    store && access.owner ? <LifecycleNudgeCard key="nudge" /> : null
   const recent =
-    availability?.hasOrders && store ? (
+    hasSales && store ? (
       <section
         key="recent"
-        className="flex min-w-0 flex-col rounded-lg border border-border bg-card"
+        aria-labelledby="recent-orders-title"
+        className="flex min-w-0 flex-col overflow-hidden rounded-[var(--ui-radius-surface)] border border-border bg-card"
       >
-        <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3 sm:px-5">
-          <h2 className="font-semibold">
-            {["CASHIER", "OPERATOR"].includes(role)
-              ? "Your recent orders"
-              : "Recent orders"}
+        <div className="flex min-h-14 items-center justify-between gap-3 border-b border-border px-4 sm:px-5">
+          <h2 id="recent-orders-title" className="text-lg font-semibold">
+            {own ? "Your recent orders" : "Recent orders"}
           </h2>
           {canAccessDashboardPath(
             "/sales",
@@ -139,10 +179,10 @@ export async function OverviewContent({
           ) ? (
             <Link
               href="/sales"
-              className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
+              className="-mr-2 inline-flex min-h-11 items-center gap-1 px-2 font-medium text-[var(--link)] hover:underline"
             >
-              View all
-              <HugeiconsIcon icon={ArrowRight01Icon} className="size-3.5" />
+              All orders
+              <HugeiconsIcon icon={ArrowRight01Icon} className="size-4" />
             </Link>
           ) : null}
         </div>
@@ -154,7 +194,7 @@ export async function OverviewContent({
           >
             <OverviewRecentOrders
               storeId={store.id}
-              tenantId={tenant?.id ?? ""}
+              tenantId={tenant.id}
               timeZone={timeZone}
               createdByUserId={scope?.createdByUserId}
             />
@@ -163,20 +203,24 @@ export async function OverviewContent({
       </section>
     ) : null
   const storeLink =
-    store && tenant && isOwner ? (
+    store && access.owner ? (
       <OnlineStoreStrip
         key={`store:${tenant.id}:${store.id}`}
         tenant={{ id: tenant.id, name: tenant.name, slug: tenant.slug }}
         hasCatalogItems={availability?.hasCatalogItems ?? false}
+        itemLimit={tenant.storefrontItemLimit}
       />
     ) : null
   const businesses =
-    store && tenant && isOwner ? (
-      <OwnerBusinesses key={`businesses:${tenant.id}`} />
+    store && access.owner ? (
+      <OwnerBusinesses
+        key={`businesses:${tenant.id}`}
+        currentTenantId={tenant.id}
+      />
     ) : null
-  const sections = availability?.hasOrders
-    ? [numbers, needsYou, nudge, recent, setup, storeLink, businesses]
-    : [setup, needsYou, nudge, storeLink, numbers, businesses]
+  const sections = hasSales
+    ? [numbers, needsYou, setup, nudge, recent, storeLink, businesses]
+    : [setup, needsYou, nudge, storeLink, businesses]
 
   return <>{sections}</>
 }

@@ -34,8 +34,8 @@ function client(name: string) {
 // Client refs serialize through actual Flight; no client hook, controller,
 // business command or provider executes in this server scheduling fixture.
 for (const [path, names] of [
-  ["components/collapsible-summary", ["CollapsibleSummary"]],
   ["components/dashboard/getting-started", ["GettingStarted"]],
+  ["components/dashboard/lifecycle-nudge-card", ["LifecycleNudgeCard"]],
   ["components/dashboard/overview-actions", ["OverviewActions"]],
   ["components/dashboard/overview-fab", ["OverviewFab"]],
   ["components/dashboard/overview-needs-you", ["OverviewNeedsYou"]],
@@ -48,7 +48,6 @@ for (const [path, names] of [
     "components/dashboard/workspace-error",
     ["OverviewNumbersError", "OverviewOrdersError"],
   ],
-  ["components/page-header", ["PageHeader"]],
   ["components/setup-assistant/setup-assistant", ["SetupAssistant"]],
   ["components/orders/overview/order-overview-parts", ["Pill"]],
 ] as const) {
@@ -106,6 +105,10 @@ let policy = deferred<{ salesRepOrderVisibility: string } | null>()
 let tenantGate = deferred<void>()
 let summaryGate = deferred<void>()
 const reads: Array<{ kind: string; input: unknown }> = []
+const presenceHandedOut = new Map<
+  string,
+  Promise<WorkspaceFeatureAvailability>
+>()
 mock.module(app("lib/session"), () => ({
   getServerSession: async () => (signedIn ? { user: { id: "actor-a" } } : null),
 }))
@@ -116,8 +119,14 @@ mock.module(app("lib/tenant"), () => ({
   },
 }))
 mock.module(app("lib/workspace-feature-availability"), () => ({
+  // The real read is React cache()d per request: the Today heading and the
+  // content share one presence read. Count each pending read once.
   getDashboardFeatureAvailability: (storeId: string, tenantId: string) => {
-    reads.push({ kind: "presence", input: { storeId, tenantId } })
+    const key = `${storeId}:${tenantId}`
+    if (presenceHandedOut.get(key) !== presence.promise) {
+      presenceHandedOut.set(key, presence.promise)
+      reads.push({ kind: "presence", input: { storeId, tenantId } })
+    }
     return presence.promise
   },
 }))
@@ -133,10 +142,10 @@ const prisma = {
     await summaryGate.promise
     return [
       {
-        revenueTodayMinor: 123456n,
+        salesTodayMinor: 123456n,
+        ordersToday: 2n,
+        salesThisMonthMinor: 234567n,
         ordersThisMonth: 3n,
-        catalogItems: 4n,
-        stockBalances: 5n,
       },
     ]
   },
@@ -197,7 +206,7 @@ function sectionKeys(text: string) {
       if (
         value[0] === "$" &&
         typeof key === "string" &&
-        (["numbers", "needs-you", "recent", "setup"].includes(key) ||
+        (["numbers", "needs-you", "recent", "setup", "nudge"].includes(key) ||
           key.startsWith("store:") ||
           key.startsWith("businesses:"))
       )
@@ -263,7 +272,7 @@ test("Overview Flight sends its header/actions while presence and fresh visibili
     for (let i = 0; i < 4; i++) await settle()
     expect(reads.filter(({ kind }) => kind === "presence")).toHaveLength(1)
     expect(reads.filter(({ kind }) => kind === "policy")).toHaveLength(1)
-    expect(view.text).toContain('"title":"Overview"')
+    expect(view.text).toContain("inert/OverviewActions")
     expect(view.text).toContain("inert/OverviewActions")
     expect(view.text).toContain("inert/OverviewSheets")
     expect(view.text).toContain("inert/OverviewFab")
@@ -302,7 +311,7 @@ test("membership resolution still precedes header, presence, visibility and priv
   const view = flight()
   for (let i = 0; i < 3; i++) await settle()
   expect(reads).toHaveLength(0)
-  expect(view.text).not.toContain('"title":"Overview"')
+  expect(view.text).not.toContain("inert/OverviewActions")
   tenantGate.resolve()
   presence.resolve(facts)
   policy.resolve({ salesRepOrderVisibility: "OWN_SALES" })
@@ -314,7 +323,7 @@ test("a refused current Store policy sends no metrics or recent Orders", async (
   tenantGate.resolve()
   const view = flight()
   for (let i = 0; i < 4; i++) await settle()
-  expect(view.text).toContain('"title":"Overview"')
+  expect(view.text).toContain("inert/OverviewActions")
   presence.resolve(facts)
   policy.resolve(null)
   await view.done
@@ -339,16 +348,17 @@ test("owner composition preserves populated and empty section order without a st
         ? [
             "numbers",
             "needs-you",
-            "recent",
             "setup",
+            "nudge",
+            "recent",
             "store:tenant-a:store-a",
             "businesses:tenant-a",
           ]
         : [
             "setup",
             "needs-you",
+            "nudge",
             "store:tenant-a:store-a",
-            "numbers",
             "businesses:tenant-a",
           ],
     )
@@ -362,7 +372,7 @@ test("presence still gates private data after an all-Store visibility result", a
   const view = flight()
   policy.resolve({ salesRepOrderVisibility: "ALL_STORE_ORDERS" })
   for (let i = 0; i < 4; i++) await settle()
-  expect(view.text).toContain('"title":"Overview"')
+  expect(view.text).toContain("inert/OverviewActions")
   expect(
     reads.filter(({ kind }) => kind === "metrics" || kind === "recent"),
   ).toHaveLength(0)
@@ -382,7 +392,7 @@ test("a failed presence read cannot start metrics or recent Orders", async () =>
   tenantGate.resolve()
   const view = flight()
   for (let i = 0; i < 4; i++) await settle()
-  expect(view.text).toContain('"title":"Overview"')
+  expect(view.text).toContain("inert/OverviewActions")
   policy.resolve({ salesRepOrderVisibility: "OWN_SALES" })
   presence.reject(Error("inert presence failure"))
   await view.done
@@ -401,7 +411,7 @@ test("a slow numbers read retains the existing independent recent-Orders stream"
   for (let i = 0; i < 4; i++) await settle()
   expect(reads.filter(({ kind }) => kind === "metrics")).toHaveLength(1)
   expect(reads.filter(({ kind }) => kind === "recent")).toHaveLength(1)
-  expect(view.text).toContain("No orders yet. New orders show here.")
+  expect(view.text).toContain("No orders yet.")
   expect(view.text).not.toContain('"children":"Your sales today"')
   summaryGate.resolve()
   await view.done
@@ -429,8 +439,8 @@ test("pending requests retain their own Tenant and Store after a second context 
   presence.resolve({ ...facts, storeId: storeB.id })
   policy.resolve({ salesRepOrderVisibility: "OWN_SALES" })
   await current.done
-  expect(current.text).toContain("Business B · Store B")
-  expect(previous.text).not.toContain("Business B · Store B")
+  expect(current.text).toContain('"storeId":"store-b"')
+  expect(previous.text).not.toContain("store-b")
   previousPresence.resolve(facts)
   previousPolicy.resolve({ salesRepOrderVisibility: "OWN_SALES" })
   await previous.done
@@ -472,5 +482,25 @@ test("absent session or Tenant never mounts private Overview content", async () 
     expect(view.errors).toHaveLength(0)
     expect(reads).toHaveLength(0)
     expect(view.text).not.toContain("inert/OverviewActions")
+  }
+})
+
+test("Support and Member roles get no sales numbers, recent orders or policy read", async () => {
+  for (const role of ["SUPPORT", "MEMBER"]) {
+    reads.length = 0
+    ctx.membership.role = role
+    presence = deferred()
+    tenantGate.resolve()
+    const view = flight()
+    presence.resolve(facts)
+    await view.done
+    expect(view.errors).toHaveLength(0)
+    expect(
+      reads.filter(({ kind }) =>
+        ["metrics", "recent", "policy"].includes(kind),
+      ),
+    ).toHaveLength(0)
+    expect(sectionKeys(view.text)).toEqual([])
+    expect(view.text).not.toContain("Sales today")
   }
 })

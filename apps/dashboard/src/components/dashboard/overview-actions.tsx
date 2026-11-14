@@ -10,10 +10,17 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@ewatrade/ui"
-import { Add01Icon, ArrowDown01Icon } from "@hugeicons/core-free-icons"
+import {
+  Add01Icon,
+  ArrowDown01Icon,
+  ShoppingCart01Icon,
+} from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 
-/** The Overview's one "New" menu; the floating + offers the same actions. */
+/**
+ * Overview toolbar (640px and up): "New order" is the one primary action; the
+ * Add menu holds the rest. Phones get the same actions from the + button.
+ */
 export function OverviewActions({
   orders,
   stock,
@@ -24,65 +31,71 @@ export function OverviewActions({
   const { setParams: setCatalogParams } = useCatalogItemParams()
   if (!orders && !stock && !catalog) return null
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger
-        render={
-          <Button
-            type="button"
-            variant="outline"
-            aria-label="New: choose what to add"
-          />
-        }
-      >
-        <HugeiconsIcon icon={Add01Icon} className="size-4" />
-        New
-        <HugeiconsIcon
-          icon={ArrowDown01Icon}
-          className="size-3.5 text-muted-foreground"
-        />
-      </DropdownMenuTrigger>
-      <DropdownMenuContent appearance="dashboard" align="end">
-        {orders ? (
-          <DropdownMenuItem
-            onClick={() => void setOrderParams({ orderSheet: "create" })}
-          >
-            New order
-          </DropdownMenuItem>
-        ) : null}
-        {stock ? (
-          <DropdownMenuItem
-            onClick={() =>
-              void setInventoryParams({ inventoryOperation: "adjustment" })
+    <div className="ml-auto hidden shrink-0 items-center gap-2 sm:flex">
+      {stock || catalog ? (
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={
+              <Button
+                type="button"
+                variant="outline"
+                aria-label="Add: choose what to add"
+              />
             }
           >
-            Update stock
-          </DropdownMenuItem>
-        ) : null}
-        {catalog ? (
-          <>
-            <DropdownMenuItem
-              onClick={() =>
-                void setCatalogParams({
-                  catalogItem: "create",
-                  catalogCreateKind: "product",
-                })
-              }
-            >
-              Add item
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() =>
-                void setCatalogParams({
-                  catalogItem: "create",
-                  catalogCreateKind: "service",
-                })
-              }
-            >
-              Add service
-            </DropdownMenuItem>
-          </>
-        ) : null}
-      </DropdownMenuContent>
-    </DropdownMenu>
+            <HugeiconsIcon icon={Add01Icon} className="size-4" />
+            Add
+            <HugeiconsIcon
+              icon={ArrowDown01Icon}
+              className="size-4 text-muted-foreground"
+            />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent appearance="dashboard" align="end">
+            {catalog ? (
+              <>
+                <DropdownMenuItem
+                  onClick={() =>
+                    void setCatalogParams({
+                      catalogItem: "create",
+                      catalogCreateKind: "product",
+                    })
+                  }
+                >
+                  Add item
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() =>
+                    void setCatalogParams({
+                      catalogItem: "create",
+                      catalogCreateKind: "service",
+                    })
+                  }
+                >
+                  Add service
+                </DropdownMenuItem>
+              </>
+            ) : null}
+            {stock ? (
+              <DropdownMenuItem
+                onClick={() =>
+                  void setInventoryParams({ inventoryOperation: "adjustment" })
+                }
+              >
+                Update stock
+              </DropdownMenuItem>
+            ) : null}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ) : null}
+      {orders ? (
+        <Button
+          type="button"
+          onClick={() => void setOrderParams({ orderSheet: "create" })}
+        >
+          <HugeiconsIcon icon={ShoppingCart01Icon} className="size-4" />
+          New order
+        </Button>
+      ) : null}
+    </div>
   )
 }

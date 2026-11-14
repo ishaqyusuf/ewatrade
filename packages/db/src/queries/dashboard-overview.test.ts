@@ -6,11 +6,6 @@ import type { DbClient } from "./types"
 
 type OverviewInput = Parameters<typeof getDashboardOverviewMetrics>[1]
 const input: OverviewInput = {
-  availability: {
-    hasOrders: true,
-    hasCatalogItems: true,
-    hasProductItems: true,
-  },
   createdByUserId: undefined,
   monthStart: new Date("2026-10-01T00:00:00Z"),
   storeId: "store-a",
@@ -102,14 +97,6 @@ const orders = [
 const memory = await PGlite.create()
 await memory.exec(`
   CREATE TABLE "CommercialOrder" ("tenantId" text, "storeId" text, "createdByUserId" text, "createdAt" timestamp, "totalMinor" integer, status text);
-  CREATE TABLE "CatalogItem" (id text, "tenantId" text, "systemRole" text);
-  CREATE TABLE "SellableOffering" (id text, "catalogItemId" text);
-  CREATE TABLE "StoreOfferingAvailability" ("offeringId" text, "storeId" text, "isAvailable" boolean);
-  CREATE TABLE "StockBalanceSource" ("storeId" text);
-  INSERT INTO "CatalogItem" VALUES ('one','tenant-a',null),('two','tenant-a',null),('system','tenant-a','SYSTEM'),('foreign','tenant-b',null),('elsewhere','tenant-a',null);
-  INSERT INTO "SellableOffering" VALUES ('offer1','one'),('offer2','one'),('offer3','two'),('offer4','system'),('offer5','foreign'),('offer6','elsewhere');
-  INSERT INTO "StoreOfferingAvailability" VALUES ('offer1','store-a',true),('offer1','store-a',true),('offer2','store-a',false),('offer3','store-a',false),('offer4','store-a',true),('offer5','store-a',true),('offer6','store-b',true);
-  INSERT INTO "StockBalanceSource" VALUES ('store-a'),('store-a'),('store-b');
 `)
 for (const row of orders)
   await memory.query(
@@ -118,109 +105,75 @@ for (const row of orders)
   )
 afterAll(() => memory.close())
 
+const NOT_SALES = ["DRAFT", "CANCELLED"]
+
 function expected(params: OverviewInput) {
   const own = orders.filter(
     (row) =>
       row.tenant === params.tenantId &&
       row.store === params.storeId &&
+      !NOT_SALES.includes(row.status) &&
       (params.createdByUserId === undefined ||
         row.actor === params.createdByUserId),
   )
+  const today = own.filter((row) => new Date(row.at) >= params.todayStart)
+  const month = own.filter((row) => new Date(row.at) >= params.monthStart)
   return {
-    revenueTodayMinor: params.availability.hasOrders
-      ? own
-          .filter((row) => new Date(row.at) >= params.todayStart)
-          .reduce((total, row) => total + row.total, 0)
-      : 0,
-    ordersThisMonth: params.availability.hasOrders
-      ? own.filter((row) => new Date(row.at) >= params.monthStart).length
-      : 0,
-    catalogItems:
-      params.availability.hasCatalogItems && params.storeId === "store-a"
-        ? params.tenantId === "tenant-a"
-          ? 2
-          : params.tenantId === "tenant-b"
-            ? 1
-            : 0
-        : 0,
-    stockBalances:
-      params.availability.hasProductItems && params.storeId === "store-a"
-        ? 2
-        : 0,
+    salesTodayMinor: today.reduce((total, row) => total + row.total, 0),
+    ordersToday: today.length,
+    salesThisMonthMinor: month.reduce((total, row) => total + row.total, 0),
+    ordersThisMonth: month.length,
   }
 }
 
-function reader(params: OverviewInput) {
+function reader() {
   const calls: string[] = []
-  const result = expected(params)
   const db = {
-    commercialOrder: {
-      aggregate: async () => {
-        calls.push("revenue")
-        return { _sum: { totalMinor: result.revenueTodayMinor } }
-      },
-      count: async () => {
-        calls.push("orders")
-        return result.ordersThisMonth
-      },
-    },
-    catalogItem: {
-      count: async () => {
-        calls.push("catalog")
-        return result.catalogItems
-      },
-    },
-    stockBalanceSource: {
-      count: async () => {
-        calls.push("stock")
-        return result.stockBalances
-      },
-    },
     $queryRaw: async (query: Prisma.Sql) => {
       calls.push("summary")
       return (await memory.query(query.text, query.values)).rows
     },
   }
-  // Inert Prisma boundary: legacy ports measure the old acquisition fan-out;
-  // the new raw port executes the real parameterized SQL in disposable Postgres.
+  // Inert Prisma boundary: the raw port executes the real parameterized SQL
+  // in disposable Postgres.
   return { calls, db: db as unknown as DbClient }
 }
 
-test("Overview numbers use one database acquisition instead of four", async () => {
-  const { calls, db } = reader(input)
+test("Overview numbers are one statement", async () => {
+  const { calls, db } = reader()
   expect(await getDashboardOverviewMetrics(db, input)).toEqual(expected(input))
   expect(calls).toHaveLength(1)
 })
 
-test("all presence masks and creator scopes retain existing numbers and date boundaries", async () => {
-  for (let mask = 0; mask < 8; mask++) {
-    for (const actor of [undefined, "a", "b", "absent", "", "a' OR true --"]) {
-      const params = {
-        ...input,
-        createdByUserId: actor,
-        availability: {
-          hasOrders: Boolean(mask & 1),
-          hasCatalogItems: Boolean(mask & 2),
-          hasProductItems: Boolean(mask & 4),
-        },
-      }
-      const { db, calls } = reader(params)
-      expect(await getDashboardOverviewMetrics(db, params)).toEqual(
-        expected(params),
-      )
-      expect(calls).toHaveLength(mask ? 1 : 0)
-    }
+test("creator scopes keep each person's own numbers and date boundaries", async () => {
+  for (const actor of [undefined, "a", "b", "absent", "", "a' OR true --"]) {
+    const params = { ...input, createdByUserId: actor }
+    const { db, calls } = reader()
+    expect(await getDashboardOverviewMetrics(db, params)).toEqual(
+      expected(params),
+    )
+    expect(calls).toHaveLength(1)
   }
 })
 
-test("empty and foreign Store/Tenant scope returns no foreign money or Catalog", async () => {
+test("drafts and cancelled orders are not sales", async () => {
+  const { db } = reader()
+  const result = await getDashboardOverviewMetrics(db, input)
+  // From the 30th: 100, a -50 refund, two large orders and a later 500.
+  expect(result.ordersToday).toBe(5)
+  expect(result.salesTodayMinor).toBe(100 - 50 + 4000000000 + 500)
+  // The cancelled 300 on the 1st is left out of the month.
+  expect(result.ordersThisMonth).toBe(5)
+})
+
+test("empty and foreign Store/Tenant scope returns no foreign money", async () => {
   for (const scope of [
     { storeId: "missing", tenantId: "tenant-a" },
     { storeId: "store-a", tenantId: "tenant-b" },
     { storeId: "store-a' OR true --", tenantId: "tenant-a" },
   ]) {
     const params = { ...input, ...scope }
-    const { db } = reader(params)
+    const { db } = reader()
     expect(await getDashboardOverviewMetrics(db, params)).toEqual(
       expected(params),
     )
@@ -233,7 +186,7 @@ test("independent date lower bounds and integer sums remain exact", async () => 
     { todayStart: new Date("2026-11-02"), monthStart: new Date("2026-11-02") },
   ]) {
     const params = { ...input, ...dates }
-    const { db } = reader(params)
+    const { db } = reader()
     expect(await getDashboardOverviewMetrics(db, params)).toEqual(
       expected(params),
     )
@@ -241,7 +194,7 @@ test("independent date lower bounds and integer sums remain exact", async () => 
 })
 
 test("a failed or absent current projection propagates instead of reusing numbers", async () => {
-  const { db } = reader(input)
+  const { db } = reader()
   Object.assign(db, {
     $queryRaw: async () => {
       throw Error("current read failed")
@@ -257,7 +210,7 @@ test("a failed or absent current projection propagates instead of reusing number
 })
 
 test("each call reads a current snapshot without a retained summary", async () => {
-  const { db, calls } = reader(input)
+  const { db, calls } = reader()
   const before = await getDashboardOverviewMetrics(db, input)
   const where = '"tenantId"=$1 AND "storeId"=$2 AND "totalMinor"=100'
   try {
@@ -265,9 +218,9 @@ test("each call reads a current snapshot without a retained summary", async () =
       `UPDATE "CommercialOrder" SET "totalMinor"=101 WHERE ${where}`,
       [input.tenantId, input.storeId],
     )
-    expect(
-      (await getDashboardOverviewMetrics(db, input)).revenueTodayMinor,
-    ).toBe(before.revenueTodayMinor + 1)
+    expect((await getDashboardOverviewMetrics(db, input)).salesTodayMinor).toBe(
+      before.salesTodayMinor + 1,
+    )
     expect(calls).toHaveLength(2)
   } finally {
     await memory.query(

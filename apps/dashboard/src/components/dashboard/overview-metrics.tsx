@@ -1,22 +1,6 @@
-import type { TenantStore } from "@/lib/tenant"
+import { getOverviewPeriods } from "@/lib/dashboard-overview"
 import { prisma } from "@ewatrade/db"
-import {
-  type WorkspaceFeatureAvailability,
-  getDashboardOverviewMetrics,
-} from "@ewatrade/db/queries"
-
-function startOfToday() {
-  const value = new Date()
-  value.setHours(0, 0, 0, 0)
-  return value
-}
-
-function startOfMonth() {
-  const value = new Date()
-  value.setDate(1)
-  value.setHours(0, 0, 0, 0)
-  return value
-}
+import { getDashboardOverviewMetrics } from "@ewatrade/db/queries"
 
 /** Whole naira without ".00"; kobo only when there is some. */
 function money(value: number, currencyCode: string) {
@@ -28,120 +12,73 @@ function money(value: number, currencyCode: string) {
   }).format(value / 100)
 }
 
-type Props = {
-  availability: WorkspaceFeatureAvailability
-  store: TenantStore
-  tenantId: string
-  createdByUserId?: string
-}
+const GRID = "grid grid-cols-2 gap-3 lg:grid-cols-4"
 
-const GRID = "grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4"
-
+/** Today first, then the month so far. No captions: the labels say it. */
 export async function OverviewMetrics({
-  availability,
-  store,
+  storeId,
   tenantId,
+  currencyCode,
+  timeZone,
   createdByUserId,
-}: Props) {
-  const monthStart = startOfMonth()
+}: {
+  storeId: string
+  tenantId: string
+  currencyCode: string
+  timeZone: string
+  createdByUserId?: string
+}) {
   const summary = await getDashboardOverviewMetrics(prisma, {
-    availability,
     createdByUserId,
-    storeId: store.id,
+    storeId,
     tenantId,
-    todayStart: startOfToday(),
-    monthStart,
+    ...getOverviewPeriods(timeZone),
   })
   // A cashier or operator scoped to their own sales sees only their numbers.
-  const own = Boolean(createdByUserId)
-  const metrics: Array<{
-    label: string
-    value: string
-    sub: string
-    money?: boolean
-  }> = [
-    ...(availability.hasOrders
-      ? [
-          {
-            label: own ? "Your sales today" : "Sales today",
-            money: true,
-            value: money(summary.revenueTodayMinor, store.currencyCode),
-            sub: "From confirmed orders",
-          },
-          {
-            label: own ? "Your orders this month" : "Orders this month",
-            value: summary.ordersThisMonth.toLocaleString(),
-            sub: `Since ${monthStart.toLocaleDateString("en-NG", { day: "numeric", month: "short" })}`,
-          },
-        ]
-      : []),
-    ...(availability.hasCatalogItems
-      ? [
-          {
-            label: "Goods and services",
-            value: summary.catalogItems.toLocaleString(),
-            sub: "In your catalog",
-          },
-        ]
-      : []),
-    ...(availability.hasProductItems
-      ? [
-          {
-            label: "Tracked in stock",
-            value: summary.stockBalances.toLocaleString(),
-            sub: "Goods with a stock count",
-          },
-        ]
-      : []),
+  const own = createdByUserId !== undefined
+  const metrics = [
+    {
+      label: own ? "Your sales today" : "Sales today",
+      value: money(summary.salesTodayMinor, currencyCode),
+    },
+    {
+      label: own ? "Your orders today" : "Orders today",
+      value: summary.ordersToday.toLocaleString("en-NG"),
+    },
+    {
+      label: own ? "Your sales this month" : "Sales this month",
+      value: money(summary.salesThisMonthMinor, currencyCode),
+    },
+    {
+      label: own ? "Your orders this month" : "Orders this month",
+      value: summary.ordersThisMonth.toLocaleString("en-NG"),
+    },
   ]
-  if (!metrics.length) return null
   return (
-    <dl data-summary-grid className={GRID}>
+    <dl className={GRID}>
       {metrics.map((metric) => (
         <div
           key={metric.label}
-          className="min-w-0 rounded-lg border border-border bg-background px-4 py-3.5"
+          className="min-w-0 rounded-[var(--ui-radius-surface)] border border-border bg-card px-4 py-4"
         >
-          <dt className="text-sm font-medium">{metric.label}</dt>
-          <dd
-            data-summary-money={metric.money || undefined}
-            className="mt-1 truncate text-2xl font-semibold tracking-tight tabular-nums"
-          >
+          <dt className="text-sm text-muted-foreground">{metric.label}</dt>
+          <dd className="mt-1.5 text-[22px] leading-tight font-semibold tracking-tight tabular-nums [overflow-wrap:anywhere] sm:text-[28px]">
             {metric.value}
           </dd>
-          <p
-            data-summary-detail
-            className="mt-0.5 text-xs text-muted-foreground"
-          >
-            {metric.sub}
-          </p>
         </div>
       ))}
     </dl>
   )
 }
 
-export function OverviewMetricsSkeleton({
-  availability,
-}: { availability?: Props["availability"] }) {
-  const count = availability
-    ? (availability.hasOrders ? 2 : 0) +
-      (availability.hasCatalogItems ? 1 : 0) +
-      (availability.hasProductItems ? 1 : 0)
-    : 4
-  if (!count) return null
+export function OverviewMetricsSkeleton() {
   return (
-    <output
-      aria-label="Loading numbers"
-      data-summary-grid
-      data-summary-skeleton
-      className={GRID}
-    >
-      {Array.from({ length: count }, (_, index) => (
+    <output aria-label="Loading numbers" className={GRID}>
+      {Array.from({ length: 4 }, (_, index) => (
         <div
           // biome-ignore lint/suspicious/noArrayIndexKey: fixed placeholders
           key={index}
-          className="h-[92px] animate-pulse rounded-lg border border-border bg-muted"
+          className="h-[92px] animate-pulse rounded-[var(--ui-radius-surface)] border border-border bg-muted sm:h-[100px]"
         />
       ))}
     </output>

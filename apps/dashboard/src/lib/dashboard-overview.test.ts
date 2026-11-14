@@ -1,6 +1,10 @@
 import { describe, expect, test } from "bun:test"
 import type { WorkspaceFeatureAvailability } from "@ewatrade/db/queries"
-import { getGettingStartedActions } from "./dashboard-overview"
+import {
+  getGettingStartedActions,
+  getOverviewAccess,
+  getOverviewPeriods,
+} from "./dashboard-overview"
 
 const emptyAvailability: WorkspaceFeatureAvailability = {
   hasActiveSellableItems: false,
@@ -63,5 +67,46 @@ describe("dashboard getting started actions", () => {
         (action) => action.label,
       ),
     ).toEqual(["Create your first order"])
+  })
+})
+
+describe("overview access", () => {
+  test("only roles that can sell see sales numbers and recent orders", () => {
+    for (const role of ["OWNER", "ADMIN", "MANAGER", "CASHIER", "OPERATOR"])
+      expect(getOverviewAccess(role).sales).toBe(true)
+    for (const role of ["SUPPORT", "MEMBER", null, "unknown"])
+      expect(getOverviewAccess(role).sales).toBe(false)
+  })
+
+  test("owner cards are for owners and admins", () => {
+    expect(getOverviewAccess("OWNER").owner).toBe(true)
+    expect(getOverviewAccess("admin").owner).toBe(true)
+    for (const role of ["MANAGER", "CASHIER", "OPERATOR", "SUPPORT", "MEMBER"])
+      expect(getOverviewAccess(role).owner).toBe(false)
+  })
+})
+
+describe("overview periods", () => {
+  test("today starts at midnight in the business's time zone", () => {
+    // 00:30 in Lagos (UTC+1) is still the previous day in UTC.
+    const now = new Date("2026-11-14T23:30:00Z")
+    expect(getOverviewPeriods("Africa/Lagos", now)).toEqual({
+      todayStart: new Date("2026-11-14T23:00:00Z"),
+      monthStart: new Date("2026-10-31T23:00:00Z"),
+    })
+    expect(getOverviewPeriods("UTC", now)).toEqual({
+      todayStart: new Date("2026-11-14T00:00:00Z"),
+      monthStart: new Date("2026-11-01T00:00:00Z"),
+    })
+  })
+
+  test("a daylight-saving day keeps the local midnight", () => {
+    // London moved from BST (UTC+1) to GMT on 25 Oct 2026.
+    const periods = getOverviewPeriods(
+      "Europe/London",
+      new Date("2026-10-25T12:00:00Z"),
+    )
+    expect(periods.todayStart).toEqual(new Date("2026-10-24T23:00:00Z"))
+    expect(periods.monthStart).toEqual(new Date("2026-09-30T23:00:00Z"))
   })
 })

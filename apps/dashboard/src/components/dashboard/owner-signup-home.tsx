@@ -3,14 +3,13 @@
 import { OWNER_PLAN_LIMITS } from "@/components/owner-signup/model"
 import { useGrowthIntent } from "@/hooks/use-growth-intent"
 import { useTRPC } from "@/trpc/client"
-import { Button, Skeleton, buttonVariants } from "@ewatrade/ui"
+import { Button } from "@ewatrade/ui"
 import {
   buildInternalTenantHostname,
   getStorefrontDomain,
 } from "@ewatrade/utils"
 import {
   Copy01Icon,
-  LinkSquare02Icon,
   Share08Icon,
   Store04Icon,
   Tick02Icon,
@@ -18,7 +17,7 @@ import {
 import { HugeiconsIcon } from "@hugeicons/react"
 import { useQuery } from "@tanstack/react-query"
 import Link from "next/link"
-import { useState } from "react"
+import { useState, useSyncExternalStore } from "react"
 
 function storefrontUrl(slug: string) {
   const hostname = buildInternalTenantHostname({
@@ -63,64 +62,73 @@ function useStoreLinkShare() {
   return { share, copied, feedback }
 }
 
-/**
- * Overview: the online store link as a slim strip. Mounted only for the
- * current server-resolved Owner/Admin membership.
- */
 const storefrontDomain = getStorefrontDomain(
   process.env.NEXT_PUBLIC_PLATFORM_DOMAIN ?? "ewatrade.com",
 )
 
+/** Native share on touch screens; desktops copy the link instead. */
+function useCanShare() {
+  return useSyncExternalStore(
+    () => () => {},
+    () =>
+      typeof navigator.share === "function" &&
+      window.matchMedia("(pointer: coarse)").matches,
+    () => false,
+  )
+}
+
+/**
+ * Overview: the online store link as one slim row. Mounted only for the
+ * server-resolved Owner/Admin. `itemLimit` comes from the server's plan
+ * features (null = every item shows), so the card makes no plan request.
+ */
 export function OnlineStoreStrip({
   tenant,
   hasCatalogItems,
+  itemLimit,
 }: {
   tenant: { id: string; name: string; slug: string }
   hasCatalogItems: boolean
+  itemLimit: number | null
 }) {
-  const trpc = useTRPC()
   const intent = useGrowthIntent()
-  const subscription = useQuery(
-    trpc.retailOps.subscription.queryOptions(undefined, { retry: false }),
-  )
-  const plan = subscription.data?.plan
-  const limited = plan ? plan.limits.storefrontItems !== null : false
-  const preview = useQuery(
-    trpc.tenant.storefrontPreview.queryOptions(undefined, {
-      enabled: Boolean(plan && limited),
-      retry: false,
-    }),
-  )
+  const canShare = useCanShare()
   const { share, copied, feedback } = useStoreLinkShare()
   const url = storefrontUrl(tenant.slug)
   return (
     <section
-      className="grid grid-cols-[minmax(0,1fr)] gap-2.5 rounded-lg border border-border bg-card px-4 py-3"
+      className="grid grid-cols-[minmax(0,1fr)] gap-3 rounded-[var(--ui-radius-surface)] border border-border bg-card px-4 py-4 sm:px-5"
       aria-labelledby="online-store-title"
     >
-      <div className="flex flex-wrap items-center gap-x-3.5 gap-y-2.5">
-        <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
-          <HugeiconsIcon icon={Store04Icon} className="size-4" />
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
+        <span className="flex size-10 shrink-0 items-center justify-center rounded-[var(--ui-radius-control)] bg-muted text-muted-foreground">
+          <HugeiconsIcon icon={Store04Icon} className="size-5" />
         </span>
-        <div className="min-w-0 flex-[1_1_12rem]">
-          <h2 id="online-store-title" className="text-sm font-semibold">
-            Your online store
+        <div className="min-w-0 flex-[1_1_14rem]">
+          <h2 id="online-store-title" className="font-semibold">
+            Online store
           </h2>
-          <p className="truncate text-sm text-muted-foreground">
+          <a
+            href={url}
+            target="_blank"
+            rel="noreferrer"
+            className="block truncate text-sm text-[var(--link)] hover:underline"
+          >
             {url.replace(/^https:\/\//, "")}
-          </p>
+          </a>
         </div>
-        {subscription.isPending ? (
-          <Skeleton className="h-6 w-24 rounded-full" />
-        ) : plan ? (
-          <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
-            {plan.name} plan
-          </span>
-        ) : null}
         <div className="flex flex-wrap items-center gap-2">
+          {canShare ? (
+            <Button
+              variant="outline"
+              onClick={() => void share(tenant.name, tenant.slug, true)}
+            >
+              <HugeiconsIcon icon={Share08Icon} className="size-4" />
+              Share
+            </Button>
+          ) : null}
           <Button
             variant="outline"
-            size="sm"
             onClick={() => void share(tenant.name, tenant.slug, false)}
           >
             <HugeiconsIcon
@@ -129,95 +137,34 @@ export function OnlineStoreStrip({
             />
             {copied === tenant.slug ? "Copied" : "Copy link"}
           </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => void share(tenant.name, tenant.slug, true)}
-          >
-            <HugeiconsIcon icon={Share08Icon} className="size-4" />
-            Share
-          </Button>
-          <a
-            href={url}
-            target="_blank"
-            rel="noreferrer"
-            className={buttonVariants({ variant: "ghost", size: "sm" })}
-          >
-            <HugeiconsIcon icon={LinkSquare02Icon} className="size-4" />
-            Open
-          </a>
-          {limited ? (
-            <Link
-              className="px-1 text-sm text-primary underline underline-offset-4"
-              href="/settings/billing"
-              onClick={() => intent.seePlans("storefront", "home_card")}
-            >
-              See plans
-            </Link>
+        </div>
+      </div>
+      {itemLimit !== null || !hasCatalogItems ? (
+        <p className="flex flex-wrap gap-x-3 gap-y-1 text-sm text-muted-foreground">
+          {itemLimit !== null ? (
+            <span>
+              Only your first {itemLimit} items show online.{" "}
+              <Link
+                className="font-medium text-[var(--link)] underline underline-offset-4"
+                href="/settings/billing"
+                onClick={() => intent.seePlans("storefront", "home_card")}
+              >
+                See plans
+              </Link>
+            </span>
           ) : null}
           {hasCatalogItems ? null : (
             <Link
-              className="px-1 text-sm text-primary underline underline-offset-4"
+              className="font-medium text-[var(--link)] underline underline-offset-4"
               href="/catalog"
             >
-              Add items
+              Add items to show
             </Link>
           )}
-        </div>
-      </div>
-      {subscription.error ? (
-        <div className="flex flex-wrap items-center gap-2 text-sm">
-          <p role="alert">Couldn’t load your plan.</p>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => void subscription.refetch()}
-          >
-            Try again
-          </Button>
-        </div>
-      ) : plan ? (
-        <p className="text-sm text-muted-foreground">
-          {limited
-            ? "Only your first 3 items show online. Upgrade to show all items and get customer messages."
-            : "All your items can show online. Customers can message you once chat is set up."}
         </p>
       ) : null}
-      {limited ? (
-        <div
-          className="grid gap-2 sm:grid-cols-3 sm:gap-3"
-          aria-label="Your first three items online"
-        >
-          {[0, 1, 2].map((index) => {
-            const item = preview.data?.[index]
-            return (
-              <div
-                className={`flex min-h-12 items-center rounded-md border px-3.5 py-2.5 text-sm ${item ? "bg-background" : "border-dashed text-muted-foreground"}`}
-                key={item?.id ?? `slot-${index}`}
-              >
-                {item?.name ??
-                  (preview.isPending
-                    ? "Loading items…"
-                    : preview.error
-                      ? "Couldn’t load items"
-                      : "Empty · add an item")}
-              </div>
-            )
-          })}
-        </div>
-      ) : null}
-      {preview.error && limited ? (
-        <Button
-          size="sm"
-          variant="outline"
-          className="justify-self-start"
-          onClick={() => void preview.refetch()}
-        >
-          Try again
-        </Button>
-      ) : null}
       <output
-        className="block text-xs text-muted-foreground empty:hidden"
+        className="block text-sm text-muted-foreground empty:hidden"
         aria-live="polite"
       >
         {feedback}
@@ -227,76 +174,59 @@ export function OnlineStoreStrip({
 }
 
 /** Overview: the owner's other businesses, shown once there is more than one. */
-export function OwnerBusinesses() {
+export function OwnerBusinesses({
+  currentTenantId,
+}: { currentTenantId: string }) {
   const intent = useGrowthIntent()
   const trpc = useTRPC()
   const summary = useQuery(
     trpc.tenant.ownerSignupSummary.queryOptions(undefined, { retry: false }),
   )
-  const { share, copied, feedback } = useStoreLinkShare()
   const data = summary.data
   if (summary.error)
     return (
-      <section className="flex flex-wrap items-center gap-3 rounded-lg border border-border p-4">
-        <p className="text-sm" role="alert">
-          Couldn’t load your other businesses.
-        </p>
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={() => void summary.refetch()}
-        >
+      <section className="flex flex-wrap items-center gap-3 rounded-[var(--ui-radius-surface)] border border-border bg-card p-4">
+        <p role="alert">Couldn’t load your other businesses.</p>
+        <Button variant="outline" onClick={() => void summary.refetch()}>
           Try again
         </Button>
       </section>
     )
   if (!data || data.readyBusinesses.length + data.pendingBusinesses.length <= 1)
     return null
+  const others = data.readyBusinesses.filter(
+    (business) => business.id !== currentTenantId,
+  )
   return (
     <section
-      className="grid gap-3 rounded-lg border border-border bg-card p-5"
+      className="overflow-hidden rounded-[var(--ui-radius-surface)] border border-border bg-card"
       aria-labelledby="owner-businesses-title"
     >
-      <h2 id="owner-businesses-title" className="font-semibold">
-        Your businesses
+      <h2
+        id="owner-businesses-title"
+        className="border-b border-border px-4 py-4 text-lg font-semibold sm:px-5"
+      >
+        Your other businesses
       </h2>
-      <div className="grid gap-3 lg:grid-cols-2">
-        {data.readyBusinesses.map((business) => (
-          <article
+      <ul className="divide-y divide-border">
+        {others.map((business) => (
+          <li
             key={business.id}
-            className="grid min-w-0 justify-items-start gap-1.5 rounded-md border border-border bg-background p-4"
+            className="flex min-h-16 items-center gap-3 px-4 py-3 sm:px-5"
           >
-            <div className="flex w-full items-center justify-between gap-3">
-              <h3 className="flex items-center gap-2.5 text-sm font-semibold">
-                <span
-                  className="flex size-8 items-center justify-center rounded-full bg-primary/10 text-xs text-primary"
-                  aria-hidden="true"
-                >
-                  {initials(business.name)}
-                </span>
-                {business.name}
-              </h3>
-              <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
-                Live
-              </span>
-            </div>
+            <BusinessName name={business.name} />
             <a
               href={storefrontUrl(business.slug)}
               target="_blank"
               rel="noreferrer"
-              className="break-all text-sm text-primary underline underline-offset-4"
+              className="ml-auto hidden truncate text-sm text-[var(--link)] hover:underline sm:block"
             >
               {business.slug}.{storefrontDomain}
             </a>
-            <Button
-              variant="outline"
-              size="sm"
-              className="mt-1"
-              onClick={() => void share(business.name, business.slug, false)}
-            >
-              {copied === business.slug ? "Copied" : "Copy link"}
-            </Button>
-          </article>
+            <span className="ml-auto shrink-0 rounded-full bg-success px-2.5 py-0.5 text-sm font-medium text-success-foreground sm:ml-0">
+              Live
+            </span>
+          </li>
         ))}
         {data.pendingBusinesses.map((business, index) => {
           const needed =
@@ -304,48 +234,41 @@ export function OwnerBusinesses() {
               ? "Pro"
               : "Growth"
           return (
-            <article
+            <li
               key={business.id ?? business.slug}
-              className="grid min-w-0 justify-items-start gap-1.5 rounded-md border border-dashed border-border p-4"
+              className="flex min-h-16 flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 sm:px-5"
             >
-              <h3 className="flex items-center gap-2.5 text-sm font-semibold">
-                <span
-                  className="flex size-8 items-center justify-center rounded-full bg-muted text-xs text-muted-foreground"
-                  aria-hidden="true"
-                >
-                  {initials(business.name)}
-                </span>
-                {business.name}
-              </h3>
-              <p className="break-all text-sm text-muted-foreground">
-                {business.slug}.{storefrontDomain}
-              </p>
-              <p className="flex flex-wrap items-center gap-2 text-sm">
-                <span className="rounded-full bg-amber-500/15 px-2.5 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-300">
+              <BusinessName name={business.name} muted />
+              <span className="ml-auto flex items-center gap-3">
+                <span className="rounded-full bg-warning px-2.5 py-0.5 text-sm font-medium text-warning-foreground">
                   Needs {needed} plan
                 </span>
-                Saved. Upgrade to open it.
-              </p>
-              <Link
-                className="text-sm font-medium text-primary underline underline-offset-4"
-                href="/settings/billing"
-                onClick={() => intent.seePlans("businesses", "home_card")}
-              >
-                Upgrade
-              </Link>
-            </article>
+                <Link
+                  className="font-medium text-[var(--link)] underline underline-offset-4"
+                  href="/settings/billing"
+                  onClick={() => intent.seePlans("businesses", "home_card")}
+                >
+                  Upgrade
+                </Link>
+              </span>
+            </li>
           )
         })}
-      </div>
-      <p className="text-xs text-muted-foreground">
-        Switch business from the menu at the top left.
-      </p>
-      <output
-        className="block text-xs text-muted-foreground empty:hidden"
-        aria-live="polite"
-      >
-        {feedback}
-      </output>
+      </ul>
     </section>
+  )
+}
+
+function BusinessName({ name, muted }: { name: string; muted?: boolean }) {
+  return (
+    <span className="flex min-w-0 items-center gap-3 font-medium">
+      <span
+        className={`flex size-9 shrink-0 items-center justify-center rounded-full text-sm ${muted ? "bg-muted text-muted-foreground" : "bg-[var(--avatar)] text-foreground"}`}
+        aria-hidden="true"
+      >
+        {initials(name)}
+      </span>
+      <span className="truncate">{name}</span>
+    </span>
   )
 }
