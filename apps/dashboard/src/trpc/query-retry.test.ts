@@ -84,7 +84,7 @@ describe("Dashboard query retries", () => {
       expect(error).toBeInstanceOf(TRPCClientError)
       if (!(error instanceof TRPCClientError))
         throw new Error("Expected API refusal")
-      expect(error.meta?.response.status).toBe(429)
+      expect(error.meta?.response).toMatchObject({ status: 429 })
       expect(shouldRetryQuery(0, error, client)).toBe(false)
     } finally {
       mockFetch.mockRestore()

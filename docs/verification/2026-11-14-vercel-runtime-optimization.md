@@ -51,8 +51,9 @@ Dashboard was also selected while it had its existing local edit, and Turbo
 listed the edited root agent-chat file in both queries.
 
 The owned-path fast suite passed 287 tests. The focused runtime/contract and
-dashboard streaming suites passed 61 tests combined. H02 and the WhatsApp
-inventory check passed.
+dashboard streaming suites passed 61 tests combined. Embedded Oversight types
+and scoped API telemetry and Dashboard retry types passed. H02 and the
+WhatsApp inventory check passed.
 
 ## Release verification
 
@@ -81,8 +82,8 @@ inventory check passed.
 
 Vercel CLI authentication metadata was inaccessible within this session's
 filesystem permissions. No provider inventory or settings were changed. The
-local web smoke browser exited before navigating. Marketing and Storefront
-full TypeScript graphs exhausted the local heap. The existing H01 gate reports
+local web smoke browser exited before navigating. The final full API,
+Marketing and Storefront typechecks exhausted the heap. The H01 gate reports
 three unclassified growth procedures (`growthIntent.recordSeePlansTap`,
 `growth.activeNudge`, `growth.dismissNudge`). Supplementary unchanged suites also
 failed on the retired Production QA early-access fixture and the signup-email
