@@ -333,42 +333,25 @@ export async function listReturnableBalances(
       },
     }),
     db.returnableMovement.findMany({
-      orderBy: [{ occurredAt: "asc" }, { createdAt: "asc" }],
-      select: {
-        catalogItemId: true,
-        customerId: true,
-        occurredAt: true,
-        orderId: true,
-        quantity: true,
-      },
+      select: allocationSelect,
       where: {
         ...where,
         customerId: { in: [...new Set(kept.map((pair) => pair.customerId))] },
-        kind: "ISSUED",
       },
     }),
   ])
   const customerName = new Map(customers.map((row) => [row.id, row.name]))
   const itemName = new Map(items.map((row) => [row.id, row.name]))
   const balances = kept.map((pair) => {
-    // First in, first back: skip what has already been returned or written off.
-    let cleared = pair.back
-    let oldestOutAt: Date | null = null
-    const orders = new Set<string>()
-    for (const row of issued) {
-      if (
-        row.customerId !== pair.customerId ||
-        row.catalogItemId !== pair.catalogItemId
-      )
-        continue
-      if (cleared >= row.quantity) {
-        cleared -= row.quantity
-        continue
-      }
-      cleared = 0
-      oldestOutAt ??= row.occurredAt
-      if (row.orderId) orders.add(row.orderId)
-    }
+    const open = allocateReturnables(
+      issued.filter(
+        (row) =>
+          row.customerId === pair.customerId &&
+          row.catalogItemId === pair.catalogItemId,
+      ),
+    ).filter((row) => row.open > 0)
+    const oldestOutAt = open[0]?.occurredAt ?? null
+    const orders = new Set(open.flatMap((row) => row.orderId ?? []))
     return {
       catalogItemId: pair.catalogItemId,
       customerId: pair.customerId,
@@ -418,7 +401,10 @@ export async function listReturnableMovements(
   }
 }
 
-/** Per item on one order: what went out with it and what came back against it. */
+/**
+ * Per item on one order: what went out with it and how much of that is back.
+ * Returns recorded against the customer (no order) count too, oldest first.
+ */
 export async function readOrderReturnables(
   db: DbClient,
   input: { tenantId: string; scope: OrderScope; orderId: string },
@@ -428,37 +414,104 @@ export async function readOrderReturnables(
     where: { ...input.scope, id: input.orderId, tenantId: input.tenantId },
   })
   if (!order) throw new CatalogError("ORDER_NOT_FOUND", "Order not found.")
-  const sums = await db.returnableMovement.groupBy({
-    by: ["catalogItemId", "kind"],
-    _sum: { quantity: true },
-    where: { orderId: order.id, tenantId: input.tenantId },
+  const onOrder = await db.returnableMovement.findMany({
+    distinct: ["catalogItemId"],
+    select: { catalogItemId: true },
+    where: { kind: "ISSUED", orderId: order.id, tenantId: input.tenantId },
   })
-  if (!sums.length) return { customerId: order.customerId, items: [] }
-  const items = await db.catalogItem.findMany({
-    select: { id: true, name: true },
-    where: {
-      id: { in: [...new Set(sums.map((row) => row.catalogItemId))] },
-      tenantId: input.tenantId,
-    },
-  })
+  if (!onOrder.length || !order.customerId)
+    return { customerId: order.customerId, items: [] }
+  const itemIds = onOrder.map((row) => row.catalogItemId)
+  const [items, moves] = await Promise.all([
+    db.catalogItem.findMany({
+      select: { id: true, name: true },
+      where: { id: { in: itemIds }, tenantId: input.tenantId },
+    }),
+    db.returnableMovement.findMany({
+      select: allocationSelect,
+      where: {
+        catalogItemId: { in: itemIds },
+        customerId: order.customerId,
+        tenantId: input.tenantId,
+      },
+    }),
+  ])
   return {
     customerId: order.customerId,
     items: items
       .map((item) => {
-        const total = (kind: ReturnableMovementKind) =>
-          sums
-            .filter((row) => row.catalogItemId === item.id && row.kind === kind)
-            .reduce((sum, row) => sum + (row._sum.quantity ?? 0), 0)
+        const rows = allocateReturnables(
+          moves.filter((row) => row.catalogItemId === item.id),
+        ).filter((row) => row.orderId === order.id)
+        const sum = (key: "quantity" | "returned" | "writtenOff") =>
+          rows.reduce((total, row) => total + row[key], 0)
         return {
           catalogItemId: item.id,
           itemName: item.name,
-          issued: total("ISSUED"),
-          returned: total("RETURNED"),
-          writtenOff: total("WRITTEN_OFF"),
+          issued: sum("quantity"),
+          returned: sum("returned"),
+          writtenOff: sum("writtenOff"),
         }
       })
       .sort((a, b) => a.itemName.localeCompare(b.itemName)),
   }
+}
+
+const allocationSelect = {
+  catalogItemId: true,
+  createdAt: true,
+  customerId: true,
+  kind: true,
+  occurredAt: true,
+  orderId: true,
+  quantity: true,
+} satisfies Prisma.ReturnableMovementSelect
+
+type AllocationMove = {
+  kind: ReturnableMovementKind
+  orderId: string | null
+  quantity: number
+  occurredAt: Date
+  createdAt: Date
+}
+
+/**
+ * Which items that went out are back, for one customer and item. A return or
+ * write-off on an order clears that order's items first; anything left, and
+ * every return with no order, clears the oldest items still out.
+ */
+export function allocateReturnables<T extends AllocationMove>(moves: T[]) {
+  const byTime = (a: AllocationMove, b: AllocationMove) =>
+    a.occurredAt.getTime() - b.occurredAt.getTime() ||
+    a.createdAt.getTime() - b.createdAt.getTime()
+  const issued = moves
+    .filter((move) => move.kind === "ISSUED")
+    .sort(byTime)
+    .map((move) => ({
+      ...move,
+      open: move.quantity,
+      returned: 0,
+      writtenOff: 0,
+    }))
+  for (const clear of moves
+    .filter((move) => move.kind !== "ISSUED")
+    .sort(byTime)) {
+    let left = clear.quantity
+    const take = (rows: typeof issued) => {
+      for (const row of rows) {
+        if (!left) return
+        const count = Math.min(left, row.open)
+        row.open -= count
+        left -= count
+        if (clear.kind === "RETURNED") row.returned += count
+        else row.writtenOff += count
+      }
+    }
+    if (clear.orderId)
+      take(issued.filter((row) => row.orderId === clear.orderId))
+    take(issued)
+  }
+  return issued
 }
 
 /** Usage can't leave Returnable while the ledger holds movements for the item. */

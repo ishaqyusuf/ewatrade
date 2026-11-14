@@ -226,7 +226,8 @@ if (enabled) setDefaultTimeout(120_000)
             catalogItemId: crate.id,
             issued: 58,
             itemName: "Egg crate",
-            returned: 0,
+            // The 50 returned with no order clear the oldest crates: this order's.
+            returned: 50,
             writtenOff: 3,
           },
         ])
