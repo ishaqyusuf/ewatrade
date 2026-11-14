@@ -27,7 +27,12 @@ export type InventoryOperationFilters = {
 
 export const operationHistoryInclude = {
   store: { select: { name: true } },
-  movements: true,
+  movements: {
+    select: {
+      signedCanonicalEffect: true,
+      balanceSource: { select: { variantId: true } },
+    },
+  },
   categories: stockOperationCategoryGraph,
 } satisfies Prisma.StockOperationInclude
 
@@ -50,6 +55,13 @@ export function serializeOperationHistoryRow(
     storeId: operation.storeId,
     storeName: operation.store.name,
     movementCount: operation.movements.length,
+    /**
+     * Products (variants) the change touched. A transfer moves one product
+     * through two lines (shelf and on the way), so it is not movementCount.
+     */
+    productCount: new Set(
+      operation.movements.map((movement) => movement.balanceSource.variantId),
+    ).size,
     reason: operation.reason,
     source: operation.source,
     type: operation.type,

@@ -7,7 +7,7 @@ export type InventoryOperation =
 export const operationSortFields = [
   "identity",
   "effectiveAt",
-  "movementCount",
+  "productCount",
 ] as const
 
 /** Reasons picked from the list, then any typed note. */
@@ -73,12 +73,12 @@ export function operationColumns({
       ),
     },
     {
-      id: "movementCount",
-      accessorKey: "movementCount",
+      id: "productCount",
+      accessorKey: "productCount",
       header: "Products changed",
       size: 200,
-      meta: { headerLabel: "Products changed", sortField: "movementCount" },
-      cell: ({ row }) => productsChangedText(row.original.movementCount),
+      meta: { headerLabel: "Products changed", sortField: "productCount" },
+      cell: ({ row }) => productsChangedText(row.original.productCount),
     },
   ]
 }

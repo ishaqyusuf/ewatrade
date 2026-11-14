@@ -227,6 +227,7 @@ function operations(): Parameters<typeof stockOperationsReadAnswers>[0] {
     storeId: "store",
     storeName: "Store",
     movementCount: 2,
+    productCount: 1,
     reason: long,
     source: "manual",
     type: "ADJUSTMENT",

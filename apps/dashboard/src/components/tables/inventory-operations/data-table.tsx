@@ -35,7 +35,7 @@ function describeOperation(row: InventoryOperation, allStores: boolean) {
       ...(reason ? [{ label: "Reason and note", value: reason }] : []),
       {
         label: "Products changed",
-        value: productsChangedText(row.movementCount),
+        value: productsChangedText(row.productCount),
       },
     ],
   }

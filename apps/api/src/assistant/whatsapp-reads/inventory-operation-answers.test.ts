@@ -234,6 +234,7 @@ test("recent stock operation arrays are bounded and do not sum incompatible cano
       storeId: "store",
       storeName: "Store",
       movementCount: 2,
+      productCount: 1,
       reason: long,
       source: "manual",
       type: "ADJUSTMENT",
