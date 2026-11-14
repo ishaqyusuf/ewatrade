@@ -15,7 +15,10 @@ const Providers = (_props: {
 mock.module("@ewatrade/ui/globals.css", () => ({}))
 mock.module("@/styles/dashboard.css", () => ({}))
 mock.module("next/font/google", () => ({
-  Figtree: () => ({ variable: "font" }),
+  Inter: () => ({ variable: "font" }),
+}))
+mock.module("next/font/local", () => ({
+  default: () => ({ variable: "display-font" }),
 }))
 mock.module("@/components/analytics/events-provider", () => ({
   DashboardEventsProvider: ({ children }: { children: ReactNode }) => children,
