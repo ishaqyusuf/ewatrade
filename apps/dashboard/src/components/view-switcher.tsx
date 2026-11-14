@@ -56,7 +56,6 @@ export function ViewDropdown<Value extends string>({
           <Button
             type="button"
             variant="outline"
-            className="rounded-none"
             aria-label={`${label}: ${current.label}. Choose view`}
           />
         }
