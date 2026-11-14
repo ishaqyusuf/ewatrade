@@ -128,6 +128,8 @@ type CatalogItemFormProps = {
   /** A saved item opens the same form for editing. */
   editItem?: SavedCatalogItem | null
   footerHost?: HTMLDivElement | null
+  /** Header slot for the QA-only Quick Fill button. */
+  qaHost?: HTMLDivElement | null
   onCreated: (name: string) => void
   onSaved?: (name: string) => void
   storeId: string
@@ -194,6 +196,7 @@ export function CatalogItemForm({
   currencyCode,
   editItem,
   footerHost,
+  qaHost,
   onCreated,
   onSaved,
   storeId: initialStoreId,
@@ -2167,6 +2170,38 @@ export function CatalogItemForm({
     </div>
   )
 
+  // QA sessions only. It sits in the sheet's header line (beside the item
+  // type) so the form starts at the same place with or without it.
+  const quickFill = editing ? null : (
+    <QaDashboardQuickFill
+      label="Fill"
+      canUndo={canUndoQuickFill}
+      formId="dashboard.catalog.item"
+      isDirty={Boolean(form.name || form.price || form.description)}
+      onFill={(context, sequence) => {
+        quickFillSnapshot.current = form
+        const fixture = createCatalogFixture(context, sequence)
+        setForm((current) => ({
+          ...current,
+          description: fixture.description,
+          kind: current.kind ?? "product",
+          name: fixture.name,
+          openingStockQuantity: current.kind === "service" ? "" : "12",
+          price: fixture.price,
+          unitName: current.kind === "service" ? "" : fixture.unit,
+        }))
+        setShowDescription(true)
+        if (form.kind !== "service") setShowOpeningStock(true)
+        setCanUndoQuickFill(true)
+      }}
+      onUndo={() => {
+        if (!quickFillSnapshot.current) return
+        setForm(quickFillSnapshot.current)
+        quickFillSnapshot.current = null
+        setCanUndoQuickFill(false)
+      }}
+    />
+  )
   return (
     <>
       {!productScopeCurrent ? (
@@ -2400,41 +2435,7 @@ export function CatalogItemForm({
                               : "Create with AI"}
                         </Button>
                       ) : null}
-                      {/* QA only: shares this row so it never shapes the real layout. */}
-                      <QaDashboardQuickFill
-                        canUndo={canUndoQuickFill}
-                        formId="dashboard.catalog.item"
-                        isDirty={Boolean(
-                          form.name || form.price || form.description,
-                        )}
-                        onFill={(context, sequence) => {
-                          quickFillSnapshot.current = form
-                          const fixture = createCatalogFixture(
-                            context,
-                            sequence,
-                          )
-                          setForm((current) => ({
-                            ...current,
-                            description: fixture.description,
-                            kind: current.kind ?? "product",
-                            name: fixture.name,
-                            openingStockQuantity:
-                              current.kind === "service" ? "" : "12",
-                            price: fixture.price,
-                            unitName:
-                              current.kind === "service" ? "" : fixture.unit,
-                          }))
-                          setShowDescription(true)
-                          if (form.kind !== "service") setShowOpeningStock(true)
-                          setCanUndoQuickFill(true)
-                        }}
-                        onUndo={() => {
-                          if (!quickFillSnapshot.current) return
-                          setForm(quickFillSnapshot.current)
-                          quickFillSnapshot.current = null
-                          setCanUndoQuickFill(false)
-                        }}
-                      />
+                      {qaHost ? null : quickFill}
                     </div>
                   </>
                 )}
@@ -2626,6 +2627,7 @@ export function CatalogItemForm({
           onOpenChange={setSavedPhotosOpen}
         />
       ) : null}
+      {qaHost && quickFill ? createPortal(quickFill, qaHost) : null}
       {!editItem ? (
         <CatalogImageEditor
           open={draftImagesOpen}

@@ -58,6 +58,7 @@ export function CatalogItemContent(props: CatalogItemContentProps) {
   const { setParams, catalogConversation, catalogCreateMode } =
     useCatalogItemParams()
   const [footerHost, setFooterHost] = useState<HTMLDivElement | null>(null)
+  const [qaHost, setQaHost] = useState<HTMLDivElement | null>(null)
   return (
     <SheetFrame
       loadingFallback={
@@ -94,7 +95,11 @@ export function CatalogItemContent(props: CatalogItemContentProps) {
       header={
         props.allowKindChange === false ||
         catalogCreateMode === "chat" ? null : (
-          <CatalogItemSheetHeader />
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <CatalogItemSheetHeader />
+            {/* QA-only Quick Fill renders here (see CatalogItemForm). */}
+            <div ref={setQaHost} className="empty:hidden" />
+          </div>
         )
       }
       // Chat mode has no form action, so it skips the empty footer bar.
@@ -109,6 +114,7 @@ export function CatalogItemContent(props: CatalogItemContentProps) {
           key={catalogConversation ?? "new"}
           {...props}
           footerHost={footerHost}
+          qaHost={qaHost}
         />
       ) : (
         <CatalogItemKindChoices
