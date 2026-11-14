@@ -17,7 +17,7 @@ import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
 
 import { formatFinanceMoney } from "@ewatrade/utils/finance-money"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { useState } from "react"
+import { type ReactNode, useState } from "react"
 import { z } from "zod"
 import { financeSourceLabel } from "./bank-source-detail"
 import {
@@ -226,10 +226,12 @@ export function FinanceMoneyReversalForm({
     )
   }
 
+  let reviewDialog: ReactNode = null
   if (review) {
     const moved = moneyLines(review.source)
-    return (
+    reviewDialog = (
       <FinanceReview
+        alert={{ title: `Undo ${review.source.description}?` }}
         command={command}
         onBack={() => setReview(null)}
         onConfirm={() => submit(review)}
@@ -265,51 +267,61 @@ export function FinanceMoneyReversalForm({
 
   const originalDate = new Date(source.effectiveAt).toISOString().slice(0, 10)
   return (
-    <form
-      className="grid gap-5"
-      onSubmit={form.handleSubmit((values) => void prepare(values))}
-    >
-      <MovementSummary source={source} money={money} timeZone={book.timezone} />
-      <p className="text-sm text-muted-foreground">
-        Undoing takes it back in your records. No real money moves, and the
-        original stays in history.
-      </p>
-      <FieldGroup className="gap-4">
-        <FinanceField label="Date" error={form.formState.errors.date?.message}>
-          <FormDatePicker
-            min={originalDate}
-            max={today}
-            disabled={preparing}
-            control={form.control}
-            name="date"
-          />
-        </FinanceField>
-        <FinanceField
-          label="Why are you undoing it?"
-          error={form.formState.errors.reason?.message}
-        >
-          <Input
-            required
-            maxLength={400}
-            autoComplete="off"
-            placeholder="Typed the wrong amount"
-            disabled={preparing}
-            {...form.register("reason")}
-          />
-        </FinanceField>
-      </FieldGroup>
-      {prepareError ? (
-        <Alert appearance="dashboard" variant="destructive">
-          <AlertDescription>{prepareError}</AlertDescription>
-        </Alert>
-      ) : null}
-      <FinanceFormFooter
-        onCancel={() => void close()}
-        submitLabel="Review"
-        isSubmitting={preparing}
-        disabled={preparing || !command.ready}
-      />
-    </form>
+    <>
+      {reviewDialog}
+      <form
+        className="grid gap-5"
+        onSubmit={form.handleSubmit((values) => void prepare(values))}
+      >
+        <MovementSummary
+          source={source}
+          money={money}
+          timeZone={book.timezone}
+        />
+        <p className="text-sm text-muted-foreground">
+          Undoing takes it back in your records. No real money moves, and the
+          original stays in history.
+        </p>
+        <FieldGroup className="gap-4">
+          <FinanceField
+            label="Date"
+            error={form.formState.errors.date?.message}
+          >
+            <FormDatePicker
+              min={originalDate}
+              max={today}
+              disabled={preparing}
+              control={form.control}
+              name="date"
+            />
+          </FinanceField>
+          <FinanceField
+            label="Why are you undoing it?"
+            error={form.formState.errors.reason?.message}
+          >
+            <Input
+              required
+              maxLength={400}
+              autoComplete="off"
+              placeholder="Typed the wrong amount"
+              disabled={preparing}
+              {...form.register("reason")}
+            />
+          </FinanceField>
+        </FieldGroup>
+        {prepareError ? (
+          <Alert appearance="dashboard" variant="destructive">
+            <AlertDescription>{prepareError}</AlertDescription>
+          </Alert>
+        ) : null}
+        <FinanceFormFooter
+          onCancel={() => void close()}
+          submitLabel="Review"
+          isSubmitting={preparing}
+          disabled={preparing || !command.ready}
+        />
+      </form>
+    </>
   )
 }
 

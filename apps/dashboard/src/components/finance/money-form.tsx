@@ -14,7 +14,7 @@ import { useTRPC } from "@/trpc/client"
 
 import { parseFinanceMoney } from "@ewatrade/utils/finance-money"
 import { useMutation } from "@tanstack/react-query"
-import { useState } from "react"
+import { type ReactNode, useState } from "react"
 import { z } from "zod"
 import {
   FinanceDetails,
@@ -149,6 +149,7 @@ export function FinanceMoneyForm({ book }: { book: FinanceBook }) {
         mutation.mutateAsync({ ...payload, clientCommandId }),
     })
   }
+  let reviewDialog: ReactNode = null
   if (review) {
     const amount = minorOf(review.amount)
     const money = moneyText(amount, currency)
@@ -178,8 +179,16 @@ export function FinanceMoneyForm({ book }: { book: FinanceBook }) {
       ),
     }[review.kind]
     const out = review.kind === "TRANSFER" || review.kind === "OWNER_WITHDRAWAL"
-    return (
+    reviewDialog = (
       <FinanceReview
+        alert={{
+          title: {
+            TRANSFER: `Move ${money} from ${from} to ${name(review.destinationAccountId)}?`,
+            OWNER_CONTRIBUTION: `Record ${money} put into ${from}?`,
+            OWNER_WITHDRAWAL: `Record ${money} taken out of ${from}?`,
+            OPENING_BALANCE: `Start ${from} at ${money}?`,
+          }[review.kind],
+        }}
         command={command}
         onBack={() => setReview(null)}
         onConfirm={() => submit(review)}
@@ -235,102 +244,108 @@ export function FinanceMoneyForm({ book }: { book: FinanceBook }) {
     )
   }
   return (
-    <form onSubmit={form.handleSubmit(setReview)}>
-      <FieldGroup className="min-w-0 grid gap-5">
-        <FinanceField label="What happened?">
-          <FormRadioChoices
-            control={form.control}
-            name="kind"
-            label="What happened?"
-            options={[
-              { value: "TRANSFER", label: movementLabels.TRANSFER },
-              {
-                value: "OWNER_CONTRIBUTION",
-                label: movementLabels.OWNER_CONTRIBUTION,
-              },
-              {
-                value: "OWNER_WITHDRAWAL",
-                label: movementLabels.OWNER_WITHDRAWAL,
-              },
-              {
-                value: "OPENING_BALANCE",
-                label: movementLabels.OPENING_BALANCE,
-                hint: `What an account held on ${plainDay(startDay)}, when you started using Finance.`,
-              },
-            ]}
-          />
-        </FinanceField>
-        <FinanceField
-          label={
-            kind === "TRANSFER" || kind === "OWNER_WITHDRAWAL"
-              ? "From"
-              : kind === "OWNER_CONTRIBUTION"
-                ? "Into"
-                : "Account"
-          }
-          error={form.formState.errors.accountId?.message}
-        >
-          <FormSelectControl
-            control={form.control}
-            name="accountId"
-            placeholder="Choose an account"
-            options={paidFromOptions(accounts, balances, currency, false)}
-          />
-        </FinanceField>
-        {kind === "TRANSFER" ? (
+    <>
+      {reviewDialog}
+      <form onSubmit={form.handleSubmit(setReview)}>
+        <FieldGroup className="min-w-0 grid gap-5">
+          <FinanceField label="What happened?">
+            <FormRadioChoices
+              control={form.control}
+              name="kind"
+              label="What happened?"
+              options={[
+                { value: "TRANSFER", label: movementLabels.TRANSFER },
+                {
+                  value: "OWNER_CONTRIBUTION",
+                  label: movementLabels.OWNER_CONTRIBUTION,
+                },
+                {
+                  value: "OWNER_WITHDRAWAL",
+                  label: movementLabels.OWNER_WITHDRAWAL,
+                },
+                {
+                  value: "OPENING_BALANCE",
+                  label: movementLabels.OPENING_BALANCE,
+                  hint: `What an account held on ${plainDay(startDay)}, when you started using Finance.`,
+                },
+              ]}
+            />
+          </FinanceField>
           <FinanceField
-            label="To"
-            error={form.formState.errors.destinationAccountId?.message}
+            label={
+              kind === "TRANSFER" || kind === "OWNER_WITHDRAWAL"
+                ? "From"
+                : kind === "OWNER_CONTRIBUTION"
+                  ? "Into"
+                  : "Account"
+            }
+            error={form.formState.errors.accountId?.message}
           >
             <FormSelectControl
               control={form.control}
-              name="destinationAccountId"
+              name="accountId"
               placeholder="Choose an account"
               options={paidFromOptions(accounts, balances, currency, false)}
             />
           </FinanceField>
-        ) : null}
-        <FinanceField
-          label="Amount"
-          error={form.formState.errors.amount?.message}
-        >
-          <MoneyInput
-            currencyCode={book.currencyCode}
-            inputMode="decimal"
-            placeholder="0.00"
-            {...form.register("amount")}
-          />
-        </FinanceField>
-        <FinanceField
-          label="Note"
-          error={form.formState.errors.description?.message}
-        >
-          <Input
-            {...form.register("description")}
-            placeholder="Banked takings"
-          />
-        </FinanceField>
-        {kind === "OPENING_BALANCE" ? (
-          <p className="text-sm text-muted-foreground">
-            Starting balances are dated {plainDay(startDay)}, the day you
-            started using Finance. Add one per account. Money added later is a
-            separate movement.
-          </p>
-        ) : (
+          {kind === "TRANSFER" ? (
+            <FinanceField
+              label="To"
+              error={form.formState.errors.destinationAccountId?.message}
+            >
+              <FormSelectControl
+                control={form.control}
+                name="destinationAccountId"
+                placeholder="Choose an account"
+                options={paidFromOptions(accounts, balances, currency, false)}
+              />
+            </FinanceField>
+          ) : null}
           <FinanceField
-            label="Date"
-            error={form.formState.errors.date?.message}
+            label="Amount"
+            error={form.formState.errors.amount?.message}
           >
-            <FormDatePicker
-              control={form.control}
-              name="date"
-              min={startDay}
-              max={todayIn(book.timezone)}
+            <MoneyInput
+              currencyCode={book.currencyCode}
+              inputMode="decimal"
+              placeholder="0.00"
+              {...form.register("amount")}
             />
           </FinanceField>
-        )}
-        <FinanceFormFooter onCancel={() => void close()} submitLabel="Review" />
-      </FieldGroup>
-    </form>
+          <FinanceField
+            label="Note"
+            error={form.formState.errors.description?.message}
+          >
+            <Input
+              {...form.register("description")}
+              placeholder="Banked takings"
+            />
+          </FinanceField>
+          {kind === "OPENING_BALANCE" ? (
+            <p className="text-sm text-muted-foreground">
+              Starting balances are dated {plainDay(startDay)}, the day you
+              started using Finance. Add one per account. Money added later is a
+              separate movement.
+            </p>
+          ) : (
+            <FinanceField
+              label="Date"
+              error={form.formState.errors.date?.message}
+            >
+              <FormDatePicker
+                control={form.control}
+                name="date"
+                min={startDay}
+                max={todayIn(book.timezone)}
+              />
+            </FinanceField>
+          )}
+          <FinanceFormFooter
+            onCancel={() => void close()}
+            submitLabel="Review"
+          />
+        </FieldGroup>
+      </form>
+    </>
   )
 }

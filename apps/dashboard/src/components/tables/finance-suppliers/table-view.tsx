@@ -1,5 +1,6 @@
 "use client"
 
+import { FinanceRow, FinanceRowList } from "@/components/finance/finance-rows"
 import {
   DirectoryCollection,
   DirectoryRecord,
@@ -160,12 +161,22 @@ export function FinanceSupplierTableView({
         </Alert>
       ) : null}
 
-      <DirectoryToolbar
-        table={table}
-        view={view}
-        selectAllLabel="Select all loaded suppliers"
-        summary={`${count} Supplier${count === 1 ? "" : "s"} · you owe ${formatFinanceMoney(owedMinor, currencyCode)}`}
-      />
+      <p className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 md:hidden">
+        <span className="text-muted-foreground">
+          {count} supplier{count === 1 ? "" : "s"} · you owe
+        </span>
+        <span className="text-xl font-semibold tabular-nums">
+          {formatFinanceMoney(owedMinor, currencyCode)}
+        </span>
+      </p>
+      <div className="max-md:hidden">
+        <DirectoryToolbar
+          table={table}
+          view={view}
+          selectAllLabel="Select all loaded suppliers"
+          summary={`${count} supplier${count === 1 ? "" : "s"} · you owe ${formatFinanceMoney(owedMinor, currencyCode)}`}
+        />
+      </div>
       <FinanceSupplierTableSettings
         table={table}
         showColumns={view === "table"}
@@ -184,62 +195,95 @@ export function FinanceSupplierTableView({
         </Alert>
       ) : null}
 
+      {rows.length ? (
+        <FinanceRowList label="Suppliers" className="md:hidden">
+          {rows.map(({ original: supplier }) => (
+            <FinanceRow
+              key={supplier.id}
+              title={supplier.name}
+              subtitle={
+                supplier.paidAheadMinor && supplier.paidAheadMinor !== "0"
+                  ? `Paid ahead ${formatFinanceMoney(supplier.paidAheadMinor, currencyCode)}`
+                  : supplier.code
+              }
+              amount={
+                supplier.owedMinor === undefined
+                  ? undefined
+                  : formatFinanceMoney(supplier.owedMinor, currencyCode)
+              }
+              aside={<SupplierDuePill supplier={supplier} />}
+              onOpen={() =>
+                void setParams({
+                  financeSheet: "supplier-statement",
+                  supplierId: supplier.id,
+                })
+              }
+            />
+          ))}
+        </FinanceRowList>
+      ) : null}
       {!rows.length ? (
         <FinanceSupplierEmptyState filtered={filtered} />
       ) : view !== "table" ? (
-        <DirectoryCollection view={view} label="Supplier" cardColumns="md2-lg3">
-          {rows.map((row) => {
-            const supplier = row.original
-            const open = () =>
-              void setParams({
-                financeSheet: "supplier-statement",
-                supplierId: supplier.id,
-              })
-            return (
-              <DirectoryRecord
-                key={row.id}
-                row={row}
-                view={view}
-                selectLabel={`Select ${supplier.name}`}
-                title={supplier.name}
-                onOpen={open}
-                description={supplier.code}
-                badges={<SupplierDuePill supplier={supplier} />}
-                highlight={
-                  supplier.owedMinor === undefined
-                    ? undefined
-                    : {
-                        label: "You owe",
-                        value: formatFinanceMoney(
-                          supplier.owedMinor,
-                          currencyCode,
-                        ),
-                      }
-                }
-                details={
-                  supplier.paidAheadMinor && supplier.paidAheadMinor !== "0"
-                    ? [
-                        {
-                          label: "Paid ahead",
+        <div className="max-md:hidden">
+          <DirectoryCollection
+            view={view}
+            label="Supplier"
+            cardColumns="md2-lg3"
+          >
+            {rows.map((row) => {
+              const supplier = row.original
+              const open = () =>
+                void setParams({
+                  financeSheet: "supplier-statement",
+                  supplierId: supplier.id,
+                })
+              return (
+                <DirectoryRecord
+                  key={row.id}
+                  row={row}
+                  view={view}
+                  selectLabel={`Select ${supplier.name}`}
+                  title={supplier.name}
+                  onOpen={open}
+                  description={supplier.code}
+                  badges={<SupplierDuePill supplier={supplier} />}
+                  highlight={
+                    supplier.owedMinor === undefined
+                      ? undefined
+                      : {
+                          label: "You owe",
                           value: formatFinanceMoney(
-                            supplier.paidAheadMinor,
+                            supplier.owedMinor,
                             currencyCode,
                           ),
-                        },
-                      ]
-                    : undefined
-                }
-                actions={
-                  <ViewSupplierButton supplier={supplier} onOpen={open} />
-                }
-              />
-            )
-          })}
-        </DirectoryCollection>
+                        }
+                  }
+                  details={
+                    supplier.paidAheadMinor && supplier.paidAheadMinor !== "0"
+                      ? [
+                          {
+                            label: "Paid ahead",
+                            value: formatFinanceMoney(
+                              supplier.paidAheadMinor,
+                              currencyCode,
+                            ),
+                          },
+                        ]
+                      : undefined
+                  }
+                  actions={
+                    <ViewSupplierButton supplier={supplier} onOpen={open} />
+                  }
+                />
+              )
+            })}
+          </DirectoryCollection>
+        </div>
       ) : (
         <section
           ref={tableScroll.setContainerRef}
-          className="max-h-[560px] overflow-auto overscroll-contain border border-border"
+          className="max-h-[560px] overflow-auto overscroll-contain rounded-[var(--ui-radius-surface)] border border-border bg-card max-md:hidden"
           aria-label="Supplier directory"
         >
           <DndContext

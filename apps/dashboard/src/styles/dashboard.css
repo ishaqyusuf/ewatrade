@@ -258,6 +258,7 @@
     margin: 0;
     padding: 0.75rem;
     border: 1px solid var(--border);
+    border-radius: var(--ui-radius-item, 0.5rem);
   }
 
   [data-summary-grid] > :last-child:nth-child(odd) {
@@ -272,7 +273,7 @@
   [data-summary-grid] [data-summary-label] {
     min-width: 0;
     margin: 0;
-    font-size: 0.75rem;
+    font-size: 0.875rem;
     line-height: 1.5;
     overflow-wrap: anywhere;
   }
@@ -299,7 +300,7 @@
   [data-summary-grid] [data-summary-detail] {
     grid-column: 1 / -1;
     margin: 0;
-    font-size: 0.75rem;
+    font-size: 0.875rem;
     line-height: 1.5;
     overflow-wrap: anywhere;
   }

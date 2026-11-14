@@ -14,6 +14,10 @@ import {
   AlertTitle,
   Badge,
   Button,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
   Table,
   TableBody,
   TableCell,
@@ -238,12 +242,6 @@ function FinanceSupplierHistory({
           {statement.supplier.code}
         </p>
       </div>
-      <Alert appearance="dashboard">
-        <AlertDescription>
-          Bills, payments and money paid ahead. What you owe and what you paid
-          ahead are kept apart.
-        </AlertDescription>
-      </Alert>
       <dl
         data-summary-grid
         data-summary-money
@@ -275,26 +273,33 @@ function FinanceSupplierHistory({
         <Button
           variant="outline"
           onClick={() =>
-            void setParams({ financeSheet: "supplier-opening", supplierId })
-          }
-        >
-          Add starting balance
-        </Button>
-        <Button
-          variant="outline"
-          onClick={() =>
             void setParams({ financeSheet: "supplier-advance", supplierId })
           }
         >
           Pay ahead
         </Button>
-        <Button
-          variant="outline"
-          disabled={busy}
-          onClick={() => void refresh()}
-        >
-          {refreshing ? "Refreshing…" : "Refresh"}
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={<Button type="button" variant="outline" />}
+          >
+            More
+          </DropdownMenuTrigger>
+          <DropdownMenuContent appearance="dashboard" align="end">
+            <DropdownMenuItem
+              onClick={() =>
+                void setParams({
+                  financeSheet: "supplier-opening",
+                  supplierId,
+                })
+              }
+            >
+              Add starting balance
+            </DropdownMenuItem>
+            <DropdownMenuItem disabled={busy} onClick={() => void refresh()}>
+              {refreshing ? "Refreshing…" : "Refresh"}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
       {refreshError ? (
         <Alert appearance="dashboard" variant="destructive">
@@ -303,9 +308,9 @@ function FinanceSupplierHistory({
           </AlertDescription>
         </Alert>
       ) : null}
-      <p className="text-xs text-muted-foreground">
-        Page {cursors.length}. Refresh to see newer entries.
-      </p>
+      {cursors.length > 1 ? (
+        <p className="text-sm text-muted-foreground">Page {cursors.length}</p>
+      ) : null}
       <InlineSelectionStatus selection={selection} />
       <section
         className="overflow-x-auto border border-border"
@@ -356,7 +361,7 @@ function FinanceSupplierHistory({
                   </TableCell>
                   <TableCell className="max-w-sm">
                     <p className="break-words">{entry.description}</p>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-sm text-muted-foreground">
                       {entryLabels[entry.kind]} · #{entry.sequence}
                     </p>
                     {entry.reversalOfId ? (
@@ -366,7 +371,7 @@ function FinanceSupplierHistory({
                         <Badge variant="secondary">
                           Undone; original kept in history
                         </Badge>
-                        <p className="break-words text-xs text-muted-foreground">
+                        <p className="break-words text-sm text-muted-foreground">
                           {entry.reversal.description} ·{" "}
                           {plainDay(
                             dayIn(entry.reversal.effectiveAt, book.timezone),

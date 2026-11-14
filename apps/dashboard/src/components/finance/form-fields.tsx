@@ -1,5 +1,6 @@
 "use client"
 import { FormFeedback } from "@/components/forms/form-feedback"
+import { OrderDialog } from "@/components/orders/overview/order-dialog-frame"
 import {
   Button,
   ControlField,
@@ -113,7 +114,7 @@ export function FinanceChanges({ changes }: { changes: FinanceChange[] }) {
   if (!changes.length) return null
   return (
     <div className="border border-border text-sm">
-      <p className="bg-muted/50 px-3 py-2 text-xs font-medium text-muted-foreground">
+      <p className="bg-muted/50 px-3 py-2 text-sm font-medium text-muted-foreground">
         What changes
       </p>
       {changes.map((change) => (
@@ -139,7 +140,7 @@ export function FinanceChanges({ changes }: { changes: FinanceChange[] }) {
             </span>
           </span>
           {change.note ? (
-            <span className="col-span-2 text-xs text-muted-foreground">
+            <span className="col-span-2 text-sm text-muted-foreground">
               {change.note}
             </span>
           ) : null}
@@ -195,7 +196,13 @@ export function FinanceReview({
   onBack,
   confirmDisabled = false,
   backDisabled = false,
+  alert,
 }: {
+  /**
+   * Money confirms (moving, paying, undoing): show the check as an alert
+   * dialog over the form; its title names the amount and who.
+   */
+  alert?: { title: string }
   children?: ReactNode
   sentence?: ReactNode
   changes?: FinanceChange[]
@@ -219,9 +226,76 @@ export function FinanceReview({
     setLocked(command.pending)
     return () => setLocked(false)
   }, [command.pending, setLocked])
+  const feedback =
+    command.uncertain && !command.pending ? (
+      <FormFeedback appearance="dashboard">
+        We couldn't confirm this was saved. Try again: it won't be recorded
+        twice.
+        {command.error ? ` ${command.error}` : ""}
+      </FormFeedback>
+    ) : command.error ? (
+      <FormFeedback appearance="dashboard">
+        We couldn't save this. {command.error}
+      </FormFeedback>
+    ) : null
+  const back = (
+    <Button
+      type="button"
+      variant="outline"
+      onClick={onBack}
+      disabled={command.pending || command.saved || backDisabled}
+    >
+      Back
+    </Button>
+  )
+  const confirm = (
+    <SubmitButton
+      type="button"
+      isSubmitting={command.pending}
+      disabled={
+        command.pending ||
+        (command.saved && !command.uncertain) ||
+        command.ready === false ||
+        confirmDisabled
+      }
+      onClick={onConfirm}
+    >
+      {command.uncertain ? "Try again" : confirmLabel}
+    </SubmitButton>
+  )
+  if (alert)
+    return (
+      <OrderDialog
+        alert
+        open
+        busy={command.pending || command.saved}
+        onOpenChange={(open) => {
+          if (!open) onBack()
+        }}
+        title={alert.title}
+        footer={
+          <>
+            {back}
+            {confirm}
+          </>
+        }
+      >
+        {sentence ? (
+          <p className="text-sm leading-relaxed">{sentence}</p>
+        ) : null}
+        {children}
+        <FinanceChanges changes={changes} />
+        {warning ? (
+          <p className="rounded-[var(--ui-radius-item)] bg-[var(--warning)] px-3 py-2 text-sm text-[color:var(--warning-foreground)]">
+            {warning}
+          </p>
+        ) : null}
+        {note ? <p className="text-sm text-muted-foreground">{note}</p> : null}
+        {feedback}
+      </OrderDialog>
+    )
   return (
     <FieldGroup className="gap-5">
-      {sentence ? <p className="text-sm leading-relaxed">{sentence}</p> : null}
       {children}
       <FinanceChanges changes={changes} />
       {warning ? (
@@ -229,40 +303,11 @@ export function FinanceReview({
           {warning}
         </p>
       ) : null}
-      {note ? <p className="text-xs text-muted-foreground">{note}</p> : null}
-      {command.uncertain && !command.pending ? (
-        <FormFeedback appearance="dashboard">
-          We couldn't confirm this was saved. Try again: it won't be recorded
-          twice.
-          {command.error ? ` ${command.error}` : ""}
-        </FormFeedback>
-      ) : command.error ? (
-        <FormFeedback appearance="dashboard">
-          We couldn't save this. {command.error}
-        </FormFeedback>
-      ) : null}
+      {note ? <p className="text-sm text-muted-foreground">{note}</p> : null}
+      {feedback}
       <FormActions className="sticky -bottom-6 z-10 -mx-6 border-t border-border bg-background px-6 py-4">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={onBack}
-          disabled={command.pending || command.saved || backDisabled}
-        >
-          Back
-        </Button>
-        <SubmitButton
-          type="button"
-          isSubmitting={command.pending}
-          disabled={
-            command.pending ||
-            (command.saved && !command.uncertain) ||
-            command.ready === false ||
-            confirmDisabled
-          }
-          onClick={onConfirm}
-        >
-          {command.uncertain ? "Try again" : confirmLabel}
-        </SubmitButton>
+        {back}
+        {confirm}
       </FormActions>
     </FieldGroup>
   )

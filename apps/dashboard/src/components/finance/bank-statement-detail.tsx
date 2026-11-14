@@ -169,9 +169,6 @@ export function FinanceBankStatementDetail({
             {formatFinanceDate(data.statement.startsAt)} –{" "}
             {formatFinanceDate(data.statement.endsAt)}
           </p>
-          <p className="mt-1 text-xs text-muted-foreground">
-            As of the latest records.
-          </p>
         </div>
         <Button
           variant="outline"
@@ -181,40 +178,64 @@ export function FinanceBankStatementDetail({
           {query.isFetching ? "Refreshing…" : "Refresh"}
         </Button>
       </div>
-      <dl className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        {[
-          ["Start balance", data.statement.openingBalanceMinor],
-          ["Your records at start", data.postedOpeningMinor],
-          ["End balance", data.statement.closingBalanceMinor],
-          ["Your records at end", data.postedClosingMinor],
-          ["Difference at start", data.openingDifferenceMinor],
-          ["Difference at end", data.closingDifferenceMinor],
-        ].map(([label, amount]) => (
-          <div key={label} className="border border-border p-4">
-            <dt className="text-xs text-muted-foreground">{label}</dt>
-            <dd className="mt-2 text-lg font-medium tabular-nums">
-              {money(amount ?? "0")}
-            </dd>
-          </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        {(
+          [
+            [
+              "Start",
+              data.statement.openingBalanceMinor,
+              data.postedOpeningMinor,
+              data.openingDifferenceMinor,
+            ],
+            [
+              "End",
+              data.statement.closingBalanceMinor,
+              data.postedClosingMinor,
+              data.closingDifferenceMinor,
+            ],
+          ] as const
+        ).map(([label, bank, records, difference]) => (
+          <section
+            key={label}
+            aria-label={label}
+            className="rounded-[var(--ui-radius-surface)] border border-border p-4"
+          >
+            <h4 className="mb-2 font-semibold">{label}</h4>
+            <dl className="grid gap-1.5">
+              {(
+                [
+                  ["Bank says", bank],
+                  ["Your records", records],
+                  ["Difference", difference],
+                ] as const
+              ).map(([name, amount]) => (
+                <div key={name} className="flex justify-between gap-3">
+                  <dt className="text-muted-foreground">{name}</dt>
+                  <dd
+                    className={
+                      name === "Difference" && amount && amount !== "0"
+                        ? "font-semibold tabular-nums text-[color:var(--warning-foreground)]"
+                        : "font-semibold tabular-nums"
+                    }
+                  >
+                    {money(amount ?? "0")}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          </section>
         ))}
-      </dl>
-      <Alert appearance="dashboard">
-        <AlertTitle>Still to match</AlertTitle>
-        <AlertDescription>
+      </div>
+      <p className="rounded-[var(--ui-radius-item)] bg-muted px-3 py-2">
+        <b className="font-semibold">
           {data.unmatchedBankRows}{" "}
-          {data.unmatchedBankRows === 1 ? "bank line" : "bank lines"} not
-          matched yet · net {money(data.unmatchedBankMinor)}. Matching a line
-          doesn't change any money. If something is wrong, fix the original
-          record. Matching every line doesn't prove every naira is accounted
-          for.
-        </AlertDescription>
-      </Alert>
+          {data.unmatchedBankRows === 1 ? "bank line" : "bank lines"} to match
+        </b>{" "}
+        · {money(data.unmatchedBankMinor)}. Matching doesn&apos;t move any
+        money.
+      </p>
       <FieldSet className="grid min-w-0 gap-3">
         <FieldLegend>Bank lines</FieldLegend>
-        <p className="text-xs text-muted-foreground">
-          {data.statement.rowCount} lines from your bank file, kept exactly as
-          uploaded.
-        </p>
         {data.rows.length ? (
           <div className="max-h-80 overflow-auto overscroll-contain border border-border">
             <Table>
@@ -267,7 +288,7 @@ export function FinanceBankStatementDetail({
                         }
                       />
                     </TableCell>
-                    <TableCell className="font-mono text-xs">
+                    <TableCell className="font-mono text-sm">
                       {row.externalId}
                     </TableCell>
                     <TableCell className="whitespace-nowrap">
@@ -365,11 +386,11 @@ export function FinanceBankStatementDetail({
                     </TableCell>
                     <TableCell className="max-w-80 whitespace-normal break-words">
                       {line.description}
-                      <span className="block text-xs text-muted-foreground">
+                      <span className="block text-sm text-muted-foreground">
                         Record {line.sequence}
                       </span>
                     </TableCell>
-                    <TableCell className="text-xs">
+                    <TableCell className="text-sm">
                       {financeSourceLabel(line.sourceKind)}
                       <Button
                         variant="outline"
@@ -405,13 +426,17 @@ export function FinanceBankStatementDetail({
           <AlertDescription>{recoveryError}</AlertDescription>
         </Alert>
       ) : null}
-      <div className="sticky bottom-0 grid gap-3 border border-border bg-background p-4">
+      <div className="sticky -bottom-6 z-10 -mx-6 grid gap-3 border-t border-border bg-background px-6 py-4">
         <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
           <span>
-            {bankRowIds.length}/50 bank lines · {money(bankTotal)}
+            {bankRowIds.length}{" "}
+            {bankRowIds.length === 1 ? "bank line" : "bank lines"} ·{" "}
+            {money(bankTotal)}
           </span>
           <span>
-            {journalLineIds.length}/50 records · {money(postedTotal)}
+            {journalLineIds.length}{" "}
+            {journalLineIds.length === 1 ? "record" : "records"} ·{" "}
+            {money(postedTotal)}
           </span>
           {bankRowIds.length || journalLineIds.length ? (
             <Button
@@ -448,12 +473,7 @@ export function FinanceBankStatementDetail({
         </Button>
       </div>
       <Alert appearance="dashboard">
-        <AlertTitle>If something doesn't match</AlertTitle>
-        <AlertDescription>
-          Check the original payment, expense or Customer or Supplier record
-          before fixing anything. If real money moved and isn't recorded, add
-          it. Bank lines never change.
-        </AlertDescription>
+        <AlertTitle>Money missing from your records?</AlertTitle>
         <div className="mt-3 flex flex-wrap gap-2">
           <Button
             variant="outline"
@@ -461,7 +481,7 @@ export function FinanceBankStatementDetail({
               void setParams({ financeSheet: "expense", statementId: null })
             }
           >
-            Add the missing expense
+            Add expense
           </Button>
           <Button
             variant="outline"
@@ -469,7 +489,7 @@ export function FinanceBankStatementDetail({
               void setParams({ financeSheet: "money", statementId: null })
             }
           >
-            Add the missing money movement
+            Add money movement
           </Button>
         </div>
       </Alert>

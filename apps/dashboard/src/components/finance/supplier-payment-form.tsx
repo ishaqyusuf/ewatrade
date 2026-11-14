@@ -14,7 +14,7 @@ import { useTRPC } from "@/trpc/client"
 
 import { parseFinanceMoney } from "@ewatrade/utils/finance-money"
 import { useMutation, useQuery } from "@tanstack/react-query"
-import { useEffect, useState } from "react"
+import { type ReactNode, useEffect, useMemo, useState } from "react"
 import { z } from "zod"
 import {
   FinanceDetails,
@@ -107,31 +107,35 @@ export function FinanceSupplierPaymentForm({
   )
   const [review, setReview] = useState<Values | null>(null)
   // What you owe: the starting balance (if any is left), then open bills.
-  const open: Owed[] = [
-    ...(opening.data && BigInt(opening.data.outstandingMinor) > 0n
-      ? [
-          {
-            id: OPENING,
-            description: "Starting balance",
-            outstandingMinor: opening.data.outstandingMinor,
-            incurredAt: opening.data.effectiveAt,
-            dueAt: null,
-          },
-        ]
-      : []),
-    ...(bills.data?.items ?? [])
-      .filter(
-        (bill) => bill.status !== "VOID" && BigInt(bill.outstandingMinor) > 0n,
-      )
-      .map((bill) => ({
-        id: bill.id,
-        description: bill.description,
-        outstandingMinor: bill.outstandingMinor,
-        incurredAt: bill.incurredAt,
-        dueAt: bill.dueAt,
-      })),
-  ]
-  const supplierName = supplier.data?.supplier.name ?? "this Supplier"
+  const open = useMemo<Owed[]>(
+    () => [
+      ...(opening.data && BigInt(opening.data.outstandingMinor) > 0n
+        ? [
+            {
+              id: OPENING,
+              description: "Starting balance",
+              outstandingMinor: opening.data.outstandingMinor,
+              incurredAt: opening.data.effectiveAt,
+              dueAt: null,
+            },
+          ]
+        : []),
+      ...(bills.data?.items ?? [])
+        .filter(
+          (bill) =>
+            bill.status !== "VOID" && BigInt(bill.outstandingMinor) > 0n,
+        )
+        .map((bill) => ({
+          id: bill.id,
+          description: bill.description,
+          outstandingMinor: bill.outstandingMinor,
+          incurredAt: bill.incurredAt,
+          dueAt: bill.dueAt,
+        })),
+    ],
+    [opening.data, bills.data],
+  )
+  const supplierName = supplier.data?.supplier.name ?? "this supplier"
   const chosen = review ? open.find((bill) => bill.id === review.billId) : null
   const paying = review ? minorOf(review.amount) : 0n
   const left = chosen ? BigInt(chosen.outstandingMinor) - paying : 0n
@@ -230,10 +234,12 @@ export function FinanceSupplierPaymentForm({
   const accountName = (id: string) =>
     accounts.find((account) => account.id === id)?.name ?? ""
 
+  let reviewDialog: ReactNode = null
   if (review && chosen) {
     const before = BigInt(chosen.outstandingMinor)
-    return (
+    reviewDialog = (
       <FinanceReview
+        alert={{ title: `Pay ${supplierName} ${moneyText(paying, currency)}?` }}
         command={command}
         onBack={() => setReview(null)}
         onConfirm={() => submit(review)}
@@ -292,84 +298,92 @@ export function FinanceSupplierPaymentForm({
           : `Bought ${plainDay(dayIn(bill.incurredAt, book.timezone))}`,
   }))
   return (
-    <form
-      onSubmit={form.handleSubmit((values) => {
-        const bill = open.find((item) => item.id === values.billId)
-        if (bill && minorOf(values.amount) > BigInt(bill.outstandingMinor)) {
-          form.setError("amount", {
-            message: `That's more than the ${moneyText(bill.outstandingMinor, currency)} you owe on ${bill.id === OPENING ? "the starting balance" : "this bill"}.`,
-          })
-          return
-        }
-        setReview(values)
-      })}
-    >
-      <FieldGroup className="min-w-0 grid gap-5">
-        <p className="text-sm text-muted-foreground">
-          Record money you paid {supplierName}.
-        </p>
-        <FinanceField
-          label="What are you paying?"
-          error={errors.billId?.message}
-        >
-          {billChoices.length <= 4 ? (
-            <FormRadioChoices
-              control={form.control}
-              name="billId"
-              label="What are you paying?"
-              options={billChoices}
-            />
-          ) : (
-            <FormSelectControl
-              control={form.control}
-              name="billId"
-              placeholder="Choose what you're paying"
-              options={billChoices.map((choice) => ({
-                value: choice.value,
-                label: choice.label,
-              }))}
-            />
-          )}
-        </FinanceField>
-        <FinanceField
-          label="Amount"
-          description="The full amount still to pay. Change it to pay part."
-          error={errors.amount?.message}
-        >
-          <MoneyInput
-            currencyCode={currency}
-            inputMode="decimal"
-            placeholder="0.00"
-            {...form.register("amount")}
-          />
-        </FinanceField>
-        <FinanceField label="Paid from" error={errors.accountId?.message}>
-          <FormSelectControl
-            control={form.control}
-            name="accountId"
-            placeholder="Choose an account"
-            options={paidFromOptions(accounts, balances, currency, false)}
-          />
-        </FinanceField>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <FinanceField label="Date paid" error={errors.date?.message}>
-            <FormDatePicker
-              control={form.control}
-              name="date"
-              min={
-                selected ? dayIn(selected.incurredAt, book.timezone) : undefined
-              }
-              max={todayIn(book.timezone)}
+    <>
+      {reviewDialog}
+      <form
+        onSubmit={form.handleSubmit((values) => {
+          const bill = open.find((item) => item.id === values.billId)
+          if (bill && minorOf(values.amount) > BigInt(bill.outstandingMinor)) {
+            form.setError("amount", {
+              message: `That's more than the ${moneyText(bill.outstandingMinor, currency)} you owe on ${bill.id === OPENING ? "the starting balance" : "this bill"}.`,
+            })
+            return
+          }
+          setReview(values)
+        })}
+      >
+        <FieldGroup className="min-w-0 grid gap-5">
+          <p className="text-sm text-muted-foreground">
+            Record money you paid {supplierName}.
+          </p>
+          <FinanceField
+            label="What are you paying?"
+            error={errors.billId?.message}
+          >
+            {billChoices.length <= 4 ? (
+              <FormRadioChoices
+                control={form.control}
+                name="billId"
+                label="What are you paying?"
+                options={billChoices}
+              />
+            ) : (
+              <FormSelectControl
+                control={form.control}
+                name="billId"
+                placeholder="Choose what you're paying"
+                options={billChoices.map((choice) => ({
+                  value: choice.value,
+                  label: choice.label,
+                }))}
+              />
+            )}
+          </FinanceField>
+          <FinanceField
+            label="Amount"
+            description="The full amount still to pay. Change it to pay part."
+            error={errors.amount?.message}
+          >
+            <MoneyInput
+              currencyCode={currency}
+              inputMode="decimal"
+              placeholder="0.00"
+              {...form.register("amount")}
             />
           </FinanceField>
-          {selectedId === OPENING ? null : (
-            <FinanceField label="Reference (optional)">
-              <Input {...form.register("reference")} />
+          <FinanceField label="Paid from" error={errors.accountId?.message}>
+            <FormSelectControl
+              control={form.control}
+              name="accountId"
+              placeholder="Choose an account"
+              options={paidFromOptions(accounts, balances, currency, false)}
+            />
+          </FinanceField>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <FinanceField label="Date paid" error={errors.date?.message}>
+              <FormDatePicker
+                control={form.control}
+                name="date"
+                min={
+                  selected
+                    ? dayIn(selected.incurredAt, book.timezone)
+                    : undefined
+                }
+                max={todayIn(book.timezone)}
+              />
             </FinanceField>
-          )}
-        </div>
-        <FinanceFormFooter onCancel={() => void close()} submitLabel="Review" />
-      </FieldGroup>
-    </form>
+            {selectedId === OPENING ? null : (
+              <FinanceField label="Reference (optional)">
+                <Input {...form.register("reference")} />
+              </FinanceField>
+            )}
+          </div>
+          <FinanceFormFooter
+            onCancel={() => void close()}
+            submitLabel="Review"
+          />
+        </FieldGroup>
+      </form>
+    </>
   )
 }

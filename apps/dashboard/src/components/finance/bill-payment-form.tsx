@@ -13,7 +13,7 @@ import { useTRPC } from "@/trpc/client"
 
 import { parseFinanceMoney } from "@ewatrade/utils/finance-money"
 import { useMutation, useQuery } from "@tanstack/react-query"
-import { useEffect, useState } from "react"
+import { type ReactNode, useEffect, useState } from "react"
 import { z } from "zod"
 import {
   FinanceDetails,
@@ -121,11 +121,15 @@ export function FinanceBillPaymentForm({
     id === "OWNER_CAPITAL"
       ? "Owner's own money"
       : (accounts.find((account) => account.id === id)?.name ?? "")
+  let reviewDialog: ReactNode = null
   if (review) {
     const from =
       review.accountId === "OWNER_CAPITAL" ? undefined : review.accountId
-    return (
+    reviewDialog = (
       <FinanceReview
+        alert={{
+          title: `Pay ${bill.payeeName} ${moneyText(paying, currency)}?`,
+        }}
         command={command}
         onBack={() => setReview(null)}
         onConfirm={() => submit(review)}
@@ -163,61 +167,67 @@ export function FinanceBillPaymentForm({
   }
   const errors = form.formState.errors
   return (
-    <form
-      onSubmit={form.handleSubmit((values) => {
-        if (minorOf(values.amount) > outstanding) {
-          form.setError("amount", {
-            message: `That's more than the ${moneyText(outstanding, currency)} still to pay.`,
-          })
-          return
-        }
-        setReview(values)
-      })}
-    >
-      <FieldGroup className="min-w-0 grid gap-5">
-        <div className="grid gap-0.5 border border-border bg-muted/40 px-3 py-2 text-sm">
-          <span className="font-medium">
-            {bill.description} · {bill.payeeName}
-          </span>
-          <span className="text-muted-foreground">
-            {moneyText(outstanding, currency)} still to pay
-          </span>
-        </div>
-        <FinanceField
-          label="Amount"
-          description="The full amount still to pay. Change it to pay part."
-          error={errors.amount?.message}
-        >
-          <MoneyInput
-            currencyCode={currency}
-            inputMode="decimal"
-            placeholder="0.00"
-            {...form.register("amount")}
-          />
-        </FinanceField>
-        <FinanceField label="Paid from" error={errors.accountId?.message}>
-          <FormSelectControl
-            control={form.control}
-            name="accountId"
-            placeholder="Choose an account"
-            options={paidFromOptions(accounts, balances, currency)}
-          />
-        </FinanceField>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <FinanceField label="Date paid" error={errors.date?.message}>
-            <FormDatePicker
-              control={form.control}
-              name="date"
-              min={dayIn(book.startsAt, book.timezone)}
-              max={todayIn(book.timezone)}
+    <>
+      {reviewDialog}
+      <form
+        onSubmit={form.handleSubmit((values) => {
+          if (minorOf(values.amount) > outstanding) {
+            form.setError("amount", {
+              message: `That's more than the ${moneyText(outstanding, currency)} still to pay.`,
+            })
+            return
+          }
+          setReview(values)
+        })}
+      >
+        <FieldGroup className="min-w-0 grid gap-5">
+          <div className="grid gap-0.5 border border-border bg-muted/40 px-3 py-2 text-sm">
+            <span className="font-medium">
+              {bill.description} · {bill.payeeName}
+            </span>
+            <span className="text-muted-foreground">
+              {moneyText(outstanding, currency)} still to pay
+            </span>
+          </div>
+          <FinanceField
+            label="Amount"
+            description="The full amount still to pay. Change it to pay part."
+            error={errors.amount?.message}
+          >
+            <MoneyInput
+              currencyCode={currency}
+              inputMode="decimal"
+              placeholder="0.00"
+              {...form.register("amount")}
             />
           </FinanceField>
-          <FinanceField label="Reference (optional)">
-            <Input {...form.register("reference")} />
+          <FinanceField label="Paid from" error={errors.accountId?.message}>
+            <FormSelectControl
+              control={form.control}
+              name="accountId"
+              placeholder="Choose an account"
+              options={paidFromOptions(accounts, balances, currency)}
+            />
           </FinanceField>
-        </div>
-        <FinanceFormFooter onCancel={() => void close()} submitLabel="Review" />
-      </FieldGroup>
-    </form>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <FinanceField label="Date paid" error={errors.date?.message}>
+              <FormDatePicker
+                control={form.control}
+                name="date"
+                min={dayIn(book.startsAt, book.timezone)}
+                max={todayIn(book.timezone)}
+              />
+            </FinanceField>
+            <FinanceField label="Reference (optional)">
+              <Input {...form.register("reference")} />
+            </FinanceField>
+          </div>
+          <FinanceFormFooter
+            onCancel={() => void close()}
+            submitLabel="Review"
+          />
+        </FieldGroup>
+      </form>
+    </>
   )
 }

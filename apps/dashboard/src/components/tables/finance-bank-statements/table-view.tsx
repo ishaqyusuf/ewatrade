@@ -1,5 +1,6 @@
 "use client"
 
+import { FinanceRow, FinanceRowList } from "@/components/finance/finance-rows"
 import type {
   FinanceBankStatementRow,
   FinanceBook,
@@ -164,12 +165,18 @@ export function FinanceBankStatementTableView({
         </Alert>
       ) : null}
 
-      <DirectoryToolbar
-        table={table}
-        view={view}
-        selectAllLabel="Select all loaded bank statements"
-        summary={`${rows.length} statement${rows.length === 1 ? "" : "s"} · ${toMatch} line${toMatch === 1 ? "" : "s"} to match`}
-      />
+      <p className="text-muted-foreground md:hidden">
+        {rows.length} statement{rows.length === 1 ? "" : "s"} · {toMatch} line
+        {toMatch === 1 ? "" : "s"} to match
+      </p>
+      <div className="max-md:hidden">
+        <DirectoryToolbar
+          table={table}
+          view={view}
+          selectAllLabel="Select all loaded bank statements"
+          summary={`${rows.length} statement${rows.length === 1 ? "" : "s"} · ${toMatch} line${toMatch === 1 ? "" : "s"} to match`}
+        />
+      </div>
       {view === "table" ? (
         <FinanceBankStatementTableSettings table={table} />
       ) : null}
@@ -187,61 +194,83 @@ export function FinanceBankStatementTableView({
         </Alert>
       ) : null}
 
+      {rows.length ? (
+        <FinanceRowList label="Bank statements" className="md:hidden">
+          {rows.map(({ original: statement }) => (
+            <FinanceRow
+              key={statement.id}
+              title={getStatementAccountName(book, statement)}
+              subtitle={formatStatementRange(statement)}
+              aside={<StatementMatchPill statement={statement} />}
+              onOpen={() =>
+                void setParams({
+                  financeSheet: "bank-statement",
+                  statementId: statement.id,
+                })
+              }
+            />
+          ))}
+        </FinanceRowList>
+      ) : null}
       {!rows.length ? (
         <FinanceBankStatementEmptyState filtered={filtered} />
       ) : view !== "table" ? (
-        <DirectoryCollection view={view} label="Bank statement">
-          {rows.map((row) => {
-            const statement = row.original
-            const open = () =>
-              void setParams({
-                financeSheet: "bank-statement",
-                statementId: statement.id,
-              })
-            return (
-              <DirectoryRecord
-                key={row.id}
-                row={row}
-                view={view}
-                selectLabel={`Select ${statement.reference}`}
-                title={`${getStatementAccountName(book, statement)}, ${formatStatementRange(statement)}`}
-                onOpen={open}
-                description={statement.reference}
-                badges={<StatementMatchPill statement={statement} />}
-                highlight={{
-                  label: "Balance at the end",
-                  value: formatFinanceMoney(
-                    statement.closingBalanceMinor,
-                    statement.currencyCode,
-                  ),
-                }}
-                details={[
-                  {
-                    label: "Lines",
-                    value: (
-                      <span className="tabular-nums">{statement.rowCount}</span>
+        <div className="max-md:hidden">
+          <DirectoryCollection view={view} label="Bank statement">
+            {rows.map((row) => {
+              const statement = row.original
+              const open = () =>
+                void setParams({
+                  financeSheet: "bank-statement",
+                  statementId: statement.id,
+                })
+              return (
+                <DirectoryRecord
+                  key={row.id}
+                  row={row}
+                  view={view}
+                  selectLabel={`Select ${statement.reference}`}
+                  title={`${getStatementAccountName(book, statement)}, ${formatStatementRange(statement)}`}
+                  onOpen={open}
+                  description={statement.reference}
+                  badges={<StatementMatchPill statement={statement} />}
+                  highlight={{
+                    label: "Balance at the end",
+                    value: formatFinanceMoney(
+                      statement.closingBalanceMinor,
+                      statement.currencyCode,
                     ),
-                  },
-                ]}
-                actions={
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    aria-label={`Open ${statement.reference}`}
-                    onClick={open}
-                  >
-                    Open
-                  </Button>
-                }
-              />
-            )
-          })}
-        </DirectoryCollection>
+                  }}
+                  details={[
+                    {
+                      label: "Lines",
+                      value: (
+                        <span className="tabular-nums">
+                          {statement.rowCount}
+                        </span>
+                      ),
+                    },
+                  ]}
+                  actions={
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      aria-label={`Open ${statement.reference}`}
+                      onClick={open}
+                    >
+                      Open
+                    </Button>
+                  }
+                />
+              )
+            })}
+          </DirectoryCollection>
+        </div>
       ) : (
         <section
           ref={tableScroll.setContainerRef}
-          className="max-h-[560px] overflow-auto overscroll-contain border border-border"
+          className="max-h-[560px] overflow-auto overscroll-contain rounded-[var(--ui-radius-surface)] border border-border bg-card max-md:hidden"
           aria-label="Bank statements"
         >
           <DndContext
