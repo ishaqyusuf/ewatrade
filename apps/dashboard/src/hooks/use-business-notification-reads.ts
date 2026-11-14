@@ -1,7 +1,6 @@
 "use client"
 
 import { useTRPC } from "@/trpc/client"
-import { readPollInterval } from "@/trpc/query-read-errors"
 import {
   mountOwnedRead,
   nextReadMount,
@@ -9,12 +8,17 @@ import {
 import { useQuery } from "@tanstack/react-query"
 import { useState } from "react"
 
-/** Fresh private reads; each mounted consumer keeps its own generation. */
+/**
+ * Fresh private reads; each mounted consumer keeps its own generation. No
+ * timers (dashboard shell rule, ADR-0060): reads run on mount, when the window
+ * regains focus, and after the actions that invalidate them.
+ */
 export const notificationReadOptions = {
   retry: false,
   staleTime: 0,
   gcTime: 0,
   refetchOnMount: "always",
+  refetchInterval: false,
   trpc: { abortOnUnmount: true },
 } as const
 
@@ -25,7 +29,6 @@ export function useUnreadBusinessNotificationCount() {
     mountOwnedRead(
       trpc.businessNotifications.unreadCount.queryOptions(undefined, {
         ...notificationReadOptions,
-        refetchInterval: (query) => readPollInterval(query.state.error, 60_000),
       }),
       mount,
     ),
@@ -39,7 +42,6 @@ export function usePendingPaymentReportCount() {
     mountOwnedRead(
       trpc.businessBanking.pendingReportCount.queryOptions(undefined, {
         ...notificationReadOptions,
-        refetchInterval: (query) => readPollInterval(query.state.error, 30_000),
       }),
       mount,
     ),
@@ -53,7 +55,6 @@ export function usePaymentPlanNoticeCount() {
     mountOwnedRead(
       trpc.businessBanking.notificationChangeCount.queryOptions(undefined, {
         ...notificationReadOptions,
-        refetchInterval: (query) => readPollInterval(query.state.error, 60_000),
       }),
       mount,
     ),
@@ -67,7 +68,6 @@ export function useStorefrontRequestNotificationCount() {
     mountOwnedRead(
       trpc.storefrontRequests.notificationCount.queryOptions(undefined, {
         ...notificationReadOptions,
-        refetchInterval: (query) => readPollInterval(query.state.error, 60_000),
       }),
       mount,
     ),
@@ -83,8 +83,6 @@ export function usePendingPaymentReports() {
         { limit: 5 },
         {
           ...notificationReadOptions,
-          refetchInterval: (query) =>
-            readPollInterval(query.state.error, 30_000),
         },
       ),
       mount,
@@ -101,8 +99,6 @@ export function usePaymentPlanNotices() {
         { limit: 5 },
         {
           ...notificationReadOptions,
-          refetchInterval: (query) =>
-            readPollInterval(query.state.error, 60_000),
         },
       ),
       mount,
@@ -110,7 +106,7 @@ export function usePaymentPlanNotices() {
   )
 }
 
-/** Only the bell polls; the panel reads fresh each time it opens. */
+/** Only the bell refreshes on focus; the panel reads fresh each time it opens. */
 export function useStorefrontRequestNotifications({ poll }: { poll: boolean }) {
   const trpc = useTRPC()
   const [mount] = useState(nextReadMount)
@@ -119,9 +115,6 @@ export function useStorefrontRequestNotifications({ poll }: { poll: boolean }) {
       trpc.storefrontRequests.notifications.queryOptions(undefined, {
         ...notificationReadOptions,
         refetchOnWindowFocus: poll,
-        refetchInterval: poll
-          ? (query) => readPollInterval(query.state.error, 60_000)
-          : false,
       }),
       mount,
     ),

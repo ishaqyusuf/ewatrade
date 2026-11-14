@@ -46,7 +46,7 @@ const { QueryClientProvider, focusManager, notifyManager } = await import(
 const { createRoot } = await import("react-dom/client")
 notifyManager.setScheduler((callback) => queueMicrotask(callback))
 const interval = globalThis.setInterval
-// Accelerate only the existing 30s/60s cadence, retaining real interval/focus work.
+// Accelerate any 30s/60s timer so a reintroduced poll would show up in hold().
 globalThis.setInterval = ((
   callback: TimerHandler,
   delay?: number,
@@ -236,11 +236,17 @@ for (const kind of [
   "plan-count",
   "request-count",
 ] as const) {
-  test(`${kind} stops repeated interval reads and clears prior data after a fresh refusal`, async () => {
+  test(`${kind} stops reading and clears prior data after a fresh refusal`, async () => {
     const ui = await mount([{ kind, name: "owner" }])
     await ui.until(() => snapshots.get("owner")?.isSuccess === true)
     behavior.set(kind, () => {
       throw error()
+    })
+    await act(async () => {
+      focusManager.setFocused(false)
+      await wait()
+      focusManager.setFocused(true)
+      await wait()
     })
     await ui.until(() => snapshots.get("owner")?.isError === true)
     const stopped = count(kind)
@@ -249,7 +255,7 @@ for (const kind of [
     expect(count(kind)).toBe(stopped)
   })
 
-  test(`${kind} retains fresh focus recovery and resumes successful polling`, async () => {
+  test(`${kind} recovers on a fresh focus and then does not poll`, async () => {
     behavior.set(kind, () => {
       throw error("UNAUTHORIZED")
     })
@@ -267,10 +273,11 @@ for (const kind of [
     await ui.until(() => snapshots.get("owner")?.isSuccess === true)
     const recovered = count(kind)
     await ui.hold()
-    expect(count(kind)).toBeGreaterThan(recovered)
+    // No timers: a recovered read waits for the next focus or invalidation.
+    expect(count(kind)).toBe(recovered)
   })
 
-  test(`${kind} keeps polling transient failures rather than treating them as lost access`, async () => {
+  test(`${kind} retries a transient failure on focus rather than treating it as lost access`, async () => {
     behavior.set(kind, () => {
       throw new TypeError("inert transport failure")
     })
@@ -278,7 +285,15 @@ for (const kind of [
     await ui.until(() => snapshots.get("owner")?.isError === true)
     const before = count(kind)
     await ui.hold()
-    expect(count(kind)).toBeGreaterThan(before)
+    expect(count(kind)).toBe(before)
+    await act(async () => {
+      focusManager.setFocused(false)
+      await wait()
+      focusManager.setFocused(true)
+      await wait()
+    })
+    // A transient failure is retried on focus, not treated as lost access.
+    await ui.until(() => count(kind) > before)
   })
 
   test(`${kind} keeps independent mount keys, canonical SDK input and cancellation ownership`, async () => {
@@ -342,7 +357,7 @@ for (const kind of [
   "plan-count",
   "request-count",
 ] as const) {
-  test(`${kind} pauses interval work while unfocused and resumes on focus`, async () => {
+  test(`${kind} reads nothing while unfocused and refreshes on focus`, async () => {
     const ui = await mount([{ kind, name: "owner" }])
     await ui.until(() => snapshots.get("owner")?.isSuccess === true)
     await act(async () => {

@@ -54,7 +54,7 @@ export function BusinessNotificationCenter({
   const payments = usePendingPaymentReportCount()
   // So do unread payment alert plan changes.
   const planNotices = usePaymentPlanNoticeCount()
-  // And unread website requests; only this read polls.
+  // And unread website requests. None of these poll (ADR-0060).
   const requests = useStorefrontRequestNotificationCount()
   const unread =
     alerts +
