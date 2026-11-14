@@ -89,18 +89,34 @@ export function CustomerLedgerStatement({
       !query.isFetching &&
       !query.isError &&
       !refreshing
-    )
+    ) {
+      // Seed the pinned read with this answer so pinning doesn't read the
+      // same statement a second time.
+      client.setQueryData(
+        trpc.customerLedger.statement.queryKey({
+          accountId,
+          snapshotSequence: query.data.snapshotSequence,
+          afterSequence: ledgerAfter ?? undefined,
+          limit: 30,
+        }),
+        query.data,
+      )
       void setParams(
         { ledgerSnapshot: query.data.snapshotSequence },
         { history: "replace" },
       )
+    }
   }, [
+    accountId,
+    client,
+    ledgerAfter,
     ledgerSnapshot,
     query.data,
     query.isFetching,
     query.isError,
     refreshing,
     setParams,
+    trpc,
   ])
   const open = useCallback(
     (id: string) => {
