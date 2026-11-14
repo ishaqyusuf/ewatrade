@@ -118,6 +118,7 @@ export function OrderForm({
   const [error, setError] = useState<string | null>(null)
   const [catalogFreeAttempt, setCatalogFreeAttempt] = useState(0)
   const [returnables, setReturnables] = useState<ReturnableDraft[]>([])
+  const customerArea = useRef<HTMLDivElement>(null)
   const savedCustomer = Boolean(
     selectedCustomer?.id || (creatingCustomer && customerName.trim()),
   )
@@ -388,7 +389,16 @@ export function OrderForm({
       <CheckoutReturnables
         rows={returnables}
         savedCustomer={savedCustomer}
-        onChooseCustomer={() => setShowCustomer(true)}
+        onChooseCustomer={() => {
+          setShowCustomer(true)
+          // The picker renders below; bring it into view once it exists.
+          requestAnimationFrame(() =>
+            customerArea.current?.scrollIntoView({
+              behavior: "smooth",
+              block: "center",
+            }),
+          )
+        }}
         disabled={createMutation.isPending}
         onChange={(next) => {
           setReturnables(next)
@@ -455,7 +465,7 @@ export function OrderForm({
         {showCustomer ? "Hide customer details" : "Add customer details"}
       </button>
       {showCustomer ? (
-        <div className="grid gap-3">
+        <div ref={customerArea} className="grid gap-3">
           {creatingCustomer ? (
             <div className="grid gap-3 border border-border p-4">
               <div className="flex items-center justify-between gap-3">

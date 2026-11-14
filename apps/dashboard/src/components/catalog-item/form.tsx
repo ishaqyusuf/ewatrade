@@ -1547,13 +1547,15 @@ export function CatalogItemForm({
     createAdvancedMutation.isPending ||
     updateMutation.isPending
 
-  const priceSummary = showAdvanced
-    ? `${combinations.length} customer choices`
-    : defaultQuoteRequired
-      ? "Quote each job"
-      : form.price.trim()
-        ? `${currencyCode} ${form.price}${form.kind === "product" ? ` / ${form.unitName || "main unit"}` : ""}`
-        : "Price not set"
+  const priceSummary = returnable
+    ? "Returnable · not sold"
+    : showAdvanced
+      ? `${combinations.length} customer choices`
+      : defaultQuoteRequired
+        ? "Quote each job"
+        : form.price.trim()
+          ? `${currencyCode} ${form.price}${form.kind === "product" ? ` / ${form.unitName || "main unit"}` : ""}`
+          : "Price not set"
   const sectionMeta: Record<
     CatalogSectionId,
     { title: string; icon: typeof Image01Icon; summary: string; done: boolean }

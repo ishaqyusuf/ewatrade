@@ -46,9 +46,15 @@ export function useRecordReturnable() {
   return useMutation(
     trpc.returnables.record.mutationOptions({
       onSuccess: () =>
-        queryClient.invalidateQueries({
-          queryKey: trpc.returnables.pathKey(),
-        }),
+        Promise.all([
+          queryClient.invalidateQueries({
+            queryKey: trpc.returnables.pathKey(),
+          }),
+          // The order timeline shows "came back" lines derived from the ledger.
+          queryClient.invalidateQueries({
+            queryKey: trpc.orders.timeline.pathKey(),
+          }),
+        ]),
     }),
   )
 }
