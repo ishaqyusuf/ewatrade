@@ -96,6 +96,10 @@ mock.module(app("components/forms/form-feedback"), () => ({
   FormFeedback: Leaf,
 }))
 mock.module(app("components/forms/form-controls"), () => ({ FormDatePicker }))
+// Money checks render in this alert dialog; setup never opens one.
+mock.module(app("components/orders/overview/order-dialog-frame"), () => ({
+  OrderDialog: Leaf,
+}))
 mock.module(app("trpc/client"), () => ({
   useTRPC: () => ({
     finance: {
