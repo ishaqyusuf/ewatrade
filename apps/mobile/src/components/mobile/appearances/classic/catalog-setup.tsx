@@ -450,6 +450,7 @@ export function CatalogEssentialsFields({
   guidance,
   currencyCode,
   defaultQuoteRequired,
+  hidePrice = false,
   kind,
   multiplePriceOptions,
   name,
@@ -465,6 +466,8 @@ export function CatalogEssentialsFields({
   afterName?: ReactNode
   currencyCode: string
   defaultQuoteRequired: boolean
+  /** Returnable items are never sold, so they have no selling price. */
+  hidePrice?: boolean
   kind: CatalogItemKind
   multiplePriceOptions: boolean
   name: string
@@ -494,10 +497,14 @@ export function CatalogEssentialsFields({
       />
       {afterName}
       {kind === "product" && showProductEssentials ? (
-        <View className={largeTextLayout ? "gap-3" : "flex-row gap-3"}>
+        <View
+          className={largeTextLayout || hidePrice ? "gap-3" : "flex-row gap-3"}
+        >
           <FormField
             autoCapitalize="words"
-            containerClassName={largeTextLayout ? undefined : "min-w-0 flex-1"}
+            containerClassName={
+              largeTextLayout || hidePrice ? undefined : "min-w-0 flex-1"
+            }
             label="Main unit"
             maxLength={80}
             onChangeText={onUnitNameChange}
@@ -507,21 +514,25 @@ export function CatalogEssentialsFields({
             variant="green-gate"
             value={unitName}
           />
-          <MoneyField
-            containerClassName={largeTextLayout ? undefined : "min-w-0 flex-1"}
-            currencyCode={currencyCode}
-            editable={!multiplePriceOptions}
-            helper={
-              multiplePriceOptions
-                ? "Set prices in Item stock & pricing below."
-                : undefined
-            }
-            label="Selling price"
-            onChangeValue={onPriceChange}
-            placeholder="0.00"
-            variant="green-gate"
-            value={price}
-          />
+          {hidePrice ? null : (
+            <MoneyField
+              containerClassName={
+                largeTextLayout ? undefined : "min-w-0 flex-1"
+              }
+              currencyCode={currencyCode}
+              editable={!multiplePriceOptions}
+              helper={
+                multiplePriceOptions
+                  ? "Set prices in Item stock & pricing below."
+                  : undefined
+              }
+              label="Selling price"
+              onChangeValue={onPriceChange}
+              placeholder="0.00"
+              variant="green-gate"
+              value={price}
+            />
+          )}
         </View>
       ) : !defaultQuoteRequired ? (
         <MoneyField

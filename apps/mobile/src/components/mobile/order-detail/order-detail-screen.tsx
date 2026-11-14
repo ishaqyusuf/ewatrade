@@ -18,6 +18,7 @@ import {
 import { EmptyState } from "@/components/mobile/empty-state"
 import { QaQuickFillButton } from "@/components/mobile/qa-quick-fill-button"
 import { QueryRefreshControl } from "@/components/mobile/query-refresh-control"
+import { OrderReturnablesCard } from "@/components/mobile/returnables/returnables-cards"
 import { MobileScreen } from "@/components/mobile/screen"
 import { useModal } from "@/components/ui/modal"
 import { MotionView } from "@/components/ui/motion"
@@ -531,6 +532,9 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
             ) : null
           }
           order={order}
+          returnables={
+            <OrderReturnablesCard isOffline={isOffline} orderId={order.id} />
+          }
         />
       </ClassicOrderDetailScreen>
 

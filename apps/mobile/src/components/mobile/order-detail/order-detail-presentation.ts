@@ -18,6 +18,8 @@ export type OrderDetailContentProps = {
   whatsApp?: ReactNode
   /** After a committed payment, refund or cancellation: tell the customer. */
   messageFollowUp?: ReactNode
+  /** Returnables that went out with this order; renders nothing when none. */
+  returnables?: ReactNode
   /** Opens the Change sheet; absent while the order cannot load its options. */
   onChange?: () => void
   /** Opens the bank-transfer Payment link page; absent with nothing due. */

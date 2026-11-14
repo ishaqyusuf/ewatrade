@@ -67,6 +67,7 @@ export function ClassicOrderDetailContent({
   onPaymentLink,
   whatsApp,
   messageFollowUp,
+  returnables,
   error,
   fulfillingOrderLineId,
   isFulfillingAll,
@@ -247,6 +248,8 @@ export function ClassicOrderDetailContent({
           />
         ))}
       </OrderOverviewSection>
+
+      {returnables}
 
       <OrderOverviewSection title="Totals">
         <OrderTotalRow

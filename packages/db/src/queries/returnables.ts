@@ -477,3 +477,21 @@ export async function assertReturnableUsageChange(
       "This item has returnable history, so it stays Returnable.",
     )
 }
+
+/** Items set up as Returnable (not archived), for pickers. */
+export async function listReturnableItems(
+  db: DbClient,
+  input: { tenantId: string },
+) {
+  return db.catalogItem.findMany({
+    orderBy: { name: "asc" },
+    select: { id: true, imageUrl: true, name: true },
+    take: 50,
+    where: {
+      kind: "PRODUCT",
+      product: { is: { usage: "RETURNABLE" } },
+      status: { not: "ARCHIVED" },
+      tenantId: input.tenantId,
+    },
+  })
+}

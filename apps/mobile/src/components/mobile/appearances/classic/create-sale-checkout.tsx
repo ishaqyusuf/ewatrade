@@ -2,6 +2,7 @@ import { ActionButton } from "@/components/mobile/action-button"
 import { BottomSearchFooter } from "@/components/mobile/bottom-search-footer"
 import { CatalogFreeSaleSummaryRows } from "@/components/mobile/create-sale/catalog-free-sale-lines"
 import { CheckoutMoneyAccountField } from "@/components/mobile/create-sale/checkout-money-account"
+import { CheckoutReturnables } from "@/components/mobile/create-sale/checkout-returnables"
 import {
   PAYMENT_METHODS,
   deliveryDateLabel,
@@ -414,6 +415,8 @@ export function ClassicSaleCheckout({
               hasRowsAbove={selectedRows.length > 0}
             />
           </View>
+
+          <CheckoutReturnables model={model} />
 
           <SectionLabel>DELIVERY</SectionLabel>
           <View className="rounded-[20px] bg-card px-3.5 py-1 shadow-sm">

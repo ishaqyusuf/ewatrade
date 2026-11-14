@@ -5,11 +5,11 @@ import {
   type ProductUsage,
   productUsageDescriptions,
   productUsageLabels,
-  selectableProductUsages,
+  productUsages,
 } from "@ewatrade/utils/product-usage"
 import { View } from "react-native"
 
-/** For sale · Internal use · Both, with the chosen usage explained below. */
+/** For sale · Internal use · Both · Returnable, with the chosen usage explained below. */
 export function ProductUsagePicker({
   disabled = false,
   onChange,
@@ -29,7 +29,7 @@ export function ProductUsagePicker({
         accessibilityRole="radiogroup"
         className="flex-row flex-wrap gap-2"
       >
-        {selectableProductUsages.map((usage) => {
+        {productUsages.map((usage) => {
           const selected = usage === value
           return (
             <Pressable

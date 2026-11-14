@@ -3,6 +3,7 @@ import {
   RETURNABLE_MOVEMENT_MAX_QUANTITY,
   RETURNABLE_MOVEMENT_NOTE_MAX_LENGTH,
   listReturnableBalances,
+  listReturnableItems,
   listReturnableMovements,
   readOrderReturnables,
   recordReturnableMovement,
@@ -50,6 +51,14 @@ function returnableError(error: unknown): never {
 
 /** Crates, cylinders and other items customers hold and bring back. */
 export const returnablesRouter = createTRPCRouter({
+  /** Items set up as Returnable, for checkout and Record return pickers. */
+  items: protectedProcedure.query(async ({ ctx }) => {
+    assertCanOperateOrders(ctx.tenantContext.membership.role)
+    return listReturnableItems(ctx.db, {
+      tenantId: ctx.tenantContext.tenant.id,
+    })
+  }),
+
   /** Outstanding balances per customer and item (all customers, or one). */
   balances: protectedProcedure
     .input(

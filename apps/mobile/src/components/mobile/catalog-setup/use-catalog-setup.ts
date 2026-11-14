@@ -1071,11 +1071,12 @@ export function useCatalogSetup({
         kind: "product",
         name: trimmedName,
         usage,
-        openingStockQuantity: showOpeningStock
-          ? showAdvanced
-            ? undefined
-            : getExactOpeningStock(openingStock, canonicalTransactionScale)
-          : undefined,
+        openingStockQuantity:
+          showOpeningStock && usage !== "RETURNABLE"
+            ? showAdvanced
+              ? undefined
+              : getExactOpeningStock(openingStock, canonicalTransactionScale)
+            : undefined,
         optionGroups: showAdvanced ? normalizedOptionGroups : undefined,
         unitConfiguration: {
           canonicalBalanceScale: EXACT_CANONICAL_MAX_SCALE,
@@ -1301,9 +1302,10 @@ export function useCatalogSetup({
           kind,
           name: trimmedName,
           usage,
-          openingStockQuantity: showOpeningStock
-            ? getExactOpeningStock(openingStock, canonicalTransactionScale)
-            : undefined,
+          openingStockQuantity:
+            showOpeningStock && usage !== "RETURNABLE"
+              ? getExactOpeningStock(openingStock, canonicalTransactionScale)
+              : undefined,
           priceMinor,
         })
         return

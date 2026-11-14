@@ -31,6 +31,10 @@ import {
 import { MobileWorkflowChrome } from "../appearances/workflow-chrome"
 import { ListCreateFab } from "../list-create-fab"
 import { getListCreateFabFooterOffset } from "../list-create-fab-model"
+import {
+  CustomerReturnablesCard,
+  ReturnablesEntryRow,
+} from "../returnables/returnables-cards"
 import { SearchFold, useSearchFold } from "../search-fold"
 import type { WorkflowModalChromeProps } from "../workflow-modal-screen"
 import { CustomerOpenOrders } from "./customer-open-orders"
@@ -182,6 +186,10 @@ export function CustomerBookContent(
             phone={selectedCustomer.phone}
             onOpenOrder={(id) => router.push(commercialOrderHref(id) as never)}
           />
+          <CustomerReturnablesCard
+            customerId={selectedIsSaved ? selectedCustomer.id : undefined}
+            isOffline={isOffline}
+          />
         </>
       }
       onStatement={
@@ -296,6 +304,7 @@ export function CustomerBookContent(
                   search={search}
                 />
               </SearchFold>
+              {isOffline ? null : <ReturnablesEntryRow />}
               {isOffline ? (
                 <StatusBanner
                   icon="Wind"

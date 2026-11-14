@@ -22,7 +22,7 @@ describe("product usage", () => {
     expect(isReturnableProduct("RETURNABLE")).toBe(true)
   })
 
-  test("forms do not offer Returnable before its screens ship", () => {
+  test("the dashboard form does not offer Returnable yet", () => {
     expect(selectableProductUsages).not.toContain("RETURNABLE")
   })
 })

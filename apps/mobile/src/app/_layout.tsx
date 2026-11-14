@@ -337,6 +337,8 @@ const InitialLayout = ({
               screens explain when the signed-in role can't. */}
           <Stack.Screen name="receipt-approvals-modal" options={modalOptions} />
           <Stack.Screen name="receipt-approval/[id]" options={modalOptions} />
+          <Stack.Screen name="returnables-modal" options={modalOptions} />
+          <Stack.Screen name="returnable-return" options={modalOptions} />
           <Stack.Screen name="order-receipts-modal" options={modalOptions} />
           <Stack.Screen name="payments-to-check-modal" options={modalOptions} />
           <Stack.Screen name="payment-link/[orderId]" options={modalOptions} />

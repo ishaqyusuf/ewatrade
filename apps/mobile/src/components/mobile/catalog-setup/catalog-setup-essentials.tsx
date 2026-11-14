@@ -70,6 +70,7 @@ export function CatalogSetupEssentials({
         currencyCode={currencyCode}
         guidance={formGuidance}
         defaultQuoteRequired={defaultQuoteRequired}
+        hidePrice={kind === "product" && model.usage === "RETURNABLE"}
         kind={kind}
         multiplePriceOptions={multiplePriceOptions}
         name={name}
@@ -83,7 +84,18 @@ export function CatalogSetupEssentials({
       />
 
       {kind === "product" ? (
-        <ProductUsagePicker onChange={model.setUsage} value={model.usage} />
+        <ProductUsagePicker
+          onChange={(usage) => {
+            // Returnables are never sold or stocked: drop a typed price and opening stock.
+            if (usage === "RETURNABLE") {
+              setPrice("")
+              setOpeningStock("")
+              setShowOpeningStock(false)
+            }
+            model.setUsage(usage)
+          }}
+          value={model.usage}
+        />
       ) : null}
 
       {kind === "service" ? (
@@ -100,7 +112,11 @@ export function CatalogSetupEssentials({
       <View className="gap-3 rounded-[20px] bg-card p-3.5 shadow-sm">
         {fields}
       </View>
-      {!focused && kind === "product" && !showAdvanced && showOpeningStock ? (
+      {!focused &&
+      kind === "product" &&
+      !showAdvanced &&
+      showOpeningStock &&
+      model.usage !== "RETURNABLE" ? (
         <FormField
           actionLabel="Remove"
           keyboardType="decimal-pad"

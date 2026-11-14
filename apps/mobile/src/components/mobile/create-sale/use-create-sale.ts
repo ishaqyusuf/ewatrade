@@ -75,6 +75,10 @@ import {
   saleOfferingChoices,
 } from "./create-sale-model"
 import { buildSaleCustomerSuggestions } from "./sale-customer-suggestions"
+import {
+  type SaleReturnableDraft,
+  saleReturnableLines,
+} from "./sale-returnables"
 import { saleUnitCount } from "./sale-unit-count"
 import type { SaleSubmissionOutcome } from "./use-sale-activity"
 import { useSaleFulfillment } from "./use-sale-fulfillment"
@@ -190,6 +194,8 @@ export function useCreateSale({
   >([])
   const [selectedCustomer, setSelectedCustomer] =
     useState<SelectedCustomer | null>(initialCustomer ?? null)
+  // Returnable items (crates, cylinders) going out with this sale.
+  const [returnables, setReturnables] = useState<SaleReturnableDraft[]>([])
   const [step, setStep] = useState<SaleStep>("items")
   const quickFillSnapshot = useRef<{
     paymentMethod: PaymentMethod
@@ -899,6 +905,19 @@ export function useCreateSale({
       return
     }
 
+    const returnableLines = saleReturnableLines(returnables)
+    if (returnables.length && (isOffline || !selectedCustomer?.directoryId)) {
+      setError(
+        isOffline
+          ? "Returnables need a connection. Remove them or reconnect."
+          : "Choose a saved customer to send returnables, or remove them.",
+      )
+      return
+    }
+    if (returnableLines === null) {
+      setError("Enter how many of each returnable go out, at least 1.")
+      return
+    }
     const payload = {
       customerId: selectedCustomer?.directoryId,
       customerEmail: selectedCustomer?.email,
@@ -986,6 +1005,7 @@ export function useCreateSale({
             : undefined,
         schemaVersion: 1,
         ...payload,
+        returnables: returnableLines.length ? returnableLines : undefined,
       })
       const result: CreateSaleCompletion = {
         amount: formatMinorMoney(totalMinor, currencyCode),
@@ -1136,6 +1156,29 @@ export function useCreateSale({
     addCatalogFreeLine,
     updateCatalogFreeLine,
     removeCatalogFreeLine,
+    returnables,
+    addReturnable: (item: { catalogItemId: string; name: string }) => {
+      if (submissionPending.current || submitted.current) return
+      setReturnables((current) =>
+        current.some((row) => row.catalogItemId === item.catalogItemId)
+          ? current
+          : [...current, { ...item, quantity: "1" }],
+      )
+    },
+    updateReturnable: (catalogItemId: string, quantity: string) => {
+      if (submissionPending.current || submitted.current) return
+      setReturnables((current) =>
+        current.map((row) =>
+          row.catalogItemId === catalogItemId ? { ...row, quantity } : row,
+        ),
+      )
+    },
+    removeReturnable: (catalogItemId: string) => {
+      if (submissionPending.current || submitted.current) return
+      setReturnables((current) =>
+        current.filter((row) => row.catalogItemId !== catalogItemId),
+      )
+    },
     selectedCustomer,
     step,
     setStep: guardEdit(setStep),
