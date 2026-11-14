@@ -87,13 +87,13 @@ export function StockHistoryTotals({
               !open && "-rotate-90",
             )}
           />
-          <span className="font-medium">Net change</span>
+          <span className="shrink-0 font-medium">Net change</span>
           <span className="truncate text-muted-foreground">
             {scope} · {storeLabel}
           </span>
         </button>
         {open && totals.data ? (
-          <span className="ml-auto text-xs text-muted-foreground">
+          <span className="ml-auto text-xs text-muted-foreground max-sm:hidden">
             {stockTotalsFromText(totals.data)}
           </span>
         ) : null}
