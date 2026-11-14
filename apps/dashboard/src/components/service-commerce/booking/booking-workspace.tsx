@@ -590,7 +590,7 @@ function BookingWorkspaceContent({ storeId }: { storeId: string }) {
         )}
         {createdLink ? (
           <div className="grid gap-2">
-            <div className="flex items-center gap-3 border border-border px-3 py-2.5">
+            <div className="flex items-center gap-3 rounded-[var(--ui-radius-control)] border border-border px-3 py-2.5">
               <a
                 className="min-w-0 flex-1 text-sm break-all text-primary underline"
                 href={createdLink}
@@ -859,7 +859,7 @@ function BookingResources({
             const checked = selected.some((item) => item.id === resource.id)
             return (
               <CheckboxField
-                className="min-h-11 items-center border border-border px-3"
+                className="min-h-11 items-center rounded-[var(--ui-radius-control)] border border-border px-3"
                 key={resource.id}
                 label={
                   <span className="flex flex-wrap items-center justify-between gap-2">

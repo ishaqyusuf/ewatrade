@@ -94,7 +94,7 @@ export function ServiceRequestForm({ store }: { store: StoreSummary }) {
   const yourLinks =
     links.length > 0 ? (
       <SheetSection title="Your links">
-        <ul className="grid border border-border">
+        <ul className="grid overflow-hidden rounded-[var(--ui-radius-surface)] border border-border">
           {links.map((link) => (
             <li
               key={link.id}
@@ -128,7 +128,7 @@ export function ServiceRequestForm({ store }: { store: StoreSummary }) {
         <FormFeedback appearance="dashboard" variant="default">
           Link ready. Share it on WhatsApp, your status or a flyer.
         </FormFeedback>
-        <div className="flex items-center gap-3 border border-border px-3 py-2.5">
+        <div className="flex items-center gap-3 rounded-[var(--ui-radius-control)] border border-border px-3 py-2.5">
           <a
             className="min-w-0 flex-1 text-sm break-all text-primary underline"
             href={publicUrl}

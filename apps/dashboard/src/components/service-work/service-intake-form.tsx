@@ -632,7 +632,7 @@ export function ServiceIntakeForm({
           <div className="grid min-w-0 gap-4">
             {lines.length ? (
               <div
-                className="grid gap-3 border border-border p-4"
+                className="grid gap-3 rounded-[var(--ui-radius-surface)] border border-border p-4"
                 aria-label="Selected services"
               >
                 <h3 className="text-sm font-medium">
@@ -715,7 +715,7 @@ export function ServiceIntakeForm({
                 })}
               </div>
             ) : (
-              <div className="grid gap-2 border border-dashed border-border p-4 text-sm text-muted-foreground">
+              <div className="grid gap-2 rounded-[var(--ui-radius-surface)] border border-dashed border-border p-4 text-sm text-muted-foreground">
                 <h3 className="font-medium text-foreground">In this order</h3>
                 <p>
                   Add services from the list. Quantities and any quote amounts
@@ -740,7 +740,7 @@ export function ServiceIntakeForm({
       </SheetSection>
       <SheetSection title="Customer" optional={!summary.needsQuote}>
         {customer ? (
-          <div className="flex items-center justify-between gap-3 border border-border p-3">
+          <div className="flex items-center justify-between gap-3 rounded-[var(--ui-radius-surface)] border border-border p-3">
             <div className="min-w-0">
               <p className="truncate text-sm font-medium">
                 {customer.name || customer.phone}

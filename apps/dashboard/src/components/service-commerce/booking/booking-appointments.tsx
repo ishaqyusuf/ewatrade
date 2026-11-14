@@ -85,7 +85,7 @@ export function BookingAppointments(scope: Scope) {
             const ended = ["cancelled", "no_show"].includes(row.status)
             return (
               <li
-                className="flex flex-wrap items-center gap-3 border border-border px-3 py-2.5"
+                className="flex flex-wrap items-center gap-3 rounded-[var(--ui-radius-control)] border border-border px-3 py-2.5"
                 key={row.id}
               >
                 <div className="min-w-0 flex-1">

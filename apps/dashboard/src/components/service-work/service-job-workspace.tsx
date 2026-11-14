@@ -422,18 +422,23 @@ function JobSummary({
           {stage.label}
         </Badge>
         {late ? (
-          <span className="border border-destructive px-1 text-xs font-semibold text-destructive">
+          <span className="rounded-full bg-danger px-2 text-xs font-medium text-danger-foreground">
             Late
           </span>
         ) : null}
         {job.priority === "urgent" ? (
-          <span className="text-xs font-semibold tracking-wide uppercase">
+          <span className="rounded-full bg-warning px-2 text-xs font-medium text-warning-foreground">
             Urgent
           </span>
         ) : null}
       </div>
 
-      <section className={cn("grid gap-3 border p-4", nextTone)}>
+      <section
+        className={cn(
+          "grid gap-3 rounded-[var(--ui-radius-surface)] border p-4",
+          nextTone,
+        )}
+      >
         <p className="text-sm font-medium">{nextText}</p>
         {nextButtons.length ? (
           <div className="flex flex-wrap gap-2">
@@ -452,7 +457,7 @@ function JobSummary({
         ) : null}
       </section>
 
-      <dl className="grid grid-cols-[120px_1fr] gap-x-3 gap-y-2 text-sm">
+      <dl className="grid grid-cols-[120px_1fr] items-center gap-x-3 gap-y-1 text-sm">
         <dt className="text-muted-foreground">Customer</dt>
         <dd>{job.customerName || "Walk-in customer"}</dd>
         <dt className="text-muted-foreground">Who is doing it</dt>
@@ -481,7 +486,7 @@ function JobSummary({
       </dl>
 
       <SummarySection title="Work">
-        <ul className="grid border border-border">
+        <ul className="grid overflow-hidden rounded-[var(--ui-radius-surface)] border border-border">
           {job.lines.map((line) => (
             <WorkLine
               key={line.id}
@@ -498,24 +503,34 @@ function JobSummary({
       <SummarySection title="Money">
         <dl className="grid grid-cols-[120px_1fr] gap-x-3 gap-y-2 text-sm">
           <dt className="text-muted-foreground">Total</dt>
-          <dd>{formatPrice(job.orderTotalMinor, job.currencyCode)}</dd>
+          <dd className="tabular-nums">
+            {formatPrice(job.orderTotalMinor, job.currencyCode)}
+          </dd>
           <dt className="text-muted-foreground">Paid</dt>
-          <dd>{formatPrice(job.amountPaidMinor, job.currencyCode)}</dd>
+          <dd className="tabular-nums">
+            {formatPrice(job.amountPaidMinor, job.currencyCode)}
+          </dd>
           <dt className="text-muted-foreground">Still to pay</dt>
-          <dd className="flex flex-wrap items-center gap-2">
-            <span className="font-medium">
-              {formatPrice(job.balanceDueMinor, job.currencyCode)}
-            </span>
-            {job.balanceDueMinor > 0 ? (
-              <LinkButton onClick={() => goTo("pay")}>Take payment</LinkButton>
-            ) : null}
-            {job.balanceDueMinor > 0 && job.summary !== "cancelled" ? (
-              <LinkButton onClick={() => setPaymentLinkOpen(true)}>
-                Payment link
-              </LinkButton>
-            ) : null}
+          <dd className="font-medium tabular-nums">
+            {formatPrice(job.balanceDueMinor, job.currencyCode)}
           </dd>
         </dl>
+        {job.balanceDueMinor > 0 ? (
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" variant="outline" onClick={() => goTo("pay")}>
+              Take payment
+            </Button>
+            {job.summary !== "cancelled" ? (
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => setPaymentLinkOpen(true)}
+              >
+                Payment link
+              </Button>
+            ) : null}
+          </div>
+        ) : null}
         {paymentLinkOpen ? (
           <PaymentLinkDialog
             kind="service"
@@ -759,7 +774,7 @@ function JobActivity({
                 {/* Authenticated, uncached content; next/image cannot optimise it. */}
                 <img
                   alt={entry.label || "Job photo"}
-                  className="h-24 w-32 border border-border object-cover"
+                  className="h-24 w-32 rounded-[var(--ui-radius-item)] border border-border object-cover"
                   loading="lazy"
                   src={jobPhotoSource(entry.id)}
                 />
@@ -1895,7 +1910,7 @@ function JobStepView({
             </FormFeedback>
           ) : null}
           {trackingUrl ? (
-            <div className="flex items-center gap-3 border border-border px-3 py-2.5">
+            <div className="flex items-center gap-3 rounded-[var(--ui-radius-control)] border border-border px-3 py-2.5">
               <a
                 className="min-w-0 flex-1 text-sm break-all text-primary underline"
                 href={trackingUrl}
@@ -2096,9 +2111,7 @@ function SummarySection({
 }) {
   return (
     <section className="grid gap-3 border-t border-border pt-4">
-      <h3 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-        {title}
-      </h3>
+      <h3 className="text-base font-semibold">{title}</h3>
       {children}
     </section>
   )
@@ -2117,7 +2130,7 @@ function LinkButton({
     <button
       type="button"
       className={cn(
-        "text-sm font-medium text-primary underline-offset-4 hover:underline",
+        "inline-flex min-h-11 items-center text-sm font-medium text-[var(--link)] underline-offset-4 hover:underline",
         className,
       )}
       onClick={onClick}
@@ -2183,7 +2196,7 @@ function JobPhotoInput({
         // A local object URL; next/image cannot optimise it.
         <img
           alt="Selected for upload"
-          className="size-16 border border-border object-cover"
+          className="size-16 rounded-[var(--ui-radius-item)] border border-border object-cover"
           src={preview}
         />
       ) : null}

@@ -293,7 +293,7 @@ function CustomerRequestContent({
             {notice}
           </FormFeedback>
         ) : null}
-        <div className="grid gap-3 border border-border bg-card p-4">
+        <div className="grid gap-3 rounded-[var(--ui-radius-surface)] border border-border bg-card p-4">
           <p className="text-sm font-medium">
             {request.status === "SUBMITTED"
               ? "New request. Send a price, or ask for what you need to price it."
