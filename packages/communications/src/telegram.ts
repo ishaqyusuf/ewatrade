@@ -1,6 +1,15 @@
-import { type TelegramMedia, readTelegramMedia } from "./telegram-media"
+import {
+  type TelegramFile,
+  type TelegramMedia,
+  readTelegramFile,
+  readTelegramMedia,
+} from "./telegram-media"
 
-export type { TelegramMedia, TelegramMediaKind } from "./telegram-media"
+export type {
+  TelegramFile,
+  TelegramMedia,
+  TelegramMediaKind,
+} from "./telegram-media"
 
 type Environment = Record<string, string | undefined>
 
@@ -94,8 +103,11 @@ export type NormalizedAssistantTelegramUpdate =
             forward?: { userId: string | null; isBot: boolean }
           }
         | { kind: "callback"; callbackId: string; data: string }
-        /** Photo, file, video or voice note: its kind only, never the file or caption. */
-        | ({ kind: "media" } & TelegramMedia)
+        /**
+         * Photo, file, video or voice note. `file` is present only for a single
+         * photo or photo/PDF document, which the assistant may download.
+         */
+        | ({ kind: "media"; file?: TelegramFile } & TelegramMedia)
       ))
   | (Omit<TelegramUpdateIdentity, "messageId"> & {
       /** `my_chat_member`: the user stopped (blocked) or restarted the bot. */
@@ -177,7 +189,10 @@ export function parseAssistantTelegramUpdate(
   const input = message?.text
   if (typeof input !== "string") {
     const media = message && readTelegramMedia(message)
-    return media ? { ...identity, kind: "media", ...media } : null
+    const file = media?.attachable && message ? readTelegramFile(message) : null
+    return media
+      ? { ...identity, kind: "media", ...media, ...(file ? { file } : {}) }
+      : null
   }
   if (byteLength(input) > 16_384) return null
   const text = input.trim()
@@ -292,6 +307,7 @@ type TelegramMethod =
   | "unpinAllChatMessages"
   | "setMyCommands"
   | "deleteMyCommands"
+  | "getFile"
 type TelegramFetch = (url: string, init: RequestInit) => Promise<Response>
 type TelegramRequest = {
   status: number
@@ -349,6 +365,66 @@ export class DirectTelegramBotProvider {
     private readonly config: Pick<AssistantTelegramConfig, "token">,
     private readonly send: TelegramFetch = fetch,
   ) {}
+
+  /** Downloads a file the user sent (Bot API getFile), refusing anything over maxBytes. */
+  async downloadFile(input: {
+    fileId: string
+    maxBytes: number
+    signal?: AbortSignal
+  }): Promise<Uint8Array> {
+    const response = await this.request(
+      "getFile",
+      { file_id: input.fileId },
+      input.signal,
+    )
+    const result = record(response?.body?.result)
+    const path = result?.file_path
+    const stated = Number(result?.file_size)
+    if (
+      response?.body?.ok !== true ||
+      typeof path !== "string" ||
+      !/^[\w./-]{1,256}$/.test(path) ||
+      path.includes("..")
+    )
+      throw new Error("Telegram file unavailable.")
+    if (Number.isFinite(stated) && stated > input.maxBytes)
+      throw Object.assign(new Error("Telegram file too large."), {
+        code: "MEDIA_TOO_LARGE",
+      })
+    const timeout = AbortSignal.timeout(20_000)
+    const download = await this.send(
+      `https://api.telegram.org/file/bot${this.config.token}/${path}`,
+      {
+        method: "GET",
+        redirect: "error",
+        signal: input.signal
+          ? AbortSignal.any([input.signal, timeout])
+          : timeout,
+      },
+    )
+    if (!download.ok || !download.body) {
+      await download.body?.cancel().catch(() => undefined)
+      throw new Error("Telegram file unavailable.")
+    }
+    const reader = download.body.getReader()
+    const chunks: Uint8Array[] = []
+    let size = 0
+    try {
+      for (;;) {
+        const chunk = await reader.read()
+        if (chunk.done) break
+        size += chunk.value.byteLength
+        if (size > input.maxBytes)
+          throw Object.assign(new Error("Telegram file too large."), {
+            code: "MEDIA_TOO_LARGE",
+          })
+        chunks.push(chunk.value)
+      }
+    } finally {
+      await reader.cancel().catch(() => undefined)
+    }
+    return new Uint8Array(Buffer.concat(chunks))
+  }
 
   async sendTyping(chatId: string, signal?: AbortSignal): Promise<boolean> {
     const target = Number(chatId)
@@ -583,7 +659,7 @@ export class DirectTelegramBotProvider {
   ): Promise<TelegramRequest | null> {
     try {
       const timeout = AbortSignal.timeout(
-        method === "sendMessage" ? 20_000 : 2_000,
+        method === "sendMessage" || method === "getFile" ? 20_000 : 2_000,
       )
       const response = await this.send(
         `https://api.telegram.org/bot${this.config.token}/${method}`,

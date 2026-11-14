@@ -21,7 +21,11 @@ import {
   generalProposalForApp,
   generalProposalWithReview,
 } from "./general-proposals"
-import { handleReceiptChat, handleReceiptFollowUp } from "./general-receipt-chat"
+import {
+  handleReceiptChat,
+  handleReceiptFollowUp,
+} from "./general-receipt-chat"
+import { ingestTelegramFile } from "./telegram-file"
 
 // Smallest valid JPEG signature; the provider read is synthetic.
 const RECEIPT = new Uint8Array([
@@ -61,7 +65,7 @@ const read = (over: Partial<ChatReceiptExtraction>) => async () =>
 
 /** Every business this test made (QA, its own source domain), finance rows first. */
 async function removeReceiptFixtures(
-  db: (typeof import("@ewatrade/db"))["prisma"],
+  db: typeof import("@ewatrade/db")["prisma"],
 ) {
   const tenants = await db.tenant.findMany({
     where: { dataClassification: "QA", qaSourceDomain: "chat-receipt.test" },
@@ -214,7 +218,13 @@ if (enabled) setDefaultTimeout(240_000)
           actorUserId: user.id,
           clientOrderId: `rc-musa-${marker}`,
           customerName: "Musa Ibrahim",
-          lines: [{ amountMinor: 6_200_000, custom: "quick_sale", description: "Rice 50kg" }],
+          lines: [
+            {
+              amountMinor: 6_200_000,
+              custom: "quick_sale",
+              description: "Rice 50kg",
+            },
+          ],
           schemaVersion: 1,
           storeId: store.id,
           tenantId,
@@ -223,7 +233,13 @@ if (enabled) setDefaultTimeout(240_000)
           actorUserId: user.id,
           clientOrderId: `rc-chidi-${marker}`,
           customerName: "Chidi Eze",
-          lines: [{ amountMinor: 2_450_000, custom: "quick_sale", description: "Vegetable oil" }],
+          lines: [
+            {
+              amountMinor: 2_450_000,
+              custom: "quick_sale",
+              description: "Vegetable oil",
+            },
+          ],
           schemaVersion: 1,
           storeId: store.id,
           tenantId,
@@ -258,10 +274,7 @@ if (enabled) setDefaultTimeout(240_000)
             where: { id: row.id },
           })
         }
-        const send = async (
-          over: Partial<ChatReceiptExtraction>,
-          text = "",
-        ) =>
+        const send = async (over: Partial<ChatReceiptExtraction>, text = "") =>
           handleReceiptChat(
             ctx,
             {
@@ -291,7 +304,9 @@ if (enabled) setDefaultTimeout(240_000)
             .receiptAttachmentId,
         ).toBeTruthy()
         const reviewed = await generalProposalWithReview(ctx, paymentRow)
-        expect(reviewed.review?.join("\n")).toContain("Received into: Main bank")
+        expect(reviewed.review?.join("\n")).toContain(
+          "Received into: Main bank",
+        )
         expect(reviewed.review?.join("\n")).toContain("MUSA IBRAHIM")
         const app = generalProposalForApp(paymentRow)
         const paid = await decideGeneralProposal(ctx, {
@@ -300,7 +315,10 @@ if (enabled) setDefaultTimeout(240_000)
           proposalId: app.id,
           revision: app.revision,
         })
-        expect(paid.receipt).toMatchObject({ kind: "payment", orderId: musa.id })
+        expect(paid.receipt).toMatchObject({
+          kind: "payment",
+          orderId: musa.id,
+        })
         const order = await db.commercialOrder.findUniqueOrThrow({
           where: { id: musa.id },
         })
@@ -390,8 +408,68 @@ if (enabled) setDefaultTimeout(240_000)
         expect(
           await send({ documentKind: "not_a_receipt", amountText: null }),
         ).toBeNull()
-        expect(await send({ amountText: null, documentKind: "unreadable" }))
-          .toMatchObject({ text: expect.stringContaining("can't read the amount") })
+        expect(
+          await send({ amountText: null, documentKind: "unreadable" }),
+        ).toMatchObject({
+          text: expect.stringContaining("can't read the amount"),
+        })
+
+        // Telegram: a sent photo and a PDF are stored as this chat's ready
+        // attachments (download is synthetic), then read like any upload.
+        const telegramCtx = { ...ctx, assistantConversationId: conversation.id }
+        const PDF = new TextEncoder().encode(
+          "%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF\n",
+        )
+        for (const [contentType, bytes] of [
+          ["image/jpeg", RECEIPT],
+          ["application/pdf", PDF],
+        ] as const) {
+          const ingested = await ingestTelegramFile(
+            telegramCtx as GeneralContext,
+            { token: "synthetic" },
+            {
+              kind: "media",
+              fileId: `file-${randomUUID()}`,
+              fileUniqueId: `u-${contentType.length}-${marker.slice(0, 6)}`,
+              contentType,
+              fileName:
+                contentType === "application/pdf" ? "r.pdf" : "photo.jpg",
+              caption: null,
+            },
+            async () => bytes,
+          )
+          expect(ingested.kind).toBe("ready")
+          const part =
+            ingested.kind === "ready"
+              ? ingested.parts.find((item) => item.type !== "text")
+              : undefined
+          const attachmentId = (part as { data: { attachmentId: string } }).data
+            .attachmentId
+          const stored = await db.assistantAttachment.findUniqueOrThrow({
+            where: { id: attachmentId },
+          })
+          expect(stored).toMatchObject({
+            status: "READY",
+            kind: contentType === "application/pdf" ? "PDF" : "IMAGE",
+          })
+          sent += 1
+          const reply = await handleReceiptChat(
+            ctx,
+            {
+              conversationId: conversation.id,
+              text: "",
+              attachments: [stored],
+            },
+            {
+              env,
+              read: read({
+                amountText: "1,000",
+                senderName: "NOBODY KNOWN",
+              }),
+            },
+          )
+          expect(reply?.text).toContain("What is it for?")
+        }
 
         const reads = await db.assistantReceiptRead.count({
           where: { tenantId },

@@ -20,7 +20,7 @@ const photo = [
   { file_id: "AgAD-large", file_unique_id: "u2", width: 1280, height: 960 },
 ]
 
-test("recognises photos, files, videos and voice notes without keeping files or captions", () => {
+test("recognises photos, files, videos and voice notes; only a single photo or PDF carries its file", () => {
   const parsed = parseAssistantTelegramUpdate(
     update({ photo, caption: "receipt for S-1038" }),
   )
@@ -34,9 +34,48 @@ test("recognises photos, files, videos and voice notes without keeping files or 
     media: "photo",
     mediaGroupId: null,
     attachable: true,
+    // The largest size, kept so the assistant can read a transfer receipt.
+    file: {
+      fileId: "AgAD-large",
+      fileUniqueId: "u2",
+      contentType: "image/jpeg",
+      fileName: "photo.jpg",
+      sizeBytes: null,
+      caption: "receipt for S-1038",
+    },
   })
-  // No file ID, caption, name or MIME type leaves the parser.
-  expect(JSON.stringify(parsed)).not.toMatch(/AgAD|receipt|file_id/)
+  // The kind-only parser still keeps no file ID, caption, name or MIME type.
+  expect(
+    JSON.stringify(readTelegramMedia({ photo, caption: "receipt" })),
+  ).not.toMatch(/AgAD|receipt|file_id/)
+  // Albums, voice notes and other files never carry a file.
+  expect(
+    parseAssistantTelegramUpdate(update({ photo, media_group_id: "g1" })),
+  ).not.toHaveProperty("file")
+  expect(
+    parseAssistantTelegramUpdate(
+      update({ voice: { file_id: "voice-file-1" } }),
+    ),
+  ).not.toHaveProperty("file")
+  expect(
+    parseAssistantTelegramUpdate(
+      update({
+        document: {
+          file_id: "BQAD-receipt",
+          file_unique_id: "d1",
+          mime_type: "application/pdf",
+          file_name: "Transfer receipt.pdf",
+          file_size: 96_000,
+        },
+      }),
+    ),
+  ).toMatchObject({
+    file: {
+      contentType: "application/pdf",
+      fileName: "Transfer receipt.pdf",
+      sizeBytes: 96_000,
+    },
+  })
 
   expect(
     readTelegramMedia({ voice: { file_id: "v", duration: 7 } }),

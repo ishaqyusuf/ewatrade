@@ -34,6 +34,22 @@ const contentSchema = z.discriminatedUnion("kind", [
       callbackId: z.string().min(1).max(128),
     })
     .strict(),
+  // A single photo or PDF (a transfer receipt) the assistant downloads and reads.
+  z
+    .object({
+      kind: z.literal("media"),
+      fileId: z.string().regex(/^[A-Za-z0-9_-]{8,256}$/),
+      fileUniqueId: z.string().regex(/^[A-Za-z0-9_-]{1,256}$/),
+      contentType: z.enum([
+        "image/jpeg",
+        "image/png",
+        "image/webp",
+        "application/pdf",
+      ]),
+      fileName: z.string().min(1).max(120),
+      caption: z.string().max(1024).nullable(),
+    })
+    .strict(),
 ])
 export type TelegramInboundContent = z.infer<typeof contentSchema>
 export type TelegramUpdateInput = TelegramSender & {

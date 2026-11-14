@@ -54,8 +54,10 @@ import {
   decideGeneralProposalInTransaction,
   inFreshGeneralTransaction,
 } from "./general-proposals"
+import { receiptReadingConfig } from "./general-receipt-availability"
 import { createGeneralAssistantTurn } from "./general-turn"
 import { GeneralTurnError } from "./general-turn-contract"
+import type { GeneralTurnInput } from "./general-turn-contract"
 import { proposalApprovalToken } from "./proposal-security"
 import { acceptTelegramChatsUpdate } from "./telegram-chats"
 import { pickTelegramChoice, telegramChoiceExpired } from "./telegram-choices"
@@ -72,6 +74,7 @@ import {
   telegramTypedDecision,
   telegramTypedDecisionReply,
 } from "./telegram-control"
+import { ingestTelegramFile } from "./telegram-file"
 import { retireTelegramHandoffLinks } from "./telegram-handoff"
 import { acceptAssistantTelegramMedia } from "./telegram-media"
 import {
@@ -153,6 +156,32 @@ export async function acceptAssistantTelegramUpdate(
   const control = await acceptTelegramControl(config, event)
   if (control) return control
   if (event.kind === "member") return {}
+  // A single photo or PDF is downloaded and read when receipt reading is on
+  // (transfer receipts); other media keeps the phase 5 text-only reply.
+  if (
+    event.kind === "media" &&
+    event.file &&
+    config.enabled &&
+    receiptReadingConfig()
+  ) {
+    const row = await acceptTelegramInbox(prisma, {
+      ...sender,
+      updateId: event.updateId,
+      messageId: event.messageId,
+      occurredAt: new Date(),
+      allowedUserIds: config.allowedUserIds,
+      allowedTenantIds: config.allowedTenantIds,
+      content: {
+        kind: "media",
+        fileId: event.file.fileId,
+        fileUniqueId: event.file.fileUniqueId,
+        contentType: event.file.contentType,
+        fileName: event.file.fileName,
+        caption: event.file.caption,
+      },
+    })
+    if (row) return { ingressId: row.id }
+  }
   // Phase 5 (f-today, v-today): media gets a text-only reply and never enters the inbox.
   if (event.kind === "media")
     return acceptAssistantTelegramMedia(config, event, {
@@ -681,6 +710,7 @@ export async function processAssistantTelegramTurn(
       lease,
     )
     let text: string | undefined
+    let mediaParts: GeneralTurnInput["message"]["parts"] | undefined
     if (content.kind === "callback") {
       // Phase 3 (l-ambig): a saved choice runs as the user's next message.
       if (isTelegramChoiceCallback(content.data)) {
@@ -696,6 +726,20 @@ export async function processAssistantTelegramTurn(
             stageText(fresh, lease, [telegramChoiceExpired]),
           )
       } else await executeCallback(ctx, claim, content.data)
+    } else if (content.kind === "media") {
+      const file = await ingestTelegramFile(ctx, config, content)
+      if (file.kind === "refused") {
+        await inFreshGeneralTransaction(ctx, async (fresh) => {
+          await stageAssistantTelegramOutbox(fresh.db, lease, {
+            text: file.text,
+            replyToMessageId: inbox.messageId,
+          })
+          await settleAssistantTelegramInbox(fresh.db, lease, {})
+        })
+      } else {
+        mediaParts = file.parts
+        text = content.caption?.trim() ?? ""
+      }
     } else text = content.text.trim()
     if (text !== undefined) {
       // Phase 2: /help by role (c-help, a-cashier-menu), /scope with a
@@ -772,7 +816,7 @@ export async function processAssistantTelegramTurn(
               message: {
                 id: inbox.userMessageId,
                 role: "user",
-                parts: [{ type: "text", text }],
+                parts: mediaParts ?? [{ type: "text", text }],
               },
             })
             const reader = turn.stream.getReader()

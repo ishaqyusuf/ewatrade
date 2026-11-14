@@ -4,7 +4,7 @@
   "tickets": [
     "H02"
   ],
-  "summary": "Read bank transfer receipts an owner shares in the assistant chat (photo or PDF) with OpenAI, then match them to an owing order, a transfer between the business's own accounts, or money out, and draft the existing reviewed action. Nothing is recorded until the owner confirms.",
+  "summary": "Read bank transfer receipts an owner shares in the assistant chat (photo or PDF) with OpenAI, then match them to an owing order, a transfer between the business's own accounts, or money out, and draft the existing reviewed action. Nothing is recorded until the owner confirms. Telegram now downloads a single photo or PDF sent to the bot and stores it as the chat's attachment so the same receipt flow runs; other media keeps the text-only reply.",
   "capabilities": [
     {
       "id": "sales.payment.record",
@@ -48,13 +48,25 @@
       "kind": "test",
       "path": "apps/api/src/assistant/general-receipt-chat.integration.test.ts",
       "executed": true,
-      "result": "Guarded development QA (ewatrade_qa_v1, own QA business, removed after): receipt matched to the owing order by sender, payment confirmed and the receipt kept on the order, duplicate reference refused, unknown sender asked then matched by typed name, own-account transfer, money-out expense, purpose question, unknown account, not-a-receipt and unreadable. Provider read synthetic. 1 test, 20 assertions pass."
+      "result": "Guarded development QA (ewatrade_qa_v1, own QA business, removed after): receipt matched by sender, payment confirmed with the receipt kept on the order, duplicate refused, unknown sender asked then matched by typed name, own-account transfer, money-out expense, purpose question, unknown account, not-a-receipt, unreadable, and Telegram photo and PDF stored as ready attachments then read. Provider read and Telegram download synthetic. 1 test, 26 assertions pass."
     },
     {
       "kind": "test",
       "path": "apps/api/src/assistant/channel-media-turn.test.ts",
       "executed": true,
       "result": "Media turn and channel proposal review suites: 14 tests, 98 assertions pass with the inert database URL."
+    },
+    {
+      "kind": "test",
+      "path": "packages/communications/src/telegram-media.test.ts",
+      "executed": true,
+      "result": "Telegram parser and webhook suites: 16 tests, 89 assertions pass; a single photo or PDF carries its file, albums, voice notes and other files do not."
+    },
+    {
+      "kind": "test",
+      "path": "apps/api/src/assistant/telegram-review.test.ts",
+      "executed": true,
+      "result": "All API Telegram unit suites: 61 tests, 236 assertions pass."
     }
   ]
 }
