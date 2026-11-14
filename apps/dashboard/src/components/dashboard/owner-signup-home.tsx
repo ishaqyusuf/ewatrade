@@ -95,7 +95,7 @@ export function OnlineStoreStrip({
   const url = storefrontUrl(tenant.slug)
   return (
     <section
-      className="grid gap-2.5 rounded-lg border border-border bg-card px-4 py-3"
+      className="grid grid-cols-[minmax(0,1fr)] gap-2.5 rounded-lg border border-border bg-card px-4 py-3"
       aria-labelledby="online-store-title"
     >
       <div className="flex flex-wrap items-center gap-x-3.5 gap-y-2.5">
