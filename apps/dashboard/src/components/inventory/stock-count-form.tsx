@@ -425,7 +425,9 @@ export function StockCountForm({ store }: { store: StoreSummary }) {
                 <span className="sr-only">Count this</span>
               </th>
               <th className="px-3 py-2 font-normal">Product</th>
-              <th className="px-3 py-2 text-right font-normal">Expected</th>
+              <th className="px-3 py-2 text-right font-normal max-sm:hidden">
+                Expected
+              </th>
               <th className="px-3 py-2 font-normal">Counted</th>
               <th className="px-3 py-2 text-right font-normal">Difference</th>
             </tr>
@@ -507,21 +509,21 @@ export function StockCountForm({ store }: { store: StoreSummary }) {
                     {difference === null ? (
                       <span className="text-muted-foreground">—</span>
                     ) : compareExactDecimals(difference, "0") === 0 ? (
-                      <span className="text-primary">Matches</span>
+                      <span className="text-muted-foreground">Matches</span>
                     ) : (
                       <span
                         className={cn(
                           "font-medium",
                           compareExactDecimals(difference, "0") < 0
-                            ? "text-destructive"
-                            : "text-primary",
+                            ? "text-danger-foreground"
+                            : "text-success-foreground",
                         )}
                       >
                         {signedQuantity(difference, row.inventoryUnitName)}
                       </span>
                     )}
                     {belowHeld ? (
-                      <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">
+                      <p className="mt-1 text-xs text-warning-foreground">
                         Below the{" "}
                         {formatStockQuantity(
                           row.reservedQuantity,
@@ -622,8 +624,8 @@ function CountReview({
           {`Stock changed for ${stale.length} product${stale.length === 1 ? "" : "s"} since this count was saved, so it can’t be finished. Count again to start a fresh count with the same products.`}
         </FormFeedback>
       ) : null}
-      <div className="overflow-auto border border-border">
-        <table className="w-full min-w-[520px] border-collapse text-sm">
+      <div className="overflow-auto rounded-[var(--ui-radius-surface)] border border-border">
+        <table className="w-full border-collapse text-sm">
           <thead>
             <tr className="border-b border-border text-left text-muted-foreground">
               <th className="px-3 py-2 font-normal">Product</th>
@@ -641,13 +643,13 @@ function CountReview({
                   <td className="px-3 py-2">
                     {productLabel(line)}
                     {!line.stockCurrent ? (
-                      <p className="text-xs text-amber-700 dark:text-amber-300">
+                      <p className="text-xs text-warning-foreground">
                         Changed since the count (now{" "}
                         {formatInventoryQuantity(line.currentQuantity)})
                       </p>
                     ) : null}
                   </td>
-                  <td className="px-3 py-2 text-right tabular-nums">
+                  <td className="px-3 py-2 text-right tabular-nums max-sm:hidden">
                     {formatStockQuantity(line.expectedQuantity, line.unitName)}
                   </td>
                   <td className="px-3 py-2 text-right tabular-nums">
@@ -655,14 +657,14 @@ function CountReview({
                   </td>
                   <td className="px-3 py-2 text-right tabular-nums">
                     {zero ? (
-                      <span className="text-primary">Matches</span>
+                      <span className="text-muted-foreground">Matches</span>
                     ) : (
                       <span
                         className={cn(
                           "font-medium",
                           compareExactDecimals(line.varianceQuantity, "0") < 0
-                            ? "text-destructive"
-                            : "text-primary",
+                            ? "text-danger-foreground"
+                            : "text-success-foreground",
                         )}
                       >
                         {signedQuantity(line.varianceQuantity, line.unitName)}
@@ -677,8 +679,7 @@ function CountReview({
       </div>
       {data.status === "DRAFT" ? (
         <p className="text-muted-foreground">
-          Finishing sets each product to what you counted. Products you didn’t
-          count are not changed. The count stays in Stock history.
+          Each product is set to what you counted. Others stay as they are.
         </p>
       ) : null}
       <div className="flex flex-wrap justify-end gap-2 border-t border-border pt-4">

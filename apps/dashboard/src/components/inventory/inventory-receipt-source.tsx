@@ -192,7 +192,7 @@ export function InventoryReceiptSource({
         <ComboboxInput
           aria-label="Product"
           placeholder="Search products"
-          className="w-full"
+          className="h-[var(--ui-control-h)] w-full rounded-[var(--ui-radius-control)] border-[color:var(--ui-control-border)] bg-background"
           showClear
         />
         <ComboboxContent>

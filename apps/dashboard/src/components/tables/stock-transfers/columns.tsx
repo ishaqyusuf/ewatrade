@@ -15,11 +15,11 @@ export const transferSortFields = [
 ] as const
 
 const statusTone: Record<string, string> = {
-  IN_TRANSIT: "bg-amber-500/15 text-amber-700 dark:text-amber-300",
-  DISPATCHED: "bg-amber-500/15 text-amber-700 dark:text-amber-300",
-  RECEIVED: "bg-primary/10 text-primary",
-  CANCELLED: "bg-muted text-muted-foreground",
-  EXCEPTION: "bg-destructive/10 text-destructive",
+  IN_TRANSIT: "bg-info text-info-foreground",
+  DISPATCHED: "bg-info text-info-foreground",
+  RECEIVED: "bg-success text-success-foreground",
+  CANCELLED: "bg-[var(--neutral)] text-[var(--neutral-foreground)]",
+  EXCEPTION: "bg-danger text-danger-foreground",
 }
 
 export function TransferStatusBadge({ status }: { status: string }) {
@@ -27,7 +27,8 @@ export function TransferStatusBadge({ status }: { status: string }) {
     <Badge
       className={cn(
         "rounded-full border-0",
-        statusTone[status] ?? "bg-muted text-foreground",
+        statusTone[status] ??
+          "bg-[var(--neutral)] text-[var(--neutral-foreground)]",
       )}
     >
       {transferStatusLabel(status)}

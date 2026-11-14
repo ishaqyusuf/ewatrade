@@ -80,8 +80,8 @@ function Audit({
                 <p
                   className={
                     up
-                      ? "font-semibold tabular-nums text-primary"
-                      : "font-semibold tabular-nums text-destructive"
+                      ? "font-semibold tabular-nums text-success-foreground"
+                      : "font-semibold tabular-nums text-danger-foreground"
                   }
                 >
                   {up ? "+" : "−"}
@@ -131,7 +131,6 @@ export function InventoryAuditSheet({
               ? "Stock change"
               : stockChangeLabel(record.type)
           }
-          description="What changed, by how much, and why."
         >
           <Audit key={record.id} operationId={record.id} storeId={storeId} />
         </SheetFrame>

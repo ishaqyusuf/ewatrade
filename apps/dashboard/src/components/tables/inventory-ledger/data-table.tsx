@@ -29,11 +29,8 @@ import { useVirtualizer } from "@tanstack/react-virtual"
 import { type ReactNode, useCallback, useMemo } from "react"
 import { LedgerTableHeader, LedgerTableSettings } from "./table-header"
 
-const stickyColumns = [
-  { id: "identity", width: 240 },
-  { id: "actions", width: 64, side: "right" as const },
-]
-const fixedColumnIds = ["identity", "actions"]
+const stickyColumns = [{ id: "identity", width: 240 }]
+const fixedColumnIds = ["identity"]
 const getLedgerId = (row: { id: string }) => row.id
 
 /** Server cursor pages, loaded on scroll or with the Load more button. */

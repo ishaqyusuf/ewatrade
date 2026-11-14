@@ -12,7 +12,19 @@ import {
 } from "@/lib/inventory-quantity"
 import { formatStockQuantity, pluralizeUnitName } from "@/lib/inventory-view"
 import { useTRPC } from "@/trpc/client"
-import { Button, ControlField, Input, Sheet, Textarea } from "@ewatrade/ui"
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogTitle,
+  Button,
+  ControlField,
+  Input,
+  Sheet,
+  Textarea,
+} from "@ewatrade/ui"
 import {
   compareExactDecimals,
   parseExactDecimal,
@@ -22,11 +34,11 @@ import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { useState } from "react"
 import { SheetFrame } from "./sheet-frame"
 
-type View = "details" | "receive" | "cancel"
+type View = "details" | "receive"
 
 /**
- * One transfer. Receive and Cancel are steps inside this sheet with Back,
- * following the dashboard rule for changing an existing record.
+ * One transfer. Receive is a step inside this sheet with Back (it takes a
+ * quantity); Cancel sends stock back, so it is an alert naming what moves.
  */
 export function StockTransferSheet({
   record,
@@ -36,6 +48,7 @@ export function StockTransferSheet({
   const trpc = useTRPC()
   const queryClient = useQueryClient()
   const [view, setView] = useState<View>("details")
+  const [confirmCancel, setConfirmCancel] = useState(false)
   const [arrived, setArrived] = useState("")
   const [note, setNote] = useState("")
   const [error, setError] = useState<string | null>(null)
@@ -105,6 +118,7 @@ export function StockTransferSheet({
       {
         onSuccess: () => {
           setView("details")
+          setConfirmCancel(false)
           setError(null)
           setNotice(
             transition === "receive"
@@ -112,7 +126,10 @@ export function StockTransferSheet({
               : `Transfer cancelled. ${onTheWay} went back to ${source}.`,
           )
         },
-        onError: (failure) => setError(failure.message),
+        onError: (failure) => {
+          setConfirmCancel(false)
+          setError(failure.message)
+        },
       },
     )
   }
@@ -175,8 +192,7 @@ export function StockTransferSheet({
         <SheetFrame
           back={back}
           closeDisabled={mutation.isPending}
-          title="Receive"
-          description={`${title} · ${route}`}
+          title={`Receive ${title}`}
           footer={
             <>
               <Button
@@ -205,7 +221,7 @@ export function StockTransferSheet({
               {stockDate(record.createdAt)}.
             </p>
             <ControlField
-              label="How many arrived?"
+              label={`How many ${pluralizeUnitName(unit).toLowerCase()} arrived?`}
               description={
                 part
                   ? `The other ${formatStockQuantity(
@@ -214,8 +230,8 @@ export function StockTransferSheet({
                         typedArrived,
                       ),
                       unit,
-                    )} stay On the way. Receive them when they arrive, or ${record.sourceStore.name} can cancel them.`
-                  : `In ${pluralizeUnitName(unit).toLowerCase()}. Change this if fewer arrived.`
+                    )} stay On the way.`
+                  : undefined
               }
             >
               <Input
@@ -235,65 +251,55 @@ export function StockTransferSheet({
             </ControlField>
           </div>
         </SheetFrame>
-      ) : view === "cancel" && actionable ? (
+      ) : (
         <SheetFrame
-          back={back}
-          closeDisabled={mutation.isPending}
-          title="Cancel this transfer?"
-          description={`${title} · ${route}`}
+          title={title}
           footer={
-            <>
-              <Button
-                variant="outline"
-                disabled={mutation.isPending}
-                onClick={back.onClick}
-              >
-                Keep transfer
-              </Button>
-              <Button
-                variant="destructive"
-                disabled={mutation.isPending}
-                onClick={() => send("cancel")}
-              >
-                {mutation.isPending ? "Cancelling…" : "Cancel transfer"}
-              </Button>
-            </>
+            actionable && (canReceive || canCancel) ? (
+              <>
+                {canCancel ? (
+                  <Button
+                    variant="outline"
+                    disabled={mutation.isPending}
+                    onClick={() => {
+                      setError(null)
+                      setNote("")
+                      setConfirmCancel(true)
+                    }}
+                  >
+                    Cancel transfer
+                  </Button>
+                ) : null}
+                {canReceive ? (
+                  <Button
+                    disabled={mutation.isPending}
+                    onClick={() => open("receive")}
+                  >
+                    Receive
+                  </Button>
+                ) : null}
+              </>
+            ) : undefined
           }
         >
-          <div className="grid gap-4 text-sm">
+          <div className="grid gap-5">
+            {notice ? (
+              <output className="text-success-foreground">{notice}</output>
+            ) : null}
             {error ? (
               <FormFeedback appearance="dashboard">{error}</FormFeedback>
             ) : null}
-            <p>
-              <span className="font-medium">
-                {onTheWay} go back to {record.sourceStore.name}.
-              </span>{" "}
-              {record.targetStore.name} won’t be able to receive them. This
-              can’t be undone.
-            </p>
-            <ControlField label="Why are you cancelling? (optional)">
-              <Textarea
-                value={note}
-                maxLength={500}
-                placeholder="e.g. Sent by mistake"
-                onChange={(event) => setNote(event.target.value)}
-              />
-            </ControlField>
-          </div>
-        </SheetFrame>
-      ) : (
-        <SheetFrame title={title} description={`Transfer · ${route}`}>
-          <div className="grid gap-5 text-sm">
-            {notice ? <output className="text-primary">{notice}</output> : null}
-            <dl className="grid grid-cols-[9rem_minmax(0,1fr)] gap-x-4 gap-y-3">
+            <dl className="grid grid-cols-[8rem_minmax(0,1fr)] gap-x-4 gap-y-3">
               <dt className="text-muted-foreground">Status</dt>
               <dd>
                 <TransferStatusBadge status={record.status} />
               </dd>
               <dt className="text-muted-foreground">Sent</dt>
-              <dd>{formatStockQuantity(record.quantity, unit)}</dd>
+              <dd className="tabular-nums">
+                {formatStockQuantity(record.quantity, unit)}
+              </dd>
               <dt className="text-muted-foreground">Still on the way</dt>
-              <dd>
+              <dd className="tabular-nums">
                 {compareExactDecimals(record.remainingQuantity, "0") > 0
                   ? onTheWay
                   : "None"}
@@ -303,29 +309,10 @@ export function StockTransferSheet({
               <dt className="text-muted-foreground">Sent on</dt>
               <dd>{stockDate(record.createdAt)}</dd>
             </dl>
-            {actionable && (canReceive || canCancel) ? (
-              <section className="grid gap-2 border border-border p-4">
-                <h3 className="font-medium">What do you want to do?</h3>
-                <div className="flex flex-wrap gap-2">
-                  {canReceive ? (
-                    <Button variant="outline" onClick={() => open("receive")}>
-                      Receive
-                    </Button>
-                  ) : null}
-                  {canCancel ? (
-                    <Button variant="outline" onClick={() => open("cancel")}>
-                      Cancel transfer
-                    </Button>
-                  ) : null}
-                </div>
-                <p className="text-muted-foreground">
-                  {canReceive && !canCancel
-                    ? `Receive it once it is here. Only ${record.sourceStore.name} can cancel it.`
-                    : canCancel && !canReceive
-                      ? `Only ${record.targetStore.name} can receive it. You can cancel it until then.`
-                      : "Receive it once it is here, or cancel it to send it back."}
-                </p>
-              </section>
+            {actionable && !canReceive ? (
+              <p className="text-muted-foreground">
+                {record.targetStore.name} receives it.
+              </p>
             ) : null}
             <StockTransferHistory
               key={record.id}
@@ -335,6 +322,43 @@ export function StockTransferSheet({
           </div>
         </SheetFrame>
       )}
+      <AlertDialog
+        open={confirmCancel && actionable}
+        onOpenChange={(next) => {
+          if (!next && !mutation.isPending) setConfirmCancel(false)
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogTitle className="text-lg font-medium">
+            Cancel the transfer of {onTheWay}?
+          </AlertDialogTitle>
+          <AlertDialogDescription className="text-muted-foreground">
+            {title}: {onTheWay} go back to {record.sourceStore.name}.{" "}
+            {record.targetStore.name} won’t receive them. This can’t be undone.
+          </AlertDialogDescription>
+          <ControlField label="Why? (optional)">
+            <Textarea
+              value={note}
+              maxLength={500}
+              placeholder="e.g. Sent by mistake"
+              onChange={(event) => setNote(event.target.value)}
+            />
+          </ControlField>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={mutation.isPending}>
+              Keep transfer
+            </AlertDialogCancel>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={mutation.isPending}
+              onClick={() => send("cancel")}
+            >
+              {mutation.isPending ? "Cancelling…" : "Cancel transfer"}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Sheet>
   )
 }

@@ -15,11 +15,7 @@ export function StockCountSheet({ storeId }: { storeId: string }) {
       }}
     >
       {stockCountId ? (
-        <SheetFrame
-          title="Stock count"
-          description="What was counted and what it changed."
-          closeError={closeError}
-        >
+        <SheetFrame title="Stock count" closeError={closeError}>
           <StockCountDetails
             key={`${storeId}:${stockCountId}`}
             storeId={storeId}

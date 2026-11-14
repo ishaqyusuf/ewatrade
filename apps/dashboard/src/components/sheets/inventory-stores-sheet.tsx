@@ -24,15 +24,15 @@ export function InventoryStoresSheet({
           title={record.productName}
           description={
             record.variantName && record.variantName !== record.productName
-              ? `${record.variantName} · stock in each store`
-              : "Stock in each store"
+              ? record.variantName
+              : undefined
           }
         >
           <div className="grid gap-4">
             {record.storeBalances?.map((row) => (
               <section
                 key={row.balanceSourceId}
-                className="border border-border p-4"
+                className="rounded-[var(--ui-radius-surface)] border border-border p-4"
               >
                 <div className="flex items-center justify-between gap-3">
                   <h3 className="font-medium">

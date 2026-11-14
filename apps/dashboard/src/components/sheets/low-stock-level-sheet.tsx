@@ -110,16 +110,12 @@ function LevelForm({
         {error ? (
           <FormFeedback appearance="dashboard">{error}</FormFeedback>
         ) : null}
-        <p className="text-muted-foreground">
-          {record.productName} shows as Running low when stock free to sell is
-          at or below this number. It never stops a sale.
-        </p>
         <ControlField
           label="Running low at"
           description={
             packed
-              ? `In ${unitWord}. Packs kept separately are not checked against this level.`
-              : `In ${unitWord}, for every variant of this Product. Free to sell now: ${formatStockQuantity(record.availableQuantity, unit)}.`
+              ? `In ${unitWord}. Packs kept separately are not checked.`
+              : `In ${unitWord}, for every variant. Free to sell now: ${formatStockQuantity(record.availableQuantity, unit)}.`
           }
         >
           <div className="flex items-center gap-2">

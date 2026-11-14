@@ -262,11 +262,8 @@ export function StockCategoriesInput({
           </ComboboxContent>
         </Combobox>
       </div>
-      <FieldDescription id={`${id}-help`}>
-        {atLimit
-          ? "10 reasons picked. Remove one to add another."
-          : "Pick one or more, or type your own and press Enter."}{" "}
-        Reasons you use are remembered.
+      <FieldDescription id={`${id}-help`} className="empty:hidden">
+        {atLimit ? "10 reasons picked. Remove one to add another." : null}
       </FieldDescription>
       {suggestions.isError ? (
         <p className="text-xs text-muted-foreground">

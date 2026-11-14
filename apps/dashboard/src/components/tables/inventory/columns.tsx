@@ -30,7 +30,7 @@ const statusTone: Record<InventoryStockStatus, string> = {
   low: "bg-warning text-warning-foreground",
   out: "bg-danger text-danger-foreground",
   transit: "bg-info text-info-foreground",
-  staff: "bg-neutral text-neutral-foreground",
+  staff: "bg-[var(--neutral)] text-[var(--neutral-foreground)]",
 }
 
 export function InventoryStatusBadge({ row }: { row: InventoryBalance }) {

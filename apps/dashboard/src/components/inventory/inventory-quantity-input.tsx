@@ -90,13 +90,11 @@ export function InventoryQuantityInput({
         </InputGroupAddon>
       </InputGroup>
       <FieldDescription id={`${id}-total`} aria-live="polite">
-        {!unit || !balance
-          ? "Choose a product to see its units."
-          : unit.id === balance.inventoryUnitId
-            ? `In ${pluralizeUnitName(unit.name).toLowerCase()}.`
-            : total
-              ? `= ${formatStockQuantity(total, balance.inventoryUnitName)} (1 ${unit.name.toLowerCase()} = ${formatStockQuantity(unit.factor, balance.inventoryUnitName)})`
-              : `1 ${unit.name.toLowerCase()} = ${formatStockQuantity(unit.factor, balance.inventoryUnitName)}.`}
+        {!unit || !balance || unit.id === balance.inventoryUnitId
+          ? null
+          : total
+            ? `= ${formatStockQuantity(total, balance.inventoryUnitName)} (1 ${unit.name.toLowerCase()} = ${formatStockQuantity(unit.factor, balance.inventoryUnitName)})`
+            : `1 ${unit.name.toLowerCase()} = ${formatStockQuantity(unit.factor, balance.inventoryUnitName)}.`}
       </FieldDescription>
     </Field>
   )

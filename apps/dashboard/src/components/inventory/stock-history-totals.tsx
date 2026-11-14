@@ -144,8 +144,8 @@ export function StockHistoryTotals({
                     <b
                       className={cn(
                         "font-medium tabular-nums",
-                        net > 0 && "text-primary",
-                        net < 0 && "text-destructive",
+                        net > 0 && "text-success-foreground",
+                        net < 0 && "text-danger-foreground",
                       )}
                     >
                       {stockNetChangeText(

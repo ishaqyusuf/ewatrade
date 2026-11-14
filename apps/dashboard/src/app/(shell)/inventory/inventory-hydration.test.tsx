@@ -141,7 +141,8 @@ mock.module("@/hooks/use-table-settings", () => ({
 }))
 mock.module("@/lib/inventory-view", () => ({
   filterInventory: <T,>(rows: T[]) => rows,
-  summarizeInventory: () => ({}),
+  countInventoryFilters: () => ({ all: 0, low: 0, out: 0, reserved: 0 }),
+  formatStockQuantity: (value: string) => value,
 }))
 mock.module("@/lib/inventory-store-totals", () => ({
   groupInventoryStores: <T,>(rows: T[]) => rows,

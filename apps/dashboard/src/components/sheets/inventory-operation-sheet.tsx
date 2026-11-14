@@ -45,19 +45,6 @@ const operationTitles = {
   transformation: "Pack or unpack",
 } as const
 
-const operationDescriptions = {
-  adjustment:
-    "Fix a number that is wrong. To check everything on the shelf, use Count stock.",
-  count:
-    "Count several products at once. Save for later, or finish to set stock to what you counted.",
-  custody:
-    "Track stock a staff member carries to sell, such as on a van or at a stall.",
-  internal_use: "Stock the business used itself, not sold.",
-  receipt: "Add stock that arrived: collected, bought or returned.",
-  transfer: "Move stock to another of your stores.",
-  transformation: "Move stock between loose stock and packs kept separately.",
-} as const
-
 export function InventoryOperationSheet({
   store,
   popupClassName,
@@ -95,11 +82,6 @@ export function InventoryOperationSheet({
             operation === "adjustment" && preset === "loss"
               ? "Damaged or lost"
               : operationTitles[operation]
-          }
-          description={
-            operation === "adjustment" && preset === "loss"
-              ? "Remove stock that broke, died, expired or went missing."
-              : operationDescriptions[operation]
           }
         >
           {selectedStore && operation === "count" ? (

@@ -56,7 +56,7 @@ export function StoreSelector({
         <ComboboxInput
           aria-label={label}
           placeholder="Search stores…"
-          className="w-full"
+          className="h-[var(--ui-control-h)] w-full rounded-[var(--ui-radius-control)] border-[color:var(--ui-control-border)] bg-background"
         />
         <ComboboxContent>
           <ComboboxEmpty>No matching stores.</ComboboxEmpty>

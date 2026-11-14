@@ -45,10 +45,7 @@ export function StockTransferDetailsSheet({ storeId }: { storeId: string }) {
       }}
     >
       {transferId ? (
-        <SheetFrame
-          title="Transfer"
-          description="What was sent and what has arrived."
-        >
+        <SheetFrame title="Transfer">
           {query.isError ? (
             <div role="alert" className="grid gap-3">
               <p>

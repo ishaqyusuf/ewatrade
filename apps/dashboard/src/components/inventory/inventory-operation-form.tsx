@@ -1,5 +1,12 @@
 "use client"
 import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogTitle,
+  Button,
   ControlField,
   FieldGroup,
   FieldSet,
@@ -38,13 +45,17 @@ import { useTRPC } from "@/trpc/client"
 import type { RouterInputs } from "@ewatrade/api/trpc/routers/_app"
 
 import { StoreSelector } from "@/components/stores/store-selector"
-import { compareExactDecimals } from "@ewatrade/utils/exact-decimal"
+import {
+  addExactDecimals,
+  compareExactDecimals,
+  subtractExactDecimals,
+} from "@ewatrade/utils/exact-decimal"
 import {
   type StockCategoryDraft,
   collectStockCategoryDraft,
   stockCategorySelectors,
 } from "@ewatrade/utils/inventory-categories"
-import { Note01Icon, Store01Icon } from "@hugeicons/core-free-icons"
+import { Note01Icon } from "@hugeicons/core-free-icons"
 import {
   useMutation,
   useQuery,
@@ -226,6 +237,15 @@ export function InventoryOperationForm({
   const [targetStoreId, setTargetStoreId] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [openSections, setOpenSections] = useState<string[]>([])
+  // A correction or loss changes stock value, so it is confirmed first.
+  const [confirming, setConfirming] = useState<{
+    retained: RetainedOperation
+    title: string
+    detail: string
+    action: string
+    removing: boolean
+  } | null>(null)
+  const multiStore = (storesQuery.data?.length ?? 0) > 1
   const isLoss = operation === "adjustment" && preset === "loss"
   const qaSnapshot = useRef<{
     categories: StockCategoryDraft[]
@@ -608,6 +628,25 @@ export function InventoryOperationForm({
     input.categories = stockCategorySelectors(selectedCategories)
     setCategories(selectedCategories)
     setCategoryInput("")
+    if (operation === "adjustment") {
+      const removing = direction === "decrease"
+      const amount = formatStockQuantity(typedQuantity, enteredUnit.name)
+      const after = removing
+        ? subtractExactDecimals(selected.onHandQuantity, balanceQuantity)
+        : addExactDecimals(selected.onHandQuantity, balanceQuantity)
+      const item =
+        selected.variantName && selected.variantName !== selected.productName
+          ? `${selected.productName} (${selected.variantName})`
+          : selected.productName
+      setConfirming({
+        retained: { kind: "balance", input },
+        title: `${removing ? "Remove" : "Add"} ${amount} ${removing ? "from" : "to"} ${item}?`,
+        detail: `${store.name}: ${formatStockQuantity(selected.onHandQuantity, selected.inventoryUnitName)} in stock now, ${formatStockQuantity(after, selected.inventoryUnitName)} after.`,
+        action: `${removing ? "Remove" : "Add"} ${amount}`,
+        removing,
+      })
+      return
+    }
     send({ kind: "balance", input })
   }
 
@@ -730,11 +769,30 @@ export function InventoryOperationForm({
             qaSnapshot.current = null
           }}
         />
+        {multiStore ? (
+          <ControlField
+            label={operation === "transfer" ? "Send from" : "Store"}
+          >
+            <StoreSelector
+              value={store}
+              label={operation === "transfer" ? "Send from" : "Store"}
+              disabled={pending || Boolean(retainedOperation.current)}
+              onChange={(next) => {
+                setStore(next)
+                changeSource("")
+                setTargetStoreId("")
+                setTargetCustodyReferenceId("")
+                setError(null)
+                qaSnapshot.current = null
+              }}
+            />
+          </ControlField>
+        ) : null}
         <ControlField
           label={<>Product</>}
           description={
             recordsUse && !productId
-              ? "Only Products set to Internal use, or For sale and internal use, show here."
+              ? "Only products used in the business show here."
               : undefined
           }
         >
@@ -793,10 +851,7 @@ export function InventoryOperationForm({
           </>
         ) : null}
         {operation === "transfer" ? (
-          <ControlField
-            label="Send to"
-            description={`The stock leaves ${store.name} now and shows as On the way until the other store receives it.`}
-          >
+          <ControlField label="Send to">
             <StoreSelector
               label="Send to"
               value={
@@ -851,10 +906,7 @@ export function InventoryOperationForm({
         ) : null}
         {operation === "transformation" ? (
           <>
-            <ControlField
-              label={<>Pack to fill</>}
-              description="Packs kept separately have their own stock. To open packs, choose the pack as the product and loose stock here."
-            >
+            <ControlField label={<>Pack to fill</>}>
               <SelectControl
                 value={targetId}
                 onValueChange={(value) => setTargetId(value)}
@@ -920,60 +972,30 @@ export function InventoryOperationForm({
             />
           </ControlField>
         ) : null}
-        <div className="grid gap-2">
-          <p className="text-sm font-medium text-muted-foreground">
-            Optional · open only what you need
-          </p>
+        {!usesCategories && !recordsUse ? (
           <CatalogSections value={openSections} onValueChange={setOpenSections}>
-            {!usesCategories && !recordsUse ? (
-              <CatalogSection
-                id="note"
-                icon={Note01Icon}
-                title="Note"
-                summary={reason.trim() || "Anything to remember"}
-              >
-                <ControlField label={<>Note (optional)</>}>
-                  <Textarea
-                    value={reason}
-                    placeholder={
-                      operation === "count"
-                        ? "e.g. Weekly count"
-                        : operation === "transfer"
-                          ? "e.g. Weekend stock for the shop"
-                          : "e.g. Boxes for Saturday orders"
-                    }
-                    onChange={(event) => setReason(event.target.value)}
-                  />
-                </ControlField>
-              </CatalogSection>
-            ) : null}
             <CatalogSection
-              id="store"
-              icon={Store01Icon}
-              title={operation === "transfer" ? "Send from" : "Store"}
-              summary={store.name}
+              id="note"
+              icon={Note01Icon}
+              title="Note"
+              summary={reason.trim() || "Optional"}
             >
-              <ControlField
-                label={operation === "transfer" ? "Send from" : "Store"}
-                description="Changing the store clears the product."
-              >
-                <StoreSelector
-                  value={store}
-                  label={operation === "transfer" ? "Send from" : "Store"}
-                  disabled={pending || Boolean(retainedOperation.current)}
-                  onChange={(next) => {
-                    setStore(next)
-                    changeSource("")
-                    setTargetStoreId("")
-                    setTargetCustodyReferenceId("")
-                    setError(null)
-                    qaSnapshot.current = null
-                  }}
+              <ControlField label={<>Note (optional)</>}>
+                <Textarea
+                  value={reason}
+                  placeholder={
+                    operation === "count"
+                      ? "e.g. Weekly count"
+                      : operation === "transfer"
+                        ? "e.g. Weekend stock for the shop"
+                        : "e.g. Boxes for Saturday orders"
+                  }
+                  onChange={(event) => setReason(event.target.value)}
                 />
               </ControlField>
             </CatalogSection>
           </CatalogSections>
-        </div>
+        ) : null}
       </FieldSet>
       <FormActions>
         <SubmitButton
@@ -991,6 +1013,38 @@ export function InventoryOperationForm({
               : copy.save}
         </SubmitButton>
       </FormActions>
+      <AlertDialog
+        open={Boolean(confirming)}
+        onOpenChange={(next) => {
+          if (!next) setConfirming(null)
+        }}
+      >
+        {confirming ? (
+          <AlertDialogContent>
+            <AlertDialogTitle className="text-lg font-medium">
+              {confirming.title}
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-muted-foreground">
+              {confirming.detail}
+            </AlertDialogDescription>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Go back</AlertDialogCancel>
+              <Button
+                type="button"
+                variant={confirming.removing ? "destructive" : "default"}
+                className="tabular-nums"
+                onClick={() => {
+                  const next = confirming.retained
+                  setConfirming(null)
+                  send(next)
+                }}
+              >
+                {confirming.action}
+              </Button>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        ) : null}
+      </AlertDialog>
     </FieldGroup>
   )
 }
