@@ -181,6 +181,11 @@ formOnly(
   "Catalog page type and problem counts behind its filters; the assistant counts products with catalog.count and pages them with listItemsPage.",
   ["catalog.attentionSummary"],
 )
+formOnly(
+  "catalog",
+  "Dashboard item sheet's whole-item archive behind a confirm that names the item; the assistant drafts unit and variant archives (catalog.archive).",
+  ["catalog.archiveItem"],
+)
 excluded(
   "catalog",
   "Unbounded legacy list; assistant uses stable listItemsPage continuation.",

@@ -180,6 +180,7 @@ const catalog = new Set([
   "catalog.photos.createIntent",
   "catalog.photos.getMetadata",
   "catalog.archiveOffering",
+  "catalog.archiveItem",
   "catalog.archiveVariant",
   "catalog.createUnitConfigurationDraft",
   "catalog.createUnitDefinition",

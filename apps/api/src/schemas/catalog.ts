@@ -472,6 +472,10 @@ export const catalogArchiveOfferingSchema = z
   .object({ offeringId: z.string().trim().min(1) })
   .strict()
 
+export const catalogArchiveItemSchema = z
+  .object({ itemId: z.string().trim().min(1) })
+  .strict()
+
 export const catalogArchiveVariantSchema = z
   .object({ variantId: z.string().trim().min(1) })
   .strict()

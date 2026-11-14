@@ -6,11 +6,11 @@ Tickets refer to the Brain plan `.brain/plans/2026-10-09-assistant-business-oper
 
 ## Summary
 
-- Router procedures: 845 (643 merchant, 202 public/account/internal)
+- Router procedures: 841 (643 merchant, 198 public/account/internal)
 - Merchant supported by a capability: 188
 - Merchant planned: 144
-- Merchant form-only: 237
-- Merchant excluded: 74
+- Merchant form-only: 238
+- Merchant excluded: 73
 - Capabilities: 171 (89 read, 82 write)
 
 ## Capabilities
@@ -481,6 +481,7 @@ track conversational evaluation separately from these source test links.
 | `catalog.aiImages.startBatch` | mutation | catalog | catalog | form_only | Photo capture, upload, AI generation and refinement belong to the product form; model tools cannot spend generation allowance. |
 | `catalog.aiImages.state` | query | catalog | catalog | form_only | Photo capture, upload, AI generation and refinement belong to the product form; model tools cannot spend generation allowance. |
 | `catalog.aiImages.versions` | query | catalog | catalog | form_only | Photo capture, upload, AI generation and refinement belong to the product form; model tools cannot spend generation allowance. |
+| `catalog.archiveItem` | mutation | catalog | catalog | form_only | Dashboard item sheet's whole-item archive behind a confirm that names the item; the assistant drafts unit and variant archives (catalog.archive). |
 | `catalog.archiveOffering` | mutation | catalog | catalog | supported | catalog.archive |
 | `catalog.archiveVariant` | mutation | catalog | catalog | supported | catalog.archive |
 | `catalog.attentionSummary` | query | read | catalog | form_only | Catalog page type and problem counts behind its filters; the assistant counts products with catalog.count and pages them with listItemsPage. |
@@ -817,7 +818,6 @@ track conversational evaluation separately from these source test links.
 | `productAssistant.start` | mutation | Owner/Admin only | assistant | excluded | Assistant transport or a dedicated assistant flow. |
 | `productAssistant.state` | query | Owner/Admin only | assistant | excluded | Assistant transport or a dedicated assistant flow. |
 | `productAssistant.updateSnapshot` | mutation | Owner/Admin only | assistant | excluded | Assistant transport or a dedicated assistant flow. |
-| `qaAccess.fixtureContext` | query | Owner/Admin only | platform | excluded | Internal QA tooling. |
 | `qaTools.fixtureContext` | query | Owner/Admin only | platform | excluded | Internal QA tooling. |
 | `retailOps.checkWebSubscriptionPayment` | mutation | Owner/Admin only | platform | form_only | Subscription purchase and verification use the billing checkout. |
 | `retailOps.createSubscriptionCheckoutIntent` | mutation | Owner/Admin only | platform | form_only | Subscription purchase and verification use the billing checkout. |

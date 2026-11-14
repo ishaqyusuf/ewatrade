@@ -232,6 +232,8 @@ export type ListCatalogItemsPageInput = ListCatalogItemsInput & {
   attention?: CatalogAttention
   attentionStoreId?: string
   cursor?: string
+  /** Without a status filter, leave archived items out (dashboard Catalog list). */
+  hideArchived?: boolean
   limit?: number
   query?: string
   searchOrder?: "relevance" | "stable"
@@ -1677,6 +1679,49 @@ export async function archiveCatalogOffering(
   return db.sellableOffering.update({
     data: { archivedAt: new Date(), status: CatalogRecordStatus.ARCHIVED },
     where: { id: offering.id },
+  })
+}
+
+/**
+ * Archives a whole item: the item, every choice and every price, in one
+ * transaction. Past orders keep their lines; the item leaves selling and the
+ * default Catalog list but stays readable under the Archived filter.
+ */
+export async function archiveCatalogItem(
+  db: PrismaClient,
+  input: { itemId: string; tenantId: string },
+) {
+  return db.$transaction(async (tx) => {
+    const item = await tx.catalogItem.findFirst({
+      where: { id: input.itemId, tenantId: input.tenantId, systemRole: null },
+      select: { id: true, name: true, status: true },
+    })
+    if (!item)
+      throw new CatalogError(
+        "CATALOG_ITEM_NOT_FOUND",
+        "Catalog item not found.",
+      )
+    if (item.status === CatalogRecordStatus.ARCHIVED)
+      return { id: item.id, name: item.name }
+    const archivedAt = new Date()
+    const live = { status: { not: CatalogRecordStatus.ARCHIVED } }
+    await tx.sellableOffering.updateMany({
+      data: { archivedAt, status: CatalogRecordStatus.ARCHIVED },
+      where: { catalogItemId: item.id, ...live },
+    })
+    await tx.sellableVariant.updateMany({
+      data: {
+        archivedAt,
+        isDefault: false,
+        status: CatalogRecordStatus.ARCHIVED,
+      },
+      where: { catalogItemId: item.id, ...live },
+    })
+    await tx.catalogItem.update({
+      data: { archivedAt, status: CatalogRecordStatus.ARCHIVED },
+      where: { id: item.id },
+    })
+    return { id: item.id, name: item.name }
   })
 }
 

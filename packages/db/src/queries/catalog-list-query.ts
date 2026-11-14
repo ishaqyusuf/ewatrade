@@ -27,7 +27,11 @@ export async function catalogListPageQuery(
   const baseWhere: Prisma.CatalogItemWhereInput = {
     ...(options.itemIds ? { id: { in: options.itemIds } } : {}),
     kind: input.kind ? catalogKind(input.kind) : undefined,
-    status: input.status ? catalogStatus(input.status) : undefined,
+    status: input.status
+      ? catalogStatus(input.status)
+      : input.hideArchived
+        ? { not: CatalogRecordStatus.ARCHIVED }
+        : undefined,
     systemRole: null,
     tenantId: input.tenantId,
   }

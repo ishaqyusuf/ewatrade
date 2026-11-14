@@ -7,6 +7,7 @@ import {
   DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
   SheetClose,
   SheetDescription,
@@ -14,6 +15,7 @@ import {
   SheetTitle,
 } from "@ewatrade/ui"
 import {
+  Archive02Icon,
   Cancel01Icon,
   Image01Icon,
   MoreVerticalIcon,
@@ -29,6 +31,7 @@ import { CatalogIllustrationPreview } from "../catalog-illustration-preview"
 import { CatalogPhotoPreview } from "../catalog-photo-preview"
 import { canShareCatalogProduct } from "../catalog-product-share"
 import { CatalogProductShareDialog } from "../catalog-product-share-dialog"
+import { ArchiveCatalogItemDialog } from "./archive-item-dialog"
 import type { CatalogDetail } from "./display"
 import { catalogDetailAffordances } from "./read-access"
 export function CatalogDetailHeader({
@@ -56,6 +59,8 @@ export function CatalogDetailHeader({
     canManageUsage: detail.canManageUsage,
   })
   const [sharing, setSharing] = useState(false)
+  const [archiving, setArchiving] = useState(false)
+  const canArchive = !readOnly && item.status !== "archived"
   const kindLabel = item.kind === "service" ? "Service" : "Goods"
   const choiceCount = item.variants.filter(
     (variant) => variant.status !== "archived",
@@ -129,7 +134,7 @@ export function CatalogDetailHeader({
             />
           </>
         ) : null}
-        {affordances.privatePhotos ? (
+        {affordances.privatePhotos || canArchive ? (
           <DropdownMenu>
             <DropdownMenuTrigger
               render={
@@ -149,11 +154,13 @@ export function CatalogDetailHeader({
               className={themeClass}
             >
               <DropdownMenuGroup>
-                <DropdownMenuItem onClick={() => void setView("images")}>
-                  <HugeiconsIcon icon={Image01Icon} aria-hidden="true" />
-                  Images
-                </DropdownMenuItem>
-                {onStorefrontSettings ? (
+                {affordances.privatePhotos ? (
+                  <DropdownMenuItem onClick={() => void setView("images")}>
+                    <HugeiconsIcon icon={Image01Icon} aria-hidden="true" />
+                    Images
+                  </DropdownMenuItem>
+                ) : null}
+                {onStorefrontSettings && affordances.privatePhotos ? (
                   <DropdownMenuItem onClick={onStorefrontSettings}>
                     <HugeiconsIcon icon={Store01Icon} aria-hidden="true" />
                     Storefront settings
@@ -166,8 +173,31 @@ export function CatalogDetailHeader({
                   </DropdownMenuItem>
                 ) : null}
               </DropdownMenuGroup>
+              {canArchive ? (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuGroup>
+                    <DropdownMenuItem
+                      variant="destructive"
+                      onClick={() => setArchiving(true)}
+                    >
+                      <HugeiconsIcon icon={Archive02Icon} aria-hidden="true" />
+                      Archive item
+                    </DropdownMenuItem>
+                  </DropdownMenuGroup>
+                </>
+              ) : null}
             </DropdownMenuContent>
           </DropdownMenu>
+        ) : null}
+        {canArchive ? (
+          <ArchiveCatalogItemDialog
+            itemId={item.id}
+            itemName={item.name}
+            open={archiving}
+            onOpenChange={setArchiving}
+            className={themeClass}
+          />
         ) : null}
       </div>
     </SheetHeader>

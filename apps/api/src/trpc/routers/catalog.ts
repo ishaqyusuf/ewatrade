@@ -11,6 +11,7 @@ import { CatalogPhotoError } from "@ewatrade/db/catalog-photos"
 import {
   CatalogError,
   addServiceChoiceInTransaction,
+  archiveCatalogItem,
   archiveCatalogOffering,
   archiveCatalogVariant,
   countCatalogItems,
@@ -49,6 +50,7 @@ import { catalogStorefrontRouter } from "./catalog-storefront"
 
 import {
   catalogAddServiceChoiceSchema,
+  catalogArchiveItemSchema,
   catalogArchiveOfferingSchema,
   catalogArchiveVariantSchema,
   catalogAttentionSummarySchema,
@@ -367,6 +369,22 @@ export const catalogRouter = createTRPCRouter({
       }
     }),
 
+  /** Archives the whole item; owners and admins (or staff with Catalog). */
+  archiveItem: protectedProcedure
+    .input(catalogArchiveItemSchema)
+    .mutation(async ({ ctx, input }) => {
+      assertCanManageCatalog(ctx.tenantContext)
+      try {
+        return await archiveCatalogItem(ctx.db, {
+          ...input,
+          tenantId: ctx.tenantContext.tenant.id,
+        })
+      } catch (error) {
+        if (error instanceof CatalogError) throw catalogTRPCError(error)
+        throw error
+      }
+    }),
+
   archiveVariant: protectedProcedure
     .input(catalogArchiveVariantSchema)
     .mutation(async ({ ctx, input }) => {
@@ -558,6 +576,8 @@ export const catalogRouter = createTRPCRouter({
         throw new TRPCError({ code: "NOT_FOUND", message: "Store not found" })
       return listCatalogDirectoryPage(ctx.db, {
         ...input,
+        // Archived items show only under the Archived status filter.
+        hideArchived: true,
         tenantId: ctx.tenantContext.tenant.id,
         storeId: store.id,
         storeIds:
