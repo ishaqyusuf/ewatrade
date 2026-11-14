@@ -422,11 +422,19 @@ export function ClassicCatalogItemOverview({
             border={Boolean(item.description || item.category)}
             icon={product ? "Package" : "Wrench"}
             tint={product ? "sky" : "lilac"}
-            title={product ? "Stock-tracked item" : "Service"}
+            title={
+              returnable
+                ? "Returnable item"
+                : product
+                  ? "Stock-tracked item"
+                  : "Service"
+            }
             sub={
-              product
-                ? "Stock moves when orders are fulfilled"
-                : "Work is tracked in Service jobs"
+              returnable
+                ? "Counted per customer until it comes back"
+                : product
+                  ? "Stock moves when orders are fulfilled"
+                  : "Work is tracked in Service jobs"
             }
           />
           {item.product && !canManageUsage ? (
