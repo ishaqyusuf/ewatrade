@@ -8,6 +8,7 @@ import {
   pdfBytes,
   statementPdfRange,
 } from "@/lib/customer-ledger/statement-pdf"
+import { printPdf, removePrintFrame } from "@/lib/print-pdf"
 import { useTRPC } from "@/trpc/client"
 import { useDashboardWorkflow } from "@ewatrade/events/dashboard-client"
 import {
@@ -89,7 +90,6 @@ function StatementPdfFrame({
   const [showPaymentDetails, setShowPaymentDetails] = useState(true)
   const [url, setUrl] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const printFrame = useRef<HTMLIFrameElement | null>(null)
   const query = useQuery(
     trpc.customerLedger.statementPdf.queryOptions(
       {
@@ -120,12 +120,7 @@ function StatementPdfFrame({
     setUrl(next)
     return () => URL.revokeObjectURL(next)
   }, [data])
-  useEffect(
-    () => () => {
-      printFrame.current?.remove()
-    },
-    [],
-  )
+  useEffect(() => removePrintFrame, [])
 
   function choose(value: StatementPdfPreset) {
     setPreset(value)
@@ -147,23 +142,11 @@ function StatementPdfFrame({
   function print() {
     if (!url) return
     setError(null)
-    printFrame.current?.remove()
-    const frame = document.createElement("iframe")
-    frame.title = "Statement to print"
-    frame.className = "fixed right-0 bottom-0 size-0 border-0 opacity-0"
-    frame.src = url
-    frame.onload = () => {
-      try {
-        frame.contentWindow?.focus()
-        frame.contentWindow?.print()
-      } catch {
-        // Some browsers keep PDF viewers out of reach; open it to print there.
-        if (!window.open(url, "_blank"))
-          setError("Allow pop-ups to print, or download the PDF and print it.")
-      }
-    }
-    document.body.append(frame)
-    printFrame.current = frame
+    printPdf(url, {
+      title: "Statement to print",
+      onBlocked: () =>
+        setError("Allow pop-ups to print, or download the PDF and print it."),
+    })
     workflow.track("report_print", "completed")
   }
 

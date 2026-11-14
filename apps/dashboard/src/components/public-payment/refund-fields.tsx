@@ -32,12 +32,12 @@ export function RefundFields({
       <legend className="text-sm font-semibold">
         Where should a refund go?
       </legend>
-      <p className="text-[13px] leading-relaxed text-muted-foreground">
+      <p className="text-xs leading-relaxed text-muted-foreground">
         This requests a refund of the confirmed extra. The business must check
         the transfer and approve it before any money is returned.
       </p>
       {saved ? (
-        <p className="text-[13px] text-muted-foreground">
+        <p className="text-xs text-muted-foreground">
           Bank details are already attached to this draft. Leave these blank to
           keep them, or enter all three fields to replace them.
         </p>
@@ -71,7 +71,7 @@ export function RefundFields({
               />
             </label>
           ))}
-          <p className="text-[13px] text-muted-foreground">
+          <p className="text-xs text-muted-foreground">
             Optional. If you leave these blank, the business will need your bank
             details before arranging a refund. They are never saved in this
             browser.
@@ -79,7 +79,7 @@ export function RefundFields({
         </>
       ) : (
         <>
-          <p className="text-[13px] text-muted-foreground">
+          <p className="text-xs text-muted-foreground">
             Sign in as this order's customer to attach bank details. You can
             send the refund preference now and give details to the business
             later.

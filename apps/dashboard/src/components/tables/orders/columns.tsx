@@ -131,6 +131,19 @@ export function orderColumns(timeZone?: string): ColumnDef<OrderRow>[] {
       },
     },
     {
+      accessorKey: "status",
+      header: "Status",
+      size: 150,
+      minSize: 120,
+      maxSize: 200,
+      meta: {
+        headerLabel: "Status",
+        sortField: "status",
+        skeleton: { type: "badge" as const, width: "w-24" },
+      },
+      cell: ({ row }) => <OrderStatusPill status={row.original.status} />,
+    },
+    {
       accessorKey: "totalMinor",
       header: "Total",
       size: 130,
@@ -167,19 +180,6 @@ export function orderColumns(timeZone?: string): ColumnDef<OrderRow>[] {
           <span className="text-muted-foreground">—</span>
         )
       },
-    },
-    {
-      accessorKey: "status",
-      header: "Status",
-      size: 150,
-      minSize: 120,
-      maxSize: 200,
-      meta: {
-        headerLabel: "Status",
-        sortField: "status",
-        skeleton: { type: "badge" as const, width: "w-24" },
-      },
-      cell: ({ row }) => <OrderStatusPill status={row.original.status} />,
     },
   ]
 }

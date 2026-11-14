@@ -57,7 +57,7 @@ export function PaymentHero({ link }: { link: PublicPaymentLink }) {
   return (
     <section className="bg-[linear-gradient(150deg,#17684f,#0e4a38)] text-[#fff9ed]">
       <div className="mx-auto flex w-full max-w-[520px] flex-col gap-0.5 px-5 pt-10 pb-6 sm:pt-14">
-        <h1 className="text-[13.5px] opacity-85">
+        <h1 className="text-xs opacity-85">
           {link.businessName} · Order {link.orderNumber}
         </h1>
         <p className="text-[40px] leading-tight font-extrabold tracking-tight tabular-nums">
@@ -66,7 +66,7 @@ export function PaymentHero({ link }: { link: PublicPaymentLink }) {
         </p>
         <HeroAmountCopy amountMinor={link.amountPrefilledMinor} />
         {summary ? <p className="text-sm opacity-85">{summary}</p> : null}
-        <p className="mt-1 text-[13px] opacity-75">
+        <p className="mt-1 text-xs opacity-75">
           {link.paidMinor > 0
             ? `Part paid · ${money(link.balanceMinor, link.currencyCode)} left`
             : "Not paid yet"}
@@ -139,9 +139,7 @@ export function OutcomeCard({
         <div
           className={`${cardClass} flex flex-col gap-0.5 border-l-4 border-l-destructive px-3.5 py-3`}
         >
-          <small className="text-[12.5px] text-muted-foreground">
-            Their message
-          </small>
+          <small className="text-xs text-muted-foreground">Their message</small>
           <b className="text-[15px] leading-relaxed">{status.message}</b>
         </div>
       </>
@@ -252,7 +250,7 @@ export function WaitingView({
         ]}
       />
       {proposal ? (
-        <p className="text-center text-[13px] leading-relaxed text-muted-foreground">
+        <p className="text-center text-xs leading-relaxed text-muted-foreground">
           {proposal}
         </p>
       ) : null}
@@ -266,12 +264,12 @@ export function WaitingView({
         />
       ) : null}
       {reference ? (
-        <p className="text-center text-[13px] leading-relaxed text-muted-foreground">
+        <p className="text-center text-xs leading-relaxed text-muted-foreground">
           A matching reference helps {link.businessName} find your transfer.
           They still confirm it in their bank account.
         </p>
       ) : null}
-      <p className="text-center text-[13px] leading-relaxed text-muted-foreground">
+      <p className="text-center text-xs leading-relaxed text-muted-foreground">
         {canRecover
           ? "You can close this page. Open the same link in this browser later to see the result."
           : "Keep this page open to see the result. Your browser couldn't save this report for a later visit."}

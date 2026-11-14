@@ -92,19 +92,19 @@ export function ReceiptCheck({
         <div className="mt-1 flex flex-wrap items-center gap-2">
           <button
             type="button"
-            className="inline-flex h-8 items-center rounded-lg border border-border bg-card px-2.5 text-[13px] font-semibold transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/40 disabled:opacity-60"
+            className="inline-flex h-11 items-center rounded-lg border border-border bg-card px-3 text-xs font-semibold transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/40 disabled:opacity-60"
             disabled={retry.isPending}
             onClick={() => retry.mutate({ reportToken })}
           >
             {retry.isPending ? "Checking again…" : "Check again"}
           </button>
           {retry.isError ? (
-            <span role="alert" className="text-[13px] text-destructive">
+            <span role="alert" className="text-xs text-destructive">
               Couldn't start the check. {businessName} can still check it.
             </span>
           ) : retry.isSuccess &&
             retry.data.receiptAssessment?.state === "unavailable" ? (
-            <span className="text-[13px] text-muted-foreground">
+            <span className="text-xs text-muted-foreground">
               The check is still unavailable.
             </span>
           ) : null}

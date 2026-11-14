@@ -11,7 +11,7 @@ const PILL: Record<PillTone, string> = {
   amber: "bg-warning text-warning-foreground",
   green: "bg-success text-success-foreground",
   blue: "bg-info text-info-foreground",
-  muted: "bg-neutral text-neutral-foreground",
+  muted: "bg-[var(--neutral)] text-[var(--neutral-foreground)]",
   red: "bg-danger text-danger-foreground",
 }
 

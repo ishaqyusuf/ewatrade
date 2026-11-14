@@ -40,11 +40,7 @@ export function OrderCreateSheet({
       }}
     >
       {open ? (
-        <SheetFrame
-          closeError={closeError}
-          title="New order"
-          description="Pick catalog items or type a price. Customer details are optional."
-        >
+        <SheetFrame closeError={closeError} title="New order">
           <OrderForm
             key={`${store.id}:create`}
             store={store}

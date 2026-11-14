@@ -248,7 +248,7 @@ function CreditOfferNote({
             },
           ]}
         />
-        <p className="text-[13px] leading-relaxed text-muted-foreground">
+        <p className="text-xs leading-relaxed text-muted-foreground">
           This uses money {businessName} already holds for you. No new bank
           transfer is recorded.
         </p>
@@ -325,7 +325,7 @@ function CreditOfferNote({
   // A failed read is not a zero balance: say so quietly and let the customer retry.
   if (fundsQuery.isError && !fundsQuery.data)
     return (
-      <p className="text-center text-[13px] text-muted-foreground">
+      <p className="text-center text-xs text-muted-foreground">
         Couldn't check for credit.{" "}
         <button
           type="button"

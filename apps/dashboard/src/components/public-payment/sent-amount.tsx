@@ -80,7 +80,7 @@ export function SentAmount({
         <span
           id={`${id}-sent-hint`}
           className={cn(
-            "text-[13px]",
+            "text-xs",
             error ? "text-destructive" : "text-muted-foreground",
           )}
         >
@@ -92,7 +92,7 @@ export function SentAmount({
       </div>
 
       {review.kind === "more" ? (
-        <p className="rounded-xl bg-info px-3.5 py-2.5 text-[13px] leading-relaxed text-info-foreground">
+        <p className="rounded-xl bg-info px-3.5 py-2.5 text-xs leading-relaxed text-info-foreground">
           That's more than this link asks for. Once {businessName} confirms it,{" "}
           {money(review.applyMinor, currencyCode)} goes to this order
           {review.leftMinor > 0
@@ -110,7 +110,7 @@ export function SentAmount({
             What should happen to the extra{" "}
             {money(review.extraMinor, currencyCode)}?
           </legend>
-          <p className="text-[13px] leading-relaxed text-muted-foreground">
+          <p className="text-xs leading-relaxed text-muted-foreground">
             {money(review.applyMinor, currencyCode)} pays this order in full.
             This is only your preference: {businessName} first confirms what
             actually arrived.
@@ -132,7 +132,7 @@ export function SentAmount({
             </label>
           ))}
           {choice === "REFUND" ? (
-            <p className="text-[13px] leading-relaxed text-muted-foreground">
+            <p className="text-xs leading-relaxed text-muted-foreground">
               Asking for a refund doesn't send one. {businessName} asks for your
               bank details after they confirm your transfer.
             </p>

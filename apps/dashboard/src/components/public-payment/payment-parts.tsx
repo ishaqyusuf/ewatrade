@@ -49,7 +49,7 @@ export const primaryButtonClass =
 export const secondaryButtonClass =
   "flex h-13 w-full items-center justify-center gap-2 rounded-2xl border-[1.5px] border-border bg-card px-4 text-base font-bold text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/40 disabled:pointer-events-none disabled:opacity-60"
 const smallButtonClass =
-  "inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg border border-border bg-card px-2.5 text-[13px] font-semibold text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/40"
+  "inline-flex h-11 shrink-0 items-center gap-1.5 rounded-lg border border-border bg-card px-2.5 text-xs font-semibold text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/40"
 
 /** Branded page frame: centered column, an optional hero band and the EwaTrade footer. */
 export function PaymentShell({
@@ -96,7 +96,7 @@ export function BusinessHeader({
       </span>
       <div className="min-w-0">
         <h1 className="truncate text-[17px] font-bold">{businessName}</h1>
-        <p className="text-[13px] text-muted-foreground">Order {orderNumber}</p>
+        <p className="text-xs text-muted-foreground">Order {orderNumber}</p>
       </div>
     </header>
   )
@@ -337,7 +337,7 @@ export function HeroAmountCopy({ amountMinor }: { amountMinor: number }) {
       value={copyableAmount(amountMinor)}
       label="amount"
       text="Copy amount"
-      className="mt-1 inline-flex min-h-9 items-center gap-1.5 self-start rounded-full border border-white/25 bg-white/15 px-3 text-[13px] font-bold text-inherit transition-colors hover:bg-white/25 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-white/40"
+      className="mt-1 inline-flex min-h-9 items-center gap-1.5 self-start rounded-full border border-white/25 bg-white/15 px-3 text-xs font-bold text-inherit transition-colors hover:bg-white/25 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-white/40"
     />
   )
 }
@@ -413,9 +413,7 @@ export function BankDetails({
               key={row.label}
               className="flex flex-col border-b border-border px-3.5 py-2.5 last:border-b-0"
             >
-              <dt className="text-[12.5px] text-muted-foreground">
-                {row.label}
-              </dt>
+              <dt className="text-xs text-muted-foreground">{row.label}</dt>
               <dd className="flex items-center justify-between gap-2">
                 <b
                   className={cn(
@@ -440,7 +438,7 @@ export function BankDetails({
           {announcement}
         </span>
       </div>
-      <p className="text-center text-[13px] leading-relaxed text-muted-foreground">
+      <p className="text-center text-xs leading-relaxed text-muted-foreground">
         Paste {reference.value} into your bank app's narration or description.
       </p>
       <CopyButton
@@ -463,7 +461,7 @@ export function FixedAmount({
 }) {
   return (
     <div className="flex flex-col gap-0.5">
-      <small className="text-[13px] text-muted-foreground">
+      <small className="text-xs text-muted-foreground">
         Amount to transfer
       </small>
       <b className="text-[30px] font-extrabold tracking-tight tabular-nums">
@@ -496,7 +494,7 @@ export function AmountField({
   const id = useId()
   return (
     <div className="flex flex-col gap-1">
-      <label htmlFor={id} className="text-[13px] text-muted-foreground">
+      <label htmlFor={id} className="text-xs text-muted-foreground">
         Amount you're paying
       </label>
       <div
@@ -524,7 +522,7 @@ export function AmountField({
       <span
         id={`${id}-hint`}
         className={cn(
-          "text-[13px]",
+          "text-xs",
           error ? "text-destructive" : "text-muted-foreground",
         )}
       >
@@ -593,7 +591,7 @@ export function ReceiptPicker({
             <b className="block truncate text-[15px]">
               {receipt.meta.fileName}
             </b>
-            <small className="text-[13px] text-muted-foreground">
+            <small className="text-xs text-muted-foreground">
               {receiptSizeLabel(receipt.meta.sizeBytes)}
             </small>
           </span>
@@ -632,18 +630,14 @@ export function ReceiptPicker({
             <b className="block text-[15px]">
               {reading ? "Checking the file…" : "Add transfer receipt"}
             </b>
-            <small className="text-[13px] text-muted-foreground">
+            <small className="text-xs text-muted-foreground">
               Optional · photo or PDF, up to 4 MB
             </small>
           </span>
         </button>
       )}
       {error ? (
-        <span
-          id={errorId}
-          role="alert"
-          className="text-[13px] text-destructive"
-        >
+        <span id={errorId} role="alert" className="text-xs text-destructive">
           {error}
         </span>
       ) : null}
@@ -686,7 +680,7 @@ export function LiveIndicator({
 }) {
   if (connection === "reconnecting" || connection === "stopped")
     return (
-      <div className="mt-1 inline-flex items-center gap-2 rounded-full bg-warning py-1.5 pr-1.5 pl-3 text-[12.5px] text-warning-foreground">
+      <div className="mt-1 inline-flex items-center gap-2 rounded-full bg-warning py-1.5 pr-1.5 pl-3 text-xs text-warning-foreground">
         <HugeiconsIcon
           icon={WifiDisconnected01Icon}
           strokeWidth={2}
@@ -707,7 +701,7 @@ export function LiveIndicator({
       </div>
     )
   return (
-    <div className="mt-1 inline-flex items-center gap-1.5 text-[12.5px] text-muted-foreground">
+    <div className="mt-1 inline-flex items-center gap-1.5 text-xs text-muted-foreground">
       <span
         aria-hidden="true"
         className={cn(

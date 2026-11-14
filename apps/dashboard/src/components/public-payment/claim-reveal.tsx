@@ -134,8 +134,8 @@ export function ClaimReveal({
           id={`${id}-name-hint`}
           className={
             nameError
-              ? "text-[13px] text-destructive"
-              : "text-[13px] text-muted-foreground"
+              ? "text-xs text-destructive"
+              : "text-xs text-muted-foreground"
           }
         >
           {nameError ??
@@ -151,7 +151,7 @@ export function ClaimReveal({
 
       {receipt}
 
-      <p className="text-center text-[13px] leading-relaxed text-muted-foreground">
+      <p className="text-center text-xs leading-relaxed text-muted-foreground">
         {link.businessName} will check their account. Saying you've paid doesn't
         mark the order as paid.
       </p>

@@ -1,4 +1,5 @@
 "use client"
+import { printPdf, removePrintFrame } from "@/lib/print-pdf"
 import { useDashboardWorkflow } from "@ewatrade/events/dashboard-client"
 import { receiptFileStem } from "@ewatrade/order-receipts"
 import { useEffect, useMemo, useState } from "react"
@@ -28,7 +29,10 @@ export function useReceiptDownload(
       new Blob([bytes], { type: "application/pdf" }),
     )
     setUrl(next)
-    return () => URL.revokeObjectURL(next)
+    return () => {
+      removePrintFrame()
+      URL.revokeObjectURL(next)
+    }
   }, [pdfBase64])
 
   async function download(format: "pdf" | "image") {
@@ -104,25 +108,14 @@ export function useReceiptDownload(
     }
   }
 
-  /** Prints the same PDF from a hidden frame; opens it when a frame can't. */
   function print() {
     if (!url) return
-    const frame = document.createElement("iframe")
-    frame.style.position = "fixed"
-    frame.style.width = "0"
-    frame.style.height = "0"
-    frame.style.border = "0"
-    frame.src = url
-    frame.onload = () => {
-      try {
-        frame.contentWindow?.focus()
-        frame.contentWindow?.print()
-      } catch {
-        window.open(url, "_blank", "noopener")
-      }
-      window.setTimeout(() => frame.remove(), 60_000)
-    }
-    document.body.append(frame)
+    setError(null)
+    printPdf(url, {
+      title: "Receipt to print",
+      onBlocked: () =>
+        setError("Allow pop-ups to print, or download the PDF and print it."),
+    })
   }
 
   return { url, pending, message, error, download, canShare, share, print }

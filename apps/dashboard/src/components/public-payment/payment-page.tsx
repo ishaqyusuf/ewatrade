@@ -851,13 +851,13 @@ export function PaymentPage({
               </ReceiptCheck>
             ) : null}
             {checkReady ? (
-              <p className="text-[13px] text-muted-foreground">
+              <p className="text-xs text-muted-foreground">
                 Your report is still a draft. Send it below when you're ready;{" "}
                 {link.businessName} will check their account.
               </p>
             ) : null}
             {draftMode && record?.receipt && !receipt && !receiptEdited ? (
-              <p className="text-[13px] text-muted-foreground">
+              <p className="text-xs text-muted-foreground">
                 Receipt saved for this draft: {record.receipt.fileName}.{" "}
                 <button
                   type="button"
@@ -1235,7 +1235,7 @@ export function PaymentPage({
         {next && notice?.kind === "error" ? (
           <p
             role="alert"
-            className="text-center text-[13px] leading-relaxed text-destructive"
+            className="text-center text-xs leading-relaxed text-destructive"
           >
             {notice.message}
           </p>
@@ -1335,7 +1335,7 @@ export function PaymentPage({
         {previousReference &&
         viewLink.paymentReference &&
         previousReference !== viewLink.paymentReference ? (
-          <p className="text-[13px] leading-relaxed text-muted-foreground">
+          <p className="text-xs leading-relaxed text-muted-foreground">
             This transfer has a new payment reference. Your last report used{" "}
             <span className="break-all">{previousReference}</span>.
           </p>
