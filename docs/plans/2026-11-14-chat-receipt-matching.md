@@ -4,7 +4,9 @@
 (photo or PDF) with the assistant on WhatsApp or Telegram. OpenAI reads it, the
 assistant works out what the money was, and records it after the merchant confirms.
 
-Status: owner selected v18 and asked to implement it all (14 Nov 2026). Implementation in progress.
+Status: owner selected v18 and asked to implement it all (14 Nov 2026). Source
+implemented and verified on Development; hosted channels need the settings below.
+The cashier approval queue (19l) is not built yet.
 
 ## What the owner asked for
 
@@ -117,3 +119,70 @@ permission get the approval link; overpayments are kept as customer credit;
 Telegram follows the same flows without a separate Workshop pass.
 
 No product code, schema, provider call, or deployment in this checkpoint.
+
+## Implementation — 14 November 2026
+
+Commits `1f5c6fe77` (reader, matcher, schema), `ef21d259d` (chat wiring and
+payment receipt attachment), `703b9c5b9` (Telegram) and `680589ef0` (account
+numbers printed with the bank name).
+
+- **Reader** `packages/payments/src/chat-receipt.ts`: OpenAI Responses API,
+  `gpt-4.1-mini` by default, strict schema with sender and recipient name,
+  account and bank, remark, reference, date, status and document kind. Images
+  are normalized to JPEG; PDFs go as a file input. `store: false`.
+- **Matcher** `packages/assistant/src/general/receipt-match.ts`: pure. Account
+  by number (full, masked, or printed with the bank name), else saved holder
+  name with an agreeing bank. Both sides ours means a transfer; only the sender
+  ours means money out, with the remark choosing an expense category or owner
+  withdrawal; only the recipient ours means money in, matched by order number,
+  then the remark, the caption, then the sender's name. Same customer with
+  several orders takes the exact balance, else asks.
+- **Chat** `apps/api/src/assistant/general-receipt-chat.ts` runs in the shared
+  turn before the simple money collectors, so WhatsApp, Telegram and the app
+  chat behave the same. One read per attachment (`AssistantReceiptRead`), then:
+  `payment_record` (with `receiptAttachmentId`, attached to the order's Notes &
+  photos on confirm), `money_transfer_simple`, `expense_record_simple` (saved
+  category, else Operating expenses), `money_movement` owner withdrawal, or
+  `sale_record` for "not for an order". Questions (which order, which account,
+  what for) are answered by the next message: a name, a list number, an account
+  name or a purpose word. A completed earlier read with the same bank reference
+  is refused. Failed, reversed, multi-transfer and foreign-currency receipts are
+  refused. A caption that orders goods (“20 crates of eggs for this customer”)
+  hands the server-read facts to the model, which prepares the order with the
+  payment through `prepareOrder`.
+- **Overpayment** records the order's balance; the extra becomes the customer's
+  credit through a second reviewed `customer_receipt` when the owner replies
+  `credit` after confirming. The design showed one confirmation for both.
+- **Telegram** stores a single photo or photo/PDF document as the chat's ready
+  attachment (`apps/api/src/assistant/telegram-file.ts`); albums, voice notes and
+  other files keep the text-only reply.
+- **Staff** without the needed permission are told an owner or admin must record
+  it. The design's approval request to Ada or Kemi (19l) needs an approval queue
+  and owner notification that do not exist yet.
+
+### Settings for hosted channels
+
+- An OpenAI key with Responses access: `ASSISTANT_RECEIPT_OPENAI_API_KEY`, or the
+  assistant `OPENAI_API` key. `CATALOG_IMAGE_OPENAI_API_KEY` is image-scoped and
+  returns 401 for this call.
+- WhatsApp: `ASSISTANT_WHATSAPP_MEDIA_ENABLED=true`, and add `payment_record`
+  to `ASSISTANT_WHATSAPP_NATIVE_REVIEW_ACTIONS` so owners confirm payments in
+  chat (otherwise the review link is used).
+- Telegram: release the payment, transfer and expense capabilities in
+  `ASSISTANT_TELEGRAM_RELEASED_CAPABILITY_IDS`.
+- Money accounts need their account number (or holder and bank) in Finance to
+  be matched.
+
+### Verification
+
+- Unit: reader 6 tests, matcher 15 tests, Telegram parser 16 tests, Telegram API
+  61 tests, media turn and channel review 14 tests.
+- Guarded Development QA integration test (own QA business, removed after):
+  every receipt outcome above, payment confirmed with the receipt on the order,
+  Telegram photo and PDF ingest. 26 assertions.
+- Live Development turn as the Claude Web Test Farms QA owner: a rendered receipt
+  read by `gpt-4.1-mini` (about 1,700 input tokens, 4–5 s) matched ORD-035 by
+  sender and GTBank current account by number and drafted the payment review.
+  That run set the GTBank current account's number to `0123454417` in that QA
+  business.
+- Not run: a real WhatsApp or Telegram delivery, hosted environments.
