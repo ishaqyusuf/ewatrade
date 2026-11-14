@@ -167,7 +167,7 @@ numbers printed with the bank name).
   approves transfers" and asks `ask` or `cancel` (no buttons; plain reply).
 - `ask` → `APPROVAL_PENDING` for 3 days. Owners/Admins whose role can record the
   action are told "Bisi sent a transfer to approve" with the link
-  `/receipt-approval/<id>`, on their linked WhatsApp (only inside WhatsApp's
+  `/open/receipt-approval/<id>`, on their linked WhatsApp (only inside WhatsApp's
   24-hour window: new `server_notice` outbox kind on their newest completed
   inbox, rechecked by delivery) and on Telegram (direct send to the linked
   chat, allow-lists apply). QA businesses only reach chats when
@@ -181,12 +181,21 @@ numbers printed with the bank name).
   declined …": an assistant message in their conversation plus the same
   WhatsApp/Telegram notice. Payments approved this way don't attach the
   cashier's photo to the order (the file belongs to the cashier's chat); the
-  note says the receipt was sent in chat. Not built: email to owners, mobile
-  app approval screen, push notifications.
+  note says the receipt was sent in chat. Not built: email to owners, push
+  notifications.
+- Mobile app: owners and admins see "N receipts to approve" on the home's
+  Needs attention rail (one request opens directly, more open a list). The
+  native screen `receipt-approval/[id]` shows the receipt facts and the chat's
+  draft card with Approve and save, Edit and Decline. The link
+  `/open/receipt-approval/<id>` is claimed by the installed app (Android intent
+  filter prefix, iOS association path) and redirects to the web page in a
+  browser. Android picks up the new link prefix only from the next native
+  build; until then the link opens the web page.
 - Code: `apps/api/src/assistant/general-receipt-approval.ts`,
   `packages/db/src/queries/assistant-whatsapp/server-notice.ts`,
-  `apps/dashboard/src/app/receipt-approval/[id]`. Commits `c65386843`,
-  `5df5612a6`.
+  `apps/dashboard/src/app/receipt-approval/[id]`,
+  `apps/mobile/src/components/mobile/assistant/receipt-approval-screen.tsx`.
+  Commits `c65386843`, `5df5612a6`, `33b38ea7d`.
 
 ### Settings for hosted channels
 
