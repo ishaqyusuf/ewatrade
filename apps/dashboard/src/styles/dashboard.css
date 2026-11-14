@@ -28,6 +28,11 @@
   --ui-control-h-lg: 3rem;
   --ui-control-px: 1rem;
   --ui-control-border: var(--input);
+  /* Search groups, comboboxes, select menus and OTP cells: a solid field with
+     the 3:1 border, like plain inputs (packages/ui default is a grey pill). */
+  --ui-control-fill: var(--background);
+  --ui-field-border: var(--input);
+  --ui-chip-fill: var(--muted);
   --ui-radius-control: 10px;
   --ui-radius-surface: 14px;
   --ui-radius-item: 8px;

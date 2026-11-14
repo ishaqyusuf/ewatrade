@@ -88,6 +88,9 @@
   --color-highlight: var(--highlight);
   --color-highlight-foreground: var(--highlight-foreground);
   --color-highlight-border: var(--highlight-border);
+  /* Set by apps that define --neutral (dashboard draft/neutral pills). */
+  --color-neutral: var(--neutral);
+  --color-neutral-foreground: var(--neutral-foreground);
 }
 
 :root {
