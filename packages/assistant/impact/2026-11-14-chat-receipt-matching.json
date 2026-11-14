@@ -4,7 +4,7 @@
   "tickets": [
     "H02"
   ],
-  "summary": "Read bank transfer receipts an owner shares in the assistant chat (photo or PDF) with OpenAI, then match them to an owing order, a transfer between the business's own accounts, or money out, and draft the existing reviewed action. Nothing is recorded until the owner confirms. Telegram now downloads a single photo or PDF sent to the bot and stores it as the chat's attachment so the same receipt flow runs; other media keeps the text-only reply.",
+  "summary": "Read bank transfer receipts an owner shares in the assistant chat (photo or PDF) with OpenAI, then match them to an owing order, a transfer between the business's own accounts, or money out, and draft the existing reviewed action. Nothing is recorded until the owner confirms. Telegram now downloads a single photo or PDF sent to the bot and stores it as the chat's attachment so the same receipt flow runs; other media keeps the text-only reply. Staff who can't record a receipt's action ask in chat; Owners/Admins are told (WhatsApp in-window server notice, Telegram) and approve on /receipt-approval/<id>, which drafts the action as the approver's own proposal and confirms it once.",
   "capabilities": [
     {
       "id": "sales.payment.record",
@@ -69,7 +69,7 @@
       "result": "All API Telegram unit suites: 61 tests, 236 assertions pass."
     },
     {
-      "kind": "manual",
+      "kind": "run",
       "path": "apps/api/src/assistant/general-turn-execution.ts",
       "executed": true,
       "result": "Live Development turn (14 Nov 2026) as the Claude Web Test Farms QA owner: a rendered transfer receipt was read by gpt-4.1-mini (1,695 input / 138 output tokens), matched to ORD-035 by sender name and to GTBank current account by account number, and drafted payment_record with the receipt attached; review lines were the 5-line native shape. Proposal left to expire unconfirmed. Turn 17.7 s."
@@ -79,6 +79,18 @@
       "path": "packages/assistant/src/general/receipt-match.test.ts",
       "executed": true,
       "result": "15 tests, 38 assertions pass, including bank names printed with the account number (GTBank |, 9PSB, Xpress masked)."
+    },
+    {
+      "kind": "test",
+      "path": "apps/api/src/assistant/general-receipt-chat.integration.test.ts",
+      "executed": true,
+      "result": "Cashier approval (19l) added to the guarded Development QA test: offer, ask, owner list/open/approve as their own proposal, second approval refused, cashier told, decline cancels the draft, cancel before asking. 1 test, 46 assertions pass."
+    },
+    {
+      "kind": "run",
+      "path": "apps/dashboard/src/components/general-assistant/receipt-approval-review.tsx",
+      "executed": true,
+      "result": "Dashboard on Development as the Heritage Wash & Care QA owner with a temporary book, accounts and cashier (removed after): Needs you listed the request; the approval page showed receipt facts and the transfer review card; Decline closed it with nothing saved."
     }
   ]
 }

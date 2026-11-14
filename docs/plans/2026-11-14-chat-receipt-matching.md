@@ -6,7 +6,7 @@ assistant works out what the money was, and records it after the merchant confir
 
 Status: owner selected v18 and asked to implement it all (14 Nov 2026). Source
 implemented and verified on Development; hosted channels need the settings below.
-The cashier approval queue (19l) is not built yet.
+The cashier approval request (19l) was added the same day (see its section).
 
 ## What the owner asked for
 
@@ -156,9 +156,37 @@ numbers printed with the bank name).
 - **Telegram** stores a single photo or photo/PDF document as the chat's ready
   attachment (`apps/api/src/assistant/telegram-file.ts`); albums, voice notes and
   other files keep the text-only reply.
-- **Staff** without the needed permission are told an owner or admin must record
-  it. The design's approval request to Ada or Kemi (19l) needs an approval queue
-  and owner notification that do not exist yet.
+- **Staff** without the needed permission get the approval request below (19l).
+
+### Cashier approval request (19l) — 14 November 2026
+
+- A cashier's receipt that matches an action they can't record (payment,
+  own-account transfer, expense, owner withdrawal) is saved on the
+  `AssistantReceiptRead` row as `approvalAction` + `approvalSummary`, status
+  `APPROVAL_OFFERED`. The chat shows "🔁 Transfer to approve … Ada or Kemi
+  approves transfers" and asks `ask` or `cancel` (no buttons; plain reply).
+- `ask` → `APPROVAL_PENDING` for 3 days. Owners/Admins whose role can record the
+  action are told "Bisi sent a transfer to approve" with the link
+  `/receipt-approval/<id>`, on their linked WhatsApp (only inside WhatsApp's
+  24-hour window: new `server_notice` outbox kind on their newest completed
+  inbox, rechecked by delivery) and on Telegram (direct send to the linked
+  chat, allow-lists apply). QA businesses only reach chats when
+  `ASSISTANT_RECEIPT_QA_LIVE=true`. Every pending request also shows in the
+  dashboard Overview's **Needs you** card.
+- Opening the link drafts the action as the approver's own proposal (their
+  latest chat), so the usual review card, Edit and Confirm apply. Approve claims
+  the request and confirms in one serializable transaction (records once; a
+  second approval is refused). Decline closes it and cancels the draft.
+- The cashier's chat gets "✅ Transfer recorded … Approved by Ada" or "❌ Ada
+  declined …": an assistant message in their conversation plus the same
+  WhatsApp/Telegram notice. Payments approved this way don't attach the
+  cashier's photo to the order (the file belongs to the cashier's chat); the
+  note says the receipt was sent in chat. Not built: email to owners, mobile
+  app approval screen, push notifications.
+- Code: `apps/api/src/assistant/general-receipt-approval.ts`,
+  `packages/db/src/queries/assistant-whatsapp/server-notice.ts`,
+  `apps/dashboard/src/app/receipt-approval/[id]`. Commits `c65386843`,
+  `5df5612a6`.
 
 ### Settings for hosted channels
 
@@ -185,4 +213,10 @@ numbers printed with the bank name).
   sender and GTBank current account by number and drafted the payment review.
   That run set the GTBank current account's number to `0123454417` in that QA
   business.
+- 19l integration (same test, 46 assertions): cashier offer, `ask`, owner
+  list/open/approve, double approval refused, cashier told, decline cancels the
+  draft, `cancel` before asking.
+- 19l browser check (Heritage Wash & Care QA, temporary book, accounts and
+  cashier removed after): Needs you row, approval page with receipt facts and
+  review card, Decline. Opening the page took about 10 s on Neon.
 - Not run: a real WhatsApp or Telegram delivery, hosted environments.
