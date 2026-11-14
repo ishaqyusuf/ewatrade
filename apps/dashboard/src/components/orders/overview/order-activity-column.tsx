@@ -45,6 +45,7 @@ const ICON: Record<OrderTimelineItem["kind"], typeof Invoice01Icon> = {
   refund: MoneyReceive01Icon,
   fulfilled: PackageDelivered01Icon,
   returned: ArrowTurnBackwardIcon,
+  returnable: PackageDelivered01Icon,
   changed: Exchange01Icon,
   replaced: Exchange01Icon,
   cancelled: Cancel02Icon,

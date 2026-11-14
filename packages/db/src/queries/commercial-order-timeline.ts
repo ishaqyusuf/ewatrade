@@ -16,6 +16,8 @@ export type CommercialOrderTimelineKind =
   | "cancelled"
   | "completed"
   | "credited"
+  /** A returnables ledger movement on this order; `disposition` is its kind. */
+  | "returnable"
 
 export type CommercialOrderTimelineChange =
   | { field: "customer"; before: string | null; after: string | null }
@@ -117,6 +119,7 @@ const KIND_ORDER: Record<CommercialOrderTimelineKind, number> = {
   payment: 2,
   refund: 2,
   fulfilled: 3,
+  returnable: 3,
   returned: 4,
   replaced: 5,
   cancelled: 5,
@@ -239,7 +242,7 @@ export async function getCommercialOrderTimeline(
   const operationIds = order.lines.flatMap((line) =>
     line.productFulfillments.map((fulfilment) => fulfilment.stockOperationId),
   )
-  const [operations, commands] = await Promise.all([
+  const [operations, commands, returnables] = await Promise.all([
     operationIds.length
       ? db.stockOperation.findMany({
           where: { id: { in: operationIds }, tenantId: input.tenantId },
@@ -258,6 +261,17 @@ export async function getCommercialOrderTimeline(
         actorUserId: true,
         clientOperationId: true,
         createdAt: true,
+      },
+    }),
+    db.returnableMovement.findMany({
+      where: { orderId: order.id, tenantId: input.tenantId },
+      select: {
+        id: true,
+        actorUserId: true,
+        kind: true,
+        occurredAt: true,
+        quantity: true,
+        catalogItem: { select: { name: true } },
       },
     }),
   ])
@@ -384,6 +398,23 @@ export async function getCommercialOrderTimeline(
         lines: [{ label, quantity: productReturn.quantity.toString() }],
       })
   }
+
+  // Crates and other returnables that went out with, or came back against, this order.
+  for (const movement of returnables)
+    items.push({
+      ...empty(),
+      id: `returnable:${movement.id}`,
+      kind: "returnable",
+      occurredAt: movement.occurredAt.toISOString(),
+      actorUserId: movement.actorUserId,
+      disposition: movement.kind,
+      lines: [
+        {
+          label: movement.catalogItem.name,
+          quantity: String(movement.quantity),
+        },
+      ],
+    })
 
   let cancelRecorded = false
   for (const amendment of order.amendments) {

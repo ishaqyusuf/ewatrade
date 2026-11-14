@@ -26,7 +26,7 @@ if (enabled) setDefaultTimeout(120_000)
         for (const [tid, slug] of [
           [tenantId, `returnables-${id}`],
           [otherTenantId, `returnables-other-${id}`],
-        ])
+        ] as const)
           await prisma.tenant.create({
             data: {
               id: tid,

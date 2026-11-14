@@ -10,6 +10,13 @@ import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
 export type OrderTimeline = RouterOutputs["orders"]["timeline"]
 type TimelineItem = OrderTimeline["items"][number]
 
+/** Returnables ledger movements shown on the order (crates, cylinders). */
+const RETURNABLE_LABEL: Record<string, string> = {
+  ISSUED: "Returnables went out",
+  RETURNED: "Returnables came back",
+  WRITTEN_OFF: "Returnables written off",
+}
+
 const RETURN_LABEL: Record<string, string> = {
   RESTOCK: "back on the shelf",
   QUARANTINE: "set aside",
@@ -147,6 +154,13 @@ export function timelineActivity(
           label: "Fulfilled",
           detail: `${lines(item)} · ${who(item)}`,
           tone: "sky",
+        }
+      case "returnable":
+        return {
+          ...base,
+          label: RETURNABLE_LABEL[item.disposition ?? ""] ?? "Returnables",
+          detail: `${lines(item)} · ${who(item)}`,
+          tone: item.disposition === "WRITTEN_OFF" ? "amber" : "sky",
         }
       case "returned":
         return {

@@ -18,8 +18,12 @@ const line = (id: string, name: string, unit: string) => ({
   serviceFulfillment: null,
 })
 
-function fakeDb(order: Record<string, unknown>) {
+function fakeDb(
+  order: Record<string, unknown>,
+  returnables: Record<string, unknown>[] = [],
+) {
   return {
+    returnableMovement: { findMany: async () => returnables },
     commercialOrder: { findFirst: async () => order },
     stockOperation: {
       findMany: async () => [
@@ -369,4 +373,34 @@ test("credits show why and how the total dropped, oldest first", async () => {
       changes: [{ field: "total", before: 7000000, after: 6830000 }],
     },
   ])
+})
+
+test("returnables that went out with the order and came back read in time order", async () => {
+  const timeline = await getCommercialOrderTimeline(
+    fakeDb({ ...baseOrder, lines: [], payments: [], amendments: [] }, [
+      {
+        id: "rm1",
+        actorUserId: "ishaq",
+        kind: "ISSUED",
+        occurredAt: at("10:00:00"),
+        quantity: 58,
+        catalogItem: { name: "Egg crate" },
+      },
+      {
+        id: "rm2",
+        actorUserId: "musa",
+        kind: "RETURNED",
+        occurredAt: at("12:00:00"),
+        quantity: 20,
+        catalogItem: { name: "Egg crate" },
+      },
+    ]),
+    scope,
+  )
+  const moves = timeline.items.filter((item) => item.kind === "returnable")
+  expect(moves.map((item) => [item.disposition, item.lines])).toEqual([
+    ["ISSUED", [{ label: "Egg crate", quantity: "58" }]],
+    ["RETURNED", [{ label: "Egg crate", quantity: "20" }]],
+  ])
+  expect(moves[1]?.actor).toEqual({ id: "musa", name: "Musa" })
 })

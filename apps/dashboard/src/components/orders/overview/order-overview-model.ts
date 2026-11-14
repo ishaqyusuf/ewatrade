@@ -354,6 +354,22 @@ export function describeEvent(
         lines: [],
         linkLabel: null,
       }
+    case "returnable":
+      return {
+        title:
+          item.disposition === "ISSUED"
+            ? "Returnables went out"
+            : item.disposition === "WRITTEN_OFF"
+              ? "Returnables written off"
+              : "Returnables came back",
+        amount: null,
+        tone: (item.disposition === "WRITTEN_OFF"
+          ? "change"
+          : "stock") as EventTone,
+        detail: meta(lines.join(", "), actor),
+        lines: [],
+        linkLabel: null,
+      }
     case "returned":
       return {
         title: "Returned",
