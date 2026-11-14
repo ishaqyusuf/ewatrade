@@ -18,6 +18,7 @@ model CatalogItem {
   systemRole        CatalogSystemRole?
   tenant            Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   product           CatalogProduct?
+  returnableMovements ReturnableMovement[]
   service           CatalogService?
   variants          SellableVariant[]
   optionGroups      VariantOptionGroup[]
@@ -40,6 +41,8 @@ enum ProductUsage {
   FOR_SALE
   INTERNAL_USE
   BOTH
+  /// Goes out with orders and comes back (crates, cylinders); never sold.
+  RETURNABLE
 }
 
 model CatalogProduct {

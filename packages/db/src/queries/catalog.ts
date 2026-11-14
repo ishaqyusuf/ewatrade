@@ -663,6 +663,16 @@ function assertCreateCatalogItem(input: CreateCatalogItemInput) {
     )
   }
   if (
+    input.kind === "product" &&
+    input.usage === "RETURNABLE" &&
+    input.openingStockQuantity !== undefined
+  ) {
+    throw new CatalogError(
+      "INVALID_CATALOG_ITEM",
+      "Returnable items are tracked in Returnables, not stock.",
+    )
+  }
+  if (
     input.illustrationId !== undefined &&
     (!findCatalogIllustration(input.illustrationId) ||
       input.photoAssetIds?.length)

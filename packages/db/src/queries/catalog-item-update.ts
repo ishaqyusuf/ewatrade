@@ -33,6 +33,7 @@ import {
   publishProductUnitConfigurationInTransaction,
   updateProductUnitConfigurationDraftInTransaction,
 } from "./catalog-unit-configurations"
+import { assertReturnableUsageChange } from "./returnables"
 
 export type UpdateCatalogOfferingInput = {
   /** Product only: index into `units`, where 0 is the main unit. */
@@ -363,6 +364,12 @@ async function applyCatalogItemUpdate(
       )
     // Order creation holds FOR SHARE on the product; this waits for those orders.
     await tx.$queryRaw`SELECT id FROM "CatalogProduct" WHERE "catalogItemId" = ${item.id} FOR UPDATE`
+    await assertReturnableUsageChange(tx, {
+      catalogItemId: item.id,
+      from: item.product?.usage ?? "FOR_SALE",
+      tenantId: input.tenantId,
+      to: input.usage,
+    })
     await tx.catalogProduct.update({
       where: { catalogItemId: item.id },
       data: { usage: input.usage },

@@ -1127,6 +1127,12 @@ async function postSingleBalanceStockOperationInTransactionCore(
     ? await resolveStockCategories(tx, input.tenantId, input.categories)
     : []
   const balance = prepared?.balance ?? (await loadBalance(tx, input))
+  if (balance.product.usage === "RETURNABLE") {
+    throw new CatalogError(
+      "INVALID_STOCK_OPERATION",
+      "Returnable items are tracked in Returnables, not stock.",
+    )
+  }
   if (input.type === "internal_use" && balance.product.usage === "FOR_SALE") {
     throw new CatalogError(
       "INVALID_STOCK_OPERATION",

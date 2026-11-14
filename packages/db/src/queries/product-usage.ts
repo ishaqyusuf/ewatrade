@@ -1,6 +1,11 @@
-import { type ProductUsage, productUsages } from "@ewatrade/utils/product-usage"
+import {
+  type ProductUsage,
+  isSaleEligibleProduct,
+  productUsages,
+} from "@ewatrade/utils/product-usage"
 import type { Prisma, PrismaClient } from "../../generated/prisma/client"
 import { CatalogError } from "./catalog-errors"
+import { assertReturnableUsageChange } from "./returnables"
 
 // Use in sale reads, never in purchasing or Inventory queries.
 export const saleEligibleCatalogItem = {
@@ -32,10 +37,12 @@ export async function assertSaleProductUsage(
         WHERE o."catalogItemId" = i.id AND o.id IN (${Prisma.join(ids)}))
     ORDER BY p.id FOR SHARE OF p
   `)
-  if (products.some((product) => product.usage === "INTERNAL_USE")) {
+  if (products.some((product) => !isSaleEligibleProduct(product.usage))) {
     throw new CatalogError(
       "OFFERING_UNAVAILABLE",
-      "Internal-use Products cannot be added to customer orders.",
+      products.some((product) => product.usage === "RETURNABLE")
+        ? "Returnable items go out as returnables, not as order items."
+        : "Internal-use Products cannot be added to customer orders.",
     )
   }
 }
@@ -102,6 +109,12 @@ export async function setCatalogProductUsage(
           "This Product changed. Refresh before changing its usage.",
         )
       }
+      await assertReturnableUsageChange(tx, {
+        catalogItemId: input.itemId,
+        from: product.usage,
+        tenantId: input.tenantId,
+        to: input.usage,
+      })
       const updated = await tx.catalogProduct.update({
         where: { id: product.id },
         data: { usage: input.usage },

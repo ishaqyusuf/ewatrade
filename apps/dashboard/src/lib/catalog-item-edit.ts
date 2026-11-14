@@ -13,6 +13,7 @@ import {
   catalogUnitFactorToRelation,
 } from "@ewatrade/utils"
 import { minorToMajorInput } from "@ewatrade/utils/currency"
+import type { ProductUsage } from "@ewatrade/utils/product-usage"
 
 export type SavedCatalogItem = NonNullable<RouterOutputs["catalog"]["getItem"]>
 type SavedVariant = SavedCatalogItem["variants"][number]
@@ -31,7 +32,7 @@ export type CatalogEditFormState = {
   description: string
   unitName: string
   price: string
-  usage: "FOR_SALE" | "INTERNAL_USE" | "BOTH"
+  usage: ProductUsage
   category: string
   sku: string
   barcode: string

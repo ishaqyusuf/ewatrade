@@ -1,3 +1,4 @@
+import type { ProductUsage } from "@ewatrade/utils/product-usage"
 import type { CommonActions } from "@react-navigation/native"
 
 export type OperationSuccessKind = "order" | "product" | "service"
@@ -20,7 +21,7 @@ export type OperationSuccessParams = {
   /** A Service order: New sale starts another Service order. */
   saleKind?: "service"
   /** A saved Product's usage; Internal use skips the first-order prompt. */
-  usage?: "FOR_SALE" | "INTERNAL_USE" | "BOTH"
+  usage?: ProductUsage
 }
 
 type ResetAction = ReturnType<typeof CommonActions.reset>

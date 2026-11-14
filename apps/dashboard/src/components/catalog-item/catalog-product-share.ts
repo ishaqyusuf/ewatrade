@@ -3,10 +3,11 @@ export function canShareCatalogProduct(item: {
   kind: string
   product?: { usage?: string | null } | null
 }) {
+  const usage = item.product?.usage
   return (
     item.kind === "product" &&
     Boolean(item.product) &&
-    item.product?.usage !== "INTERNAL_USE"
+    (usage == null || usage === "FOR_SALE" || usage === "BOTH")
   )
 }
 

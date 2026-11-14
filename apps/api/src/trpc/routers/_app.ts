@@ -28,6 +28,7 @@ import { qaAccessRouter, qaPhoneAccessRouter } from "./qa-access"
 import { qaMaintenanceRouter } from "./qa-maintenance"
 import { qaToolsRouter } from "./qa-tools"
 import { retailOpsRouter } from "./retail-ops"
+import { returnablesRouter } from "./returnables"
 import { searchRouter } from "./search"
 import { serviceAccessRouter } from "./service-access"
 import { serviceAssistantBookingsRouter } from "./service-assistant-bookings"
@@ -61,6 +62,7 @@ export const appRouter = createTRPCRouter({
   accountPrivacy: accountPrivacyRouter,
   catalog: catalogRouter,
   customers: customersRouter,
+  returnables: returnablesRouter,
   customerMessages: customerMessagesRouter,
   inventory: inventoryRouter,
   location: locationRouter,

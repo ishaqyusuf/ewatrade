@@ -1,4 +1,5 @@
 model Store {
+  returnableMovements ReturnableMovement[]
   catalogStorefrontPolicies CatalogStorefrontPolicy[]
   storefrontOrderRequests                           StorefrontOrderRequest[]
   assistantWhatsAppLinks AssistantWhatsAppLink[]
@@ -198,6 +199,7 @@ model Store {
 
 model Customer {
   ledgerAccounts   CustomerLedgerAccount[]
+  returnableMovements ReturnableMovement[]
   commercialOrders CommercialOrder[]
   orderLinks       CommercialOrderCustomerLink[]
   id               String                  @id @default(cuid())

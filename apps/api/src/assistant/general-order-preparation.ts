@@ -8,6 +8,7 @@ import {
 import { listCatalogItemsPage, listCustomersPage } from "@ewatrade/db/queries"
 import type { PrismaClient } from "@ewatrade/db/types"
 import { subtractExactDecimals } from "@ewatrade/utils/exact-decimal"
+import { isSaleEligibleProduct } from "@ewatrade/utils/product-usage"
 import {
   type GeneralContext,
   assertCapability,
@@ -83,7 +84,7 @@ export async function prepareGeneralOrder(
                 available:
                   !!unit &&
                   !!balance &&
-                  item.product?.usage !== "INTERNAL_USE" &&
+                  isSaleEligibleProduct(item.product?.usage) &&
                   offering.stores.some(
                     (store) =>
                       store.storeId === scope.storeId && store.isAvailable,

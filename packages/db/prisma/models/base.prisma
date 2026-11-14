@@ -1,4 +1,5 @@
 model Tenant {
+  returnableMovements ReturnableMovement[]
   growthSnapshots BusinessGrowthSnapshot[]
   lifecycleMessages LifecycleMessage[]
   growthFeatureIntents GrowthFeatureIntent[]

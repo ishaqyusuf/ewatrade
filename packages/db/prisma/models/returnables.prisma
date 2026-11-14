@@ -1,0 +1,41 @@
+enum ReturnableMovementKind {
+  /// Went out to the customer, usually with an order.
+  ISSUED
+  /// Came back from the customer.
+  RETURNED
+  /// Lost or damaged; cleared from the customer's balance without coming back.
+  WRITTEN_OFF
+}
+
+/// Returnable items (usage RETURNABLE) held by customers; append-only, corrections are new entries.
+/// A customer's balance per item = ISSUED - RETURNED - WRITTEN_OFF.
+model ReturnableMovement {
+  id               String                 @id @default(cuid())
+  tenantId         String
+  /// The order's Store, or the Store the staff member recorded it in.
+  storeId          String?
+  customerId       String
+  catalogItemId    String
+  /// Reference only: returns reduce the customer's balance, not one order's.
+  orderId          String?
+  kind             ReturnableMovementKind
+  quantity         Int
+  occurredAt       DateTime               @default(now())
+  note             String?
+  /// "staff" from the app screens, "assistant" when recorded through chat.
+  source           String                 @default("staff")
+  actorUserId      String
+  clientMovementId String
+  payloadHash      String
+  createdAt        DateTime               @default(now())
+  tenant           Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store            Store?                 @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  customer         Customer               @relation(fields: [tenantId, customerId], references: [tenantId, id], onDelete: Restrict)
+  catalogItem      CatalogItem            @relation(fields: [tenantId, catalogItemId], references: [tenantId, id], onDelete: Restrict)
+  order            CommercialOrder?       @relation(fields: [tenantId, orderId], references: [tenantId, id], onDelete: Restrict)
+
+  @@unique([tenantId, clientMovementId])
+  @@index([tenantId, customerId, catalogItemId])
+  @@index([tenantId, orderId])
+  @@index([tenantId, catalogItemId, occurredAt])
+}

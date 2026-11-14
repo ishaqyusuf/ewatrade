@@ -28,6 +28,12 @@ type CatalogErrorCode =
   | "INVALID_ASSIGNEE"
   | "QUOTE_CONFLICT"
   | "PUBLIC_TOKEN_INVALID"
+  | "CUSTOMER_NOT_FOUND"
+  | "INVALID_RETURNABLE_MOVEMENT"
+  | "ORDER_CUSTOMER_MISMATCH"
+  | "RETURNABLE_IN_USE"
+  | "RETURNABLE_NOT_FOUND"
+  | "RETURNABLE_OVER_BALANCE"
 
 export class CatalogError extends Error {
   readonly code: CatalogErrorCode

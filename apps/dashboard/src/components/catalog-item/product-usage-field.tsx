@@ -5,7 +5,7 @@ import {
   type ProductUsage,
   productUsageDescriptions,
   productUsageLabels,
-  productUsages,
+  selectableProductUsages,
 } from "@ewatrade/utils/product-usage"
 
 export function ProductUsageField({
@@ -25,10 +25,12 @@ export function ProductUsageField({
         value={value}
         disabled={disabled}
         onValueChange={(next) => {
-          const usage = productUsages.find((candidate) => candidate === next)
+          const usage = selectableProductUsages.find(
+            (candidate) => candidate === next,
+          )
           if (usage) onChange(usage)
         }}
-        options={productUsages.map((usage) => ({
+        options={selectableProductUsages.map((usage) => ({
           value: usage,
           label: productUsageLabels[usage],
         }))}

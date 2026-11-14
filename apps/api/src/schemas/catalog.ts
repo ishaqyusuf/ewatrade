@@ -4,6 +4,7 @@ import {
   EXACT_QUANTITY_MAX_SCALE,
   parseExactDecimal,
 } from "@ewatrade/utils/exact-decimal"
+import { productUsages } from "@ewatrade/utils/product-usage"
 import { z } from "zod"
 
 export const catalogProductShareSchema = z
@@ -244,7 +245,7 @@ export const catalogCreateProductSchema = z
   .object({
     ...catalogItemFields,
     kind: z.literal("product"),
-    usage: z.enum(["FOR_SALE", "INTERNAL_USE", "BOTH"]).optional(),
+    usage: z.enum(productUsages).optional(),
     openingStockQuantity: exactQuantitySchema.optional(),
     unitConfiguration: z
       .object({
@@ -323,7 +324,7 @@ export const catalogCreateSimpleProductSchema = z
     ...simpleCatalogItemFields,
     canonicalUnitName: z.string().trim().min(1).max(80),
     kind: z.literal("product"),
-    usage: z.enum(["FOR_SALE", "INTERNAL_USE", "BOTH"]).optional(),
+    usage: z.enum(productUsages).optional(),
     openingStockQuantity: exactQuantitySchema.optional(),
     priceMinor: catalogPriceMinorSchema.optional(),
   })
@@ -371,7 +372,7 @@ export const catalogUpdateItemSchema = z
     category: z.string().trim().max(500).optional(),
     categoryId: catalogItemFields.categoryId,
     subcategoryId: catalogItemFields.subcategoryId,
-    usage: z.enum(["FOR_SALE", "INTERNAL_USE", "BOTH"]).optional(),
+    usage: z.enum(productUsages).optional(),
     priceChangeReason: z.string().trim().max(500).optional(),
     storeId: z.string().trim().min(1).optional(),
     optionGroups: z
@@ -527,7 +528,7 @@ export const catalogPublishUnitConfigurationSchema = z
 export const catalogSetProductUsageSchema = z
   .object({
     itemId: z.string().trim().min(1).max(128),
-    usage: z.enum(["FOR_SALE", "INTERNAL_USE", "BOTH"]),
+    usage: z.enum(productUsages),
     expectedUpdatedAt: z.coerce.date(),
   })
   .strict()

@@ -54,6 +54,7 @@ model CommercialOrder {
   prescriptionDeliveryAssignment PrescriptionDeliveryAssignment?
   serviceBookings                ServiceBooking[]
   activities                     CommercialOrderActivity[]
+  returnableMovements            ReturnableMovement[]
   attachments                    CommercialOrderAttachment[]
   credits                        CommercialOrderCredit[]
   changeApprovals                CommercialOrderChangeApproval[]

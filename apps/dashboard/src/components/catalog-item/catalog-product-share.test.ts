@@ -35,6 +35,12 @@ describe("canShareCatalogProduct", () => {
         product: { usage: "INTERNAL_USE" },
       }),
     ).toBe(false)
+    expect(
+      canShareCatalogProduct({
+        kind: "product",
+        product: { usage: "RETURNABLE" },
+      }),
+    ).toBe(false)
     expect(canShareCatalogProduct({ kind: "service", product: null })).toBe(
       false,
     )
