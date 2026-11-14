@@ -30,7 +30,6 @@ import {
   CatalogDetailEditor,
   CatalogFooterLabel,
   CatalogSection,
-  CatalogSectionNav,
   CatalogSections,
   useCatalogSections,
 } from "./catalog-detail-editor"
@@ -39,6 +38,7 @@ import type {
   AdvancedUnitDraft,
   AdvancedVariantDraft,
 } from "./catalog-form-types"
+import { CatalogItemPhotoTile } from "./catalog-item-photo-tile"
 import { CatalogOptionsEditor } from "./catalog-options-editor"
 import { CatalogSellingUnitsEditor } from "./catalog-selling-units-editor"
 
@@ -71,12 +71,16 @@ import {
   findCatalogSetupHelper,
   getCatalogSetupReplacementAction,
 } from "@ewatrade/utils"
+import { catalogImageUsage } from "@ewatrade/utils/catalog-image-editor"
+import { formatMinorMoney } from "@ewatrade/utils/currency"
 import {
   EXACT_CANONICAL_MAX_SCALE,
   parseExactDecimal,
 } from "@ewatrade/utils/exact-decimal"
+import { productUsageLabels } from "@ewatrade/utils/product-usage"
 import {
   BarcodeScanIcon,
+  Folder01Icon,
   Image01Icon,
   Layers01Icon,
   Money03Icon,
@@ -168,6 +172,7 @@ const DEFAULT_UNIT_TRANSACTION_SCALE = 2
 
 type CatalogSectionId =
   | "images"
+  | "details"
   | "pricing"
   | "options"
   | "units"
@@ -396,6 +401,20 @@ export function CatalogItemForm({
     photo.restore,
   ])
   const editing = Boolean(editItem)
+  // The saved item's main photo (whole item, this Store) for the photo tile.
+  const savedStorePhotos =
+    editItem?.photos.filter((entry) => entry.storeId === storeId) ?? []
+  const savedPhoto =
+    savedStorePhotos.find((entry) => catalogImageUsage(entry).includes(null)) ??
+    savedStorePhotos[0]
+  const savedPhotoUrl = savedPhoto
+    ? `/api/catalog/photos/${encodeURIComponent(savedPhoto.assetId)}/preview?storeId=${encodeURIComponent(storeId)}&variant=thumbnail`
+    : null
+  const savedIllustrationId = editItem?.illustrations[0]?.illustrationId ?? null
+  const savedPrice = useMemo(
+    () => (editItem ? savedItemToFormState(editItem).price : null),
+    [editItem],
+  )
   const savedIds = useMemo(
     () => (editItem ? savedCatalogIds(editItem) : null),
     [editItem],
@@ -1550,11 +1569,11 @@ export function CatalogItemForm({
   const priceSummary = returnable
     ? "Returnable · not sold"
     : showAdvanced
-      ? `${combinations.length} customer choices`
+      ? `${combinations.length} choices`
       : defaultQuoteRequired
         ? "Quote each job"
         : form.price.trim()
-          ? `${currencyCode} ${form.price}${form.kind === "product" ? ` / ${form.unitName || "main unit"}` : ""}`
+          ? `${parsePrice(form.price) === null ? form.price : formatMinorMoney(parsePrice(form.price), currencyCode)}${form.kind === "product" && form.unitName.trim() ? ` per ${form.unitName.trim()}` : ""}`
           : "Price not set"
   const sectionMeta: Record<
     CatalogSectionId,
@@ -1571,6 +1590,18 @@ export function CatalogItemForm({
           : "Photos or illustrations that describe this item.",
       done: Boolean(illustrationId || photo.file),
     },
+    details: {
+      title: form.kind === "product" ? "Category and use" : "Category",
+      icon: Folder01Icon,
+      summary:
+        [
+          category ? category.split(" / ").at(-1) : null,
+          form.kind === "product" ? productUsageLabels[form.usage] : null,
+        ]
+          .filter(Boolean)
+          .join(" · ") || "No category",
+      done: Boolean(category),
+    },
     pricing: {
       title: "How you charge",
       icon: Money03Icon,
@@ -1580,8 +1611,8 @@ export function CatalogItemForm({
     options: {
       title:
         form.kind === "service"
-          ? "Packages or customer choices"
-          : "Customer choices",
+          ? "Packages or choices"
+          : "Sizes, colours or other choices",
       icon: Layers01Icon,
       summary: showAdvanced
         ? `${combinations.length} choices · prices set individually`
@@ -1589,11 +1620,11 @@ export function CatalogItemForm({
       done: showAdvanced,
     },
     units: {
-      title: "Selling units",
+      title: "Packs and bigger units",
       icon: Package01Icon,
       summary: additionalUnits.length
         ? additionalUnits.map((unit) => unit.name || "Unnamed unit").join(" · ")
-        : "Sell trays or packs as well as single units.",
+        : "Sell by the crate or pack too.",
       done: additionalUnits.length > 0,
     },
     stock: editing
@@ -1604,17 +1635,17 @@ export function CatalogItemForm({
           done: true,
         }
       : {
-          title: "Opening stock",
+          title: "Stock you have now",
           icon: WarehouseIcon,
           summary: showAdvanced
-            ? "Set stock for each customer choice."
+            ? "Set stock for each choice."
             : form.openingStockQuantity.trim()
               ? `${form.openingStockQuantity} ${form.unitName}`
-              : "Record what you have on hand. Optional.",
+              : "Count what you have to track stock.",
           done: !showAdvanced && Boolean(form.openingStockQuantity.trim()),
         },
     work: {
-      title: "Work settings",
+      title: "Job tracking",
       icon: Task01Icon,
       summary: trackServiceWork
         ? "Track work after order confirmation"
@@ -1630,7 +1661,7 @@ export function CatalogItemForm({
       done: Boolean(form.description.trim()),
     },
     codes: {
-      title: "SKU and barcode",
+      title: "Barcode and SKU",
       icon: BarcodeScanIcon,
       summary: showAdvanced
         ? "Set inventory codes for each customer choice."
@@ -1641,46 +1672,51 @@ export function CatalogItemForm({
     },
   }
   // A Returnable is never sold or stocked: only its look and description apply.
+  // The photo sits beside the name, so Images is not an optional section.
   const sectionOrder: CatalogSectionId[] = returnable
-    ? ["images", "description"]
+    ? ["details", "description"]
     : form.kind === "product"
-      ? ["images", "options", "units", "stock", "description", "codes"]
-      : ["images", "pricing", "options", "work", "description"]
+      ? ["options", "units", "stock", "details", "description", "codes"]
+      : ["pricing", "options", "work", "details", "description"]
+
+  function changeUsage(usage: (typeof form)["usage"]) {
+    if (usage === "RETURNABLE") {
+      if (showAdvanced || additionalUnits.length) {
+        setError("Remove choices and packs before making this item Returnable.")
+        return
+      }
+      // Returnables are never sold or stocked: drop a typed price, opening stock and codes.
+      setShowOpeningStock(false)
+      setSku("")
+      setBarcode("")
+      setForm((current) => ({
+        ...current,
+        usage,
+        price: "",
+        openingStockQuantity: "",
+      }))
+      setError(null)
+      return
+    }
+    setForm((current) => ({ ...current, usage }))
+  }
 
   function sectionContent(id: CatalogSectionId) {
     const stack = sections.section(id)
-    if (id === "images" && editItem)
+    if (id === "details")
       return (
-        <div className="flex flex-col items-start gap-3">
-          <p className="text-sm text-muted-foreground">
-            Saved photos and illustrations change on their own, without saving
-            this form.
-          </p>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => setSavedPhotosOpen(true)}
-          >
-            Manage images
-          </Button>
-          <CatalogSavedPhotos
-            item={editItem}
-            storeId={storeId}
-            open={savedPhotosOpen}
-            onOpenChange={setSavedPhotosOpen}
-          />
-        </div>
-      )
-    if (id === "images")
-      return (
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => setDraftImagesOpen(true)}
-        >
-          Open images editor
-        </Button>
+        <FieldGroup className="gap-4">
+          <Field htmlFor="catalog-item-category" label="Category">
+            <CatalogCategoryEditor
+              category={category}
+              enabled={!suggestionsDisabled}
+              onChange={setCategory}
+            />
+          </Field>
+          {form.kind === "product" ? (
+            <ProductUsageField value={form.usage} onChange={changeUsage} />
+          ) : null}
+        </FieldGroup>
       )
     if (id === "description")
       return (
@@ -2260,28 +2296,6 @@ export function CatalogItemForm({
             </AlertDescription>
           </Alert>
         ) : null}
-        {!editing && form.kind === "product" && capability.data?.enabled ? (
-          <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-muted/20 p-4">
-            <div>
-              <p className="text-sm font-medium">Create with AI</p>
-              <p className="text-xs text-muted-foreground">
-                Describe your product and we'll help fill in the details.
-              </p>
-            </div>
-            <Button
-              type="button"
-              variant="outline"
-              disabled={startProductChat.isPending || photo.uploading}
-              onClick={() => void openProductChat()}
-            >
-              {startProductChat.isPending
-                ? "Starting…"
-                : catalogConversation
-                  ? "Continue product chat"
-                  : "Create with AI"}
-            </Button>
-          </div>
-        ) : null}
         {handoffError ? (
           <p role="alert" className="mb-4 text-sm text-destructive">
             {handoffError}
@@ -2336,25 +2350,7 @@ export function CatalogItemForm({
             }
           }}
         />
-        <div
-          ref={sections.containerRef}
-          className="grid items-start gap-6 lg:grid-cols-[180px_minmax(0,1fr)]"
-        >
-          <CatalogSectionNav
-            essentialsSummary={priceSummary}
-            sections={sectionOrder.map((id) => ({ id, ...sectionMeta[id] }))}
-            onSelect={(id) =>
-              id === "essentials"
-                ? document
-                    .getElementById("catalog-item-name")
-                    ?.scrollIntoView({ block: "center", behavior: "smooth" })
-                : id === "images"
-                  ? editItem
-                    ? setSavedPhotosOpen(true)
-                    : setDraftImagesOpen(true)
-                  : sections.reveal(id)
-            }
-          />
+        <div ref={sections.containerRef}>
           <div className="min-w-0">
             <fieldset
               disabled={Boolean(
@@ -2398,81 +2394,73 @@ export function CatalogItemForm({
                         setCanUndoQuickFill(false)
                       }}
                     />
-                    <Button
-                      type="button"
-                      className="w-full justify-center"
-                      onClick={() => setHelperPickerOpen(true)}
-                      variant="outline"
-                    >
-                      {selectedHelper
-                        ? `Quick setup: ${selectedHelper.title}`
-                        : "Choose a quick setup"}
-                    </Button>
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setHelperPickerOpen(true)}
+                      >
+                        {selectedHelper
+                          ? `Quick setup: ${selectedHelper.title}`
+                          : "Quick setup"}
+                      </Button>
+                      {form.kind === "product" && capability.data?.enabled ? (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          disabled={
+                            startProductChat.isPending || photo.uploading
+                          }
+                          onClick={() => void openProductChat()}
+                        >
+                          {startProductChat.isPending
+                            ? "Starting…"
+                            : catalogConversation
+                              ? "Continue with AI"
+                              : "Create with AI"}
+                        </Button>
+                      ) : null}
+                    </div>
                   </>
                 )}
 
-                <Field
-                  htmlFor="catalog-item-name"
-                  label={
-                    form.kind === "product" ? "Product name" : "Service name"
-                  }
-                >
-                  <TextInput
-                    maxLength={160}
-                    id="catalog-item-name"
-                    autoFocus
-                    autoComplete="off"
-                    placeholder={formGuidance.name.placeholder}
-                    value={form.name}
-                    onChange={(event) =>
-                      setForm((current) => ({
-                        ...current,
-                        name: event.target.value,
-                      }))
+                <div className="flex items-end gap-3">
+                  <CatalogItemPhotoTile
+                    itemName={form.name}
+                    previewUrl={editItem ? savedPhotoUrl : photo.preview}
+                    illustrationId={
+                      editItem ? savedIllustrationId : illustrationId
                     }
-                    required
+                    onOpen={() =>
+                      editItem
+                        ? setSavedPhotosOpen(true)
+                        : setDraftImagesOpen(true)
+                    }
                   />
-                </Field>
-
-                <Field
-                  htmlFor="catalog-item-category"
-                  label="Category (optional)"
-                >
-                  <CatalogCategoryEditor
-                    category={category}
-                    enabled={!suggestionsDisabled}
-                    onChange={setCategory}
-                  />
-                </Field>
-
-                {form.kind === "product" ? (
-                  <ProductUsageField
-                    value={form.usage}
-                    onChange={(usage) => {
-                      if (usage === "RETURNABLE") {
-                        if (showAdvanced || additionalUnits.length) {
-                          setError(
-                            "Remove customer choices and selling units before making this item Returnable.",
-                          )
-                          return
+                  <div className="min-w-0 flex-1">
+                    <Field
+                      htmlFor="catalog-item-name"
+                      label={form.kind === "product" ? "Name" : "Service name"}
+                    >
+                      <TextInput
+                        maxLength={160}
+                        id="catalog-item-name"
+                        autoFocus
+                        autoComplete="off"
+                        placeholder={formGuidance.name.placeholder}
+                        value={form.name}
+                        onChange={(event) =>
+                          setForm((current) => ({
+                            ...current,
+                            name: event.target.value,
+                          }))
                         }
-                        // Returnables are never sold or stocked: drop a typed price, opening stock and codes.
-                        setShowOpeningStock(false)
-                        setSku("")
-                        setBarcode("")
-                        setForm((current) => ({
-                          ...current,
-                          usage,
-                          price: "",
-                          openingStockQuantity: "",
-                        }))
-                        setError(null)
-                        return
-                      }
-                      setForm((current) => ({ ...current, usage }))
-                    }}
-                  />
-                ) : null}
+                        required
+                      />
+                    </Field>
+                  </div>
+                </div>
+
                 <div
                   hidden={
                     showAdvanced ||
@@ -2484,8 +2472,10 @@ export function CatalogItemForm({
                     htmlFor="catalog-item-price"
                     label={
                       form.kind === "service"
-                        ? "Fixed price"
-                        : `Selling price per ${form.unitName.trim() || "main unit"} (optional)`
+                        ? "Price"
+                        : form.unitName.trim()
+                          ? `Price per ${form.unitName.trim()}`
+                          : "Price"
                     }
                   >
                     <CurrencyInput
@@ -2522,10 +2512,12 @@ export function CatalogItemForm({
                   </Alert>
                 ) : null}
 
-                {editing && !returnable ? (
+                {editing &&
+                !returnable &&
+                (showAdvanced || form.price !== savedPrice) ? (
                   <Field
                     htmlFor="catalog-price-reason"
-                    label="Reason for price changes (optional)"
+                    label="Reason for the new price (optional)"
                   >
                     <TextInput
                       id="catalog-price-reason"
@@ -2536,14 +2528,10 @@ export function CatalogItemForm({
                         setPriceChangeReason(event.target.value)
                       }
                     />
-                    <p className="text-xs text-muted-foreground">
-                      Kept in the price history. Past Orders keep the price they
-                      were sold at.
-                    </p>
                   </Field>
                 ) : null}
                 {form.kind === "product" ? (
-                  <Field htmlFor="catalog-item-unit" label="Main unit">
+                  <Field htmlFor="catalog-item-unit" label="Sold by">
                     <TextInput
                       id="catalog-item-unit"
                       autoComplete="off"
@@ -2557,11 +2545,8 @@ export function CatalogItemForm({
                       }
                       required
                     />
-                    <p className="text-xs text-muted-foreground">
-                      {formGuidance.stockUnit?.helperText}
-                    </p>
                     <CatalogGuidanceSuggestions
-                      label="Stock unit suggestions"
+                      label="Unit suggestions"
                       values={formGuidance.stockUnit?.suggestions ?? []}
                       disabled={suggestionsDisabled}
                       onSelect={(unitName) =>
@@ -2573,7 +2558,7 @@ export function CatalogItemForm({
               </FieldGroup>
               <div className="flex flex-col gap-2">
                 <p className="text-sm font-medium text-muted-foreground">
-                  Optional details · open only what you need
+                  More options
                 </p>
                 <CatalogSections
                   value={sections.open}
@@ -2615,6 +2600,14 @@ export function CatalogItemForm({
             ? createPortal(footerAction, footerHost)
             : footerAction}
       </form>
+      {editItem ? (
+        <CatalogSavedPhotos
+          item={editItem}
+          storeId={storeId}
+          open={savedPhotosOpen}
+          onOpenChange={setSavedPhotosOpen}
+        />
+      ) : null}
       {!editItem ? (
         <CatalogImageEditor
           open={draftImagesOpen}
