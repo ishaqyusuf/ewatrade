@@ -7,8 +7,8 @@ import { createTRPCClient } from "@trpc/client"
 import { createTRPCOptionsProxy } from "@trpc/tanstack-react-query"
 import { createLoader } from "nuqs/server"
 import { catalogDetailScope } from "../../../../../api/src/catalog/detail-access"
-import { catalogDetailParamParsers } from "../../../hooks/use-catalog-detail-params"
 import { GET as openCatalogItemLink } from "../../../app/open/catalog-item/[itemId]/route"
+import { catalogDetailParamParsers } from "../../../hooks/use-catalog-detail-params"
 import { canAccessDashboardPath } from "../../../lib/navigation"
 import {
   catalogDetailAccessFingerprint,
