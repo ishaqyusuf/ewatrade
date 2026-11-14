@@ -171,9 +171,10 @@ const jobGraph = {
 type JobGraph = Prisma.ServiceJobGetPayload<{ include: typeof jobGraph }>
 
 /**
- * List rows carry what a row shows and moves on: no activity history, notes,
- * photos or messages (the job sheet reads those with getServiceJob). The hand-over
- * event stays so `handoff` still says how the job reached the customer.
+ * List rows skip the activity history and customer message log (the job sheet
+ * reads those with getServiceJob). The hand-over event stays so `handoff` still
+ * says how the job reached the customer. Notes, photos and problems stay: the
+ * mobile app shows a cached row while the job loads and when offline.
  */
 const jobListGraph = {
   ...jobGraph,
@@ -181,12 +182,6 @@ const jobListGraph = {
     orderBy: [{ effectiveAt: "asc" }, { createdAt: "asc" }],
     where: { type: ServiceWorkEventType.REMOTE_HANDOFF },
   },
-  evidence: { orderBy: { createdAt: "asc" }, take: 0 },
-  exceptions: {
-    orderBy: { occurredAt: "asc" },
-    where: { outcome: ServiceExceptionOutcome.OPEN },
-  },
-  notes: { orderBy: { createdAt: "asc" }, take: 0 },
   notificationIntents: {
     include: {
       deliveryAttempts: { orderBy: { attemptedAt: "asc" } },
