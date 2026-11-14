@@ -15,9 +15,11 @@ export async function getStaffWebInvitation(token: string) {
           email: true,
           ageBand: true,
           name: true,
+          // Only whether a password exists; never read the hash itself.
           accounts: {
-            where: { providerId: "credential" },
-            select: { password: true },
+            where: { providerId: "credential", password: { not: null } },
+            select: { id: true },
+            take: 1,
           },
         },
       },
@@ -38,6 +40,6 @@ export async function getStaffWebInvitation(token: string) {
   return {
     ...invite,
     user,
-    needsPassword: !accounts.some((account) => Boolean(account.password)),
+    needsPassword: accounts.length === 0,
   }
 }

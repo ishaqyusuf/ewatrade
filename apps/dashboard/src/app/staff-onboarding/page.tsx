@@ -26,7 +26,7 @@ export default async function StaffOnboardingPage({
   if (!invite)
     return (
       <AuthShell
-        title="This invite has expired"
+        title="This invite no longer works"
         description="Ask the business owner to send a new one."
       >
         <Button render={<Link href="/login" />} className="w-full">

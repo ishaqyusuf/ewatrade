@@ -97,8 +97,8 @@ export async function startOwnerSetup(
   userId: string,
   input: { businessName?: string; requestedSlug?: string } = {},
 ): Promise<StartOwnerSetupResult> {
+  // getPendingOwnerSignup already refuses an owner without an eligible age.
   if (await getPendingOwnerSignup(db, userId)) return { status: "pending" }
-  await requireEligibleOwnerAge(db, userId)
   const memberships = await db.membership.findMany({
     where: { userId, status: "ACTIVE", tenant: { isActive: true } },
     orderBy: { createdAt: "asc" },
