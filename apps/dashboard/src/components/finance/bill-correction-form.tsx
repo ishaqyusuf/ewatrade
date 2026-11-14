@@ -113,108 +113,111 @@ export function FinanceBillCorrectionForm({
       }
     />
   )
-  if (review)
-    return (
-      <div className="grid gap-5">
-        {back}
-        <FinanceReview
-          command={command}
-          onBack={() => setReview(null)}
-          onConfirm={() => submit(review)}
-          confirmLabel={title}
-          sentence={
-            undo ? (
-              <>
-                This takes back the <b>{amount}</b> payment to{" "}
-                {target.payeeName} in your records. It doesn't send or return
-                any money. The payment stays in history, marked Undone.
-              </>
-            ) : (
-              <>
-                This cancels the <b>{amount}</b> expense{" "}
-                {target.billDescription}. It stops counting in Spending and
-                Still to pay. You'll still see it, marked Cancelled, with your
-                reason.
-              </>
-            )
-          }
-          changes={changes(
-            undo
-              ? [
-                  balanceChange(
-                    balances,
-                    target.accountId,
-                    BigInt(target.amountMinor),
-                    currency,
-                  ),
-                  {
+  const reviewDialog = review ? (
+    <FinanceReview
+      alert={{
+        title: undo
+          ? `Undo the ${amount} payment to ${target.payeeName}?`
+          : `Cancel the ${amount} expense to ${target.payeeName}?`,
+      }}
+      command={command}
+      onBack={() => setReview(null)}
+      onConfirm={() => submit(review)}
+      confirmLabel={title}
+      sentence={
+        undo ? (
+          <>
+            This takes back the <b>{amount}</b> payment to {target.payeeName} in
+            your records. It doesn't send or return any money. The payment stays
+            in history, marked Undone.
+          </>
+        ) : (
+          <>
+            This cancels the <b>{amount}</b> expense {target.billDescription}.
+            It stops counting in Spending and Still to pay. You'll still see it,
+            marked Cancelled, with your reason.
+          </>
+        )
+      }
+      changes={changes(
+        undo
+          ? [
+              balanceChange(
+                balances,
+                target.accountId,
+                BigInt(target.amountMinor),
+                currency,
+              ),
+              {
+                label: `Still to pay ${target.payeeName}`,
+                before: moneyText(outstanding, currency),
+                after: moneyText(
+                  outstanding + BigInt(target.amountMinor),
+                  currency,
+                ),
+              },
+            ]
+          : [
+              outstanding > BigInt(0)
+                ? {
                     label: `Still to pay ${target.payeeName}`,
                     before: moneyText(outstanding, currency),
-                    after: moneyText(
-                      outstanding + BigInt(target.amountMinor),
-                      currency,
-                    ),
-                  },
-                ]
-              : [
-                  outstanding > BigInt(0)
-                    ? {
-                        label: `Still to pay ${target.payeeName}`,
-                        before: moneyText(outstanding, currency),
-                        after: moneyText(BigInt(0), currency),
-                      }
-                    : null,
-                ],
-          )}
-        >
-          <FinanceDetails
-            rows={[
-              ["Date", plainDay(review.date)],
-              ["Why", review.reason],
-            ]}
-          />
-        </FinanceReview>
-      </div>
-    )
+                    after: moneyText(BigInt(0), currency),
+                  }
+                : null,
+            ],
+      )}
+    >
+      <FinanceDetails
+        rows={[
+          ["Date", plainDay(review.date)],
+          ["Why", review.reason],
+        ]}
+      />
+    </FinanceReview>
+  ) : null
   const errors = form.formState.errors
   return (
-    <form onSubmit={form.handleSubmit(setReview)}>
-      <FieldGroup className="min-w-0 grid gap-5">
-        {back}
-        <div className="grid gap-0.5 border border-border bg-muted/40 px-3 py-2 text-sm">
-          <span className="flex justify-between gap-3 font-medium">
-            <span>{target.description}</span>
-            <span className="tabular-nums">{amount}</span>
-          </span>
-          <span className="text-muted-foreground">
-            {target.billDescription} · {target.payeeName}
-          </span>
-        </div>
-        <FinanceField label="Date" error={errors.date?.message}>
-          <FormDatePicker
-            control={form.control}
-            name="date"
-            max={todayIn(book.timezone)}
-          />
-        </FinanceField>
-        <FinanceField
-          label={
-            undo ? "Why are you undoing it?" : "Why are you cancelling it?"
-          }
-          error={errors.reason?.message}
-        >
-          <Input
-            maxLength={400}
-            placeholder={
-              undo
-                ? "The transfer failed and came back"
-                : "Entered twice, or it was waived"
+    <>
+      {reviewDialog}
+      <form onSubmit={form.handleSubmit(setReview)}>
+        <FieldGroup className="min-w-0 grid gap-5">
+          {back}
+          <div className="grid gap-0.5 border border-border bg-muted/40 px-3 py-2 text-sm">
+            <span className="flex justify-between gap-3 font-medium">
+              <span>{target.description}</span>
+              <span className="tabular-nums">{amount}</span>
+            </span>
+            <span className="text-muted-foreground">
+              {target.billDescription} · {target.payeeName}
+            </span>
+          </div>
+          <FinanceField label="Date" error={errors.date?.message}>
+            <FormDatePicker
+              control={form.control}
+              name="date"
+              max={todayIn(book.timezone)}
+            />
+          </FinanceField>
+          <FinanceField
+            label={
+              undo ? "Why are you undoing it?" : "Why are you cancelling it?"
             }
-            {...form.register("reason")}
-          />
-        </FinanceField>
-        <FinanceFormFooter onCancel={onBack} submitLabel="Review" />
-      </FieldGroup>
-    </form>
+            error={errors.reason?.message}
+          >
+            <Input
+              maxLength={400}
+              placeholder={
+                undo
+                  ? "The transfer failed and came back"
+                  : "Entered twice, or it was waived"
+              }
+              {...form.register("reason")}
+            />
+          </FinanceField>
+          <FinanceFormFooter onCancel={onBack} submitLabel="Review" />
+        </FieldGroup>
+      </form>
+    </>
   )
 }

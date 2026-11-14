@@ -139,87 +139,89 @@ export function FinanceSupplierEntryUndoForm({
       description="Takes it back in your records. No real money moves, and the original stays in history."
     />
   )
-  if (review)
-    return (
-      <div className="grid gap-5">
-        {back}
-        <FinanceReview
-          command={command}
-          onBack={() => setReview(false)}
-          onConfirm={submit}
-          confirmLabel="Undo"
-          sentence={
-            <>
-              This undoes <b>{moneyText(amount, currency)}</b>{" "}
-              {entry.label.toLowerCase()} for {supplierName}. No money moves.
-              The original stays in history, marked Undone.
-            </>
-          }
-          changes={changes(effects)}
-          note={
-            entry.kind === "OPENING_PAYABLE"
-              ? "Undo any payments toward this starting balance first."
-              : entry.kind === "ADVANCE" || entry.kind === "OPENING_ADVANCE"
-                ? "If any of this paid-ahead money was used on a bill, undo that use first."
-                : undefined
-          }
-        >
-          <FinanceDetails
-            rows={[
-              ["Entry", `${entry.label} · ${entry.description}`],
-              ["Date", plainDay(day)],
-              ["Why", reason.trim()],
-            ]}
-          />
-        </FinanceReview>
-      </div>
-    )
-  return (
-    <form
-      onSubmit={(event) => {
-        event.preventDefault()
-        if (!reason.trim()) {
-          setError("Say why, so others understand later.")
-          return
-        }
-        setReview(true)
+  const reviewDialog = review ? (
+    <FinanceReview
+      alert={{
+        title: `Undo ${moneyText(amount, currency)} ${entry.label.toLowerCase()} for ${supplierName}?`,
       }}
+      command={command}
+      onBack={() => setReview(false)}
+      onConfirm={submit}
+      confirmLabel="Undo"
+      sentence={
+        <>
+          This undoes <b>{moneyText(amount, currency)}</b>{" "}
+          {entry.label.toLowerCase()} for {supplierName}. No money moves. The
+          original stays in history, marked Undone.
+        </>
+      }
+      changes={changes(effects)}
+      note={
+        entry.kind === "OPENING_PAYABLE"
+          ? "Undo any payments toward this starting balance first."
+          : entry.kind === "ADVANCE" || entry.kind === "OPENING_ADVANCE"
+            ? "If any of this paid-ahead money was used on a bill, undo that use first."
+            : undefined
+      }
     >
-      <FieldGroup className="min-w-0 grid gap-5">
-        {back}
-        <div className="flex justify-between gap-3 border border-border bg-muted/40 px-3 py-2 text-sm">
-          <span className="grid">
-            <span className="font-medium">{entry.label}</span>
-            <span className="text-muted-foreground">
-              {entry.description} · {plainDay(originalDay)}
+      <FinanceDetails
+        rows={[
+          ["Entry", `${entry.label} · ${entry.description}`],
+          ["Date", plainDay(day)],
+          ["Why", reason.trim()],
+        ]}
+      />
+    </FinanceReview>
+  ) : null
+  return (
+    <>
+      {reviewDialog}
+      <form
+        onSubmit={(event) => {
+          event.preventDefault()
+          if (!reason.trim()) {
+            setError("Say why, so others understand later.")
+            return
+          }
+          setReview(true)
+        }}
+      >
+        <FieldGroup className="min-w-0 grid gap-5">
+          {back}
+          <div className="flex justify-between gap-3 border border-border bg-muted/40 px-3 py-2 text-sm">
+            <span className="grid">
+              <span className="font-medium">{entry.label}</span>
+              <span className="text-muted-foreground">
+                {entry.description} · {plainDay(originalDay)}
+              </span>
             </span>
-          </span>
-          <span className="tabular-nums">{moneyText(amount, currency)}</span>
-        </div>
-        <FinanceField label="Date">
-          <DatePicker
-            value={day}
-            min={originalDay}
-            max={todayIn(book.timezone)}
-            onValueChange={setDay}
-          />
-        </FinanceField>
-        <FinanceField
-          label="Why are you undoing it?"
-          error={error ?? undefined}
-        >
-          <Input
-            maxLength={400}
-            value={reason}
-            placeholder="Entered the wrong amount"
-            onChange={(event) => {
-              setReason(event.target.value)
-              setError(null)
-            }}
-          />
-        </FinanceField>
-        <FinanceFormFooter onCancel={onBack} submitLabel="Review" />
-      </FieldGroup>
-    </form>
+            <span className="tabular-nums">{moneyText(amount, currency)}</span>
+          </div>
+          <FinanceField label="Date">
+            <DatePicker
+              value={day}
+              min={originalDay}
+              max={todayIn(book.timezone)}
+              onValueChange={setDay}
+            />
+          </FinanceField>
+          <FinanceField
+            label="Why are you undoing it?"
+            error={error ?? undefined}
+          >
+            <Input
+              maxLength={400}
+              value={reason}
+              placeholder="Entered the wrong amount"
+              onChange={(event) => {
+                setReason(event.target.value)
+                setError(null)
+              }}
+            />
+          </FinanceField>
+          <FinanceFormFooter onCancel={onBack} submitLabel="Review" />
+        </FieldGroup>
+      </form>
+    </>
   )
 }

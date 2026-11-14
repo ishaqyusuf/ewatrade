@@ -184,75 +184,80 @@ export function FinanceCashAdjustmentReversalForm({
       description="Takes the adjustment back in your records. No cash moves."
     />
   )
-  if (review)
-    return (
-      <div className="grid gap-5">
-        {back}
-        <FinanceReview
-          command={command}
-          onBack={() => setReview(null)}
-          onConfirm={() => submit(review)}
-          confirmLabel="Undo adjustment"
-          sentence={
-            <>
-              This undoes the{" "}
-              <b>
-                {moneyText(absolute(count.differenceMinor), count.currencyCode)}
-              </b>{" "}
-              adjustment to {count.accountName}. No cash moves. The count and
-              its difference stay in history.
-            </>
-          }
-        >
-          <FinanceDetails
-            rows={[
-              ["Adjustment", review.adjustmentDescription],
-              ["Date", plainDay(review.effectiveAt.toISOString().slice(0, 10))],
-              ["Why", review.reason],
-            ]}
-          />
-        </FinanceReview>
-      </div>
-    )
+  const reviewDialog = review ? (
+    <FinanceReview
+      alert={{
+        title: `Undo the ${moneyText(absolute(count.differenceMinor), count.currencyCode)} adjustment to ${count.accountName}?`,
+      }}
+      command={command}
+      onBack={() => setReview(null)}
+      onConfirm={() => submit(review)}
+      confirmLabel="Undo adjustment"
+      sentence={
+        <>
+          This undoes the{" "}
+          <b>
+            {moneyText(absolute(count.differenceMinor), count.currencyCode)}
+          </b>{" "}
+          adjustment to {count.accountName}. No cash moves. The count and its
+          difference stay in history.
+        </>
+      }
+    >
+      <FinanceDetails
+        rows={[
+          ["Adjustment", review.adjustmentDescription],
+          ["Date", plainDay(review.effectiveAt.toISOString().slice(0, 10))],
+          ["Why", review.reason],
+        ]}
+      />
+    </FinanceReview>
+  ) : null
 
   return (
-    <form onSubmit={form.handleSubmit((values) => void prepare(values))}>
-      <FieldGroup className="min-w-0 grid gap-5">
-        {back}
-        <p className="break-words border border-border bg-muted/40 px-3 py-2 text-sm">
-          {adjustment?.description}
-        </p>
-        <FinanceField label="Date" error={form.formState.errors.date?.message}>
-          <FormDatePicker
-            min={minDate}
-            max={today}
-            disabled={preparing}
-            control={form.control}
-            name="date"
+    <>
+      {reviewDialog}
+      <form onSubmit={form.handleSubmit((values) => void prepare(values))}>
+        <FieldGroup className="min-w-0 grid gap-5">
+          {back}
+          <p className="break-words border border-border bg-muted/40 px-3 py-2 text-sm">
+            {adjustment?.description}
+          </p>
+          <FinanceField
+            label="Date"
+            error={form.formState.errors.date?.message}
+          >
+            <FormDatePicker
+              min={minDate}
+              max={today}
+              disabled={preparing}
+              control={form.control}
+              name="date"
+            />
+          </FinanceField>
+          <FinanceField
+            label="Why are you undoing it?"
+            error={form.formState.errors.reason?.message}
+          >
+            <Input
+              maxLength={400}
+              disabled={preparing}
+              placeholder="Found the missing sale"
+              {...form.register("reason")}
+            />
+          </FinanceField>
+          {prepareError ? (
+            <FormFeedback appearance="dashboard">{prepareError}</FormFeedback>
+          ) : null}
+          <FinanceFormFooter
+            onCancel={onBack}
+            submitLabel="Review"
+            isSubmitting={preparing}
+            disabled={preparing || !command.ready}
           />
-        </FinanceField>
-        <FinanceField
-          label="Why are you undoing it?"
-          error={form.formState.errors.reason?.message}
-        >
-          <Input
-            maxLength={400}
-            disabled={preparing}
-            placeholder="Found the missing sale"
-            {...form.register("reason")}
-          />
-        </FinanceField>
-        {prepareError ? (
-          <FormFeedback appearance="dashboard">{prepareError}</FormFeedback>
-        ) : null}
-        <FinanceFormFooter
-          onCancel={onBack}
-          submitLabel="Review"
-          isSubmitting={preparing}
-          disabled={preparing || !command.ready}
-        />
-      </FieldGroup>
-    </form>
+        </FieldGroup>
+      </form>
+    </>
   )
 }
 
