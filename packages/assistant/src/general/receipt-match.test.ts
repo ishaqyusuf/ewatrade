@@ -88,6 +88,19 @@ describe("receipt accounts", () => {
     expect(matchReceiptAccount(side("012****417"), accounts)?.id).toBe("main")
     expect(matchReceiptAccount(side("******3051"), accounts)?.id).toBe("bisi")
     expect(matchReceiptAccount(side("9999999999"), accounts)).toBeNull()
+    // The bank name printed with the number is not part of it.
+    expect(matchReceiptAccount(side("GTBank | 0123454417"), accounts)?.id).toBe(
+      "main",
+    )
+    expect(
+      matchReceiptAccount(side("Access Bank | 012****417"), accounts)?.id,
+    ).toBe("main")
+    expect(matchReceiptAccount(side("9PSB 8100093051"), accounts)?.id).toBe(
+      "bisi",
+    )
+    expect(
+      matchReceiptAccount(side("Xpress Bank 012xxxx417"), accounts)?.id,
+    ).toBe("main")
   })
   test("never guesses between two accounts with the same digits", () => {
     const twin = {

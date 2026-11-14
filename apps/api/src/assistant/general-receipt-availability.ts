@@ -16,8 +16,8 @@ export function receiptReadingConfig(env: Environment = process.env) {
   const apiKey =
     env.ASSISTANT_RECEIPT_OPENAI_API_KEY?.trim() ||
     env.MANUAL_RECEIPT_OPENAI_API_KEY?.trim() ||
-    assistantProviderApiKey("OPENAI", env) ||
-    env.CATALOG_IMAGE_OPENAI_API_KEY?.trim()
+    // The Catalog image key is image-scoped and cannot call the Responses API.
+    assistantProviderApiKey("OPENAI", env)
   if (!apiKey) return null
   const limit = Number(env.ASSISTANT_RECEIPT_DAILY_LIMIT ?? "200")
   return {

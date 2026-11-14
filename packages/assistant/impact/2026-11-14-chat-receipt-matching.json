@@ -67,6 +67,18 @@
       "path": "apps/api/src/assistant/telegram-review.test.ts",
       "executed": true,
       "result": "All API Telegram unit suites: 61 tests, 236 assertions pass."
+    },
+    {
+      "kind": "manual",
+      "path": "apps/api/src/assistant/general-turn-execution.ts",
+      "executed": true,
+      "result": "Live Development turn (14 Nov 2026) as the Claude Web Test Farms QA owner: a rendered transfer receipt was read by gpt-4.1-mini (1,695 input / 138 output tokens), matched to ORD-035 by sender name and to GTBank current account by account number, and drafted payment_record with the receipt attached; review lines were the 5-line native shape. Proposal left to expire unconfirmed. Turn 17.7 s."
+    },
+    {
+      "kind": "test",
+      "path": "packages/assistant/src/general/receipt-match.test.ts",
+      "executed": true,
+      "result": "15 tests, 38 assertions pass, including bank names printed with the account number (GTBank |, 9PSB, Xpress masked)."
     }
   ]
 }

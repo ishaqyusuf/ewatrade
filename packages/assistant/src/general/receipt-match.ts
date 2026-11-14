@@ -99,18 +99,24 @@ export function receiptNameMatches(given: string | null, saved: string | null) {
   return short.every((word) => long.some((other) => sameWord(word, other)))
 }
 
-/** Account-number evidence: visible prefix and suffix digits around a mask. */
+/**
+ * Account-number evidence: visible prefix and suffix digits around a mask.
+ * Receipts often print the bank too ("GTBank | 0123****17", "9PSB 1234567890"),
+ * so only the last run of digits and mask characters is the number.
+ */
 function printedDigits(value: string | null) {
-  const raw = value?.trim() ?? ""
+  const runs =
+    (value ?? "").match(
+      /\d[\d*•#xX]*\d|[*•#]+[\d*•#xX]*\d|\d[\d*•#xX]*[*•#]+/g,
+    ) ?? []
+  const raw = runs.filter((run) => (run.match(/\d/g) ?? []).length >= 3).at(-1)
   if (!raw) return null
-  const masked = /[*x•#X]/.test(raw)
-  if (!masked) {
-    const digits = raw.replace(/\D/g, "")
-    return digits.length >= 4
-      ? { prefix: "", suffix: digits, whole: digits.length >= 10 }
+  const masked = /[*•#]|\d[xX]+\d/.test(raw)
+  if (!masked)
+    return raw.length >= 4
+      ? { prefix: "", suffix: raw, whole: raw.length >= 10 }
       : null
-  }
-  const [head = "", ...rest] = raw.split(/[*x•#X]+/)
+  const [head = "", ...rest] = raw.split(/[*•#xX]+/)
   const prefix = head.replace(/\D/g, "")
   const suffix = rest.join("").replace(/\D/g, "")
   return prefix.length + suffix.length >= 4
