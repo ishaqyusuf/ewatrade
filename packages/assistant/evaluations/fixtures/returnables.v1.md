@@ -3,7 +3,7 @@
 Capabilities: `sales.order.prepare` v1 / `sales.order.create` v1 (`returnables`,
 `payment.percent`), `returnables.movement.record` v1 (`returnable_movement_record`)
 and `returnables.read` v1 (`readReturnableBalances`). Prompt `general-v39`.
-Clients: dashboard, mobile, WhatsApp. Status: defined; RT-01, RT-08 and RT-11 have
+Clients: dashboard, mobile, WhatsApp. Status: defined; RT-01, RT-10 and RT-11 have
 model smoke cases in `commerce-preparation-smoke.ts`; the rest are **not run
 against a model**. Design: Workshop `assistant/conversations` v19 (rev `11e8ecad`),
 WhatsApp family 20 and Assistant RT01–RT05.
