@@ -1,0 +1,21 @@
+diff --git a/packages/jobs/src/tasks/scheduled-cadences.ts b/packages/jobs/src/tasks/scheduled-cadences.ts
+--- a/packages/jobs/src/tasks/scheduled-cadences.ts
++++ b/packages/jobs/src/tasks/scheduled-cadences.ts
+@@ -242,11 +242,15 @@
+ function cadenceSchedule(id: keyof typeof SCHEDULED_CADENCES) {
+   const cadence = SCHEDULED_CADENCES[id]
++  // The replacement EwaTrade project owns recovery. Keep callable task IDs on
++  // the old worker so stale dispatches can finish without touching its database.
++  const retired =
++    id === "schedules.every-5-minutes" || id === "schedules.every-15-minutes"
+   return schedules.task({
+     id,
+-    cron: automaticJobCron(cadence.cron),
++    cron: retired ? undefined : automaticJobCron(cadence.cron),
+     maxDuration: 180,
+     // The next tick is the retry; retrying would rerun every sweep.
+     retry: { maxAttempts: 1 },
+-    run: () => runCadenceSteps(cadence.steps),
++    run: () => (retired ? Promise.resolve({}) : runCadenceSteps(cadence.steps)),
+   })
+ }
