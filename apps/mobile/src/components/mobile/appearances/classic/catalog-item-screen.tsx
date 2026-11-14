@@ -41,6 +41,7 @@ import {
   productUsageDescriptions,
   productUsageLabels,
 } from "@ewatrade/utils/product-usage"
+import { useRouter } from "expo-router"
 import { StatusBar } from "expo-status-bar"
 import { useState } from "react"
 import { Text as NativeText, ScrollView, Share } from "react-native"
@@ -122,10 +123,13 @@ export function ClassicCatalogItemOverview({
   )
   // Internal use Products never reach customer orders (the API agrees).
   const internalUse = item.product?.usage === "INTERNAL_USE"
+  // Returnables (crates, cylinders) are never sold or stocked: Returnables tracks them.
+  const returnable = item.product?.usage === "RETURNABLE"
+  const router = useRouter()
   // Stock consumed inside the business is recorded for Internal use or Both.
   const usable = internalUse || item.product?.usage === "BOTH"
   const sellable =
-    item.status === "active" && !internalUse
+    item.status === "active" && !internalUse && !returnable
       ? flattenSaleOfferings(
           [
             {
@@ -253,57 +257,83 @@ export function ClassicCatalogItemOverview({
         />
       ) : null}
       <QuickActionRow
-        actions={[
-          // An Internal use Product can never be ordered, so Record use leads.
-          ...(internalUse
-            ? []
-            : [
-                {
-                  disabled: !sellableOfferings.length,
-                  gold: true,
-                  icon: "Plus" as const,
-                  label: "New order",
-                  onPress: newOrder,
-                },
-              ]),
-          product
-            ? {
-                disabled: !onStockIn || Boolean(cachedAt),
-                icon: "Download",
-                label: "Stock in",
-                onPress: () =>
-                  onStockIn?.(activeFilter ? { variantId: activeFilter } : {}),
-              }
-            : {
-                disabled: !onOpenServiceJobs,
-                icon: "Wrench",
-                label: "Jobs",
-                onPress: () => onOpenServiceJobs?.(),
-              },
-          ...(product && usable
+        actions={
+          returnable
             ? [
                 {
-                  disabled: !onRecordUse || Boolean(cachedAt),
-                  gold: internalUse,
-                  icon: "Upload" as const,
-                  label: "Record use",
-                  onPress: () =>
-                    onRecordUse?.(
-                      activeFilter ? { variantId: activeFilter } : {},
-                    ),
+                  gold: true,
+                  icon: "Package",
+                  label: "Returnables",
+                  onPress: () => router.push("/returnables-modal"),
+                },
+                {
+                  disabled: !canEditImages,
+                  icon: "Image",
+                  label: "Images",
+                  onPress: () => setEditingImages(true),
                 },
               ]
-            : []),
-          {
-            disabled: !canEditImages,
-            icon: "Image",
-            label: "Images",
-            onPress: () => setEditingImages(true),
-          },
-          { icon: "Share", label: "Share", onPress: share },
-        ]}
+            : [
+                // An Internal use Product can never be ordered, so Record use leads.
+                ...(internalUse
+                  ? []
+                  : [
+                      {
+                        disabled: !sellableOfferings.length,
+                        gold: true,
+                        icon: "Plus" as const,
+                        label: "New order",
+                        onPress: newOrder,
+                      },
+                    ]),
+                product
+                  ? {
+                      disabled: !onStockIn || Boolean(cachedAt),
+                      icon: "Download",
+                      label: "Stock in",
+                      onPress: () =>
+                        onStockIn?.(
+                          activeFilter ? { variantId: activeFilter } : {},
+                        ),
+                    }
+                  : {
+                      disabled: !onOpenServiceJobs,
+                      icon: "Wrench",
+                      label: "Jobs",
+                      onPress: () => onOpenServiceJobs?.(),
+                    },
+                ...(product && usable
+                  ? [
+                      {
+                        disabled: !onRecordUse || Boolean(cachedAt),
+                        gold: internalUse,
+                        icon: "Upload" as const,
+                        label: "Record use",
+                        onPress: () =>
+                          onRecordUse?.(
+                            activeFilter ? { variantId: activeFilter } : {},
+                          ),
+                      },
+                    ]
+                  : []),
+                {
+                  disabled: !canEditImages,
+                  icon: "Image",
+                  label: "Images",
+                  onPress: () => setEditingImages(true),
+                },
+                { icon: "Share", label: "Share", onPress: share },
+              ]
+        }
       />
-      {!sellableOfferings.length ? (
+      {returnable ? (
+        <StatusBanner
+          tone="primary"
+          icon="Package"
+          title="Returnable"
+          message="Goes out with orders and comes back. Add it at checkout; track who holds it in Returnables."
+        />
+      ) : !sellableOfferings.length ? (
         <StatusBanner
           tone="warning"
           icon="Tag"
@@ -311,7 +341,7 @@ export function ClassicCatalogItemOverview({
           message={reason}
         />
       ) : null}
-      {offerings.length ? (
+      {offerings.length && !returnable ? (
         <View className="gap-2.5">
           {variants.length > 1 ? (
             <ScrollView
