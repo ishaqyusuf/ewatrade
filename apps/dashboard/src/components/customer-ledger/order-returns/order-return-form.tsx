@@ -7,6 +7,7 @@ import {
 import {
   DialogField,
   OrderDialog,
+  orderCustomerName,
 } from "@/components/orders/overview/order-dialog-frame"
 import {
   type OrderPaymentMethod,
@@ -24,8 +25,6 @@ import {
   Switch,
 } from "@ewatrade/ui"
 import { formatFinanceMoney } from "@ewatrade/utils/finance-money"
-import { Wallet01Icon } from "@hugeicons/core-free-icons"
-import { HugeiconsIcon } from "@hugeicons/react"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { useState } from "react"
 import { RefundCommandStatus } from "../refunds/refund-command-status"
@@ -164,6 +163,8 @@ export function OrderReturnForm({
   const paidBy = PAYMENT_METHODS.find(
     (row) => row.value === original.method,
   )?.label.toLowerCase()
+  const backMinor = (BigInt(creditMinor) + BigInt(cashMinor)).toString()
+  const customer = orderCustomerName(order)
 
   async function submit() {
     if (draft.kind !== "ready" || !confirmed || locked || !command.ready) return
@@ -188,51 +189,26 @@ export function OrderReturnForm({
       open
       onOpenChange={(open) => !open && onClose()}
       busy={command.pending}
-      title="Refund"
-      description="Review original payment sources"
+      alert
+      title={`Refund ${customer}`}
+      description={`${order.orderNumber} · ${money(review.creditMaxMinor)} paid with credit${
+        BigInt(review.ordinaryCashRemainingMinor) > BigInt(0)
+          ? `, ${money(review.ordinaryCashRemainingMinor)} paid${paidBy ? ` by ${paidBy}` : ""}`
+          : ""
+      }`}
     >
-      <dl className="divide-y divide-border overflow-hidden rounded-md border border-border text-sm">
-        <Row
-          label="Order paid with held credit"
-          value={money(review.creditMaxMinor)}
-        />
-        <Row
-          label={
-            paidBy
-              ? `Order paid by ${paidBy}`
-              : "Order paid with money received"
-          }
-          value={money(review.ordinaryCashRemainingMinor)}
-        />
-        <Row
-          label="Proposed credit restoration"
-          value={draft.kind === "ready" ? money(creditMinor) : "Review below"}
-        />
-        <Row
-          label="Proposed cash refund"
-          value={draft.kind === "ready" ? money(cashMinor) : "Review below"}
-        />
-      </dl>
-      <div className="flex gap-2 rounded-md bg-sky-50 p-3 text-sm text-sky-900 dark:bg-sky-950/40 dark:text-sky-100">
-        <HugeiconsIcon icon={Wallet01Icon} className="mt-0.5 size-4 shrink-0" />
-        <p>
-          Restore credit through the original allocation source. Return bank
-          money through the original eligible payment. Never restore and pay out
-          the same value.
-        </p>
-      </div>
       <fieldset className="grid gap-3" disabled={locked}>
         <legend className="mb-2 text-sm font-medium">
-          Back to customer credit
+          Back to {customer}’s credit
         </legend>
         {review.creditSources.map((source) => (
           <DialogField
             key={source.allocationId}
-            label={`${source.sourceKind === "UNBILLED" ? "Credit held for this Order" : "Credit used on this Order"} · ${dateFormat.format(source.effectiveAt)}`}
+            label={`${source.sourceKind === "UNBILLED" ? "Credit held" : "Credit used"} · ${dateFormat.format(source.effectiveAt)}`}
             htmlFor={`order-return-${source.allocationId}`}
             hint={
               problems[source.allocationId] ??
-              `Up to ${money(source.remainingMinor)} goes back to the customer’s credit.`
+              `Up to ${money(source.remainingMinor)}`
             }
           >
             <MoneyInput
@@ -253,7 +229,7 @@ export function OrderReturnForm({
         <fieldset className="grid gap-3" disabled={locked}>
           <div className="flex items-center justify-between gap-4">
             <span id="order-return-cash-on" className="text-sm font-medium">
-              Also return money received
+              Also pay money back
             </span>
             <Switch
               aria-labelledby="order-return-cash-on"
@@ -267,8 +243,7 @@ export function OrderReturnForm({
                 label="Amount paid back"
                 htmlFor="order-return-cash"
                 hint={
-                  problems.cash ??
-                  `Up to ${money(review.ordinaryCashMaxMinor)}. Customer credit is never paid out as cash.`
+                  problems.cash ?? `Up to ${money(review.ordinaryCashMaxMinor)}`
                 }
               >
                 <MoneyInput
@@ -326,14 +301,13 @@ export function OrderReturnForm({
           onChange={(event) => setReason(event.target.value)}
         />
       </DialogField>
-      <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-        The Order total stays the same.
+      <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
         {canReturn ? (
           <Button
             type="button"
             variant="link"
             size="sm"
-            className="h-auto p-0 text-xs"
+            className="h-11 p-0 text-sm"
             disabled={locked}
             onClick={onOpenReturn}
           >
@@ -344,7 +318,7 @@ export function OrderReturnForm({
           type="button"
           variant="link"
           size="sm"
-          className="h-auto p-0 text-xs"
+          className="h-11 p-0 text-sm"
           disabled={locked}
           onClick={onOrdinary}
         >
@@ -355,16 +329,16 @@ export function OrderReturnForm({
         <span className="grid gap-0.5">
           <span id="order-return-confirm" className="text-sm font-medium">
             {key
-              ? `Restore ${money(creditMinor)} to credit${cashMinor === "0" ? "" : ` and record ${money(cashMinor)} paid back`}`
+              ? `${money(creditMinor)} back to credit${cashMinor === "0" ? "" : `, ${money(cashMinor)} paid back`}`
               : "Check the amounts above"}
           </span>
           <span className="text-xs text-muted-foreground">
             {accountProblem ??
               (draft.kind === "invalid" && draft.empty
-                ? "Choose credit to restore or money to return."
+                ? "Choose credit or money to give back."
                 : cashMinor !== "0"
-                  ? "I have already paid back the cash amount shown. Credit goes back to its original source."
-                  : "Credit goes back to its original source; no cash is paid out.")}
+                  ? `I have paid ${money(cashMinor)} back to ${customer}.`
+                  : "No money is paid out.")}
           </span>
         </span>
         <Switch
@@ -409,19 +383,14 @@ export function OrderReturnForm({
             disabled={!confirmed || !command.ready || command.pending}
             onClick={() => void submit()}
           >
-            {command.pending ? "Saving…" : "Return to original sources"}
+            {command.pending
+              ? "Saving…"
+              : key
+                ? `Refund ${money(backMinor)}`
+                : "Refund"}
           </Button>
         )}
       </div>
     </OrderDialog>
-  )
-}
-
-function Row({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex items-center justify-between gap-4 px-3 py-2">
-      <dt className="text-muted-foreground">{label}</dt>
-      <dd className="tabular-nums">{value}</dd>
-    </div>
   )
 }

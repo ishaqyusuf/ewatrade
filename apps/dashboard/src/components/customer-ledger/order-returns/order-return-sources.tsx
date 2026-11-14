@@ -1,6 +1,9 @@
 "use client"
 import { errorCode } from "@/components/business-banking/business-banking-model"
-import { OrderDialog } from "@/components/orders/overview/order-dialog-frame"
+import {
+  OrderDialog,
+  orderCustomerName,
+} from "@/components/orders/overview/order-dialog-frame"
 import type { OverviewOrder } from "@/components/orders/overview/order-overview-model"
 import { useTRPC } from "@/trpc/client"
 import { canManageTenant, normalizeRole } from "@ewatrade/auth/roles"
@@ -54,9 +57,9 @@ export function OrderReturnSources({
       <OrderDialog
         open
         onOpenChange={(open) => !open && onClose()}
-        title="Refund"
+        title={`Refund ${orderCustomerName(order)}`}
       >
-        <output aria-busy="true">Checking Finance access…</output>
+        <output aria-busy="true">Loading…</output>
       </OrderDialog>
     )
   return (
@@ -132,14 +135,14 @@ function ScopedSources({
     <OrderDialog
       open
       onOpenChange={(open) => !open && onClose()}
-      title="Refund"
-      description="Review original payment sources"
+      alert
+      title={`Refund ${orderCustomerName(order)}`}
+      description={order.orderNumber}
     >
       {route.kind === "error" ? (
         <Alert appearance="dashboard" variant="destructive">
           <AlertDescription>
-            The Order’s payment sources couldn’t load.{" "}
-            {review.error?.message ?? ""}
+            Couldn’t load how this order was paid.
           </AlertDescription>
           <Button
             variant="outline"
@@ -155,7 +158,7 @@ function ScopedSources({
         </Alert>
       ) : (
         <output className="rounded-lg border border-border p-3 text-sm text-muted-foreground">
-          Checking how this Order was paid…
+          Loading…
         </output>
       )}
       <div className="flex justify-end">
