@@ -10,7 +10,7 @@ export function Input({ className, ...props }: ComponentProps<"input">) {
     <InputPrimitive
       data-slot="input"
       className={cn(
-        "flex h-9 w-full min-w-0 rounded-none border border-border bg-transparent px-3 py-1 text-base text-foreground transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive md:text-sm [&:-webkit-autofill]:!bg-transparent [&:-webkit-autofill]:!bg-none [&:-webkit-autofill]:!shadow-none",
+        "flex h-[var(--ui-control-h,calc(var(--spacing)*9))] w-full min-w-0 rounded-[var(--ui-radius-control,0px)] border border-[color:var(--ui-control-border,var(--border))] bg-transparent px-3 py-1 text-base text-foreground transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive md:text-sm [&:-webkit-autofill]:!bg-transparent [&:-webkit-autofill]:!bg-none [&:-webkit-autofill]:!shadow-none",
         className,
       )}
       {...props}

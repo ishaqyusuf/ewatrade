@@ -45,7 +45,7 @@ export function TableHead({ className, ...props }: ComponentProps<"th">) {
   return (
     <th
       className={cn(
-        "h-12 w-auto border-r px-4 text-left align-middle font-medium text-muted-foreground last:border-r-0 [&:has([role=checkbox])]:pr-0 [&:nth-last-child(2)]:border-r-0",
+        "h-[var(--ui-table-head-h,calc(var(--spacing)*12))] w-auto border-r px-4 text-left align-middle font-medium text-muted-foreground last:border-r-0 [&:has([role=checkbox])]:pr-0 [&:nth-last-child(2)]:border-r-0",
         className,
       )}
       {...props}

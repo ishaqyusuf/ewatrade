@@ -62,7 +62,7 @@ function SheetContent({
       >
         <div
           className={cn(
-            "relative flex h-full w-full flex-col overflow-hidden border border-border bg-[#FAFAF9] p-6 max-md:border-0 dark:bg-[#0C0C0C]",
+            "relative flex h-full w-full flex-col overflow-hidden border border-border bg-[var(--ui-sheet-bg,#FAFAF9)] p-6 max-md:border-0 dark:bg-[var(--ui-sheet-bg,#0C0C0C)]",
             mobileLayout === "bottom" && "max-md:border-t",
             className,
           )}

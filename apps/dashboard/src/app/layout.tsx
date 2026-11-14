@@ -5,13 +5,22 @@ import "@ewatrade/ui/globals.css"
 import "@/styles/dashboard.css"
 import { cn } from "@/utils"
 import { isQaAcceleratorClientMode } from "@ewatrade/utils/qa-accelerator"
-import { Figtree } from "next/font/google"
+import { Inter } from "next/font/google"
+import localFont from "next/font/local"
 import { Providers } from "./providers"
 
-const figtree = Figtree({
+// Midnight Paper (ADR-0060): Inter for text and numbers, Cal Sans for titles.
+const inter = Inter({
   subsets: ["latin"],
   display: "swap",
-  variable: "--font-figtree",
+  variable: "--font-inter",
+})
+
+const calSans = localFont({
+  src: "../../public/shop-v3/cal-sans.woff2",
+  display: "swap",
+  variable: "--font-cal-sans",
+  weight: "600",
 })
 
 export const metadata: Metadata = {
@@ -53,7 +62,7 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={cn("ewatrade-dashboard", figtree.variable)}
+      className={cn("ewatrade-dashboard", inter.variable, calSans.variable)}
     >
       <body className="bg-background font-sans antialiased">
         <DashboardEventsProvider>

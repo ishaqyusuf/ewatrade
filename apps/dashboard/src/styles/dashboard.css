@@ -1,52 +1,99 @@
-/* shadcn Luma preset: Stone base + Emerald theme, Figtree, small radius. */
+/*
+ * Midnight Paper (ADR-0060, Workshop dashboard/side-nav v2 direction 01,
+ * revision 8f7b030a). Wash canvas, white cards, ink text, ink primary button,
+ * indigo accent for links, focus and the active nav row. Contrast numbers are
+ * in the ADR; --input is the 3:1 control border.
+ *
+ * --text-* override Tailwind's type scale for the dashboard only (14px is the
+ * smallest size). --ui-* feed control, badge, table, menu and sheet sizes in
+ * packages/ui, which fall back to their old sizes in other apps.
+ */
 .ewatrade-dashboard {
-  --font-sans: var(--font-figtree);
-  --font-display: var(--font-figtree);
-  --font-serif: var(--font-figtree);
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.147 0.004 49.25);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.147 0.004 49.25);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.147 0.004 49.25);
-  --primary: oklch(0.508 0.118 165.612);
-  --primary-foreground: oklch(0.979 0.021 166.113);
-  --secondary: oklch(0.97 0.001 106.424);
-  --secondary-foreground: oklch(0.216 0.006 56.043);
-  --muted: oklch(0.97 0.001 106.424);
-  --muted-foreground: oklch(0.553 0.013 58.071);
-  --accent: oklch(0.97 0.001 106.424);
-  --accent-foreground: oklch(0.216 0.006 56.043);
-  --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.985 0 0);
-  --border: oklch(0.923 0.003 48.717);
-  --input: oklch(0.923 0.003 48.717);
-  --ring: oklch(0.508 0.118 165.612);
-  /* Soft status tones: bg-{tone}, text-{tone}-foreground, border-{tone}-border. */
-  --success: oklch(97.9% 0.021 166.113);
-  --success-foreground: oklch(43.2% 0.095 166.913);
-  --success-border: oklch(90.5% 0.093 164.15);
-  --warning: oklch(98.7% 0.022 95.277);
-  --warning-foreground: oklch(47.3% 0.137 46.201);
-  --warning-border: oklch(92.4% 0.12 95.746);
-  --info: oklch(97% 0.014 254.604);
-  --info-foreground: oklch(42.4% 0.199 265.638);
-  --info-border: oklch(88.2% 0.059 254.128);
-  --danger: oklch(97.1% 0.013 17.38);
-  --danger-foreground: oklch(44.4% 0.177 26.899);
-  --danger-border: oklch(88.5% 0.062 18.334);
-  --highlight: oklch(96.9% 0.016 293.756);
-  --highlight-foreground: oklch(43.2% 0.232 292.759);
-  --highlight-border: oklch(89.4% 0.057 293.283);
-  --radius: 0.45rem;
-  --sidebar: var(--background);
-  --sidebar-foreground: var(--foreground);
-  --sidebar-primary: var(--accent);
-  --sidebar-primary-foreground: var(--foreground);
-  --sidebar-accent: var(--accent);
-  --sidebar-accent-foreground: var(--accent-foreground);
-  --sidebar-border: var(--border);
-  --sidebar-ring: var(--ring);
+  --font-sans: var(--font-inter);
+  --font-display: var(--font-cal-sans);
+  --font-serif: var(--font-inter);
+
+  --text-xs: 0.875rem;
+  --text-xs--line-height: 1.45;
+  --text-sm: 0.9375rem;
+  --text-sm--line-height: 1.5;
+  --text-base: 1rem;
+  --text-base--line-height: 1.5;
+  --text-lg: 1.125rem;
+  --text-lg--line-height: 1.45;
+
+  --ui-control-h: 2.75rem;
+  --ui-control-h-sm: 2.25rem;
+  --ui-control-h-xs: 2rem;
+  --ui-control-h-lg: 3rem;
+  --ui-control-px: 1rem;
+  --ui-control-border: var(--input);
+  --ui-radius-control: 10px;
+  --ui-radius-surface: 14px;
+  --ui-radius-item: 8px;
+  --ui-badge-h: 1.75rem;
+  --ui-badge-px: 0.625rem;
+  --ui-table-head-h: 2.75rem;
+  --ui-menu-item-h: 2.75rem;
+  --ui-sheet-bg: var(--background);
+  --radius: 0.625rem;
+
+  /* Shell sizes. --sidebar-width is set on the shell from the pin state. */
+  --rail-width: 70px;
+  --sidebar-open-width: 256px;
+  --header-height: 64px;
+
+  --canvas: #f5f6f8;
+  --background: #ffffff;
+  --foreground: #151b28;
+  --card: #ffffff;
+  --card-foreground: #151b28;
+  --popover: #ffffff;
+  --popover-foreground: #151b28;
+  --primary: #151b28;
+  --primary-foreground: #ffffff;
+  --secondary: #eef0f3;
+  --secondary-foreground: #151b28;
+  --muted: #eef0f3;
+  --muted-foreground: #545c69;
+  --accent: #eef0f3;
+  --accent-foreground: #151b28;
+  --destructive: #b3261e;
+  --destructive-foreground: #ffffff;
+  --border: #dfe3e8;
+  --input: #8a919d;
+  --ring: #2747b4;
+  --link: #2747b4;
+  --hover: #151b280b;
+  /* Solid status pairs: bg-{tone}, text-{tone}-foreground, border-{tone}-border. */
+  --success: #e7f4ec;
+  --success-foreground: #166a3d;
+  --success-border: #bfe0cb;
+  --warning: #fdf1de;
+  --warning-foreground: #8a4600;
+  --warning-border: #f1d4a6;
+  --info: #eef1fb;
+  --info-foreground: #2747b4;
+  --info-border: #c9d3f3;
+  --danger: #fcebea;
+  --danger-foreground: #b3261e;
+  --danger-border: #f2c4c0;
+  --neutral: #eef0f3;
+  --neutral-foreground: #454d5a;
+  --highlight: #f1edfc;
+  --highlight-foreground: #5b3cb0;
+  --highlight-border: #d8cdf5;
+  --sidebar: #ffffff;
+  --sidebar-foreground: #3d4553;
+  --sidebar-primary: #2747b4;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #eef1fb;
+  --sidebar-accent-foreground: #2747b4;
+  --sidebar-border: #dfe3e8;
+  --sidebar-ring: #2747b4;
+  --avatar: #e4e8f2;
+  --avatar-foreground: #1d2a4d;
+  --badge-dot: #d4351c;
   /* Report charts. Checked with the dataviz palette validator on this surface:
      Products/Services pass the categorical checks; steps pass the ordinal ones. */
   --report-product: #007a55;
@@ -57,54 +104,99 @@
   --report-step-4: #00513a;
 }
 
-.ewatrade-dashboard body {
-  background: var(--background);
-  font-family: var(--font-sans), system-ui, sans-serif;
-}
-
-/* Surfaces sit one step above the preset's dark values for readability. */
 .ewatrade-dashboard.dark {
-  --background: oklch(0.195 0.004 49.25);
-  --foreground: oklch(0.985 0.001 106.423);
-  --card: oklch(0.235 0.004 49.25);
-  --card-foreground: oklch(0.985 0.001 106.423);
-  --popover: oklch(0.235 0.004 49.25);
-  --popover-foreground: oklch(0.985 0.001 106.423);
-  --primary: oklch(0.696 0.17 162.48);
-  --primary-foreground: oklch(0.262 0.051 172.552);
-  --secondary: oklch(0.28 0.004 49.25);
-  --secondary-foreground: oklch(0.985 0.001 106.423);
-  --muted: oklch(0.28 0.004 49.25);
-  --muted-foreground: oklch(0.72 0.012 56.259);
-  --accent: oklch(0.28 0.004 49.25);
-  --accent-foreground: oklch(0.985 0.001 106.423);
-  --destructive: oklch(0.704 0.191 22.216);
-  --destructive-foreground: oklch(0.985 0 0);
-  --border: oklch(1 0 0 / 12%);
-  --input: oklch(1 0 0 / 16%);
-  --ring: oklch(0.596 0.145 163.225);
-  /* Soft status tones sit as tinted glass over dark surfaces. */
-  --success: oklch(26.2% 0.051 172.552 / 45%);
-  --success-foreground: oklch(84.5% 0.143 164.978);
-  --success-border: oklch(43.2% 0.095 166.913 / 60%);
-  --warning: oklch(27.9% 0.077 45.635 / 45%);
-  --warning-foreground: oklch(87.9% 0.169 91.605);
-  --warning-border: oklch(47.3% 0.137 46.201 / 60%);
-  --info: oklch(28.2% 0.091 267.935 / 45%);
-  --info-foreground: oklch(80.9% 0.105 251.813);
-  --info-border: oklch(42.4% 0.199 265.638 / 60%);
-  --danger: oklch(25.8% 0.092 26.042 / 45%);
-  --danger-foreground: oklch(80.8% 0.114 19.571);
-  --danger-border: oklch(44.4% 0.177 26.899 / 60%);
-  --highlight: oklch(28.3% 0.141 291.089 / 45%);
-  --highlight-foreground: oklch(81.1% 0.111 293.571);
-  --highlight-border: oklch(43.2% 0.232 292.759 / 60%);
+  --canvas: #10141c;
+  --background: #181d27;
+  --foreground: #eff1f5;
+  --card: #181d27;
+  --card-foreground: #eff1f5;
+  --popover: #1c2230;
+  --popover-foreground: #eff1f5;
+  --primary: #eff1f5;
+  --primary-foreground: #10141c;
+  --secondary: #242a35;
+  --secondary-foreground: #eff1f5;
+  --muted: #242a35;
+  --muted-foreground: #b0b8c7;
+  --accent: #242a35;
+  --accent-foreground: #eff1f5;
+  --destructive: #ffaba3;
+  --destructive-foreground: #10141c;
+  --border: #2d3340;
+  --input: #6e7787;
+  --ring: #a7bbff;
+  --link: #a7bbff;
+  --hover: #ffffff10;
+  --success: #16291f;
+  --success-foreground: #7fdca8;
+  --success-border: #2a4d39;
+  --warning: #2c2213;
+  --warning-foreground: #f5c26b;
+  --warning-border: #574320;
+  --info: #1e2640;
+  --info-foreground: #b8c7ff;
+  --info-border: #33406b;
+  --danger: #321b1b;
+  --danger-foreground: #ffaba3;
+  --danger-border: #5c2f2f;
+  --neutral: #242a35;
+  --neutral-foreground: #c3cad6;
+  --highlight: #261f3d;
+  --highlight-foreground: #d4c2ff;
+  --highlight-border: #463a6b;
+  --sidebar: #141923;
+  --sidebar-foreground: #c3cad6;
+  --sidebar-primary: #c4d1ff;
+  --sidebar-primary-foreground: #10141c;
+  --sidebar-accent: #232b3d;
+  --sidebar-accent-foreground: #c4d1ff;
+  --sidebar-border: #2d3340;
+  --sidebar-ring: #a7bbff;
+  --avatar: #2b3446;
+  --avatar-foreground: #e3e8f5;
+  --badge-dot: #ff8a80;
   --report-product: #00a370;
   --report-service: #3987e5;
   --report-step-1: #006045;
   --report-step-2: #00805a;
   --report-step-3: #00a370;
   --report-step-4: #6fd3ad;
+}
+
+.ewatrade-dashboard body {
+  background: var(--canvas);
+  color: var(--foreground);
+  font-family: var(--font-sans), system-ui, sans-serif;
+  font-size: var(--text-base);
+  line-height: var(--text-base--line-height);
+}
+
+/* Titles use Cal Sans, as on the marketing site. Amounts stay Inter. */
+.ewatrade-dashboard h1,
+.ewatrade-dashboard h2,
+.ewatrade-dashboard [data-slot="card-title"],
+.ewatrade-dashboard [data-slot="sheet-title"],
+.ewatrade-dashboard [data-slot="dialog-title"],
+.ewatrade-dashboard [data-slot="alert-dialog-title"] {
+  font-family: var(--font-display), var(--font-sans), system-ui, sans-serif;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+/* One clear keyboard focus ring everywhere (beats outline-none utilities). */
+.ewatrade-dashboard :focus-visible {
+  outline: 3px solid var(--ring);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ewatrade-dashboard *,
+  .ewatrade-dashboard *::before,
+  .ewatrade-dashboard *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
 }
 
 .ewatrade-dashboard .scrollbar-hide {
