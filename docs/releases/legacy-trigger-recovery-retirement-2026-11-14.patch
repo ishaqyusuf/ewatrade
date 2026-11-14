@@ -19,3 +19,29 @@ diff --git a/packages/jobs/src/tasks/scheduled-cadences.ts b/packages/jobs/src/t
 +    run: () => (retired ? Promise.resolve({}) : runCadenceSteps(cadence.steps)),
    })
  }
+diff --git a/packages/jobs/trigger.config.ts b/packages/jobs/trigger.config.ts
+--- a/packages/jobs/trigger.config.ts
++++ b/packages/jobs/trigger.config.ts
+@@ -1,10 +1,4 @@
+-import {
+-  additionalFiles,
+-  syncEnvVars,
+-} from "@trigger.dev/build/extensions/core"
++import { additionalFiles } from "@trigger.dev/build/extensions/core"
+ import { defineConfig } from "@trigger.dev/sdk/v3"
+-import {
+-  syncedTriggerJobEnvironment,
+-  triggerProjectForConfigEnv,
+-} from "../../scripts/trigger-deploy-profile.mjs"
++import { triggerProjectForConfigEnv } from "../../scripts/trigger-deploy-profile.mjs"
+ import { captureTerminalJobError } from "./src/observability/sentry"
+@@ -30,9 +24,6 @@
+   build: {
+     external: ["sharp", "libheif-js"],
+     extensions: [
+       additionalFiles({ files: ["../catalog/src/photo-heic-worker.mjs"] }),
+-      syncEnvVars(() => syncedTriggerJobEnvironment(process.env), {
+-        override: true,
+-      }),
+     ],
+   },
