@@ -97,6 +97,10 @@ import {
 import { runInOwnTransaction } from "./own-transaction"
 import { assertSaleProductUsage } from "./product-usage"
 import { assertRetailOpsOrderAllowance } from "./retail-ops-subscriptions"
+import {
+  RETURNABLE_MOVEMENT_MAX_QUANTITY,
+  recordReturnableMovement,
+} from "./returnables"
 import { loadTenantActors } from "./tenant-actors"
 
 export type CommercialOrderCatalogLineInput = {
@@ -134,11 +138,40 @@ export type CreateCommercialOrderInput = {
   }
   lines: Array<CommercialOrderCatalogLineInput | CommercialOrderCustomLineInput>
   notes?: string
+  /** Returnable items (crates, cylinders) going out with this order; needs a saved customer. */
+  returnables?: Array<{ catalogItemId: string; quantity: number }>
+  returnablesSource?: "staff" | "assistant"
   schemaVersion: number
   serviceChargeMinor?: number
   storeId: string
   taxMinor?: number
   tenantId: string
+}
+
+export const ORDER_RETURNABLES_MAX = 10
+
+function assertOrderReturnables(input: CreateCommercialOrderInput) {
+  const items = input.returnables ?? []
+  if (!items.length) return
+  if (!input.customerId && input.customerMode !== "create")
+    throw new CatalogError(
+      "INVALID_ORDER",
+      "Choose a saved customer to send returnables with this order.",
+    )
+  if (
+    items.length > ORDER_RETURNABLES_MAX ||
+    new Set(items.map((item) => item.catalogItemId)).size !== items.length ||
+    items.some(
+      (item) =>
+        !Number.isSafeInteger(item.quantity) ||
+        item.quantity < 1 ||
+        item.quantity > RETURNABLE_MOVEMENT_MAX_QUANTITY,
+    )
+  )
+    throw new CatalogError(
+      "INVALID_ORDER",
+      "List each returnable once with a whole number of at least 1.",
+    )
 }
 
 const orderGraph = {
@@ -654,6 +687,7 @@ export async function createCommercialOrderGraphInTransaction(
       "A Commercial Order requires at least one line.",
     )
   }
+  assertOrderReturnables(input)
   const now = new Date()
   const deliveryDueAt = normalizeDeliveryDueAt(input.deliveryDueAt, now)
   if (input.fulfillNow && deliveryDueAt.getTime() > now.getTime()) {
@@ -1226,6 +1260,28 @@ export async function createCommercialOrderGraphInTransaction(
       compositionLock,
       recoveryAuthorization,
     )
+  }
+
+  if (input.returnables?.length) {
+    if (!customerId)
+      throw new CatalogError(
+        "INVALID_ORDER",
+        "Choose a saved customer to send returnables with this order.",
+      )
+    for (const [index, item] of input.returnables.entries())
+      await recordReturnableMovement(tx, {
+        actorUserId: input.actorUserId,
+        catalogItemId: item.catalogItemId,
+        clientMovementId: `order:${order.id}:returnable:${index + 1}`,
+        customerId,
+        kind: "ISSUED",
+        orderId: order.id,
+        quantity: item.quantity,
+        scope: { tenantId: input.tenantId },
+        source: input.returnablesSource ?? "staff",
+        storeId: input.storeId,
+        tenantId: input.tenantId,
+      })
   }
 
   const created = await tx.commercialOrder.findUniqueOrThrow({

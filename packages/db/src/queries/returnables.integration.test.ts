@@ -239,6 +239,59 @@ if (enabled) setDefaultTimeout(120_000)
           await listReturnableBalances(prisma, { tenantId: otherTenantId }),
         ).toEqual([])
 
+        // Order creation issues returnables in the same transaction, once.
+        const withCrates = {
+          actorUserId: userId,
+          clientOrderId: `returnables-order-${id}`,
+          customerId: other.id,
+          lines: [
+            {
+              amountMinor: 6_000_000,
+              custom: "quick_sale" as const,
+              description: "10 crates",
+            },
+          ],
+          returnables: [{ catalogItemId: crate.id, quantity: 10 }],
+          schemaVersion: 1,
+          storeId: store.id,
+          tenantId,
+        }
+        const crateOrder = await createCommercialOrder(prisma, withCrates)
+        await createCommercialOrder(prisma, withCrates)
+        const otherBalance = await listReturnableBalances(prisma, {
+          customerId: other.id,
+          tenantId,
+        })
+        expect(otherBalance[0]?.out).toBe(10)
+        expect(
+          (
+            await readOrderReturnables(prisma, {
+              orderId: crateOrder.id,
+              scope,
+              tenantId,
+            })
+          ).items[0]?.issued,
+        ).toBe(10)
+        await expect(
+          createCommercialOrder(prisma, {
+            ...withCrates,
+            clientOrderId: `returnables-walkin-${id}`,
+            customerId: undefined,
+          }),
+        ).rejects.toMatchObject({ code: "INVALID_ORDER" })
+        await expect(
+          createCommercialOrder(prisma, {
+            ...withCrates,
+            clientOrderId: `returnables-eggs-${id}`,
+            returnables: [{ catalogItemId: eggs.id, quantity: 1 }],
+          }),
+        ).rejects.toMatchObject({ code: "RETURNABLE_NOT_FOUND" })
+        expect(
+          await prisma.commercialOrder.count({
+            where: { clientOrderId: `returnables-eggs-${id}`, tenantId },
+          }),
+        ).toBe(0)
+
         // An item with history stays Returnable.
         await expect(
           setCatalogProductUsage(prisma, {

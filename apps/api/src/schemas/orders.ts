@@ -93,6 +93,17 @@ export const commercialOrderCreateSchema = z
       .min(1)
       .max(100),
     notes: z.string().trim().max(2_000).optional(),
+    returnables: z
+      .array(
+        z
+          .object({
+            catalogItemId: z.string().trim().min(1).max(128),
+            quantity: z.number().int().min(1).max(100_000),
+          })
+          .strict(),
+      )
+      .max(10)
+      .optional(),
     schemaVersion: z.literal(1),
     storeId: z.string().trim().min(1).optional(),
     taxMinor: z.number().int().nonnegative().max(100_000_000).optional(),
