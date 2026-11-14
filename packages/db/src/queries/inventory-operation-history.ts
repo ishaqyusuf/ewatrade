@@ -288,6 +288,9 @@ export async function getInventoryOperationTotals(
       FROM tree t
       JOIN "StockMovement" m ON m."operationId" = t."id"
       JOIN "StockBalanceSource" b ON b."id" = m."balanceSourceId"
+      -- Stock on the way belongs to no shelf: a sent transfer counts as
+      -- leaving the sender now and arriving when the other store receives it.
+      WHERE b."custodyType" <> 'TRANSIT'
       GROUP BY b."storeId", b."productId", b."variantId",
         m."configurationVersionId"`,
     db.$queryRaw<Array<{ operations: number; corrections: number }>>`${tree}
