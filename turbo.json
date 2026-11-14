@@ -33,6 +33,9 @@
     "build": {
       "dependsOn": ["^build"],
       "env": [
+        "VERCEL",
+        "VERCEL_ENV",
+        "VERCEL_URL",
         "EWATRADE_DATABASE_URL",
         "BETTER_AUTH_SECRET",
         "BETTER_AUTH_URL",
@@ -90,6 +93,14 @@
         "next-env.d.ts"
       ],
       "inputs": ["$TURBO_DEFAULT$", ".env*"]
+    },
+    "@ewatrade/oversight-api#build": {
+      "dependsOn": ["^build"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/scripts/build-oversight-api.mjs"
+      ],
+      "outputs": ["src/bundle.js"]
     },
     "dev": {
       "cache": false,

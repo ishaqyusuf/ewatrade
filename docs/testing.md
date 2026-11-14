@@ -66,6 +66,7 @@ The explicit mapping in `scripts/test-quick.ts` selects a small reviewed set:
 | --- | --- |
 | Documentation / QA scripts | QA workflow and environment/isolation tests |
 | Dashboard, marketing, storefront; onboarding, storefront-components and shared UI packages | Core + web + domain smoke (adds signup-chat and component contract/operations/SDK/source-policy tests) |
+| Embedded Oversight API | Core + domain smoke (includes lazy database initialization, read-key refusals and input validation) |
 | Mobile, `.easignore` | Core + mobile + domain smoke |
 | API, auth, DB, jobs, assistant, AI, events, communications and mapped shared contracts | All client/domain smoke groups (adds AI runtime-config and events policy/storefront tests) |
 | Root package/lock/config, `.vercelignore` or workspace manifests | All workspace smoke groups |
@@ -82,7 +83,7 @@ render, so it needs a behaviour review) and the QA auth modal import order. `pac
 not in the smoke set: it writes fixtures under the macOS-only `/private/tmp`.
 Shared UI has no test of its own; its consumers' web smoke is the bounded check.
 Areas never touched by that release still exit 2 when changed (157 tracked paths
-on 2 November 2026): POS, desktop, WAPI and oversight API apps; private-media,
+on 2 November 2026): POS, desktop, WAPI and Oversight API apps; private-media,
 domains, order-receipts, prescriptions, customer-messages, tenant-url,
 notifications-react, observability and tsconfig packages; `tools/`, `tmp/`,
 `patches/` and a few root files. Map each after reviewing its offline tests.
@@ -91,8 +92,9 @@ On 7 November, the full Production candidate comparison exposed ten unmapped
 changes in customer-messages, order-receipts and private-media. These packages now
 select the bounded shared smoke groups, including their reviewed customer template/
 phone helpers, embedded-font statement PDF and fake/local-object erasure suites.
-The three suites pass 22 tests/91 assertions in the minimal smoke environment;
-they make no provider/DB calls. Other unmapped packages still fail visibly.
+The three suites pass 22 tests/91 assertions in the minimal smoke environment.
+The embedded Oversight API also uses its offline health and authorization
+suite. Other unmapped packages still fail visibly.
 
 Every run also typechecks only the QA tooling and runs Biome on existing changed
 JS/TS/JSON files. It does **not** typecheck application graphs. A TypeScript feature

@@ -19,6 +19,7 @@ import { dashboardAnalyticsLink } from "./analytics-link"
 import { isBodyTransportQuery } from "./body-transport"
 import { shouldLogDashboardTrpcOperation } from "./log-operation"
 import { makeQueryClient } from "./query-client"
+import { fetchDashboardRead } from "./query-retry"
 
 export const { TRPCProvider, useTRPC, useTRPCClient } =
   createTRPCContext<AppRouter>()
@@ -82,6 +83,7 @@ export function TRPCReactProvider({
           true: httpBatchStreamLink({
             url: "/api/trpc",
             transformer: superjson,
+            fetch: fetchDashboardRead,
             headers,
           }),
           false: splitLink({
@@ -90,6 +92,7 @@ export function TRPCReactProvider({
               url: "/api/trpc",
               transformer: superjson,
               methodOverride: "POST",
+              fetch: fetchDashboardRead,
               headers,
             }),
             false: httpBatchLink({

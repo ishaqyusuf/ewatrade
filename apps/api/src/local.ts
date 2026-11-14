@@ -5,7 +5,7 @@ import {
   manualPaymentWebSocket,
   upgradeManualPaymentSocket,
 } from "./banking/status-socket"
-import { app } from "./index"
+import app from "./index"
 
 const requestedPort = Number(
   process.env.PORT ?? process.env.PORTLESS_APP_PORT ?? 3095,

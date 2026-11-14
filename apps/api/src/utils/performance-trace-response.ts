@@ -4,6 +4,7 @@ import {
   startPerformanceTrace,
 } from "@ewatrade/db/performance-tracing"
 import type { MiddlewareHandler } from "hono"
+import { getRequestTrace } from "./request-trace"
 
 export type TraceCompletion = "complete" | "error" | "cancelled"
 
@@ -13,16 +14,18 @@ export function performanceTracingMiddleware(
     trace: PerformanceTrace,
     completion: TraceCompletion,
     status: number,
+    requestId: string,
   ) => void,
 ): MiddlewareHandler {
   return async (c, next) => {
     if (!enabled()) return next()
+    const { requestId } = getRequestTrace(c.req)
     const response = await tracePerformanceResponse(
       async () => {
         await next()
         return c.res
       },
-      (trace, completion) => emit(trace, completion, c.res.status),
+      (trace, completion) => emit(trace, completion, c.res.status, requestId),
     )
     // Hono preserves existing headers when replacing c.res; restore the merged
     // diagnostic value after that assignment rather than losing it to the old one.

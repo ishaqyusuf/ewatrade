@@ -11,7 +11,7 @@ import {
 import { siteContentHash } from "./storefront-sites"
 import type { DbClient } from "./types"
 
-function repository(plan: "starter" | "growth" = "starter") {
+function repository(plan: "free" | "starter" | "growth" = "starter") {
   const reads: string[] = []
   const composition = {
     schemaVersion: 1,
@@ -194,12 +194,12 @@ test("paid detail reads one eligible item without a listing, stock aggregation o
 })
 
 test("capped detail checks bounded ID membership and cannot reveal an over-cap item", async () => {
-  const { db, reads } = repository()
+  const { db, reads } = repository("free")
   const selections: unknown[] = []
   Object.assign(db.catalogItem, {
     findMany: async (query: unknown) => {
       selections.push(query)
-      return [{ id: "one" }, { id: "two" }, { id: "three" }]
+      return Array.from({ length: 10 }, (_, index) => ({ id: `item-${index}` }))
     },
     findFirst: async () => {
       reads.push("detail")
@@ -215,12 +215,12 @@ test("capped detail checks bounded ID membership and cannot reveal an over-cap i
     db,
     context,
     undefined,
-    { item: "four" },
+    { item: "item-10" },
     { catalog: "detail" },
   )
   expect(result?.storefront.highlightedItem).toBeNull()
   expect(selections).toHaveLength(1)
-  expect(selections[0]).toMatchObject({ take: 3, select: { id: true } })
+  expect(selections[0]).toMatchObject({ take: 10, select: { id: true } })
   expect(reads).not.toContain("detail")
 })
 

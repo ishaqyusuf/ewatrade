@@ -4,14 +4,12 @@ import {
   loadPublicStorefrontPinnedItems,
   type loadStorefrontContextForHost,
   loadStorefrontResourcesForContext,
-  siteContentHash,
 } from "@ewatrade/db/queries"
 import { storefrontActionSchema } from "@ewatrade/storefront-contracts/actions"
 import {
   readStorefrontFeatureConfig,
   storefrontCommerceAvailability,
 } from "@ewatrade/storefront-contracts/features"
-import { STOREFRONT_RUNTIME_VERSION } from "@ewatrade/storefront-contracts/manifest"
 import { publicLowStockCountsEnabled } from "@ewatrade/storefront-contracts/orders"
 import { catalogQuerySchema } from "@ewatrade/storefront-contracts/resources"
 import {
@@ -75,17 +73,8 @@ function factoryDependencies(
         })
   const current = source.then(async (value) => {
     if (!value) return null
-    const release = value.site.release
-    const pinned = release.composition as {
-      template?: { key?: unknown; version?: unknown }
-    } | null
-    if (
-      release.runtimeVersion !== STOREFRONT_RUNTIME_VERSION ||
-      release.contentHash !== siteContentHash(release.composition) ||
-      pinned?.template?.key !== release.templateKey ||
-      pinned?.template?.version !== release.templateVersion
-    )
-      return null
+    // Both loaders use the current host context, which validates publication
+    // scope, the composition digest and its template pin before any projection.
     const storefront = await withLocalQaStorefrontPhotos(value.storefront, host)
     return storefront ? { ...value, storefront } : null
   })

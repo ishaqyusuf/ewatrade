@@ -56,6 +56,7 @@ export const suites = {
     "packages/db/src/queries/manual-payment-alert-rules.test.ts",
     "packages/utils/src/payment-report-notification-policy.test.ts",
     "packages/oversight/src/payment-notifications.test.ts",
+    "apps/oversight-api/src/index.test.ts",
     "packages/utils/src/finance-money.test.ts",
     "packages/utils/src/currency.test.ts",
     "packages/errors/src/error-system.test.ts",
@@ -171,6 +172,8 @@ export function selectQuickPlan(files: string[]) {
       /^packages\/(onboarding|storefront-components|ui)\//.test(file)
     ) {
       groups.add("web")
+      groups.add("domain")
+    } else if (/^apps\/oversight-api\//.test(file)) {
       groups.add("domain")
     } else if (/^apps\/mobile\//.test(file) || file === ".easignore") {
       groups.add("mobile")

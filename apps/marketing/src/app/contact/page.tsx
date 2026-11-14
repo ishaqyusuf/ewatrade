@@ -1,2 +1,4 @@
 export { default, generateMetadata } from "../support/page"
-export const dynamic = "force-dynamic"
+
+// Next requires a literal segment setting for this alias.
+export const revalidate = 300

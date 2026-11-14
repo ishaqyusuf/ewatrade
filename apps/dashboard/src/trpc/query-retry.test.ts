@@ -1,7 +1,15 @@
-import { describe, expect, test } from "bun:test"
-import { TRPCClientError } from "@trpc/client"
+import { describe, expect, spyOn, test } from "bun:test"
+import {
+  TRPCClientError,
+  createTRPCClient,
+  httpBatchStreamLink,
+} from "@trpc/client"
+import { initTRPC } from "@trpc/server"
 
-import { shouldRetryQuery } from "./query-retry"
+import { fetchDashboardRead, shouldRetryQuery } from "./query-retry"
+
+const t = initTRPC.create()
+const router = t.router({ fixture: t.procedure.query(() => "ok") })
 
 const trpcError = (httpStatus: number, code: string) => ({
   data: { code, httpStatus },
@@ -22,7 +30,7 @@ describe("Dashboard query retries", () => {
       expect(shouldRetryQuery(0, trpcError(status, code), client)).toBe(false)
   })
 
-  test("timeouts, server errors and network failures keep three retries", () => {
+  test("timeouts, server errors and network failures get one retry", () => {
     for (const error of [
       trpcError(408, "TIMEOUT"),
       trpcError(500, "INTERNAL_SERVER_ERROR"),
@@ -31,8 +39,55 @@ describe("Dashboard query retries", () => {
       undefined,
     ]) {
       expect(shouldRetryQuery(0, error, client)).toBe(true)
-      expect(shouldRetryQuery(2, error, client)).toBe(true)
-      expect(shouldRetryQuery(3, error, client)).toBe(false)
+      expect(shouldRetryQuery(1, error, client)).toBe(false)
+    }
+  })
+
+  test("respects gateway HTTP status when no tRPC error was decoded", () => {
+    for (const [status, retry] of [
+      [401, false],
+      [429, false],
+      [503, true],
+    ] as const) {
+      const error = TRPCClientError.from(new SyntaxError("Invalid JSON"), {
+        meta: { response: new Response("gateway", { status }) },
+      })
+      expect(shouldRetryQuery(0, error, client)).toBe(retry)
+    }
+  })
+
+  test("does not restart aborted requests", () => {
+    const aborted = new DOMException("Aborted", "AbortError")
+    expect(shouldRetryQuery(0, aborted, client)).toBe(false)
+    expect(shouldRetryQuery(0, TRPCClientError.from(aborted), client)).toBe(
+      false,
+    )
+  })
+
+  test("the streaming link preserves a gateway refusal for the retry policy", async () => {
+    const mockFetch = spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response("<p>Rate limited</p>", {
+        status: 429,
+        headers: { "Content-Type": "text/html" },
+      }),
+    )
+    try {
+      const trpc = createTRPCClient<typeof router>({
+        links: [
+          httpBatchStreamLink({
+            url: "https://dashboard.invalid/api/trpc",
+            fetch: fetchDashboardRead,
+          }),
+        ],
+      })
+      const error: unknown = await trpc.fixture.query().catch((cause) => cause)
+      expect(error).toBeInstanceOf(TRPCClientError)
+      if (!(error instanceof TRPCClientError))
+        throw new Error("Expected API refusal")
+      expect(error.meta?.response.status).toBe(429)
+      expect(shouldRetryQuery(0, error, client)).toBe(false)
+    } finally {
+      mockFetch.mockRestore()
     }
   })
 

@@ -52,6 +52,10 @@ import {
 import { registerFinanceExpenseReceiptUploadRoutes } from "./finance/expense-receipt-upload"
 import { registerLifecycleRoutes } from "./growth/lifecycle-routes"
 import { registerHealthRoutes } from "./health-routes"
+import {
+  apiRequestLabels,
+  apiRequestMetrics,
+} from "./observability/request-metrics"
 import { captureApiError } from "./observability/sentry"
 import { registerOrderAttachmentRoutes } from "./orders/order-attachment-routes"
 import { registerPrescriptionMediaDeliveryRoutes } from "./prescriptions/media-delivery"
@@ -83,15 +87,16 @@ installLimitPressureHook(process.env, {
 })
 
 const app = new OpenAPIHono()
+const requestLabels = apiRequestLabels(appRouter._def.procedures)
 
 app.use(
   "*",
   performanceTracingMiddleware(
     () => process.env.PERFORMANCE_TRACE === "true",
-    (trace, completion, status) => {
+    (trace, completion, status, requestId) => {
       console.info(
         "[performance]",
-        JSON.stringify({ ...trace, completion, status }),
+        JSON.stringify({ ...trace, completion, status, requestId }),
       )
     },
   ),
@@ -194,23 +199,23 @@ app.use("/api/trpc/*", async (c, next) => {
   if (procedures.some((path) => path.startsWith("storefront.")))
     c.header("X-Robots-Tag", "noindex, nofollow")
 
+  const procedureLabels = requestLabels.batch(c.req.path).procedures
   c.header(
     "Server-Timing",
-    `${isStreamingPerformanceResponse(c.res) ? "responseSetup" : "total"};dur=${duration.toFixed(1)},procedures;desc="${procedures.join(",")}"`,
+    `${isStreamingPerformanceResponse(c.res) ? "responseSetup" : "total"};dur=${duration.toFixed(1)},procedures;desc="${procedureLabels.join(",")}"`,
   )
 
   if (debugPerf) {
-    const { requestId, cfRay } = getRequestTrace(c.req)
+    const { requestId } = getRequestTrace(c.req)
 
     console.info("[perf:trpc]", {
       ...(isStreamingPerformanceResponse(c.res)
         ? { responseSetupMs: Number(duration.toFixed(2)) }
         : { totalMs: Number(duration.toFixed(2)) }),
       procedureCount: procedures.length,
-      procedures,
+      procedures: procedureLabels,
       status: c.res.status,
       requestId,
-      cfRay,
     })
   }
 })
@@ -301,12 +306,13 @@ app.use(
     endpoint: "/api/trpc",
     allowMethodOverride: true,
     onError: ({ ctx, error, path }) => {
+      const procedure = requestLabels.procedure(path)
       captureApiError(error, {
-        operation: path ? `trpc.${path}` : "trpc.unknown",
+        operation: `trpc.${procedure}`,
         requestId: ctx?.requestId,
       })
       console.error("[tRPC]", {
-        path,
+        path: procedure,
         code: error.code,
         requestId: ctx?.requestId,
       })
@@ -336,8 +342,9 @@ app.onError((err, c) => {
 
 export { app }
 
-// Vercel's Hono adapter detects a direct `hono` entrypoint. Route the shared
-// API app through that entrypoint while local Bun continues to serve `app`.
+// Vercel detects a direct Hono entrypoint. Sample only standalone traffic;
+// Marketing's embedded handler uses the inner app.
 const vercelApp = new Hono()
+vercelApp.use("*", apiRequestMetrics(requestLabels))
 vercelApp.route("/", app)
 export default vercelApp

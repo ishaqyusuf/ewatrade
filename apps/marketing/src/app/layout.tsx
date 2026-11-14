@@ -1,10 +1,14 @@
 import { EventsProvider } from "@ewatrade/events/client"
-import { getQaPolicyEnvironment } from "@ewatrade/utils/qa-policy-server"
+import {
+  getQaPolicyEnvironment,
+  qaPolicyTarget,
+} from "@ewatrade/utils/qa-policy-server"
 import type { Metadata } from "next"
 import "@ewatrade/ui/globals.css"
 import { cn } from "@/utils"
 import { isQaAcceleratorClientMode } from "@ewatrade/utils/qa-accelerator"
 import { Fraunces, Geist } from "next/font/google"
+import { connection } from "next/server"
 import { Providers } from "./providers"
 
 const geist = Geist({
@@ -73,9 +77,17 @@ export const metadata: Metadata = {
 export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  const qaAcceleratorEnabled =
-    (await getQaPolicyEnvironment()).QA_ACCELERATOR_ENABLED === "true" &&
+  let qaAcceleratorEnabled = false
+  if (
+    qaPolicyTarget() &&
     isQaAcceleratorClientMode(process.env.APP_ENV ?? process.env.NODE_ENV)
+  ) {
+    // QA policy may change while a preview is running. Resolve it only for a
+    // real request so the build never freezes QA state into the public shell.
+    await connection()
+    qaAcceleratorEnabled =
+      (await getQaPolicyEnvironment()).QA_ACCELERATOR_ENABLED === "true"
+  }
 
   return (
     <html

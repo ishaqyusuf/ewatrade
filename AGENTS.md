@@ -25,6 +25,31 @@ stale, wrong-runtime or failed receipts do not qualify. Retry failed testing wit
 `qa:smoke`, not another deployment. Preserve the explicit no-deployment boundary
 whenever the owner requests implementation/testing only.
 
+## Vercel runtime and cost
+
+- Prerender eligible public routes and verify the build output. Keep forms and
+  analytics in their existing handlers. For added request-time rendering,
+  middleware, network calls, polling or jobs, document the trigger and frequency.
+- Keep `ewatrade-api` canonical for shared clients and provider callbacks.
+  Use Next.js route handlers for web-owned endpoints. Reuse the authorized
+  service directly where it is already local to the deployment. Keep middleware
+  scoped and cross-service timeouts and retries bounded.
+- Keep sessions, roles, private tenant data, payments, private files and previews out
+  of shared caches. For any published storefront projection cached across
+  requests, record host authority, tenant, locale, release, TTL and invalidation.
+  Verify publish, unpublish, domain reassignment and cross-tenant isolation.
+- Bound pagination, polling, retries, concurrency and request bodies. Skip
+  retries on authorization or validation refusals. Reuse the existing runner
+  for deferred work, with one schedule owner, bounded retries and idempotency.
+  Keep liveness cheap and dependency readiness separate.
+- Verify the build dependency graph for app-only and shared-package changes.
+  Include external build inputs and native runtime dependencies. Keep rollback
+  candidates available and apply the existing Preview and Production gates.
+- Record the candidate, deployment environment, normalized routes, invocations,
+  CPU per 1,000 requests, latency and errors where available. Keep request content
+  and customer identifiers out of telemetry. Inventory every caller and verify
+  compatibility in Preview before proposing a traffic or endpoint change.
+
 ## Codex / Claude communication
 
 Use the root `AGENT_CHAT.md` for shared assistant-operation messages. Codex is the

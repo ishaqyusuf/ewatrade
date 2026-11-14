@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "id": "2026-11-14-vercel-runtime-optimization",
+  "tickets": ["H02"],
+  "summary": "Profile standalone API traffic with normalized request telemetry, bound dashboard read retries, prerender support, and correct build inputs.",
+  "noAssistantImpact": "Diagnostics and read retry policy preserve procedures, assistant capability inventory, auth, request bodies and write paths. Marketing support and storefront read orchestration add no assistant execution surface.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "updated",
+      "path": "docs/verification/2026-11-14-vercel-runtime-optimization.md"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "apps/api/src/observability/request-metrics.test.ts",
+      "executed": true,
+      "result": "Standalone Hono and tRPC batch tests passed with server-owned IDs, fixed route labels, privacy-safe procedure labels and bounded sampling."
+    },
+    {
+      "kind": "test",
+      "path": "apps/dashboard/src/trpc/query-retry.test.ts",
+      "executed": true,
+      "result": "Dashboard retries are bounded and refusal/abort regression tests pass."
+    }
+  ]
+}

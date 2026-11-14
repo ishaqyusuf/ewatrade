@@ -3,7 +3,8 @@ import { SupportContactPage } from "@/components/support/support-contact-page"
 import { isApprovedLegalPublication } from "@ewatrade/utils/legal-approval"
 import type { Metadata } from "next"
 
-export const dynamic = "force-dynamic"
+// Prerender the public support copy and refresh for effective-date transitions.
+export const revalidate = 300
 
 export function generateMetadata(): Metadata {
   return {
