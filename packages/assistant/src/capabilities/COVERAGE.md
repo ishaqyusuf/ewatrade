@@ -6,11 +6,11 @@ Tickets refer to the Brain plan `.brain/plans/2026-10-09-assistant-business-oper
 
 ## Summary
 
-- Router procedures: 827 (629 merchant, 198 public/account/internal)
+- Router procedures: 840 (638 merchant, 202 public/account/internal)
 - Merchant supported by a capability: 185
-- Merchant planned: 142
+- Merchant planned: 144
 - Merchant form-only: 235
-- Merchant excluded: 67
+- Merchant excluded: 74
 - Capabilities: 169 (88 read, 81 write)
 
 ## Capabilities
@@ -383,7 +383,7 @@ track conversational evaluation separately from these source test links.
 | D02 | 1 |
 | D03 | 8 |
 | D04 | 3 |
-| D05 | 4 |
+| D05 | 5 |
 | E01 | 4 |
 | E02 | 10 |
 | E03 | 3 |
@@ -391,7 +391,7 @@ track conversational evaluation separately from these source test links.
 | E05 | 2 |
 | G01 | 7 |
 | G02 | 4 |
-| G03 | 30 |
+| G03 | 31 |
 | G04 | 4 |
 | G05 | 28 |
 | H04 | 10 |
@@ -411,10 +411,13 @@ track conversational evaluation separately from these source test links.
 | `assistant.conversation` | query | read | assistant | excluded | Assistant transport or a dedicated assistant flow. |
 | `assistant.conversations` | query | read | assistant | excluded | Assistant transport or a dedicated assistant flow. |
 | `assistant.decideProposal` | mutation | read | assistant | excluded | Assistant transport or a dedicated assistant flow. |
+| `assistant.decideReceiptApproval` | mutation | Owner/Admin only | assistant | excluded | Assistant transport or a dedicated assistant flow. |
 | `assistant.decideReviewLink` | mutation | read | assistant | excluded | Assistant transport or a dedicated assistant flow. |
 | `assistant.editProposal` | mutation | read | assistant | excluded | Assistant transport or a dedicated assistant flow. |
 | `assistant.editReviewLink` | mutation | read | assistant | excluded | Assistant transport or a dedicated assistant flow. |
+| `assistant.openReceiptApproval` | mutation | Owner/Admin only | assistant | excluded | Assistant transport or a dedicated assistant flow. |
 | `assistant.pendingProposals` | query | Owner/Admin only | assistant | excluded | Assistant transport or a dedicated assistant flow. |
+| `assistant.receiptApprovals` | query | Owner/Admin only | assistant | excluded | Assistant transport or a dedicated assistant flow. |
 | `assistant.responseLink` | mutation | read | assistant | excluded | Assistant transport or a dedicated assistant flow. |
 | `assistant.reviewLink` | mutation | read | assistant | excluded | Assistant transport or a dedicated assistant flow. |
 | `assistant.saleOptions` | query | orders | sales | supported | sales.order.record_simple |
@@ -426,6 +429,7 @@ track conversational evaluation separately from these source test links.
 | `assistantChannels.confirmWhatsAppLink` | mutation | read | assistant | excluded | Assistant transport or a dedicated assistant flow. |
 | `assistantChannels.createTelegramLink` | mutation | read | assistant | excluded | Assistant transport or a dedicated assistant flow. |
 | `assistantChannels.createWhatsAppLink` | mutation | read | assistant | excluded | Assistant transport or a dedicated assistant flow. |
+| `assistantChannels.rejectTelegramLink` | mutation | Owner/Admin only | assistant | excluded | Assistant transport or a dedicated assistant flow. |
 | `assistantChannels.telegramAvailability` | query | read | assistant | excluded | Assistant transport or a dedicated assistant flow. |
 | `assistantChannels.telegramLink` | query | read | assistant | excluded | Assistant transport or a dedicated assistant flow. |
 | `assistantChannels.whatsAppLink` | query | read | assistant | excluded | Assistant transport or a dedicated assistant flow. |
@@ -654,6 +658,9 @@ track conversational evaluation separately from these source test links.
 | `finance.updateMoneyAccountPayments` | mutation | Owner/Admin only | finance | planned | E03 |
 | `finance.voidExpense` | mutation | Owner/Admin only | finance | supported | finance.expense.void |
 | `finance.yearEndPreview` | query | Owner/Admin only | finance | form_only | Period close, reopen and fiscal calendar changes are privileged Finance actions. |
+| `growth.activeNudge` | query | Owner/Admin only | platform | excluded | Home card state and first-party lifecycle intent belong to the merchant UI. |
+| `growth.dismissNudge` | mutation | Owner/Admin only | platform | excluded | Home card state and first-party lifecycle intent belong to the merchant UI. |
+| `growthIntent.recordSeePlansTap` | mutation | Owner/Admin only | platform | excluded | Home card state and first-party lifecycle intent belong to the merchant UI. |
 | `inventory.auditExport` | query | stock | inventory | form_only | Bulk file export; download it from the page. |
 | `inventory.balancePage` | query | stock | inventory | supported | inventory.balances.read |
 | `inventory.balanceReport` | query | stock | inventory | form_only | Legacy full response; assistant uses balancePage and compatibleTotalsPage, preserving complete source-group totals with response pagination. |
@@ -839,6 +846,7 @@ track conversational evaluation separately from these source test links.
 | `serviceAccess.requestForms` | query | Owner/Admin only | commerce | planned | G03 |
 | `serviceAccess.requests` | query | Owner/Admin only | commerce | planned | G03 |
 | `serviceAccess.revokeTracking` | mutation | Owner/Admin only | commerce | planned | G03 |
+| `serviceAccess.trackingAvailability` | query | Owner/Admin only | commerce | planned | G03 |
 | `serviceAccess.updateRequest` | mutation | Owner/Admin only | commerce | planned | G03 |
 | `serviceAssistantBookings.availability` | query | read | commerce | planned | G03 |
 | `serviceAssistantIntake.options` | query | Owner/Admin only | services | supported | services.intake.options.read |
@@ -962,6 +970,7 @@ track conversational evaluation separately from these source test links.
 | `services.rescheduleJob` | mutation | Owner/Admin only | services | supported | services.work.reschedule |
 | `services.revokeEvidence` | mutation | Owner/Admin only | services | planned | H04 |
 | `services.splitLine` | mutation | Owner/Admin only | services | planned | D05 |
+| `services.startPhotoUpload` | mutation | Owner/Admin only | services | planned | D05 |
 | `services.transitionLine` | mutation | Owner/Admin only | services | supported | services.work.transition |
 | `services.updateEvidenceUpload` | mutation | Owner/Admin only | services | planned | H04 |
 | `services.updateSettings` | mutation | Owner/Admin only | services | planned | G05 |

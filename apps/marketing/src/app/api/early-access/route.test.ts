@@ -131,7 +131,7 @@ beforeEach(() => {
       return Response.json({
         projectId: "ewatrade",
         revision: 1,
-        environments: { development: true, preview: true, production: true },
+        environments: { development: true, preview: true },
         entries: [
           {
             id: "57da5d46-6b28-44ef-8be7-d29eb6171f3f",
@@ -287,7 +287,15 @@ test("verification links are bound to the approved session and unlock email veri
   expect(body.emailVerified).toBe(true)
 })
 
-test("production QA approval and verification deliver every handoff to the tester inbox", async () => {
+test("Production refuses legacy QA approval delivery without sending email", async () => {
+  await submit("owner@ishaq.qa.test")
+  expect((await approvePending()).status).toBe(503)
+  expect(dispatch).not.toHaveBeenCalled()
+})
+
+test("Preview QA approval and verification deliver every handoff to the tester inbox", async () => {
+  process.env.APP_ENV = "preview"
+  process.env.VERCEL_ENV = "preview"
   await submit("owner@ishaq.qa.test")
   expect((await approvePending()).status).toBe(200)
   const confirmation = await verification(

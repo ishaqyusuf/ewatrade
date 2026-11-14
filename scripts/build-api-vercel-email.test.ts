@@ -4,6 +4,7 @@ import {
   copyFileSync,
   mkdirSync,
   mkdtempSync,
+  readFileSync,
   rmSync,
   writeFileSync,
 } from "node:fs"
@@ -56,12 +57,13 @@ test("Vercel Git build renders the real signup email in a production runtime", (
       timeout: 15_000,
     })
     expect(built.status, built.stderr).toBe(0)
+    const resultPath = join(fixture, "rendered-email.json")
     const rendered = spawnSync(
       process.execPath,
       [
         "--no-env-file",
         "--eval",
-        `const {renderMobileOwnerOtpTemplate}=await import(${JSON.stringify(join(fixture, "apps/api/src/bundle.js"))});const email=renderMobileOwnerOtpTemplate({code:'000000',expiresAtLabel:'12:00',mode:'sign_up'});if(!email.html.startsWith('<!doctype html>')||!email.html.includes('verify your new EwaTrade account')||!email.text.includes('000000'))process.exit(92);console.log('signup email rendered');process.exit(0);`,
+        `import { writeFileSync } from 'node:fs';const {renderMobileOwnerOtpTemplate}=await import(${JSON.stringify(join(fixture, "apps/api/src/bundle.js"))});const email=renderMobileOwnerOtpTemplate({code:'000000',expiresAtLabel:'12:00',mode:'sign_up'});writeFileSync(${JSON.stringify(resultPath)}, JSON.stringify(email));process.exit(0);`,
       ],
       {
         cwd: fixture,
@@ -71,7 +73,10 @@ test("Vercel Git build renders the real signup email in a production runtime", (
       },
     )
     expect(rendered.status, rendered.stderr).toBe(0)
-    expect(rendered.stdout.trim()).toBe("signup email rendered")
+    const email = JSON.parse(readFileSync(resultPath, "utf8"))
+    expect(email.html).toStartWith("<!doctype html>")
+    expect(email.html).toContain("verify your new EwaTrade account")
+    expect(email.text).toContain("000000")
   } finally {
     rmSync(fixture, { recursive: true, force: true })
   }

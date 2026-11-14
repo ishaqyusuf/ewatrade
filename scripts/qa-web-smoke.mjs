@@ -59,11 +59,11 @@ export async function webJourney(page, config) {
     const url = new URL(request.url())
     if (
       !["GET", "HEAD"].includes(request.method()) &&
-      url.pathname !== "/api/qa-access"
+      !(url.origin === origin && url.pathname === "/api/qa-access")
     ) {
       mutations.push(url.pathname)
       await route.abort("blockedbyclient")
-    } else await route.continue()
+    } else await route.fallback()
   })
   /** @param {string} path */
   const go = async (path) => {

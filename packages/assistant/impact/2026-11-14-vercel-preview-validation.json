@@ -1,0 +1,75 @@
+{
+  "version": 1,
+  "id": "2026-11-14-vercel-preview-validation",
+  "tickets": ["H01", "H02"],
+  "summary": "Classify the three lifecycle UI procedures and refresh coverage for the current router before Preview.",
+  "noAssistantImpact": "The coverage inventory records existing router behavior. Assistant capabilities, dispatch, permissions and rollout are unchanged.",
+  "capabilities": [],
+  "procedures": [
+    {
+      "path": "growth.activeNudge",
+      "status": "excluded",
+      "reason": "Reads the Home card selected by the lifecycle sweep."
+    },
+    {
+      "path": "growth.dismissNudge",
+      "status": "excluded",
+      "reason": "Records a merchant's explicit dismissal of their Home card."
+    },
+    {
+      "path": "growthIntent.recordSeePlansTap",
+      "status": "excluded",
+      "reason": "Records actual merchant UI intent for lifecycle eligibility."
+    },
+    {
+      "path": "assistant.decideReceiptApproval",
+      "status": "excluded",
+      "reason": "Existing dedicated receipt approval flow."
+    },
+    {
+      "path": "assistant.openReceiptApproval",
+      "status": "excluded",
+      "reason": "Existing dedicated receipt review flow."
+    },
+    {
+      "path": "assistant.receiptApprovals",
+      "status": "excluded",
+      "reason": "Existing dedicated receipt approval inbox."
+    },
+    {
+      "path": "assistantChannels.rejectTelegramLink",
+      "status": "excluded",
+      "reason": "Existing authenticated channel-link rejection."
+    },
+    {
+      "path": "serviceAccess.trackingAvailability",
+      "status": "planned",
+      "ticket": "G03",
+      "reason": "Existing service tracking availability under the tracking-links plan."
+    },
+    {
+      "path": "services.startPhotoUpload",
+      "status": "planned",
+      "ticket": "D05",
+      "reason": "Existing service evidence upload grant under the job-evidence plan."
+    }
+  ],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/lifecycle-marketing.md"
+    },
+    {
+      "topic": "capability",
+      "status": "updated",
+      "path": "packages/assistant/src/capabilities/COVERAGE.md"
+    },
+    {
+      "topic": "api",
+      "status": "not_applicable",
+      "note": "This slice adds coverage for already committed endpoints. Wire contracts and permissions are unchanged."
+    }
+  ],
+  "evidence": []
+}

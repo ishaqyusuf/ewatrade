@@ -30,6 +30,15 @@ excluded("assistant", "Assistant transport or a dedicated assistant flow.", [
 excluded("platform", "Internal QA tooling.", ["qa*"])
 excluded(
   "platform",
+  "Home card state and first-party lifecycle intent belong to the merchant UI.",
+  [
+    "growth.activeNudge",
+    "growth.dismissNudge",
+    "growthIntent.recordSeePlansTap",
+  ],
+)
+excluded(
+  "platform",
   "Device sync; assistant writes stay online-only until replay supports them.",
   ["offline.*"],
 )
