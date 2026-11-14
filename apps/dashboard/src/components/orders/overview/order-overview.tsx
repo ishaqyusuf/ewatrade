@@ -14,6 +14,7 @@ import {
   requestQuickAssistant,
   useQuickAssistantLauncher,
 } from "@/components/page-fab/fab-slot"
+import { OrderReturnablesCard } from "@/components/returnables/returnable-cards"
 import { useCatalogItemParams } from "@/hooks/use-catalog-item-params"
 import { useReceiptParams } from "@/hooks/use-receipt-params"
 import { useTRPC } from "@/trpc/client"
@@ -474,6 +475,7 @@ export function OrderOverview({
         </ol>
         <OrderTotals order={order} />
       </OverviewCard>
+      <OrderReturnablesCard orderId={order.id} />
       <div className="grid gap-4 @container md:grid-cols-2">
         <OverviewCard
           title="Customer"

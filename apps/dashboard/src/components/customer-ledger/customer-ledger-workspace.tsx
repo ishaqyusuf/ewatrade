@@ -1,5 +1,6 @@
 "use client"
 import { CustomerFormSheet } from "@/components/customers/customer-form-sheet"
+import { CustomerReturnablesSection } from "@/components/returnables/returnable-cards"
 import { ScrollableContent } from "@/components/scrollable-content"
 import { CustomerLedgerEmptyState } from "@/components/tables/customer-ledger/empty-states"
 import { useCustomerLedgerParams } from "@/hooks/use-customer-ledger-params"
@@ -230,7 +231,10 @@ export function CustomerLedgerWorkspace({
                   initialSettings={initialSettings}
                   onEditCustomer={() => void customerSheet.openEdit(customerId)}
                   renderHeader={(actions) => (
-                    <StatementHeader customer={customer} actions={actions} />
+                    <>
+                      <StatementHeader customer={customer} actions={actions} />
+                      <CustomerReturnablesSection customerId={customerId} />
+                    </>
                   )}
                 />
                 {/* Pending refunds are separate from "Return paid-ahead money",
@@ -255,6 +259,7 @@ export function CustomerLedgerWorkspace({
                     </Button>
                   }
                 />
+                <CustomerReturnablesSection customerId={customerId} />
                 {accounts.length > 1 ? (
                   <p className="text-muted-foreground">
                     Choose a currency to see this statement.
