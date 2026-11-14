@@ -38,6 +38,11 @@ import { FormFeedback } from "@/components/forms/form-feedback"
 
 import { createOrderFixture } from "@/components/qa/fixture-recipes"
 import { QaDashboardQuickFill } from "@/components/qa/qa-quick-fill"
+import {
+  CheckoutReturnables,
+  type ReturnableDraft,
+  orderReturnablesPayload,
+} from "@/components/returnables/checkout-returnables"
 import { invalidateServiceJobLists } from "@/components/service-work/invalidate-service-job-lists"
 import { useCustomerMessageParams } from "@/hooks/use-customer-message-params"
 import { useOrderParams } from "@/hooks/use-order-params"
@@ -112,6 +117,10 @@ export function OrderForm({
   const [customerSearch, setCustomerSearch] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [catalogFreeAttempt, setCatalogFreeAttempt] = useState(0)
+  const [returnables, setReturnables] = useState<ReturnableDraft[]>([])
+  const savedCustomer = Boolean(
+    selectedCustomer?.id || (creatingCustomer && customerName.trim()),
+  )
   const quickFillSnapshot = useRef<{
     selectedCustomer: OrderCustomerSelection | null
     customerEmail: string
@@ -197,6 +206,15 @@ export function OrderForm({
         setCatalogFreeAttempt((attempt) => attempt + 1)
       return
     }
+    const issued = orderReturnablesPayload(returnables)
+    if (issued.problem !== null) {
+      setError(issued.problem)
+      return
+    }
+    if (issued.returnables.length && !savedCustomer) {
+      setError("Choose a saved customer to send returnables with this order.")
+      return
+    }
     const paidMinor = paidInFull ? orderLinesTotalMinor(lines) : null
     if (paidInFull && account.problem) {
       setError(account.problem)
@@ -223,6 +241,7 @@ export function OrderForm({
       customerPhone: customerPhone.trim() || undefined,
       customerEmail: customerEmail.trim() || undefined,
       lines,
+      returnables: issued.returnables.length ? issued.returnables : undefined,
       schemaVersion: 1 as const,
       storeId: store.id,
     }
@@ -365,6 +384,16 @@ export function OrderForm({
           setError(null)
         }}
         validationAttempt={catalogFreeAttempt}
+      />
+      <CheckoutReturnables
+        rows={returnables}
+        savedCustomer={savedCustomer}
+        onChooseCustomer={() => setShowCustomer(true)}
+        disabled={createMutation.isPending}
+        onChange={(next) => {
+          setReturnables(next)
+          setError(null)
+        }}
       />
       {totalMinor !== null ? (
         <div className="flex items-baseline justify-between border-t border-border pt-3">
