@@ -60,7 +60,7 @@ export function SearchFilter({
           <SearchField
             ref={searchRef}
             maxLength={maxLength}
-            className="sm:max-w-[350px] sm:shrink-0 max-md:[&_input]:h-11 max-md:[&>svg]:top-[14px]"
+            className="sm:max-w-[350px] sm:shrink-0"
             placeholder={placeholder}
             value={value}
             onSearch={(value) => {
@@ -79,7 +79,7 @@ export function SearchFilter({
                 onClick={() => setSheetOpen(true)}
                 aria-label={`Filter ${placeholder.replace(/^Search /i, "").replace(/\.\.\.$/, "")}`}
                 className={cn(
-                  "absolute right-0 top-0 flex size-11 items-center justify-center opacity-50 outline-none transition-opacity hover:opacity-100 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring",
+                  "absolute right-0 top-0 flex size-11 items-center justify-center rounded-r-[10px] opacity-50 outline-none transition-opacity hover:opacity-100 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring",
                   (filters.length > 0 || sheetOpen) && "opacity-100",
                 )}
               >
@@ -87,7 +87,7 @@ export function SearchFilter({
                 {filters.length ? (
                   <span
                     aria-hidden="true"
-                    className="absolute right-0 top-0 flex size-4 items-center justify-center rounded-full bg-foreground text-[9px] font-medium text-background"
+                    className="absolute top-0.5 right-0.5 flex size-5 items-center justify-center rounded-full bg-foreground text-xs font-semibold text-background"
                   >
                     {filters.length}
                   </span>
@@ -97,7 +97,7 @@ export function SearchFilter({
               <DropdownMenuTrigger
                 aria-label={`Filter ${placeholder.replace(/^Search /i, "").replace(/\.\.\.$/, "")}`}
                 className={cn(
-                  "absolute right-0 top-0 flex size-9 items-center justify-center opacity-50 outline-none transition-opacity hover:opacity-100 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring",
+                  "absolute right-0 top-0 flex size-11 items-center justify-center rounded-r-[10px] opacity-50 outline-none transition-opacity hover:opacity-100 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring",
                   (filters.length > 0 || open) && "opacity-100",
                 )}
               >

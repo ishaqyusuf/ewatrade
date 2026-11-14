@@ -54,7 +54,7 @@ export function SearchField({
     >
       <HugeiconsIcon
         icon={Search01Icon}
-        className="pointer-events-none absolute left-3 top-[10px] size-4 text-muted-foreground"
+        className="pointer-events-none absolute top-1/2 left-3.5 size-[18px] -translate-y-1/2 text-muted-foreground"
       />
       <Input
         maxLength={maxLength}
@@ -62,8 +62,9 @@ export function SearchField({
         aria-label={placeholder.replace(/\.\.\.$/, "")}
         placeholder={placeholder}
         className={cn(
-          "h-9 rounded-none bg-transparent py-1 pl-9 focus:ring-0 focus:border-border",
-          children ? "pr-10" : "pr-3",
+          // Shared Input sizes: 44px, 10px corners, 3:1 border (ADR-0060).
+          "bg-background py-1 pl-10 focus:ring-0",
+          children ? "pr-12" : "pr-3",
         )}
         value={input}
         onChange={(event) => {

@@ -1,6 +1,8 @@
 "use client"
 
 import { Button, cn } from "@ewatrade/ui"
+import { ArrowLeft01Icon, ArrowRight01Icon } from "@hugeicons/core-free-icons"
+import { HugeiconsIcon } from "@hugeicons/react"
 
 export interface HorizontalPaginationProps {
   canScrollLeft: boolean
@@ -18,28 +20,28 @@ export function HorizontalPagination({
   className,
 }: HorizontalPaginationProps) {
   return (
-    <div className={cn("flex shrink-0 items-center gap-1", className)}>
+    <div className={cn("flex shrink-0 items-center gap-0.5", className)}>
       <Button
         type="button"
-        variant="outline"
-        size="icon-xs"
-        className="rounded-none"
+        variant="ghost"
+        size="icon"
+        className="text-muted-foreground hover:bg-[var(--hover,var(--muted))] disabled:opacity-30"
         aria-label="Scroll table left"
         disabled={!canScrollLeft}
         onClick={() => onScrollLeft()}
       >
-        <span aria-hidden="true">←</span>
+        <HugeiconsIcon icon={ArrowLeft01Icon} className="size-[18px]" />
       </Button>
       <Button
         type="button"
-        variant="outline"
-        size="icon-xs"
-        className="rounded-none"
+        variant="ghost"
+        size="icon"
+        className="text-muted-foreground hover:bg-[var(--hover,var(--muted))] disabled:opacity-30"
         aria-label="Scroll table right"
         disabled={!canScrollRight}
         onClick={() => onScrollRight()}
       >
-        <span aria-hidden="true">→</span>
+        <HugeiconsIcon icon={ArrowRight01Icon} className="size-[18px]" />
       </Button>
     </div>
   )
