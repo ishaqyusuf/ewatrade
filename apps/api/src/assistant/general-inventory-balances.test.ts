@@ -66,6 +66,7 @@ test("long source units stay within saved answer schema without rounding exact q
   const row: Parameters<
     typeof generalInventoryBalanceAnswers
   >[0]["rows"][number] = {
+    archived: false,
     availableQuantity: "9007199254740993.125",
     lowStockLevel: null,
     balanceSourceId: "source",

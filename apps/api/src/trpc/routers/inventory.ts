@@ -140,6 +140,38 @@ export function canActForStore(tenant: TenantContext, storeId: string) {
   )
 }
 
+/**
+ * Archived items keep their stock countable (count, correct, loss, use) but
+ * take no new stock: no Stock in and no new transfer.
+ */
+async function assertStockNotArchived(
+  ctx: {
+    db: Parameters<typeof listInventoryBalanceReport>[0]
+    tenantContext: TenantContext
+  },
+  balanceSourceId: string,
+  action: "receive" | "send",
+) {
+  const balance = await ctx.db.stockBalanceSource.findFirst({
+    where: { id: balanceSourceId, tenantId: ctx.tenantContext.tenant.id },
+    select: {
+      product: {
+        select: { catalogItem: { select: { name: true, status: true } } },
+      },
+      variant: { select: { status: true } },
+    },
+  })
+  if (
+    balance &&
+    (balance.product.catalogItem.status === "ARCHIVED" ||
+      balance.variant.status === "ARCHIVED")
+  )
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: `${balance.product.catalogItem.name} is archived, so it can’t ${action === "receive" ? "take new stock" : "be sent to another store"}. You can still count or correct it.`,
+    })
+}
+
 function withoutCost<
   T extends {
     totalCostMinorSnapshot: string | null
@@ -744,6 +776,7 @@ export const inventoryRouter = createTRPCRouter({
     .input(inventoryDispatchTransferSchema)
     .mutation(async ({ ctx, input }) => {
       assertCanManageInventory(ctx.tenantContext)
+      await assertStockNotArchived(ctx, input.sourceBalanceSourceId, "send")
       try {
         return await createAndDispatchStockTransfer(ctx.db, {
           ...input,
@@ -861,6 +894,8 @@ export const inventoryRouter = createTRPCRouter({
         ctx.tenantContext.activeStore,
         input.storeId,
       )
+      if (input.type === "receipt")
+        await assertStockNotArchived(ctx, input.balanceSourceId, "receive")
       try {
         return await postSingleBalanceStockOperation(ctx.db, {
           ...input,

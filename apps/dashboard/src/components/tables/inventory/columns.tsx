@@ -45,6 +45,7 @@ export function InventoryStatusBadge({ row }: { row: InventoryBalance }) {
 /** Variant, packed unit and store, whichever tell this line apart. */
 export function getInventoryLineDetail(row: InventoryBalance) {
   const parts = [
+    row.archived ? "Archived" : null,
     row.variantName && row.variantName !== row.productName
       ? row.variantName
       : null,

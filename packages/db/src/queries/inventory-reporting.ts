@@ -51,11 +51,11 @@ const balanceReportGraph = {
   product: {
     select: {
       lowStockLevel: true,
-      catalogItem: { select: { id: true, name: true } },
+      catalogItem: { select: { id: true, name: true, status: true } },
     },
   },
   store: { select: { name: true } },
-  variant: { select: { name: true } },
+  variant: { select: { name: true, status: true } },
 } as const satisfies Prisma.StockBalanceSourceSelect
 
 function serializeInventoryBalanceRow(
@@ -71,6 +71,10 @@ function serializeInventoryBalanceRow(
             balance.onHandQuantity.toFixed(),
             balance.reservedQuantity.toFixed(),
           ),
+    /** Item or variant archived: still countable, not offered for new stock. */
+    archived:
+      balance.product.catalogItem.status === "ARCHIVED" ||
+      balance.variant.status === "ARCHIVED",
     balanceSourceId: balance.id,
     catalogItemId: balance.product.catalogItem.id,
     custodyReferenceId: balance.custodyReferenceId || null,

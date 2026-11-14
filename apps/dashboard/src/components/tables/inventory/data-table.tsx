@@ -12,6 +12,7 @@ import { countInventoryFilters, filterInventory } from "@/lib/inventory-view"
 import { useTRPC } from "@/trpc/client"
 import type { DirectoryView } from "@/utils/directory-view-settings"
 import { type TableSettings, getColumnIds } from "@/utils/table-settings"
+import { compareExactDecimals } from "@ewatrade/utils/exact-decimal"
 import { useSuspenseQuery } from "@tanstack/react-query"
 import {
   getCoreRowModel,
@@ -73,9 +74,20 @@ export function InventoryDataTable({
   const { data: balances } = useSuspenseQuery(
     trpc.inventory.balanceReport.queryOptions({ storeId }, { retry: false }),
   )
+  // Archived items leave the list once nothing is left to count or correct.
+  const liveRows = useMemo(
+    () =>
+      balances.rows.filter(
+        (row) =>
+          !row.archived ||
+          compareExactDecimals(row.onHandQuantity, "0") !== 0 ||
+          compareExactDecimals(row.reservedQuantity, "0") !== 0,
+      ),
+    [balances.rows],
+  )
   const scopedRows = useMemo(
-    () => (storeId ? balances.rows : groupInventoryStores(balances.rows)),
-    [balances.rows, storeId],
+    () => (storeId ? liveRows : groupInventoryStores(liveRows)),
+    [liveRows, storeId],
   )
   const counts = useMemo(() => countInventoryFilters(scopedRows), [scopedRows])
   const rows = useMemo(

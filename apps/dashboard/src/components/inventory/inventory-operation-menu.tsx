@@ -28,6 +28,8 @@ type BalanceContext = {
   productName: string
   variantName: string
   inventoryUnitName: string
+  /** Archived items can only be counted, corrected, written off or used. */
+  archived?: boolean
 }
 type InventoryAction = (typeof INVENTORY_ACTIONS)[number]
 
@@ -131,7 +133,11 @@ export function InventoryOperationMenu({
         align="end"
         className="min-w-60"
       >
-        {INVENTORY_ACTIONS.map((action) => (
+        {INVENTORY_ACTIONS.filter(
+          (action) =>
+            !balance.archived ||
+            ["count", "adjustment", "internal_use"].includes(action.mode),
+        ).map((action) => (
           <DropdownMenuItem
             key={action.label}
             onClick={(event) => {

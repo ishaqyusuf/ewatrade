@@ -32,7 +32,9 @@ test("exact source reads bind tenant, Store and ID without scanning, initializin
             predicates.push(args.where)
             // Explicit columns only: no whole catalog or store rows.
             expect(args.select).toHaveProperty("inventoryUnit")
-            expect(args.select).not.toHaveProperty("product.catalogItem.select.description")
+            expect(args.select).not.toHaveProperty(
+              "product.catalogItem.select.description",
+            )
             return (
               rows.find(
                 (row) =>
@@ -69,6 +71,7 @@ test("exact source reads bind tenant, Store and ID without scanning, initializin
     ])
   const exact = await read("wanted")
   expect(exact).toEqual({
+    archived: false,
     availableQuantity: "2",
     balanceSourceId: "wanted",
     catalogItemId: "item",

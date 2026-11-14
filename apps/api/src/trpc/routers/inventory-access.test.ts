@@ -146,3 +146,34 @@ test("receive acts for the receiving store and cancel for the sending store", as
     }),
   ).rejects.toMatchObject({ code: "FORBIDDEN" })
 })
+
+test("an archived item can't be sent to another store", async () => {
+  const base = context("OWNER")
+  const caller = createCaller({
+    ...base,
+    db: {
+      stockBalanceSource: {
+        findFirst: async () => ({
+          product: { catalogItem: { name: "Old feed", status: "ARCHIVED" } },
+          variant: { status: "ARCHIVED" },
+        }),
+      },
+    },
+  } as never)
+  await expect(
+    caller.dispatchTransfer({
+      clientOperationId: "dispatch-0001",
+      clientTransferId: "transfer-0001",
+      expectedSourceRevision: 1,
+      quantity: "1",
+      reason: "Sent",
+      schemaVersion: 1,
+      source: "dashboard_inventory",
+      sourceBalanceSourceId: "balance",
+      targetStoreId: "branch",
+    }),
+  ).rejects.toMatchObject({
+    code: "BAD_REQUEST",
+    message: expect.stringContaining("Old feed is archived"),
+  })
+})

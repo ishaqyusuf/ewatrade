@@ -230,11 +230,18 @@ export function InventoryOperationForm({
         : [],
     ),
   )
+  // Archived items can still be counted, corrected, written off or used up,
+  // but take no new stock and are not sent, handed out or packed.
+  const takesArchived =
+    operation === "count" ||
+    operation === "adjustment" ||
+    operation === "internal_use"
+  const liveRows = takesArchived ? rows : rows.filter((row) => !row.archived)
   const sourceRows = recordsUse
     ? productId
-      ? rows.filter((row) => row.productId === productId)
-      : rows.filter((row) => usableProductIds.has(row.productId))
-    : rows
+      ? liveRows.filter((row) => row.productId === productId)
+      : liveRows.filter((row) => usableProductIds.has(row.productId))
+    : liveRows
   const [targetCustodyType, setTargetCustodyType] = useState<"staff" | "store">(
     "staff",
   )
