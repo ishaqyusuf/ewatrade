@@ -320,8 +320,9 @@ export function StockTransferSheet({
             Cancel the transfer of {onTheWay}?
           </AlertDialogTitle>
           <AlertDialogDescription className="text-muted-foreground">
-            {title}: {onTheWay} go back to {record.sourceStore.name}.{" "}
-            {record.targetStore.name} won’t receive them. This can’t be undone.
+            {title}: {onTheWay} will go back to {record.sourceStore.name}, and{" "}
+            {record.targetStore.name} won’t get this stock. This can’t be
+            undone.
           </AlertDialogDescription>
           <ControlField label="Why? (optional)">
             <Textarea

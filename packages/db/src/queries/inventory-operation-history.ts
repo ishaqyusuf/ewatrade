@@ -133,7 +133,14 @@ function operationConditions(
   categoryNameIds: number[],
 ) {
   const conditions = [Prisma.sql`o."tenantId" = ${input.tenantId}`]
-  if (input.storeId) conditions.push(Prisma.sql`o."storeId" = ${input.storeId}`)
+  // A Store's history includes changes to its own shelves that another
+  // Store recorded, such as a transfer it received (saved under the sender).
+  if (input.storeId)
+    conditions.push(Prisma.sql`(o."storeId" = ${input.storeId} OR EXISTS (
+      SELECT 1 FROM "StockMovement" sm
+      JOIN "StockBalanceSource" sb ON sb."id" = sm."balanceSourceId"
+      WHERE sm."operationId" = o."id" AND sb."storeId" = ${input.storeId}
+    ))`)
   if (input.type) conditions.push(Prisma.sql`o."type"::text = ${input.type}`)
   if (input.uncategorized)
     conditions.push(Prisma.sql`NOT EXISTS (
@@ -291,6 +298,7 @@ export async function getInventoryOperationTotals(
       -- Stock on the way belongs to no shelf: a sent transfer counts as
       -- leaving the sender now and arriving when the other store receives it.
       WHERE b."custodyType" <> 'TRANSIT'
+        ${input.storeId ? Prisma.sql`AND b."storeId" = ${input.storeId}` : Prisma.empty}
       GROUP BY b."storeId", b."productId", b."variantId",
         m."configurationVersionId"`,
     db.$queryRaw<Array<{ operations: number; corrections: number }>>`${tree}
