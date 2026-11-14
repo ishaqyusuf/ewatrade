@@ -20,8 +20,11 @@ export function ReceiptSheet({ storeId }: { storeId: string }) {
     >
       {open ? (
         <SheetFrame
-          title={receiptIds?.length === 1 ? "Order receipt" : "Order receipts"}
-          description="Preview and download using your saved receipt settings."
+          title={
+            receiptIds?.length === 1
+              ? "Receipt"
+              : `${receiptIds?.length ?? 0} receipts`
+          }
           closeError={closeError}
           popupClassName="sm:max-w-[960px]"
         >

@@ -54,18 +54,18 @@ export function ReceiptContent({
   if (!online)
     return (
       <div role="alert" className="py-8 text-sm">
-        Reconnect to prepare a receipt from current Order records.
+        You’re offline. Reconnect to make the receipt.
       </div>
     )
   if (orderIds.length > 20)
-    return <div role="alert">Select up to 20 Orders per export.</div>
+    return <div role="alert">Choose up to 20 orders at a time.</div>
   if (query.isError)
     return (
       <div role="alert" className="grid gap-4 py-8">
         <p>
           {!query.error.data ||
           query.error.data.code === "INTERNAL_SERVER_ERROR"
-            ? "Receipt preparation failed. Please try again."
+            ? "The receipt couldn’t be made. Try again."
             : query.error.message}
         </p>
         <Button variant="outline" onClick={() => void query.refetch()}>
@@ -80,31 +80,43 @@ export function ReceiptContent({
         {orderIds.length === 1 ? "receipt" : `${orderIds.length} receipts`}…
       </output>
     )
+  const canShare = Boolean(output.canShare)
   return (
     <div className="grid gap-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <p className="font-medium">{query.data.orderNumbers.join(", ")}</p>
-          <p className="text-xs text-muted-foreground">
-            {query.data.settingsSource === "store"
-              ? "Store settings"
-              : "Business defaults"}{" "}
-            · One receipt per Order
-          </p>
-        </div>
-        <div className="flex gap-2">
+      <div className="grid gap-3">
+        <p className="font-medium">{query.data.orderNumbers.join(", ")}</p>
+        <div className="flex flex-wrap gap-2">
+          {canShare ? (
+            <Button
+              className="max-sm:flex-1"
+              disabled={output.pending}
+              onClick={() => void output.share?.()}
+            >
+              Share
+            </Button>
+          ) : null}
+          <Button
+            className="max-sm:flex-1"
+            variant={canShare ? "outline" : "default"}
+            disabled={output.pending}
+            onClick={() => void output.download("pdf")}
+          >
+            Download PDF
+          </Button>
+          <Button
+            variant="outline"
+            className="max-sm:hidden"
+            disabled={output.pending}
+            onClick={() => output.print?.()}
+          >
+            Print
+          </Button>
           <Button
             variant="outline"
             disabled={output.pending}
             onClick={() => void output.download("image")}
           >
-            Download images
-          </Button>
-          <Button
-            disabled={output.pending}
-            onClick={() => void output.download("pdf")}
-          >
-            Download PDF
+            {query.data.orderNumbers.length === 1 ? "Image" : "Images"}
           </Button>
         </div>
       </div>
@@ -113,10 +125,11 @@ export function ReceiptContent({
           {output.error}
         </p>
       ) : null}
-      <output aria-live="polite" className="text-xs text-muted-foreground">
-        {output.message ||
-          "Images use the same layout as this PDF. Multi-page and group images download as a ZIP."}
-      </output>
+      {output.message ? (
+        <output aria-live="polite" className="text-sm text-muted-foreground">
+          {output.message}
+        </output>
+      ) : null}
       <ReceiptPdfPreview key={output.url} url={output.url} />
     </div>
   )

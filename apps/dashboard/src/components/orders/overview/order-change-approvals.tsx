@@ -1,7 +1,6 @@
 "use client"
 
 import { useTRPC } from "@/trpc/client"
-import { readPollInterval } from "@/trpc/query-read-errors"
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
 import { Button, Input, cn } from "@ewatrade/ui"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
@@ -13,19 +12,6 @@ import { formatOrderTime } from "./order-overview-model"
 type ChangeOptions = RouterOutputs["orders"]["changeOptions"]
 type Approval = NonNullable<ChangeOptions["approvals"]["return"]>
 type Pending = RouterOutputs["orders"]["pendingChangeApprovals"][number]
-
-/**
- * Keep checking while a request is waiting, or approved but not yet recorded
- * (it may be used from another device or lapse at midnight).
- */
-export function hasOpenOrderApproval(options: ChangeOptions | undefined) {
-  if (!options) return false
-  return (
-    (options.approvals?.pending.length ?? 0) > 0 ||
-    ["pending", "approved"].includes(options.approvals?.return?.status ?? "") ||
-    ["pending", "approved"].includes(options.approvals?.refund?.status ?? "")
-  )
-}
 
 const ACTION = { return: "return items", refund: "give a refund" } as const
 
@@ -345,12 +331,15 @@ export function OrderApprovalBanners({
   )
 }
 
-/** Home: requests waiting for this Owner/Admin in the selected Store. */
+/**
+ * Home: requests waiting for this Owner/Admin in the selected Store. No
+ * timer: it reads again when the tab regains focus and after a decision.
+ */
 export function usePendingChangeApprovals() {
   const trpc = useTRPC()
   return useQuery(
     trpc.orders.pendingChangeApprovals.queryOptions(undefined, {
-      refetchInterval: (query) => readPollInterval(query.state.error, 30_000),
+      refetchOnWindowFocus: "always",
       retry: false,
     }),
   )

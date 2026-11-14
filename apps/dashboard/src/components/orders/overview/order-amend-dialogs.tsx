@@ -16,6 +16,7 @@ import {
   OrderDialog,
   ReasonField,
   ReviewEffects,
+  orderCustomerName,
 } from "./order-dialog-frame"
 import {
   type OverviewOrder,
@@ -640,8 +641,9 @@ export function CancelOrderDialog({ order, onClose, onDone }: DialogProps) {
       open
       onOpenChange={(open) => !open && onClose()}
       busy={cancel.isPending}
-      title={`Cancel ${order.orderNumber}?`}
-      description="Reserved stock goes back to the shelf. This can’t be undone."
+      alert
+      title={`Cancel ${order.orderNumber} for ${orderCustomerName(order)}?`}
+      description={`${orderMoney(order.totalMinor, order.currencyCode)} order. Reserved stock goes back to the shelf. This can’t be undone.`}
     >
       <ReviewEffects
         loading={review.isPending}

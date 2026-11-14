@@ -141,7 +141,7 @@ export function OrderActivityColumn({
                 ref={index === entries.length - 1 ? listEnd : undefined}
               >
                 {heading ? (
-                  <p className="pt-2 pb-2 pl-10 text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">
+                  <p className="pt-2 pb-2 pl-10 text-xs font-medium text-muted-foreground">
                     {heading}
                   </p>
                 ) : null}

@@ -62,10 +62,7 @@ import {
   DetailsChangeDialog,
   ItemsChangeDialog,
 } from "./order-amend-dialogs"
-import {
-  OrderApprovalBanners,
-  hasOpenOrderApproval,
-} from "./order-change-approvals"
+import { OrderApprovalBanners } from "./order-change-approvals"
 import {
   FulfilDialog,
   PaymentDialog,
@@ -174,9 +171,9 @@ export function OrderOverview({
     trpc.orders.changeOptions.queryOptions(
       { orderId },
       {
-        // Someone waits on a return/refund decision: check back often.
-        refetchInterval: (query) =>
-          hasOpenOrderApproval(query.state.data) ? 15_000 : false,
+        // No timer: an open return/refund decision is read again when the
+        // tab regains focus and after every change made here.
+        refetchOnWindowFocus: "always",
         retry: false,
       },
     ),

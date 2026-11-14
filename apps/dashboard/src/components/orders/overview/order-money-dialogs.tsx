@@ -24,6 +24,7 @@ import {
   MutationError,
   OrderDialog,
   ReasonField,
+  orderCustomerName,
 } from "./order-dialog-frame"
 import {
   type OrderPaymentMethod,
@@ -110,7 +111,7 @@ function Outcome({
       )}
     >
       {title ? (
-        <p className="flex items-center gap-1.5 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+        <p className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground">
           <HugeiconsIcon icon={InformationCircleIcon} className="size-3.5" />
           {title}
         </p>
@@ -206,7 +207,8 @@ export function PaymentDialog({
       open
       onOpenChange={(open) => !open && onClose()}
       busy={record.isPending}
-      title="Record payment"
+      alert
+      title={`Payment from ${orderCustomerName(order)}`}
       description={`${money(order.balanceDueMinor)} is due on ${order.orderNumber}.`}
     >
       <DialogField
@@ -400,8 +402,9 @@ function OrdinaryRefundDialog({
       open
       onOpenChange={(open) => !open && onClose()}
       busy={refund.isPending}
-      title="Refund"
-      description={`Paid so far ${money(paid)} · total ${money(order.totalMinor)}`}
+      alert
+      title={`Refund ${orderCustomerName(order)}`}
+      description={`${order.orderNumber} · paid ${money(paid)} of ${money(order.totalMinor)}`}
     >
       <Choice
         label="How much goes back?"
@@ -738,8 +741,9 @@ export function ReturnItemsDialog({
       open
       onOpenChange={(open) => !open && onClose()}
       busy={save.isPending}
-      title="Items came back"
-      description="Set how many of each came back."
+      alert
+      title={`Items back from ${orderCustomerName(order)}`}
+      description={`${order.orderNumber} · set how many of each came back.`}
     >
       <ul className="grid gap-2">
         {rows.map((row) => (
@@ -1064,7 +1068,7 @@ export function FulfilDialog({
       onOpenChange={(open) => !open && onClose()}
       busy={pending}
       title={lineId ? "Fulfil this item" : "Fulfil all ready items"}
-      description="Records the items as handed over and moves the stock. Confirm only when they are ready."
+      description="Marks them handed over and takes them out of stock."
     >
       <ul className="grid gap-2">
         {lines.map((line) => (

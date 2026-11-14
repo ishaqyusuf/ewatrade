@@ -1,7 +1,13 @@
 "use client"
 import { useDashboardWorkflow } from "@ewatrade/events/dashboard-client"
 import { receiptFileStem } from "@ewatrade/order-receipts"
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
+
+function receiptPdfName(orderNumbers: string[]) {
+  return orderNumbers.length === 1
+    ? `${receiptFileStem(orderNumbers[0] ?? "order")}.pdf`
+    : "order-receipts.pdf"
+}
 
 export function useReceiptDownload(
   pdfBase64: string | undefined,
@@ -39,10 +45,7 @@ export function useReceiptDownload(
         format === "pdf"
           ? {
               blob: new Blob([bytes], { type: "application/pdf" }),
-              filename:
-                orderNumbers.length === 1
-                  ? `${receiptFileStem(orderNumbers[0] ?? "order")}.pdf`
-                  : "order-receipts.pdf",
+              filename: receiptPdfName(orderNumbers),
             }
           : await (
               await import("@/components/receipts/image-export")
@@ -69,5 +72,58 @@ export function useReceiptDownload(
       setPending(false)
     }
   }
-  return { url, pending, message, error, download }
+  // The phone share sheet (WhatsApp, email…) takes the PDF itself.
+  const shareFile = useMemo(() => {
+    if (!pdfBase64 || typeof File === "undefined") return null
+    const bytes = Uint8Array.from(atob(pdfBase64), (char) => char.charCodeAt(0))
+    return new File([bytes], receiptPdfName(orderNumbers), {
+      type: "application/pdf",
+    })
+  }, [pdfBase64, orderNumbers])
+  const canShare = Boolean(
+    shareFile &&
+      typeof navigator !== "undefined" &&
+      navigator.canShare?.({ files: [shareFile] }),
+  )
+
+  async function share() {
+    if (!shareFile || pending) return
+    setError(null)
+    workflow.track("receipt_download", "started", { channel: "share" })
+    try {
+      await navigator.share({
+        files: [shareFile],
+        title: orderNumbers.join(", "),
+      })
+      workflow.track("receipt_download", "completed", { channel: "share" })
+    } catch (cause) {
+      // Closing the share sheet is not an error.
+      if (cause instanceof DOMException && cause.name === "AbortError") return
+      workflow.track("receipt_download", "failed", { channel: "share" })
+      setError("Sharing failed. Download the PDF instead.")
+    }
+  }
+
+  /** Prints the same PDF from a hidden frame; opens it when a frame can't. */
+  function print() {
+    if (!url) return
+    const frame = document.createElement("iframe")
+    frame.style.position = "fixed"
+    frame.style.width = "0"
+    frame.style.height = "0"
+    frame.style.border = "0"
+    frame.src = url
+    frame.onload = () => {
+      try {
+        frame.contentWindow?.focus()
+        frame.contentWindow?.print()
+      } catch {
+        window.open(url, "_blank", "noopener")
+      }
+      window.setTimeout(() => frame.remove(), 60_000)
+    }
+    document.body.append(frame)
+  }
+
+  return { url, pending, message, error, download, canShare, share, print }
 }

@@ -2,6 +2,10 @@
 
 import { FormFeedback } from "@/components/forms/form-feedback"
 import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogTitle,
   Button,
   Dialog,
   DialogContent,
@@ -14,7 +18,16 @@ import {
 } from "@ewatrade/ui"
 import type { ReactNode } from "react"
 
-/** One change dialog: title, plain description, body and optional footer. */
+/** Who an order is for, as a dialog names them. */
+export function orderCustomerName(order: { customerName?: string | null }) {
+  return order.customerName?.trim() || "Walk-in customer"
+}
+
+/**
+ * One change dialog: title, plain description, body and optional footer.
+ * `alert` is for money and destructive confirms: a real alert dialog that
+ * an outside click never closes, so its title names the customer and amount.
+ */
 export function OrderDialog({
   open,
   onOpenChange,
@@ -23,6 +36,7 @@ export function OrderDialog({
   children,
   footer,
   busy = false,
+  alert = false,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -31,14 +45,32 @@ export function OrderDialog({
   children: ReactNode
   footer?: ReactNode
   busy?: boolean
+  alert?: boolean
 }) {
+  const change = (next: boolean) => {
+    if (!busy) onOpenChange(next)
+  }
+  if (alert)
+    return (
+      <AlertDialog open={open} onOpenChange={change}>
+        <AlertDialogContent className="grid max-w-lg gap-5 p-6 text-foreground max-md:content-start">
+          <div className="grid gap-1.5">
+            <AlertDialogTitle className="text-lg font-semibold">
+              {title}
+            </AlertDialogTitle>
+            {description ? (
+              <AlertDialogDescription className="text-sm text-muted-foreground">
+                {description}
+              </AlertDialogDescription>
+            ) : null}
+          </div>
+          <div className="grid min-w-0 gap-4">{children}</div>
+          {footer ? <DialogFooter>{footer}</DialogFooter> : null}
+        </AlertDialogContent>
+      </AlertDialog>
+    )
   return (
-    <Dialog
-      open={open}
-      onOpenChange={(next) => {
-        if (!busy) onOpenChange(next)
-      }}
-    >
+    <Dialog open={open} onOpenChange={change}>
       <DialogContent className="grid max-w-lg gap-5 p-6 text-foreground max-md:content-start max-md:overflow-y-auto">
         <DialogHeader className="pr-8">
           <DialogTitle className="text-lg font-semibold">{title}</DialogTitle>
@@ -86,7 +118,7 @@ export function ReasonField({
             type="button"
             aria-pressed={value === chip}
             className={cn(
-              "rounded-full border border-border px-3 py-1 text-xs transition-colors hover:bg-muted",
+              "min-h-9 rounded-full border border-border px-3 py-1 text-sm transition-colors hover:bg-muted",
               value === chip &&
                 "border-primary bg-primary/10 text-foreground hover:bg-primary/15",
             )}
@@ -145,9 +177,7 @@ export function ReviewEffects({
     )
   return (
     <div className="grid gap-2 rounded-lg border border-border bg-muted/40 p-3">
-      <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-        What changes
-      </p>
+      <p className="text-sm font-medium text-muted-foreground">What changes</p>
       <ul className="grid gap-1 text-sm">
         {effects.map((effect) => (
           <li key={effect} className="break-words">
