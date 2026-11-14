@@ -188,7 +188,12 @@ export function InventoryOperationForm({
     ),
   )
   const storesQuery = useQuery(trpc.tenant.stores.queryOptions())
-  const assigneesQuery = useQuery(trpc.services.assignees.queryOptions())
+  // Staff are only chosen when handing stock to someone.
+  const assigneesQuery = useQuery(
+    trpc.services.assignees.queryOptions(undefined, {
+      enabled: operation === "custody",
+    }),
+  )
   const rows = balances.rows
   const [sourceId, setSourceId] = useState(() =>
     initialInventorySource(

@@ -64,9 +64,15 @@ export function InventoryReceiptSource({
   const enableOffering = useMutation(
     trpc.catalog.setOfferingAvailability.mutationOptions(),
   )
+  // Only Stock in can start stock for a product that has none, so only it
+  // reads the whole catalog; other changes list the stock lines they act on.
   const catalog = useQuery(
-    trpc.catalog.listItems.queryOptions({ kind: "product" }, { retry: false }),
+    trpc.catalog.listItems.queryOptions(
+      { kind: "product" },
+      { retry: false, enabled: allowFirstReceipt },
+    ),
   )
+  const catalogLoading = allowFirstReceipt && catalog.isPending
   const [preparing, setPreparing] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const missing = useMemo(
@@ -182,7 +188,7 @@ export function InventoryReceiptSource({
         itemToStringLabel={(option) => option.label}
         isItemEqualToValue={(option, value) => option.value === value.value}
         autoHighlight
-        disabled={disabled || Boolean(preparing) || catalog.isPending}
+        disabled={disabled || Boolean(preparing) || catalogLoading}
         onValueChange={(option) => {
           if (disabled || preparing || option?.disabled) return
           if (option) void choose(option.value)
