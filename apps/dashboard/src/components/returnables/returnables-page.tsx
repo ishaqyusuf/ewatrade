@@ -1,5 +1,6 @@
 "use client"
 
+import { PageTitleHeading } from "@/components/dashboard/page-title"
 import { MetricCard } from "@/components/reports/metric-card"
 import { ScrollableContent } from "@/components/scrollable-content"
 import {
@@ -62,9 +63,7 @@ export function ReturnablesPage({
             Customers
           </Link>
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <h1 className="text-2xl font-semibold tracking-tight">
-              Returnables
-            </h1>
+            <PageTitleHeading title="Returnables" />
             {rows.length ? (
               <Button onClick={() => setTarget({})}>
                 <HugeiconsIcon

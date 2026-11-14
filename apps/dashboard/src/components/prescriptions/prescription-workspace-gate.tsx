@@ -95,11 +95,11 @@ export function PrescriptionWorkspaceGate({
           <p className="text-sm font-medium text-muted-foreground">
             Prescription workspace unavailable
           </p>
-          <h1 className="mt-2 text-xl font-semibold">
+          <h2 className="mt-2 text-xl">
             {accessState === "forbidden"
               ? "Professional access is required"
               : "We could not load this workspace"}
-          </h1>
+          </h2>
           <p className="mt-2 text-sm text-muted-foreground">
             {accessState === "forbidden"
               ? "Ask an Owner or Admin to assign your verified pharmacy role."

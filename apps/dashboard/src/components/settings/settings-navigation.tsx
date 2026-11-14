@@ -63,7 +63,7 @@ export function SettingsNavigation({ items }: { items: DashboardNavItem[] }) {
       </div>
       <nav
         aria-label="Settings"
-        className="hidden self-start md:sticky md:top-4 md:grid md:gap-[18px]"
+        className="hidden self-start md:sticky md:top-[calc(var(--header-height)+1rem)] md:grid md:gap-[18px]"
       >
         {groups.map(({ group, items }) => (
           <div key={group} className="grid gap-0.5">

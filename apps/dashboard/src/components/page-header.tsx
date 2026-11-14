@@ -1,5 +1,11 @@
+import { PageTitleHeading } from "@/components/dashboard/page-title"
 import type { ReactNode } from "react"
 
+/**
+ * Page title block. Inside the shell the top bar is the page's only `<h1>`,
+ * so the title (and its eyebrow) hides on a section's own page and becomes an
+ * `<h2>` on deeper pages; the description and children stay.
+ */
 export function PageHeader({
   children,
   description,
@@ -13,13 +19,19 @@ export function PageHeader({
 }) {
   return (
     <header className="grid min-w-0 gap-4">
-      <div>
-        {eyebrow ? (
-          <p className="text-sm text-muted-foreground">{eyebrow}</p>
-        ) : null}
-        <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
+      <div className="empty:hidden">
+        <PageTitleHeading
+          title={title}
+          eyebrow={
+            eyebrow ? (
+              <p className="text-sm text-muted-foreground">{eyebrow}</p>
+            ) : null
+          }
+        />
         {description ? (
-          <p className="mt-1 text-sm text-muted-foreground">{description}</p>
+          <p className="mt-1 text-sm text-muted-foreground first:mt-0">
+            {description}
+          </p>
         ) : null}
       </div>
       {children}

@@ -4,7 +4,9 @@ import {
   canAccessDashboardPath,
   getDashboardNavItem,
   getDashboardNavigation,
+  getDashboardPageTitle,
   getDashboardRoleLabel,
+  getSidebarNavItems,
 } from "./navigation"
 
 function context(
@@ -462,4 +464,33 @@ test("Free plan hides and blocks finance, staff, suppliers and receipt settings"
   expect(canAccessDashboardPath("/settings/receipts", "OWNER", paid)).toBe(true)
   // An unknown plan (read failed) leaves navigation to the API's enforcement.
   expect(canAccessDashboardPath("/finance", "OWNER", context())).toBe(true)
+})
+
+test("the top bar title names the deepest sidebar row for the path", () => {
+  const items = getDashboardNavigation("OWNER", {
+    staffAccessMode: "LEGACY",
+  })
+  const title = (path: string) => getDashboardPageTitle(path, items)
+  expect(title("/")).toBe("Overview")
+  expect(title("/sales")).toBe("Sales")
+  expect(title("/sales/orders/ord_1")).toBe("Order")
+  expect(title("/inventory/operations")).toBe("Stock history")
+  expect(title("/finance")).toBe("Finance")
+  expect(title("/finance/spending")).toBe("Spending")
+  expect(title("/analytics")).toBe("Reports")
+  expect(title("/settings/receipts")).toBe("Settings")
+  expect(title("/customers/c_1/statement")).toBe("Statement")
+  expect(title("/assistant/c/abc")).toBe("Assistant")
+})
+
+test("Settings pages leave the sidebar; other areas keep theirs", () => {
+  const items = getSidebarNavItems(
+    getDashboardNavigation("OWNER", { staffAccessMode: "LEGACY" }),
+  )
+  expect(items.find((item) => item.href === "/settings")?.children).toBe(
+    undefined,
+  )
+  expect(
+    items.find((item) => item.href === "/inventory")?.children?.length,
+  ).toBeGreaterThan(0)
 })

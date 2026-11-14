@@ -137,11 +137,10 @@ export function AssistantWorkbench() {
   return (
     // Edge to edge under the shell header, like the design: no card frame.
     // -mb-4 cancels the shell's bottom padding so only the columns scroll.
-    <div className="-mx-4 -mb-4 flex flex-1 flex-col md:-mx-8">
-      <h1 className="sr-only">AI assistant</h1>
+    <div className="-mx-4 -mb-4 flex flex-1 flex-col md:-mx-6">
       <div
         className={cn(
-          "grid h-[calc(100svh-70px)] min-h-[32rem] overflow-hidden",
+          "grid h-[calc(100svh-var(--header-height))] min-h-[32rem] overflow-hidden",
           sidebarOpen && "xl:grid-cols-[272px_minmax(0,1fr)]",
         )}
       >

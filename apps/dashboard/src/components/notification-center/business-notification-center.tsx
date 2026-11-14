@@ -17,7 +17,7 @@ import {
   nextReadMount,
 } from "@ewatrade/assistant/general/staff-activity-target"
 import type { BusinessNotificationReceiptView } from "@ewatrade/notifications/business-events"
-import { Popover, PopoverContent, PopoverTrigger, cn } from "@ewatrade/ui"
+import { Popover, PopoverContent, PopoverTrigger } from "@ewatrade/ui"
 import { Notification01Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { useInfiniteQuery, useMutation } from "@tanstack/react-query"
@@ -74,18 +74,15 @@ export function BusinessNotificationCenter({
         aria-label={
           unread ? `My notifications, ${unread} unread` : "My notifications"
         }
-        className="relative flex size-9 items-center justify-center outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring"
+        className="relative flex size-11 items-center justify-center rounded-[10px] outline-none hover:bg-[var(--hover)] aria-expanded:bg-[var(--hover)]"
       >
         <HugeiconsIcon icon={Notification01Icon} className="size-5" />
         {unread ? (
+          // The count is in the button's name; the dot only says "new".
           <span
             aria-hidden="true"
-            className={cn(
-              "absolute top-0.5 right-0 flex h-4 min-w-4 items-center justify-center rounded-full bg-blue-600 px-1 text-[10px] font-semibold text-white dark:bg-blue-500",
-            )}
-          >
-            {unread > 99 ? "99+" : unread}
-          </span>
+            className="absolute top-2 right-2.5 size-2.5 rounded-full border-2 border-card bg-[var(--badge-dot)]"
+          />
         ) : null}
       </PopoverTrigger>
       <PopoverContent

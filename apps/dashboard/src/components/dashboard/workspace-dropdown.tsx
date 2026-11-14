@@ -19,6 +19,7 @@ import {
   Building02Icon,
   Store04Icon,
   Tick02Icon,
+  UnfoldMoreIcon,
 } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { usePathname } from "next/navigation"
@@ -28,6 +29,16 @@ type Props = {
   selection?: "workspace" | "business" | "store"
   isExpanded?: boolean
   onNavigate?: () => void
+}
+
+function businessInitials(name: string) {
+  const words = name.trim().split(/\s+/).filter(Boolean)
+  return (
+    (words.length > 1
+      ? `${words[0]?.[0]}${words[1]?.[0]}`
+      : name.slice(0, 2)
+    ).toUpperCase() || "?"
+  )
 }
 
 export function WorkspaceDropdown({
@@ -66,62 +77,69 @@ export function WorkspaceDropdown({
                   : `Business ${ctx.tenant.name}, store ${storeName}`
               }
               title={`${ctx.tenant.name} · ${storeName}`}
-              className={
-                isExpanded
-                  ? cn(
-                      "h-auto w-full justify-start gap-3 rounded-none px-2 py-2 text-left disabled:opacity-100",
-                      isSwitching && "disabled:opacity-70",
-                    )
-                  : cn(
-                      "mx-auto flex size-10 rounded-none p-0 disabled:opacity-100",
-                      isSwitching && "disabled:opacity-70",
-                    )
-              }
+              className={cn(
+                "disabled:opacity-100",
+                isSwitching && "disabled:opacity-70",
+                selection === "store"
+                  ? "h-11 max-w-64 gap-2 border border-[color:var(--input)] bg-background px-3 font-medium"
+                  : "h-11 w-full justify-start gap-2.5 overflow-hidden px-[5px] text-left hover:bg-[var(--hover)]",
+              )}
             />
           }
         >
-          <span className="flex size-8 shrink-0 items-center justify-center rounded-none border border-border bg-muted text-foreground">
-            <HugeiconsIcon
-              icon={selection === "store" ? Store04Icon : Building02Icon}
-              className="size-4"
-            />
-          </span>
-          {isExpanded ? (
-            <span className="min-w-0 flex-1">
-              <span className="block truncate text-sm font-medium">
-                {selection === "store" ? storeName : ctx.tenant.name}
-              </span>
-              {selection !== "store" || isSwitching ? (
-                <span className="block truncate text-xs text-muted-foreground">
-                  {isSwitching ? "Switching…" : storeName}
-                </span>
-              ) : null}
+          {selection === "store" ? (
+            <HugeiconsIcon icon={Store04Icon} className="size-[18px]" />
+          ) : (
+            <span
+              aria-hidden="true"
+              className="flex size-9 shrink-0 items-center justify-center rounded-[8px] bg-foreground text-sm font-bold tracking-wide text-background"
+            >
+              {businessInitials(ctx.tenant.name)}
             </span>
-          ) : null}
-          {isExpanded && hasChoices ? (
+          )}
+          {selection === "store" ? (
+            <span className="min-w-0 truncate text-sm">
+              {isSwitching ? "Switching…" : storeName}
+            </span>
+          ) : (
+            <span
+              className={cn(
+                "grid min-w-0 flex-1 leading-tight transition-opacity duration-150",
+                isExpanded ? "opacity-100" : "opacity-0",
+              )}
+            >
+              <span className="truncate text-sm font-semibold text-foreground">
+                {ctx.tenant.name}
+              </span>
+              <span className="truncate text-xs font-normal text-muted-foreground">
+                {isSwitching ? "Switching…" : storeName}
+              </span>
+            </span>
+          )}
+          {hasChoices && (isExpanded || selection === "store") ? (
             <HugeiconsIcon
-              icon={ArrowDown01Icon}
+              icon={selection === "store" ? ArrowDown01Icon : UnfoldMoreIcon}
               className="size-4 shrink-0 text-muted-foreground"
             />
           ) : null}
         </DropdownMenuTrigger>
         <DropdownMenuContent
           appearance="dashboard"
-          align={isExpanded ? "start" : "end"}
-          side={isExpanded ? "bottom" : "right"}
+          align={selection === "store" ? "end" : "start"}
+          side={selection === "store" || isExpanded ? "bottom" : "right"}
           sideOffset={8}
           className="w-64"
         >
           {showBusinesses ? (
             <DropdownMenuGroup>
-              <DropdownMenuLabel className="px-2 py-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              <DropdownMenuLabel className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
                 Businesses
               </DropdownMenuLabel>
               {ctx.tenants.map((tenant) => (
                 <DropdownMenuItem
                   key={tenant.id}
                   disabled={isSwitching}
-                  className="rounded-none px-2 py-1.5 font-normal"
+                  className="px-2 py-1.5 font-normal"
                   onClick={() => void switchTenant(tenant.id, onNavigate)}
                 >
                   <HugeiconsIcon
@@ -143,7 +161,7 @@ export function WorkspaceDropdown({
 
           {showStores ? (
             <DropdownMenuGroup>
-              <DropdownMenuLabel className="px-2 py-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              <DropdownMenuLabel className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
                 {ctx.storeSelectionNeedsRepair
                   ? "Select a Store to refresh access"
                   : "Stores"}
@@ -167,7 +185,7 @@ export function WorkspaceDropdown({
                 <DropdownMenuItem
                   key={store.id}
                   disabled={isSwitching}
-                  className="rounded-none px-2 py-1.5 font-normal"
+                  className="px-2 py-1.5 font-normal"
                   onClick={() => void switchStore(store.id, onNavigate)}
                 >
                   <HugeiconsIcon

@@ -180,7 +180,9 @@
 .ewatrade-dashboard [data-slot="alert-dialog-title"] {
   font-family: var(--font-display), var(--font-sans), system-ui, sans-serif;
   font-weight: 600;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.005em;
+  /* Cal Sans sets a narrow word space. */
+  word-spacing: 0.08em;
 }
 
 /* One clear keyboard focus ring everywhere (beats outline-none utilities). */
@@ -298,5 +300,51 @@
 
   [data-summary-grid][data-summary-skeleton] > :last-child:nth-child(odd) {
     height: 3.75rem;
+  }
+}
+
+/*
+ * Shell (ADR-0060). One --sidebar-width drives the sidebar and the content
+ * offset: none on phones (menu sheet), the 70px rail from 768px, and the open
+ * width from 1024px when Keep open is on. Hovering opens the sidebar over the
+ * content without moving it.
+ */
+.dashboard-shell {
+  --sidebar-width: 0px;
+}
+
+.dashboard-sidebar {
+  width: var(--sidebar-width);
+  transition: width 200ms ease-out, box-shadow 200ms ease-out;
+}
+
+.dashboard-sidebar[data-open] {
+  width: var(--sidebar-open-width);
+}
+
+.dashboard-sidebar[data-open]:not([data-pinned]) {
+  box-shadow: 12px 0 32px -18px rgb(16 20 28 / 0.45);
+}
+
+.dashboard-shell-content {
+  padding-left: var(--sidebar-width);
+  transition: padding-left 200ms ease-out;
+}
+
+@media (width >= 48rem) {
+  .dashboard-shell {
+    --sidebar-width: var(--rail-width);
+  }
+}
+
+@media (width >= 64rem) {
+  .dashboard-shell[data-sidebar-pinned] {
+    --sidebar-width: var(--sidebar-open-width);
+  }
+}
+
+@media (width < 48rem) {
+  .ewatrade-dashboard {
+    --header-height: 60px;
   }
 }

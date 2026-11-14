@@ -1,5 +1,6 @@
 "use client"
 
+import { PageTitleHeading } from "@/components/dashboard/page-title"
 import type { BusinessActivityFilterOptions } from "@ewatrade/notifications/business-events"
 import { Button } from "@ewatrade/ui"
 import { RefreshIcon } from "@hugeicons/core-free-icons"
@@ -23,7 +24,7 @@ export function ActivityHeader({
   return (
     <div className="flex items-end justify-between gap-4">
       <div className="min-w-0">
-        <h1 className="text-2xl font-medium">Activity</h1>
+        <PageTitleHeading title="Activity" />
         <p className="mt-1 text-sm text-muted-foreground">
           {scope ? SCOPE_COPY[scope] : "What happened, newest first."}
         </p>

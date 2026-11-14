@@ -2,11 +2,10 @@
 
 import type { DashboardNavItem } from "@/lib/navigation"
 import { cn } from "@/utils"
-import { ArrowDown01Icon } from "@hugeicons/core-free-icons"
+import { ArrowDown01Icon, ArrowRight01Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { useEffect, useId, useState } from "react"
 import { IntentLink } from "./intent-link"
 import { NavIcon } from "./nav-icon"
 
@@ -23,114 +22,85 @@ function matchesPath(pathname: string, item: DashboardNavItem) {
   )
 }
 
+/**
+ * Sidebar rows: 44px, icon in the rail column, label shown while open. An
+ * area's pages (Inventory, Finance, Reports) show only for the active area
+ * while the sidebar is open.
+ */
 export function MainMenu({ navItems, isExpanded, onNavigate }: Props) {
   const pathname = usePathname()
-  const id = useId()
-  const [expandedItem, setExpandedItem] = useState<string | null>(null)
-  useEffect(() => {
-    if (!isExpanded) setExpandedItem(null)
-  }, [isExpanded])
 
   return (
     <nav
       aria-label="Main navigation"
-      className="scrollbar-hide min-h-0 flex-1 overflow-y-auto py-4"
+      className="scrollbar-hide min-h-0 flex-1 overflow-y-auto py-2.5"
     >
-      <ul className="flex flex-col gap-2">
+      <ul className="grid gap-0.5">
         {navItems.map((item) => {
-          const isActive =
-            matchesPath(pathname, item) ||
-            Boolean(
-              item.children?.some((child) => matchesPath(pathname, child)),
-            )
+          const activeChild = item.children
+            ?.filter((child) => matchesPath(pathname, child))
+            .sort((a, b) => b.href.length - a.href.length)[0]
+          const isActive = matchesPath(pathname, item) || Boolean(activeChild)
           const hasChildren = Boolean(item.children?.length)
-          const showChildren = isExpanded && expandedItem === item.href
-          const childrenId = `${id}-${item.href.replaceAll("/", "-")}`
+          const showChildren = isExpanded && hasChildren && isActive
           return (
             <li key={item.href}>
-              <div className="relative">
-                <Link
-                  href={item.href}
-                  onClick={onNavigate}
-                  title={isExpanded ? undefined : item.label}
-                  aria-label={item.label}
-                  aria-current={pathname === item.href ? "page" : undefined}
+              <Link
+                href={item.href}
+                onClick={onNavigate}
+                title={isExpanded ? undefined : item.label}
+                aria-label={item.label}
+                aria-current={pathname === item.href ? "page" : undefined}
+                className={cn(
+                  "relative mx-3 flex h-11 items-center overflow-hidden rounded-[10px] whitespace-nowrap outline-none transition-colors",
+                  isActive
+                    ? "bg-sidebar-accent font-semibold text-sidebar-accent-foreground before:absolute before:top-2.5 before:bottom-2.5 before:left-0 before:w-[3px] before:rounded-full before:bg-sidebar-accent-foreground"
+                    : "font-medium text-sidebar-foreground hover:bg-[var(--hover)] hover:text-foreground",
+                )}
+              >
+                <span className="flex w-[calc(var(--rail-width)-24px)] shrink-0 items-center justify-center">
+                  <NavIcon name={item.icon} className="size-5" />
+                </span>
+                <span
+                  aria-hidden="true"
                   className={cn(
-                    "group/nav-item relative mx-[15px] flex h-10 items-center overflow-hidden border border-transparent outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
-                    isActive
-                      ? "border-[#e6e6e6] bg-[#f7f7f7] text-foreground dark:border-[#1d1d1d] dark:bg-[#131313] dark:text-foreground"
-                      : "text-sidebar-foreground hover:border-sidebar-border hover:bg-sidebar-accent",
+                    "min-w-0 flex-1 truncate text-base transition-opacity duration-150",
+                    isExpanded ? "opacity-100" : "opacity-0",
                   )}
                 >
-                  <span className="flex size-10 shrink-0 items-center justify-center">
-                    <NavIcon
-                      name={item.icon}
-                      className={cn(
-                        "size-5 transition-colors",
-                        isActive
-                          ? "text-foreground dark:text-white"
-                          : "text-foreground dark:text-[#666666]",
-                      )}
-                    />
-                  </span>
-                  <span
-                    className={cn(
-                      "min-w-0 truncate text-sm font-medium transition-[opacity,width] duration-150",
-                      hasChildren ? "pr-10" : "pr-2",
-                      isActive
-                        ? "text-primary"
-                        : "text-[#666666] group-hover/nav-item:text-primary",
-                      isExpanded ? "w-auto opacity-100" : "w-0 opacity-0",
-                    )}
-                    aria-hidden={!isExpanded}
-                  >
-                    {item.label}
-                  </span>
-                  <span className="sr-only">{item.description}</span>
-                </Link>
-                {isExpanded && hasChildren ? (
-                  <button
-                    type="button"
-                    aria-label={`Toggle ${item.label} pages`}
-                    aria-expanded={showChildren}
-                    aria-controls={showChildren ? childrenId : undefined}
-                    onClick={() =>
-                      setExpandedItem(showChildren ? null : item.href)
-                    }
-                    className="absolute right-5 top-1 flex size-8 items-center justify-center text-[#888] outline-none hover:text-primary focus-visible:ring-2 focus-visible:ring-ring"
-                  >
-                    <HugeiconsIcon
-                      icon={ArrowDown01Icon}
-                      className={cn(
-                        "size-4 transition-transform",
-                        showChildren && "rotate-180",
-                      )}
-                    />
-                  </button>
+                  {item.label}
+                </span>
+                {hasChildren && isExpanded ? (
+                  <HugeiconsIcon
+                    aria-hidden="true"
+                    icon={showChildren ? ArrowDown01Icon : ArrowRight01Icon}
+                    className="mr-3 size-4 shrink-0"
+                  />
                 ) : null}
-              </div>
+                <span className="sr-only">{item.description}</span>
+              </Link>
               {showChildren ? (
-                <ul
-                  id={childrenId}
-                  className="mt-1 ml-[35px] mr-[15px] border-l border-[#e6e6e6] dark:border-[#1d1d1d]"
-                >
-                  {item.children?.map((child) => (
-                    <li key={child.href}>
-                      <IntentLink
-                        href={child.href}
-                        onClick={onNavigate}
-                        aria-current={
-                          pathname === child.href ? "page" : undefined
-                        }
-                        className={cn(
-                          "flex h-8 items-center overflow-hidden whitespace-nowrap pl-3 text-xs font-medium text-[#888] outline-none hover:text-primary focus-visible:ring-2 focus-visible:ring-ring",
-                          pathname === child.href && "text-primary",
-                        )}
-                      >
-                        {child.label}
-                      </IntentLink>
-                    </li>
-                  ))}
+                <ul className="mt-0.5 mr-3 mb-1.5 ml-[calc(var(--rail-width)/2+2px)] grid gap-0.5 border-l border-sidebar-border pl-2.5">
+                  {item.children?.map((child) => {
+                    const isCurrent = child.href === activeChild?.href
+                    return (
+                      <li key={child.href}>
+                        <IntentLink
+                          href={child.href}
+                          onClick={onNavigate}
+                          aria-current={isCurrent ? "page" : undefined}
+                          className={cn(
+                            "flex h-11 items-center overflow-hidden rounded-[10px] px-2.5 text-sm whitespace-nowrap outline-none",
+                            isCurrent
+                              ? "bg-sidebar-accent font-semibold text-sidebar-accent-foreground"
+                              : "text-sidebar-foreground hover:bg-[var(--hover)] hover:text-foreground",
+                          )}
+                        >
+                          {child.label}
+                        </IntentLink>
+                      </li>
+                    )
+                  })}
                 </ul>
               ) : null}
             </li>

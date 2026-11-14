@@ -1,88 +1,96 @@
 "use client"
 
-import { type DashboardNavItem, getDashboardRoleLabel } from "@/lib/navigation"
-import type { SessionUser } from "@/lib/session"
+import { type DashboardNavItem, getSidebarNavItems } from "@/lib/navigation"
 import type { TenantContext } from "@/lib/tenant"
 import { cn } from "@/utils"
-import { useEffect, useRef, useState } from "react"
-import { DashboardLogo } from "./dashboard-logo"
+import { PinIcon, PinOffIcon } from "@hugeicons/core-free-icons"
+import { HugeiconsIcon } from "@hugeicons/react"
 import { MainMenu } from "./main-menu"
-import { UserMenu } from "./user-menu"
+import { useSidebarState } from "./sidebar-state"
 import { WorkspaceDropdown } from "./workspace-dropdown"
-
-const HOVER_DELAY_MS = 500
 
 type Props = {
   navItems: DashboardNavItem[]
-  user: SessionUser
   ctx: TenantContext
 }
 
-export function DashboardSidebar({ navItems, user, ctx }: Props) {
-  const [isPointerInside, setIsPointerInside] = useState(false)
-  const [isFocusWithin, setIsFocusWithin] = useState(false)
-  const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const isExpanded = isPointerInside || isFocusWithin
-  const settingsHref = navItems.find((item) => item.href === "/settings")?.href
-
-  useEffect(() => () => clearHoverTimer(), [])
-
-  function clearHoverTimer() {
-    if (hoverTimerRef.current) {
-      clearTimeout(hoverTimerRef.current)
-      hoverTimerRef.current = null
-    }
-  }
-
-  function setPointerInsideAfterDelay(inside: boolean) {
-    clearHoverTimer()
-    hoverTimerRef.current = setTimeout(() => {
-      hoverTimerRef.current = null
-      setIsPointerInside(inside)
-    }, HOVER_DELAY_MS)
-  }
+/**
+ * 70px rail that opens to 256px after 500ms of hover (at once on keyboard
+ * focus) and closes 500ms after leaving. From 1024px, Keep open pins it and
+ * the content shifts by the same `--sidebar-width`.
+ */
+export function DashboardSidebar({ navItems, ctx }: Props) {
+  const sidebar = useSidebarState()
+  const pinned = sidebar.isPinned && sidebar.canPin
+  const label = pinned ? "Let sidebar close" : "Keep sidebar open"
 
   return (
     <aside
-      aria-label="Dashboard sidebar"
-      className={cn(
-        "group/sidebar fixed left-0 top-0 z-50 hidden h-dvh shrink-0 flex-col border-r border-sidebar-border bg-sidebar pb-4 transition-[width] duration-200 ease-out md:flex",
-        isExpanded ? "w-[240px]" : "w-[70px]",
-      )}
+      aria-label="Sidebar"
+      data-open={sidebar.isOpen ? "true" : undefined}
+      data-pinned={pinned ? "true" : undefined}
+      className="dashboard-sidebar group/sidebar fixed top-0 left-0 z-50 hidden h-dvh flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground md:flex"
       onBlur={(event) => {
         if (
           !(event.relatedTarget instanceof Node) ||
           !event.currentTarget.contains(event.relatedTarget)
-        ) {
-          setIsFocusWithin(false)
-        }
+        )
+          sidebar.focusLeave()
       }}
-      onFocusCapture={() => setIsFocusWithin(true)}
-      onMouseEnter={() => setPointerInsideAfterDelay(true)}
-      onMouseLeave={() => setPointerInsideAfterDelay(false)}
+      onFocus={(event) => {
+        // Pointer clicks also focus; only keyboard focus opens at once.
+        if (
+          event.target instanceof HTMLElement &&
+          event.target.matches(":focus-visible")
+        )
+          sidebar.focusEnter()
+      }}
+      onMouseEnter={sidebar.pointerEnter}
+      onMouseLeave={sidebar.pointerLeave}
     >
-      <div className="flex h-[70px] shrink-0 items-center border-b border-sidebar-border px-[22px]">
-        <DashboardLogo />
+      <div className="flex h-[var(--header-height)] shrink-0 items-center gap-2 border-b border-sidebar-border px-3">
+        <div className="min-w-0 flex-1">
+          <WorkspaceDropdown
+            ctx={ctx}
+            isExpanded={sidebar.isOpen}
+            selection="business"
+          />
+        </div>
+        {sidebar.isOpen && sidebar.canPin ? (
+          <button
+            type="button"
+            aria-label={label}
+            aria-pressed={pinned}
+            aria-keyshortcuts="["
+            onClick={sidebar.togglePinned}
+            className={cn(
+              "group/pin relative hidden size-10 shrink-0 items-center justify-center rounded-[10px] outline-none lg:flex",
+              pinned
+                ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                : "text-sidebar-foreground hover:bg-[var(--hover)] hover:text-foreground",
+            )}
+          >
+            <HugeiconsIcon
+              icon={pinned ? PinOffIcon : PinIcon}
+              className="size-5"
+            />
+            <span
+              role="tooltip"
+              className="pointer-events-none absolute top-[calc(100%+8px)] left-1/2 z-[60] hidden -translate-x-1/2 items-center gap-2 rounded-lg bg-foreground px-2.5 py-2 text-xs font-medium whitespace-nowrap text-background shadow-lg group-hover/pin:flex group-focus-visible/pin:flex"
+            >
+              {label}
+              <kbd className="rounded bg-background/20 px-1.5 py-0.5 font-sans text-xs font-semibold">
+                [
+              </kbd>
+            </span>
+          </button>
+        ) : null}
       </div>
 
-      <div className="shrink-0 border-b border-sidebar-border px-2 py-3">
-        <WorkspaceDropdown
-          ctx={ctx}
-          isExpanded={isExpanded}
-          selection="business"
-        />
-      </div>
-
-      <MainMenu isExpanded={isExpanded} navItems={navItems} />
-
-      <div className="shrink-0 border-t border-sidebar-border px-2 pt-3">
-        <UserMenu
-          isExpanded={isExpanded}
-          roleLabel={getDashboardRoleLabel(ctx.membership.role)}
-          settingsHref={settingsHref}
-          user={user}
-        />
-      </div>
+      <MainMenu
+        isExpanded={sidebar.isOpen}
+        navItems={getSidebarNavItems(navItems)}
+      />
     </aside>
   )
 }

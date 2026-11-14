@@ -605,3 +605,59 @@ export function canAccessDashboardPath(
 export function getDashboardRoleLabel(role: string | null | undefined) {
   return getRoleDisplayName(getNormalizedRole(role))
 }
+
+/** Cookie that keeps the sidebar open (ADR-0060); read on the server for first paint. */
+export const SIDEBAR_PIN_COOKIE = "ewatrade-sidebar"
+export const SIDEBAR_PIN_VALUE = "pinned"
+
+/**
+ * Sidebar rows. Settings keeps its own page list inside the Settings page, so
+ * its children leave the sidebar; Inventory, Finance and Reports keep theirs.
+ */
+export function getSidebarNavItems(items: DashboardNavItem[]) {
+  return items.map((item) =>
+    item.href === "/settings" ? { ...item, children: undefined } : item,
+  )
+}
+
+/** Titles for shell pages that are not sidebar rows (longest prefix wins). */
+const EXTRA_PAGE_TITLES: Array<[string, string]> = [
+  ["/sales/orders", "Order"],
+  ["/customers/returnables", "Returnables"],
+  ["/finance/refunds", "Refunds"],
+  ["/inventory/shipments", "Shipments"],
+  ["/services/requests", "Service requests"],
+  ["/products", "Catalog"],
+  ["/settings", "Settings"],
+]
+
+/**
+ * The top bar's `<h1>`: the deepest sidebar row that matches the path. A
+ * child called "Overview" takes its parent's name, and every Settings page
+ * is titled Settings (the page names its own section).
+ */
+export function getDashboardPageTitle(
+  pathname: string,
+  items: DashboardNavItem[],
+) {
+  if (pathname === "/settings" || pathname.startsWith("/settings/"))
+    return "Settings"
+  if (/^\/customers\/[^/]+\/statement$/.test(pathname)) return "Statement"
+  const extra = EXTRA_PAGE_TITLES.filter(([href]) =>
+    matchesPath(pathname, href),
+  ).sort((left, right) => right[0].length - left[0].length)[0]
+  const matches = items
+    .flatMap((item) => [
+      { item, parent: undefined as DashboardNavItem | undefined },
+      ...(item.children ?? []).map((child) => ({ item: child, parent: item })),
+    ])
+    .filter(({ item }) => matchesPath(pathname, item.href, item.end))
+    .sort((left, right) => right.item.href.length - left.item.href.length)
+  const best = matches[0]
+  if (extra && (!best || extra[0].length > best.item.href.length))
+    return extra[1]
+  if (!best) return "Overview"
+  return best.parent && best.item.label === "Overview"
+    ? best.parent.label
+    : best.item.label
+}

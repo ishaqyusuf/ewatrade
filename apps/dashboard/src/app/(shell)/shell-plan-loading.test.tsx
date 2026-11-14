@@ -65,6 +65,7 @@ mock.module("@/lib/tenant", () => ({
 }))
 mock.module("next/headers", () => ({
   headers: async () => new Headers({ "x-pathname": "/" }),
+  cookies: async () => ({ get: () => undefined }),
 }))
 mock.module("next/navigation", () => ({
   redirect: (path: string) => {
@@ -75,6 +76,12 @@ mock.module("@/components/dashboard/sidebar", () => ({
   DashboardSidebar: Sidebar,
 }))
 mock.module("@/components/dashboard/header", () => ({ DashboardHeader: empty }))
+mock.module("@/components/dashboard/sidebar-state", () => ({
+  DashboardShellFrame: ({ children }: { children: unknown }) => children,
+}))
+mock.module("@/components/dashboard/page-title", () => ({
+  DashboardPageTitleProvider: empty,
+}))
 mock.module("@/components/dashboard/page-loading", () => ({
   PageLoading: empty,
 }))

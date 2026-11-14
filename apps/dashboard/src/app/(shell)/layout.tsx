@@ -2,10 +2,14 @@ import { CatalogCreateAccessProvider } from "@/components/catalog-item/catalog-c
 import { catalogDetailAccessFingerprint } from "@/components/catalog-item/detail/read-access"
 import { DashboardHeader } from "@/components/dashboard/header"
 import { PageLoading } from "@/components/dashboard/page-loading"
+import { DashboardPageTitleProvider } from "@/components/dashboard/page-title"
 import { DashboardSidebar } from "@/components/dashboard/sidebar"
+import { DashboardShellFrame } from "@/components/dashboard/sidebar-state"
 import { QuickAssistant } from "@/components/quick-assistant/quick-assistant"
 import { GlobalSheetsProvider } from "@/components/sheets/global-sheets-provider"
 import {
+  SIDEBAR_PIN_COOKIE,
+  SIDEBAR_PIN_VALUE,
   canAccessDashboardPath,
   getDashboardNavigation,
 } from "@/lib/navigation"
@@ -19,13 +23,13 @@ import { canManageTenant, normalizeRole } from "@ewatrade/auth/roles"
 import { prisma } from "@ewatrade/db"
 import { getRetailOpsTenantPlanFeatures } from "@ewatrade/db/retail-ops-subscriptions"
 import { isWebsiteDomainsLaunchApproved } from "@ewatrade/db/website-domains-launch-gate"
-import { headers } from "next/headers"
+import { cookies, headers } from "next/headers"
 import { redirect } from "next/navigation"
 import { Suspense } from "react"
 
 async function ResolvedShell({ children }: { children: React.ReactNode }) {
   const session = await getServerSession()
-  const headerStore = await headers()
+  const [headerStore, cookieStore] = await Promise.all([headers(), cookies()])
 
   if (!session) {
     redirect("/login")
@@ -96,9 +100,13 @@ async function ResolvedShell({ children }: { children: React.ReactNode }) {
     !["OWNER", "ADMIN"].includes(ctx.membership.role)
 
   return (
-    <div className="relative min-h-screen bg-background">
-      <DashboardSidebar user={session.user} ctx={ctx} navItems={navItems} />
-      <div className="min-h-screen pb-4 md:ml-[70px]">
+    <DashboardShellFrame
+      initialPinned={
+        cookieStore.get(SIDEBAR_PIN_COOKIE)?.value === SIDEBAR_PIN_VALUE
+      }
+    >
+      <DashboardSidebar ctx={ctx} navItems={navItems} />
+      <div className="dashboard-shell-content min-h-screen pb-4">
         <DashboardHeader
           commandPaths={commandPaths}
           user={session.user}
@@ -170,9 +178,11 @@ async function ResolvedShell({ children }: { children: React.ReactNode }) {
             tenantId={ctx.tenant.id}
             timeZone={ctx.tenant.timezone}
           >
-            {/* 70px header + this + the wrapper's pb-4 fill exactly one screen. */}
-            <main className="flex min-h-[calc(100vh-70px-1rem)] min-w-0 flex-col px-4 md:px-8">
-              {children}
+            {/* Top bar + this + the wrapper's pb-4 fill exactly one screen. */}
+            <main className="flex min-h-[calc(100vh-var(--header-height)-1rem)] min-w-0 flex-col px-4 md:px-6">
+              <DashboardPageTitleProvider navItems={navItems}>
+                {children}
+              </DashboardPageTitleProvider>
             </main>
           </GlobalSheetsProvider>
         </CatalogCreateAccessProvider>
@@ -186,7 +196,7 @@ async function ResolvedShell({ children }: { children: React.ReactNode }) {
           />
         ) : null}
       </div>
-    </div>
+    </DashboardShellFrame>
   )
 }
 
@@ -197,7 +207,7 @@ export default function ShellLayout({
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen px-4 py-6 md:px-8">
+        <div className="min-h-screen px-4 py-6 md:px-6">
           <PageLoading />
         </div>
       }

@@ -2,7 +2,10 @@
 import { FormFeedback } from "@/components/forms/form-feedback"
 import { useDashboardWorkflow } from "@ewatrade/events/dashboard-client"
 
-import { OpenSearchButton } from "@/components/dashboard/open-search-button"
+import {
+  OPEN_DASHBOARD_SEARCH_EVENT,
+  OpenSearchButton,
+} from "@/components/dashboard/open-search-button"
 import {
   type DashboardSearchResponse,
   filterDashboardCommands,
@@ -125,9 +128,14 @@ export function DashboardCommandSearch({ commandPaths, navItems }: Props) {
       if (event.key === "Escape") setOpen(false)
     }
 
+    const openFromMenu = () => setOpen(true)
     window.addEventListener("keydown", onKeyDown)
+    window.addEventListener(OPEN_DASHBOARD_SEARCH_EVENT, openFromMenu)
 
-    return () => window.removeEventListener("keydown", onKeyDown)
+    return () => {
+      window.removeEventListener("keydown", onKeyDown)
+      window.removeEventListener(OPEN_DASHBOARD_SEARCH_EVENT, openFromMenu)
+    }
   }, [])
 
   useEffect(() => {

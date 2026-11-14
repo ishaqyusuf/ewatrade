@@ -1,3 +1,4 @@
+import { PageTitleHeading } from "@/components/dashboard/page-title"
 import { cn } from "@/utils"
 import { Tick02Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
@@ -23,7 +24,7 @@ export function SettingsHeader({
   return (
     <header className="flex flex-wrap items-start justify-between gap-x-5 gap-y-3">
       <div className="min-w-0 flex-[1_1_320px]">
-        <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
+        <PageTitleHeading title={title} />
         {description ? (
           <p className="mt-1 text-sm text-muted-foreground">{description}</p>
         ) : null}

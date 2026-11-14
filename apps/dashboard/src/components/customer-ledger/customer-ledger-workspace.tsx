@@ -48,9 +48,9 @@ function StatementHeader({
       </Link>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0">
-          <h1 className="text-2xl font-semibold tracking-tight">
+          <h2 className="text-2xl tracking-tight">
             {customer?.name ?? "Customer"}
-          </h1>
+          </h2>
           <p
             className={`text-sm text-muted-foreground ${contact ? "" : "italic"}`}
           >

@@ -547,7 +547,7 @@ export function OrderOverview({
           </nav>
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div className="grid gap-2">
-              <h1 className="text-2xl font-semibold">{order.orderNumber}</h1>
+              <h2 className="text-2xl">{order.orderNumber}</h2>
               <p className="text-sm text-muted-foreground">
                 {orderSubline(order, timeZone)}
               </p>
