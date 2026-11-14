@@ -77,12 +77,11 @@ export function FinanceFormFooter({
   disabled?: boolean
 }) {
   return (
-    <FormActions className="sticky bottom-0 bg-background py-4">
+    <FormActions className="sticky -bottom-6 z-10 -mx-6 border-t border-border bg-background px-6 py-4">
       {onCancel ? (
         <Button
           type="button"
           variant="outline"
-          className="rounded-none"
           onClick={onCancel}
           disabled={isSubmitting}
         >
@@ -242,10 +241,9 @@ export function FinanceReview({
           We couldn't save this. {command.error}
         </FormFeedback>
       ) : null}
-      <FormActions className="sticky bottom-0 bg-background py-4">
+      <FormActions className="sticky -bottom-6 z-10 -mx-6 border-t border-border bg-background px-6 py-4">
         <Button
           type="button"
-          className="rounded-none"
           variant="outline"
           onClick={onBack}
           disabled={command.pending || command.saved || backDisabled}

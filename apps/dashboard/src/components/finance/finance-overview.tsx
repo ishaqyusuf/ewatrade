@@ -10,16 +10,20 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import type { ReactNode } from "react"
 import { expensePill } from "./expense-status"
+import { FinanceRow } from "./finance-rows"
 import { formatFinanceShortDate } from "./format-date"
 import type { FinanceBook } from "./types"
 
 const MONEY_PURPOSES = ["CASH", "BANK", "CLEARING"]
 
-/** Finance pages workshop 01: what you have, who owes what, and recent spending. */
+/**
+ * Money first: the total you have and where it is, then who owes what, then
+ * recent spending. Every row opens its record.
+ */
 export function FinanceOverview({ book }: { book: FinanceBook }) {
   return (
-    <div className="grid gap-4">
-      <div className="grid gap-4 lg:grid-cols-2">
+    <div className="grid gap-4 pb-8">
+      <div className="grid items-start gap-4 lg:grid-cols-2">
         <OverviewAccounts book={book} />
         <OverviewOwed book={book} />
       </div>
@@ -31,71 +35,51 @@ export function FinanceOverview({ book }: { book: FinanceBook }) {
 function Panel({
   title,
   link,
+  lead,
   children,
 }: {
   title: string
   link: { href: string; label: string }
+  /** A headline amount under the title. */
+  lead?: ReactNode
   children: ReactNode
 }) {
   return (
-    <section className="min-w-0 border border-border bg-background">
-      <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
-        <h2 className="font-medium">{title}</h2>
+    <section
+      aria-label={title}
+      className="min-w-0 overflow-hidden rounded-[var(--ui-radius-surface)] border border-border bg-card"
+    >
+      <div className="flex items-start justify-between gap-3 px-4 pt-4 pb-3">
+        <div className="grid min-w-0 gap-1">
+          <h2 className="text-base font-semibold">{title}</h2>
+          {lead}
+        </div>
         <Link
           href={link.href}
-          className="text-sm text-primary underline-offset-4 hover:underline"
+          className="inline-flex min-h-11 shrink-0 items-center text-sm font-medium text-[color:var(--link)] underline-offset-4 hover:underline -my-2"
         >
           {link.label}
         </Link>
       </div>
-      {children}
+      <div className="border-t border-border">{children}</div>
     </section>
   )
 }
 
-function PanelRow({
-  title,
-  subtitle,
-  amount,
-  aside,
-  onOpen,
-}: {
-  title: ReactNode
-  subtitle?: ReactNode
-  amount: string
-  aside?: ReactNode
-  onOpen?: () => void
-}) {
+/** Rows inside a panel: a list when there are records, else the state. */
+function PanelRows({
+  label,
+  children,
+}: { label: string; children: ReactNode }) {
   return (
-    <div className="flex items-center justify-between gap-3 border-t border-border px-4 py-2.5 first:border-t-0">
-      <div className="grid min-w-0 gap-0.5">
-        {onOpen ? (
-          <button
-            type="button"
-            className="truncate text-left font-medium underline-offset-4 hover:underline focus-visible:underline"
-            onClick={onOpen}
-          >
-            {title}
-          </button>
-        ) : (
-          <span className="truncate font-medium">{title}</span>
-        )}
-        {subtitle ? (
-          <span className="truncate text-[13px] text-muted-foreground">
-            {subtitle}
-          </span>
-        ) : null}
-      </div>
-      <div className="flex shrink-0 items-center gap-3">
-        {aside}
-        <span className="font-semibold tabular-nums">{amount}</span>
-      </div>
-    </div>
+    <ul aria-label={label} className="divide-y divide-border">
+      {children}
+    </ul>
   )
 }
 
 function PanelState({ children }: { children: ReactNode }) {
-  return <p className="px-4 py-6 text-sm text-muted-foreground">{children}</p>
+  return <p className="px-4 py-6 text-muted-foreground">{children}</p>
 }
 
 function PanelSkeleton() {
@@ -111,8 +95,8 @@ function PanelSkeleton() {
 function PanelError({ retry }: { retry: () => void }) {
   return (
     <div className="grid justify-items-start gap-2 px-4 py-4" role="alert">
-      <p className="text-sm">We couldn&apos;t load this. Try again.</p>
-      <Button variant="outline" size="sm" onClick={retry}>
+      <p>We couldn&apos;t load this.</p>
+      <Button variant="outline" onClick={retry}>
         Try again
       </Button>
     </div>
@@ -136,8 +120,15 @@ function OverviewAccounts({ book }: { book: FinanceBook }) {
   )
   return (
     <Panel
-      title="Money accounts"
-      link={{ href: "/finance/accounts", label: "See all" }}
+      title="Money you have"
+      link={{ href: "/finance/accounts", label: "Accounts" }}
+      lead={
+        balances.isSuccess && accounts.length ? (
+          <p className="text-3xl font-semibold tabular-nums">
+            {formatFinanceMoney(total.toString(), book.currencyCode)}
+          </p>
+        ) : null
+      }
     >
       {balances.isPending ? (
         <PanelSkeleton />
@@ -146,9 +137,9 @@ function OverviewAccounts({ book }: { book: FinanceBook }) {
       ) : !accounts.length ? (
         <PanelState>No money accounts yet.</PanelState>
       ) : (
-        <>
+        <PanelRows label="Money accounts">
           {accounts.map((account) => (
-            <PanelRow
+            <FinanceRow
               key={account.id}
               title={account.name}
               subtitle={`${moneyAccountPurposeLabel(account.purpose, account.mobileMoney)}${account.paymentsPausedAt ? " · Paused" : ""}`}
@@ -161,13 +152,7 @@ function OverviewAccounts({ book }: { book: FinanceBook }) {
               }
             />
           ))}
-          <div className="flex justify-between border-t border-border px-4 py-3 font-semibold">
-            <span>Total</span>
-            <span className="tabular-nums">
-              {formatFinanceMoney(total.toString(), book.currencyCode)}
-            </span>
-          </div>
-        </>
+        </PanelRows>
       )}
     </Panel>
   )
@@ -186,23 +171,24 @@ function OverviewOwed({ book }: { book: FinanceBook }) {
   return (
     <Panel
       title="Who owes what"
-      link={{ href: "/customer-ledger", label: "Customer balances" }}
+      link={{ href: "/customer-ledger", label: "Customers" }}
     >
       {owed.isPending ? (
         <PanelSkeleton />
       ) : owed.isError ? (
         <PanelError retry={() => void owed.refetch()} />
       ) : (
-        <>
-          <PanelRow
+        <PanelRows label="Who owes what">
+          <FinanceRow
             title="Customers owe you"
-            subtitle={plural(owed.data.customers.count, "Customer")}
+            subtitle={plural(owed.data.customers.count, "customer")}
             amount={money(owed.data.customers.owedMinor)}
           />
           {owed.data.customers.top.map((customer) => (
-            <PanelRow
+            <FinanceRow
               key={customer.id}
-              title={<span className="font-normal">{customer.name}</span>}
+              inset
+              title={customer.name}
               amount={money(customer.owedMinor)}
               onOpen={() =>
                 router.push(
@@ -211,15 +197,16 @@ function OverviewOwed({ book }: { book: FinanceBook }) {
               }
             />
           ))}
-          <PanelRow
-            title="You owe Suppliers"
-            subtitle={plural(owed.data.suppliers.count, "Supplier")}
+          <FinanceRow
+            title="You owe suppliers"
+            subtitle={plural(owed.data.suppliers.count, "supplier")}
             amount={money(owed.data.suppliers.owedMinor)}
           />
           {owed.data.suppliers.top.map((supplier) => (
-            <PanelRow
+            <FinanceRow
               key={supplier.id}
-              title={<span className="font-normal">{supplier.name}</span>}
+              inset
+              title={supplier.name}
               amount={money(supplier.owedMinor)}
               onOpen={() =>
                 void setParams({
@@ -229,7 +216,7 @@ function OverviewOwed({ book }: { book: FinanceBook }) {
               }
             />
           ))}
-        </>
+        </PanelRows>
       )}
     </Panel>
   )
@@ -244,32 +231,32 @@ function OverviewSpending({ book }: { book: FinanceBook }) {
   return (
     <Panel
       title="Recent spending"
-      link={{ href: "/finance/spending", label: "See all" }}
+      link={{ href: "/finance/spending", label: "All spending" }}
     >
       {bills.isPending ? (
         <PanelSkeleton />
       ) : bills.isError ? (
         <PanelError retry={() => void bills.refetch()} />
       ) : !bills.data.items.length ? (
-        <PanelState>
-          No expenses yet. Add what you spend as you pay it.
-        </PanelState>
+        <PanelState>No spending yet.</PanelState>
       ) : (
-        bills.data.items.map((bill) => {
-          const pill = expensePill(bill.status)
-          return (
-            <PanelRow
-              key={bill.id}
-              title={bill.description}
-              subtitle={`${bill.payeeName} · ${formatFinanceShortDate(bill.incurredAt, book.timezone)}`}
-              amount={formatFinanceMoney(bill.totalMinor, book.currencyCode)}
-              aside={<Pill tone={pill.tone}>{pill.label}</Pill>}
-              onOpen={() =>
-                void setParams({ financeSheet: "bill", billId: bill.id })
-              }
-            />
-          )
-        })
+        <PanelRows label="Recent spending">
+          {bills.data.items.map((bill) => {
+            const pill = expensePill(bill.status)
+            return (
+              <FinanceRow
+                key={bill.id}
+                title={bill.description}
+                subtitle={`${bill.payeeName} · ${formatFinanceShortDate(bill.incurredAt, book.timezone)}`}
+                amount={formatFinanceMoney(bill.totalMinor, book.currencyCode)}
+                aside={<Pill tone={pill.tone}>{pill.label}</Pill>}
+                onOpen={() =>
+                  void setParams({ financeSheet: "bill", billId: bill.id })
+                }
+              />
+            )
+          })}
+        </PanelRows>
       )}
     </Panel>
   )

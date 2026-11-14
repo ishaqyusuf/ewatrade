@@ -45,9 +45,7 @@ export function MoneyAccountSortMenu() {
     <TableToolbarPortal>
       <DropdownMenu>
         <DropdownMenuTrigger
-          render={
-            <Button type="button" variant="outline" className="rounded-none" />
-          }
+          render={<Button type="button" variant="outline" />}
         >
           {current.label}
           <HugeiconsIcon

@@ -1,6 +1,9 @@
 "use client"
 
+import { expensePill } from "@/components/finance/expense-status"
+import { FinanceRow, FinanceRowList } from "@/components/finance/finance-rows"
 import type { FinanceBillRow, FinanceBook } from "@/components/finance/types"
+import { Pill } from "@/components/orders/overview/order-overview-parts"
 import {
   BottomBar,
   DirectoryCollection,
@@ -146,7 +149,7 @@ export function ExpenseTableView({
 
   return (
     <div className="grid gap-4">
-      <div className="grid gap-4 border-y border-border py-5 sm:grid-cols-3">
+      <div className="grid grid-cols-2 gap-4 rounded-[var(--ui-radius-surface)] border border-border bg-card p-4 sm:grid-cols-3">
         {(
           [
             ["Spent", summary.summary.incurredMinor],
@@ -156,7 +159,7 @@ export function ExpenseTableView({
         ).map(([label, value]) => (
           <div key={label}>
             <p className="text-sm text-muted-foreground">{label}</p>
-            <p className="mt-2 text-xl font-semibold tabular-nums">
+            <p className="mt-1 text-lg font-semibold tabular-nums sm:text-xl">
               {formatFinanceMoney(value, currency)}
             </p>
           </div>
@@ -179,12 +182,14 @@ export function ExpenseTableView({
         </div>
       ) : null}
 
-      <DirectoryToolbar
-        table={table}
-        view={view}
-        selectAllLabel="Select all loaded expenses"
-        summary={`${summary.count} expense${summary.count === 1 ? "" : "s"}`}
-      />
+      <div className="max-md:hidden">
+        <DirectoryToolbar
+          table={table}
+          view={view}
+          selectAllLabel="Select all loaded expenses"
+          summary={`${summary.count} expense${summary.count === 1 ? "" : "s"}`}
+        />
+      </div>
       <ExpenseTableSettings table={table} showColumns={view === "table"} />
 
       {persistenceError ? (
@@ -196,72 +201,99 @@ export function ExpenseTableView({
         </div>
       ) : null}
 
-      {!rows.length ? (
-        <ExpenseEmptyState filtered={filtered} />
-      ) : view === "cards" ? (
-        <ExpenseReceiptGrid
-          rows={rows}
-          timezone={book.timezone}
-          currency={currency}
-          onOpen={(billId) => void setParams({ financeSheet: "bill", billId })}
-        />
-      ) : view !== "table" ? (
-        <DirectoryCollection view={view} label="Expense">
-          {rows.map((row) => {
-            const bill = row.original
-            const open = () =>
-              void setParams({ financeSheet: "bill", billId: bill.id })
+      {rows.length ? (
+        <FinanceRowList label="Expenses" className="md:hidden">
+          {rows.map(({ original: bill }) => {
+            const pill = expensePill(bill.status)
             return (
-              <DirectoryRecord
-                key={row.id}
-                row={row}
-                view={view}
-                selectLabel={`Select ${bill.description}`}
+              <FinanceRow
+                key={bill.id}
                 title={bill.description}
-                onOpen={open}
-                description={`${bill.payeeName} · ${formatExpenseDate(
+                subtitle={`${bill.payeeName} · ${formatExpenseDate(
                   bill.incurredAt,
                   book.timezone,
                 )}`}
-                badges={
-                  <>
-                    <ExpenseStatusPill status={bill.status} />
-                    <ExpenseReceipt bill={bill} />
-                  </>
-                }
-                highlight={{
-                  label: "Still to pay",
-                  value: formatFinanceMoney(bill.outstandingMinor, currency),
-                }}
-                details={[
-                  {
-                    label: "Amount",
-                    value: formatFinanceMoney(bill.totalMinor, currency),
-                  },
-                  {
-                    label: "Paid",
-                    value: formatFinanceMoney(bill.paidMinor, currency),
-                  },
-                ]}
-                actions={
-                  <Button
-                    aria-label={`View expense ${bill.description}`}
-                    className="rounded-none"
-                    size="sm"
-                    variant="ghost"
-                    onClick={open}
-                  >
-                    View
-                  </Button>
+                amount={formatFinanceMoney(bill.totalMinor, currency)}
+                aside={<Pill tone={pill.tone}>{pill.label}</Pill>}
+                onOpen={() =>
+                  void setParams({ financeSheet: "bill", billId: bill.id })
                 }
               />
             )
           })}
-        </DirectoryCollection>
+        </FinanceRowList>
+      ) : null}
+      {!rows.length ? (
+        <ExpenseEmptyState filtered={filtered} />
+      ) : view === "cards" ? (
+        <div className="max-md:hidden">
+          <ExpenseReceiptGrid
+            rows={rows}
+            timezone={book.timezone}
+            currency={currency}
+            onOpen={(billId) =>
+              void setParams({ financeSheet: "bill", billId })
+            }
+          />
+        </div>
+      ) : view !== "table" ? (
+        <div className="max-md:hidden">
+          <DirectoryCollection view={view} label="Expense">
+            {rows.map((row) => {
+              const bill = row.original
+              const open = () =>
+                void setParams({ financeSheet: "bill", billId: bill.id })
+              return (
+                <DirectoryRecord
+                  key={row.id}
+                  row={row}
+                  view={view}
+                  selectLabel={`Select ${bill.description}`}
+                  title={bill.description}
+                  onOpen={open}
+                  description={`${bill.payeeName} · ${formatExpenseDate(
+                    bill.incurredAt,
+                    book.timezone,
+                  )}`}
+                  badges={
+                    <>
+                      <ExpenseStatusPill status={bill.status} />
+                      <ExpenseReceipt bill={bill} />
+                    </>
+                  }
+                  highlight={{
+                    label: "Still to pay",
+                    value: formatFinanceMoney(bill.outstandingMinor, currency),
+                  }}
+                  details={[
+                    {
+                      label: "Amount",
+                      value: formatFinanceMoney(bill.totalMinor, currency),
+                    },
+                    {
+                      label: "Paid",
+                      value: formatFinanceMoney(bill.paidMinor, currency),
+                    },
+                  ]}
+                  actions={
+                    <Button
+                      aria-label={`View expense ${bill.description}`}
+                      size="sm"
+                      variant="ghost"
+                      onClick={open}
+                    >
+                      View
+                    </Button>
+                  }
+                />
+              )
+            })}
+          </DirectoryCollection>
+        </div>
       ) : (
         <section
           ref={tableScroll.setContainerRef}
-          className="max-h-[560px] overflow-auto overscroll-contain border border-border"
+          className="max-h-[560px] overflow-auto overscroll-contain rounded-[var(--ui-radius-surface)] border border-border bg-card max-md:hidden"
           aria-label="Expense records"
         >
           <DndContext
@@ -298,6 +330,12 @@ export function ExpenseTableView({
                       getStickyStyle={getStickyStyle}
                       getStickyClassName={getStickyClassName}
                       nonClickableColumns={NON_CLICKABLE_COLUMNS}
+                      onRowOpen={(open) =>
+                        void setParams({
+                          financeSheet: "bill",
+                          billId: open.original.id,
+                        })
+                      }
                       columnSizing={table.getState().columnSizing}
                       columnOrder={table.getState().columnOrder}
                       columnVisibility={table.getState().columnVisibility}
@@ -319,7 +357,7 @@ export function ExpenseTableView({
           disabled={isFetchingNextPage}
           onClick={() => void fetchNextPage()}
         >
-          {isFetchingNextPage ? "Loading…" : "Load more expenses"}
+          {isFetchingNextPage ? "Loading…" : "Load more"}
         </Button>
       ) : null}
       <AnimatePresence>

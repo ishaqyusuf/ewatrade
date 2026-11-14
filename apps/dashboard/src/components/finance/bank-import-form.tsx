@@ -882,7 +882,6 @@ export function FinanceBankImportForm({ book }: { book: FinanceBook }) {
           <Button
             type="button"
             variant="outline"
-            className="rounded-none"
             onClick={() => void close()}
             disabled={preparing || command.pending}
           >

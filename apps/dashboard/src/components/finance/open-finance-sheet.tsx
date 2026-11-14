@@ -28,7 +28,7 @@ export function OpenFinanceSheet({
   return (
     <Button
       variant={primary ? "default" : "outline"}
-      className="h-9 rounded-none"
+      className={primary ? "max-sm:flex-1" : undefined}
       onClick={() =>
         setParams({
           financeSheet: mode,

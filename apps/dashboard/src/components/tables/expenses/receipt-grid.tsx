@@ -101,7 +101,6 @@ function ExpenseReceiptCard({
           type="button"
           variant="ghost"
           size="sm"
-          className="rounded-none"
           aria-label={`View expense ${bill.description}`}
           onClick={() => onOpen(bill.id)}
         >

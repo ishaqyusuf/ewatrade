@@ -199,7 +199,7 @@ export function FinanceSupplierTableSettings({
         <DropdownMenu>
           <DropdownMenuTrigger
             render={
-              <Button type="button" variant="outline" className="rounded-none">
+              <Button type="button" variant="outline">
                 Columns
                 <HugeiconsIcon
                   icon={ArrowDown01Icon}
@@ -244,7 +244,7 @@ export function FinanceSupplierTableSettings({
       <DropdownMenu>
         <DropdownMenuTrigger
           render={
-            <Button type="button" variant="outline" className="rounded-none">
+            <Button type="button" variant="outline">
               {current.label}
               <HugeiconsIcon
                 icon={ArrowDown01Icon}

@@ -279,14 +279,11 @@ function FinanceDirectoryPage({
 
 function FinanceSetupIntro() {
   return (
-    <section className="my-6 grid max-w-xl gap-3 border border-border p-5">
-      <h2 className="text-xl font-medium">
-        Start tracking your business money
-      </h2>
-      <p className="text-sm text-muted-foreground">
-        Pick the day you start tracking money in EwaTrade. Next you'll add what
-        each cash, bank and mobile money account held on that day. Older sales
-        and payments aren&apos;t brought in.
+    <section className="grid max-w-xl gap-3 rounded-[var(--ui-radius-surface)] border border-border bg-card p-5">
+      <h2 className="text-xl font-semibold">Start tracking your money</h2>
+      <p className="text-muted-foreground">
+        Pick the day you start. Next, add what each cash, bank and mobile money
+        account held that day.
       </p>
       <FinanceSetupForm />
     </section>

@@ -77,6 +77,7 @@ mock.module(app("components/sheets/sheet-frame"), () => ({
 mock.module("@ewatrade/ui", () => ({
   Button: leaf,
   Skeleton: () => <div data-skeleton="true" />,
+  cn: (...names: unknown[]) => names.filter(Boolean).join(" "),
 }))
 mock.module("server-only", () => ({}))
 mock.module(app("observability/sentry"), () => ({ captureDashboardError() {} }))
@@ -456,7 +457,7 @@ test("pending panels start together without holding the route and settle indepen
       .filter((query) => query.state.status === "pending"),
   ).toHaveLength(3)
   const view = await mount(await result)
-  expect(view.text()).toContain("Money accounts")
+  expect(view.text()).toContain("Money you have")
   expect(view.text()).not.toContain("Inert cash")
   gates.get("finance.balances")?.resolve(undefined)
   await flush()
@@ -484,7 +485,7 @@ test("Book admission still controls hydration and cancels unused reads when miss
   gates.get("finance.book")?.resolve(undefined)
   const view = await mount(await pending)
   expect(calls).toHaveLength(4)
-  expect(view.text()).not.toContain("Money accounts")
+  expect(view.text()).not.toContain("Money you have")
   expect(view.text()).not.toContain("Inert cash")
   expect(
     server
@@ -648,7 +649,7 @@ test("the canonical invalidation still refreshes all four active projections and
   await flush()
   expect(calls).toHaveLength(8)
   expect(view.text()).not.toContain("Inert customer")
-  expect(view.text()).toContain("We couldn't load this. Try again.")
+  expect(view.text()).toContain("We couldn't load this.")
   expect(view.text()).toContain("Inert cash")
   expect(view.text()).toContain("Inert spending")
   expect(
@@ -667,7 +668,7 @@ test("an initial refused panel remains local while the other prefetched panels d
   // reaches the current 403; do not replace production retry/error semantics.
   const deadline = Date.now() + 2000
   while (
-    !view.text().includes("We couldn't load this. Try again.") &&
+    !view.text().includes("We couldn't load this.") &&
     Date.now() < deadline
   )
     await act(async () => {
@@ -676,7 +677,7 @@ test("an initial refused panel remains local while the other prefetched panels d
   expect(view.text()).toContain("Inert cash")
   expect(view.text()).toContain("Inert spending")
   expect(view.text()).not.toContain("Inert customer")
-  expect(view.text()).toContain("We couldn't load this. Try again.")
+  expect(view.text()).toContain("We couldn't load this.")
   expect(calls.filter((call) => call.path === "finance.balances")).toHaveLength(
     1,
   )

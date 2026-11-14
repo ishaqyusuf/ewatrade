@@ -1,5 +1,4 @@
 "use client"
-import { PageHeader, PageToolbar } from "@/components/page-header"
 import { SecondaryMenu } from "@/components/secondary-menu"
 import { TableToolbarSlot } from "@/components/tables/core"
 import { useFinanceParams } from "@/hooks/use-finance-params"
@@ -10,7 +9,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@ewatrade/ui"
-import { Add01Icon, ArrowDown01Icon } from "@hugeicons/core-free-icons"
+import { ArrowDown01Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import type { ReactNode } from "react"
 import { ExpenseSearchFilter } from "./expense-search-filter"
@@ -25,31 +24,6 @@ export type FinanceView =
   | "suppliers"
   | "bank"
 
-// Finance pages workshop, direction 01: one name per page and a line saying what it is for.
-const FINANCE_PAGE_COPY: Record<FinanceView, [string, string]> = {
-  overview: [
-    "Finance",
-    "Your money at a glance: what you have, what you spent and who owes what.",
-  ],
-  spending: [
-    "Spending",
-    "What you spent, who you paid and what is still to pay.",
-  ],
-  accounts: [
-    "Money accounts",
-    "Cash, bank and mobile money you keep track of.",
-  ],
-  bank: [
-    "Bank statements",
-    "Check each line from your bank against what you recorded.",
-  ],
-  suppliers: [
-    "Suppliers",
-    "What you owe each Supplier, and what you paid them ahead.",
-  ],
-  reports: ["Reports", "Profit, money in and out, and what you own and owe."],
-}
-
 export const FINANCE_MENU_ITEMS = [
   { path: "/finance", label: "Overview" },
   { path: "/finance/spending", label: "Spending" },
@@ -62,6 +36,11 @@ export const FINANCE_MENU_ITEMS = [
   { path: "/finance/reports", label: "Reports" },
 ]
 
+/**
+ * Every Finance page shares one header: the section tabs, then search (on
+ * lists) and the page's actions. The top bar already names the page, so
+ * there is no title or description here.
+ */
 export function FinanceHeader({
   ready,
   view,
@@ -71,35 +50,48 @@ export function FinanceHeader({
   view: FinanceView
   viewControl?: ReactNode
 }) {
-  const [title, description] = FINANCE_PAGE_COPY[view]
   const hasTable =
     view === "spending" ||
     view === "bank" ||
     view === "suppliers" ||
     view === "accounts"
+  const search =
+    ready && view === "spending" ? (
+      <ExpenseSearchFilter />
+    ) : ready && view === "suppliers" ? (
+      <FinanceSupplierSearchFilter />
+    ) : null
+  const tableControls = hasTable ? (
+    <div className="flex items-center gap-2 max-md:hidden">
+      <TableToolbarSlot />
+      {viewControl}
+    </div>
+  ) : null
   return (
-    <PageHeader
-      eyebrow="Business money"
-      title={title}
-      description={description}
-    >
-      <PageToolbar
-        actions={
-          ready ? (
-            <>
-              {hasTable ? <TableToolbarSlot /> : null}
-              {viewControl}
-              <FinancePageActions view={view} />
-            </>
-          ) : // Not set up yet: the start-date form sits on the page itself.
-          null
-        }
-      >
-        {ready && view === "spending" ? <ExpenseSearchFilter /> : null}
-        {ready && view === "suppliers" ? <FinanceSupplierSearchFilter /> : null}
-      </PageToolbar>
-      <SecondaryMenu items={FINANCE_MENU_ITEMS} label="Finance" />
-    </PageHeader>
+    <header className="grid min-w-0 gap-4">
+      <div className="flex min-w-0 flex-col gap-3 lg:flex-row lg:items-center lg:gap-6">
+        <div className="min-w-0 flex-1">
+          <SecondaryMenu items={FINANCE_MENU_ITEMS} label="Finance" />
+        </div>
+        {ready ? (
+          <div className="flex min-w-0 items-center gap-2 max-sm:w-full">
+            <FinancePageActions view={view} />
+          </div>
+        ) : null}
+      </div>
+      {ready && (search || tableControls) ? (
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
+          {search ? (
+            <div className="min-w-0 flex-1 basis-full sm:basis-72">
+              {search}
+            </div>
+          ) : null}
+          {tableControls ? (
+            <div className="sm:ml-auto">{tableControls}</div>
+          ) : null}
+        </div>
+      ) : null}
+    </header>
   )
 }
 
@@ -134,55 +126,42 @@ function FinancePageActions({ view }: { view: FinanceView }) {
   )
 }
 
-/** One Add button on Spending: an expense, or a category to group them. */
+/** Spending: Add expense is one tap; a new category sits under More. */
 function AddSpendingMenu() {
   const { setParams } = useFinanceParams()
-  const open = (mode: "expense" | "category") =>
-    void setParams({
-      financeSheet: mode,
-      statementId: null,
-      billId: null,
-      supplierId: null,
-      countId: null,
-      moneyEntryId: null,
-    })
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger
-        render={<Button type="button" className="h-9 rounded-none" />}
-      >
-        <HugeiconsIcon
-          icon={Add01Icon}
-          data-icon="inline-start"
-          aria-hidden="true"
-        />
-        Add
-        <HugeiconsIcon
-          icon={ArrowDown01Icon}
-          data-icon="inline-end"
-          aria-hidden="true"
-        />
-      </DropdownMenuTrigger>
-      <DropdownMenuContent appearance="dashboard" align="end" className="w-72">
-        <DropdownMenuItem
-          className="grid gap-0.5 py-2"
-          onClick={() => open("expense")}
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          render={<Button type="button" variant="outline" />}
         >
-          <span className="font-medium">Expense</span>
-          <span className="text-xs text-muted-foreground">
-            Something you paid for, or still owe.
-          </span>
-        </DropdownMenuItem>
-        <DropdownMenuItem
-          className="grid gap-0.5 py-2"
-          onClick={() => open("category")}
-        >
-          <span className="font-medium">Spending category</span>
-          <span className="text-xs text-muted-foreground">
-            Group expenses, like Fuel or Rent.
-          </span>
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+          More
+          <HugeiconsIcon
+            icon={ArrowDown01Icon}
+            data-icon="inline-end"
+            aria-hidden="true"
+          />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent appearance="dashboard" align="end">
+          <DropdownMenuItem
+            onClick={() =>
+              void setParams({
+                financeSheet: "category",
+                statementId: null,
+                billId: null,
+                supplierId: null,
+                countId: null,
+                moneyEntryId: null,
+              })
+            }
+          >
+            New spending category
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+      <OpenFinanceSheet mode="expense" primary>
+        Add expense
+      </OpenFinanceSheet>
+    </>
   )
 }

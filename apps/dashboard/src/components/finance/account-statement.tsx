@@ -42,17 +42,8 @@ export function FinanceAccountStatement({
   })
   const [version, setVersion] = useState(0)
   return (
-    <section className="grid gap-5 border-t border-border pt-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-lg font-medium">Money in and out</h2>
-        <Button
-          variant="outline"
-          onClick={() => setVersion((value) => value + 1)}
-        >
-          Refresh
-        </Button>
-      </div>
-      <div className="grid gap-2">
+    <section className="grid gap-5">
+      <div className="flex flex-wrap items-center gap-2">
         <DateRangeControl
           label="Date range"
           start={from}
@@ -62,9 +53,12 @@ export function FinanceAccountStatement({
             void setRange(range).then(() => setVersion((value) => value + 1))
           }}
         />
-        <p className="text-xs text-muted-foreground">
-          Days run midnight to midnight UTC (1 am in Lagos).
-        </p>
+        <Button
+          variant="outline"
+          onClick={() => setVersion((value) => value + 1)}
+        >
+          Refresh
+        </Button>
       </div>
       <StatementPages
         key={`${book.id}:${accountId}:${from}:${through}:${version}`}
@@ -137,17 +131,6 @@ function StatementPages({
   const money = (value: string) => formatFinanceMoney(value, book.currencyCode)
   return (
     <div className="grid gap-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h3 className="font-medium">{statement.account.name}</h3>
-        <FinanceStatementExport
-          key={statement.snapshotSequence}
-          bookId={book.id}
-          statement={statement}
-        />
-      </div>
-      <p className="text-sm text-muted-foreground">
-        Only money recorded in Finance. Refresh to see newer entries.
-      </p>
       <dl
         data-summary-grid
         data-summary-money
@@ -165,16 +148,73 @@ function StatementPages({
           </div>
         ))}
       </dl>
-      <p className="text-xs text-muted-foreground">
-        Page {cursors.length} · Balance at the top of this page{" "}
-        {money(statement.pageOpeningBalanceMinor)}
-      </p>
-      <InlineSelectionStatus
-        selection={selection}
-        note="Export includes every entry"
-      />
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-sm text-muted-foreground">
+          {cursors.length > 1
+            ? `Page ${cursors.length} · starts at ${money(statement.pageOpeningBalanceMinor)}`
+            : null}
+        </p>
+        <FinanceStatementExport
+          key={statement.snapshotSequence}
+          bookId={book.id}
+          statement={statement}
+        />
+      </div>
+      <div className="max-md:hidden">
+        <InlineSelectionStatus
+          selection={selection}
+          note="Export includes every entry"
+        />
+      </div>
+      <ul
+        aria-label="Money in and out"
+        className="divide-y divide-border rounded-[var(--ui-radius-surface)] border border-border md:hidden"
+      >
+        {statement.items.length ? (
+          statement.items.map((entry) => {
+            const isIn = BigInt(entry.debitMinor) > 0n
+            return (
+              <li
+                key={entry.id}
+                className="flex min-h-14 items-center justify-between gap-3 px-4 py-2.5"
+              >
+                <span className="grid min-w-0 gap-0.5">
+                  <span className="break-words">{entry.description}</span>
+                  <span className="text-sm text-muted-foreground">
+                    {formatFinanceDate(entry.effectiveAt)}
+                    {entry.reversalOfId
+                      ? " · Undo"
+                      : entry.reversedById
+                        ? " · Undone"
+                        : ""}
+                  </span>
+                </span>
+                <span className="grid shrink-0 justify-items-end gap-0.5">
+                  <span
+                    className={
+                      isIn
+                        ? "font-semibold tabular-nums text-[color:var(--success-foreground)]"
+                        : "font-semibold tabular-nums"
+                    }
+                  >
+                    {isIn ? "+" : "−"}
+                    {money(isIn ? entry.debitMinor : entry.creditMinor)}
+                  </span>
+                  <span className="text-sm text-muted-foreground tabular-nums">
+                    {money(entry.balanceMinor)}
+                  </span>
+                </span>
+              </li>
+            )
+          })
+        ) : (
+          <li className="px-4 py-6 text-center text-muted-foreground">
+            Nothing recorded in these dates.
+          </li>
+        )}
+      </ul>
       <section
-        className="overflow-x-auto border border-border"
+        className="overflow-x-auto rounded-[var(--ui-radius-surface)] border border-border max-md:hidden"
         // biome-ignore lint/a11y/noNoninteractiveTabindex: Keyboard users must be able to scroll the wide statement.
         tabIndex={0}
         aria-label="Money in and out"
@@ -228,9 +268,9 @@ function StatementPages({
                   <TableCell className="max-w-sm p-3">
                     <p className="break-words">{entry.description}</p>
                     {entry.reversalOfId ? (
-                      <p className="text-xs text-muted-foreground">Undo</p>
+                      <p className="text-sm text-muted-foreground">Undo</p>
                     ) : entry.reversedById ? (
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-sm text-muted-foreground">
                         Undone; original kept in history
                       </p>
                     ) : null}
@@ -285,36 +325,42 @@ function StatementPages({
                   colSpan={6}
                   className="p-6 text-center text-muted-foreground"
                 >
-                  Nothing recorded in this period.
+                  Nothing recorded in these dates.
                 </TableCell>
               </TableRow>
             )}
           </TableBody>
         </Table>
       </section>
-      <div className="flex gap-2">
-        <Button
-          variant="outline"
-          disabled={cursors.length === 1 || query.isFetching}
-          onClick={() => setCursors((value) => value.slice(0, -1))}
-        >
-          Previous page
-        </Button>
-        <Button
-          variant="outline"
-          disabled={
-            !statement.nextCursor || snapshot === undefined || query.isFetching
-          }
-          onClick={() => {
-            if (statement.nextCursor)
-              setCursors((value) => [
-                ...value,
-                statement.nextCursor ?? undefined,
-              ])
-          }}
-        >
-          Next page
-        </Button>
+      <div className="flex gap-2 empty:hidden">
+        {cursors.length > 1 || statement.nextCursor ? (
+          <>
+            <Button
+              variant="outline"
+              disabled={cursors.length === 1 || query.isFetching}
+              onClick={() => setCursors((value) => value.slice(0, -1))}
+            >
+              Previous page
+            </Button>
+            <Button
+              variant="outline"
+              disabled={
+                !statement.nextCursor ||
+                snapshot === undefined ||
+                query.isFetching
+              }
+              onClick={() => {
+                if (statement.nextCursor)
+                  setCursors((value) => [
+                    ...value,
+                    statement.nextCursor ?? undefined,
+                  ])
+              }}
+            >
+              Next page
+            </Button>
+          </>
+        ) : null}
       </div>
     </div>
   )

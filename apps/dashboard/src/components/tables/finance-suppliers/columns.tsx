@@ -165,7 +165,6 @@ export function ViewSupplierButton({
       type="button"
       aria-label={`Open ${supplier.name}`}
       data-row-interactive="true"
-      className="rounded-none"
       size="sm"
       variant="ghost"
       onClick={onOpen}
