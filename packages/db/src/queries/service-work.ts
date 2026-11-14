@@ -170,6 +170,33 @@ const jobGraph = {
 
 type JobGraph = Prisma.ServiceJobGetPayload<{ include: typeof jobGraph }>
 
+/**
+ * List rows carry what a row shows and moves on: no activity history, notes,
+ * photos or messages (the job sheet reads those with getServiceJob). The hand-over
+ * event stays so `handoff` still says how the job reached the customer.
+ */
+const jobListGraph = {
+  ...jobGraph,
+  events: {
+    orderBy: [{ effectiveAt: "asc" }, { createdAt: "asc" }],
+    where: { type: ServiceWorkEventType.REMOTE_HANDOFF },
+  },
+  evidence: { orderBy: { createdAt: "asc" }, take: 0 },
+  exceptions: {
+    orderBy: { occurredAt: "asc" },
+    where: { outcome: ServiceExceptionOutcome.OPEN },
+  },
+  notes: { orderBy: { createdAt: "asc" }, take: 0 },
+  notificationIntents: {
+    include: {
+      deliveryAttempts: { orderBy: { attemptedAt: "asc" } },
+      manualShares: { orderBy: { sharedAt: "asc" } },
+    },
+    orderBy: { createdAt: "asc" },
+    take: 0,
+  },
+} satisfies Prisma.ServiceJobInclude
+
 function derivedJobSummary(lines: Array<{ status: ServiceJobLineStatus }>) {
   if (lines.length === 0) return "cancelled" as const
   const statuses = lines.map((line) => line.status)
@@ -2653,7 +2680,7 @@ export async function listServiceWorkQueuePage(
     : []
   const [records, totalCount] = await Promise.all([
     db.serviceJob.findMany({
-      include: jobGraph,
+      include: jobListGraph,
       orderBy,
       take: limit + 1,
       where: cursor

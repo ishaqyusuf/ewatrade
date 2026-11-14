@@ -99,6 +99,7 @@ export const storefrontRequestsRouter = createTRPCRouter({
       return readStorefrontNotification(ctx.db, scope(ctx), input.alertId)
     }),
   counts: protectedProcedure.query(({ ctx }) => {
+    assertCanOperateOrders(ctx.tenantContext.membership.role)
     const value = scope(ctx)
     return countPendingStorefrontRequests(ctx.db, value)
   }),

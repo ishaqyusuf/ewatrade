@@ -357,12 +357,19 @@ export const servicesRouter = createTRPCRouter({
 
   getJob: protectedProcedure
     .input(serviceJobGetSchema)
-    .query(({ ctx, input }) => {
+    .query(async ({ ctx, input }) => {
       assertServiceOperator(ctx.tenantContext.membership.role)
-      return getServiceJob(ctx.db, {
+      const job = await getServiceJob(ctx.db, {
         ...input,
         tenantId: ctx.tenantContext.tenant.id,
       })
+      // A job from a Store this person can't open reads as missing.
+      if (
+        job &&
+        !ctx.tenantContext.stores.some((store) => store.id === job.storeId)
+      )
+        return null
+      return job
     }),
 
   getSettings: protectedProcedure
@@ -434,6 +441,11 @@ export const servicesRouter = createTRPCRouter({
       assertServiceOperator(ctx.tenantContext.membership.role)
       return listServiceWorkQueue(ctx.db, {
         ...input,
+        storeId: resolveServiceStoreId(
+          ctx.tenantContext.stores,
+          ctx.tenantContext.activeStore,
+          input.storeId,
+        ),
         tenantId: ctx.tenantContext.tenant.id,
       })
     }),
@@ -444,6 +456,11 @@ export const servicesRouter = createTRPCRouter({
       assertServiceOperator(ctx.tenantContext.membership.role)
       return countServiceWorkQueueStages(ctx.db, {
         ...input,
+        storeId: resolveServiceStoreId(
+          ctx.tenantContext.stores,
+          ctx.tenantContext.activeStore,
+          input.storeId,
+        ),
         tenantId: ctx.tenantContext.tenant.id,
       })
     }),
@@ -454,6 +471,11 @@ export const servicesRouter = createTRPCRouter({
       assertServiceOperator(ctx.tenantContext.membership.role)
       return listServiceWorkQueuePage(ctx.db, {
         ...input,
+        storeId: resolveServiceStoreId(
+          ctx.tenantContext.stores,
+          ctx.tenantContext.activeStore,
+          input.storeId,
+        ),
         tenantId: ctx.tenantContext.tenant.id,
       })
     }),
