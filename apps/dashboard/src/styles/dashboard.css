@@ -33,6 +33,9 @@
   --ui-control-fill: var(--background);
   --ui-field-border: var(--input);
   --ui-chip-fill: var(--muted);
+  /* ⌘K group headings (Commands, Pages): Inter at the smallest size. */
+  --ui-group-heading-font: var(--font-sans);
+  --ui-group-heading-size: var(--text-xs);
   --ui-radius-control: 10px;
   --ui-radius-surface: 14px;
   --ui-radius-item: 8px;
