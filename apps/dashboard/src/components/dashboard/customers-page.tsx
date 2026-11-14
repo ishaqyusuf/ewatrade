@@ -4,6 +4,7 @@ import { CollapsibleSummary } from "@/components/collapsible-summary"
 import { CustomerFormSheet } from "@/components/customers/customer-form-sheet"
 import { CustomerDirectoryHeader } from "@/components/dashboard/customer-directory-header"
 import { MetricCard } from "@/components/reports/metric-card"
+import { ReturnablesEntry } from "@/components/returnables/returnables-page"
 import { ScrollableContent } from "@/components/scrollable-content"
 import { TableToolbarSlotProvider } from "@/components/tables/core"
 import { describeCustomerBalance } from "@/components/tables/customers/columns"
@@ -182,6 +183,7 @@ export function CustomersPage({
               ) : null}
             </div>
           </CollapsibleSummary>
+          <ReturnablesEntry />
 
           <CustomerDirectoryHeader
             query={customerQuery}
