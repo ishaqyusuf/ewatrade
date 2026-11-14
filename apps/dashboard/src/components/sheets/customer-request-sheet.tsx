@@ -1,5 +1,6 @@
 "use client"
 
+import { ConfirmAlert } from "@/components/forms/confirm-alert"
 import { FormFeedback } from "@/components/forms/form-feedback"
 import { ServiceQuoteForm } from "@/components/service-work/service-quote-form"
 import {
@@ -114,6 +115,7 @@ function CustomerRequestContent({
   const [message, setMessage] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
+  const [confirmDecline, setConfirmDecline] = useState(false)
   const firstName = request?.customerName.split(/\s+/)[0] ?? ""
   const update = useMutation(
     trpc.serviceAccess.updateRequest.mutationOptions({
@@ -226,7 +228,15 @@ function CustomerRequestContent({
               disabled={update.isPending}
               onClick={() => {
                 if (!response) {
-                  setError("Write what you need to know.")
+                  setError(
+                    decline
+                      ? "Write a short reply for the customer."
+                      : "Write what you need to know.",
+                  )
+                  return
+                }
+                if (decline) {
+                  setConfirmDecline(true)
                   return
                 }
                 update.mutate({
@@ -234,7 +244,7 @@ function CustomerRequestContent({
                   storeId: store.id,
                   requestId,
                   response,
-                  status: decline ? "declined" : "needs_information",
+                  status: "needs_information",
                 })
               }}
             >
@@ -242,6 +252,28 @@ function CustomerRequestContent({
             </SubmitButton>
           </FormActions>
         </div>
+        <ConfirmAlert
+          open={decline && confirmDecline}
+          title={`Decline ${request.customerName}’s request?`}
+          description={`${wants}. They can send a new request later. This can’t be undone.`}
+          action="Decline request"
+          cancelLabel="Keep request"
+          danger
+          pending={update.isPending}
+          onCancel={() => setConfirmDecline(false)}
+          onConfirm={() =>
+            update.mutate(
+              {
+                expectedRevision: request.revision,
+                storeId: store.id,
+                requestId,
+                response,
+                status: "declined",
+              },
+              { onSettled: () => setConfirmDecline(false) },
+            )
+          }
+        />
       </SheetFrame>
     )
   }

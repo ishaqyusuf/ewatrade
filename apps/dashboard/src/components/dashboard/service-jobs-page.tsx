@@ -7,9 +7,11 @@ import { ServiceWorkHeader } from "@/components/service-work/service-work-header
 import { ServiceJobSheet } from "@/components/sheets/service-job-sheet"
 import { ServiceRequestSheet } from "@/components/sheets/service-request-sheet"
 import { ServiceSettingsSheet } from "@/components/sheets/service-settings-sheet"
+import { TableToolbarSlotProvider } from "@/components/tables/core"
 import { ServiceWorkDataTable } from "@/components/tables/service-work/data-table"
 import { ServiceWorkTableSkeleton } from "@/components/tables/service-work/skeleton"
 import { useDirectoryView } from "@/hooks/use-directory-view"
+import { useMobileOverlay } from "@/hooks/use-mobile-overlay"
 import { useServiceWorkParams } from "@/hooks/use-service-work-params"
 import type { DirectoryViewSettings } from "@/utils/directory-view-settings"
 import type { TableSettings } from "@/utils/table-settings"
@@ -44,13 +46,15 @@ export function ServiceJobsPage({
       queryKey: "serviceView",
       initialSettings: initialViewSettings,
     })
+  // Phones hide the view menu and always get the readable list.
+  const phone = useMobileOverlay()
+  const shownView = phone ? "list" : view
   return (
-    <>
+    <TableToolbarSlotProvider>
       <ScrollableContent>
-        <div className="flex min-w-0 flex-1 flex-col gap-6 pt-6">
+        <div className="flex min-w-0 flex-1 flex-col gap-4 pt-4 pb-24 sm:pb-8">
           <ServiceWorkHeader
             canManage={canManage}
-            storeName={store.name}
             view={view}
             onViewChange={setView}
           />
@@ -67,7 +71,7 @@ export function ServiceJobsPage({
               fallback={
                 <ServiceWorkTableSkeleton
                   initialSettings={initialSettings}
-                  view={view}
+                  view={shownView}
                 />
               }
             >
@@ -79,7 +83,7 @@ export function ServiceJobsPage({
                   canManage={canManage}
                   storeId={store.id}
                   timeZone={timeZone}
-                  view={view}
+                  view={shownView}
                 />
               )}
             </Suspense>
@@ -96,6 +100,6 @@ export function ServiceJobsPage({
         </>
       ) : null}
       <ServiceJobSheet canManage={canManage} storeId={store.id} />
-    </>
+    </TableToolbarSlotProvider>
   )
 }

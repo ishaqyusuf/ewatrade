@@ -77,12 +77,12 @@ export function ServiceWorkDue({
         {formatWhen(job.dueCommitmentAt, timeZone)}
       </span>
       {late ? (
-        <span className="border border-destructive px-1 text-[11px] font-semibold text-destructive">
+        <span className="rounded-full bg-danger px-2 text-xs font-medium text-danger-foreground">
           Late
         </span>
       ) : null}
       {job.priority === "urgent" ? (
-        <span className="text-[11px] font-semibold tracking-wide text-warning-foreground uppercase">
+        <span className="rounded-full bg-warning px-2 text-xs font-medium text-warning-foreground">
           Urgent
         </span>
       ) : null}
@@ -97,7 +97,7 @@ export function ServiceWorkMoney({ job }: { job: WorkJob }) {
         <span className="font-medium tabular-nums">
           {formatPrice(job.balanceDueMinor, job.currencyCode)}
         </span>{" "}
-        <span className="text-muted-foreground">to pay</span>
+        <span className="text-muted-foreground">due</span>
       </span>
     )
   return <span className="text-muted-foreground">Paid</span>
@@ -308,7 +308,7 @@ export function createServiceWorkColumns(
     },
     {
       id: "assignment",
-      size: 130,
+      size: 170,
       minSize: 100,
       maxSize: 240,
       meta: {
@@ -331,7 +331,7 @@ export function createServiceWorkColumns(
     },
     {
       id: "due",
-      size: 160,
+      size: 190,
       minSize: 130,
       maxSize: 300,
       meta: { headerLabel: "Due", skeleton: { type: "text" } },
@@ -341,7 +341,7 @@ export function createServiceWorkColumns(
     },
     {
       id: "money",
-      size: 120,
+      size: 140,
       minSize: 100,
       maxSize: 220,
       meta: { headerLabel: "Money", skeleton: { type: "text" } },

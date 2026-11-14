@@ -126,7 +126,6 @@ export function ServiceWorkDataTable({
       timeZone={timeZone}
       actions={actions}
       filtered={hasFilters}
-      sort={sort}
       batch={batch}
       canManage={canManage}
       hasNextPage={query.hasNextPage}

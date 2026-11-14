@@ -159,8 +159,6 @@ export function ServiceWorkBatchMessage({ batch }: { batch: BatchActions }) {
           onChange={(event) => batch.setMessage(event.target.value)}
         />
         <Button
-          className="rounded-none"
-          size="sm"
           disabled={
             !batch.message.trim() ||
             batch.notificationMutation.isPending ||

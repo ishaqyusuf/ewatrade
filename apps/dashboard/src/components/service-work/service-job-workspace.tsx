@@ -1,6 +1,7 @@
 "use client"
 
 import { PaymentLinkDialog } from "@/components/business-banking/payment-link-dialog"
+import { ConfirmAlert } from "@/components/forms/confirm-alert"
 import { FormFeedback } from "@/components/forms/form-feedback"
 import {
   OrderPaymentAccount,
@@ -75,6 +76,14 @@ import { type ReactNode, useEffect, useRef, useState } from "react"
 type Job = WorkJob
 type Line = Job["lines"][number]
 type PaymentMethod = "bank_transfer" | "card" | "cash" | "other" | "pos"
+
+const PAYMENT_METHOD_WORDS: Record<PaymentMethod, string> = {
+  bank_transfer: "Bank transfer",
+  card: "Card",
+  cash: "Cash",
+  other: "Payment",
+  pos: "POS",
+}
 
 const PAYMENT_METHODS: Array<{ value: PaymentMethod; label: ReactNode }> = [
   { value: "cash", label: <>Cash</> },
@@ -359,10 +368,10 @@ function JobSummary({
     nextButtons.push({
       label:
         next.action === "approve"
-            ? "Approve the start"
-            : next.action === "start"
-              ? "Start work"
-              : next.label,
+          ? "Approve the start"
+          : next.action === "start"
+            ? "Start work"
+            : next.label,
       onClick: () =>
         next.action === "start" || next.action === "ready"
           ? void quick.run(job, next.action).then(refresh)
@@ -370,7 +379,10 @@ function JobSummary({
     })
   }
   if (next?.action === "handover" && job.deliveryApplies)
-    nextButtons.push({ label: "Mark delivered", onClick: () => goTo("deliver") })
+    nextButtons.push({
+      label: "Mark delivered",
+      onClick: () => goTo("deliver"),
+    })
   if (job.summary === "in_progress" || job.summary === "partially_ready")
     nextButtons.push({ label: "Mark stuck", onClick: () => goTo("stuck") })
   if (job.summary === "queued" && !jobGate(job) && canManage)
@@ -889,6 +901,10 @@ function JobStepView({
   >(step === "deliver" ? "delivered" : "collected")
   const [trackingUrl, setTrackingUrl] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
+  /** Money and cancel steps ask once more, naming the customer and amount. */
+  const [confirming, setConfirming] = useState<
+    (StepConfirm & { run: () => Promise<string> }) | null
+  >(null)
   const admission = useRef(false)
   // Kept for this step, so retrying after a failure repeats the same command.
   const commandId = useRef(crypto.randomUUID())
@@ -973,6 +989,7 @@ function JobStepView({
   async function save(
     checks: Record<string, string | null | false>,
     run: () => Promise<string>,
+    confirm?: StepConfirm,
   ) {
     setError(null)
     const next = Object.fromEntries(
@@ -982,6 +999,14 @@ function JobStepView({
     )
     setFieldErrors(next)
     if (Object.keys(next).length) return
+    if (confirm) {
+      setConfirming({ ...confirm, run })
+      return
+    }
+    await execute(run)
+  }
+
+  async function execute(run: () => Promise<string>) {
     setPending(true)
     try {
       const done = await run()
@@ -1097,6 +1122,8 @@ function JobStepView({
       </>
     ) : null
 
+  const customer = job.customerName || "the walk-in customer"
+
   const moneyList = (
     <dl className="grid grid-cols-[120px_1fr] gap-x-3 gap-y-2 text-sm">
       <dt className="text-muted-foreground">Total</dt>
@@ -1146,6 +1173,15 @@ function JobStepView({
                       reference: reference.trim() || undefined,
                     })
                     return `${formatPrice(amountMinor ?? 0, job.currencyCode)} recorded.`
+                  },
+                  {
+                    title: `Record ${formatPrice(amountMinor ?? 0, job.currencyCode)} from ${customer}?`,
+                    description: `${PAYMENT_METHOD_WORDS[method] ?? "Payment"} for ${job.orderNumber}.${
+                      amountMinor && amountMinor < balance
+                        ? ` ${formatPrice(balance - amountMinor, job.currencyCode)} will still be left to pay.`
+                        : " This pays the job in full."
+                    }`,
+                    action: `Record ${formatPrice(amountMinor ?? 0, job.currencyCode)}`,
                   },
                 ),
             }
@@ -1279,6 +1315,26 @@ function JobStepView({
                     ? `${done} ${formatPrice(owed, job.currencyCode)} still owed.`
                     : done
                 },
+                collecting > 0 || owed > 0
+                  ? {
+                      title:
+                        collecting > 0
+                          ? `Collect ${formatPrice(collecting, job.currencyCode)} from ${customer}?`
+                          : `Hand over with ${formatPrice(owed, job.currencyCode)} still owed?`,
+                      description: [
+                        `${job.orderNumber} will be marked ${delivered ? "delivered" : "collected"}.`,
+                        owed > 0
+                          ? `${customer} will still owe ${formatPrice(owed, job.currencyCode)}.`
+                          : null,
+                      ]
+                        .filter(Boolean)
+                        .join(" "),
+                      action:
+                        collecting > 0
+                          ? `Collect ${formatPrice(collecting, job.currencyCode)}`
+                          : verb,
+                    }
+                  : undefined,
               ),
           }
         : null
@@ -1395,19 +1451,13 @@ function JobStepView({
         "READY_FOR_HANDOFF",
       ])
       body = (
-        <>
-          <FormFeedback appearance="dashboard">
-            The work stops for good. Money already paid stays on the order;
-            refund it from Orders if needed.
-          </FormFeedback>
-          <ControlField label="Why?" error={fieldErrors.why}>
-            <Textarea
-              placeholder="e.g. Customer no longer needs it"
-              value={why}
-              onChange={(event) => setWhy(event.target.value)}
-            />
-          </ControlField>
-        </>
+        <ControlField label="Why?" error={fieldErrors.why}>
+          <Textarea
+            placeholder="e.g. Customer no longer needs it"
+            value={why}
+            onChange={(event) => setWhy(event.target.value)}
+          />
+        </ControlField>
       )
       secondaryLabel = "Keep the work"
       primary = {
@@ -1432,6 +1482,16 @@ function JobStepView({
                 })
               }
               return "Work cancelled."
+            },
+            {
+              title: `Cancel ${job.orderNumber} for ${customer}?`,
+              description: `The work stops for good. ${
+                job.amountPaidMinor > 0
+                  ? `${formatPrice(job.amountPaidMinor, job.currencyCode)} already paid stays on the order; refund it from Sales if needed.`
+                  : `Nothing has been paid on this ${formatPrice(job.orderTotalMinor, job.currencyCode)} job.`
+              }`,
+              action: "Cancel work",
+              danger: true,
             },
           ),
       }
@@ -1907,7 +1967,9 @@ function JobStepView({
           <ControlField label="Why?" error={fieldErrors.why}>
             <Input
               placeholder={
-                isSplit ? "e.g. The rest on Friday" : "e.g. Two items need redoing"
+                isSplit
+                  ? "e.g. The rest on Friday"
+                  : "e.g. Two items need redoing"
               }
               value={why}
               onChange={(event) => setWhy(event.target.value)}
@@ -1999,8 +2061,28 @@ function JobStepView({
           </SubmitButton>
         ) : null}
       </FormActions>
+      <ConfirmAlert
+        open={Boolean(confirming)}
+        title={confirming?.title}
+        description={confirming?.description}
+        action={confirming?.action}
+        danger={confirming?.danger}
+        pending={pending}
+        onCancel={() => setConfirming(null)}
+        onConfirm={() => {
+          if (!confirming) return
+          void execute(confirming.run).finally(() => setConfirming(null))
+        }}
+      />
     </div>
   )
+}
+
+type StepConfirm = {
+  title: string
+  description: string
+  action: string
+  danger?: boolean
 }
 
 // ----------------------------------------------------------------- Helpers

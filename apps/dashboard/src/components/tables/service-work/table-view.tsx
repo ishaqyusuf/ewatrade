@@ -2,11 +2,10 @@
 import { FormFeedback } from "@/components/forms/form-feedback"
 import type { WorkJob } from "@/components/service-work/service-utils"
 import {
-  DirectoryToolbar,
   SelectionBar,
+  TableToolbarPortal,
   VirtualRow,
 } from "@/components/tables/core"
-import type { serviceWorkSortFields } from "@/hooks/sort-params"
 import { useInfiniteScroll } from "@/hooks/use-infinite-scroll"
 import { useStickyColumns } from "@/hooks/use-sticky-columns"
 import { useTableDnd } from "@/hooks/use-table-dnd"
@@ -37,7 +36,6 @@ export function ServiceWorkTableView({
   timeZone,
   actions,
   filtered,
-  sort,
   batch,
   canManage,
   hasNextPage,
@@ -55,10 +53,6 @@ export function ServiceWorkTableView({
   timeZone: string
   actions: ServiceWorkColumnActions
   filtered: boolean
-  sort?: {
-    field: (typeof serviceWorkSortFields)[number]
-    direction: "asc" | "desc"
-  }
   batch: ReturnType<typeof useServiceWorkBatch>
   canManage: boolean
   hasNextPage: boolean
@@ -94,24 +88,16 @@ export function ServiceWorkTableView({
   })
   const selectedCount = table.getSelectedRowModel().rows.length
   return (
-    <div className="grid gap-4">
-      <DirectoryToolbar
-        table={table}
-        view={view}
-        selectAllLabel="Select all loaded jobs"
-        summary={`${rows.length === 1 ? "1 job" : `${rows.length} jobs`} · ${
-          sort
-            ? `${sort.field === "priority" ? "urgent" : "newest"} ${sort.direction === "asc" ? "last" : "first"}`
-            : "newest first"
-        }`}
-      >
-        {view === "table" ? <ServiceWorkTableSettings table={table} /> : null}
-      </DirectoryToolbar>
+    <div className="grid gap-3">
+      {view === "table" ? (
+        <TableToolbarPortal>
+          <ServiceWorkTableSettings table={table} />
+        </TableToolbarPortal>
+      ) : null}
       {isFetchNextPageError || isRefetchError ? (
         <div role="alert" className="flex items-center justify-between gap-3">
           <p className="text-sm text-destructive">{errorMessage}</p>
           <Button
-            className="rounded-none"
             variant="outline"
             onClick={() => (isFetchNextPageError ? retry() : void refetch())}
           >
@@ -122,11 +108,7 @@ export function ServiceWorkTableView({
       {persistenceError ? (
         <div role="alert" className="flex items-center justify-between gap-3">
           <p className="text-sm text-destructive">{persistenceError}</p>
-          <Button
-            className="rounded-none"
-            variant="outline"
-            onClick={retryPersistence}
-          >
+          <Button variant="outline" onClick={retryPersistence}>
             Retry saving columns
           </Button>
         </div>
@@ -148,7 +130,7 @@ export function ServiceWorkTableView({
         <section
           ref={scroll.setContainerRef}
           aria-label="Service jobs"
-          className="max-h-[560px] overflow-auto overscroll-contain border border-border"
+          className="max-h-[640px] overflow-auto overscroll-contain rounded-[var(--ui-radius-surface)] border border-border bg-card"
         >
           <DndContext
             id="service-work-table-dnd"
@@ -199,7 +181,7 @@ export function ServiceWorkTableView({
       )}
       {hasNextPage && !isFetchNextPageError ? (
         <Button
-          className="w-fit rounded-none"
+          className="w-fit"
           variant="outline"
           disabled={isFetchingNextPage}
           onClick={() => void fetchNextPage()}

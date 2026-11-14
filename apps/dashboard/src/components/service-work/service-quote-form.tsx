@@ -1,4 +1,5 @@
 "use client"
+import { ConfirmAlert } from "@/components/forms/confirm-alert"
 import { FormFeedback } from "@/components/forms/form-feedback"
 import { formatPrice } from "@/components/service-work/service-utils"
 import {
@@ -53,6 +54,7 @@ export function ServiceQuoteForm({ store }: { store: StoreSummary }) {
   const [agreedScope, setAgreedScope] = useState("")
   const [publicUrl, setPublicUrl] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [confirming, setConfirming] = useState(false)
 
   useEffect(() => {
     if (!request) return
@@ -99,6 +101,25 @@ export function ServiceQuoteForm({ store }: { store: StoreSummary }) {
     )
   }
 
+  function checkQuote() {
+    setError(null)
+    if (!request) return
+    if (
+      request.lines.some((line) => {
+        const value = Number(prices[line.offeringId])
+        return (
+          !prices[line.offeringId]?.trim() ||
+          !Number.isFinite(value) ||
+          value < 0
+        )
+      })
+    ) {
+      setError("Enter a price for each service, like 15000.")
+      return
+    }
+    setConfirming(true)
+  }
+
   function issueQuote() {
     if (!request) return
 
@@ -119,15 +140,18 @@ export function ServiceQuoteForm({ store }: { store: StoreSummary }) {
       setError("Enter a price for each service, like 15000.")
       return
     }
-    quoteMutation.mutate({
-      clientQuoteId: `request-${request.id}`,
-      clientVersionId: crypto.randomUUID(),
-      customerNote: agreedScope.trim() || undefined,
-      expiresAt: expiresAt ? new Date(expiresAt) : undefined,
-      lines,
-      requestId: request.id,
-      storeId: store.id,
-    })
+    quoteMutation.mutate(
+      {
+        clientQuoteId: `request-${request.id}`,
+        clientVersionId: crypto.randomUUID(),
+        customerNote: agreedScope.trim() || undefined,
+        expiresAt: expiresAt ? new Date(expiresAt) : undefined,
+        lines,
+        requestId: request.id,
+        storeId: store.id,
+      },
+      { onSettled: () => setConfirming(false) },
+    )
   }
 
   if (publicUrl) {
@@ -197,10 +221,7 @@ export function ServiceQuoteForm({ store }: { store: StoreSummary }) {
           </UiField>
         </div>
       ))}
-      <ControlField
-        label="What the price covers"
-        description="Check the customer’s words and say what is and isn’t included. They see this with the price before accepting."
-      >
+      <ControlField label="What the price covers">
         <Textarea
           value={agreedScope}
           onChange={(event) => setAgreedScope(event.target.value)}
@@ -228,7 +249,7 @@ export function ServiceQuoteForm({ store }: { store: StoreSummary }) {
           type="button"
           isSubmitting={quoteMutation.isPending}
           disabled={quoteMutation.isPending}
-          onClick={issueQuote}
+          onClick={checkQuote}
         >
           {quoteMutation.isPending
             ? "Creating…"
@@ -237,6 +258,15 @@ export function ServiceQuoteForm({ store }: { store: StoreSummary }) {
               : "Create quote"}
         </SubmitButton>
       </FormActions>
+      <ConfirmAlert
+        open={confirming}
+        title={`Create a ${formatPrice(totalMinor, store.currencyCode)} quote for ${request.customerName}?`}
+        description={`${request.customerName} sees this price and what it covers, and accepts it from a link. Nothing is charged now.`}
+        action={`Create quote · ${formatPrice(totalMinor, store.currencyCode)}`}
+        pending={quoteMutation.isPending}
+        onCancel={() => setConfirming(false)}
+        onConfirm={issueQuote}
+      />
     </FieldGroup>
   )
 }
