@@ -225,19 +225,16 @@ export async function getCatalogItemDetail(
 }
 
 /** Overview and its bounded preview share authority and start together. */
+/**
+ * The details sheet's Overview: the item graph and its last order. Activity is
+ * its own tab (`listCatalogItemActivity`), so opening the sheet no longer runs
+ * the activity reads (about 8 statements) for a two-row preview.
+ */
 export async function getCatalogItemOverview(
   db: PrismaClient,
   scope: CatalogDetailScope,
 ) {
-  const [detail, activity] = await Promise.all([
-    getCatalogItemDetail(db, scope),
-    listCatalogItemActivity(db, scope, { category: "all", limit: 2 }).then(
-      (result) => result,
-      () => null,
-    ),
-  ])
-  // A failed preview retains the independent client error/retry path.
-  return detail ? { ...detail, recentActivity: activity } : null
+  return getCatalogItemDetail(db, scope)
 }
 
 // Comparisons use retained values; Decimal callers never convert stock to floats.

@@ -1,10 +1,4 @@
 "use client"
-import {
-  InlineRowCheckbox,
-  InlineSelectAllCheckbox,
-  InlineSelectionStatus,
-  useInlineSelection,
-} from "@/components/tables/core"
 import { useCatalogDetailParams } from "@/hooks/use-catalog-detail-params"
 import { useServiceWorkParams } from "@/hooks/use-service-work-params"
 import {
@@ -14,41 +8,28 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
 } from "@ewatrade/ui"
 import {
   catalogImageUsage,
   catalogImagesForOption,
 } from "@ewatrade/utils/catalog-image-editor"
+import { productUsageLabels } from "@ewatrade/utils/product-usage"
 import Link from "next/link"
-import { useMemo } from "react"
 import { CatalogPhotoPreview } from "../catalog-photo-preview"
-import { ProductUsageForm } from "../product-usage-form"
-import { CatalogActivityEvents, CatalogDetailActivity } from "./activity"
 import { type CatalogDetail, dateTime, money, orderHref } from "./display"
-import {
-  type CatalogDetailReadScope,
-  catalogDetailAffordances,
-} from "./read-access"
+import { catalogDetailAffordances } from "./read-access"
 export function CatalogDetailOverview({
   detail,
   storeId,
   readOnly,
-  readScope,
   canCreateServiceJob,
 }: {
   detail: CatalogDetail
   storeId: string
   readOnly: boolean
-  readScope: CatalogDetailReadScope
   canCreateServiceJob: boolean
 }) {
-  const { close, setParams, setView } = useCatalogDetailParams()
+  const { close, setView } = useCatalogDetailParams()
   const serviceWork = useServiceWorkParams()
   const { item, lastOrder } = detail
   const product = item.product
@@ -72,122 +53,118 @@ export function CatalogDetailOverview({
   const main =
     units.find((unit) => unit.stockBehavior === "canonical_shared") ??
     units.find((unit) => unit.factor === "1")
-  const offeringIds = useMemo(
-    () =>
-      item.variants.flatMap((variant) =>
-        variant.offerings.map((offering) => offering.id),
-      ),
-    [item.variants],
-  )
-  const offeringSelection = useInlineSelection({
-    ids: offeringIds,
-    scope: `${item.id}:${storeId}`,
+  const prices = item.variants.flatMap((variant) => {
+    const photo =
+      showOptionPhotos && variant.status !== "archived"
+        ? catalogImagesForOption(photos, variant.id)[0]
+        : undefined
+    return variant.offerings.map((offering) => ({
+      id: offering.id,
+      photo,
+      choice: item.variants.length > 1 ? variant.name : null,
+      unit:
+        units.find((unit) => unit.id === offering.productUnit?.inventoryUnitId)
+          ?.name ?? offering.name,
+      price:
+        offering.pricingPolicy === "order_total"
+          ? "Set when ordering"
+          : offering.pricingPolicy === "quote_required" &&
+              offering.fixedPriceMinor === null
+            ? "Quote each job"
+            : money(offering.fixedPriceMinor, offering.currencyCode),
+      status: offering.status,
+    }))
   })
+  const packs = main
+    ? units
+        .filter((unit) => unit.id !== main.id)
+        .map((unit) => `1 ${unit.name} = ${unit.factor} ${main.name}`)
+    : []
   return (
     <div className="grid gap-6">
-      {item.kind === "service" && canCreateServiceJob ? (
-        <Card size="sm">
-          <CardHeader>
-            <CardTitle>Service jobs</CardTitle>
-            <CardDescription>
-              Create and track customer work from intake to handover.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
+      <section className="grid gap-2" aria-label="Prices">
+        <div className="flex items-center justify-between gap-3">
+          <h3 className="text-base font-semibold">Prices</h3>
+          {product && affordances.configureUnits ? (
             <Button
               size="sm"
-              onClick={async () => {
-                await close()
-                await serviceWork.setParams({
-                  serviceSheet: "intake",
-                  jobId: null,
-                  jobStep: null,
-                  requestId: null,
-                })
-              }}
+              variant="outline"
+              onClick={() => void setView("units")}
             >
-              Create service job
+              Units
             </Button>
-          </CardContent>
-        </Card>
-      ) : null}
-      {product ? (
-        <ProductUsageForm
-          key={`${item.id}:${product.updatedAt}`}
-          itemId={item.id}
-          usage={product.usage}
-          updatedAt={product.updatedAt}
-          canManage={affordances.manageUsage}
-        />
-      ) : null}
+          ) : null}
+        </div>
+        <ul className="divide-y rounded-[var(--ui-radius-surface)] border">
+          {prices.map((row) => (
+            <li
+              key={row.id}
+              className="flex min-h-12 items-center justify-between gap-3 px-4 py-2.5"
+            >
+              <span className="flex min-w-0 items-center gap-2">
+                {row.photo ? (
+                  <CatalogPhotoPreview
+                    key={row.photo.assetId}
+                    compact
+                    assetId={row.photo.assetId}
+                    storeId={storeId}
+                    label=""
+                  />
+                ) : null}
+                <span className="min-w-0">
+                  <span className="block truncate">
+                    {row.choice ? `${row.choice} · ` : ""}
+                    {row.unit}
+                  </span>
+                  {row.status === "active" ? null : (
+                    <span className="block text-sm capitalize text-muted-foreground">
+                      {row.status}
+                    </span>
+                  )}
+                </span>
+              </span>
+              <span className="shrink-0 font-medium tabular-nums">
+                {row.price}
+              </span>
+            </li>
+          ))}
+        </ul>
+        {packs.length ? (
+          <p className="text-sm text-muted-foreground">{packs.join(" · ")}</p>
+        ) : null}
+      </section>
       <div className={product ? "grid gap-4 sm:grid-cols-2" : "grid gap-4"}>
-        <Card size="sm">
-          <CardHeader>
-            <CardDescription>Last ordered</CardDescription>
-            <CardTitle>
-              {lastOrder ? dateTime(lastOrder.at) : "Not ordered yet"}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="grid gap-2">
-            {lastOrder ? (
-              <>
-                <p>
-                  {lastOrder.quantity} × {lastOrder.variantName}{" "}
-                  {lastOrder.unitName} · {lastOrder.customer}
-                </p>
-                <Link
-                  className="text-sm underline underline-offset-4"
-                  href={orderHref(lastOrder.orderNumber)}
-                >
-                  View {lastOrder.orderNumber}
-                </Link>
-              </>
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                The latest non-cancelled recorded order will appear here.
-              </p>
-            )}
-          </CardContent>
-        </Card>
         {product ? (
           <Card size="sm">
             <CardHeader>
-              <CardDescription>Stock on hand</CardDescription>
+              <CardDescription>In stock</CardDescription>
               <CardTitle>
                 {!detail.inventoryAllowed
-                  ? "Inventory access required"
+                  ? "Ask a manager"
                   : product.stockBalances.length
-                    ? "Recorded balances"
-                    : "Stock not recorded"}
+                    ? null
+                    : "Not counted yet"}
               </CardTitle>
             </CardHeader>
             <CardContent className="grid gap-2">
               {detail.inventoryAllowed ? (
                 <>
                   {product.stockBalances.map((balance) => (
-                    <p key={balance.id} className="text-sm">
-                      {balance.variantName}: {balance.onHandQuantity}{" "}
-                      {balance.inventoryUnitName}{" "}
-                      <span className="text-muted-foreground">
-                        ({balance.reservedQuantity} reserved)
+                    <p key={balance.id} className="tabular-nums">
+                      {item.variants.length > 1
+                        ? `${balance.variantName}: `
+                        : ""}
+                      <span className="font-semibold">
+                        {balance.onHandQuantity} {balance.inventoryUnitName}
                       </span>
+                      {Number(balance.reservedQuantity) > 0 ? (
+                        <span className="text-sm text-muted-foreground">
+                          {" "}
+                          ({balance.reservedQuantity} held for orders)
+                        </span>
+                      ) : null}
                     </p>
                   ))}
-                  {item.variants
-                    .filter(
-                      (variant) =>
-                        !product.stockBalances.some(
-                          (balance) => balance.variantId === variant.id,
-                        ),
-                    )
-                    .map((variant) => (
-                      <p
-                        key={variant.id}
-                        className="text-sm text-muted-foreground"
-                      >
-                        {variant.name}: stock not recorded
-                      </p>
-                    ))}
                   <div className="flex flex-wrap items-center gap-3">
                     {canRecordUse ? (
                       <Button
@@ -203,157 +180,64 @@ export function CatalogDetailOverview({
                       </Button>
                     ) : null}
                     <Link
-                      className="text-sm underline underline-offset-4"
+                      className="text-sm text-[var(--link)] underline underline-offset-4"
                       href={`/inventory?inventoryProduct=${encodeURIComponent(product.id)}&inventoryQuery=${encodeURIComponent(item.name)}`}
                     >
-                      View inventory
+                      Open in Inventory
                     </Link>
                   </div>
                 </>
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  Ask a manager to view this store's stock.
-                </p>
-              )}
+              ) : null}
             </CardContent>
           </Card>
         ) : null}
-      </div>
-      <section className="grid gap-3">
-        <div className="flex items-center justify-between gap-3">
-          <h3 className="font-medium">Current prices</h3>
-          {product && affordances.configureUnits ? (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => void setView("units")}
-            >
-              Units
-            </Button>
+        <Card size="sm">
+          <CardHeader>
+            <CardDescription>Last ordered</CardDescription>
+            <CardTitle>
+              {lastOrder ? dateTime(lastOrder.at) : "Not ordered yet"}
+            </CardTitle>
+          </CardHeader>
+          {lastOrder ? (
+            <CardContent className="grid gap-2">
+              <p>
+                {lastOrder.quantity} × {lastOrder.variantName}{" "}
+                {lastOrder.unitName} · {lastOrder.customer}
+              </p>
+              <Link
+                className="text-sm text-[var(--link)] underline underline-offset-4"
+                href={orderHref(lastOrder.orderNumber)}
+              >
+                View {lastOrder.orderNumber}
+              </Link>
+            </CardContent>
           ) : null}
-        </div>
-        <InlineSelectionStatus selection={offeringSelection} />
-        <div className="overflow-x-auto border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-10">
-                  <InlineSelectAllCheckbox
-                    selection={offeringSelection}
-                    label="Select all current prices"
-                  />
-                </TableHead>
-                <TableHead>Choice</TableHead>
-                <TableHead>Selling unit</TableHead>
-                <TableHead>Price</TableHead>
-                <TableHead>Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {item.variants.flatMap((variant) => {
-                const photo =
-                  showOptionPhotos && variant.status !== "archived"
-                    ? catalogImagesForOption(photos, variant.id)[0]
-                    : undefined
-                return variant.offerings.map((offering) => (
-                  <TableRow
-                    key={offering.id}
-                    data-state={
-                      offeringSelection.isSelected(offering.id)
-                        ? "selected"
-                        : undefined
-                    }
-                  >
-                    <TableCell>
-                      <InlineRowCheckbox
-                        selection={offeringSelection}
-                        id={offering.id}
-                        label={`Select ${variant.name} ${offering.name}`}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        {photo ? (
-                          <CatalogPhotoPreview
-                            key={photo.assetId}
-                            compact
-                            assetId={photo.assetId}
-                            storeId={storeId}
-                            label=""
-                          />
-                        ) : null}
-                        {variant.name}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {units.find(
-                        (unit) =>
-                          unit.id === offering.productUnit?.inventoryUnitId,
-                      )?.name ?? offering.name}
-                    </TableCell>
-                    <TableCell>
-                      {offering.pricingPolicy === "order_total"
-                        ? "Enter price during order"
-                        : offering.pricingPolicy === "quote_required" &&
-                            offering.fixedPriceMinor === null
-                          ? "Quote required"
-                          : money(
-                              offering.fixedPriceMinor,
-                              offering.currencyCode,
-                            )}
-                    </TableCell>
-                    <TableCell className="capitalize">
-                      {offering.status}
-                    </TableCell>
-                  </TableRow>
-                ))
-              })}
-            </TableBody>
-          </Table>
-        </div>
-        {main ? (
-          <p className="text-xs text-muted-foreground">
-            {units
-              .filter((unit) => unit.id !== main.id)
-              .map(
-                (unit) =>
-                  `1 ${unit.name} = ${unit.factor} ${main.name}${unit.stockBehavior === "alternate_transaction" ? " · shared stock" : ""}`,
-              )
-              .join(" · ") || `Main unit: ${main.name}`}
-          </p>
-        ) : null}
-      </section>
-      {item.description ? (
-        <p className="text-sm text-muted-foreground">{item.description}</p>
+        </Card>
+      </div>
+      {product ? (
+        <p className="text-sm text-muted-foreground">
+          Use: {productUsageLabels[product.usage]}
+        </p>
       ) : null}
-      <section className="grid gap-2">
-        <div className="flex items-center justify-between">
-          <h3 className="font-medium">Recent activity</h3>
+      {item.description ? <p>{item.description}</p> : null}
+      {item.kind === "service" && canCreateServiceJob ? (
+        <div>
           <Button
-            size="sm"
-            variant="ghost"
-            onClick={() =>
-              void setParams({
-                catalogDetailTab: "activity",
-                catalogActivity: null,
+            variant="outline"
+            onClick={async () => {
+              await close()
+              await serviceWork.setParams({
+                serviceSheet: "intake",
+                jobId: null,
+                jobStep: null,
+                requestId: null,
               })
-            }
+            }}
           >
-            All activity
+            Create service job
           </Button>
         </div>
-        {detail.recentActivity ? (
-          <CatalogActivityEvents events={detail.recentActivity.items} />
-        ) : (
-          <CatalogDetailActivity
-            itemId={item.id}
-            storeId={storeId}
-            readScope={readScope}
-            inventoryAllowed={detail.inventoryAllowed && Boolean(product)}
-            preview
-          />
-        )}
-      </section>
+      ) : null}
     </div>
   )
 }

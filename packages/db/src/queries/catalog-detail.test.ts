@@ -9,84 +9,55 @@ import {
   getCatalogItemOverview,
 } from "./catalog-detail"
 const at = "2026-10-02T10:00:00.000Z"
-test("overview overlaps a bounded authorized preview and preserves details when only that preview fails", async () => {
-  for (const previewFails of [false, true]) {
-    const graph = Promise.withResolvers<unknown>()
-    let previewStarted = false
-    const db = {
-      catalogItem: {
-        findFirst: async (args: { include?: unknown; where: unknown }) => {
-          expect(args.where).toEqual({
-            id: "item",
-            tenantId: "tenant",
-            systemRole: null,
-          })
-          return args.include ? graph.promise : null
-        },
-      },
-      commercialOrderLine: {
-        findFirst: async () => null,
-        findMany: async (args: { take: number; where: { order: unknown } }) => {
-          expect(args.take).toBe(3)
-          expect(args.where.order).toEqual({
-            tenantId: "tenant",
-            storeId: "store",
-            createdByUserId: "actor",
-          })
-          return []
-        },
-      },
-      catalogPriceChange: {
-        findMany: async (args: { take: number; where: unknown }) => {
-          previewStarted = true
-          expect(args.take).toBe(3)
-          expect(args.where).toEqual({
-            tenantId: "tenant",
-            offering: { catalogItemId: "item" },
-          })
-          if (previewFails) throw new Error("preview unavailable")
-          return []
-        },
-      },
-      productFulfillment: { findMany: async () => [] },
-      commercialServiceFulfillment: { findMany: async () => [] },
-      stockOperation: {
-        findMany: () => {
-          throw new Error("Stock must not be read without Inventory access")
-        },
-      },
-    } as unknown as PrismaClient
-    const read = getCatalogItemOverview(db, {
-      tenantId: "tenant",
-      storeId: "store",
-      itemId: "item",
-      inventory: false,
-      createdByUserId: "actor",
-    })
-    expect(previewStarted).toBe(true)
-    graph.resolve({
-      id: "item",
-      name: "Service",
-      kind: "SERVICE",
-      status: "ACTIVE",
-      createdAt: new Date(at),
-      updatedAt: new Date(at),
-      photoAssets: [],
-      illustrations: [],
-      optionGroups: [],
-      product: null,
-      service: { id: "service" },
-      variants: [],
-    })
-    const result = await read
-    expect(result?.item.id).toBe("item")
-    expect(result?.inventoryAllowed).toBe(false)
-    expect(result?.recentActivity).toEqual(
-      previewFails
-        ? null
-        : { items: [], nextCursor: null, inventoryAllowed: false },
-    )
+test("overview reads the item and its last order without any activity reads", async () => {
+  const fail = (table: string) => () => {
+    throw new Error(`Overview must not read ${table}`)
   }
+  const db = {
+    catalogItem: {
+      findFirst: async (args: { include?: unknown; where: unknown }) => {
+        expect(args.where).toEqual({
+          id: "item",
+          tenantId: "tenant",
+          systemRole: null,
+        })
+        return args.include
+          ? {
+              id: "item",
+              name: "Service",
+              kind: "SERVICE",
+              status: "ACTIVE",
+              createdAt: new Date(at),
+              updatedAt: new Date(at),
+              photoAssets: [],
+              illustrations: [],
+              optionGroups: [],
+              product: null,
+              service: { id: "service" },
+              variants: [],
+            }
+          : null
+      },
+    },
+    commercialOrderLine: {
+      findFirst: async () => null,
+      findMany: fail("order lines"),
+    },
+    catalogPriceChange: { findMany: fail("price changes") },
+    productFulfillment: { findMany: fail("product fulfillments") },
+    commercialServiceFulfillment: { findMany: fail("service fulfillments") },
+    stockOperation: { findMany: fail("stock operations") },
+  } as unknown as PrismaClient
+  const result = await getCatalogItemOverview(db, {
+    tenantId: "tenant",
+    storeId: "store",
+    itemId: "item",
+    inventory: false,
+    createdByUserId: "actor",
+  })
+  expect(result?.item.id).toBe("item")
+  expect(result?.inventoryAllowed).toBe(false)
+  expect(result && "recentActivity" in result).toBe(false)
 })
 test("detail starts independent scoped order read before the item graph resolves, and still refuses a missing item", async () => {
   const item = Promise.withResolvers<null>()

@@ -67,7 +67,6 @@ export function CatalogDetailContent({
             detail={detail}
             storeId={storeId}
             readOnly={readOnly}
-            readScope={readScope}
             canCreateServiceJob={canCreateServiceJob}
           />
         </TabsContent>

@@ -56,49 +56,51 @@ export function CatalogDetailHeader({
     canManageUsage: detail.canManageUsage,
   })
   const [sharing, setSharing] = useState(false)
+  const kindLabel = item.kind === "service" ? "Service" : "Goods"
+  const choiceCount = item.variants.filter(
+    (variant) => variant.status !== "archived",
+  ).length
   return (
-    <SheetHeader className="shrink-0 flex-row items-start gap-4 px-6 pt-[max(1.5rem,env(safe-area-inset-top))] pb-6">
-      <div className="flex size-16 shrink-0 items-center justify-center overflow-hidden bg-muted">
-        {photo && affordances.privatePhotos ? (
-          <CatalogPhotoPreview
-            assetId={photo.assetId}
-            storeId={store.id}
-            label={item.name}
-          />
-        ) : item.illustrations[0] ? (
-          <CatalogIllustrationPreview
-            illustrationId={item.illustrations[0].illustrationId}
-          />
-        ) : (
-          <span className="text-sm text-muted-foreground">
-            {item.kind === "service" ? "Service" : "Item"}
-          </span>
-        )}
-      </div>
-      <div className="grid min-w-0 flex-1 gap-2">
-        <div className="flex flex-wrap gap-2">
-          <Badge variant="secondary" className="capitalize">
-            {item.kind}
-          </Badge>
-          <Badge variant="outline" className="capitalize">
-            {item.status}
-          </Badge>
+    <SheetHeader className="shrink-0 gap-4 px-6 pt-[max(1.5rem,env(safe-area-inset-top))] pb-5">
+      <div className="flex items-start gap-4">
+        <div className="flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-[var(--ui-radius-control)] bg-muted">
+          {photo && affordances.privatePhotos ? (
+            <CatalogPhotoPreview
+              assetId={photo.assetId}
+              storeId={store.id}
+              label={item.name}
+              className="size-full object-cover"
+            />
+          ) : item.illustrations[0] ? (
+            <CatalogIllustrationPreview
+              illustrationId={item.illustrations[0].illustrationId}
+            />
+          ) : (
+            <span className="text-sm text-muted-foreground">{kindLabel}</span>
+          )}
         </div>
-        <SheetTitle className="text-xl font-semibold break-words">
-          {item.name}
-        </SheetTitle>
-        <SheetDescription>
-          {item.variants.length}{" "}
-          {item.variants.length === 1 ? "variant" : "customer choices"} ·{" "}
-          {store.name}
-        </SheetDescription>
+        <div className="grid min-w-0 flex-1 gap-1 pt-1">
+          <SheetTitle className="text-xl font-semibold break-words">
+            {item.name}
+          </SheetTitle>
+          <SheetDescription className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <span>
+              {kindLabel}
+              {choiceCount > 1 ? ` · ${choiceCount} choices` : ""}
+            </span>
+            {item.status === "active" ? null : (
+              <Badge variant="outline" className="capitalize">
+                {item.status}
+              </Badge>
+            )}
+          </SheetDescription>
+        </div>
+        <CatalogDetailClose />
       </div>
-      <div className="flex shrink-0 items-center gap-2 self-start">
+      <div className="flex flex-wrap items-center gap-2">
         {readOnly || item.status === "archived" ? null : (
           <Button
             type="button"
-            variant="outline"
-            size="sm"
             onClick={async () => {
               await close()
               await editCatalogItem(item.id)
@@ -113,7 +115,6 @@ export function CatalogDetailHeader({
             <Button
               type="button"
               variant="outline"
-              size="sm"
               onClick={() => setSharing(true)}
             >
               <HugeiconsIcon icon={Share01Icon} data-icon="inline-start" />
@@ -135,7 +136,7 @@ export function CatalogDetailHeader({
                 <Button
                   type="button"
                   variant="outline"
-                  size="icon-sm"
+                  size="icon"
                   aria-label={`More actions for ${item.name}`}
                 />
               }
@@ -144,13 +145,13 @@ export function CatalogDetailHeader({
             </DropdownMenuTrigger>
             <DropdownMenuContent
               appearance="dashboard"
-              align="end"
+              align="start"
               className={themeClass}
             >
               <DropdownMenuGroup>
                 <DropdownMenuItem onClick={() => void setView("images")}>
                   <HugeiconsIcon icon={Image01Icon} aria-hidden="true" />
-                  Images
+                  Photos
                 </DropdownMenuItem>
                 {onStorefrontSettings ? (
                   <DropdownMenuItem onClick={onStorefrontSettings}>
@@ -168,7 +169,6 @@ export function CatalogDetailHeader({
             </DropdownMenuContent>
           </DropdownMenu>
         ) : null}
-        <CatalogDetailClose />
       </div>
     </SheetHeader>
   )
@@ -180,7 +180,7 @@ export function CatalogDetailClose() {
       render={
         <Button
           aria-label="Close"
-          className="m-0 size-auto shrink-0 rounded-none p-0 hover:bg-transparent"
+          className="-mt-1 -mr-2 shrink-0"
           size="icon"
           type="button"
           variant="ghost"
