@@ -55,6 +55,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { type ReactNode, useEffect, useRef, useState } from "react"
 import { orderMoney } from "../order-draft"
+import { useOrderPaymentAccounts } from "../order-payment-account"
 import { OrderActivityColumn } from "./order-activity-column"
 import {
   CancelOrderDialog,
@@ -176,6 +177,15 @@ export function OrderOverview({
         refetchOnWindowFocus: "always",
         retry: false,
       },
+    ),
+  )
+  // Warm the payment accounts while money is owed, so Record payment opens
+  // ready instead of disabled while they load (shared, 60s fresh).
+  useOrderPaymentAccounts(
+    Boolean(
+      query.data &&
+        !isClosedOrder(query.data.status) &&
+        query.data.balanceDueMinor > 0,
     ),
   )
   // Shown only where the shell offers the quick assistant (not to cashiers).

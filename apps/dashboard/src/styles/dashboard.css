@@ -191,6 +191,18 @@
   outline-offset: 2px;
 }
 
+/* Input groups (money, search) ring the whole group, not the inner input. */
+.ewatrade-dashboard [data-slot="input-group-control"]:focus-visible {
+  outline: none;
+}
+.ewatrade-dashboard
+  [data-slot="input-group"]:has(
+    [data-slot="input-group-control"]:focus-visible
+  ) {
+  outline: 3px solid var(--ring);
+  outline-offset: 2px;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .ewatrade-dashboard *,
   .ewatrade-dashboard *::before,
