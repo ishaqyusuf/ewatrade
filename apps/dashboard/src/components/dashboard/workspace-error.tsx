@@ -40,7 +40,7 @@ export function OverviewNumbersError(props: ErrorProps) {
     <WorkspaceError
       {...props}
       title="Couldn’t load your numbers."
-      className="min-h-40 rounded-lg border border-dashed border-border"
+      className="min-h-40 rounded-[var(--ui-radius-surface)] border border-dashed border-border"
     />
   )
 }

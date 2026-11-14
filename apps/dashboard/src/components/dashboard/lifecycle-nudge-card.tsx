@@ -48,7 +48,7 @@ export function LifecycleNudgeCard() {
   return (
     <section
       aria-labelledby="lifecycle-nudge-title"
-      className="flex min-w-0 items-start gap-3 rounded-lg border border-border bg-card p-4 sm:p-5"
+      className="flex min-w-0 items-start gap-3 rounded-[var(--ui-radius-surface)] border border-border bg-card p-4 sm:p-5"
     >
       <div className="grid min-w-0 flex-1 gap-1">
         <h2 id="lifecycle-nudge-title" className="font-semibold">
@@ -56,7 +56,7 @@ export function LifecycleNudgeCard() {
         </h2>
         <p className="text-sm text-muted-foreground">{card.body}</p>
         <div className="pt-2">
-          <Link href={card.ctaPath} className={buttonVariants({ size: "sm" })}>
+          <Link href={card.ctaPath} className={buttonVariants()}>
             {card.ctaLabel}
           </Link>
         </div>
