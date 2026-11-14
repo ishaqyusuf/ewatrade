@@ -119,7 +119,9 @@ export function InventoryTableHeader({
                 <span className="truncate">{label}</span>
               )
               const content =
-                id === SELECT_COLUMN_ID ? (
+                id === "actions" ? (
+                  <span className="sr-only">{label}</span>
+                ) : id === SELECT_COLUMN_ID ? (
                   <SelectAllCheckbox
                     table={table}
                     label="Select all loaded inventory balances"

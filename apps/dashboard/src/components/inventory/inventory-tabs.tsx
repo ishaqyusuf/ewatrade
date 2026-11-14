@@ -6,10 +6,17 @@ const INVENTORY_PAGES = [
   { path: "/inventory", label: "Stock" },
   { path: "/inventory/operations", label: "History" },
   { path: "/inventory/transfers", label: "Transfers" },
-  { path: "/inventory/shipments", label: "Shipments" },
 ]
+const SHIPMENTS = { path: "/inventory/shipments", label: "Shipments" }
 
-/** Stock, History and Transfers were only reachable from the sidebar. */
-export function InventoryTabs() {
-  return <SecondaryMenu items={INVENTORY_PAGES} label="Inventory" />
+/** Shipments only shows to roles its page lets in (owners and admins). */
+export function InventoryTabs({
+  showShipments = false,
+}: { showShipments?: boolean }) {
+  return (
+    <SecondaryMenu
+      items={showShipments ? [...INVENTORY_PAGES, SHIPMENTS] : INVENTORY_PAGES}
+      label="Inventory"
+    />
+  )
 }

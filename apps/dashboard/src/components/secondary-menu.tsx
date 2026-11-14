@@ -16,8 +16,8 @@ export function SecondaryMenu({
   const pathname = usePathname()
 
   return (
-    <nav aria-label={label} className="min-w-0 py-4">
-      <ul className="flex space-x-6 overflow-auto text-sm scrollbar-hide">
+    <nav aria-label={label} className="min-w-0 border-b border-border">
+      <ul className="flex gap-6 overflow-x-auto scrollbar-hide">
         {items.map((item) => {
           const active = pathname === item.path
           return (
@@ -27,9 +27,9 @@ export function SecondaryMenu({
                 prefetch
                 aria-current={active ? "page" : undefined}
                 className={cn(
-                  "text-[#606060]",
+                  "relative inline-flex min-h-11 items-center text-sm text-muted-foreground transition-colors hover:text-foreground",
                   active &&
-                    "font-medium text-primary underline underline-offset-8",
+                    "font-medium text-foreground after:absolute after:inset-x-0 after:-bottom-px after:h-0.5 after:bg-foreground",
                 )}
               >
                 {item.label}

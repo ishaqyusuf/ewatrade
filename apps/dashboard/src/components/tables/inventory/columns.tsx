@@ -1,7 +1,7 @@
 "use client"
 
 import { InventoryOperationMenu } from "@/components/inventory/inventory-operation-menu"
-import { type TableColumnMeta, selectColumn } from "@/components/tables/core"
+import type { TableColumnMeta } from "@/components/tables/core"
 import {
   type InventoryStockStatus,
   formatStockQuantity,
@@ -26,11 +26,11 @@ export const inventorySortFields = [
 ] as const
 
 const statusTone: Record<InventoryStockStatus, string> = {
-  in_stock: "bg-primary/10 text-primary",
-  low: "bg-amber-500/15 text-amber-700 dark:text-amber-300",
-  out: "bg-destructive/10 text-destructive",
-  transit: "bg-sky-500/15 text-sky-700 dark:text-sky-300",
-  staff: "bg-muted text-foreground",
+  in_stock: "bg-success text-success-foreground",
+  low: "bg-warning text-warning-foreground",
+  out: "bg-danger text-danger-foreground",
+  transit: "bg-info text-info-foreground",
+  staff: "bg-neutral text-neutral-foreground",
 }
 
 export function InventoryStatusBadge({ row }: { row: InventoryBalance }) {
@@ -134,12 +134,16 @@ export function InventoryRowActions({
   )
 }
 
+/**
+ * One store's stock has no Store column (the header names the store);
+ * all stores shows how many stores hold each product.
+ */
 export function createInventoryColumns(
   onOpen?: (catalogItemId: string) => void,
   onStores?: (row: InventoryBalance) => void,
+  { showStore = true }: { showStore?: boolean } = {},
 ): ColumnDef<InventoryBalance>[] {
-  return [
-    selectColumn(getInventoryRecordName),
+  const columns: ColumnDef<InventoryBalance>[] = [
     {
       id: "product",
       accessorFn: (row) => row.productName,
@@ -152,8 +156,7 @@ export function createInventoryColumns(
         sticky: true,
         reorderable: false,
         sortField: "productName",
-        className:
-          "z-20 bg-background group-hover:bg-muted/40 group-aria-selected:bg-muted/60 md:sticky",
+        className: "z-20 bg-background group-hover:bg-[var(--hover)] md:sticky",
         skeleton: { type: "avatar-text", width: "w-32" },
       }),
       cell: ({ row }) => (
@@ -161,9 +164,8 @@ export function createInventoryColumns(
           <Button
             type="button"
             variant="link"
-            size="sm"
             data-catalog-open={row.original.catalogItemId}
-            className="block h-auto max-w-full truncate p-0 text-left"
+            className="block h-auto max-w-full truncate p-0 text-left font-medium text-foreground"
             onClick={(event) => {
               event.stopPropagation()
               onOpen?.(row.original.catalogItemId)
@@ -177,25 +179,7 @@ export function createInventoryColumns(
         </div>
       ),
     },
-    {
-      id: "store",
-      accessorKey: "storeName",
-      header: "Store",
-      size: 180,
-      meta: meta("Store", "w-24"),
-      cell: ({ row }) =>
-        row.original.storeBalances ? (
-          <Button
-            variant="link"
-            className="truncate p-0"
-            onClick={() => onStores?.(row.original)}
-          >
-            {storeCountText(row.original)}
-          </Button>
-        ) : (
-          <span className="truncate">{row.original.storeName}</span>
-        ),
-    },
+    ...(showStore ? [storeColumn(onStores)] : []),
     {
       id: "onHand",
       accessorFn: (row) => row.onHandQuantity,
@@ -269,9 +253,9 @@ export function createInventoryColumns(
     {
       id: "actions",
       header: "Actions",
-      size: 84,
-      minSize: 84,
-      maxSize: 84,
+      size: 64,
+      minSize: 64,
+      maxSize: 64,
       enableHiding: false,
       enableSorting: false,
       enableResizing: false,
@@ -285,6 +269,31 @@ export function createInventoryColumns(
       ),
     },
   ]
+  return columns
+}
+
+function storeColumn(
+  onStores?: (row: InventoryBalance) => void,
+): ColumnDef<InventoryBalance> {
+  return {
+    id: "store",
+    accessorKey: "storeName",
+    header: "Store",
+    size: 180,
+    meta: meta("Store", "w-24"),
+    cell: ({ row }) =>
+      row.original.storeBalances ? (
+        <Button
+          variant="link"
+          className="truncate p-0"
+          onClick={() => onStores?.(row.original)}
+        >
+          {storeCountText(row.original)}
+        </Button>
+      ) : (
+        <span className="truncate">{row.original.storeName}</span>
+      ),
+  }
 }
 
 export const inventoryColumns = createInventoryColumns()

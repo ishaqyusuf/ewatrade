@@ -29,105 +29,140 @@ type BalanceContext = {
   variantName: string
   inventoryUnitName: string
 }
+type InventoryAction = (typeof INVENTORY_ACTIONS)[number]
 
-/** Update stock: the header button, or a row's ⋮ menu with the product preselected. */
+function useStartAction(balance?: BalanceContext, onAction?: () => void) {
+  const { setParams } = useInventoryParams()
+  return (action: InventoryAction) => {
+    onAction?.()
+    void setParams({
+      inventoryOperation: action.mode,
+      inventoryProduct: balance?.productId ?? null,
+      inventoryStore: balance?.storeId ?? null,
+      inventoryBalance: balance?.balanceSourceId ?? null,
+      inventoryPreset: "preset" in action ? action.preset : null,
+    })
+  }
+}
+
+const stockIn = INVENTORY_ACTIONS[0]
+const otherActions = INVENTORY_ACTIONS.slice(1)
+
+/**
+ * Page actions: Stock in is the everyday job, so it is one tap; the other
+ * stock changes sit under More.
+ */
+export function InventoryActions() {
+  const start = useStartAction()
+  return (
+    <>
+      <Button
+        type="button"
+        className="max-sm:flex-1"
+        onClick={() => start(stockIn)}
+      >
+        <HugeiconsIcon
+          icon={Add01Icon}
+          data-icon="inline-start"
+          aria-hidden="true"
+        />
+        {stockIn.label}
+      </Button>
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          render={
+            <Button
+              type="button"
+              variant="outline"
+              className="max-sm:flex-1"
+              aria-label="More stock changes"
+            />
+          }
+        >
+          More
+          <HugeiconsIcon
+            icon={ArrowDown01Icon}
+            data-icon="inline-end"
+            aria-hidden="true"
+          />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent
+          appearance="dashboard"
+          align="end"
+          className="min-w-60"
+        >
+          {otherActions.map((action) => (
+            <DropdownMenuItem key={action.label} onClick={() => start(action)}>
+              {action.label}
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </>
+  )
+}
+
+/** A stock line's ⋮ menu, with the product and store already chosen. */
 export function InventoryOperationMenu({
   balance,
   onAction,
-}: { balance?: BalanceContext; onAction?: () => void }) {
+}: { balance: BalanceContext; onAction?: () => void }) {
   const { setParams } = useInventoryParams()
   const { open } = useCatalogDetailParams()
+  const start = useStartAction(balance, onAction)
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
         render={
           <Button
             type="button"
-            variant={balance ? "ghost" : "default"}
-            size={balance ? "icon-sm" : "default"}
-            className="rounded-none"
+            variant="ghost"
+            size="icon"
             data-row-interactive="true"
-            aria-label={
-              balance
-                ? `Actions for ${balance.productName}, ${balance.variantName}, ${balance.inventoryUnitName}`
-                : "Update stock"
-            }
+            aria-label={`Actions for ${balance.productName}, ${balance.variantName}, ${balance.inventoryUnitName}`}
             onClick={(event) => event.stopPropagation()}
           />
         }
       >
-        {balance ? (
-          <HugeiconsIcon icon={MoreVerticalIcon} aria-hidden="true" />
-        ) : (
-          <>
-            <HugeiconsIcon
-              icon={Add01Icon}
-              data-icon="inline-start"
-              aria-hidden="true"
-            />
-            Update stock
-            <HugeiconsIcon
-              icon={ArrowDown01Icon}
-              data-icon="inline-end"
-              aria-hidden="true"
-            />
-          </>
-        )}
+        <HugeiconsIcon icon={MoreVerticalIcon} aria-hidden="true" />
       </DropdownMenuTrigger>
       <DropdownMenuContent
         appearance="dashboard"
         align="end"
-        className="min-w-64"
+        className="min-w-60"
       >
-        {balance ? (
-          <>
-            <DropdownMenuItem
-              onClick={(event) => {
-                event.stopPropagation()
-                onAction?.()
-                void open(balance.catalogItemId)
-              }}
-            >
-              <HugeiconsIcon icon={ViewIcon} aria-hidden="true" />
-              View product
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={(event) => {
-                event.stopPropagation()
-                onAction?.()
-                void setParams({ inventoryLevel: balance.balanceSourceId })
-              }}
-            >
-              <HugeiconsIcon icon={AlertDiamondIcon} aria-hidden="true" />
-              Low-stock level
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-          </>
-        ) : null}
         {INVENTORY_ACTIONS.map((action) => (
           <DropdownMenuItem
             key={action.label}
-            className="items-start"
             onClick={(event) => {
               event.stopPropagation()
-              onAction?.()
-              void setParams({
-                inventoryOperation: action.mode,
-                inventoryProduct: balance?.productId ?? null,
-                inventoryStore: balance?.storeId ?? null,
-                inventoryBalance: balance?.balanceSourceId ?? null,
-                inventoryPreset: "preset" in action ? action.preset : null,
-              })
+              start(action)
             }}
           >
-            <span className="flex flex-col">
-              <span className="font-medium">{action.label}</span>
-              <span className="text-xs text-muted-foreground">
-                {action.hint}
-              </span>
-            </span>
+            {action.label}
           </DropdownMenuItem>
         ))}
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          onClick={(event) => {
+            event.stopPropagation()
+            onAction?.()
+            void setParams({ inventoryLevel: balance.balanceSourceId })
+          }}
+        >
+          <HugeiconsIcon icon={AlertDiamondIcon} aria-hidden="true" />
+          Low-stock level
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onClick={(event) => {
+            event.stopPropagation()
+            onAction?.()
+            void open(balance.catalogItemId)
+          }}
+        >
+          <HugeiconsIcon icon={ViewIcon} aria-hidden="true" />
+          View product
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   )

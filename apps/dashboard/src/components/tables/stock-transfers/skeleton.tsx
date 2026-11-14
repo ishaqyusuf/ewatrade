@@ -2,15 +2,11 @@
 import {
   DirectoryCollectionSkeleton,
   TableSkeleton,
-  selectColumn,
 } from "@/components/tables/core"
 import type { DirectoryView } from "@/utils/directory-view-settings"
 import type { TableSettings } from "@/utils/table-settings"
-import { type StockTransfer, transferColumns } from "./columns"
-const columns = [
-  selectColumn<StockTransfer>(() => ""),
-  ...transferColumns(() => {}),
-]
+import { transferColumns } from "./columns"
+const columns = transferColumns()
 export function TransfersSkeleton({
   settings,
   view = "table",
@@ -24,7 +20,7 @@ export function TransfersSkeleton({
       columnVisibility={settings?.columns}
       columnSizing={settings?.sizing}
       columnOrder={settings?.order}
-      stickyColumnIds={["select", "identity", "actions"]}
+      stickyColumnIds={["identity"]}
     />
   )
 }

@@ -22,6 +22,7 @@ import {
 } from "@ewatrade/ui"
 import { useQuery } from "@tanstack/react-query"
 import { type ReactNode, useState } from "react"
+import { FilterPills } from "./filter-pills"
 
 /** Names of the chosen category IDs; the URL only carries IDs. */
 export function useStockCategoryNames(ids: number[]) {
@@ -314,31 +315,19 @@ export function StockHistoryFilters() {
           </DropdownMenuSub>
         </DropdownMenuGroup>
       </SearchFilter>
-      <div className="flex flex-wrap gap-1" aria-label="Kind of change">
-        {stockChangeGroups.map((row) => (
-          <Button
-            key={row.id}
-            variant={group === row.id ? "secondary" : "ghost"}
-            size="sm"
-            className="rounded-none"
-            aria-pressed={group === row.id}
-            onClick={() =>
-              void setParams({ filter: row.id === "all" ? null : row.id })
-            }
-          >
-            {row.label}
-          </Button>
-        ))}
-        {(params.q || params.filter) && !chips.length ? (
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={() => void setParams({ q: null, filter: null })}
-          >
-            Clear filters
-          </Button>
-        ) : null}
-      </div>
     </div>
+  )
+}
+
+/** All changes, Stock in, Stock out, Counts, Moves. */
+export function StockChangeGroupPills() {
+  const { params, setParams } = useInventoryLedgerParams()
+  return (
+    <FilterPills
+      label="Kind of change"
+      options={stockChangeGroups}
+      value={params.filter ?? "all"}
+      onChange={(id) => void setParams({ filter: id === "all" ? null : id })}
+    />
   )
 }

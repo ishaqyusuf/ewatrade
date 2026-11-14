@@ -1,13 +1,24 @@
 "use client"
 
 import { WorkspaceError } from "@/components/dashboard/workspace-error"
-import { InventoryHeader } from "@/components/inventory/inventory-header"
+import { InventoryFilters } from "@/components/inventory/inventory-filters"
+import {
+  type InventoryPageAccess,
+  InventoryPageHeader,
+  inventoryViewOptions,
+} from "@/components/inventory/inventory-header"
+import { InventoryActions } from "@/components/inventory/inventory-operation-menu"
 import { ScrollableContent } from "@/components/scrollable-content"
 import { InventoryOperationSheet } from "@/components/sheets/inventory-operation-sheet"
-import { TableToolbarSlotProvider } from "@/components/tables/core"
+import {
+  TableToolbarSlot,
+  TableToolbarSlotProvider,
+} from "@/components/tables/core"
 import { InventoryDataTable } from "@/components/tables/inventory/data-table"
 import { InventoryTableSkeleton } from "@/components/tables/inventory/skeleton"
+import { ViewDropdown } from "@/components/view-switcher"
 import { useDirectoryView } from "@/hooks/use-directory-view"
+import { useMobileOverlay } from "@/hooks/use-mobile-overlay"
 import type { DirectoryViewSettings } from "@/utils/directory-view-settings"
 import type { TableSettings } from "@/utils/table-settings"
 import { Alert, AlertDescription, Button } from "@ewatrade/ui"
@@ -20,7 +31,9 @@ export function InventoryPage({
   initialSettings,
   initialViewSettings,
   allStores = false,
-}: {
+  storePicker,
+  showShipments,
+}: InventoryPageAccess & {
   store: StoreSummary
   allStores?: boolean
   initialSettings: TableSettings
@@ -32,14 +45,31 @@ export function InventoryPage({
       queryKey: "inventoryView",
       initialSettings: initialViewSettings,
     })
+  // Phones hide the view menu and always get the readable list.
+  const phone = useMobileOverlay()
+  const shownView = phone ? "list" : view
   return (
     <TableToolbarSlotProvider>
       <ScrollableContent>
-        <div className="flex min-w-0 flex-1 flex-col gap-6 pt-6">
-          <InventoryHeader
-            storeName={allStores ? "All stores" : store.name}
-            view={view}
-            onViewChange={setView}
+        <div className="flex min-w-0 flex-1 flex-col gap-4 pt-4 pb-8">
+          <InventoryPageHeader
+            storePicker={storePicker}
+            showShipments={showShipments}
+            search={<InventoryFilters />}
+            actions={
+              <>
+                <div className="flex items-center gap-2 max-md:hidden">
+                  <TableToolbarSlot />
+                  <ViewDropdown
+                    label="Stock view"
+                    value={view}
+                    options={inventoryViewOptions}
+                    onValueChange={setView}
+                  />
+                </div>
+                <InventoryActions />
+              </>
+            }
           />
           {persistenceError ? (
             <Alert appearance="dashboard" role="alert">
@@ -54,14 +84,14 @@ export function InventoryPage({
               fallback={
                 <InventoryTableSkeleton
                   settings={initialSettings}
-                  view={view}
+                  view={shownView}
                 />
               }
             >
               <InventoryDataTable
                 storeId={allStores ? undefined : store.id}
                 initialSettings={initialSettings}
-                view={view}
+                view={shownView}
               />
             </Suspense>
           </ErrorBoundary>

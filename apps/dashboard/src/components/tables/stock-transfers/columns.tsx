@@ -5,7 +5,6 @@ import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
 import { Badge, cn } from "@ewatrade/ui"
 import { compareExactDecimals } from "@ewatrade/utils/exact-decimal"
 import type { ColumnDef } from "@tanstack/react-table"
-import { LedgerRowActions } from "../inventory-ledger/row-actions"
 export type StockTransfer = RouterOutputs["inventory"]["transfers"][number]
 export const transferSortFields = [
   "identity",
@@ -53,9 +52,7 @@ export function transferQuantityText(row: StockTransfer) {
     : sent
 }
 
-export function transferColumns(
-  onOpen: (row: StockTransfer) => void,
-): ColumnDef<StockTransfer>[] {
+export function transferColumns(): ColumnDef<StockTransfer>[] {
   return [
     {
       id: "identity",
@@ -67,8 +64,7 @@ export function transferColumns(
         headerLabel: "Product",
         sortField: "identity",
         sticky: true,
-        className:
-          "z-20 bg-background group-hover:bg-muted/40 group-aria-selected:bg-muted/60",
+        className: "z-20 bg-background group-hover:bg-[var(--hover)]",
       },
       cell: ({ row }) => (
         <div className="min-w-0">
@@ -121,21 +117,6 @@ export function transferColumns(
       size: 190,
       meta: { headerLabel: "Sent", sortField: "createdAt" },
       cell: ({ row }) => stockDate(row.original.createdAt),
-    },
-    {
-      id: "actions",
-      header: "Actions",
-      size: 90,
-      enableHiding: false,
-      enableResizing: false,
-      meta: { sticky: true },
-      cell: ({ row }) => (
-        <LedgerRowActions
-          label={`${row.original.productName}, sent ${stockDate(row.original.createdAt)}`}
-          viewLabel="View transfer"
-          onOpen={() => onOpen(row.original)}
-        />
-      ),
     },
   ]
 }

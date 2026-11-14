@@ -1,11 +1,16 @@
 "use client"
 
 import { WorkspaceError } from "@/components/dashboard/workspace-error"
-import { inventoryHistoryViewOptions } from "@/components/inventory/inventory-header"
-import { InventoryLedgerFilters } from "@/components/inventory/inventory-ledger-filters"
-import { InventoryTabs } from "@/components/inventory/inventory-tabs"
+import {
+  type InventoryPageAccess,
+  InventoryPageHeader,
+  inventoryHistoryViewOptions,
+} from "@/components/inventory/inventory-header"
+import {
+  InventoryLedgerFilters,
+  InventoryLedgerSearch,
+} from "@/components/inventory/inventory-ledger-filters"
 import { NewTransferButton } from "@/components/inventory/new-transfer-button"
-import { PageHeader, PageToolbar } from "@/components/page-header"
 import { ScrollableContent } from "@/components/scrollable-content"
 import { InventoryOperationSheet } from "@/components/sheets/inventory-operation-sheet"
 import {
@@ -19,6 +24,7 @@ import {
 import { TransfersSkeleton } from "@/components/tables/stock-transfers/skeleton"
 import { ViewDropdown } from "@/components/view-switcher"
 import { useDirectoryView } from "@/hooks/use-directory-view"
+import { useMobileOverlay } from "@/hooks/use-mobile-overlay"
 import type { DirectoryViewSettings } from "@/utils/directory-view-settings"
 import type { TableSettings } from "@/utils/table-settings"
 import { Alert, AlertDescription, Button } from "@ewatrade/ui"
@@ -29,7 +35,9 @@ export function InventoryTransfersPage({
   initialSettings,
   initialViewSettings,
   allStores = false,
-}: {
+  storePicker,
+  showShipments,
+}: InventoryPageAccess & {
   store: { id: string; name: string; currencyCode: string }
   allStores?: boolean
   initialSettings: TableSettings
@@ -41,20 +49,23 @@ export function InventoryTransfersPage({
       queryKey: "transferView",
       initialSettings: initialViewSettings,
     })
-  // Transfers have no grid; a saved Grid choice shows as List.
-  const shownView = view === "cards" ? "list" : view
+  // Transfers have no grid; a saved Grid choice shows as List. Phones always
+  // get the list (the view menu is hidden there).
+  const phone = useMobileOverlay()
+  const shownView = phone || view === "cards" ? "list" : view
   return (
     <TableToolbarSlotProvider>
       <ScrollableContent>
-        <div className="flex min-w-0 flex-1 flex-col gap-6 pt-6">
-          <PageHeader
-            eyebrow={allStores ? "All stores" : store.name}
-            title="Transfers"
-            description="Stock moving between your stores. It leaves one store when sent and arrives when received."
-          >
-            <PageToolbar
-              actions={
-                <>
+        <div className="flex min-w-0 flex-1 flex-col gap-4 pt-4 pb-8">
+          <InventoryPageHeader
+            storePicker={storePicker}
+            showShipments={showShipments}
+            search={
+              <InventoryLedgerSearch placeholder="Search product or store" />
+            }
+            actions={
+              <>
+                <div className="flex items-center gap-2 max-md:hidden">
                   <TableToolbarSlot />
                   <ViewDropdown
                     label="Transfers view"
@@ -62,17 +73,16 @@ export function InventoryTransfersPage({
                     options={inventoryHistoryViewOptions}
                     onValueChange={setView}
                   />
-                  <NewTransferButton />
-                </>
-              }
-            >
-              <InventoryLedgerFilters
-                placeholder="Search product or store"
-                filters={transferFilters(!allStores)}
-              />
-            </PageToolbar>
-            <InventoryTabs />
-          </PageHeader>
+                </div>
+                <NewTransferButton />
+              </>
+            }
+          >
+            <InventoryLedgerFilters
+              label="Transfer status"
+              filters={transferFilters(!allStores)}
+            />
+          </InventoryPageHeader>
           {persistenceError ? (
             <Alert appearance="dashboard" role="alert">
               <AlertDescription>{persistenceError}</AlertDescription>

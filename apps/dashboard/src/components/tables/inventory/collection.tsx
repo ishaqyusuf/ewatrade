@@ -1,15 +1,14 @@
 "use client"
 
-import { RowSelectCheckbox } from "@/components/tables/core"
 import { formatStockQuantity } from "@/lib/inventory-view"
 import { Button } from "@ewatrade/ui"
+import { compareExactDecimals } from "@ewatrade/utils/exact-decimal"
 import type { Row } from "@tanstack/react-table"
 import {
   type InventoryBalance,
   InventoryRowActions,
   InventoryStatusBadge,
   getInventoryLineDetail,
-  getInventoryRecordName,
 } from "./columns"
 
 type CollectionProps = {
@@ -29,7 +28,7 @@ function ProductName({
     <Button
       type="button"
       variant="link"
-      className="block h-auto max-w-full truncate p-0 text-left font-medium text-foreground"
+      className="block h-auto max-w-full truncate p-0 text-left text-base font-medium text-foreground"
       onClick={() => onOpen(balance.catalogItemId)}
     >
       {balance.productName}
@@ -37,36 +36,56 @@ function ProductName({
   )
 }
 
-/** One bordered panel with a row per stock line; extra figures hide on phones. */
+/** "5 crates held" when some stock is set aside for orders. */
+function heldText(balance: InventoryBalance) {
+  return compareExactDecimals(balance.reservedQuantity, "0") > 0
+    ? `${formatStockQuantity(balance.reservedQuantity, balance.inventoryUnitName)} held`
+    : null
+}
+
+/**
+ * One row per stock line. Every width shows what can be sold and its status;
+ * wider screens add what is on the shelf.
+ */
 function InventoryList({ rows, onOpen, onStores }: CollectionProps) {
   return (
-    <ul aria-label="Stock list" className="divide-y rounded-lg border">
+    <ul
+      aria-label="Stock list"
+      className="divide-y divide-border overflow-hidden rounded-[var(--ui-radius-surface)] border border-border bg-card"
+    >
       {rows.map((row) => {
         const balance = row.original
         const unit = balance.inventoryUnitName
+        const held = heldText(balance)
         return (
           <li
             key={row.id}
-            data-state={row.getIsSelected() ? "selected" : undefined}
-            className="grid grid-cols-[1rem_minmax(0,1fr)_auto_2rem] items-center gap-3 px-3 py-2.5 data-[state=selected]:bg-muted md:grid-cols-[1rem_minmax(0,1fr)_auto_9rem_9rem_2rem]"
+            className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-x-3 py-3 pr-1 pl-4 md:grid-cols-[minmax(0,1fr)_9rem_9rem_8.5rem_auto]"
           >
-            <RowSelectCheckbox
-              row={row}
-              label={`Select ${getInventoryRecordName(balance)}`}
-            />
-            <div className="grid min-w-0">
+            <div className="grid min-w-0 gap-0.5">
               <ProductName balance={balance} onOpen={onOpen} />
               <span className="truncate text-sm text-muted-foreground">
-                {getInventoryLineDetail(balance)}
+                {[getInventoryLineDetail(balance), held]
+                  .filter(Boolean)
+                  .join(" · ")}
               </span>
             </div>
-            <InventoryStatusBadge row={balance} />
             <span className="text-right text-sm tabular-nums text-muted-foreground max-md:hidden">
               {formatStockQuantity(balance.onHandQuantity, unit)} in stock
             </span>
-            <span className="text-right text-sm font-semibold tabular-nums max-md:hidden">
-              {formatStockQuantity(balance.availableQuantity, unit)} free
-            </span>
+            <div className="grid justify-items-end gap-1 md:contents">
+              <span className="text-right font-semibold tabular-nums">
+                <span className="md:hidden">
+                  {formatStockQuantity(balance.availableQuantity, unit)}
+                </span>
+                <span className="max-md:hidden">
+                  {formatStockQuantity(balance.availableQuantity, unit)} free
+                </span>
+              </span>
+              <span className="md:justify-self-end">
+                <InventoryStatusBadge row={balance} />
+              </span>
+            </div>
             <InventoryRowActions row={balance} onStores={onStores} />
           </li>
         )
@@ -87,10 +106,7 @@ function InventoryGrid({ rows, onOpen, onStores }: CollectionProps) {
         const unit = balance.inventoryUnitName
         return (
           <li key={row.id} className="min-w-0">
-            <article
-              data-state={row.getIsSelected() ? "selected" : undefined}
-              className="flex h-full flex-col gap-3 rounded-xl border bg-card p-3 data-[state=selected]:border-transparent data-[state=selected]:ring-2 data-[state=selected]:ring-primary"
-            >
+            <article className="flex h-full flex-col gap-3 rounded-[var(--ui-radius-surface)] border border-border bg-card p-4">
               <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2">
                 <div className="grid min-w-0">
                   <ProductName balance={balance} onOpen={onOpen} />
@@ -98,16 +114,10 @@ function InventoryGrid({ rows, onOpen, onStores }: CollectionProps) {
                     {getInventoryLineDetail(balance)}
                   </span>
                 </div>
-                <div className="flex items-center gap-0.5">
-                  <RowSelectCheckbox
-                    row={row}
-                    label={`Select ${getInventoryRecordName(balance)}`}
-                  />
-                  <InventoryRowActions row={balance} onStores={onStores} />
-                </div>
+                <InventoryRowActions row={balance} onStores={onStores} />
               </div>
               <InventoryStatusBadge row={balance} />
-              <dl className="mt-auto grid grid-cols-2 gap-2 border-t pt-3 text-sm">
+              <dl className="mt-auto grid grid-cols-2 gap-2 border-t border-border pt-3 text-sm">
                 <div className="min-w-0">
                   <dt className="text-muted-foreground">In stock</dt>
                   <dd className="truncate tabular-nums">

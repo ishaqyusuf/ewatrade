@@ -1,14 +1,8 @@
 "use client"
 import {
-  DirectoryCollection,
-  DirectoryRecord,
   type DirectoryRecordDetail,
-  DirectoryToolbar,
-  SelectionBar,
   TableToolbarPortal,
   VirtualRow,
-  selectColumn,
-  useLoadedRowSelection,
 } from "@/components/tables/core"
 import { useInfiniteScroll } from "@/hooks/use-infinite-scroll"
 import { useSortParams } from "@/hooks/use-sort-params"
@@ -33,15 +27,13 @@ import {
 } from "@tanstack/react-table"
 import { useVirtualizer } from "@tanstack/react-virtual"
 import { type ReactNode, useCallback, useMemo } from "react"
-import { LedgerRowActions } from "./row-actions"
 import { LedgerTableHeader, LedgerTableSettings } from "./table-header"
 
 const stickyColumns = [
-  { id: "select", width: 50 },
   { id: "identity", width: 240 },
-  { id: "actions", width: 90, side: "right" as const },
+  { id: "actions", width: 64, side: "right" as const },
 ]
-const fixedColumnIds = ["select", "identity", "actions"]
+const fixedColumnIds = ["identity", "actions"]
 const getLedgerId = (row: { id: string }) => row.id
 
 /** Server cursor pages, loaded on scroll or with the Load more button. */
@@ -70,13 +62,11 @@ export function InventoryLedgerTable<T extends { id: string }>({
   sortFields,
   label,
   view,
-  selectionScope,
   getRecordLabel,
   describeRecord,
   onOpen,
   empty,
   summary,
-  viewLabel,
   pagination,
 }: {
   rows: T[]
@@ -86,26 +76,15 @@ export function InventoryLedgerTable<T extends { id: string }>({
   sortFields: readonly string[]
   label: string
   view: DirectoryView
-  selectionScope: string
   getRecordLabel: (row: T) => string
   describeRecord: (row: T) => LedgerRecordDescription
   onOpen: (row: T) => void
   empty: React.ReactNode
   /** Count line, e.g. "12 changes". */
   summary: string
-  /** Row menu item that opens the record, e.g. "View transfer". */
-  viewLabel?: string
   pagination?: LedgerPagination
 }) {
-  const columns = useMemo(
-    () => [selectColumn(getRecordLabel), ...domainColumns],
-    [getRecordLabel, domainColumns],
-  )
-  const [rowSelection, setRowSelection] = useLoadedRowSelection({
-    rows,
-    getRowId: getLedgerId,
-    scope: selectionScope,
-  })
+  const columns = domainColumns
   const columnIds = useMemo(() => getColumnIds(columns), [columns])
   const settings = useTableSettings({
     tableId,
@@ -118,7 +97,6 @@ export function InventoryLedgerTable<T extends { id: string }>({
     data: rows,
     columns,
     getRowId: getLedgerId,
-    onRowSelectionChange: setRowSelection,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     enableColumnResizing: true,
@@ -128,7 +106,6 @@ export function InventoryLedgerTable<T extends { id: string }>({
       columnOrder: settings.columnOrder,
       columnSizing: settings.columnSizing,
       columnVisibility: settings.columnVisibility,
-      rowSelection,
     },
     onColumnOrderChange: settings.setColumnOrder,
     onColumnSizingChange: settings.setColumnSizing,
@@ -156,12 +133,9 @@ export function InventoryLedgerTable<T extends { id: string }>({
   const openRow = useCallback((row: Row<T>) => onOpen(row.original), [onOpen])
   return (
     <div className="grid gap-3">
-      <DirectoryToolbar
-        table={table}
-        view={view}
-        selectAllLabel={`Select all loaded ${label.toLowerCase()}`}
-        summary={summary}
-      />
+      <p className="text-sm text-muted-foreground" aria-live="polite">
+        {summary}
+      </p>
       {view === "table" ? (
         <TableToolbarPortal>
           <LedgerTableSettings table={table} />
@@ -178,30 +152,24 @@ export function InventoryLedgerTable<T extends { id: string }>({
       {!rows.length ? (
         empty
       ) : view !== "table" ? (
-        <DirectoryCollection view={view} label={label}>
+        <ul
+          aria-label={label}
+          className="divide-y divide-border overflow-hidden rounded-[var(--ui-radius-surface)] border border-border bg-card"
+        >
           {visible.map((row) => (
-            <DirectoryRecord
+            <LedgerListRow
               key={row.id}
-              row={row}
-              view={view}
-              selectLabel={`Select ${getRecordLabel(row.original)}`}
+              label={getRecordLabel(row.original)}
               onOpen={() => onOpen(row.original)}
-              actions={
-                <LedgerRowActions
-                  label={getRecordLabel(row.original)}
-                  viewLabel={viewLabel}
-                  onOpen={() => onOpen(row.original)}
-                />
-              }
               {...describeRecord(row.original)}
             />
           ))}
-        </DirectoryCollection>
+        </ul>
       ) : (
         <section
           aria-label={label}
           ref={scroll.setContainerRef}
-          className="max-h-[560px] overflow-auto overscroll-contain border border-border"
+          className="max-h-[640px] overflow-auto overscroll-contain rounded-[var(--ui-radius-surface)] border border-border bg-card"
         >
           <DndContext
             id={`${tableId}-dnd`}
@@ -272,9 +240,53 @@ export function InventoryLedgerTable<T extends { id: string }>({
             : `Load more ${pagination.noun}`}
         </Button>
       ) : null}
-      <SelectionBar table={table} />
     </div>
   )
 }
 
 const noNextPage = () => Promise.resolve()
+
+/**
+ * One record on phones and in List view: the whole row opens it. Details read
+ * as one plain line under the title; the status sits on the right.
+ */
+function LedgerListRow({
+  label,
+  onOpen,
+  title,
+  description,
+  badges,
+  details,
+}: LedgerRecordDescription & { label: string; onOpen: () => void }) {
+  return (
+    <li>
+      <button
+        type="button"
+        aria-label={`Open ${label}`}
+        onClick={onOpen}
+        className="grid min-h-16 w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 px-4 py-3 text-left transition-colors hover:bg-[var(--hover)]"
+      >
+        <span className="grid min-w-0 gap-0.5">
+          <span className="truncate font-medium">
+            {title}
+            {description ? (
+              <span className="font-normal text-muted-foreground">
+                {" · "}
+                {description}
+              </span>
+            ) : null}
+          </span>
+          <span className="text-sm text-muted-foreground">
+            {details.map((detail, index) => (
+              <span key={detail.label}>
+                {index ? " · " : null}
+                {detail.value}
+              </span>
+            ))}
+          </span>
+        </span>
+        {badges ? <span className="shrink-0">{badges}</span> : null}
+      </button>
+    </li>
+  )
+}

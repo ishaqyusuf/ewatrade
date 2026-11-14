@@ -1,11 +1,6 @@
 "use client"
 
-import {
-  DirectoryToolbar,
-  SelectionBar,
-  TableToolbarPortal,
-  VirtualRow,
-} from "@/components/tables/core"
+import { TableToolbarPortal, VirtualRow } from "@/components/tables/core"
 import { useStickyColumns } from "@/hooks/use-sticky-columns"
 import { useTableDnd } from "@/hooks/use-table-dnd"
 import { useTableScroll } from "@/hooks/use-table-scroll"
@@ -23,11 +18,10 @@ import { InventoryTableHeader, InventoryTableSettings } from "./table-header"
 
 const ROW_HEIGHT = 57
 const STICKY_COLUMNS = [
-  { id: "select", width: 50 },
   { id: "product", width: 240 },
-  { id: "actions", width: 84, side: "right" as const },
+  { id: "actions", width: 64, side: "right" as const },
 ]
-const FIXED_COLUMN_IDS = ["select", "product"]
+const FIXED_COLUMN_IDS = ["product"]
 
 export function InventoryTableView({
   table,
@@ -81,12 +75,6 @@ export function InventoryTableView({
 
   return (
     <div className="grid gap-3">
-      <DirectoryToolbar
-        table={table}
-        view={view}
-        selectAllLabel="Select all shown stock"
-        summary={`${rows.length} shown`}
-      />
       {view === "table" ? (
         <TableToolbarPortal>
           <InventoryTableSettings table={table} />
@@ -114,7 +102,7 @@ export function InventoryTableView({
       ) : (
         <section
           ref={tableScroll.setContainerRef}
-          className="max-h-[560px] overflow-auto overscroll-contain border border-border"
+          className="max-h-[640px] overflow-auto overscroll-contain rounded-[var(--ui-radius-surface)] border border-border bg-card"
           aria-label="Stock"
         >
           <DndContext
@@ -164,7 +152,6 @@ export function InventoryTableView({
           <div aria-hidden="true" className="h-1" />
         </section>
       )}
-      <SelectionBar table={table} />
     </div>
   )
 }

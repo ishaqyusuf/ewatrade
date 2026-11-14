@@ -3,13 +3,12 @@
 import { InventorySummary } from "@/components/inventory/inventory-summary"
 import { InventoryStoresSheet } from "@/components/sheets/inventory-stores-sheet"
 import { LowStockLevelSheet } from "@/components/sheets/low-stock-level-sheet"
-import { useLoadedRowSelection } from "@/components/tables/core"
 import { useCatalogDetailParams } from "@/hooks/use-catalog-detail-params"
 import { useInventoryParams } from "@/hooks/use-inventory-params"
 import { useSortParams } from "@/hooks/use-sort-params"
 import { useTableSettings } from "@/hooks/use-table-settings"
 import { groupInventoryStores } from "@/lib/inventory-store-totals"
-import { filterInventory, summarizeInventory } from "@/lib/inventory-view"
+import { countInventoryFilters, filterInventory } from "@/lib/inventory-view"
 import { useTRPC } from "@/trpc/client"
 import type { DirectoryView } from "@/utils/directory-view-settings"
 import { type TableSettings, getColumnIds } from "@/utils/table-settings"
@@ -58,8 +57,11 @@ export function InventoryDataTable({
     [open],
   )
   const columns = useMemo(
-    () => createInventoryColumns(openDetail, setStoreDetail),
-    [openDetail, setStoreDetail],
+    () =>
+      createInventoryColumns(openDetail, setStoreDetail, {
+        showStore: !storeId,
+      }),
+    [openDetail, setStoreDetail, storeId],
   )
   const { query, stockFilter } = useInventoryParams()
   const deferredQuery = useDeferredValue(query)
@@ -69,38 +71,23 @@ export function InventoryDataTable({
     [urlSorting],
   )
   const { data: balances } = useSuspenseQuery(
-    trpc.inventory.balanceReport.queryOptions(
-      { includeCompatibleTotals: true, storeId },
-      { retry: false },
-    ),
+    trpc.inventory.balanceReport.queryOptions({ storeId }, { retry: false }),
   )
   const scopedRows = useMemo(
     () => (storeId ? balances.rows : groupInventoryStores(balances.rows)),
     [balances.rows, storeId],
   )
-  const summary = useMemo(
-    () => summarizeInventory(balances.rows),
-    [balances.rows],
-  )
+  const counts = useMemo(() => countInventoryFilters(scopedRows), [scopedRows])
   const rows = useMemo(
     () => filterInventory(scopedRows, deferredQuery, stockFilter),
     [scopedRows, deferredQuery, stockFilter],
   )
-  const [rowSelection, setRowSelection] = useLoadedRowSelection({
-    rows,
-    getRowId: getBalanceId,
-    scope: JSON.stringify([
-      storeId ?? "all",
-      deferredQuery.trim(),
-      stockFilter,
-    ]),
-  })
   const columnIds = useMemo(() => getColumnIds(columns), [columns])
   const tableSettings = useTableSettings({
     tableId: "inventory",
     initialSettings,
     columnIds,
-    fixedColumnIds: ["select", "product"],
+    fixedColumnIds: ["product"],
   })
   const table = useReactTable({
     data: rows,
@@ -108,7 +95,6 @@ export function InventoryDataTable({
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getRowId: getBalanceId,
-    onRowSelectionChange: setRowSelection,
     enableColumnResizing: true,
     columnResizeMode: "onChange",
     state: {
@@ -116,7 +102,6 @@ export function InventoryDataTable({
       columnVisibility: tableSettings.columnVisibility,
       columnSizing: tableSettings.columnSizing,
       columnOrder: tableSettings.columnOrder,
-      rowSelection,
     },
     onColumnVisibilityChange: tableSettings.setColumnVisibility,
     onColumnSizingChange: tableSettings.setColumnSizing,
@@ -124,14 +109,8 @@ export function InventoryDataTable({
   })
 
   return (
-    <div className="grid gap-6">
-      <InventorySummary summary={summary} />
-      {!storeId ? (
-        <p className="text-sm text-muted-foreground">
-          Each product adds up its stores. Open Stores to see each one. Stock on
-          the way is not counted until it is received.
-        </p>
-      ) : null}
+    <div className="grid gap-4">
+      <InventorySummary counts={counts} />
       <LowStockLevelSheet
         record={
           balances.rows.find((row) => row.balanceSourceId === levelBalanceId) ??

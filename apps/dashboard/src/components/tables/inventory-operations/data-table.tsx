@@ -73,7 +73,7 @@ export function OperationsDataTable({
     (row: InventoryOperation) => void setParams({ record: row.id }),
     [setParams],
   )
-  const columns = useMemo(() => operationColumns(open), [open])
+  const columns = useMemo(() => operationColumns(), [])
   const record = rows.find((row) => row.id === params.record) ?? null
   return (
     <div className="grid gap-4">
@@ -99,12 +99,6 @@ export function OperationsDataTable({
         label="Stock changes"
         summary={`${rows.length} change${rows.length === 1 ? "" : "s"}${query.hasNextPage ? " loaded" : ""}`}
         view={view}
-        selectionScope={JSON.stringify([
-          storeId ?? "all",
-          params.q,
-          params.filter,
-          categories.filter,
-        ])}
         getRecordLabel={getOperationLabel}
         describeRecord={describeOperation}
         onOpen={open}

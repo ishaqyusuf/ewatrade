@@ -7,7 +7,7 @@ export function NewTransferButton() {
   const { setParams } = useInventoryParams()
   return (
     <Button
-      className="rounded-none"
+      className="max-sm:flex-1"
       onClick={() =>
         void setParams({
           inventoryOperation: "transfer",

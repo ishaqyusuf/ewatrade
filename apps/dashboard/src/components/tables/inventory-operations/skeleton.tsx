@@ -2,15 +2,11 @@
 import {
   DirectoryCollectionSkeleton,
   TableSkeleton,
-  selectColumn,
 } from "@/components/tables/core"
 import type { DirectoryView } from "@/utils/directory-view-settings"
 import type { TableSettings } from "@/utils/table-settings"
-import { type InventoryOperation, operationColumns } from "./columns"
-const columns = [
-  selectColumn<InventoryOperation>(() => ""),
-  ...operationColumns(() => {}),
-]
+import { operationColumns } from "./columns"
+const columns = operationColumns()
 export function OperationsSkeleton({
   settings,
   view = "table",
@@ -24,7 +20,7 @@ export function OperationsSkeleton({
       columnVisibility={settings?.columns}
       columnSizing={settings?.sizing}
       columnOrder={settings?.order}
-      stickyColumnIds={["select", "identity", "actions"]}
+      stickyColumnIds={["identity"]}
     />
   )
 }

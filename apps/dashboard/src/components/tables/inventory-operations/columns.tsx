@@ -2,7 +2,6 @@
 import { stockChangeLabel, stockDate } from "@/lib/inventory-labels"
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
 import type { ColumnDef } from "@tanstack/react-table"
-import { LedgerRowActions } from "../inventory-ledger/row-actions"
 export type InventoryOperation =
   RouterOutputs["inventory"]["operationHistory"][number]
 export const operationSortFields = [
@@ -22,9 +21,7 @@ export function productsChangedText(count: number) {
   return `${count} product${count === 1 ? "" : "s"}`
 }
 
-export function operationColumns(
-  onOpen: (row: InventoryOperation) => void,
-): ColumnDef<InventoryOperation>[] {
+export function operationColumns(): ColumnDef<InventoryOperation>[] {
   return [
     {
       id: "identity",
@@ -36,8 +33,7 @@ export function operationColumns(
         headerLabel: "Change",
         sortField: "identity",
         sticky: true,
-        className:
-          "z-20 bg-background group-hover:bg-muted/40 group-aria-selected:bg-muted/60",
+        className: "z-20 bg-background group-hover:bg-[var(--hover)]",
       },
       cell: ({ row }) => (
         <span className="truncate font-medium">
@@ -71,20 +67,6 @@ export function operationColumns(
       size: 200,
       meta: { headerLabel: "Products changed", sortField: "movementCount" },
       cell: ({ row }) => productsChangedText(row.original.movementCount),
-    },
-    {
-      id: "actions",
-      header: "Actions",
-      size: 90,
-      enableHiding: false,
-      enableResizing: false,
-      meta: { sticky: true },
-      cell: ({ row }) => (
-        <LedgerRowActions
-          label={`${stockChangeLabel(row.original.type)}, ${stockDate(row.original.effectiveAt)}`}
-          onOpen={() => onOpen(row.original)}
-        />
-      ),
     },
   ]
 }

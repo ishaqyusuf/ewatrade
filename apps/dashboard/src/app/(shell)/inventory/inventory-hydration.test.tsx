@@ -103,6 +103,9 @@ mock.module("@/trpc/server", () => ({
   trpc,
 }))
 mock.module("@/trpc/client", () => ({ useTRPC: () => trpc }))
+mock.module("@/lib/inventory-page-access", () => ({
+  inventoryPageAccess: () => ({ storePicker: null, showShipments: false }),
+}))
 for (const [path, name] of [
   ["@/components/dashboard/inventory-page", "InventoryPage"],
   ["@/components/tables/inventory/skeleton", "InventoryTableSkeleton"],
@@ -297,7 +300,7 @@ const owners = [
     name: "stock balances",
     path: "inventory.balanceReport",
     route: InventoryRoutePage,
-    input: { includeCompatibleTotals: true },
+    input: {},
     marker: "balance",
     table: (storeId?: string) => (
       <InventoryDataTable storeId={storeId} view="table" />

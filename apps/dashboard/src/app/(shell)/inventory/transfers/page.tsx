@@ -1,6 +1,7 @@
 import { InventoryTransfersPage } from "@/components/dashboard/inventory-transfers-page"
 import { TransfersSkeleton } from "@/components/tables/stock-transfers/skeleton"
 import { canOperateInventory } from "@/lib/inventory-operations"
+import { inventoryPageAccess } from "@/lib/inventory-page-access"
 import { getServerSession } from "@/lib/session"
 import { getActiveTenant } from "@/lib/tenant"
 import { HydrateClient, prefetch, trpc } from "@/trpc/server"
@@ -34,6 +35,7 @@ export default async function Page() {
     <HydrateClient>
       <Suspense fallback={<TransfersSkeleton settings={initialSettings} />}>
         <InventoryTransfersPage
+          {...inventoryPageAccess(ctx)}
           store={store}
           allStores={ctx.inventoryScope === "all"}
           initialSettings={initialSettings}

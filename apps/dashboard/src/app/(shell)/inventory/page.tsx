@@ -1,6 +1,7 @@
 import { InventoryPage } from "@/components/dashboard/inventory-page"
 import { InventoryTableSkeleton } from "@/components/tables/inventory/skeleton"
 import { canOperateInventory } from "@/lib/inventory-operations"
+import { inventoryPageAccess } from "@/lib/inventory-page-access"
 import { getServerSession } from "@/lib/session"
 import { getActiveTenant } from "@/lib/tenant"
 import { HydrateClient, prefetch, trpc } from "@/trpc/server"
@@ -48,7 +49,6 @@ export default async function InventoryRoutePage() {
   void Promise.allSettled([
     prefetch(
       trpc.inventory.balanceReport.queryOptions({
-        includeCompatibleTotals: true,
         storeId: ctx.inventoryScope === "all" ? undefined : store.id,
       }),
     ),
@@ -60,6 +60,7 @@ export default async function InventoryRoutePage() {
         fallback={<InventoryTableSkeleton settings={initialSettings} />}
       >
         <InventoryPage
+          {...inventoryPageAccess(ctx)}
           store={store}
           allStores={ctx.inventoryScope === "all"}
           initialSettings={initialSettings}

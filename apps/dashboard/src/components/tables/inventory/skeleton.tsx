@@ -16,17 +16,15 @@ export function InventoryTableSkeleton({
   view?: DirectoryView
 } = {}) {
   return (
-    <div className="grid gap-6">
+    <div className="grid gap-4">
       <div
-        aria-label="Loading inventory summary"
-        data-summary-grid
-        data-summary-skeleton
-        className="grid h-32 grid-cols-2 divide-x divide-border border border-border lg:grid-cols-4"
+        aria-label="Loading stock counts"
+        className="grid grid-cols-2 gap-2 lg:grid-cols-4"
       >
         {[0, 1, 2, 3].map((id) => (
           <div
             key={id}
-            className="m-5 animate-pulse bg-muted motion-reduce:animate-none"
+            className="h-[4.75rem] animate-pulse rounded-[var(--ui-radius-surface)] bg-muted motion-reduce:animate-none"
           />
         ))}
       </div>
@@ -40,7 +38,7 @@ export function InventoryTableSkeleton({
           columnVisibility={settings?.columns}
           columnSizing={settings?.sizing}
           columnOrder={settings?.order}
-          stickyColumnIds={["select", "product", "actions"]}
+          stickyColumnIds={["product", "actions"]}
         />
       )}
     </div>

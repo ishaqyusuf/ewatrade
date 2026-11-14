@@ -68,6 +68,28 @@ export function filterInventory<T extends Balance>(
   )
 }
 
+export const inventoryStockFilters: readonly InventoryStockFilter[] = [
+  "all",
+  "low",
+  "out",
+  "reserved",
+]
+
+/**
+ * How many rows each filter tile shows, counted with the same rule as
+ * `filterInventory`, so a tile's number always matches the list under it.
+ */
+export function countInventoryFilters<T extends Balance>(
+  rows: readonly T[],
+): Record<InventoryStockFilter, number> {
+  return {
+    all: rows.length,
+    low: filterInventory(rows, "", "low").length,
+    out: filterInventory(rows, "", "out").length,
+    reserved: filterInventory(rows, "", "reserved").length,
+  }
+}
+
 /**
  * What a shop owner needs from one stock line: can it be sold, is it running
  * low, or where is it. The Product's low-stock level is in its main unit, so

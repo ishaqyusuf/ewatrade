@@ -76,7 +76,7 @@ export function TransfersDataTable({
     (row: StockTransfer) => void openTransfer(row.id),
     [openTransfer],
   )
-  const columns = useMemo(() => transferColumns(open), [open])
+  const columns = useMemo(() => transferColumns(), [])
   const query = (params.q ?? "").trim().toLowerCase()
   const rows = useMemo(
     () =>
@@ -112,13 +112,7 @@ export function TransfersDataTable({
         sortFields={transferSortFields}
         label="Transfers"
         summary={`${rows.length} transfer${rows.length === 1 ? "" : "s"}${data.length >= 200 ? " · showing the latest 200" : ""}`}
-        viewLabel="View transfer"
         view={view}
-        selectionScope={JSON.stringify([
-          storeId ?? "all",
-          query,
-          params.filter,
-        ])}
         getRecordLabel={getTransferLabel}
         describeRecord={describeTransfer}
         onOpen={open}
