@@ -117,6 +117,27 @@ export function assertCanManageInventory(tenant: TenantContext) {
   }
 }
 
+/**
+ * Stock cost is Finance data. Finance and Shipments are owner/admin only, so
+ * stock reads hide cost snapshots from managers and scoped staff.
+ */
+export function canSeeStockCost(tenant: TenantContext) {
+  const role =
+    tenant.staffAccess?.mode === "SCOPED"
+      ? tenant.staffAccess.businessRole
+      : tenant.membership.role
+  return ["OWNER", "ADMIN"].includes(String(role).toUpperCase())
+}
+
+function withoutCost<
+  T extends {
+    totalCostMinorSnapshot: string | null
+    unitCostMinorSnapshot: number | null
+  },
+>(row: T): T {
+  return { ...row, totalCostMinorSnapshot: null, unitCostMinorSnapshot: null }
+}
+
 function resolveStoreId(
   stores: Array<{ id: string }>,
   activeStore: { id: string } | null,
@@ -316,10 +337,11 @@ export const inventoryRouter = createTRPCRouter({
     .input(inventoryAuditExportSchema)
     .query(async ({ ctx, input }) => {
       assertCanManageInventory(ctx.tenantContext)
-      return exportInventoryAuditRows(ctx.db, {
+      const rows = await exportInventoryAuditRows(ctx.db, {
         ...input,
         tenantId: ctx.tenantContext.tenant.id,
       })
+      return canSeeStockCost(ctx.tenantContext) ? rows : rows.map(withoutCost)
     }),
 
   lowStockPage: protectedProcedure
@@ -413,10 +435,13 @@ export const inventoryRouter = createTRPCRouter({
           ctx.tenantContext.activeStore,
           input.storeId,
         )
-      return getStockOperationAudit(ctx.db, {
+      const audit = await getStockOperationAudit(ctx.db, {
         ...input,
         tenantId: ctx.tenantContext.tenant.id,
       })
+      return audit && !canSeeStockCost(ctx.tenantContext)
+        ? { ...audit, movements: audit.movements.map(withoutCost) }
+        : audit
     }),
 
   operationHistory: protectedProcedure
