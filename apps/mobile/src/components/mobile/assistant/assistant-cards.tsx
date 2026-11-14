@@ -58,9 +58,15 @@ export function ProposalCard({
   onEdit,
   onCancel,
   media,
+  confirmLabel = "Confirm",
+  cancelLabel = "Cancel",
 }: {
   title: string
   summary: string
+  /** e.g. "Approve and save" when approving a staff request. */
+  confirmLabel?: string
+  /** e.g. "Decline" when approving a staff request. */
+  cancelLabel?: string
   /** A picture beside the summary, e.g. a product draft's photo. */
   media?: ReactNode
   state:
@@ -123,7 +129,7 @@ export function ProposalCard({
               disabled={disabled || confirmDisabled}
               onPress={onConfirm}
             >
-              Confirm
+              {confirmLabel}
             </ActionButton>
             <ActionButton
               className={actionClass}
@@ -139,7 +145,7 @@ export function ProposalCard({
               disabled={disabled}
               onPress={onCancel}
             >
-              Cancel
+              {cancelLabel}
             </ActionButton>
           </View>
         </>

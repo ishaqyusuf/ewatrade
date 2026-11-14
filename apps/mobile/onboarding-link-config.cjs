@@ -36,6 +36,8 @@ function getOnboardingLinkConfig(variant, configured) {
     // Saved-Product links from WhatsApp/assistant (dashboard redirects on web).
     recordPathPrefix: `${base}/open/catalog-item/`,
     responsePathPrefix: `${base}/open/assistant-response/`,
+    // Receipts staff sent for approval (owners and admins).
+    approvalPathPrefix: `${base}/open/receipt-approval/`,
   }
 }
 

@@ -36,3 +36,19 @@ test("other hosts, paths, schemes and odd identities never route", () => {
     expect(resolveSavedRecordLink(link, dash)).toBeNull()
   expect(resolveSavedRecordLink(`${dash}/open/catalog-item/item1`)).toBeNull()
 })
+
+test("receipt approval links open the native approval screen", () => {
+  expect(
+    resolveSavedRecordLink(`${dash}/open/receipt-approval/cmh0abc_12-x`, dash),
+  ).toBe("/receipt-approval/cmh0abc_12-x")
+  expect(resolveSavedRecordLink("ewatrade://open/receipt-approval/req1/")).toBe(
+    "/receipt-approval/req1",
+  )
+  for (const link of [
+    `${dash}/receipt-approval/req1`,
+    `${dash}/open/receipt-approval/req1/decline`,
+    `${dash}/open/receipt-approval/..%2Fsecret`,
+    "https://evil.example/open/receipt-approval/req1",
+  ])
+    expect(resolveSavedRecordLink(link, dash)).toBeNull()
+})

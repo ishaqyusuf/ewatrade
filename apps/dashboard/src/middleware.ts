@@ -94,6 +94,7 @@ export function middleware(request: NextRequest) {
     request.nextUrl.pathname === "/assistant-review" ||
     request.nextUrl.pathname.startsWith("/r/") ||
     request.nextUrl.pathname.startsWith("/receipt-approval/") ||
+    request.nextUrl.pathname.startsWith("/open/receipt-approval/") ||
     request.nextUrl.pathname === "/storefront-preview" ||
     request.nextUrl.pathname === "/storefront" ||
     request.nextUrl.pathname.startsWith("/storefront/updates/") ||

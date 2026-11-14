@@ -181,6 +181,17 @@ export function OperationsDashboardSurface({
       retry: false,
     }),
   )
+  // Receipts staff sent from chat for an owner or admin to approve (19l).
+  const receiptApprovals = useQuery(
+    trpc.assistant.receiptApprovals.queryOptions(undefined, {
+      enabled:
+        salesQueryEnabled &&
+        ["OWNER", "ADMIN"].includes(normalizeMobileRole(profile?.role)),
+      refetchInterval: 60_000,
+      retry: false,
+    }),
+  )
+  const receiptApprovalCount = receiptApprovals.data?.length ?? 0
   const repSalesQueryEnabled = isAttendant && !isOffline
   const repTodaySales = useQuery(
     trpc.orders.reportSummary.queryOptions(
@@ -588,6 +599,26 @@ export function OperationsDashboardSurface({
                     sub: "Returns and refunds to decide",
                     tint: "rose" as const,
                     title: `${changeApprovals.data?.length} ${changeApprovals.data?.length === 1 ? "approval" : "approvals"} waiting`,
+                  },
+                ]
+              : []),
+            ...(receiptApprovalCount > 0
+              ? [
+                  {
+                    icon: "Receipt" as const,
+                    key: "receipt-approvals",
+                    onPress: () => {
+                      const only = receiptApprovals.data?.[0]
+                      if (receiptApprovalCount === 1 && only)
+                        router.push({
+                          pathname: "/receipt-approval/[id]",
+                          params: { id: only.id },
+                        })
+                      else router.push("/receipt-approvals-modal" as never)
+                    },
+                    sub: "Staff sent them from chat",
+                    tint: "amber" as const,
+                    title: `${receiptApprovalCount} ${receiptApprovalCount === 1 ? "receipt" : "receipts"} to approve`,
                   },
                 ]
               : []),

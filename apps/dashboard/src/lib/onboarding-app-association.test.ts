@@ -18,6 +18,8 @@ test("only the selected app owns setup and verification links", () => {
       "/signup",
       "/api/early-access/verify",
       "/open/catalog-item/*",
+      "/open/assistant-response/*",
+      "/open/receipt-approval/*",
     ])
     expect(result.android?.[0]?.target.package_name).toBe(
       `com.ewatrade.${suffix}`,
@@ -61,6 +63,8 @@ test("configured Dashboard base paths match native association paths", () => {
     "/setup/signup",
     "/setup/api/early-access/verify",
     "/setup/open/catalog-item/*",
+    "/setup/open/assistant-response/*",
+    "/setup/open/receipt-approval/*",
   ])
   expect(
     onboardingAppAssociations({

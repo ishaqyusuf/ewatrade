@@ -146,7 +146,7 @@ function appOrigin() {
   ).replace(/\/+$/, "")
 }
 export function receiptApprovalUrl(id: string) {
-  return `${appOrigin()}/receipt-approval/${encodeURIComponent(id)}`
+  return `${appOrigin()}/open/receipt-approval/${encodeURIComponent(id)}`
 }
 
 /**

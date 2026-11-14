@@ -333,6 +333,10 @@ const InitialLayout = ({
         </Stack.Protected>
         <Stack.Protected guard={isAuthenticated && !isInvitedStaff}>
           <Stack.Screen name="business-switch-modal" options={modalOptions} />
+          {/* Owners and admins approve receipts staff sent from chat; the
+              screens explain when the signed-in role can't. */}
+          <Stack.Screen name="receipt-approvals-modal" options={modalOptions} />
+          <Stack.Screen name="receipt-approval/[id]" options={modalOptions} />
           <Stack.Screen name="order-receipts-modal" options={modalOptions} />
           <Stack.Screen name="payments-to-check-modal" options={modalOptions} />
           <Stack.Screen name="payment-link/[orderId]" options={modalOptions} />

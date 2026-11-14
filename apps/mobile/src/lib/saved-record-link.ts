@@ -18,8 +18,9 @@ function dashboardBase(dashboardUrl?: string) {
 
 /**
  * Saved-Product links (`/open/catalog-item/<id>`) from WhatsApp and the
- * assistant open that exact Catalog item. The link carries no scope: the item
- * screen reads it with the signed-in business, Store and role, as usual.
+ * assistant open that exact Catalog item; receipt approval links
+ * (`/open/receipt-approval/<id>`) open the approval screen. The link carries
+ * no scope: each screen reads it with the signed-in business, Store and role.
  */
 export function resolveSavedRecordLink(path: string, dashboardUrl?: string) {
   let pathname: string
@@ -38,13 +39,15 @@ export function resolveSavedRecordLink(path: string, dashboardUrl?: string) {
     if (!path.startsWith("/")) return null
     pathname = path.split(/[?#]/)[0] ?? ""
   }
-  const match = pathname.match(/^\/open\/catalog-item\/([^/]+)\/?$/)
-  if (!match?.[1]) return null
+  const match = pathname.match(
+    /^\/open\/(catalog-item|receipt-approval)\/([^/]+)\/?$/,
+  )
+  if (!match?.[1] || !match[2]) return null
   let id: string
   try {
-    id = decodeURIComponent(match[1])
+    id = decodeURIComponent(match[2])
   } catch {
     return null
   }
-  return RECORD_ID.test(id) ? `/catalog-item/${id}` : null
+  return RECORD_ID.test(id) ? `/${match[1]}/${id}` : null
 }
