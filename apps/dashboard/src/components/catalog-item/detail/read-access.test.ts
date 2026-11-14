@@ -8,6 +8,7 @@ import { createTRPCOptionsProxy } from "@trpc/tanstack-react-query"
 import { createLoader } from "nuqs/server"
 import { catalogDetailScope } from "../../../../../api/src/catalog/detail-access"
 import { catalogDetailParamParsers } from "../../../hooks/use-catalog-detail-params"
+import { GET as openCatalogItemLink } from "../../../app/open/catalog-item/[itemId]/route"
 import { canAccessDashboardPath } from "../../../lib/navigation"
 import {
   catalogDetailAccessFingerprint,
@@ -19,7 +20,7 @@ import {
 
 const origin = { tenantId: "business", storeId: "store" }
 
-test("an authorized restricted catalog reader reaches the actual accessible Sales detail consumer without catalog management", () => {
+test("an authorized restricted catalog reader reaches the actual accessible Sales detail consumer without catalog management", async () => {
   const policy = catalogDetailScope(
     { itemId: "saved-item", storeId: origin.storeId },
     {
@@ -38,7 +39,17 @@ test("an authorized restricted catalog reader reaches the actual accessible Sale
     },
   )
   if (!link) throw Error("Expected authorized exact catalog handoff")
-  const url = new URL(link.href)
+  // The record link is the app-claimable /open/catalog-item/<id> path; on the
+  // web it redirects to the Sales detail sheet, which is what a reader lands on.
+  const linkUrl = new URL(link.href)
+  expect(linkUrl.pathname).toBe("/open/catalog-item/saved-item")
+  const redirect = await openCatalogItemLink(new Request(linkUrl), {
+    params: Promise.resolve({ itemId: "saved-item" }),
+  })
+  expect(redirect.status).toBe(307)
+  const url = new URL(redirect.headers.get("location") ?? "")
+  expect(url.origin).toBe(linkUrl.origin)
+  expect(url.pathname).toBe("/sales")
   expect(
     canAccessDashboardPath(url.pathname, "CASHIER", {
       staffAccessMode: "LEGACY",
