@@ -1,5 +1,6 @@
 "use client"
 
+import { ConfirmAlert } from "@/components/forms/confirm-alert"
 import { FormFeedback } from "@/components/forms/form-feedback"
 import { useServiceRequestFilters } from "@/components/service-work/service-request-search-filter"
 import {
@@ -8,23 +9,26 @@ import {
   formatWhen,
   isOpenRequest,
   requestStatus,
+  toneClass,
 } from "@/components/service-work/service-utils"
 import {
-  DirectoryToolbar,
   SelectionBar,
   SimpleDirectoryTable,
   selectColumn,
   useLoadedRowSelection,
 } from "@/components/tables/core"
+import { useMobileOverlay } from "@/hooks/use-mobile-overlay"
 import { useServiceWorkParams } from "@/hooks/use-service-work-params"
 import { useTRPC } from "@/trpc/client"
 import {
+  Badge,
   Button,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
   Textarea,
+  cn,
   toast,
 } from "@ewatrade/ui"
 import { ArrowDown01Icon } from "@hugeicons/core-free-icons"
@@ -85,7 +89,9 @@ export function ServiceRequestsDataTable({
     "needs_information" | "declined" | null
   >(null)
   const [message, setMessage] = useState("")
+  const [confirmDecline, setConfirmDecline] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const phone = useMobileOverlay()
   const running = useRef(false)
   const [working, setWorking] = useState(false)
   const reviewScope = JSON.stringify([storeId, filter, selection])
@@ -210,12 +216,16 @@ export function ServiceRequestsDataTable({
   })
   const selected = table.getSelectedRowModel().rows.map((row) => row.original)
   const eligible = selected.filter((request) => isOpenRequest(request.status))
-  async function applyBatch() {
-    if (running.current || !batchAction) return
+  function reviewBatch() {
     if (!message.trim()) {
       setError("Enter a message for the selected customers.")
       return
     }
+    if (batchAction === "declined") setConfirmDecline(true)
+    else void applyBatch()
+  }
+  async function applyBatch() {
+    if (running.current || !batchAction) return
     running.current = true
     setWorking(true)
     setError(null)
@@ -248,6 +258,7 @@ export function ServiceRequestsDataTable({
     } finally {
       running.current = false
       setWorking(false)
+      setConfirmDecline(false)
       await queryClient.invalidateQueries({
         queryKey: trpc.serviceAccess.requests.pathKey(),
       })
@@ -255,18 +266,12 @@ export function ServiceRequestsDataTable({
   }
   return (
     <div className="grid gap-4">
-      <DirectoryToolbar
-        table={table}
-        view="table"
-        selectAllLabel="Select all loaded requests"
-        summary={`${data.length} requests loaded`}
-      />
       {error ? (
         <FormFeedback appearance="dashboard">{error}</FormFeedback>
       ) : null}
       {batchAction ? (
         <section
-          className="grid gap-3 border border-border p-4"
+          className="grid gap-3 rounded-[var(--ui-radius-surface)] border border-border bg-card p-4"
           aria-label="Review request batch"
         >
           <p className="text-sm">
@@ -285,7 +290,7 @@ export function ServiceRequestsDataTable({
           <div className="flex gap-2">
             <Button
               disabled={working || !eligible.length}
-              onClick={() => void applyBatch()}
+              onClick={reviewBatch}
             >
               {batchAction === "declined" ? "Decline requests" : "Save replies"}
             </Button>
@@ -302,19 +307,97 @@ export function ServiceRequestsDataTable({
           </p>
         </section>
       ) : null}
-      {data.length ? (
+      {data.length && phone ? (
+        <ul
+          aria-label="Customer requests"
+          className="divide-y divide-border overflow-hidden rounded-[var(--ui-radius-surface)] border border-border bg-card"
+        >
+          {data.map((request) => {
+            const status = requestStatus(request.status)
+            return (
+              <li key={request.id}>
+                <button
+                  type="button"
+                  onClick={() => open(request.id)}
+                  className="grid w-full gap-1 px-4 py-3 text-left hover:bg-[var(--hover)]"
+                >
+                  <span className="flex min-w-0 items-center justify-between gap-3">
+                    <span className="truncate text-base font-medium">
+                      {request.customerName}
+                    </span>
+                    <Badge
+                      className={cn(
+                        "shrink-0 rounded-full",
+                        toneClass(status.tone),
+                      )}
+                    >
+                      {status.label}
+                    </Badge>
+                  </span>
+                  <span className="truncate text-sm text-muted-foreground">
+                    {request.lines
+                      .map((line) => `${line.offeringName} · ${line.quantity}`)
+                      .join(", ")}
+                  </span>
+                  <span className="text-sm text-muted-foreground">
+                    {formatWhen(request.createdAt, timeZone)}
+                    {" · "}
+                    <span
+                      className={cn(
+                        "tabular-nums",
+                        request.currentQuote && "font-medium text-foreground",
+                      )}
+                    >
+                      {request.currentQuote
+                        ? formatPrice(
+                            request.currentQuote.totalMinor,
+                            request.currentQuote.currencyCode,
+                          )
+                        : "Price to quote"}
+                    </span>
+                  </span>
+                </button>
+              </li>
+            )
+          })}
+        </ul>
+      ) : data.length ? (
         <SimpleDirectoryTable
           table={table}
           label="Customer requests"
           onRowOpen={(row) => open(row.original.id)}
         />
       ) : (
-        <div className="border border-dashed border-border p-10 text-center text-sm text-muted-foreground">
+        <div className="rounded-[var(--ui-radius-surface)] border border-dashed border-border p-10 text-center text-sm text-muted-foreground">
           {requests.length
             ? "No matching requests. Try another search or status."
             : "No customer requests yet. Share a request link or prepare a quote from New job."}
         </div>
       )}
+      <ConfirmAlert
+        open={confirmDecline}
+        title={
+          eligible.length === 1
+            ? `Decline ${eligible[0]?.customerName}’s request?`
+            : `Decline ${eligible.length} requests?`
+        }
+        description={`${eligible
+          .slice(0, 3)
+          .map((request) => request.customerName)
+          .join(
+            ", ",
+          )}${eligible.length > 3 ? ` and ${eligible.length - 3} more` : ""}. This can’t be undone.`}
+        action={
+          eligible.length === 1
+            ? "Decline request"
+            : `Decline ${eligible.length} requests`
+        }
+        cancelLabel="Keep requests"
+        danger
+        pending={working}
+        onCancel={() => setConfirmDecline(false)}
+        onConfirm={() => void applyBatch()}
+      />
       <SelectionBar table={table}>
         <Button
           size="sm"

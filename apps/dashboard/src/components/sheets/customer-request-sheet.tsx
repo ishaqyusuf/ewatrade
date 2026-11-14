@@ -364,10 +364,11 @@ function CustomerRequestContent({
             </>
           ) : null}
         </dl>
-        <p className="text-xs text-muted-foreground">
-          Nothing is booked or charged until the customer accepts a quote. Then
-          the job is created for you.
-        </p>
+        {open ? (
+          <p className="text-sm text-muted-foreground">
+            Nothing is booked or charged until the customer accepts a quote.
+          </p>
+        ) : null}
       </div>
     </SheetFrame>
   )
