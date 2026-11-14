@@ -27,11 +27,7 @@ export function CheckoutReturnables({
   if (!available.length && !returnables.length) return null
 
   const saved = Boolean(selectedCustomer?.directoryId)
-  const blocked = isOffline
-    ? "Connect to send returnables with this sale"
-    : saved
-      ? null
-      : "Choose a saved customer to track returnables"
+  const blocked = saved ? null : "Choose a saved customer to track returnables"
   const remaining = available.filter(
     (item) => !returnables.some((row) => row.catalogItemId === item.id),
   )
@@ -73,7 +69,10 @@ export function CheckoutReturnables({
                     {row.name}
                   </Text>
                   <Text className="text-xs text-muted-foreground">
-                    {blocked ?? "To be returned"}
+                    {blocked ??
+                      (isOffline
+                        ? "Goes out when this sale syncs"
+                        : "To be returned")}
                   </Text>
                 </View>
                 <Pressable

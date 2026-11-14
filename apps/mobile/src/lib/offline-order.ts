@@ -32,6 +32,8 @@ export function buildOfflineOrderCommand(input: {
   } | null
   lines: OfflineOrderLine[]
   payment?: OfflineOrderPayment
+  /** Crates and other returnables going out; needs a saved customer. */
+  returnables?: Array<{ catalogItemId: string; quantity: number }>
   deliveryDueAt?: Date
   fulfillNow?: boolean
 }) {
@@ -53,6 +55,7 @@ export function buildOfflineOrderCommand(input: {
       ...(input.payment ? { initialPayment: input.payment } : {}),
       kind: "commercial_order" as const,
       lines: input.lines,
+      ...(input.returnables?.length ? { returnables: input.returnables } : {}),
     },
   }
 }

@@ -2,7 +2,7 @@ import { useOperationalModeStore } from "@/store/operationalModeStore"
 import { useTRPC } from "@/trpc/client"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 
-/** Items the business set up as Returnable (crates, cylinders). */
+/** Items the business set up as Returnable (crates, cylinders); offline keeps the last list read. */
 export function useReturnableItems(enabled = true) {
   const trpc = useTRPC()
   const isOffline = useOperationalModeStore((state) => state.isOfflineMode)

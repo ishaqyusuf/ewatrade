@@ -66,6 +66,8 @@ type CommercialOrderPayload = {
     | CommercialOrderCustomLineInput
   >
   notes?: string
+  /** Returnables going out with the saved sale; issued when it syncs. */
+  returnables?: Array<{ catalogItemId: string; quantity: number }>
   serviceChargeMinor?: number
   taxMinor?: number
 }

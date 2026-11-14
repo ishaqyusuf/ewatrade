@@ -105,4 +105,38 @@ describe("offline Order command", () => {
       lines: [{ offeringId: "offering_456", quantity: "1" }],
     })
   })
+
+  test("carries returnables through device persistence and API replay", () => {
+    const built = buildOfflineOrderCommand({
+      clientCommandId: "returnables-order",
+      customer: { directoryId: "customer_1", name: "Mama Tola Stores" },
+      lines: [{ offeringId: "offering_123", quantity: "80" }],
+      returnables: [{ catalogItemId: "crate_1", quantity: 58 }],
+    })
+    const replay = offlineReplaySchema.parse({
+      commands: [
+        JSON.parse(
+          JSON.stringify({
+            ...built,
+            createdAtClient: new Date("2026-11-14T06:00:00.000Z"),
+          }),
+        ),
+      ],
+      deviceId: "returnables-device",
+      storeId: "store_123",
+    })
+    const payload: OfflineCommandPayload | undefined =
+      replay.commands[0]?.payload
+    expect(payload?.customerId).toBe("customer_1")
+    expect(payload?.returnables).toEqual([
+      { catalogItemId: "crate_1", quantity: 58 },
+    ])
+    expect(
+      buildOfflineOrderCommand({
+        clientCommandId: "no-returnables",
+        lines: [{ offeringId: "offering_123", quantity: "1" }],
+        returnables: [],
+      }).payload,
+    ).not.toHaveProperty("returnables")
+  })
 })

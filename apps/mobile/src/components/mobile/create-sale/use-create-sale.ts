@@ -906,12 +906,8 @@ export function useCreateSale({
     }
 
     const returnableLines = saleReturnableLines(returnables)
-    if (returnables.length && (isOffline || !selectedCustomer?.directoryId)) {
-      setError(
-        isOffline
-          ? "Returnables need a connection. Remove them or reconnect."
-          : "Choose a saved customer to send returnables, or remove them.",
-      )
+    if (returnables.length && !selectedCustomer?.directoryId) {
+      setError("Choose a saved customer to send returnables, or remove them.")
       return
     }
     if (returnableLines === null) {
@@ -947,6 +943,7 @@ export function useCreateSale({
             deliveryDueAt,
             fulfillNow,
             lines,
+            returnables: returnableLines,
             payment:
               paymentSummary.receivedMinor > 0
                 ? {
