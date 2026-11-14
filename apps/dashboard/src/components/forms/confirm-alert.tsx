@@ -23,6 +23,7 @@ export function ConfirmAlert({
   cancelLabel = "Go back",
   danger = false,
   pending = false,
+  disabled = false,
   onConfirm,
   onCancel,
   children,
@@ -34,6 +35,8 @@ export function ConfirmAlert({
   cancelLabel?: ReactNode
   danger?: boolean
   pending?: boolean
+  /** Keeps the action off until a field inside (children) is filled. */
+  disabled?: boolean
   onConfirm: () => void
   onCancel: () => void
   children?: ReactNode
@@ -63,7 +66,7 @@ export function ConfirmAlert({
             type="button"
             variant={danger ? "destructive" : "default"}
             isSubmitting={pending}
-            disabled={pending}
+            disabled={pending || disabled}
             onClick={onConfirm}
           >
             {action}

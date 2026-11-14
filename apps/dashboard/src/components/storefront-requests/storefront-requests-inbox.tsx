@@ -1,11 +1,13 @@
 "use client"
 
 import { CustomerMessageEditor } from "@/components/business-banking/customer-message-editor"
+import { ConfirmAlert } from "@/components/forms/confirm-alert"
 import { FormFeedback } from "@/components/forms/form-feedback"
-import { PageHeader } from "@/components/page-header"
+import { FilterPills } from "@/components/inventory/filter-pills"
 import { ScrollableContent } from "@/components/scrollable-content"
+import { SheetFrame } from "@/components/sheets/sheet-frame"
 import { useTRPC } from "@/trpc/client"
-import { readPollInterval } from "@/trpc/query-read-errors"
+import { isRejectedRead } from "@/trpc/query-read-errors"
 import type { AppRouter } from "@ewatrade/api/trpc/routers/_app"
 import {
   Alert,
@@ -26,28 +28,20 @@ import {
   FieldLabel,
   Input,
   Separator,
+  Sheet,
   Spinner,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-  Tabs,
-  TabsList,
-  TabsTrigger,
   Textarea,
   buttonVariants,
   cn,
 } from "@ewatrade/ui"
 import { multiplyExactDecimals } from "@ewatrade/utils/exact-decimal"
-import { ArrowLeft01Icon, InboxIcon } from "@hugeicons/core-free-icons"
+import { InboxIcon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import type { inferRouterOutputs } from "@trpc/server"
 import Link from "next/link"
 import { parseAsString, parseAsStringLiteral, useQueryState } from "nuqs"
-import { useId, useMemo, useRef, useState } from "react"
+import { useEffect, useId, useMemo, useRef, useState } from "react"
 import {
   alertLabels,
   money,
@@ -57,7 +51,20 @@ import {
   whatsAppDraftUrl,
 } from "./storefront-requests-model"
 
-const FRESH = { staleTime: 0, refetchOnMount: "always" as const, retry: false }
+/** Lists refresh on load, on focus and after every action here; never on a timer. */
+const FRESH = {
+  staleTime: 0,
+  refetchOnMount: "always" as const,
+  refetchOnWindowFocus: "always" as const,
+  retry: false,
+}
+/**
+ * The one timed read: the two pending counts (two COUNT queries), once a
+ * minute while the tab is visible, for ten minutes after load or the last
+ * focus. A changed count refreshes the open list.
+ */
+const COUNT_CHECK_MS = 60_000
+const COUNT_CHECK_WINDOW_MS = 10 * 60_000
 const kinds = ["products", "services"] as const
 const filters = ["open", "confirmed", "closed", "all"] as const
 
@@ -134,67 +141,128 @@ function servicePreference(
  * Requests customers sent from the business website. Product requests are pending
  * until confirmed here; confirming creates the canonical Order and reserves stock.
  */
-export function StorefrontRequestsInbox({ timeZone }: { timeZone: string }) {
-  const [kind, setKind] = useQueryState(
+export function StorefrontRequestsInbox({
+  canManage,
+  timeZone,
+}: {
+  canManage: boolean
+  timeZone: string
+}) {
+  const [kindParam, setKind] = useQueryState(
     "kind",
     parseAsStringLiteral(kinds).withDefault("products"),
   )
+  // Service requests are a manager's: quotes set prices.
+  const kind = canManage ? kindParam : "products"
   const [filter, setFilter] = useQueryState(
     "show",
     parseAsStringLiteral(filters).withDefault("open"),
   )
   const [selected, setSelected] = useQueryState("request", parseAsString)
   const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  const activeSince = useRef(Date.now())
+  useEffect(() => {
+    const restart = () => {
+      if (document.visibilityState === "visible")
+        activeSince.current = Date.now()
+    }
+    document.addEventListener("visibilitychange", restart)
+    window.addEventListener("focus", restart)
+    return () => {
+      document.removeEventListener("visibilitychange", restart)
+      window.removeEventListener("focus", restart)
+    }
+  }, [])
   const counts = useQuery({
     ...trpc.storefrontRequests.counts.queryOptions(),
     ...FRESH,
-    refetchInterval: (query) => readPollInterval(query.state.error, 30_000),
+    refetchInterval: (query) =>
+      !isRejectedRead(query.state.error) &&
+      Date.now() - activeSince.current < COUNT_CHECK_WINDOW_MS
+        ? COUNT_CHECK_MS
+        : false,
   })
+  const total = counts.data?.total
+  const seenTotal = useRef(total)
+  useEffect(() => {
+    if (total === undefined) return
+    if (seenTotal.current !== undefined && seenTotal.current !== total) {
+      void queryClient.invalidateQueries({
+        queryKey: trpc.storefrontRequests.orders.queryKey(),
+      })
+      void queryClient.invalidateQueries({
+        queryKey: trpc.storefrontRequests.services.queryKey(),
+      })
+    }
+    seenTotal.current = total
+  }, [total, queryClient, trpc])
+  const kindTabs = [
+    {
+      id: "products" as const,
+      label: `Product orders${counts.data?.orders ? ` · ${counts.data.orders}` : ""}`,
+    },
+    ...(canManage
+      ? [
+          {
+            id: "services" as const,
+            label: `Service requests${counts.data?.services ? ` · ${counts.data.services}` : ""}`,
+          },
+        ]
+      : []),
+  ]
   return (
     <ScrollableContent>
-      <div className="grid min-w-0 gap-6 pt-6 pb-24">
-        <PageHeader
-          eyebrow="Website"
-          title="Website requests"
-          description="Orders and service requests customers sent from your storefront. Nothing is charged until you confirm."
+      <div className="grid min-w-0 gap-4 pt-4 pb-24 sm:pb-8">
+        {kindTabs.length > 1 ? (
+          <nav
+            aria-label="Request type"
+            className="min-w-0 border-b border-border"
+          >
+            <ul className="flex gap-6 overflow-x-auto scrollbar-hide">
+              {kindTabs.map((tab) => {
+                const active = kind === tab.id
+                return (
+                  <li key={tab.id} className="shrink-0">
+                    <button
+                      type="button"
+                      aria-current={active ? "page" : undefined}
+                      onClick={() => {
+                        void setKind(tab.id === "products" ? null : tab.id)
+                        void setSelected(null)
+                        void setFilter(null)
+                      }}
+                      className={cn(
+                        "relative inline-flex min-h-11 items-center text-sm text-muted-foreground transition-colors hover:text-foreground",
+                        active &&
+                          "font-medium text-foreground after:absolute after:inset-x-0 after:-bottom-px after:h-0.5 after:bg-foreground",
+                      )}
+                    >
+                      {tab.label}
+                    </button>
+                  </li>
+                )
+              })}
+            </ul>
+          </nav>
+        ) : null}
+        <FilterPills
+          label="Show"
+          value={filter}
+          onChange={(value) => {
+            void setFilter(value === "open" ? null : value)
+            void setSelected(null)
+          }}
+          options={[
+            { id: "open", label: "To review" },
+            {
+              id: "confirmed",
+              label: kind === "products" ? "Confirmed" : "Quoted",
+            },
+            { id: "closed", label: "Closed" },
+            { id: "all", label: "All" },
+          ]}
         />
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <Tabs
-            value={kind}
-            onValueChange={(value) => {
-              void setKind(value as (typeof kinds)[number])
-              void setSelected(null)
-              void setFilter("open")
-            }}
-          >
-            <TabsList aria-label="Request type">
-              <TabsTrigger value="products">
-                Product orders
-                {counts.data?.orders ? ` · ${counts.data.orders}` : ""}
-              </TabsTrigger>
-              <TabsTrigger value="services">
-                Service requests
-                {counts.data?.services ? ` · ${counts.data.services}` : ""}
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
-          <Tabs
-            value={filter}
-            onValueChange={(value) => {
-              void setFilter(value as (typeof filters)[number])
-              void setSelected(null)
-            }}
-          >
-            <TabsList aria-label="Show">
-              <TabsTrigger value="open">To review</TabsTrigger>
-              <TabsTrigger value="confirmed">
-                {kind === "products" ? "Confirmed" : "Quoted"}
-              </TabsTrigger>
-              <TabsTrigger value="closed">Closed</TabsTrigger>
-              <TabsTrigger value="all">All</TabsTrigger>
-            </TabsList>
-          </Tabs>
-        </div>
         {kind === "products" ? (
           <OrderRequests
             filter={filter}
@@ -216,16 +284,36 @@ export function StorefrontRequestsInbox({ timeZone }: { timeZone: string }) {
   )
 }
 
+/** The record opens in a right sheet addressed by `?request=`. */
+function RequestSheet({
+  open,
+  onClose,
+  children,
+}: {
+  open: boolean
+  onClose: () => void
+  children: React.ReactNode
+}) {
+  return (
+    <Sheet
+      open={open}
+      onOpenChange={(next) => {
+        if (!next) onClose()
+      }}
+    >
+      {open ? children : null}
+    </Sheet>
+  )
+}
+
 function ListShell({
   label,
-  selected,
   loading,
   error,
   empty,
   children,
 }: {
   label: string
-  selected: boolean
   loading: boolean
   error: unknown
   empty: boolean
@@ -234,10 +322,7 @@ function ListShell({
   return (
     <section
       aria-label={label}
-      className={cn(
-        "grid min-w-0 content-start rounded-xl border border-border",
-        selected && "max-lg:hidden",
-      )}
+      className="grid min-w-0 content-start overflow-hidden rounded-[var(--ui-radius-surface)] border border-border bg-card"
     >
       {loading ? (
         <output
@@ -260,9 +345,6 @@ function ListShell({
             aria-hidden
           />
           <b className="font-medium">Nothing here</b>
-          <span className="text-muted-foreground">
-            New requests from your website appear here.
-          </span>
         </div>
       ) : (
         children
@@ -286,14 +368,12 @@ function OrderRequests({
   const list = useQuery({
     ...trpc.storefrontRequests.orders.queryOptions({ filter }),
     ...FRESH,
-    refetchInterval: (query) => readPollInterval(query.state.error, 30_000),
   })
   const items = list.data?.items ?? []
   return (
-    <div className="grid min-w-0 items-start gap-4 lg:grid-cols-[minmax(280px,380px)_minmax(0,1fr)]">
+    <>
       <ListShell
         label="Product order requests"
-        selected={Boolean(selected)}
         loading={list.isPending}
         error={list.error}
         empty={!items.length}
@@ -306,15 +386,15 @@ function OrderRequests({
                 aria-current={item.id === selected ? "true" : undefined}
                 onClick={() => onSelect(item.id)}
                 className={cn(
-                  "flex w-full items-center gap-3 px-4 py-3 text-left outline-none hover:bg-muted/50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
-                  item.id === selected && "bg-muted",
+                  "flex min-h-16 w-full items-center gap-3 px-4 py-3 text-left outline-none hover:bg-[var(--hover)] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
+                  item.id === selected && "bg-[var(--hover)]",
                 )}
               >
                 <span className="grid min-w-0 flex-1">
-                  <span className="truncate text-sm font-medium">
+                  <span className="truncate text-base font-medium">
                     {item.customerName}
                   </span>
-                  <span className="truncate text-xs text-muted-foreground">
+                  <span className="truncate text-sm text-muted-foreground">
                     {item.reference} · {item.lineCount}{" "}
                     {item.lineCount === 1 ? "item" : "items"} ·{" "}
                     {item.fulfilment !== "DELIVERY"
@@ -353,23 +433,23 @@ function OrderRequests({
           ))}
         </ul>
       </ListShell>
-      {selected ? (
-        <OrderRequestDetail
-          key={selected}
-          requestId={selected}
-          onBack={() => onSelect(null)}
-          timeZone={timeZone}
-        />
-      ) : null}
-    </div>
+      <RequestSheet open={Boolean(selected)} onClose={() => onSelect(null)}>
+        {selected ? (
+          <OrderRequestDetail
+            key={selected}
+            requestId={selected}
+            timeZone={timeZone}
+          />
+        ) : null}
+      </RequestSheet>
+    </>
   )
 }
 
 function OrderRequestDetail({
   requestId,
-  onBack,
   timeZone,
-}: { requestId: string; onBack: () => void; timeZone: string }) {
+}: { requestId: string; timeZone: string }) {
   const trpc = useTRPC()
   const queryClient = useQueryClient()
   const detail = useQuery({
@@ -444,17 +524,21 @@ function OrderRequestDetail({
   }, [data])
   if (detail.isPending)
     return (
-      <output className="block rounded-xl border border-border p-8 text-center text-sm text-muted-foreground">
-        Loading request…
-      </output>
+      <SheetFrame title="Website order">
+        <output className="block text-sm text-muted-foreground">
+          Loading request…
+        </output>
+      </SheetFrame>
     )
   if (!data)
     return (
-      <div role="alert" className="rounded-xl border border-border p-4">
-        <FormFeedback appearance="dashboard">
-          {errorMessage(detail.error)}
-        </FormFeedback>
-      </div>
+      <SheetFrame title="Website order">
+        <div role="alert">
+          <FormFeedback appearance="dashboard">
+            {errorMessage(detail.error)}
+          </FormFeedback>
+        </div>
+      </SheetFrame>
     )
   const open =
     data.status === "SUBMITTED" || data.status === "NEEDS_INFORMATION"
@@ -472,18 +556,20 @@ function OrderRequestDetail({
   }
   const alert = data.alerts.at(-1)
   return (
-    <article
-      className="grid min-w-0 gap-4 rounded-xl border border-border p-4 sm:p-5"
-      aria-labelledby="sr-title"
+    <SheetFrame
+      title={data.customerName}
+      description={data.reference}
+      header={
+        <Badge
+          className="w-fit"
+          variant={data.stage === "received" ? "default" : "outline"}
+        >
+          {stageLabels[data.stage] ?? data.stage}
+        </Badge>
+      }
     >
-      <Button variant="ghost" className="w-fit lg:hidden" onClick={onBack}>
-        <HugeiconsIcon icon={ArrowLeft01Icon} aria-hidden /> All requests
-      </Button>
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <div className="grid gap-1">
-          <h2 id="sr-title" className="text-lg font-semibold">
-            {data.customerName} · {data.reference}
-          </h2>
+      <article className="grid min-w-0 gap-4" aria-label="Website order">
+        <header className="grid gap-1">
           <p className="text-sm text-muted-foreground">
             {new Date(data.createdAt).toLocaleString("en-NG", {
               dateStyle: "medium",
@@ -514,220 +600,212 @@ function OrderRequestDetail({
               {data.order ? "" : " (not reserved until you confirm)"}
             </p>
           ) : null}
-        </div>
-        <Badge variant={data.stage === "received" ? "default" : "outline"}>
-          {stageLabels[data.stage] ?? data.stage}
-        </Badge>
-      </header>
-      {data.notes ? (
-        <p className="rounded-lg bg-muted/50 p-3 text-sm">
-          <b className="font-medium">Customer note: </b>
-          {data.notes}
-        </p>
-      ) : null}
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Item</TableHead>
-            <TableHead className="text-right">Qty</TableHead>
-            <TableHead className="text-right">Customer saw</TableHead>
-            <TableHead className="text-right">Now</TableHead>
-            <TableHead>Stock</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
+        </header>
+        {data.notes ? (
+          <p className="rounded-[var(--ui-radius-item)] bg-muted/50 p-3 text-sm">
+            <b className="font-medium">Customer note: </b>
+            {data.notes}
+          </p>
+        ) : null}
+        <ul
+          aria-label="Items"
+          className="divide-y divide-border rounded-[var(--ui-radius-surface)] border border-border"
+        >
           {data.lines.map((line) => {
             const current = data.current.find(
               (entry) => entry.offeringId === line.offeringId,
             )
+            const stock = data.order ? (
+              <Badge variant="secondary">Reserved</Badge>
+            ) : !current?.available ? (
+              <Badge variant="destructive">Unavailable</Badge>
+            ) : !current.enoughStock ? (
+              <Badge variant="destructive">Not enough</Badge>
+            ) : line.preorder ? (
+              <Badge variant="outline">Requested ahead</Badge>
+            ) : current.stock === "unknown" ? (
+              <Badge variant="outline">Not tracked</Badge>
+            ) : current.stock === "low_stock" ? (
+              <Badge variant="outline">Low</Badge>
+            ) : (
+              <Badge variant="secondary">In stock</Badge>
+            )
             return (
-              <TableRow key={line.offeringId}>
-                <TableCell className="max-w-56 whitespace-normal">
-                  {line.itemName}
-                  {line.optionName && line.optionName !== line.itemName ? (
-                    <span className="block text-xs text-muted-foreground">
-                      {line.optionName}
-                    </span>
-                  ) : null}
-                </TableCell>
-                <TableCell className="text-right tabular-nums">
-                  {line.quantity.replace(/\.?0+$/, "")}
-                  {line.unitLabel ? ` ${line.unitLabel}` : ""}
-                </TableCell>
-                <TableCell className="text-right tabular-nums">
-                  {money(line.observedUnitPriceMinor, data.currencyCode)}
-                </TableCell>
-                <TableCell
-                  className={cn(
-                    "text-right tabular-nums",
-                    current?.priceChanged && "font-semibold text-amber-700",
-                  )}
-                >
-                  {!current?.available
-                    ? "Not for sale"
-                    : current.priceMinor === null
-                      ? "No fixed price"
-                      : money(current.priceMinor, data.currencyCode)}
-                </TableCell>
-                <TableCell>
-                  {data.order ? (
-                    <Badge variant="secondary">Reserved</Badge>
-                  ) : !current?.available ? (
-                    <Badge variant="destructive">Unavailable</Badge>
-                  ) : !current.enoughStock ? (
-                    <Badge variant="destructive">Not enough</Badge>
-                  ) : line.preorder ? (
-                    <Badge variant="outline">Requested ahead</Badge>
-                  ) : current.stock === "unknown" ? (
-                    <Badge variant="outline">Not tracked</Badge>
-                  ) : current.stock === "low_stock" ? (
-                    <Badge variant="outline">Low</Badge>
-                  ) : (
-                    <Badge variant="secondary">In stock</Badge>
-                  )}
-                </TableCell>
-              </TableRow>
+              <li
+                key={line.offeringId}
+                className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 gap-y-1 p-3"
+              >
+                <div className="grid min-w-0">
+                  <span className="font-medium">{line.itemName}</span>
+                  <span className="text-sm text-muted-foreground">
+                    {[
+                      line.optionName && line.optionName !== line.itemName
+                        ? line.optionName
+                        : null,
+                      `${line.quantity.replace(/\.?0+$/, "")}${line.unitLabel ? ` ${line.unitLabel}` : ""}`,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </span>
+                </div>
+                <div className="grid justify-items-end gap-1">
+                  <span className="tabular-nums">
+                    {money(line.observedUnitPriceMinor, data.currencyCode)}
+                  </span>
+                  {stock}
+                </div>
+                {!current?.available ? (
+                  <span className="col-span-2 text-sm text-warning-foreground">
+                    Not for sale now
+                  </span>
+                ) : current.priceMinor === null ? (
+                  <span className="col-span-2 text-sm text-warning-foreground">
+                    No fixed price now
+                  </span>
+                ) : current.priceChanged ? (
+                  <span className="col-span-2 text-sm font-medium text-warning-foreground">
+                    Now {money(current.priceMinor, data.currencyCode)}
+                  </span>
+                ) : null}
+              </li>
             )
           })}
-        </TableBody>
-      </Table>
-      {error ? (
-        <Alert variant="destructive" role="alert">
-          <AlertTitle>Not confirmed</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      ) : null}
-      {data.order ? (
-        <div className="grid gap-3 rounded-lg border border-border p-4">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <b className="font-medium">Order {data.order.orderNumber}</b>
-            <Badge variant="secondary">
-              {data.order.paymentStatus === "PAID"
-                ? "Paid"
-                : data.order.paidMinor > 0
-                  ? "Part paid"
-                  : data.order.paymentReport?.status === "SUBMITTED"
-                    ? "Payment to check"
-                    : "Not paid"}
-            </Badge>
-          </div>
-          <p className="text-sm text-muted-foreground">
-            Total {money(data.order.totalMinor, data.order.currencyCode)}
-            {!delivery
-              ? ""
-              : data.order.deliveryFeeMinor === 0
-                ? " (free delivery)"
-                : ` (includes ${money(data.order.deliveryFeeMinor, data.order.currencyCode)} delivery)`}{" "}
-            · Balance {money(data.order.balanceMinor, data.order.currencyCode)}
-          </p>
-          <div className="flex flex-wrap gap-2">
-            <Link
-              className={buttonVariants({ variant: "default" })}
-              href={`/sales/orders/${data.orderId}`}
-            >
-              Open order to request payment or fulfil
-            </Link>
-            {data.order.paymentReport?.status === "SUBMITTED" ? (
+        </ul>
+        {error ? (
+          <Alert variant="destructive" role="alert">
+            <AlertTitle>Not confirmed</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        ) : null}
+        {data.order ? (
+          <div className="grid gap-3 rounded-[var(--ui-radius-surface)] border border-border p-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <b className="font-medium">Order {data.order.orderNumber}</b>
+              <Badge variant="secondary">
+                {data.order.paymentStatus === "PAID"
+                  ? "Paid"
+                  : data.order.paidMinor > 0
+                    ? "Part paid"
+                    : data.order.paymentReport?.status === "SUBMITTED"
+                      ? "Payment to check"
+                      : "Not paid"}
+              </Badge>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Total {money(data.order.totalMinor, data.order.currencyCode)}
+              {!delivery
+                ? ""
+                : data.order.deliveryFeeMinor === 0
+                  ? " (free delivery)"
+                  : ` (includes ${money(data.order.deliveryFeeMinor, data.order.currencyCode)} delivery)`}{" "}
+              · Balance{" "}
+              {money(data.order.balanceMinor, data.order.currencyCode)}
+            </p>
+            <div className="flex flex-wrap gap-2">
               <Link
-                className={buttonVariants({ variant: "outline" })}
-                href="/finance/payments"
+                className={buttonVariants({ variant: "default" })}
+                href={`/sales/orders/${data.orderId}`}
               >
-                Check reported payment
+                Open order to request payment or fulfil
               </Link>
-            ) : null}
+              {data.order.paymentReport?.status === "SUBMITTED" ? (
+                <Link
+                  className={buttonVariants({ variant: "outline" })}
+                  href="/finance/payments"
+                >
+                  Check reported payment
+                </Link>
+              ) : null}
+            </div>
           </div>
-        </div>
-      ) : open ? (
-        <ConfirmOrderPanel
-          data={data}
-          busy={busy}
-          pending={confirm.isPending}
-          onConfirm={submitConfirm}
-          onRespond={(action, initialMessage) =>
-            setDialog({ action, initialMessage })
-          }
-        />
-      ) : data.staffResponse ? (
-        <p className="text-sm text-muted-foreground">
-          Your reply: {data.staffResponse}
-        </p>
-      ) : null}
-      {data.messages.length ? (
+        ) : open ? (
+          <ConfirmOrderPanel
+            data={data}
+            busy={busy}
+            pending={confirm.isPending}
+            onConfirm={submitConfirm}
+            onRespond={(action, initialMessage) =>
+              setDialog({ action, initialMessage })
+            }
+          />
+        ) : data.staffResponse ? (
+          <p className="text-sm text-muted-foreground">
+            Your reply: {data.staffResponse}
+          </p>
+        ) : null}
+        {data.messages.length ? (
+          <div className="grid gap-2">
+            <h3 className="text-sm font-medium">Messages</h3>
+            <ul className="grid gap-2">
+              {data.messages.map((message) => (
+                <li
+                  key={message.id}
+                  className={cn(
+                    "rounded-[var(--ui-radius-item)] p-3 text-sm",
+                    message.author === "business"
+                      ? "bg-muted/60"
+                      : "border border-border",
+                  )}
+                >
+                  <span className="text-xs text-muted-foreground">
+                    {message.author === "business" ? "You" : data.customerName}
+                  </span>
+                  <p className="whitespace-pre-wrap">{message.body}</p>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+        <Separator />
         <div className="grid gap-2">
-          <h3 className="text-sm font-medium">Messages</h3>
-          <ul className="grid gap-2">
-            {data.messages.map((message) => (
-              <li
-                key={message.id}
-                className={cn(
-                  "rounded-lg p-3 text-sm",
-                  message.author === "business"
-                    ? "bg-muted/60"
-                    : "border border-border",
-                )}
-              >
-                <span className="text-xs text-muted-foreground">
-                  {message.author === "business" ? "You" : data.customerName}
-                </span>
-                <p className="whitespace-pre-wrap">{message.body}</p>
-              </li>
-            ))}
-          </ul>
+          <h3 className="text-sm font-medium">
+            WhatsApp message to {data.customerName}
+          </h3>
+          <CustomerMessageEditor
+            key={`${data.status}:${data.revision}`}
+            initialText={draft}
+            whatsappUrl={whatsAppDraftUrl(data.customerPhone, draft)}
+            recipient={data.customerName}
+            noPhoneNote="This request has no WhatsApp number."
+          />
         </div>
-      ) : null}
-      <Separator />
-      <div className="grid gap-2">
-        <h3 className="text-sm font-medium">
-          WhatsApp message to {data.customerName}
-        </h3>
-        <p className="text-xs text-muted-foreground">
-          Review and edit. Opening WhatsApp doesn't send it: you press Send
-          there.
-        </p>
-        <CustomerMessageEditor
-          key={`${data.status}:${data.revision}`}
-          initialText={draft}
-          whatsappUrl={whatsAppDraftUrl(data.customerPhone, draft)}
-          recipient={data.customerName}
-          noPhoneNote="This request has no WhatsApp number."
-        />
-      </div>
-      {alert ? (
-        <p className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-          {alertLabels[alert.status] ?? alert.status}
-          {alert.lastError ? `: ${alert.lastError}` : ""}
-          {alert.status === "FAILED" ? (
-            <Button
-              size="xs"
-              variant="outline"
-              disabled={retry.isPending}
-              onClick={() => retry.mutate({ alertId: alert.id })}
-            >
-              Retry alert
-            </Button>
-          ) : null}
-        </p>
-      ) : null}
-      {dialog ? (
-        <RespondDialog
-          action={dialog.action}
-          initialMessage={dialog.initialMessage}
-          customerName={data.customerName}
-          onClose={() => setDialog(null)}
-          onSubmit={async (message, clientMessageId) => ({
-            requestId,
-            expectedRevision: data.revision,
-            action: dialog.action,
-            message,
-            clientMessageId,
-          })}
-          onDone={() => {
-            setDialog(null)
-            void refresh()
-          }}
-        />
-      ) : null}
-    </article>
+        {alert ? (
+          <p className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+            {alertLabels[alert.status] ?? alert.status}
+            {alert.lastError ? `: ${alert.lastError}` : ""}
+            {alert.status === "FAILED" ? (
+              <Button
+                size="xs"
+                variant="outline"
+                disabled={retry.isPending}
+                onClick={() => retry.mutate({ alertId: alert.id })}
+              >
+                Retry alert
+              </Button>
+            ) : null}
+          </p>
+        ) : null}
+        {dialog ? (
+          <RespondDialog
+            action={dialog.action}
+            initialMessage={dialog.initialMessage}
+            customerName={data.customerName}
+            onClose={() => setDialog(null)}
+            onSubmit={async (message, clientMessageId) => ({
+              requestId,
+              expectedRevision: data.revision,
+              action: dialog.action,
+              message,
+              clientMessageId,
+            })}
+            onDone={() => {
+              setDialog(null)
+              void refresh()
+            }}
+          />
+        ) : null}
+      </article>
+    </SheetFrame>
   )
 }
 
@@ -777,6 +855,7 @@ function ConfirmOrderPanel({
   const [destinationDraft, setDestinationDraft] = useState<string | null>(null)
   const [fee, setFee] = useState("")
   const [acceptPrices, setAcceptPrices] = useState(false)
+  const [confirming, setConfirming] = useState(false)
   const delivery = data.fulfilment === "delivery"
   // Untouched, the field follows the saved request; once typed, the draft wins.
   const destination = destinationDraft ?? data.deliveryAddress ?? ""
@@ -808,7 +887,7 @@ function ConfirmOrderPanel({
     (priceChanged && !acceptPrices)
   const askForDestination = `Please share the delivery address or a landmark for your order ${data.reference}.`
   return (
-    <div className="grid gap-3 rounded-lg border border-border p-4">
+    <div className="grid gap-3 rounded-[var(--ui-radius-surface)] border border-border p-4">
       {delivery && !hasDestination(data.deliveryAddress) ? (
         <Alert>
           <AlertTitle>Delivery details needed</AlertTitle>
@@ -828,10 +907,6 @@ function ConfirmOrderPanel({
           </AlertDescription>
         </Alert>
       ) : null}
-      <p className="text-sm">
-        Confirming creates an order for {data.customerName} and reserves the
-        stock.
-      </p>
       {delivery ? (
         <>
           <Field
@@ -904,7 +979,7 @@ function ConfirmOrderPanel({
         </Field>
       ) : null}
       {unavailable || short || subtotal === null ? (
-        <p className="text-sm text-amber-800">
+        <p className="text-sm text-warning-foreground">
           {unavailable ? "Some items can't be sold now. " : ""}
           {short
             ? "Recorded stock isn't enough for some items. Update stock or ask the customer. "
@@ -941,16 +1016,7 @@ function ConfirmOrderPanel({
         <Button
           disabled={blocked}
           onClick={() => {
-            if (blocked) return
-            onConfirm({
-              ...(delivery && feeMinor !== null
-                ? {
-                    deliveryFeeMinor: feeMinor,
-                    deliveryAddress: destination.trim(),
-                  }
-                : {}),
-              ...(priceChanged ? { acceptCurrentPrices: acceptPrices } : {}),
-            })
+            if (!blocked) setConfirming(true)
           }}
         >
           {pending ? <Spinner /> : null}
@@ -973,6 +1039,30 @@ function ConfirmOrderPanel({
           Decline
         </Button>
       </div>
+      <ConfirmAlert
+        open={confirming && !blocked}
+        title={`Confirm ${total === null ? "this" : money(total, data.currencyCode)} order for ${data.customerName}?`}
+        description={`This creates the order and holds the stock${delivery ? " for delivery" : " for pickup"}. Nothing is charged yet.`}
+        action={
+          total === null
+            ? "Confirm order"
+            : `Confirm ${money(total, data.currencyCode)}`
+        }
+        pending={pending}
+        onCancel={() => setConfirming(false)}
+        onConfirm={() => {
+          setConfirming(false)
+          onConfirm({
+            ...(delivery && feeMinor !== null
+              ? {
+                  deliveryFeeMinor: feeMinor,
+                  deliveryAddress: destination.trim(),
+                }
+              : {}),
+            ...(priceChanged ? { acceptCurrentPrices: acceptPrices } : {}),
+          })
+        }}
+      />
     </div>
   )
 }
@@ -1025,47 +1115,62 @@ function RespondDialog({
     trpc.storefrontRequests.respondOrder.mutationOptions({ onSuccess: onDone }),
   )
   const decline = action === "decline"
+  const field = (
+    <Field data-invalid={respond.isError ? true : undefined}>
+      <FieldLabel htmlFor={id}>
+        {decline ? "Reason" : "Your question"}
+      </FieldLabel>
+      <Textarea
+        id={id}
+        rows={4}
+        maxLength={800}
+        value={message}
+        onChange={(event) => setMessage(event.target.value)}
+      />
+      {respond.isError ? (
+        <FieldError>{errorMessage(respond.error)}</FieldError>
+      ) : null}
+    </Field>
+  )
+  const send = async () =>
+    respond.mutate(await onSubmit(message.trim(), clientMessageId))
+  if (decline)
+    return (
+      <ConfirmAlert
+        open
+        title={`Decline ${customerName}’s request?`}
+        description={`${customerName} sees your reason on their receipt. No order is created.`}
+        action="Decline request"
+        cancelLabel="Keep request"
+        danger
+        pending={respond.isPending}
+        disabled={message.trim().length < 3}
+        onCancel={onClose}
+        onConfirm={() => void send()}
+      >
+        {field}
+      </ConfirmAlert>
+    )
   return (
     <Dialog open onOpenChange={(value) => !value && onClose()}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>
-            {decline ? "Decline this request" : "Ask for details"}
-          </DialogTitle>
+          <DialogTitle>Ask {customerName} for details</DialogTitle>
           <DialogDescription>
-            {decline
-              ? `${customerName} sees your reason on their receipt. No order is created.`
-              : `${customerName} sees your question on their receipt and can reply there.`}
+            They see your question on their receipt and can reply there.
           </DialogDescription>
         </DialogHeader>
-        <Field data-invalid={respond.isError ? true : undefined}>
-          <FieldLabel htmlFor={id}>
-            {decline ? "Reason" : "Your question"}
-          </FieldLabel>
-          <Textarea
-            id={id}
-            rows={4}
-            maxLength={800}
-            value={message}
-            onChange={(event) => setMessage(event.target.value)}
-          />
-          {respond.isError ? (
-            <FieldError>{errorMessage(respond.error)}</FieldError>
-          ) : null}
-        </Field>
+        {field}
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
             Cancel
           </Button>
           <Button
-            variant={decline ? "destructive" : "default"}
             disabled={respond.isPending || message.trim().length < 3}
-            onClick={async () =>
-              respond.mutate(await onSubmit(message.trim(), clientMessageId))
-            }
+            onClick={() => void send()}
           >
             {respond.isPending ? <Spinner /> : null}
-            {decline ? "Decline request" : "Send question"}
+            Send question
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -1094,15 +1199,13 @@ function ServiceRequests({
       filter: filter === "confirmed" ? "quoted" : filter,
     }),
     ...FRESH,
-    refetchInterval: (query) => readPollInterval(query.state.error, 30_000),
   })
   const items = list.data?.items ?? []
   const current = items.find((item) => item.id === selected)
   return (
-    <div className="grid min-w-0 items-start gap-4 lg:grid-cols-[minmax(280px,380px)_minmax(0,1fr)]">
+    <>
       <ListShell
         label="Service requests"
-        selected={Boolean(selected)}
         loading={list.isPending}
         error={list.error}
         empty={!items.length}
@@ -1115,15 +1218,15 @@ function ServiceRequests({
                 aria-current={item.id === selected ? "true" : undefined}
                 onClick={() => onSelect(item.id)}
                 className={cn(
-                  "flex w-full items-center gap-3 px-4 py-3 text-left outline-none hover:bg-muted/50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
-                  item.id === selected && "bg-muted",
+                  "flex min-h-16 w-full items-center gap-3 px-4 py-3 text-left outline-none hover:bg-[var(--hover)] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
+                  item.id === selected && "bg-[var(--hover)]",
                 )}
               >
                 <span className="grid min-w-0 flex-1">
-                  <span className="truncate text-sm font-medium">
+                  <span className="truncate text-base font-medium">
                     {item.serviceRequest.customerName}
                   </span>
-                  <span className="truncate text-xs text-muted-foreground">
+                  <span className="truncate text-sm text-muted-foreground">
                     {item.reference} ·{" "}
                     {[
                       ...new Set(
@@ -1150,22 +1253,30 @@ function ServiceRequests({
           ))}
         </ul>
       </ListShell>
-      {current ? (
-        <ServiceRequestDetail item={current} onBack={() => onSelect(null)} />
-      ) : selected && list.isSuccess ? (
-        <output className="grid justify-items-start gap-2 rounded-xl border border-border p-4 text-sm">
-          <b className="font-medium">This request moved</b>
-          <span className="text-muted-foreground">
-            It changed stage, so it no longer matches this filter.
-          </span>
-          {filter !== "all" ? (
-            <Button variant="outline" size="sm" onClick={onShowAll}>
-              Show it under All
-            </Button>
-          ) : null}
-        </output>
-      ) : null}
-    </div>
+      <RequestSheet open={Boolean(selected)} onClose={() => onSelect(null)}>
+        {current ? (
+          <ServiceRequestDetail key={current.id} item={current} />
+        ) : selected && list.isSuccess ? (
+          <SheetFrame title="Service request">
+            <output className="grid justify-items-start gap-2 text-sm">
+              <b className="font-medium">This request moved</b>
+              <span className="text-muted-foreground">
+                It changed stage, so it isn’t under this filter now.
+              </span>
+              {filter !== "all" ? (
+                <Button variant="outline" onClick={onShowAll}>
+                  Show it under All
+                </Button>
+              ) : null}
+            </output>
+          </SheetFrame>
+        ) : (
+          <SheetFrame title="Service request">
+            <output className="text-sm text-muted-foreground">Loading…</output>
+          </SheetFrame>
+        )}
+      </RequestSheet>
+    </>
   )
 }
 
@@ -1173,10 +1284,7 @@ type ServiceItem =
   inferRouterOutputs<AppRouter>["storefrontRequests"]["services"]["items"][number]
 type ServiceLine = ServiceItem["serviceRequest"]["lines"][number]
 
-function ServiceRequestDetail({
-  item,
-  onBack,
-}: { item: ServiceItem; onBack: () => void }) {
+function ServiceRequestDetail({ item }: { item: ServiceItem }) {
   const trpc = useTRPC()
   const queryClient = useQueryClient()
   const request = item.serviceRequest
@@ -1197,6 +1305,7 @@ function ServiceRequestDetail({
   const [dialog, setDialog] = useState<
     "decline" | "request_information" | null
   >(null)
+  const [confirm, setConfirm] = useState<"quote" | "accept" | null>(null)
   const [message, setMessage] = useState("")
   const [clientIds] = useState(() => ({
     quote: `sfq-${crypto.randomUUID()}`,
@@ -1210,11 +1319,13 @@ function ServiceRequestDetail({
   const issue = useMutation(
     trpc.storefrontRequests.issueServiceQuote.mutationOptions({
       onSuccess: () => void refresh(),
+      onSettled: () => setConfirm(null),
     }),
   )
   const accept = useMutation(
     trpc.storefrontRequests.recordServiceQuoteAcceptance.mutationOptions({
       onSuccess: () => void refresh(),
+      onSettled: () => setConfirm(null),
     }),
   )
   const respond = useMutation(
@@ -1275,15 +1386,20 @@ function ServiceRequestDetail({
       : null,
   }).replace("this is .", "here.")
   return (
-    <article className="grid min-w-0 gap-4 rounded-xl border border-border p-4 sm:p-5">
-      <Button variant="ghost" className="w-fit lg:hidden" onClick={onBack}>
-        <HugeiconsIcon icon={ArrowLeft01Icon} aria-hidden /> All requests
-      </Button>
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <div className="grid gap-1">
-          <h2 className="text-lg font-semibold">
-            {request.customerName} · {item.reference}
-          </h2>
+    <SheetFrame
+      title={request.customerName}
+      description={item.reference}
+      header={
+        <Badge
+          className="w-fit"
+          variant={item.stage === "received" ? "default" : "outline"}
+        >
+          {stageLabels[item.stage] ?? item.stage}
+        </Badge>
+      }
+    >
+      <article className="grid min-w-0 gap-4" aria-label="Service request">
+        <header className="grid gap-1">
           <p className="text-sm">
             WhatsApp {item.customerPhoneE164 ?? request.customerPhone}
           </p>
@@ -1298,88 +1414,81 @@ function ServiceRequestDetail({
               Collect from: {item.collectionAddress}
             </p>
           ) : null}
-        </div>
-        <Badge variant={item.stage === "received" ? "default" : "outline"}>
-          {stageLabels[item.stage] ?? item.stage}
-        </Badge>
-      </header>
-      {request.details ? (
-        <p className="rounded-lg bg-muted/50 p-3 text-sm">{request.details}</p>
-      ) : null}
-      {issue.isError || accept.isError || respond.isError ? (
-        <Alert variant="destructive" role="alert">
-          <AlertDescription>
-            {errorMessage(issue.error ?? accept.error ?? respond.error)}
-          </AlertDescription>
-        </Alert>
-      ) : null}
-      {quote && quote.status === "ISSUED" ? (
-        <div className="grid gap-2 rounded-lg border border-border p-4">
-          <b className="font-medium">
-            Quote sent · {money(quote.totalMinor, quote.currencyCode)}
-          </b>
-          <p className="text-sm text-muted-foreground">
-            The customer can accept on their receipt. If they accepted on
-            WhatsApp, record it here: this creates the order.
+        </header>
+        {request.details ? (
+          <p className="rounded-[var(--ui-radius-item)] bg-muted/50 p-3 text-sm">
+            {request.details}
           </p>
-          <Button
-            className="w-fit"
-            disabled={accept.isPending}
-            onClick={() =>
-              accept.mutate({
-                requestId: request.id,
-                clientAcceptanceId: clientIds.accept,
-              })
-            }
-          >
-            {accept.isPending ? <Spinner /> : null}
-            Record acceptance from WhatsApp
-          </Button>
-        </div>
-      ) : quote?.acceptedOrderId ? (
-        <div className="grid gap-2 rounded-lg border border-border p-4">
-          <b className="font-medium">Quote accepted · order created</b>
-          <Link
-            className={buttonVariants({ className: "w-fit" })}
-            href={`/sales/orders/${quote.acceptedOrderId}`}
-          >
-            Open order to request payment or schedule
-          </Link>
-        </div>
-      ) : open ? (
-        <div className="grid gap-3 rounded-lg border border-border p-4">
-          <h3 className="text-sm font-medium">
-            Price each item and send a quote
-          </h3>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Service</TableHead>
-                <TableHead className="text-right">Qty</TableHead>
-                <TableHead className="text-right">Unit price</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+        ) : null}
+        {issue.isError || accept.isError || respond.isError ? (
+          <Alert variant="destructive" role="alert">
+            <AlertDescription>
+              {errorMessage(issue.error ?? accept.error ?? respond.error)}
+            </AlertDescription>
+          </Alert>
+        ) : null}
+        {quote && quote.status === "ISSUED" ? (
+          <div className="grid gap-2 rounded-[var(--ui-radius-surface)] border border-border p-4">
+            <b className="font-medium">
+              Quote sent · {money(quote.totalMinor, quote.currencyCode)}
+            </b>
+            <p className="text-sm text-muted-foreground">
+              The customer can accept on their receipt. If they accepted on
+              WhatsApp, record it here: this creates the order.
+            </p>
+            <Button
+              className="w-fit"
+              disabled={accept.isPending}
+              onClick={() => setConfirm("accept")}
+            >
+              {accept.isPending ? <Spinner /> : null}
+              Record acceptance from WhatsApp
+            </Button>
+          </div>
+        ) : quote?.acceptedOrderId ? (
+          <div className="grid gap-2 rounded-[var(--ui-radius-surface)] border border-border p-4">
+            <b className="font-medium">Quote accepted · order created</b>
+            <Link
+              className={buttonVariants({ className: "w-fit" })}
+              href={`/sales/orders/${quote.acceptedOrderId}`}
+            >
+              Open order to request payment or schedule
+            </Link>
+          </div>
+        ) : open ? (
+          <div className="grid gap-3 rounded-[var(--ui-radius-surface)] border border-border p-4">
+            <h3 className="font-medium">Price and send a quote</h3>
+            <ul className="grid gap-3">
               {request.lines.map((line: ServiceLine) => (
-                <TableRow key={line.offeringId}>
-                  <TableCell className="whitespace-normal">
-                    {line.offering.catalogItem.name}
-                    <span className="block text-xs text-muted-foreground">
-                      {line.variantName || line.offeringName}
+                <li
+                  key={line.offeringId}
+                  className="grid grid-cols-[minmax(0,1fr)_8.5rem] items-end gap-3"
+                >
+                  <div className="grid min-w-0 pb-2.5">
+                    <span className="font-medium">
+                      {line.offering.catalogItem.name}
                     </span>
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    {String(line.requestedQuantity).replace(/\.?0+$/, "")}
-                  </TableCell>
-                  <TableCell className="text-right">
+                    <span className="text-sm text-muted-foreground">
+                      {[
+                        (line.variantName || line.offeringName) !==
+                        line.offering.catalogItem.name
+                          ? line.variantName || line.offeringName
+                          : null,
+                        `× ${String(line.requestedQuantity).replace(/\.?0+$/, "")}`,
+                      ]
+                        .filter(Boolean)
+                        .join(" ")}
+                    </span>
+                  </div>
+                  <Field>
+                    <FieldLabel htmlFor={`${item.id}-${line.offeringId}-price`}>
+                      Price each
+                    </FieldLabel>
                     <Input
-                      aria-label={`Unit price for ${line.offering.catalogItem.name}`}
+                      id={`${item.id}-${line.offeringId}-price`}
                       inputMode="decimal"
-                      className="ml-auto max-w-32 text-right"
+                      className="text-right tabular-nums"
                       value={prices[line.offeringId] ?? ""}
-                      placeholder={
-                        line.offering.pricingPolicy === "FIXED" ? "" : "Price"
-                      }
                       onChange={(event) =>
                         setPrices((current) => ({
                           ...current,
@@ -1387,179 +1496,229 @@ function ServiceRequestDetail({
                         }))
                       }
                     />
-                  </TableCell>
-                </TableRow>
+                  </Field>
+                </li>
               ))}
-            </TableBody>
-          </Table>
-          <div className="flex flex-wrap gap-4">
-            <Field className="max-w-48">
-              <FieldLabel htmlFor={`${item.id}-fee`}>
-                Collection or delivery fee
-              </FieldLabel>
-              <Input
-                id={`${item.id}-fee`}
-                inputMode="decimal"
-                value={fee}
-                onChange={(event) => setFee(event.target.value)}
-              />
-            </Field>
-            <Field className="min-w-60 flex-1">
-              <FieldLabel htmlFor={`${item.id}-note`}>
-                Note for the customer (optional)
-              </FieldLabel>
-              <Input
-                id={`${item.id}-note`}
-                maxLength={500}
-                value={note}
-                onChange={(event) => setNote(event.target.value)}
-              />
-            </Field>
-          </div>
-          <p className="text-sm">
-            Quote total <b>{money(Math.round(total), currency)}</b>
-          </p>
-          <div className="flex flex-wrap gap-2">
-            <Button
-              disabled={
-                issue.isPending ||
-                !storeId ||
-                lines.some(
-                  (line: { unitPriceMinor: number | null }) =>
-                    line.unitPriceMinor === null,
-                ) ||
-                feeMinor === null
-              }
-              onClick={() =>
-                issue.mutate({
-                  requestId: request.id,
-                  storeId: storeId as string,
-                  clientQuoteId: clientIds.quote,
-                  lines: lines.map(
-                    (line: {
-                      offeringId: string
-                      quantity: string
-                      unitPriceMinor: number | null
-                    }) => ({
-                      offeringId: line.offeringId,
-                      quantity: line.quantity,
-                      unitPriceMinor: line.unitPriceMinor ?? 0,
-                    }),
-                  ),
-                  feeMinor: feeMinor ?? 0,
-                  ...(note.trim() ? { note: note.trim() } : {}),
-                  expiresInDays: 7,
-                })
-              }
-            >
-              {issue.isPending ? <Spinner /> : null}
-              Send quote
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => setDialog("request_information")}
-            >
-              Ask for details
-            </Button>
-            <Button variant="outline" onClick={() => setDialog("decline")}>
-              Decline
-            </Button>
-          </div>
-        </div>
-      ) : request.staffResponse ? (
-        <p className="text-sm text-muted-foreground">
-          Your reply: {request.staffResponse}
-        </p>
-      ) : null}
-      {item.messages.length ? (
-        <ul className="grid gap-2">
-          {item.messages.map((entry: ServiceItem["messages"][number]) => (
-            <li
-              key={entry.id}
-              className={cn(
-                "rounded-lg p-3 text-sm",
-                entry.author === "STAFF"
-                  ? "bg-muted/60"
-                  : "border border-border",
-              )}
-            >
-              <span className="text-xs text-muted-foreground">
-                {entry.author === "STAFF" ? "You" : request.customerName}
-              </span>
-              <p className="whitespace-pre-wrap">{entry.body}</p>
-            </li>
-          ))}
-        </ul>
-      ) : null}
-      <Separator />
-      <div className="grid gap-2">
-        <h3 className="text-sm font-medium">
-          WhatsApp message to {request.customerName}
-        </h3>
-        <p className="text-xs text-muted-foreground">
-          Review and edit. Opening WhatsApp doesn't send it: you press Send
-          there.
-        </p>
-        <CustomerMessageEditor
-          key={`${item.stage}:${request.revision}`}
-          initialText={draft}
-          whatsappUrl={whatsAppDraftUrl(item.customerPhoneE164, draft)}
-          recipient={request.customerName}
-          noPhoneNote="This request has no WhatsApp number."
-        />
-      </div>
-      {dialog ? (
-        <Dialog open onOpenChange={(value) => !value && setDialog(null)}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>
-                {dialog === "decline"
-                  ? "Decline this request"
-                  : "Ask for details"}
-              </DialogTitle>
-              <DialogDescription>
-                {request.customerName} sees this on their receipt.
-              </DialogDescription>
-            </DialogHeader>
-            <Field>
-              <FieldLabel htmlFor={`${item.id}-message`}>
-                {dialog === "decline" ? "Reason" : "Your question"}
-              </FieldLabel>
-              <Textarea
-                id={`${item.id}-message`}
-                rows={4}
-                maxLength={800}
-                value={message}
-                onChange={(event) => setMessage(event.target.value)}
-              />
-            </Field>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setDialog(null)}>
-                Cancel
+            </ul>
+            <div className="flex flex-wrap gap-4">
+              <Field className="max-w-48">
+                <FieldLabel htmlFor={`${item.id}-fee`}>
+                  Collection or delivery fee
+                </FieldLabel>
+                <Input
+                  id={`${item.id}-fee`}
+                  inputMode="decimal"
+                  value={fee}
+                  onChange={(event) => setFee(event.target.value)}
+                />
+              </Field>
+              <Field className="min-w-60 flex-1">
+                <FieldLabel htmlFor={`${item.id}-note`}>
+                  Note for the customer (optional)
+                </FieldLabel>
+                <Input
+                  id={`${item.id}-note`}
+                  maxLength={500}
+                  value={note}
+                  onChange={(event) => setNote(event.target.value)}
+                />
+              </Field>
+            </div>
+            <p className="text-sm">
+              Quote total <b>{money(Math.round(total), currency)}</b>
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                disabled={
+                  issue.isPending ||
+                  !storeId ||
+                  lines.some(
+                    (line: { unitPriceMinor: number | null }) =>
+                      line.unitPriceMinor === null,
+                  ) ||
+                  feeMinor === null
+                }
+                onClick={() => setConfirm("quote")}
+              >
+                {issue.isPending ? <Spinner /> : null}
+                Send quote
               </Button>
               <Button
-                variant={dialog === "decline" ? "destructive" : "default"}
-                disabled={
-                  respond.isPending || message.trim().length < 3 || !storeId
-                }
-                onClick={() =>
-                  respond.mutate({
-                    requestId: request.id,
-                    storeId: storeId as string,
-                    expectedRevision: request.revision,
-                    action: dialog,
-                    message: message.trim(),
-                    clientMessageId: clientIds.message,
-                  })
-                }
+                variant="outline"
+                onClick={() => setDialog("request_information")}
               >
-                {respond.isPending ? <Spinner /> : null}
-                {dialog === "decline" ? "Decline request" : "Send question"}
+                Ask for details
               </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      ) : null}
-    </article>
+              <Button variant="outline" onClick={() => setDialog("decline")}>
+                Decline
+              </Button>
+            </div>
+          </div>
+        ) : request.staffResponse ? (
+          <p className="text-sm text-muted-foreground">
+            Your reply: {request.staffResponse}
+          </p>
+        ) : null}
+        {item.messages.length ? (
+          <ul className="grid gap-2">
+            {item.messages.map((entry: ServiceItem["messages"][number]) => (
+              <li
+                key={entry.id}
+                className={cn(
+                  "rounded-[var(--ui-radius-item)] p-3 text-sm",
+                  entry.author === "STAFF"
+                    ? "bg-muted/60"
+                    : "border border-border",
+                )}
+              >
+                <span className="text-xs text-muted-foreground">
+                  {entry.author === "STAFF" ? "You" : request.customerName}
+                </span>
+                <p className="whitespace-pre-wrap">{entry.body}</p>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+        <Separator />
+        <div className="grid gap-2">
+          <h3 className="text-sm font-medium">
+            WhatsApp message to {request.customerName}
+          </h3>
+          <CustomerMessageEditor
+            key={`${item.stage}:${request.revision}`}
+            initialText={draft}
+            whatsappUrl={whatsAppDraftUrl(item.customerPhoneE164, draft)}
+            recipient={request.customerName}
+            noPhoneNote="This request has no WhatsApp number."
+          />
+        </div>
+        <ConfirmAlert
+          open={confirm === "quote"}
+          title={`Send a ${money(Math.round(total), currency)} quote to ${request.customerName}?`}
+          description={`${request.customerName} sees it on their receipt and can accept it for 7 days. Nothing is charged now.`}
+          action={`Send ${money(Math.round(total), currency)} quote`}
+          pending={issue.isPending}
+          onCancel={() => setConfirm(null)}
+          onConfirm={() =>
+            issue.mutate({
+              requestId: request.id,
+              storeId: storeId as string,
+              clientQuoteId: clientIds.quote,
+              lines: lines.map(
+                (line: {
+                  offeringId: string
+                  quantity: string
+                  unitPriceMinor: number | null
+                }) => ({
+                  offeringId: line.offeringId,
+                  quantity: line.quantity,
+                  unitPriceMinor: line.unitPriceMinor ?? 0,
+                }),
+              ),
+              feeMinor: feeMinor ?? 0,
+              ...(note.trim() ? { note: note.trim() } : {}),
+              expiresInDays: 7,
+            })
+          }
+        />
+        {quote ? (
+          <ConfirmAlert
+            open={confirm === "accept"}
+            title={`Record that ${request.customerName} accepted ${money(quote.totalMinor, quote.currencyCode)}?`}
+            description="This creates the order. Only do this if they accepted on WhatsApp."
+            action="Record acceptance"
+            pending={accept.isPending}
+            onCancel={() => setConfirm(null)}
+            onConfirm={() =>
+              accept.mutate({
+                requestId: request.id,
+                clientAcceptanceId: clientIds.accept,
+              })
+            }
+          />
+        ) : null}
+        <ConfirmAlert
+          open={dialog === "decline"}
+          title={`Decline ${request.customerName}’s request?`}
+          description={`${request.customerName} sees your reason on their receipt.`}
+          action="Decline request"
+          cancelLabel="Keep request"
+          danger
+          pending={respond.isPending}
+          disabled={message.trim().length < 3 || !storeId}
+          onCancel={() => setDialog(null)}
+          onConfirm={() =>
+            respond.mutate({
+              requestId: request.id,
+              storeId: storeId as string,
+              expectedRevision: request.revision,
+              action: "decline",
+              message: message.trim(),
+              clientMessageId: clientIds.message,
+            })
+          }
+        >
+          <Field>
+            <FieldLabel htmlFor={`${item.id}-reason`}>Reason</FieldLabel>
+            <Textarea
+              id={`${item.id}-reason`}
+              rows={4}
+              maxLength={800}
+              value={message}
+              onChange={(event) => setMessage(event.target.value)}
+            />
+          </Field>
+        </ConfirmAlert>
+        {dialog === "request_information" ? (
+          <Dialog open onOpenChange={(value) => !value && setDialog(null)}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>
+                  Ask {request.customerName} for details
+                </DialogTitle>
+                <DialogDescription>
+                  They see this on their receipt and can reply there.
+                </DialogDescription>
+              </DialogHeader>
+              <Field>
+                <FieldLabel htmlFor={`${item.id}-message`}>
+                  Your question
+                </FieldLabel>
+                <Textarea
+                  id={`${item.id}-message`}
+                  rows={4}
+                  maxLength={800}
+                  value={message}
+                  onChange={(event) => setMessage(event.target.value)}
+                />
+              </Field>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setDialog(null)}>
+                  Cancel
+                </Button>
+                <Button
+                  disabled={
+                    respond.isPending || message.trim().length < 3 || !storeId
+                  }
+                  onClick={() =>
+                    respond.mutate({
+                      requestId: request.id,
+                      storeId: storeId as string,
+                      expectedRevision: request.revision,
+                      action: "request_information",
+                      message: message.trim(),
+                      clientMessageId: clientIds.message,
+                    })
+                  }
+                >
+                  {respond.isPending ? <Spinner /> : null}
+                  Send question
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        ) : null}
+      </article>
+    </SheetFrame>
   )
 }
