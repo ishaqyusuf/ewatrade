@@ -6,11 +6,11 @@ Tickets refer to the Brain plan `.brain/plans/2026-10-09-assistant-business-oper
 
 ## Summary
 
-- Router procedures: 841 (643 merchant, 198 public/account/internal)
+- Router procedures: 849 (647 merchant, 202 public/account/internal)
 - Merchant supported by a capability: 188
 - Merchant planned: 144
-- Merchant form-only: 238
-- Merchant excluded: 73
+- Merchant form-only: 241
+- Merchant excluded: 74
 - Capabilities: 171 (89 read, 82 write)
 
 ## Capabilities
@@ -128,8 +128,8 @@ Tickets refer to the Brain plan `.brain/plans/2026-10-09-assistant-business-oper
 | `sales.order.metadata.update` | 1 | write (`order_metadata_update`) | `draftAction` | OWNER, ADMIN, MANAGER | reconciliation, reconciliation | dashboard, mobile, whatsapp | source | `orders.amendMetadata`, `orders.metadataReview` |
 | `sales.order.replace` | 1 | write (`order_replace`) | `draftAction` | OWNER, ADMIN, MANAGER | reconciliation, reconciliation | dashboard, mobile, whatsapp | source | `orders.replace`, `orders.replacementReview` |
 | `sales.order.attachment.add` | 1 | write (`order_attachment_add`) | `draftAction` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | orders | dashboard, mobile, whatsapp | source | `orders.activity.add` |
-| `returnables.read` | 1 | read | `readReturnableBalances` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | Owner/Admin only, Owner/Admin only | dashboard, mobile, whatsapp | source | `returnables.balances`, `returnables.items` |
-| `returnables.movement.record` | 1 | write (`returnable_movement_record`) | `draftAction` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | Owner/Admin only | dashboard, mobile, whatsapp | source | `returnables.record` |
+| `returnables.read` | 1 | read | `readReturnableBalances` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | read, read | dashboard, mobile, whatsapp | source | `returnables.balances`, `returnables.items` |
+| `returnables.movement.record` | 1 | write (`returnable_movement_record`) | `draftAction` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | orders | dashboard, mobile, whatsapp | source | `returnables.record` |
 | `search.records` | 1 | read | `searchRecords` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | read | dashboard, mobile, whatsapp | source | `search.global` |
 | `catalog.history.read` | 1 | read | `readCatalogHistory` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | read, read | dashboard, mobile, whatsapp | source | `catalog.detail.orders`, `catalog.detail.activity` |
 | `catalog.item.read` | 1 | read | `readCatalogItem` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | read | dashboard, mobile, whatsapp | source | `catalog.detail.overview` |
@@ -481,7 +481,7 @@ track conversational evaluation separately from these source test links.
 | `catalog.aiImages.startBatch` | mutation | catalog | catalog | form_only | Photo capture, upload, AI generation and refinement belong to the product form; model tools cannot spend generation allowance. |
 | `catalog.aiImages.state` | query | catalog | catalog | form_only | Photo capture, upload, AI generation and refinement belong to the product form; model tools cannot spend generation allowance. |
 | `catalog.aiImages.versions` | query | catalog | catalog | form_only | Photo capture, upload, AI generation and refinement belong to the product form; model tools cannot spend generation allowance. |
-| `catalog.archiveItem` | mutation | catalog | catalog | form_only | Dashboard item sheet's whole-item archive behind a confirm that names the item; the assistant drafts unit and variant archives (catalog.archive). |
+| `catalog.archiveItem` | mutation | catalog | catalog | form_only | Dashboard item sheet's whole-item archive (behind a confirm that names the item) and its restore; the assistant drafts unit and variant archives (catalog.archive). |
 | `catalog.archiveOffering` | mutation | catalog | catalog | supported | catalog.archive |
 | `catalog.archiveVariant` | mutation | catalog | catalog | supported | catalog.archive |
 | `catalog.attentionSummary` | query | read | catalog | form_only | Catalog page type and problem counts behind its filters; the assistant counts products with catalog.count and pages them with listItemsPage. |
@@ -514,6 +514,7 @@ track conversational evaluation separately from these source test links.
 | `catalog.photos.updateGalleryDetails` | mutation | Owner/Admin only | catalog | form_only | Photo capture, upload, AI generation and refinement belong to the product form; model tools cannot spend generation allowance. |
 | `catalog.productShare` | query | read | catalog | form_only | Dashboard Product Share reads an already public product link for explicit browser Share/Copy; no publishing, provider or model authority. |
 | `catalog.publishUnitConfiguration` | mutation | catalog | catalog | supported | catalog.units.publish |
+| `catalog.restoreItem` | mutation | catalog | catalog | form_only | Dashboard item sheet's whole-item archive (behind a confirm that names the item) and its restore; the assistant drafts unit and variant archives (catalog.archive). |
 | `catalog.searchProductCategories` | query | read | catalog | supported | catalog.categories.suggest |
 | `catalog.setOfferingAvailability` | mutation | catalog | catalog | supported | catalog.availability.update |
 | `catalog.setProductUsage` | mutation | Owner/Admin only | catalog | planned | B03 |
@@ -570,6 +571,7 @@ track conversational evaluation separately from these source test links.
 | `customers.create` | mutation | Owner/Admin only | customers | supported | customers.create |
 | `customers.getById` | query | read | customers | supported | customers.read |
 | `customers.listPage` | query | Owner/Admin only | customers | supported | customers.page, sales.order.prepare, services.job.prepare |
+| `customers.summary` | query | read | customers | form_only | Dashboard customer details sheet: contact plus the owner/admin balance in one read. The assistant reads a customer with readCustomer (customers.getById/customers.contact) and balances through customer statements. |
 | `customers.update` | mutation | Owner/Admin only | customers | supported | customers.update |
 | `domains.availability` | query | Owner/Admin only | platform | form_only | Domain purchase and DNS use registrar checkout and verification. |
 | `domains.checkAvailability` | mutation | Owner/Admin only | platform | form_only | Domain purchase and DNS use registrar checkout and verification. |
@@ -703,6 +705,7 @@ track conversational evaluation separately from these source test links.
 | `inventory.stockCounts` | query | Owner/Admin only | inventory | form_only | Count stock sheet: lists this Store's saved count drafts to finish or discard. The assistant reads a saved count with readStockCount and creates new counts itself. |
 | `inventory.transferReview` | query | stock | inventory | supported | inventory.transfer.read |
 | `inventory.transfers` | query | stock | inventory | supported | inventory.transfer.list |
+| `inventory.transfersPage` | query | stock | inventory | form_only | Transfers page by page behind the Transfers page filters (status, Coming in / Going out, search); the assistant lists Store transfers with readStockTransfers (inventory.transfers) and opens one with transferReview. |
 | `inventory.transformPackagedStock` | mutation | stock | inventory | supported | inventory.package.transform |
 | `inventory.transitionTransfer` | mutation | stock | inventory | supported | inventory.transfer.receive, inventory.transfer.cancel |
 | `offline.conflicts` | query | Owner/Admin only | platform | excluded | Device sync; assistant writes stay online-only until replay supports them. |
@@ -818,6 +821,7 @@ track conversational evaluation separately from these source test links.
 | `productAssistant.start` | mutation | Owner/Admin only | assistant | excluded | Assistant transport or a dedicated assistant flow. |
 | `productAssistant.state` | query | Owner/Admin only | assistant | excluded | Assistant transport or a dedicated assistant flow. |
 | `productAssistant.updateSnapshot` | mutation | Owner/Admin only | assistant | excluded | Assistant transport or a dedicated assistant flow. |
+| `qaAccess.fixtureContext` | query | Owner/Admin only | platform | excluded | Internal QA tooling. |
 | `qaTools.fixtureContext` | query | Owner/Admin only | platform | excluded | Internal QA tooling. |
 | `retailOps.checkWebSubscriptionPayment` | mutation | Owner/Admin only | platform | form_only | Subscription purchase and verification use the billing checkout. |
 | `retailOps.createSubscriptionCheckoutIntent` | mutation | Owner/Admin only | platform | form_only | Subscription purchase and verification use the billing checkout. |
@@ -842,11 +846,11 @@ track conversational evaluation separately from these source test links.
 | `retailOps.staffStoreAccessReview` | query | Owner/Admin only | staff | supported | staff.access.change, staff.access.review |
 | `retailOps.subscription` | query | Owner/Admin only | platform | form_only | Subscription purchase and verification use the billing checkout. |
 | `retailOps.updateStaffStatus` | mutation | Owner/Admin only | staff | supported | staff.status.change |
-| `returnables.balances` | query | Owner/Admin only | customers | supported | returnables.read |
-| `returnables.forOrder` | query | Owner/Admin only | customers | form_only | Returnables history screens: the assistant reads balances and items (returnables.read) and records movements (returnables.movement.record). |
-| `returnables.items` | query | Owner/Admin only | customers | supported | returnables.read |
-| `returnables.movements` | query | Owner/Admin only | customers | form_only | Returnables history screens: the assistant reads balances and items (returnables.read) and records movements (returnables.movement.record). |
-| `returnables.record` | mutation | Owner/Admin only | customers | supported | returnables.movement.record |
+| `returnables.balances` | query | read | customers | supported | returnables.read |
+| `returnables.forOrder` | query | read | customers | form_only | Returnables history screens: the assistant reads balances and items (returnables.read) and records movements (returnables.movement.record). |
+| `returnables.items` | query | read | customers | supported | returnables.read |
+| `returnables.movements` | query | read | customers | form_only | Returnables history screens: the assistant reads balances and items (returnables.read) and records movements (returnables.movement.record). |
+| `returnables.record` | mutation | orders | customers | supported | returnables.movement.record |
 | `search.global` | query | read | search | supported | search.records |
 | `serviceAccess.createRequestForm` | mutation | Owner/Admin only | commerce | planned | G03 |
 | `serviceAccess.createStaffQuote` | mutation | Owner/Admin only | commerce | form_only | Dashboard manager-reviewed staff quote cart. No assistant write or channel activation is added; existing canonical quote authority and customer acceptance remain required. |

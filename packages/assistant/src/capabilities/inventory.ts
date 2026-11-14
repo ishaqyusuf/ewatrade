@@ -232,6 +232,11 @@ formOnly(
   "Opening debt is captured by Setup and the ledger form; it is not new money.",
   ["customerLedger.recordOpening", "customerLedger.createCustomerWithOpening"],
 )
+formOnly(
+  "customers",
+  "Dashboard customer details sheet: contact plus the owner/admin balance in one read. The assistant reads a customer with readCustomer (customers.getById/customers.contact) and balances through customer statements.",
+  ["customers.summary"],
+)
 
 // Sales
 formOnly(
