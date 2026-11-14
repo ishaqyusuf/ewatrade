@@ -288,8 +288,14 @@ export function CatalogItemForm({
     staleTime: 0,
     gcTime: 0,
     refetchOnMount: "always",
+    // Replies stream into the chat and refresh this draft when they finish;
+    // poll only while a server turn is still running (e.g. after a reload).
     refetchInterval: (query) =>
-      catalogCreateMode === "chat" && !query.state.error ? 2500 : false,
+      catalogCreateMode === "chat" &&
+      !query.state.error &&
+      query.state.data?.running
+        ? 2500
+        : false,
   })
   const productData = productFormStateIsFresh(
     productState,
@@ -2368,37 +2374,6 @@ export function CatalogItemForm({
               <FieldGroup className="gap-4">
                 {editing ? null : (
                   <>
-                    <QaDashboardQuickFill
-                      canUndo={canUndoQuickFill}
-                      formId="dashboard.catalog.item"
-                      isDirty={Boolean(
-                        form.name || form.price || form.description,
-                      )}
-                      onFill={(context, sequence) => {
-                        quickFillSnapshot.current = form
-                        const fixture = createCatalogFixture(context, sequence)
-                        setForm((current) => ({
-                          ...current,
-                          description: fixture.description,
-                          kind: current.kind ?? "product",
-                          name: fixture.name,
-                          openingStockQuantity:
-                            current.kind === "service" ? "" : "12",
-                          price: fixture.price,
-                          unitName:
-                            current.kind === "service" ? "" : fixture.unit,
-                        }))
-                        setShowDescription(true)
-                        if (form.kind !== "service") setShowOpeningStock(true)
-                        setCanUndoQuickFill(true)
-                      }}
-                      onUndo={() => {
-                        if (!quickFillSnapshot.current) return
-                        setForm(quickFillSnapshot.current)
-                        quickFillSnapshot.current = null
-                        setCanUndoQuickFill(false)
-                      }}
-                    />
                     <div className="flex flex-wrap gap-2">
                       <Button
                         type="button"
@@ -2425,6 +2400,41 @@ export function CatalogItemForm({
                               : "Create with AI"}
                         </Button>
                       ) : null}
+                      {/* QA only: shares this row so it never shapes the real layout. */}
+                      <QaDashboardQuickFill
+                        canUndo={canUndoQuickFill}
+                        formId="dashboard.catalog.item"
+                        isDirty={Boolean(
+                          form.name || form.price || form.description,
+                        )}
+                        onFill={(context, sequence) => {
+                          quickFillSnapshot.current = form
+                          const fixture = createCatalogFixture(
+                            context,
+                            sequence,
+                          )
+                          setForm((current) => ({
+                            ...current,
+                            description: fixture.description,
+                            kind: current.kind ?? "product",
+                            name: fixture.name,
+                            openingStockQuantity:
+                              current.kind === "service" ? "" : "12",
+                            price: fixture.price,
+                            unitName:
+                              current.kind === "service" ? "" : fixture.unit,
+                          }))
+                          setShowDescription(true)
+                          if (form.kind !== "service") setShowOpeningStock(true)
+                          setCanUndoQuickFill(true)
+                        }}
+                        onUndo={() => {
+                          if (!quickFillSnapshot.current) return
+                          setForm(quickFillSnapshot.current)
+                          quickFillSnapshot.current = null
+                          setCanUndoQuickFill(false)
+                        }}
+                      />
                     </div>
                   </>
                 )}
