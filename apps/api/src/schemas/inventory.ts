@@ -359,6 +359,21 @@ export const inventoryListTransfersSchema = z
   })
   .strict()
 
+/** Transfers page by page, newest first, filtered on the server. */
+export const inventoryTransfersPageSchema = z
+  .object({
+    storeId: z.string().trim().min(1).optional(),
+    status: z.enum(["IN_TRANSIT", "RECEIVED", "CANCELLED"]).optional(),
+    /** Arriving at or leaving `storeId`. */
+    flow: z.enum(["incoming", "outgoing"]).optional(),
+    search: z.string().trim().max(120).optional(),
+    cursor: z.string().trim().min(1).max(200).optional(),
+    // Sent by tRPC infinite queries; the list only pages forward.
+    direction: z.enum(["forward", "backward"]).optional(),
+    limit: z.number().int().min(1).max(100).optional(),
+  })
+  .strict()
+
 export const inventoryCreateCloseoutSchema = z
   .object({
     clientOperationId: z.string().trim().min(8).max(160),

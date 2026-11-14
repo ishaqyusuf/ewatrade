@@ -51,17 +51,20 @@ const rpc = createTRPCClient<AppRouter>({
                     ],
                     nextCursor: null,
                   }
-                : [
-                    {
-                      id: `${scope}:transfer`,
-                      productName: "",
-                      variantName: "",
-                      inventoryUnitName: "",
-                      sourceStore: { id: "source", name: "" },
-                      targetStore: { id: "target", name: "" },
-                      status: "RECEIVED",
-                    },
-                  ]
+                : {
+                    rows: [
+                      {
+                        id: `${scope}:transfer`,
+                        productName: "",
+                        variantName: "",
+                        inventoryUnitName: "",
+                        sourceStore: { id: "source", name: "" },
+                        targetStore: { id: "target", name: "" },
+                        status: "RECEIVED",
+                      },
+                    ],
+                    nextCursor: null,
+                  }
           observer.next({ result: { data } })
           observer.complete()
         }),
@@ -148,10 +151,13 @@ mock.module("@/lib/inventory-store-totals", () => ({
   groupInventoryStores: <T,>(rows: T[]) => rows,
 }))
 // The real page-input builder keeps the route prefetch and table on one key.
-const { stockHistoryPageInput } = await import("@/lib/inventory-labels")
+const { stockHistoryPageInput, transfersPageInput } = await import(
+  "@/lib/inventory-labels"
+)
 mock.module("@/lib/inventory-labels", () => ({
   stockChangeGroup: () => "other",
   stockHistoryPageInput,
+  transfersPageInput,
   stockChangeLabel: (type: string) => type,
   stockDate: () => "",
   transferStatusLabel: (status: string) => status,
@@ -323,9 +329,9 @@ const owners = [
   },
   {
     name: "transfers",
-    path: "inventory.transfers",
-    route: TransfersRoutePage,
-    input: { limit: 200 },
+    path: "inventory.transfersPage",
+    route: () => TransfersRoutePage({ searchParams: Promise.resolve({}) }),
+    input: { limit: 30, direction: "forward" },
     marker: "transfer",
     table: (storeId?: string) => (
       <TransfersDataTable

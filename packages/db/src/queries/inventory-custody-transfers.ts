@@ -1160,51 +1160,32 @@ export async function finalizeInventoryCloseoutInTransaction(
   return operation
 }
 
-export async function listStockTransfers(
-  db: PrismaClient,
-  input: {
-    limit?: number
-    storeId?: string
-    tenantId: string
-    allowedStoreIds?: string[]
-  },
-) {
-  const transfers = await db.stockTransfer.findMany({
-    // Only the columns the list shows.
+/** Only the columns a transfer row shows. */
+const stockTransferRowSelect = {
+  createdAt: true,
+  enteredQuantity: true,
+  id: true,
+  status: true,
+  inventoryUnit: { select: { name: true } },
+  sourceBalanceSource: {
     select: {
-      createdAt: true,
-      enteredQuantity: true,
-      id: true,
-      status: true,
-      inventoryUnit: { select: { name: true } },
-      sourceBalanceSource: {
-        select: {
-          product: { select: { catalogItem: { select: { name: true } } } },
-          variant: { select: { name: true } },
-        },
-      },
-      sourceStore: { select: { id: true, name: true } },
-      targetStore: { select: { id: true, name: true } },
-      transitBalanceSource: {
-        select: { onHandQuantity: true, revision: true },
-      },
+      product: { select: { catalogItem: { select: { name: true } } } },
+      variant: { select: { name: true } },
     },
-    orderBy: { createdAt: "desc" },
-    take: Math.min(Math.max(input.limit ?? 100, 1), 200),
-    where: {
-      ...(input.allowedStoreIds
-        ? {
-            sourceStoreId: { in: input.allowedStoreIds },
-            targetStoreId: { in: input.allowedStoreIds },
-          }
-        : {}),
-      OR: input.storeId
-        ? [{ sourceStoreId: input.storeId }, { targetStoreId: input.storeId }]
-        : undefined,
-      tenantId: input.tenantId,
-    },
-  })
-  return transfers.map((transfer) => ({
+  },
+  sourceStore: { select: { id: true, name: true } },
+  targetStore: { select: { id: true, name: true } },
+  transitBalanceSource: {
+    select: { onHandQuantity: true, revision: true },
+  },
+} as const satisfies Prisma.StockTransferSelect
+
+function serializeStockTransferRow(
+  transfer: Prisma.StockTransferGetPayload<{
+    select: typeof stockTransferRowSelect
+  }>,
+) {
+  return {
     createdAt: transfer.createdAt,
     id: transfer.id,
     inventoryUnitName: transfer.inventoryUnit.name,
@@ -1223,5 +1204,128 @@ export async function listStockTransfers(
     },
     transitRevision: transfer.transitBalanceSource?.revision ?? null,
     variantName: transfer.sourceBalanceSource.variant.name,
-  }))
+  }
+}
+
+function stockTransferScope(input: {
+  storeId?: string
+  tenantId: string
+  allowedStoreIds?: string[]
+}): Prisma.StockTransferWhereInput {
+  return {
+    ...(input.allowedStoreIds
+      ? {
+          sourceStoreId: { in: input.allowedStoreIds },
+          targetStoreId: { in: input.allowedStoreIds },
+        }
+      : {}),
+    OR: input.storeId
+      ? [{ sourceStoreId: input.storeId }, { targetStoreId: input.storeId }]
+      : undefined,
+    tenantId: input.tenantId,
+  }
+}
+
+export async function listStockTransfers(
+  db: PrismaClient,
+  input: {
+    limit?: number
+    storeId?: string
+    tenantId: string
+    allowedStoreIds?: string[]
+  },
+) {
+  const transfers = await db.stockTransfer.findMany({
+    select: stockTransferRowSelect,
+    orderBy: { createdAt: "desc" },
+    take: Math.min(Math.max(input.limit ?? 100, 1), 200),
+    where: stockTransferScope(input),
+  })
+  return transfers.map(serializeStockTransferRow)
+}
+
+/** "<sent at ISO>_<id>": the last row of a page, newest first. */
+function parseTransferCursor(cursor: string) {
+  const split = cursor.lastIndexOf("_")
+  const createdAt = new Date(cursor.slice(0, split))
+  const id = cursor.slice(split + 1)
+  if (split < 1 || !id || Number.isNaN(createdAt.getTime())) return null
+  return { createdAt, id }
+}
+
+/**
+ * One page of transfers, newest first, filtered on the server so every page
+ * is already the list the person asked for. One statement per page: the
+ * cursor carries the sent time, so no extra read finds where to start.
+ */
+export async function listStockTransfersPage(
+  db: PrismaClient,
+  input: {
+    storeId?: string
+    tenantId: string
+    allowedStoreIds?: string[]
+    status?: "IN_TRANSIT" | "RECEIVED" | "CANCELLED"
+    /** Needs `storeId`: transfers arriving at or leaving it. */
+    direction?: "incoming" | "outgoing"
+    search?: string
+    cursor?: string
+    limit?: number
+  },
+) {
+  const limit = Math.min(Math.max(input.limit ?? 30, 1), 100)
+  const cursor = input.cursor ? parseTransferCursor(input.cursor) : null
+  if (input.cursor && !cursor)
+    throw new CatalogError(
+      "INVALID_STOCK_OPERATION",
+      "The transfers list changed. Refresh to continue.",
+    )
+  const search = input.search?.trim()
+  const contains = (value: string) => ({
+    contains: value,
+    mode: "insensitive" as const,
+  })
+  const and: Prisma.StockTransferWhereInput[] = [stockTransferScope(input)]
+  if (input.status) and.push({ status: input.status })
+  if (input.direction && input.storeId)
+    and.push(
+      input.direction === "incoming"
+        ? { targetStoreId: input.storeId }
+        : { sourceStoreId: input.storeId },
+    )
+  if (search)
+    and.push({
+      OR: [
+        {
+          sourceBalanceSource: {
+            product: { catalogItem: { name: contains(search) } },
+          },
+        },
+        { sourceBalanceSource: { variant: { name: contains(search) } } },
+        { inventoryUnit: { name: contains(search) } },
+        { sourceStore: { name: contains(search) } },
+        { targetStore: { name: contains(search) } },
+      ],
+    })
+  if (cursor)
+    and.push({
+      OR: [
+        { createdAt: { lt: cursor.createdAt } },
+        { createdAt: cursor.createdAt, id: { lt: cursor.id } },
+      ],
+    })
+  const rows = await db.stockTransfer.findMany({
+    select: stockTransferRowSelect,
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    take: limit + 1,
+    where: { AND: and },
+  })
+  const page = rows.slice(0, limit)
+  const last = page.at(-1)
+  return {
+    rows: page.map(serializeStockTransferRow),
+    nextCursor:
+      rows.length > limit && last
+        ? `${last.createdAt.toISOString()}_${last.id}`
+        : null,
+  }
 }

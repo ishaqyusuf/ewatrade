@@ -1,11 +1,11 @@
 "use client"
 import { useInventoryLedgerParams } from "@/hooks/use-inventory-ledger-params"
 import { useStockTransferParams } from "@/hooks/use-stock-transfer-params"
-import { stockDate, transferStatusLabel } from "@/lib/inventory-labels"
+import { stockDate, transfersPageInput } from "@/lib/inventory-labels"
 import { useTRPC } from "@/trpc/client"
 import type { DirectoryView } from "@/utils/directory-view-settings"
 import type { TableSettings } from "@/utils/table-settings"
-import { useSuspenseQuery } from "@tanstack/react-query"
+import { useSuspenseInfiniteQuery } from "@tanstack/react-query"
 import { useCallback, useMemo } from "react"
 import { InventoryLedgerTable } from "../inventory-ledger/data-table"
 import {
@@ -69,39 +69,26 @@ export function TransfersDataTable({
   const trpc = useTRPC()
   const { params, setParams } = useInventoryLedgerParams()
   const { open: openTransfer } = useStockTransferParams()
-  const { data } = useSuspenseQuery(
-    trpc.inventory.transfers.queryOptions({ storeId, limit: 200 }),
+  // Status, Coming in / Going out and search run on the server, so every
+  // page is already filtered; Load more fetches the next 30.
+  const query = useSuspenseInfiniteQuery(
+    trpc.inventory.transfersPage.infiniteQueryOptions(
+      transfersPageInput({ storeId, q: params.q, filter: params.filter }),
+      {
+        getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
+        retry: false,
+      },
+    ),
+  )
+  const rows = useMemo(
+    () => query.data.pages.flatMap((page) => page.rows),
+    [query.data.pages],
   )
   const open = useCallback(
     (row: StockTransfer) => void openTransfer(row.id),
     [openTransfer],
   )
   const columns = useMemo(() => transferColumns(), [])
-  const query = (params.q ?? "").trim().toLowerCase()
-  const rows = useMemo(
-    () =>
-      data.filter(
-        (row) =>
-          (!params.filter ||
-            (params.filter === "incoming"
-              ? row.targetStore.id === storeId
-              : params.filter === "outgoing"
-                ? row.sourceStore.id === storeId
-                : row.status === params.filter)) &&
-          [
-            row.productName,
-            row.variantName,
-            row.inventoryUnitName,
-            row.sourceStore.name,
-            row.targetStore.name,
-            transferStatusLabel(row.status),
-          ]
-            .join(" ")
-            .toLowerCase()
-            .includes(query),
-      ),
-    [data, params.filter, query, storeId],
-  )
   return (
     <div className="grid gap-4">
       <InventoryLedgerTable
@@ -111,11 +98,19 @@ export function TransfersDataTable({
         initialSettings={initialSettings}
         sortFields={transferSortFields}
         label="Transfers"
-        summary={`${rows.length} transfer${rows.length === 1 ? "" : "s"}${data.length >= 200 ? " · showing the latest 200" : ""}`}
+        summary={`${rows.length} transfer${rows.length === 1 ? "" : "s"}${query.hasNextPage ? " loaded" : ""}`}
         view={view}
         getRecordLabel={getTransferLabel}
         describeRecord={describeTransfer}
         onOpen={open}
+        pagination={{
+          hasNextPage: query.hasNextPage,
+          isFetchingNextPage: query.isFetchingNextPage,
+          isFetchNextPageError: query.isFetchNextPageError,
+          errorMessage: query.error?.message,
+          fetchNextPage: () => query.fetchNextPage(),
+          noun: "transfers",
+        }}
         empty={
           <TransfersEmpty
             filtered={Boolean(params.q || params.filter)}

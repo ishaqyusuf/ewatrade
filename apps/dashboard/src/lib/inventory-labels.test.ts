@@ -9,6 +9,7 @@ import {
   stockTotalsFromText,
   stockTotalsScopeNote,
   transferStatusLabel,
+  transfersPageInput,
 } from "./inventory-labels"
 
 describe("inventory labels", () => {
@@ -129,5 +130,26 @@ describe("inventory labels", () => {
     ).toBe(
       "Search “x” only filters the list below. Net change counts every change with no categories.",
     )
+  })
+})
+
+test("transfers page input keeps one key for the route and the table", () => {
+  expect(
+    transfersPageInput({ storeId: "s", q: " eggs ", filter: "IN_TRANSIT" }),
+  ).toEqual({
+    storeId: "s",
+    limit: 30,
+    status: "IN_TRANSIT",
+    search: "eggs",
+  })
+  // Coming in / Going out need one store; All stores ignores them.
+  expect(transfersPageInput({ storeId: "s", filter: "incoming" })).toEqual({
+    storeId: "s",
+    limit: 30,
+    flow: "incoming",
+  })
+  expect(transfersPageInput({ filter: "outgoing" })).toEqual({
+    storeId: undefined,
+    limit: 30,
   })
 })

@@ -319,6 +319,9 @@ export function InventoryOperationForm({
       queryClient.invalidateQueries({
         queryKey: trpc.inventory.transfers.queryKey(),
       }),
+      queryClient.invalidateQueries({
+        queryKey: trpc.inventory.transfersPage.pathKey(),
+      }),
     ])
     setParams(null)
   }

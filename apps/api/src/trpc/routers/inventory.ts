@@ -40,6 +40,7 @@ import {
   listServiceAssignees,
   listStockOperationCategoryNames,
   listStockTransfers,
+  listStockTransfersPage,
   moveInventoryCustody,
   postSingleBalanceStockOperation,
   receiveOrCancelStockTransfer,
@@ -89,6 +90,7 @@ import {
   inventoryStockCountReviewSchema,
   inventoryStockCountsSchema,
   inventoryTransferReviewSchema,
+  inventoryTransfersPageSchema,
   inventoryTransformationSchema,
   inventoryTransitionTransferSchema,
 } from "../../schemas/inventory"
@@ -344,6 +346,33 @@ export const inventoryRouter = createTRPCRouter({
             : undefined,
         tenantId: ctx.tenantContext.tenant.id,
       })
+    }),
+
+  transfersPage: protectedProcedure
+    .input(inventoryTransfersPageSchema)
+    .query(async ({ ctx, input }) => {
+      assertCanManageInventory(ctx.tenantContext)
+      const { direction: _direction, flow, ...filters } = input
+      if (filters.storeId)
+        resolveStoreId(
+          ctx.tenantContext.stores,
+          ctx.tenantContext.activeStore,
+          filters.storeId,
+        )
+      try {
+        return await listStockTransfersPage(ctx.db, {
+          ...filters,
+          direction: flow,
+          allowedStoreIds:
+            ctx.tenantContext.staffAccess?.mode === "SCOPED"
+              ? ctx.tenantContext.stores.map((store) => store.id)
+              : undefined,
+          tenantId: ctx.tenantContext.tenant.id,
+        })
+      } catch (error) {
+        if (error instanceof CatalogError) throw inventoryError(error)
+        throw error
+      }
     }),
 
   auditExport: protectedProcedure

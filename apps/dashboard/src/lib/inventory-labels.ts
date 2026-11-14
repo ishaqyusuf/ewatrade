@@ -98,6 +98,35 @@ export function stockHistoryPageInput(input: {
   }
 }
 
+const transferStatuses = ["IN_TRANSIT", "RECEIVED", "CANCELLED"] as const
+
+/**
+ * Transfers page input from the URL (`q`, `filter`), shared by the route
+ * prefetch and the table so both use one query key. Coming in / Going out
+ * only apply when one store is open.
+ */
+export function transfersPageInput(input: {
+  storeId?: string
+  q?: string | null
+  filter?: string | null
+}) {
+  const status = transferStatuses.find((value) => value === input.filter)
+  const flow: "incoming" | "outgoing" | undefined =
+    input.storeId && input.filter === "incoming"
+      ? "incoming"
+      : input.storeId && input.filter === "outgoing"
+        ? "outgoing"
+        : undefined
+  const search = input.q?.trim().slice(0, 120)
+  return {
+    storeId: input.storeId,
+    limit: 30,
+    ...(status ? { status } : {}),
+    ...(flow ? { flow } : {}),
+    ...(search ? { search } : {}),
+  }
+}
+
 /**
  * Totals input: Store and categories only. The server totals take neither the
  * search nor the Stock history group, so the totals view says what it covers.

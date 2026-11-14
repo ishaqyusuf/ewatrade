@@ -63,6 +63,9 @@ export function StockTransferSheet({
             queryKey: trpc.inventory.transfers.queryKey(),
           }),
           queryClient.invalidateQueries({
+            queryKey: trpc.inventory.transfersPage.pathKey(),
+          }),
+          queryClient.invalidateQueries({
             queryKey: trpc.inventory.balanceReport.queryKey(),
           }),
           queryClient.invalidateQueries({
