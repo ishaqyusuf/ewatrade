@@ -90,3 +90,43 @@ failed on the retired Production QA early-access fixture and the signup-email
 subprocess output assertion. Those failures are outside the changed request
 paths and remain visible for release qualification. The capped storefront fixture
 now checks the current Free plan cap. Starter is now uncapped.
+
+## Protected Preview follow-up
+
+- At `050665094`, H01 has a current inventory of 840 router procedures. The
+  three lifecycle UI procedures have exact exclusions. Six more merchant rows
+  pick up classifications already defined in the inventory. H02 passes against
+  the current remote Preview base. No assistant capability changed.
+- The 287-test owned-path fast check, 13 email and early-access tests, 35
+  offline Playwright driver tests, and 27 focused app regressions passed.
+  The email test verifies the rendered HTML and text from a temporary file.
+  Legacy QA approval refuses delivery in Production and still exercises both
+  tester emails in the Preview profile. The browser driver retains the write
+  guard and passes allowed requests to subsequent interceptors. Chromium needed
+  to run outside the filesystem sandbox.
+- Existing-data local smoke started Chromium and failed before account
+  selection. The Dashboard QA endpoint returned 404 and API QA capability
+  reported disabled. Both responses also occur on the current Preview aliases.
+  These results are diagnostics against running services, not candidate receipts.
+- Full API, Marketing and Storefront type checks remain open. The installed
+  compiler with a 16 GB heap per app hit sustained system swap pressure without
+  reporting diagnostics. A TypeScript 7 trial with temporary equivalent alias
+  configuration also stalled and was stopped. Scoped API telemetry, Dashboard
+  retry and signup email types passed. The wider assistant regression run
+  reported booking subprocess timeouts and native fixture failures. A direct
+  rerun reproduced a fixture importing `useWindowDimensions` without providing
+  it in its React Native mock. The separate assistant channel gate passed.
+- Authenticated Vercel settings showed an active Pro team and Standard
+  Protection on API, Dashboard, Marketing and the isolated Storefront Preview
+  project. The existing generated Git Preview URLs for API, Dashboard and
+  Marketing each returned a 302 unauthenticated challenge. The existing
+  `preview-api.ewatrade.com` exception returned 200 for `/live` anonymously.
+  The Dashboard custom Preview alias reached the app's login redirect.
+- The normal release dry run against `050665094` selects API, Dashboard and
+  Marketing on a push to `origin/preview`, reports Storefront up to date, and
+  passes the environment-name audit. That push would also route the candidate
+  to the API's public Preview alias. The branch delta includes two existing
+  receipt migrations, and Preview schema compatibility is unverified. The
+  normal runner would create a Git worktree because of concurrent edits.
+  The standalone API and Storefront Preview scripts enforce clean source.
+  No candidate was pushed, deployed, or exposed on an alias.
