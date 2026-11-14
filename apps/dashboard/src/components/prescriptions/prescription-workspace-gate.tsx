@@ -1,6 +1,5 @@
 "use client"
 
-import { PageHeader } from "@/components/page-header"
 import { useTRPC } from "@/trpc/client"
 import { Button } from "@ewatrade/ui"
 import { useQuery } from "@tanstack/react-query"
@@ -55,33 +54,24 @@ export function PrescriptionWorkspaceGate({
 
   if (accessState === "loading") {
     return (
-      <div className="grid min-w-0 flex-1 gap-4 pt-6" aria-busy="true">
-        <div className="h-24 animate-pulse bg-muted" />
-        <div className="h-72 animate-pulse bg-muted" />
+      <div className="grid min-w-0 flex-1 gap-4 pt-4" aria-busy="true">
+        <div className="h-11 animate-pulse rounded-[var(--ui-radius-control)] bg-muted" />
+        <div className="h-72 animate-pulse rounded-[var(--ui-radius-surface)] bg-muted" />
       </div>
     )
   }
 
   if (accessState === "setup_required") {
     return (
-      <div className="grid min-w-0 flex-1 content-start gap-6 pt-6">
-        <PageHeader
-          eyebrow={store.name}
-          title="Pharmacy compliance setup"
-          description="Complete the pharmacy policy and professional role checks before opening the private prescription queue."
-        />
-        <section className="max-w-2xl rounded-none border border-warning-border bg-warning p-6 text-warning-foreground">
-          <h2 className="font-semibold">Professional access is not ready</h2>
-          <p className="mt-2 text-sm leading-6">
-            Assign a verified pharmacist and an attendant, configure pickup or
-            delivery, and activate the Store. Patient request data remains
-            closed until those checks pass.
+      <div className="grid min-w-0 flex-1 content-start gap-4 pt-4">
+        <section className="grid max-w-2xl justify-items-start gap-3 rounded-[var(--ui-radius-surface)] border border-border bg-card p-6">
+          <h2 className="text-lg font-semibold">Finish pharmacy setup</h2>
+          <p className="text-sm text-muted-foreground">
+            Add a verified pharmacist and an attendant, and choose pickup or
+            delivery. Prescriptions stay closed until then.
           </p>
-          <Button
-            className="mt-5"
-            render={<Link href="/settings/compliance" />}
-          >
-            Continue compliance setup
+          <Button render={<Link href="/settings/compliance" />}>
+            Continue setup
           </Button>
         </section>
       </div>
@@ -90,25 +80,20 @@ export function PrescriptionWorkspaceGate({
 
   if (accessState !== "ready") {
     return (
-      <div className="flex min-h-[60vh] min-w-0 items-center justify-center pt-6">
-        <section className="w-full max-w-md rounded-none border bg-background p-6 text-center">
-          <p className="text-sm font-medium text-muted-foreground">
-            Prescription workspace unavailable
-          </p>
-          <h2 className="mt-2 text-xl">
+      <div className="flex min-h-[60vh] min-w-0 items-center justify-center pt-4">
+        <section className="grid w-full max-w-md justify-items-center gap-3 rounded-[var(--ui-radius-surface)] border border-border bg-card p-6 text-center">
+          <h2 className="text-lg font-semibold">
             {accessState === "forbidden"
-              ? "Professional access is required"
-              : "We could not load this workspace"}
+              ? "You need a pharmacy role"
+              : "Prescriptions didn’t load"}
           </h2>
-          <p className="mt-2 text-sm text-muted-foreground">
+          <p className="text-sm text-muted-foreground">
             {accessState === "forbidden"
-              ? "Ask an Owner or Admin to assign your verified pharmacy role."
-              : "Your data has not been changed. Try loading the workspace again."}
+              ? "Ask the owner to give you a pharmacist or attendant role."
+              : "Nothing was changed. Try again."}
           </p>
           {accessState === "error" ? (
-            <Button className="mt-6" onClick={retryWorkspace}>
-              Try again
-            </Button>
+            <Button onClick={retryWorkspace}>Try again</Button>
           ) : null}
         </section>
       </div>

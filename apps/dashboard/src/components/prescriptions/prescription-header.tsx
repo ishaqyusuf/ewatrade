@@ -1,7 +1,6 @@
 "use client"
 import { FormFeedback } from "@/components/forms/form-feedback"
 
-import { PageHeader, PageToolbar } from "@/components/page-header"
 import { ViewSwitcher, directoryViewOptions } from "@/components/view-switcher"
 import { useTRPC } from "@/trpc/client"
 import type { DirectoryView } from "@/utils/directory-view-settings"
@@ -16,13 +15,11 @@ import { PrescriptionSearchFilter } from "./prescription-search-filter"
 export function PrescriptionHeader({
   canManageSetup,
   storeId,
-  storeName,
   view,
   onViewChange,
 }: {
   canManageSetup: boolean
   storeId: string
-  storeName: string
   view: DirectoryView
   onViewChange: (view: DirectoryView) => void
 }) {
@@ -31,65 +28,60 @@ export function PrescriptionHeader({
     trpc.prescriptions.queueContext.queryOptions({ storeId }),
   )
   const readiness = context.data?.readiness
+  const active = readiness?.ready && context.data?.status === "active"
   return (
-    <PageHeader
-      eyebrow={storeName}
-      title="Prescription requests"
-      description="Review private intake, verify transcription, and prepare a pharmacy-approved quote."
-    >
-      <p className="text-sm" aria-live="polite">
-        <span className="font-medium">Readiness:</span>{" "}
-        {context.isLoading
-          ? "Checking…"
-          : readiness?.ready
-            ? context.data?.status === "active"
-              ? "Active"
-              : "Ready to activate"
+    <header className="grid min-w-0 gap-4">
+      {!context.isLoading && !active ? (
+        <p className="text-sm" aria-live="polite">
+          {readiness?.ready
+            ? "Ready to switch on"
             : `Needs ${readiness?.missing.join(", ").replaceAll("_", " ") ?? "setup review"}`}
-      </p>
+        </p>
+      ) : null}
       {context.error ? (
         <FormFeedback appearance="dashboard">
           Readiness could not be loaded. Refresh to try again.
         </FormFeedback>
       ) : null}
-      <PageToolbar
-        actions={
-          <>
+      <div className="flex min-w-0 flex-wrap items-center gap-2">
+        <div className="min-w-0 flex-1 sm:basis-72">
+          <PrescriptionSearchFilter storeId={storeId} />
+        </div>
+        <div className="flex min-w-0 items-center gap-2 sm:ml-auto">
+          <div className="max-md:hidden">
             <ViewSwitcher
               label="Prescription view"
               value={view}
               options={directoryViewOptions}
               onValueChange={onViewChange}
             />
+          </div>
+          <Button
+            render={<Link href="/prescriptions/reports" />}
+            variant="outline"
+            className="max-sm:hidden"
+          >
+            Reports
+          </Button>
+          {canManageSetup ? (
             <Button
-              render={<Link href="/prescriptions/reports" />}
+              render={<Link href="/settings/compliance" />}
               variant="outline"
-              className="h-9 rounded-none"
+              className="max-sm:hidden"
             >
-              Reports
+              Compliance
             </Button>
-            {canManageSetup ? (
-              <Button
-                render={<Link href="/settings/compliance" />}
-                variant="outline"
-                className="h-9 rounded-none"
-              >
-                Compliance
-              </Button>
-            ) : null}
-            <OpenPrescriptionSheet />
-          </>
-        }
-      >
-        <PrescriptionSearchFilter storeId={storeId} />
-      </PageToolbar>
+          ) : null}
+          <OpenPrescriptionSheet />
+        </div>
+      </div>
       {context.data?.activeBreakGlass ? (
         <FormFeedback appearance="dashboard">
-          Emergency access is active until{" "}
+          Emergency access is on until{" "}
           {context.data.activeBreakGlass.expiresAt?.toLocaleTimeString()}. Every
-          sensitive read is conspicuously logged and requires post-use review.
+          private read is logged and must be reviewed afterwards.
         </FormFeedback>
       ) : null}
-    </PageHeader>
+    </header>
   )
 }

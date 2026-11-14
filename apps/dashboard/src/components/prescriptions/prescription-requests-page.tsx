@@ -37,11 +37,10 @@ export function PrescriptionRequestsPage({
   return (
     <PrescriptionWorkspaceGate canManageSetup={canManageSetup} store={store}>
       <ScrollableContent>
-        <div className="flex min-w-0 flex-1 flex-col gap-6 pt-6">
+        <div className="flex min-w-0 flex-1 flex-col gap-4 pt-4 pb-24 sm:pb-8">
           <PrescriptionHeader
             canManageSetup={canManageSetup}
             storeId={store.id}
-            storeName={store.name}
             view={view}
             onViewChange={setView}
           />

@@ -10,12 +10,14 @@ export function OpenPrescriptionSheet() {
   return (
     <Button
       type="button"
-      variant="outline"
-      className="size-9 rounded-none"
-      aria-label="New intake"
       onClick={() => setParams({ prescriptionSheet: "intake" })}
     >
-      <HugeiconsIcon icon={Add01Icon} className="size-4" />
+      <HugeiconsIcon
+        icon={Add01Icon}
+        data-icon="inline-start"
+        aria-hidden="true"
+      />
+      New prescription
     </Button>
   )
 }

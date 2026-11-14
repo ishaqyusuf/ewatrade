@@ -59,41 +59,36 @@ export function PrescriptionSheetContent({
     if (context.error) void context.refetch()
   }
 
-  const title =
-    sheet === "intake" ? "Staff-assisted intake" : "Prescription request"
-  const description =
-    sheet === "intake"
-      ? "Capture only the details needed for pharmacy review."
-      : "Sensitive media access is short-lived and audited."
+  const title = sheet === "intake" ? "New prescription" : "Prescription"
 
   let content = null
   if (accessState === "loading") {
     content = <div aria-busy="true" className="h-32 animate-pulse bg-muted" />
   } else if (accessState === "setup_required") {
     content = (
-      <section className="grid gap-3 rounded-none border border-warning-border bg-warning p-5 text-warning-foreground">
-        <h2 className="font-semibold">Professional access is not ready</h2>
-        <p className="text-sm leading-6">
-          Complete the pharmacy policy and professional role checks before
-          opening the private prescription queue.
+      <section className="grid gap-3 rounded-[var(--ui-radius-surface)] border border-border p-5">
+        <h2 className="font-semibold">Finish pharmacy setup</h2>
+        <p className="text-sm text-muted-foreground">
+          Add a verified pharmacist and an attendant, and choose pickup or
+          delivery. Prescriptions stay closed until then.
         </p>
         <Button className="w-fit" render={<Link href="/settings/compliance" />}>
-          Continue compliance setup
+          Continue setup
         </Button>
       </section>
     )
   } else if (accessState !== "ready") {
     content = (
-      <section className="grid gap-3 rounded-none border border-border p-5 text-center">
+      <section className="grid gap-3 rounded-[var(--ui-radius-surface)] border border-border p-5 text-center">
         <h2 className="font-semibold">
           {accessState === "forbidden"
-            ? "Professional access is required"
-            : "Prescription workspace unavailable"}
+            ? "You need a pharmacy role"
+            : "Prescriptions didn’t load"}
         </h2>
         <p className="text-sm text-muted-foreground">
           {accessState === "forbidden"
-            ? "Ask an Owner or Admin to assign your verified pharmacy role."
-            : "We could not load this workspace. Try again."}
+            ? "Ask the owner to give you a pharmacist or attendant role."
+            : "Nothing was changed. Try again."}
         </p>
         {accessState === "error" ? (
           <Button className="mx-auto" onClick={retryWorkspace}>
@@ -141,7 +136,7 @@ export function PrescriptionSheetContent({
   }
 
   return (
-    <SheetFrame title={title} description={description}>
+    <SheetFrame title={title}>
       {closeError ? (
         <FormFeedback appearance="dashboard">{closeError}</FormFeedback>
       ) : null}
