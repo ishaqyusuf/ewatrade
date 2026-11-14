@@ -151,7 +151,7 @@ export function CatalogDetailHeader({
               <DropdownMenuGroup>
                 <DropdownMenuItem onClick={() => void setView("images")}>
                   <HugeiconsIcon icon={Image01Icon} aria-hidden="true" />
-                  Photos
+                  Images
                 </DropdownMenuItem>
                 {onStorefrontSettings ? (
                   <DropdownMenuItem onClick={onStorefrontSettings}>

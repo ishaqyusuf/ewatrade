@@ -66,9 +66,9 @@ export function CatalogItemsPage({
               </Alert>
             ) : null}
             {notice ? (
-              <p className="border border-success-border bg-success px-4 py-3 text-sm text-success-foreground">
+              <output className="block rounded-[var(--ui-radius-surface)] border border-success-border bg-success px-4 py-3 text-success-foreground">
                 {notice}
-              </p>
+              </output>
             ) : null}
             <ErrorBoundary errorComponent={WorkspaceError}>
               <Suspense
