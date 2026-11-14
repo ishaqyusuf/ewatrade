@@ -174,6 +174,17 @@ test("scoped staff read order history and options and add order notes", () => {
   expect(staffProcedureAction("orders.activity.add", "mutation")).toBe("orders")
 })
 
+test("scoped staff read returnables and record returns as order work", () => {
+  for (const path of [
+    "returnables.items",
+    "returnables.balances",
+    "returnables.movements",
+    "returnables.forOrder",
+  ])
+    expect(staffProcedureAction(path, "query")).toBe("read")
+  expect(staffProcedureAction("returnables.record", "mutation")).toBe("orders")
+})
+
 test("scoped returns are order work; refunds are reconciliation", () => {
   expect(staffProcedureAction("orders.returnItems", "mutation")).toBe("orders")
   expect(staffProcedureAction("orders.refund", "mutation")).toBe(

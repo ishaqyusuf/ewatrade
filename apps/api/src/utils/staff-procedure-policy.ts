@@ -82,6 +82,11 @@ const reads = new Set([
   "orders.activity.list",
   "orders.lookupOpen",
   "orders.lookupOpenPage",
+  // Crates and cylinders customers hold; forOrder applies orderScope.
+  "returnables.items",
+  "returnables.balances",
+  "returnables.movements",
+  "returnables.forOrder",
   "stores.orderVisibility",
   "search.global",
   "customers.getById",
@@ -115,6 +120,8 @@ const orders = new Set([
   "orders.recordPayment",
   "orders.returnProductLine",
   "orders.activity.add",
+  // Returned or lost returnables; the ledger refuses more than is out.
+  "returnables.record",
   // Money back is checked again inside: owners and managers only.
   "orders.returnItems",
   // Asking for, withdrawing and recording an Owner/Admin-approved change.
