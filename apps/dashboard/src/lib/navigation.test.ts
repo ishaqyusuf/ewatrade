@@ -494,3 +494,12 @@ test("Settings pages leave the sidebar; other areas keep theirs", () => {
     items.find((item) => item.href === "/inventory")?.children?.length,
   ).toBeGreaterThan(0)
 })
+
+test("a section hidden from this role's sidebar keeps its own title", () => {
+  const items = getDashboardNavigation("OWNER", {
+    staffAccessMode: "LEGACY",
+    businessProfileKey: "poultry-farm",
+  })
+  expect(getDashboardPageTitle("/prescriptions", items)).toBe("Prescriptions")
+  expect(getDashboardPageTitle("/services", items)).toBe("Service jobs")
+})

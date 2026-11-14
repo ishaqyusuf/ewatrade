@@ -646,9 +646,14 @@ export function getDashboardPageTitle(
   const extra = EXTRA_PAGE_TITLES.filter(([href]) =>
     matchesPath(pathname, href),
   ).sort((left, right) => right[0].length - left[0].length)[0]
-  const matches = items
-    .flatMap((item) => [
-      { item, parent: undefined as DashboardNavItem | undefined },
+  // Visible rows first; a page the role cannot see in the sidebar still gets
+  // its section's name rather than a wrong one.
+  const rows = items.some((item) => matchesPath(pathname, item.href, item.end))
+    ? items
+    : DASHBOARD_NAV
+  const matches = rows
+    .flatMap((item: DashboardNavItem | DashboardNavDefinition) => [
+      { item, parent: undefined as typeof item | undefined },
       ...(item.children ?? []).map((child) => ({ item: child, parent: item })),
     ])
     .filter(({ item }) => matchesPath(pathname, item.href, item.end))
