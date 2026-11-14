@@ -44,6 +44,16 @@ Per-route usage for that period is unknown. [Vercel Optimization Plan](https://c
 | Embedded Oversight API | Declare the `sharp` dependency externalized by the standalone Node bundle and typecheck against ES2022, matching its runtime and the shared BigInt queries. The actual build generated a 15.78 MB bundle. Node loaded the entry, returned 200 for liveness and refused a read without a key (401, no-store). Existing route tests cover validation and lazy DB initialization. |
 | Monorepo | Turbo's build keys now include the Vercel environment inputs consumed by Next. The embedded Oversight build tracks its root build script and restores its generated bundle on a cache hit. The dry graph includes Marketing, Dashboard and Storefront's API dependency and Oversight's DB and shared Oversight dependencies. Storefront Preview's isolated CLI packaging has its own path. Hosted skip settings and build outcomes remain unverified. |
 
+Turbo's local affected-package query selected only Dashboard among the apps
+for `a284ac2ae`, a Dashboard-only commit. For `0c3848939`, a shared Utils commit,
+it selected API, Marketing, Storefront and Oversight via dependencies.
+Dashboard was also selected while it had its existing local edit, and Turbo
+listed the edited root agent-chat file in both queries.
+
+The owned-path fast suite passed 287 tests. The focused runtime/contract and
+dashboard streaming suites passed 61 tests combined. H02 and the WhatsApp
+inventory check passed.
+
 ## Release verification
 
 1. Use the normal release flow and protected Preview on the same candidate
