@@ -476,6 +476,8 @@ export const catalogArchiveItemSchema = z
   .object({ itemId: z.string().trim().min(1) })
   .strict()
 
+export const catalogRestoreItemSchema = catalogArchiveItemSchema
+
 export const catalogArchiveVariantSchema = z
   .object({ variantId: z.string().trim().min(1) })
   .strict()

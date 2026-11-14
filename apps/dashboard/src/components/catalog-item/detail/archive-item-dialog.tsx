@@ -11,6 +11,8 @@ import {
   Button,
   toast,
 } from "@ewatrade/ui"
+import { ArrowTurnBackwardIcon } from "@hugeicons/core-free-icons"
+import { HugeiconsIcon } from "@hugeicons/react"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 
 /** Archives the whole item after a confirm that names it; the server rechecks Catalog access. */
@@ -80,5 +82,40 @@ export function ArchiveCatalogItemDialog({
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
+  )
+}
+
+/** Brings an archived item back; not destructive, so no confirm. */
+export function RestoreCatalogItemButton({
+  itemId,
+  itemName,
+}: {
+  itemId: string
+  itemName: string
+}) {
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  const mutation = useMutation(
+    trpc.catalog.restoreItem.mutationOptions({
+      onSuccess: async () => {
+        toast.success(`${itemName} restored`)
+        await queryClient.invalidateQueries({
+          queryKey: trpc.catalog.pathKey(),
+        })
+      },
+      onError: (error) => {
+        toast.error(error.message)
+      },
+    }),
+  )
+  return (
+    <Button
+      type="button"
+      disabled={mutation.isPending}
+      onClick={() => mutation.mutate({ itemId })}
+    >
+      <HugeiconsIcon icon={ArrowTurnBackwardIcon} data-icon="inline-start" />
+      {mutation.isPending ? "Restoring…" : "Restore item"}
+    </Button>
   )
 }

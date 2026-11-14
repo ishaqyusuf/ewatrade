@@ -31,7 +31,10 @@ import { CatalogIllustrationPreview } from "../catalog-illustration-preview"
 import { CatalogPhotoPreview } from "../catalog-photo-preview"
 import { canShareCatalogProduct } from "../catalog-product-share"
 import { CatalogProductShareDialog } from "../catalog-product-share-dialog"
-import { ArchiveCatalogItemDialog } from "./archive-item-dialog"
+import {
+  ArchiveCatalogItemDialog,
+  RestoreCatalogItemButton,
+} from "./archive-item-dialog"
 import type { CatalogDetail } from "./display"
 import { catalogDetailAffordances } from "./read-access"
 export function CatalogDetailHeader({
@@ -103,6 +106,9 @@ export function CatalogDetailHeader({
         <CatalogDetailClose />
       </div>
       <div className="flex flex-wrap items-center gap-2">
+        {!readOnly && item.status === "archived" ? (
+          <RestoreCatalogItemButton itemId={item.id} itemName={item.name} />
+        ) : null}
         {readOnly || item.status === "archived" ? null : (
           <Button
             type="button"

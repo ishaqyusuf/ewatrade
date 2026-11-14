@@ -191,6 +191,7 @@ const catalog = new Set([
   "catalog.photos.getMetadata",
   "catalog.archiveOffering",
   "catalog.archiveItem",
+  "catalog.restoreItem",
   "catalog.archiveVariant",
   "catalog.createUnitConfigurationDraft",
   "catalog.createUnitDefinition",

@@ -1725,6 +1725,62 @@ export async function archiveCatalogItem(
   })
 }
 
+/**
+ * Undoes `archiveCatalogItem`: the item and the choices and prices archived
+ * with it (same `archivedAt`) become active again. Choices or prices archived
+ * separately before stay archived. Archiving cleared the default choice, so the
+ * first restored choice becomes the default when none is live.
+ */
+export async function restoreCatalogItem(
+  db: PrismaClient,
+  input: { itemId: string; tenantId: string },
+) {
+  return db.$transaction(async (tx) => {
+    const item = await tx.catalogItem.findFirst({
+      where: { id: input.itemId, tenantId: input.tenantId, systemRole: null },
+      select: { id: true, name: true, status: true, archivedAt: true },
+    })
+    if (!item)
+      throw new CatalogError(
+        "CATALOG_ITEM_NOT_FOUND",
+        "Catalog item not found.",
+      )
+    if (item.status !== CatalogRecordStatus.ARCHIVED)
+      return { id: item.id, name: item.name }
+    const archivedWithItem = {
+      catalogItemId: item.id,
+      status: CatalogRecordStatus.ARCHIVED,
+      // Items archived elsewhere without a stamp bring back every archived choice.
+      ...(item.archivedAt ? { archivedAt: item.archivedAt } : {}),
+    }
+    const active = { archivedAt: null, status: CatalogRecordStatus.ACTIVE }
+    await tx.sellableVariant.updateMany({
+      data: active,
+      where: archivedWithItem,
+    })
+    await tx.sellableOffering.updateMany({
+      data: active,
+      where: archivedWithItem,
+    })
+    const live = await tx.sellableVariant.findMany({
+      where: { catalogItemId: item.id, status: CatalogRecordStatus.ACTIVE },
+      orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+      select: { id: true, isDefault: true },
+    })
+    const first = live[0]
+    if (first && !live.some((variant) => variant.isDefault))
+      await tx.sellableVariant.update({
+        data: { isDefault: true },
+        where: { id: first.id },
+      })
+    await tx.catalogItem.update({
+      data: active,
+      where: { id: item.id },
+    })
+    return { id: item.id, name: item.name }
+  })
+}
+
 export async function archiveCatalogVariant(
   db: PrismaClient,
   input: { tenantId: string; variantId: string },

@@ -28,6 +28,7 @@ import {
   listCatalogUnitDefinitions,
   listProductUnitConfigurations,
   publishProductUnitConfiguration,
+  restoreCatalogItem,
   setCatalogOfferingStoreAvailability,
   setCatalogProductUsage,
   updateCatalogItemInTransaction,
@@ -66,6 +67,7 @@ import {
   catalogProductShareSchema,
   catalogProductUnitConfigurationsSchema,
   catalogPublishUnitConfigurationSchema,
+  catalogRestoreItemSchema,
   catalogSetOfferingAvailabilitySchema,
   catalogSetProductUsageSchema,
   catalogUpdateItemSchema,
@@ -376,6 +378,22 @@ export const catalogRouter = createTRPCRouter({
       assertCanManageCatalog(ctx.tenantContext)
       try {
         return await archiveCatalogItem(ctx.db, {
+          ...input,
+          tenantId: ctx.tenantContext.tenant.id,
+        })
+      } catch (error) {
+        if (error instanceof CatalogError) throw catalogTRPCError(error)
+        throw error
+      }
+    }),
+
+  /** Undoes archiveItem; same access as archiving. */
+  restoreItem: protectedProcedure
+    .input(catalogRestoreItemSchema)
+    .mutation(async ({ ctx, input }) => {
+      assertCanManageCatalog(ctx.tenantContext)
+      try {
+        return await restoreCatalogItem(ctx.db, {
           ...input,
           tenantId: ctx.tenantContext.tenant.id,
         })

@@ -183,8 +183,8 @@ formOnly(
 )
 formOnly(
   "catalog",
-  "Dashboard item sheet's whole-item archive behind a confirm that names the item; the assistant drafts unit and variant archives (catalog.archive).",
-  ["catalog.archiveItem"],
+  "Dashboard item sheet's whole-item archive (behind a confirm that names the item) and its restore; the assistant drafts unit and variant archives (catalog.archive).",
+  ["catalog.archiveItem", "catalog.restoreItem"],
 )
 excluded(
   "catalog",
