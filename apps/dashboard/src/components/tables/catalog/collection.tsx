@@ -50,11 +50,21 @@ function ItemBadges({ item }: { item: CatalogRow }) {
   )
 }
 
-function ItemTitle({ item, onOpen }: { item: CatalogRow; onOpen: () => void }) {
+function ItemTitle({
+  item,
+  onOpen,
+  stretch = false,
+}: {
+  item: CatalogRow
+  onOpen: () => void
+  /** Covers the whole row so tapping anywhere on it opens the item. */
+  stretch?: boolean
+}) {
   return (
     <button
       type="button"
-      className="min-w-0 truncate text-left text-base font-semibold underline-offset-4 outline-none hover:underline focus-visible:underline"
+      data-catalog-open={item.id}
+      className={`min-w-0 truncate text-left text-base font-semibold underline-offset-4 outline-none hover:underline focus-visible:underline ${stretch ? "after:absolute after:inset-0 after:content-['']" : ""}`}
       onClick={onOpen}
     >
       {item.name}
@@ -186,9 +196,11 @@ function CatalogList({ rows, storeId, openDetail }: CollectionProps) {
           <li
             key={row.id}
             data-state={row.getIsSelected() ? "selected" : undefined}
-            className="grid grid-cols-[1rem_2.5rem_minmax(0,1fr)_2.75rem] items-center gap-x-3 px-3.5 py-2.5 data-[state=selected]:bg-muted md:grid-cols-[1rem_2.5rem_minmax(0,1fr)_8rem_8rem_2.75rem] md:gap-x-4"
+            className="relative grid grid-cols-[1rem_2.5rem_minmax(0,1fr)_2.75rem] items-center gap-x-3 px-3.5 py-2.5 hover:bg-[var(--hover)] data-[state=selected]:bg-muted md:grid-cols-[1rem_2.5rem_minmax(0,1fr)_8rem_8rem_2.75rem] md:gap-x-4"
           >
-            <RowSelectCheckbox row={row} label={`Select ${item.name}`} />
+            <div className="relative z-10 flex">
+              <RowSelectCheckbox row={row} label={`Select ${item.name}`} />
+            </div>
             <CatalogItemThumbnail
               item={item}
               storeId={storeId}
@@ -196,7 +208,11 @@ function CatalogList({ rows, storeId, openDetail }: CollectionProps) {
             />
             <div className="grid min-w-0 gap-0.5">
               <div className="flex min-w-0 items-center gap-2">
-                <ItemTitle item={item} onOpen={() => openDetail(item.id)} />
+                <ItemTitle
+                  item={item}
+                  stretch
+                  onOpen={() => openDetail(item.id)}
+                />
                 {item.status === "active" ? null : (
                   <Badge variant="outline" className="shrink-0 capitalize">
                     {item.status}
@@ -219,7 +235,7 @@ function CatalogList({ rows, storeId, openDetail }: CollectionProps) {
             <p className="text-right text-sm text-muted-foreground tabular-nums max-md:hidden">
               {stock}
             </p>
-            <div className="justify-self-end">
+            <div className="relative z-10 justify-self-end">
               <CatalogItemActions item={item} storeId={storeId} />
             </div>
           </li>
