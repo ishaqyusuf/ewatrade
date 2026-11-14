@@ -4,7 +4,7 @@
 (photo or PDF) with the assistant on WhatsApp or Telegram. OpenAI reads it, the
 assistant works out what the money was, and records it after the merchant confirms.
 
-Status: design published for review. Implementation 0/5.
+Status: owner selected v18 and asked to implement it all (14 Nov 2026). Implementation in progress.
 
 ## What the owner asked for
 
@@ -102,11 +102,18 @@ Workshop `ewatrade/assistant/conversations`, direction 01 v18
 5. **Verification.** Matcher unit tests, integration tests on the guarded QA
    database, and a Development run with real receipts. Update Brain docs.
 
+## Schema
+
+`AssistantReceiptRead` (migration `20261114012434_assistant_receipt_reads`) keeps
+one row per receipt attachment: the untrusted extraction, the amount in minor
+units, the normalized bank reference for duplicate checks, the matcher outcome and
+the question asked, the drafted proposal, any excess over the order balance, and
+provider usage. It cascades with the conversation. It records no money.
+
 ## Decisions for the owner
 
-- Confirm in chat (as designed) for owners and admins, with the approval link
-  only for staff who lack the permission? Or always use a link?
-- Should an overpayment be kept as customer credit (as designed)?
-- Mirror the scenes in the Telegram Workshop before implementation?
+Answered 14 Nov 2026: owners and admins confirm in chat, staff without the
+permission get the approval link; overpayments are kept as customer credit;
+Telegram follows the same flows without a separate Workshop pass.
 
 No product code, schema, provider call, or deployment in this checkpoint.

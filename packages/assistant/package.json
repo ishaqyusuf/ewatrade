@@ -36,6 +36,7 @@
     "./setup/vision": "./src/setup/vision.ts",
     "./general/search-answer": "./src/general/search-answer.ts",
     "./general/contracts": "./src/general/contracts.ts",
+    "./general/receipt-match": "./src/general/receipt-match.ts",
     "./general/allowance": "./src/general/allowance.ts",
     "./general/product-create": "./src/general/product-create.ts",
     "./general/prompt": "./src/general/prompt.ts",

@@ -1,0 +1,51 @@
+// A bank transfer receipt the owner shared in chat, read once by the vision
+// model. The extraction is untrusted evidence; nothing here records money.
+// Matching state lets a follow-up message ("chidi") finish the same receipt.
+model AssistantReceiptRead {
+  id                String                     @id @default(cuid())
+  tenantId          String
+  storeId           String
+  conversationId    String
+  actorUserId       String
+  attachmentId      String                     @unique
+  status            AssistantReceiptReadStatus @default(READ)
+  extraction        Json?
+  // Parsed transfer amount in minor units; null when unreadable.
+  amountMinor       BigInt?
+  currencyCode      String?
+  // Normalized bank reference (letters and digits only) for duplicate checks.
+  bankReference     String?
+  // Matcher result and the question asked, for the follow-up turn.
+  outcome           Json?
+  proposalId        String?
+  // Money above the order balance, offered as customer credit after the payment.
+  excessMinor       BigInt?
+  excessOrderId     String?
+  provider          String?
+  model             String?
+  providerRequestId String?
+  inputTokens       Int?
+  outputTokens      Int?
+  errorCode         String?
+  createdAt         DateTime                   @default(now())
+  updatedAt         DateTime                   @updatedAt
+
+  conversation AssistantConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, bankReference])
+  @@index([conversationId, actorUserId, createdAt])
+  @@index([tenantId, createdAt])
+}
+
+enum AssistantReceiptReadStatus {
+  READ
+  NOT_RECEIPT
+  UNREADABLE
+  FAILED
+  AWAITING_ORDER
+  AWAITING_ACCOUNT
+  AWAITING_PURPOSE
+  DRAFTED
+  DUPLICATE
+  RESOLVED
+}

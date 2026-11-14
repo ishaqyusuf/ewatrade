@@ -62,6 +62,7 @@ model AssistantConversation {
   attachments AssistantAttachment[]
   setupDraft  SetupDraft?
   proposals   AssistantActionProposal[]
+  receiptReads AssistantReceiptRead[]
 
   @@index([tenantId, storeId, ownerUserId, purpose])
 }

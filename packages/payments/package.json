@@ -10,7 +10,8 @@
     "./receipt-assessment": "./src/receipt-assessment.ts",
     "./receipt-extractor": "./src/receipt-extractor.ts",
     "./manual-payment-allocation": "./src/manual-payment-allocation.ts",
-    "./web-subscriptions": "./src/web-subscriptions/index.ts"
+    "./web-subscriptions": "./src/web-subscriptions/index.ts",
+    "./chat-receipt": "./src/chat-receipt.ts"
   },
   "scripts": {
     "lint": "biome check .",

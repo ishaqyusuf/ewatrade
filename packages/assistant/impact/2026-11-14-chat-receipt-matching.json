@@ -1,0 +1,48 @@
+{
+  "version": 1,
+  "id": "2026-11-14-chat-receipt-matching",
+  "tickets": [
+    "H02"
+  ],
+  "summary": "Read bank transfer receipts an owner shares in the assistant chat (photo or PDF) with OpenAI, then match them to an owing order, a transfer between the business's own accounts, or money out, and draft the existing reviewed action. Nothing is recorded until the owner confirms.",
+  "capabilities": [
+    {
+      "id": "sales.payment.record",
+      "change": "unchanged",
+      "rollout": "source",
+      "note": "Receipts in chat draft this existing action with the receiving account and the receipt facts in its note; its roles, procedure, review and rollout are unchanged."
+    }
+  ],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/chat-receipt-matching.md"
+    },
+    {
+      "topic": "schema",
+      "status": "updated",
+      "path": "docs/plans/2026-11-14-chat-receipt-matching.md"
+    },
+    {
+      "topic": "capability",
+      "status": "not_applicable",
+      "note": "Receipts draft existing actions (payment_record, money_transfer_simple, expense_record_simple, money_movement, sale_record, customer_receipt) through their existing permission checks and reviews. No capability is added or released."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/payments/src/chat-receipt.test.ts",
+      "executed": true,
+      "result": "6 tests, 20 assertions pass: amount parsing, reference normalization, strict parsing, model allowlist, PDF as file input with usage, provider failure."
+    },
+    {
+      "kind": "test",
+      "path": "packages/assistant/src/general/receipt-match.test.ts",
+      "executed": true,
+      "result": "15 tests, 34 assertions pass: names, masked account numbers, own transfer, money out purpose, order match by number/remark/sender/typed name, part and excess payment, unknown account, unreadable."
+    }
+  ]
+}
