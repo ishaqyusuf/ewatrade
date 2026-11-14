@@ -42,9 +42,8 @@ type View = "details" | "receive"
  */
 export function StockTransferSheet({
   record,
-  storeId,
   onClose,
-}: { record: StockTransfer | null; storeId?: string; onClose: () => void }) {
+}: { record: StockTransfer | null; onClose: () => void }) {
   const trpc = useTRPC()
   const queryClient = useQueryClient()
   const [view, setView] = useState<View>("details")
@@ -85,8 +84,6 @@ export function StockTransferSheet({
   const onTheWay = formatStockQuantity(record.remainingQuantity, unit)
   const actionable =
     record.status === "IN_TRANSIT" && record.transitRevision !== null
-  const canReceive = !storeId || record.targetStore.id === storeId
-  const canCancel = !storeId || record.sourceStore.id === storeId
 
   function open(next: View) {
     setView(next)
@@ -255,29 +252,25 @@ export function StockTransferSheet({
         <SheetFrame
           title={title}
           footer={
-            actionable && (canReceive || canCancel) ? (
+            actionable ? (
               <>
-                {canCancel ? (
-                  <Button
-                    variant="outline"
-                    disabled={mutation.isPending}
-                    onClick={() => {
-                      setError(null)
-                      setNote("")
-                      setConfirmCancel(true)
-                    }}
-                  >
-                    Cancel transfer
-                  </Button>
-                ) : null}
-                {canReceive ? (
-                  <Button
-                    disabled={mutation.isPending}
-                    onClick={() => open("receive")}
-                  >
-                    Receive
-                  </Button>
-                ) : null}
+                <Button
+                  variant="outline"
+                  disabled={mutation.isPending}
+                  onClick={() => {
+                    setError(null)
+                    setNote("")
+                    setConfirmCancel(true)
+                  }}
+                >
+                  Cancel transfer
+                </Button>
+                <Button
+                  disabled={mutation.isPending}
+                  onClick={() => open("receive")}
+                >
+                  Receive
+                </Button>
               </>
             ) : undefined
           }
@@ -309,16 +302,7 @@ export function StockTransferSheet({
               <dt className="text-muted-foreground">Sent on</dt>
               <dd>{stockDate(record.createdAt)}</dd>
             </dl>
-            {actionable && !canReceive ? (
-              <p className="text-muted-foreground">
-                {record.targetStore.name} receives it.
-              </p>
-            ) : null}
-            <StockTransferHistory
-              key={record.id}
-              transferId={record.id}
-              storeId={storeId}
-            />
+            <StockTransferHistory key={record.id} transferId={record.id} />
           </div>
         </SheetFrame>
       )}

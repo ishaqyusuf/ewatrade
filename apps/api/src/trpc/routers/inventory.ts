@@ -129,6 +129,15 @@ export function canSeeStockCost(tenant: TenantContext) {
   return ["OWNER", "ADMIN"].includes(String(role).toUpperCase())
 }
 
+/** The user can change stock at this Store (scoped staff: their stock permission). */
+export function canActForStore(tenant: TenantContext, storeId: string) {
+  return (
+    tenant.stores.some((store) => store.id === storeId) &&
+    (!tenant.staffAccess ||
+      canStaffPerform(tenant.staffAccess, "stock", storeId))
+  )
+}
+
 function withoutCost<
   T extends {
     totalCostMinorSnapshot: string | null
@@ -291,11 +300,15 @@ export const inventoryRouter = createTRPCRouter({
     .input(inventoryTransferReviewSchema)
     .query(async ({ ctx, input }) => {
       assertCanManageInventory(ctx.tenantContext)
-      const storeId = resolveStoreId(
-        ctx.tenantContext.stores,
-        ctx.tenantContext.activeStore,
-        input.storeId,
-      )
+      // Without a Store the transfer may be any one whose both Stores the
+      // user can act for (All stores); with one it must touch that Store.
+      const storeId = input.storeId
+        ? resolveStoreId(
+            ctx.tenantContext.stores,
+            ctx.tenantContext.activeStore,
+            input.storeId,
+          )
+        : undefined
       try {
         return await getStockTransferReview(ctx.db, {
           tenantId: ctx.tenantContext.tenant.id,
@@ -940,6 +953,28 @@ export const inventoryRouter = createTRPCRouter({
     .input(inventoryTransitionTransferSchema)
     .mutation(async ({ ctx, input }) => {
       assertCanManageInventory(ctx.tenantContext)
+      // Receiving acts for the receiving Store, cancelling for the sending
+      // one, whichever Store the user is looking at.
+      const transfer = await ctx.db.stockTransfer.findFirst({
+        where: { id: input.transferId, tenantId: ctx.tenantContext.tenant.id },
+        select: { sourceStoreId: true, targetStoreId: true },
+      })
+      if (
+        !transfer ||
+        !canActForStore(
+          ctx.tenantContext,
+          input.transition === "receive"
+            ? transfer.targetStoreId
+            : transfer.sourceStoreId,
+        )
+      )
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message:
+            input.transition === "receive"
+              ? "You can’t receive stock for this store."
+              : "You can’t cancel transfers from this store.",
+        })
       try {
         return await receiveOrCancelStockTransfer(ctx.db, {
           ...input,

@@ -13,7 +13,8 @@ export async function getStockTransferReview(
   tx: Prisma.TransactionClient,
   input: {
     tenantId: string
-    storeId: string
+    /** When given, the transfer must start or end at this Store. */
+    storeId?: string
     transferId: string
     allowedStoreIds: string[]
   },
@@ -24,7 +25,14 @@ export async function getStockTransferReview(
       tenantId: input.tenantId,
       sourceStoreId: { in: input.allowedStoreIds },
       targetStoreId: { in: input.allowedStoreIds },
-      OR: [{ sourceStoreId: input.storeId }, { targetStoreId: input.storeId }],
+      ...(input.storeId
+        ? {
+            OR: [
+              { sourceStoreId: input.storeId },
+              { targetStoreId: input.storeId },
+            ],
+          }
+        : {}),
     },
     include: {
       sourceStore: {
@@ -53,7 +61,10 @@ export async function getStockTransferReview(
     transfer.tenantId !== input.tenantId ||
     !input.allowedStoreIds.includes(transfer.sourceStoreId) ||
     !input.allowedStoreIds.includes(transfer.targetStoreId) ||
-    ![transfer.sourceStoreId, transfer.targetStoreId].includes(input.storeId) ||
+    (input.storeId &&
+      ![transfer.sourceStoreId, transfer.targetStoreId].includes(
+        input.storeId,
+      )) ||
     transfer.sourceStore.tenantId !== input.tenantId ||
     transfer.targetStore.tenantId !== input.tenantId ||
     transfer.sourceStore.id !== transfer.sourceStoreId ||
@@ -322,7 +333,14 @@ export async function getStockTransferLockScope(
       tenantId: input.tenantId,
       sourceStoreId: { in: input.allowedStoreIds },
       targetStoreId: { in: input.allowedStoreIds },
-      OR: [{ sourceStoreId: input.storeId }, { targetStoreId: input.storeId }],
+      ...(input.storeId
+        ? {
+            OR: [
+              { sourceStoreId: input.storeId },
+              { targetStoreId: input.storeId },
+            ],
+          }
+        : {}),
     },
     select: {
       id: true,
@@ -347,7 +365,8 @@ export async function getStockTransferLockScope(
     row.tenantId !== input.tenantId ||
     !input.allowedStoreIds.includes(row.sourceStoreId) ||
     !input.allowedStoreIds.includes(row.targetStoreId) ||
-    ![row.sourceStoreId, row.targetStoreId].includes(input.storeId) ||
+    (input.storeId &&
+      ![row.sourceStoreId, row.targetStoreId].includes(input.storeId)) ||
     !row.transitBalanceSourceId
   )
     throw new CatalogError(

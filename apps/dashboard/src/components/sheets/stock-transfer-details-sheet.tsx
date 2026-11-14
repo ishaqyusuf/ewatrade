@@ -6,12 +6,17 @@ import { useQuery } from "@tanstack/react-query"
 import { SheetFrame } from "./sheet-frame"
 import { StockTransferSheet } from "./stock-transfer-sheet"
 
-export function StockTransferDetailsSheet({ storeId }: { storeId: string }) {
+/**
+ * One transfer from any page. It is not tied to the Store being looked at:
+ * Receive and Cancel follow what the user may do at the receiving and sending
+ * Stores, which the server checks again on save.
+ */
+export function StockTransferDetailsSheet(_props: { storeId: string }) {
   const { transferId, close } = useStockTransferParams()
   const trpc = useTRPC()
   const query = useQuery(
     trpc.inventory.transferReview.queryOptions(
-      { transferId: transferId ?? "", storeId },
+      { transferId: transferId ?? "" },
       { enabled: Boolean(transferId), retry: false, staleTime: 0 },
     ),
   )
@@ -33,7 +38,6 @@ export function StockTransferDetailsSheet({ storeId }: { storeId: string }) {
           transitRevision: saved.transit?.revision ?? null,
           status: saved.status,
         }}
-        storeId={storeId}
         onClose={() => void close()}
       />
     )

@@ -108,3 +108,41 @@ test("a manager's stock change audit has no cost; the owner's keeps it", async (
     unitCostMinorSnapshot: 1200,
   })
 })
+
+test("receive acts for the receiving store and cancel for the sending store", async () => {
+  const transferContext = (staffAccess?: unknown) => {
+    const base = context("MANAGER", staffAccess)
+    return {
+      ...base,
+      db: {
+        stockTransfer: {
+          findFirst: async () => ({
+            sourceStoreId: "store",
+            targetStoreId: "branch",
+          }),
+        },
+      },
+      tenantContext: {
+        ...base.tenantContext,
+        stores: [{ id: "store" }],
+        activeStore: { id: "store" },
+      },
+    }
+  }
+  const input = {
+    clientOperationId: "transition-0001",
+    expectedTransitRevision: 1,
+    reason: "Received",
+    schemaVersion: 1,
+    source: "dashboard_inventory",
+    transferId: "transfer",
+  } as const
+  // The user cannot act for "branch", so receiving there is refused before
+  // any stock is touched, whatever store they are looking at.
+  await expect(
+    createCaller(transferContext() as never).transitionTransfer({
+      ...input,
+      transition: "receive",
+    }),
+  ).rejects.toMatchObject({ code: "FORBIDDEN" })
+})
