@@ -165,11 +165,15 @@ async function assertStockNotArchived(
     balance &&
     (balance.product.catalogItem.status === "ARCHIVED" ||
       balance.variant.status === "ARCHIVED")
-  )
+  ) {
+    const message = `${balance.product.catalogItem.name} is archived, so it can’t ${action === "receive" ? "take new stock" : "be sent to another store"}. You can still count or correct it.`
+    // A rule the person can read: shown as is, not masked as bad input.
     throw new TRPCError({
+      cause: ruleRejectedError(new Error(message)),
       code: "BAD_REQUEST",
-      message: `${balance.product.catalogItem.name} is archived, so it can’t ${action === "receive" ? "take new stock" : "be sent to another store"}. You can still count or correct it.`,
+      message,
     })
+  }
 }
 
 function withoutCost<
