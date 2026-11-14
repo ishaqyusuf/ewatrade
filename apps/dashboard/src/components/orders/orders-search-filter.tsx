@@ -27,20 +27,39 @@ export function OrdersSearchFilter() {
               label: orderStatusLabels[value],
             })),
           },
+          {
+            id: "payment",
+            label: "Payment",
+            allLabel: "Any payment",
+            options: [{ value: "owing", label: "Money due" }],
+          },
         ],
-        values: { status: filter.status ? [filter.status] : [] },
+        values: {
+          status: filter.status ? [filter.status] : [],
+          payment: filter.owing ? ["owing"] : [],
+        },
         onApply: (draft) =>
           setFilter({
             status:
               ORDER_STATUSES.find((value) => value === draft.status?.[0]) ??
               null,
+            owing: draft.payment?.[0] === "owing",
           }),
       }}
-      placeholder="Search orders..."
+      placeholder="Search orders"
       value={filter.query ?? ""}
       onSearch={(query) => void setFilter({ query: query || null })}
       onClear={() => void setFilter(null)}
       filters={[
+        ...(filter.owing
+          ? [
+              {
+                id: "owing",
+                label: "Money due",
+                onRemove: () => void setFilter({ owing: false }),
+              },
+            ]
+          : []),
         ...(filter.status
           ? [
               {
@@ -53,11 +72,18 @@ export function OrdersSearchFilter() {
       ]}
     >
       <DropdownMenuGroup>
+        <DropdownMenuCheckboxItem
+          checked={filter.owing}
+          closeOnClick={false}
+          onCheckedChange={(checked) => void setFilter({ owing: checked })}
+        >
+          Money due
+        </DropdownMenuCheckboxItem>
         <DropdownMenuSub>
           <DropdownMenuSubTrigger>Status</DropdownMenuSubTrigger>
           <DropdownMenuSubContent
             appearance="dashboard"
-            className="min-w-40 max-w-[calc(100vw-32px)] rounded-none bg-popover p-0 shadow-md before:hidden"
+            className="min-w-40 max-w-[calc(100vw-32px)] bg-popover p-0 shadow-md before:hidden"
             sideOffset={14}
             alignOffset={-4}
           >

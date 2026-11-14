@@ -35,11 +35,13 @@ import {
   ArrowRight01Icon,
   ArrowTurnBackwardIcon,
   ArrowUp01Icon,
+  ArrowUpRight01Icon,
   Calendar03Icon,
   Cancel02Icon,
   CreditCardIcon,
   Invoice01Icon,
   Link01Icon,
+  MoreHorizontalIcon,
   PackageIcon,
   PackageReceiveIcon,
   PencilEdit02Icon,
@@ -145,10 +147,13 @@ export function OrderOverview({
   timeZone,
   onOpenOrder,
   onLeave,
+  fullPageHref,
 }: {
   orderId: string
   storeId: string
   layout: "sheet" | "page"
+  /** The order's own page, offered from the sheet's More menu. */
+  fullPageHref?: string
   /** Business time zone, so times match on server and client. */
   timeZone?: string
   onOpenOrder: (orderId: string) => void
@@ -261,27 +266,81 @@ export function OrderOverview({
     action()
   }
 
+  const owing = !closed && order.balanceDueMinor > 0
+  const fulfilLabel =
+    fulfilled.done === 0 ? "Fulfil all" : `Fulfil ${ready.length}`
+  const openAssistant = () =>
+    void leaveThen(() => {
+      if (!requestQuickAssistant({ draft: orderAskDraft(order.orderNumber) }))
+        router.push("/assistant")
+    })
+  const more: Array<{
+    key: string
+    label: string
+    icon: typeof PackageIcon
+    onClick?: () => void
+    href?: string
+  }> = [
+    ...(owing
+      ? [
+          {
+            key: "link",
+            label: "Payment link",
+            icon: Link01Icon,
+            onClick: () => setDialog({ kind: "paymentLink" }),
+          },
+        ]
+      : []),
+    ...(owing && ready.length
+      ? [
+          {
+            key: "fulfil",
+            label: fulfilLabel,
+            icon: PackageIcon,
+            onClick: () => setDialog({ kind: "fulfil" }),
+          },
+        ]
+      : []),
+    ...(launcher && assistant.data?.enabled
+      ? [
+          {
+            key: "ask",
+            label: "Ask AI about this order",
+            icon: SparklesIcon,
+            onClick: openAssistant,
+          },
+        ]
+      : []),
+    ...(fullPageHref
+      ? [
+          {
+            key: "page",
+            label: "Open full page",
+            icon: ArrowUpRight01Icon,
+            href: fullPageHref,
+          },
+        ]
+      : []),
+  ]
+
+  // One obvious next step: take the money owed, else hand the items over.
   const actions = (
     <div className="flex flex-wrap items-center gap-2">
-      {!closed && order.balanceDueMinor > 0 ? (
-        <Button onClick={() => setDialog({ kind: "payment" })}>
+      {owing ? (
+        <Button
+          className="max-sm:flex-1"
+          onClick={() => setDialog({ kind: "payment" })}
+        >
           <HugeiconsIcon icon={CreditCardIcon} className="size-4" />
           Record payment
         </Button>
-      ) : null}
-      {!closed && order.balanceDueMinor > 0 ? (
+      ) : ready.length ? (
         <Button
-          variant="outline"
-          onClick={() => setDialog({ kind: "paymentLink" })}
+          className="max-sm:flex-1"
+          onClick={() => setDialog({ kind: "fulfil" })}
         >
-          <HugeiconsIcon icon={Link01Icon} className="size-4" />
-          Payment link
-        </Button>
-      ) : null}
-      {ready.length ? (
-        <Button variant="outline" onClick={() => setDialog({ kind: "fulfil" })}>
           <HugeiconsIcon icon={PackageIcon} className="size-4" />
-          {fulfilled.done === 0 ? "Fulfil all" : `Fulfil ${ready.length}`}
+          {fulfilLabel}
         </Button>
       ) : null}
       <Button
@@ -298,24 +357,6 @@ export function OrderOverview({
         hasPhone={Boolean(order.customerPhone)}
         onOpen={(open) => void leaveThen(open)}
       />
-      {launcher && assistant.data?.enabled ? (
-        <Button
-          className="bg-amber-400 text-amber-950 hover:bg-amber-400/85 dark:bg-amber-400 dark:text-amber-950"
-          onClick={() =>
-            void leaveThen(() => {
-              if (
-                !requestQuickAssistant({
-                  draft: orderAskDraft(order.orderNumber),
-                })
-              )
-                router.push("/assistant")
-            })
-          }
-        >
-          <HugeiconsIcon icon={SparklesIcon} className="size-4" />
-          Ask AI
-        </Button>
-      ) : null}
       <ChangeMenu
         order={order}
         options={options}
@@ -331,6 +372,39 @@ export function OrderOverview({
           )
         }
       />
+      {more.length ? (
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={
+              <Button
+                variant="outline"
+                size="icon"
+                aria-label={`More actions for ${order.orderNumber}`}
+              >
+                <HugeiconsIcon icon={MoreHorizontalIcon} className="size-5" />
+              </Button>
+            }
+          />
+          <DropdownMenuContent appearance="dashboard" align="end">
+            {more.map((item) =>
+              item.href ? (
+                <DropdownMenuItem
+                  key={item.key}
+                  render={<Link href={item.href} />}
+                >
+                  <HugeiconsIcon icon={item.icon} className="size-4" />
+                  {item.label}
+                </DropdownMenuItem>
+              ) : (
+                <DropdownMenuItem key={item.key} onClick={item.onClick}>
+                  <HugeiconsIcon icon={item.icon} className="size-4" />
+                  {item.label}
+                </DropdownMenuItem>
+              ),
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ) : null}
     </div>
   )
 
@@ -358,7 +432,7 @@ export function OrderOverview({
 
   const details = (
     <div className="grid min-w-0 content-start gap-4">
-      <SummaryStrip order={order} fulfilled={fulfilled} />
+      <SummaryStrip order={order} />
       <OrderCustomerCredit order={order} />
       <OverviewCard
         title="Items"
@@ -707,6 +781,7 @@ function OrderMessageButton({
   if (!hasPhone) return null
   return (
     <WhatsAppNotifyButton
+      iconOnly
       state={action.state}
       onOpen={() => onOpen(action.open)}
       onRetry={action.retry}
@@ -807,7 +882,6 @@ function ChangeMenu({
       <DropdownMenuTrigger
         render={
           <Button variant="outline">
-            <HugeiconsIcon icon={PencilEdit02Icon} className="size-4" />
             Change
             <HugeiconsIcon icon={ArrowDown01Icon} className="size-4" />
           </Button>
@@ -825,7 +899,7 @@ function ChangeMenu({
         ) : (
           <>
             <DropdownMenuGroup>
-              <DropdownMenuLabel className="text-[11px] font-semibold tracking-wide uppercase">
+              <DropdownMenuLabel className="text-xs font-medium text-muted-foreground">
                 Can do now
               </DropdownMenuLabel>
               {open.length ? (
@@ -857,7 +931,7 @@ function ChangeMenu({
                   </DropdownMenuItem>
                 ))
               ) : (
-                <DropdownMenuItem disabled className="py-2 text-xs">
+                <DropdownMenuItem disabled className="py-2 text-sm">
                   Nothing can change right now.
                 </DropdownMenuItem>
               )}
@@ -868,7 +942,7 @@ function ChangeMenu({
                 <DropdownMenuItem
                   closeOnClick={false}
                   aria-expanded={showLocked}
-                  className="justify-between py-2 text-xs text-muted-foreground"
+                  className="justify-between py-2 text-sm text-muted-foreground"
                   onClick={() => setShowLocked((current) => !current)}
                 >
                   Locked ({locked.length})
@@ -908,111 +982,51 @@ function ChangeMenu({
   )
 }
 
-function SummaryStrip({
-  order,
-  fulfilled,
-}: {
-  order: OverviewOrder
-  fulfilled: ReturnType<typeof fulfilmentCount>
-}) {
+function SummaryStrip({ order }: { order: OverviewOrder }) {
   const money = (value: number) => orderMoney(value, order.currencyCode)
   // Everything came back: lead with the credit, not a ₦0 total (as on mobile).
   const credited =
     order.totalMinor === 0 &&
     order.creditMinor > 0 &&
     order.balanceDueMinor === 0
-  const paidShare =
-    order.totalMinor > 0
-      ? Math.min(100, (order.amountPaidMinor / order.totalMinor) * 100)
-      : 0
-  const tile = "grid gap-1 rounded-xl border border-border bg-card px-4 py-3"
-  const label =
-    "text-[11px] font-semibold tracking-wide text-muted-foreground uppercase"
+  // Phones: one card with a row each. From sm: three tiles side by side.
+  const tile =
+    "flex items-baseline justify-between gap-3 px-4 py-3 sm:grid sm:content-start sm:gap-1 sm:rounded-[var(--ui-radius-surface)] sm:border sm:border-border sm:bg-card"
+  const label = "text-sm text-muted-foreground"
+  const value = "text-lg font-semibold tabular-nums sm:text-xl"
+  const due = order.balanceDueMinor > 0 && !isClosedOrder(order.status)
   return (
-    <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+    <dl className="grid divide-y divide-border overflow-hidden rounded-[var(--ui-radius-surface)] border border-border bg-card sm:grid-cols-3 sm:gap-3 sm:divide-y-0 sm:overflow-visible sm:rounded-none sm:border-0 sm:bg-transparent">
       {credited ? (
-        <div
-          className={cn(
-            tile,
-            "border-violet-500/40 bg-violet-500/10 text-violet-800 dark:text-violet-200",
-          )}
-        >
-          <dt className={cn(label, "text-violet-700 dark:text-violet-300")}>
-            Credited in full
-          </dt>
-          <dd className="text-xl font-semibold tabular-nums">
-            {money(order.creditMinor)}
-          </dd>
-          <dd className="text-xs">Total now {money(0)}</dd>
+        <div className={cn(tile, "sm:border-violet-500/40")}>
+          <dt className={label}>Credited in full</dt>
+          <dd className={value}>{money(order.creditMinor)}</dd>
         </div>
       ) : (
         <div className={tile}>
           <dt className={label}>Total</dt>
-          <dd className="text-xl font-semibold tabular-nums">
-            {money(order.totalMinor)}
-          </dd>
-          {order.creditMinor > 0 ? (
-            <dd className="text-xs text-muted-foreground">
-              Credit after sale −{money(order.creditMinor)}
-            </dd>
-          ) : null}
+          <dd className={value}>{money(order.totalMinor)}</dd>
         </div>
       )}
       <div className={tile}>
         <dt className={label}>Paid</dt>
-        <dd className="grid gap-2">
-          <span className="text-xl font-semibold tabular-nums">
-            {money(order.amountPaidMinor)}
-          </span>
-          {credited ? null : (
-            <span
-              aria-hidden="true"
-              className="block h-1.5 overflow-hidden rounded-full bg-muted"
-            >
-              <span
-                className="block h-full rounded-full bg-primary"
-                style={{ width: `${paidShare}%` }}
-              />
-            </span>
-          )}
-        </dd>
+        <dd className={value}>{money(order.amountPaidMinor)}</dd>
       </div>
-      <div className={tile}>
-        <dt className={label}>Balance</dt>
-        <dd
-          className={cn(
-            "text-xl font-semibold tabular-nums",
-            order.balanceDueMinor > 0 &&
-              !isClosedOrder(order.status) &&
-              "text-amber-600 dark:text-amber-400",
-          )}
-        >
+      <div
+        className={cn(tile, due && "sm:border-warning-border sm:bg-warning")}
+      >
+        <dt className={cn(label, due && "font-medium text-warning-foreground")}>
+          {due ? "Due" : "Balance"}
+        </dt>
+        <dd className={cn(value, due && "text-warning-foreground")}>
           {money(order.balanceDueMinor)}
         </dd>
-      </div>
-      <div className={tile}>
-        <dt className={label}>Fulfilled</dt>
-        <dd className="text-xl font-semibold tabular-nums">
-          {fulfilled.done} of {fulfilled.total}
-        </dd>
-        {fulfilled.returned + fulfilled.partReturned > 0 ? (
-          <dd className="text-xs text-muted-foreground">
-            {[
-              fulfilled.returned ? `${fulfilled.returned} returned` : null,
-              fulfilled.partReturned
-                ? `${fulfilled.partReturned} part returned`
-                : null,
-            ]
-              .filter(Boolean)
-              .join(" · ")}
-          </dd>
-        ) : null}
       </div>
     </dl>
   )
 }
 
-/** Same rows and words as the receipt and mobile, credit after sale included. */
+/** Same rows and words as the receipt, credit after sale included. */
 function OrderTotals({ order }: { order: OverviewOrder }) {
   const money = (value: number) => orderMoney(value, order.currencyCode)
   const rows: Array<{ label: string; value: string; className?: string }> = [
@@ -1036,7 +1050,7 @@ function OrderTotals({ order }: { order: OverviewOrder }) {
         ]
       : []),
   ]
-  const due = order.balanceDueMinor > 0 && !isClosedOrder(order.status)
+  // Paid and Due sit in the summary above, so the footer ends at Total.
   return (
     <dl className="grid gap-1.5 border-t border-border px-4 py-3 text-sm">
       {rows.map((row) => (
@@ -1048,21 +1062,6 @@ function OrderTotals({ order }: { order: OverviewOrder }) {
       <div className="mt-1 flex justify-between gap-3 border-t border-border pt-2 font-semibold">
         <dt>Total</dt>
         <dd className="tabular-nums">{money(order.totalMinor)}</dd>
-      </div>
-      <div className="flex justify-between gap-3">
-        <dt className="text-muted-foreground">Paid</dt>
-        <dd className="tabular-nums">{money(order.amountPaidMinor)}</dd>
-      </div>
-      <div className="flex justify-between gap-3">
-        <dt className="text-muted-foreground">Balance due</dt>
-        <dd
-          className={cn(
-            "tabular-nums",
-            due && "font-semibold text-amber-600 dark:text-amber-400",
-          )}
-        >
-          {money(order.balanceDueMinor)}
-        </dd>
       </div>
     </dl>
   )

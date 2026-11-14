@@ -1,6 +1,7 @@
 import {
   type LoaderInput,
   createLoader,
+  parseAsBoolean,
   parseAsString,
   parseAsStringEnum,
 } from "nuqs/server"
@@ -20,11 +21,14 @@ export const ORDER_STATUSES = [
 export const orderFilterParams = {
   orderQuery: parseAsString,
   orderStatus: parseAsStringEnum([...ORDER_STATUSES]),
+  /** Only open orders with money still due. */
+  orderOwing: parseAsBoolean,
 }
 
 export type OrderFilters = {
   query: string | null
   status: (typeof ORDER_STATUSES)[number] | null
+  owing: boolean
 }
 
 const loadOrderFilterState = createLoader(orderFilterParams)
@@ -36,6 +40,7 @@ export async function loadOrderFilterParams(
   return {
     query: params.orderQuery,
     status: params.orderStatus,
+    owing: params.orderOwing === true,
   }
 }
 
@@ -45,5 +50,6 @@ export function getOrderListPageInput(filter: OrderFilters) {
     query: filter.query?.trim().slice(0, 160) || undefined,
     queryMode: "all" as const,
     statuses: filter.status ? [filter.status] : undefined,
+    owing: filter.owing || undefined,
   }
 }

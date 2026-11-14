@@ -6,12 +6,13 @@ import { HugeiconsIcon } from "@hugeicons/react"
 import type { ReactNode } from "react"
 import type { PillTone } from "./order-overview-model"
 
+// Midnight Paper status pairs (AA in light and dark).
 const PILL: Record<PillTone, string> = {
-  amber: "bg-amber-500/15 text-amber-700 dark:text-amber-300",
-  green: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300",
-  blue: "bg-sky-500/15 text-sky-700 dark:text-sky-300",
-  muted: "bg-muted text-muted-foreground",
-  red: "bg-red-500/15 text-red-700 dark:text-red-300",
+  amber: "bg-warning text-warning-foreground",
+  green: "bg-success text-success-foreground",
+  blue: "bg-info text-info-foreground",
+  muted: "bg-neutral text-neutral-foreground",
+  red: "bg-danger text-danger-foreground",
 }
 
 export function Pill({

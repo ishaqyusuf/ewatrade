@@ -17,19 +17,22 @@ export function useOrderParams() {
   const filter: OrderFilters = {
     query: params.orderQuery,
     status: params.orderStatus,
+    owing: params.orderOwing === true,
   }
 
   return {
     filter,
-    hasFilters: Boolean(filter.query?.trim() || filter.status),
+    hasFilters: Boolean(filter.query?.trim() || filter.status || filter.owing),
     query: params.orderQuery ?? "",
     setFilter: (values: Partial<OrderFilters> | null) =>
       setParams(
         values === null
-          ? { orderQuery: null, orderStatus: null }
+          ? { orderQuery: null, orderStatus: null, orderOwing: null }
           : {
               orderQuery: values.query,
               orderStatus: values.status,
+              orderOwing:
+                values.owing === undefined ? undefined : values.owing || null,
             },
       ),
     setParams,

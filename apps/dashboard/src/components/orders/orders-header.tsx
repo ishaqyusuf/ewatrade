@@ -37,11 +37,7 @@ export function OrdersHeader({
   const { setParams } = useOrderParams()
   const createOrder = () => void setParams({ orderSheet: "create" })
   return (
-    <PageHeader
-      eyebrow={storeName}
-      title={salesRep ? "Your sales" : "Orders"}
-      description="Products and Services share one immutable order record."
-    >
+    <PageHeader eyebrow={storeName} title={salesRep ? "Your sales" : "Orders"}>
       <PageToolbar
         actions={
           <>
@@ -52,13 +48,9 @@ export function OrdersHeader({
               options={orderViewOptions}
               onValueChange={onViewChange}
             />
-            <Button
-              aria-label="New order"
-              variant="outline"
-              onClick={createOrder}
-              className="size-9 rounded-none max-sm:hidden"
-            >
+            <Button onClick={createOrder} className="max-sm:hidden">
               <HugeiconsIcon icon={Add01Icon} className="size-4" />
+              New order
             </Button>
             <PageFab label="New order" onClick={createOrder} />
           </>

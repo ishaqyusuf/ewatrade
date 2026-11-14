@@ -1,22 +1,19 @@
 "use client"
 
-import {
-  DirectoryToolbar,
-  HorizontalPagination,
-  VirtualRow,
-} from "@/components/tables/core"
+import { HorizontalPagination, VirtualRow } from "@/components/tables/core"
 import type { orderSortFields } from "@/hooks/sort-params"
 import { useInfiniteScroll } from "@/hooks/use-infinite-scroll"
+import { useOrderParams } from "@/hooks/use-order-params"
 import { useStickyColumns } from "@/hooks/use-sticky-columns"
 import { useTableDnd } from "@/hooks/use-table-dnd"
 import { useTableScroll } from "@/hooks/use-table-scroll"
 import type { DirectoryView } from "@/utils/directory-view-settings"
 import { DndContext, type DragEndEvent, closestCenter } from "@dnd-kit/core"
 import { Button, Table, TableBody } from "@ewatrade/ui"
-import type { Table as ReactTable } from "@tanstack/react-table"
+import type { Table as ReactTable, Row } from "@tanstack/react-table"
 import { useVirtualizer } from "@tanstack/react-virtual"
 import type { Virtualizer } from "@tanstack/react-virtual"
-import type { CSSProperties, ReactNode } from "react"
+import { type CSSProperties, type ReactNode, useCallback } from "react"
 import { OrdersCollection } from "./collection"
 import type { OrderRow } from "./columns"
 import { OrdersEmptyState } from "./empty-states"
@@ -40,6 +37,7 @@ export function OrdersTableView({
   sort,
   toggleSort,
   filtered,
+  totalCount,
   errorMessage,
   isInitialError,
   isFetchNextPageError,
@@ -57,6 +55,8 @@ export function OrdersTableView({
   sort?: OrderSort
   toggleSort: (field: OrderSort["field"]) => Promise<unknown>
   filtered: boolean
+  /** Orders matching the filters, across all pages. */
+  totalCount?: number
   errorMessage: string
   isInitialError: boolean
   isFetchNextPageError: boolean
@@ -69,7 +69,7 @@ export function OrdersTableView({
   retryPersistence: () => void
 }) {
   const { sensors, handleDragEnd, sortableColumnIds } = useTableDnd(table, {
-    fixedColumnIds: ["select", "orderNumber", "actions"],
+    fixedColumnIds: ["select", "orderNumber"],
   })
   const { getStickyStyle, getStickyClassName, isVisible } = useStickyColumns({
     table,
@@ -122,12 +122,6 @@ export function OrdersTableView({
         </div>
       ) : null}
 
-      <DirectoryToolbar
-        table={table}
-        view={view}
-        selectAllLabel="Select all loaded orders"
-        summary={`${table.getRowModel().rows.length} orders loaded`}
-      />
       {/* Sort and Columns render in the page header row beside View and New order. */}
       <OrdersTableSettings table={table} showColumns={view === "table"} />
 
@@ -179,14 +173,20 @@ export function OrdersTableView({
       )}
 
       {hasNextPage && !isFetchNextPageError ? (
-        <Button
-          className="w-fit"
-          variant="outline"
-          disabled={isFetchingNextPage}
-          onClick={() => void fetchNextPage()}
-        >
-          {isFetchingNextPage ? "Loading…" : "Load more orders"}
-        </Button>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+          <Button
+            variant="outline"
+            disabled={isFetchingNextPage}
+            onClick={() => void fetchNextPage()}
+          >
+            {isFetchingNextPage ? "Loading…" : "Load more orders"}
+          </Button>
+          {totalCount ? (
+            <p className="text-sm text-muted-foreground tabular-nums">
+              {rows.length} of {totalCount}
+            </p>
+          ) : null}
+        </div>
       ) : null}
     </div>
   )
@@ -218,6 +218,12 @@ function DndTable({
   scrollControls: ReactNode
 }) {
   const rows = table.getRowModel().rows
+  const { setParams } = useOrderParams()
+  const openRow = useCallback(
+    (row: Row<OrderRow>) =>
+      void setParams({ orderSheet: "details", orderId: row.original.id }),
+    [setParams],
+  )
   return (
     <DndContext
       id="orders-table-dnd"
@@ -252,6 +258,7 @@ function DndTable({
                 row={row}
                 virtualStart={virtualRow.start}
                 rowHeight={ROW_HEIGHT}
+                onRowOpen={openRow}
                 getStickyStyle={getStickyStyle}
                 getStickyClassName={getStickyClassName}
                 columnSizing={table.getState().columnSizing}

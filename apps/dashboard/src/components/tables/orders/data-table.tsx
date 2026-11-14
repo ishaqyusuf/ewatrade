@@ -18,7 +18,7 @@ import { type OrderRow, orderColumns } from "./columns"
 import { OrdersEmptyState } from "./empty-states"
 import { OrdersTableView } from "./table-view"
 
-const FIXED_COLUMN_IDS = ["select", "orderNumber", "actions"]
+const FIXED_COLUMN_IDS = ["select", "orderNumber"]
 const getOrderId = (order: OrderRow) => order.id
 
 export function OrdersDataTable({
@@ -97,6 +97,7 @@ export function OrdersDataTable({
         sort={sort}
         toggleSort={toggleSort}
         filtered={hasFilters}
+        totalCount={query.data.pages[0]?.totalCount}
         errorMessage={query.error?.message ?? ""}
         isInitialError={query.isError && !query.data}
         isFetchNextPageError={query.isFetchNextPageError}
@@ -109,7 +110,7 @@ export function OrdersDataTable({
         retryPersistence={tableSettings.retryPersistence}
       />
       <AnimatePresence>
-        {table.getSelectedRowModel().rows.length > 0 && (
+        {view === "table" && table.getSelectedRowModel().rows.length > 0 && (
           <OrdersBottomBar table={table} />
         )}
       </AnimatePresence>

@@ -9,10 +9,7 @@ import { useOrderParams } from "@/hooks/use-order-params"
 import { useSheetDismissal } from "@/hooks/use-sheet-dismissal"
 import { useTRPC } from "@/trpc/client"
 import { Sheet } from "@ewatrade/ui"
-import { ArrowUpRight01Icon } from "@hugeicons/core-free-icons"
-import { HugeiconsIcon } from "@hugeicons/react"
 import { useQuery } from "@tanstack/react-query"
-import Link from "next/link"
 import { SheetFrame } from "./sheet-frame"
 
 export function OrderDetailsSheet({
@@ -76,20 +73,7 @@ function OrderSheetBody({
     <SheetFrame
       title={loaded?.orderNumber ?? "Order details"}
       description={loaded ? orderSubline(loaded, timeZone) : undefined}
-      header={
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-          {loaded ? <OrderPills order={loaded} /> : null}
-          {fullPage ? (
-            <Link
-              href={`/sales/orders/${encodeURIComponent(orderId)}`}
-              className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
-            >
-              Open full page
-              <HugeiconsIcon icon={ArrowUpRight01Icon} className="size-3.5" />
-            </Link>
-          ) : null}
-        </div>
-      }
+      header={loaded ? <OrderPills order={loaded} /> : null}
       closeError={closeError}
       popupClassName="sm:w-[min(1180px,96vw)] sm:max-w-[1180px]"
     >
@@ -100,6 +84,9 @@ function OrderSheetBody({
         timeZone={timeZone}
         onLeave={onLeave}
         onOpenOrder={onOpenOrder}
+        fullPageHref={
+          fullPage ? `/sales/orders/${encodeURIComponent(orderId)}` : undefined
+        }
       />
     </SheetFrame>
   )

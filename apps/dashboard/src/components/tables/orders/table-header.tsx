@@ -253,7 +253,7 @@ export function OrdersTableSettings({
         <DropdownMenu>
           <DropdownMenuTrigger
             render={
-              <Button type="button" variant="outline" className="rounded-none">
+              <Button type="button" variant="outline">
                 Columns
                 <ChevronDown />
               </Button>
@@ -296,7 +296,6 @@ export function OrdersTableSettings({
             <Button
               type="button"
               variant="outline"
-              className="rounded-none"
               aria-label={`Sort orders: ${label}`}
             />
           }

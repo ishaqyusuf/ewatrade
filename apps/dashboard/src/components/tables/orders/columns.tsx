@@ -1,15 +1,14 @@
 import { orderStatusPill } from "@/components/orders/order-status"
 import {
+  type PillTone,
   formatOrderShortDateTime,
   isClosedOrder,
-  orderPaymentPill,
 } from "@/components/orders/overview/order-overview-model"
 import { Pill } from "@/components/orders/overview/order-overview-parts"
 import { selectColumn } from "@/components/tables/core"
 import { formatOrderItemGroups } from "@/lib/order-item-descriptions"
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
 import type { ColumnDef } from "@tanstack/react-table"
-import { OrderActionsMenu } from "./action-menu"
 
 export type OrderRow = RouterOutputs["orders"]["listPage"]["items"][number]
 
@@ -24,29 +23,38 @@ export function getOrderCustomer(order: OrderRow) {
   return order.customerName || order.customerPhone || "Walk-in"
 }
 
-// Readable sizes from the Orders page workshop (01 Labeled view dropdown).
-export const ORDER_PILL_CLASS = "h-auto px-2.5 py-0.5 text-[12.5px]"
-export const ORDER_SUBTITLE_CLASS =
-  "truncate text-[13.5px] text-muted-foreground"
+export const ORDER_SUBTITLE_CLASS = "truncate text-sm text-muted-foreground"
+
+/** Money still owed on an open order; closed orders owe nothing. */
+export function orderDueMinor(order: OrderRow) {
+  return isClosedOrder(order.status) ? 0 : Math.max(order.balanceDueMinor, 0)
+}
+
+/**
+ * The one chip a list row shows: what is owed when money is due, otherwise
+ * the order's status word (Confirmed, Completed, Cancelled, Refunded).
+ */
+export function orderListChip(order: OrderRow): {
+  label: string
+  tone: PillTone
+} {
+  const due = orderDueMinor(order)
+  if (due > 0)
+    return {
+      label: `${formatOrderMoney(due, order.currencyCode)} due`,
+      tone: "amber",
+    }
+  return orderStatusPill(order.status)
+}
+
+export function OrderListChip({ order }: { order: OrderRow }) {
+  const chip = orderListChip(order)
+  return <Pill tone={chip.tone}>{chip.label}</Pill>
+}
 
 export function OrderStatusPill({ status }: { status: string }) {
   const pill = orderStatusPill(status)
-  return (
-    <Pill tone={pill.tone} className={ORDER_PILL_CLASS}>
-      {pill.label}
-    </Pill>
-  )
-}
-
-/** Closed orders show their state in Status, so Payment stays empty. */
-export function OrderPaymentPill({ order }: { order: OrderRow }) {
-  if (isClosedOrder(order.status)) return null
-  const pill = orderPaymentPill(order)
-  return (
-    <Pill tone={pill.tone} className={ORDER_PILL_CLASS}>
-      {pill.label}
-    </Pill>
-  )
+  return <Pill tone={pill.tone}>{pill.label}</Pill>
 }
 
 export function orderColumns(timeZone?: string): ColumnDef<OrderRow>[] {
@@ -70,9 +78,7 @@ export function orderColumns(timeZone?: string): ColumnDef<OrderRow>[] {
       },
       cell: ({ row }) => (
         <div className="min-w-0">
-          <p className="truncate text-[14.5px] font-semibold">
-            {row.original.orderNumber}
-          </p>
+          <p className="truncate font-semibold">{row.original.orderNumber}</p>
           <p className={ORDER_SUBTITLE_CLASS}>
             {getOrderCustomer(row.original)}
           </p>
@@ -142,21 +148,25 @@ export function orderColumns(timeZone?: string): ColumnDef<OrderRow>[] {
       ),
     },
     {
-      id: "payment",
-      header: "Payment",
-      size: 230,
-      minSize: 180,
-      maxSize: 320,
+      id: "due",
+      header: "Due",
+      size: 140,
+      minSize: 110,
+      maxSize: 220,
       meta: {
-        headerLabel: "Payment",
-        skeleton: { type: "badge" as const, width: "w-32" },
+        headerLabel: "Due",
+        skeleton: { type: "text" as const, width: "w-20" },
       },
-      cell: ({ row }) =>
-        isClosedOrder(row.original.status) ? (
-          <span className="text-muted-foreground">—</span>
+      cell: ({ row }) => {
+        const due = orderDueMinor(row.original)
+        return due > 0 ? (
+          <span className="font-medium text-warning-foreground tabular-nums">
+            {formatOrderMoney(due, row.original.currencyCode)}
+          </span>
         ) : (
-          <OrderPaymentPill order={row.original} />
-        ),
+          <span className="text-muted-foreground">—</span>
+        )
+      },
     },
     {
       accessorKey: "status",
@@ -170,20 +180,6 @@ export function orderColumns(timeZone?: string): ColumnDef<OrderRow>[] {
         skeleton: { type: "badge" as const, width: "w-24" },
       },
       cell: ({ row }) => <OrderStatusPill status={row.original.status} />,
-    },
-    {
-      id: "actions",
-      size: 70,
-      minSize: 70,
-      maxSize: 70,
-      enableHiding: false,
-      enableResizing: false,
-      meta: {
-        headerLabel: "Actions",
-        reorderable: false,
-        skeleton: { type: "text" as const, width: "w-4" },
-      },
-      cell: ({ row }) => <OrderActionsMenu order={row.original} />,
     },
   ]
 }

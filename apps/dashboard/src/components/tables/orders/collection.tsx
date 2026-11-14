@@ -1,19 +1,14 @@
 "use client"
 
 import { formatOrderShortDateTime } from "@/components/orders/overview/order-overview-model"
-import {
-  type CollectionView,
-  RowSelectCheckbox,
-} from "@/components/tables/core"
+import type { CollectionView } from "@/components/tables/core"
 import { useOrderParams } from "@/hooks/use-order-params"
 import { formatOrderItemGroups } from "@/lib/order-item-descriptions"
 import type { Row } from "@tanstack/react-table"
-import { OrderActionsMenu } from "./action-menu"
 import {
   ORDER_SUBTITLE_CLASS,
-  OrderPaymentPill,
+  OrderListChip,
   type OrderRow,
-  OrderStatusPill,
   formatOrderMoney,
   getOrderCustomer,
 } from "./columns"
@@ -22,24 +17,6 @@ type CollectionProps = {
   rows: Row<OrderRow>[]
   timeZone?: string
   openDetails: (orderId: string) => void
-}
-
-function OrderTitle({
-  order,
-  onOpen,
-}: {
-  order: OrderRow
-  onOpen: () => void
-}) {
-  return (
-    <button
-      type="button"
-      className="min-w-0 truncate text-left text-[15px] font-semibold tabular-nums underline-offset-4 outline-none hover:underline focus-visible:underline"
-      onClick={onOpen}
-    >
-      {order.orderNumber}
-    </button>
-  )
 }
 
 /** The first item group, with "+N more" when the order has others. */
@@ -56,63 +33,49 @@ function FirstItems({ order }: { order: OrderRow }) {
   )
 }
 
-function OrderPills({ order }: { order: OrderRow }) {
-  return (
-    <div className="flex flex-wrap gap-1.5">
-      <OrderStatusPill status={order.status} />
-      <OrderPaymentPill order={order} />
-    </div>
-  )
-}
-
 const total = (order: OrderRow) =>
   formatOrderMoney(order.totalMinor, order.currencyCode)
+
+const ROW_BUTTON =
+  "w-full text-left outline-none transition-colors hover:bg-[var(--hover)] focus-visible:bg-[var(--hover)] focus-visible:ring-3 focus-visible:ring-ring focus-visible:ring-inset"
 
 /** Grid columns are fixed by screen width: 1, then 2 at md, 3 at lg, 4 at xl. */
 function OrdersGrid({ rows, timeZone, openDetails }: CollectionProps) {
   return (
     <ul
-      aria-label="Order grid"
+      aria-label="Orders"
       className="grid min-w-0 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
     >
       {rows.map((row) => {
         const order = row.original
         return (
           <li key={row.id} className="min-w-0">
-            <article
-              data-state={row.getIsSelected() ? "selected" : undefined}
-              className="flex h-full flex-col rounded-xl border bg-card data-[state=selected]:border-transparent data-[state=selected]:ring-2 data-[state=selected]:ring-primary"
+            <button
+              type="button"
+              onClick={() => openDetails(order.id)}
+              className={`${ROW_BUTTON} flex h-full flex-col overflow-hidden rounded-[var(--ui-radius-surface)] border bg-card`}
             >
-              <div className="grid grid-cols-[1rem_auto_minmax(0,1fr)_auto] items-center gap-2.5 pt-2.5 pr-2 pl-3.5">
-                <RowSelectCheckbox
-                  row={row}
-                  label={`Select ${order.orderNumber}`}
-                />
-                <OrderTitle
-                  order={order}
-                  onOpen={() => openDetails(order.id)}
-                />
-                <span className="truncate text-right text-[13px] text-muted-foreground tabular-nums">
+              <span className="flex w-full items-baseline justify-between gap-3 px-4 pt-3.5">
+                <span className="truncate font-semibold">
+                  {order.orderNumber}
+                </span>
+                <span className="shrink-0 text-sm text-muted-foreground tabular-nums">
                   {formatOrderShortDateTime(order.createdAt, timeZone)}
                 </span>
-                <OrderActionsMenu order={order} />
-              </div>
-              <div className="flex min-w-0 flex-1 flex-col gap-1 px-3.5 pt-2 pb-3.5">
-                <p className="truncate text-[15px] font-semibold">
-                  {getOrderCustomer(order)}
-                </p>
-                <p className={ORDER_SUBTITLE_CLASS}>
+              </span>
+              <span className="grid w-full min-w-0 flex-1 content-start gap-0.5 px-4 pt-1.5 pb-3.5">
+                <span className="truncate">{getOrderCustomer(order)}</span>
+                <span className={ORDER_SUBTITLE_CLASS}>
                   <FirstItems order={order} />
-                </p>
-                <div className="mt-2">
-                  <OrderPills order={order} />
-                </div>
-              </div>
-              <div className="flex items-baseline justify-between gap-2 border-t px-3.5 py-2.5 text-[13.5px] tabular-nums">
-                <span className="text-muted-foreground">Total</span>
-                <span className="text-base font-semibold">{total(order)}</span>
-              </div>
-            </article>
+                </span>
+              </span>
+              <span className="flex w-full items-center justify-between gap-3 border-t px-4 py-3">
+                <OrderListChip order={order} />
+                <span className="text-lg font-semibold tabular-nums">
+                  {total(order)}
+                </span>
+              </span>
+            </button>
           </li>
         )
       })}
@@ -120,50 +83,46 @@ function OrdersGrid({ rows, timeZone, openDetails }: CollectionProps) {
   )
 }
 
-/** One bordered panel with a divided row per order; items hide below lg, pills wrap under the number on phones. */
+/**
+ * One bordered panel with a row per order. A row is one button that opens
+ * the order: customer and number on the left, total and one chip (money due,
+ * else the status) on the right. Items show from lg.
+ */
 function OrdersList({ rows, timeZone, openDetails }: CollectionProps) {
   return (
-    <ul aria-label="Order list" className="divide-y rounded-lg border">
+    <ul
+      aria-label="Orders"
+      className="divide-y overflow-hidden rounded-[var(--ui-radius-surface)] border bg-card"
+    >
       {rows.map((row) => {
         const order = row.original
-        const [first] = formatOrderItemGroups(order.lines)
         return (
-          <li
-            key={row.id}
-            data-state={row.getIsSelected() ? "selected" : undefined}
-            className="grid grid-cols-[1rem_minmax(0,1fr)_auto_2rem] items-center gap-x-4 gap-y-2 px-3.5 py-2.5 data-[state=selected]:bg-muted md:grid-cols-[1rem_minmax(0,1fr)_14rem_7.5rem_2rem] lg:grid-cols-[1rem_minmax(9rem,1fr)_minmax(0,1.2fr)_18rem_7.5rem_2rem]"
-          >
-            <RowSelectCheckbox
-              row={row}
-              label={`Select ${order.orderNumber}`}
-            />
-            <div className="grid min-w-0 justify-items-start gap-0.5">
-              <OrderTitle order={order} onOpen={() => openDetails(order.id)} />
-              <p className={`max-w-full ${ORDER_SUBTITLE_CLASS}`}>
-                {getOrderCustomer(order)} ·{" "}
-                {formatOrderShortDateTime(order.createdAt, timeZone)}
-              </p>
-            </div>
-            <div className="hidden min-w-0 gap-0.5 lg:grid">
-              <p className="truncate">
-                <FirstItems order={order} />
-              </p>
-              {first ? (
-                <p className={ORDER_SUBTITLE_CLASS}>{first.details}</p>
-              ) : null}
-            </div>
-            <div className="max-md:col-span-2 max-md:col-start-2 max-md:row-start-2">
-              <OrderPills order={order} />
-            </div>
-            <p className="text-right text-[15px] font-semibold tabular-nums max-md:col-start-3 max-md:row-start-1">
-              <span className="block text-[12.5px] font-normal text-muted-foreground">
-                Total
+          <li key={row.id}>
+            <button
+              type="button"
+              onClick={() => openDetails(order.id)}
+              className={`${ROW_BUTTON} grid min-h-[4.5rem] grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 px-4 py-3 lg:grid-cols-[minmax(12rem,1fr)_minmax(0,1.2fr)_auto]`}
+            >
+              <span className="grid min-w-0 gap-0.5">
+                <span className="truncate font-medium">
+                  {getOrderCustomer(order)}
+                </span>
+                <span className={ORDER_SUBTITLE_CLASS}>
+                  {order.orderNumber}
+                  {" · "}
+                  {formatOrderShortDateTime(order.createdAt, timeZone)}
+                </span>
               </span>
-              {total(order)}
-            </p>
-            <div className="max-md:col-start-4 max-md:row-start-1">
-              <OrderActionsMenu order={order} />
-            </div>
+              <span className="hidden min-w-0 truncate text-muted-foreground lg:block">
+                <FirstItems order={order} />
+              </span>
+              <span className="grid justify-items-end gap-1">
+                <span className="font-semibold tabular-nums">
+                  {total(order)}
+                </span>
+                <OrderListChip order={order} />
+              </span>
+            </button>
           </li>
         )
       })}
