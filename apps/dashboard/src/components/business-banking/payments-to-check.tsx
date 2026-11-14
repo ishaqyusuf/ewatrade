@@ -3,32 +3,22 @@
 import { FINANCE_MENU_ITEMS } from "@/components/finance/finance-header"
 import { FormFeedback } from "@/components/forms/form-feedback"
 import { orderMoney } from "@/components/orders/order-draft"
-import { PageHeader } from "@/components/page-header"
 import { ScrollableContent } from "@/components/scrollable-content"
 import { SecondaryMenu } from "@/components/secondary-menu"
 import { useTRPC, useTRPCClient } from "@/trpc/client"
-import { isRejectedRead, readPollInterval } from "@/trpc/query-read-errors"
-import { Badge, Button, cn } from "@ewatrade/ui"
+import { isRejectedRead } from "@/trpc/query-read-errors"
+import { Button, cn } from "@ewatrade/ui"
 import { ArrowLeft01Icon, InboxIcon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
-import {
-  useInfiniteQuery,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query"
+import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query"
 import { parseAsString, useQueryState } from "nuqs"
-import { useEffect, useMemo, useRef } from "react"
+import { useEffect, useMemo } from "react"
 import { errorCode, formatReportTime } from "./business-banking-model"
 import { PaymentReportReview } from "./payment-report-review"
 
 const PAGE_SIZE = 20
-/** New customer claims appear on an open page within this interval. */
-const ARRIVAL_POLL_MS = 30_000
 /** Claims are authority-scoped: always read fresh, never reuse a cached list. */
 const FRESH = { staleTime: 0, gcTime: 0, refetchOnMount: "always" } as const
-const pageSignature = (
-  page: { items: { id: string; revision: number }[] } | undefined,
-) => page?.items.map((item) => `${item.id}:${item.revision}`).join(",") ?? ""
 
 /**
  * Finance → Payments to check (Business banking 02 "Payments inbox"):
@@ -47,14 +37,6 @@ export function PaymentsToCheck({
   const client = useTRPCClient()
   const queryClient = useQueryClient()
   const [reportId, setReportId] = useQueryState("reportId", parseAsString)
-  const firstPageOptions = trpc.businessBanking.pendingReports.queryOptions(
-    { limit: PAGE_SIZE },
-    { ...FRESH, retry: false, trpc: { abortOnUnmount: true } },
-  )
-  const firstPageToReuse =
-    useRef<
-      Awaited<ReturnType<typeof client.businessBanking.pendingReports.query>>
-    >(undefined)
   const listKey = useMemo(
     () => [
       ...trpc.businessBanking.pendingReports.queryKey(),
@@ -62,87 +44,39 @@ export function PaymentsToCheck({
     ],
     [trpc],
   )
+  // No timer: the list (every loaded page) re-reads when the tab gets focus
+  // and after a review.
   const list = useInfiniteQuery({
     queryKey: listKey,
-    queryFn: ({ pageParam, signal }) => {
-      if (!pageParam) {
-        const polled = firstPageToReuse.current
-        firstPageToReuse.current = undefined
-        return polled ?? queryClient.fetchQuery(firstPageOptions)
-      }
-      return client.businessBanking.pendingReports.query(
-        { limit: PAGE_SIZE, beforeId: pageParam },
+    queryFn: ({ pageParam, signal }) =>
+      client.businessBanking.pendingReports.query(
+        pageParam
+          ? { limit: PAGE_SIZE, beforeId: pageParam }
+          : { limit: PAGE_SIZE },
         { signal },
-      )
-    },
+      ),
     initialPageParam: null as string | null,
     getNextPageParam: (page) => page.nextCursor ?? undefined,
     retry: false,
     ...FRESH,
+    refetchOnWindowFocus: "always",
   })
-  // Only the first page is polled (paused while the tab is hidden); loaded
-  // "Load more" pages are re-read once, and only when the first page changed.
-  const arrivals = useQuery({
-    ...firstPageOptions,
-    refetchInterval: (query) =>
-      readPollInterval(query.state.error, ARRIVAL_POLL_MS),
-    // The infinite owner's fresh mount reads this same query, even with cached data.
-    refetchOnMount: false,
-  })
-  const arrivalVersion =
-    queryClient.getQueryState(firstPageOptions.queryKey)?.dataUpdateCount ?? 0
-  const arrivedSignature = arrivals.isSuccess
-    ? pageSignature(arrivals.data)
-    : null
-  const listedSignature = pageSignature(list.data?.pages[0])
-  const listFetching = list.isFetching
-  const refetchList = list.refetch
-  const checkedArrival = useRef(0)
-  useEffect(() => {
-    if (
-      arrivedSignature !== null &&
-      list.isSuccess &&
-      !listFetching &&
-      checkedArrival.current !== arrivalVersion
-    ) {
-      checkedArrival.current = arrivalVersion
-      if (arrivedSignature !== listedSignature) {
-        // Reuse only this completed poll during the immediate refresh. A paused
-        // refresh must obtain fresh authority when it later resumes.
-        firstPageToReuse.current = arrivals.data
-        try {
-          void refetchList()
-        } finally {
-          firstPageToReuse.current = undefined
-        }
-      }
-    }
-  }, [
-    arrivedSignature,
-    listedSignature,
-    arrivals.data,
-    arrivalVersion,
-    list.isSuccess,
-    listFetching,
-    refetchList,
-  ])
   // A failed current read (e.g. access removed) shows no previous claims.
-  const failed = arrivals.isError || list.isError
-  const loadError = arrivals.isError ? arrivals.error : list.error
+  const failed = list.isError
+  const loadError = list.error
   useEffect(() => {
-    if (!list.data || !isRejectedRead(arrivals.error)) return
+    if (!isRejectedRead(list.error)) return
     const retained = queryClient
       .getQueryCache()
       .find<unknown, unknown>({ queryKey: listKey, exact: true })
     if (!retained?.state.data) return
-    // A refused first page also revokes its retained paginated projection.
-    void retained.cancel({ revert: true })
+    // A refused read also revokes its retained paginated projection.
     retained.setState({
       data: undefined,
-      error: arrivals.error,
+      error: list.error,
       status: "error",
     })
-  }, [arrivals.error, list.data, listKey, queryClient])
+  }, [list.error, listKey, queryClient])
   const items = failed
     ? []
     : (list.data?.pages.flatMap((page) => page.items) ?? [])
@@ -169,25 +103,19 @@ export function PaymentsToCheck({
   return (
     <ScrollableContent>
       <div className="grid min-w-0 gap-6 pt-6 pb-24">
-        <PageHeader
-          eyebrow="Business money"
-          title="Payments to check"
-          description="Customers who tapped I have paid. Check your bank before you confirm."
-        >
-          {showFinanceMenu ? (
-            <SecondaryMenu items={FINANCE_MENU_ITEMS} label="Finance" />
-          ) : null}
-        </PageHeader>
+        {showFinanceMenu ? (
+          <SecondaryMenu items={FINANCE_MENU_ITEMS} label="Finance" />
+        ) : null}
         <div className="grid min-w-0 items-start gap-4 lg:grid-cols-[minmax(280px,360px)_minmax(0,1fr)]">
           <section
             aria-label="Payments to check"
             className={cn(
-              "grid min-w-0 content-start rounded-xl border border-border",
+              "grid min-w-0 content-start overflow-hidden rounded-[var(--ui-radius-surface)] border border-border bg-card",
               selected && "max-lg:hidden",
             )}
           >
             <header className="flex items-center justify-between gap-2 border-b border-border px-4 py-3">
-              <h2 className="text-sm font-medium">
+              <h2 className="font-semibold">
                 To check{items.length ? ` · ${items.length}` : ""}
                 {items.length && list.hasNextPage ? "+" : ""}
               </h2>
@@ -210,10 +138,7 @@ export function PaymentsToCheck({
                   <Button
                     variant="outline"
                     className="w-fit"
-                    onClick={() => {
-                      void arrivals.refetch()
-                      void list.refetch()
-                    }}
+                    onClick={() => void list.refetch()}
                   >
                     Try again
                   </Button>
@@ -228,21 +153,21 @@ export function PaymentsToCheck({
                       aria-current={item.id === selected ? "true" : undefined}
                       onClick={() => void setReportId(item.id)}
                       className={cn(
-                        "flex w-full items-center gap-3 px-4 py-3 text-left outline-none hover:bg-muted/50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
-                        item.id === selected && "bg-muted",
+                        "flex min-h-16 w-full items-center gap-3 px-4 py-3 text-left outline-none hover:bg-[var(--hover)] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
+                        item.id === selected && "bg-[var(--hover)]",
                       )}
                     >
                       <span
                         aria-hidden="true"
-                        className="grid size-9 shrink-0 place-items-center rounded-full bg-primary/10 text-xs font-semibold text-primary"
+                        className="grid size-10 shrink-0 place-items-center rounded-full bg-[var(--avatar)] text-sm font-semibold"
                       >
                         {initials(item.payerName)}
                       </span>
                       <span className="grid min-w-0 flex-1">
-                        <span className="truncate text-sm font-medium">
+                        <span className="truncate font-medium">
                           {item.payerName}
                         </span>
-                        <span className="truncate text-xs text-muted-foreground">
+                        <span className="truncate text-sm text-muted-foreground">
                           {item.orderNumber} ·{" "}
                           {item.paymentReference
                             ? `${item.paymentReference} · `
@@ -251,10 +176,9 @@ export function PaymentsToCheck({
                         </span>
                       </span>
                       <span className="grid justify-items-end gap-1">
-                        <b className="text-sm font-semibold tabular-nums">
+                        <b className="font-semibold tabular-nums">
                           {orderMoney(item.amountMinor, item.currencyCode)}
                         </b>
-                        <Badge variant="outline">To check</Badge>
                       </span>
                     </button>
                   </li>
@@ -268,13 +192,10 @@ export function PaymentsToCheck({
                   aria-hidden
                 />
                 <b className="font-medium">Nothing to check</b>
-                <span className="text-muted-foreground">
-                  When a customer taps I have paid, it shows here.
-                </span>
               </div>
             )}
             {list.isFetchNextPageError && !failed ? (
-              <p role="alert" className="px-4 py-2 text-xs text-destructive">
+              <p role="alert" className="px-4 py-2 text-sm text-destructive">
                 More payments couldn't load. Try Load more again.
               </p>
             ) : null}
@@ -312,7 +233,7 @@ export function PaymentsToCheck({
               />
             </div>
           ) : (
-            <section className="grid min-h-64 place-content-center justify-items-center gap-1 rounded-xl border border-dashed border-border p-6 text-center text-sm max-lg:hidden">
+            <section className="grid min-h-64 place-content-center justify-items-center gap-1 rounded-[var(--ui-radius-surface)] border border-dashed border-border p-6 text-center max-lg:hidden">
               <HugeiconsIcon
                 icon={InboxIcon}
                 className="size-6 text-muted-foreground"

@@ -3,6 +3,7 @@
 import { FormFeedback } from "@/components/forms/form-feedback"
 import { orderMoney } from "@/components/orders/order-draft"
 import { useOrderPaymentAccounts } from "@/components/orders/order-payment-account"
+import { OrderDialog } from "@/components/orders/overview/order-dialog-frame"
 import { useTRPC } from "@/trpc/client"
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
 import {
@@ -577,6 +578,7 @@ function ReviewFlow({
     </div>
   ) : null
 
+  let confirmDialog: ReactNode = null
   if (step === "confirm" && receivedMinor && receivedAt) {
     const excess = plan.kind === "excess" ? plan : null
     const left = report.balanceMinor - (excess?.applyMinor ?? receivedMinor)
@@ -584,9 +586,17 @@ function ReviewFlow({
       referenceKind === "nibss_session_id"
         ? "NIBSS session ID"
         : "Bank reference"
-    return (
-      <Pane
-        title="Record this payment?"
+    confirmDialog = (
+      <OrderDialog
+        alert
+        open
+        busy={review.isPending}
+        onOpenChange={(open) => {
+          if (open) return
+          review.reset()
+          setStep("check")
+        }}
+        title={`Record ${money(receivedMinor)} from ${report.payerName}?`}
         footer={
           <>
             <Button
@@ -668,19 +678,6 @@ function ReviewFlow({
           </>
         }
       >
-        <div className="grid gap-1 rounded-lg border border-border bg-muted/40 p-4">
-          <span className="text-xs text-muted-foreground">
-            {excess
-              ? `Record from ${report.payerName}`
-              : `Record on ${report.orderNumber}`}
-          </span>
-          <b className="text-2xl font-semibold tabular-nums">
-            {money(receivedMinor)}
-          </b>
-          <span className="text-sm text-muted-foreground">
-            received into {accountName} on {formatDay(day)}
-          </span>
-        </div>
         <Facts
           rows={[
             ["Customer said", money(report.claimedAmountMinor)],
@@ -729,38 +726,46 @@ function ReviewFlow({
           <>
             <CustomerPreferenceNote words={preference} />
             {report.allocationPreference === "REFUND" ? (
-              <p className="text-xs text-muted-foreground">
+              <p className="text-sm text-muted-foreground">
                 If they gave bank details, a refund request is opened for your
                 review. It isn’t reserved or sent until you approve it.
               </p>
             ) : null}
-            <p className="text-xs text-muted-foreground">
+            <p className="text-sm text-muted-foreground">
               This records one customer payment: {money(excess.applyMinor)} on
               the order and {money(excess.heldMinor)} kept as their money with
               you. Nothing is sent back. It can't be recorded twice.
             </p>
           </>
         ) : (
-          <p className="text-xs text-muted-foreground">
+          <p className="text-sm text-muted-foreground">
             This records one payment on the order, the same as Record payment.
             It can't be recorded twice.
           </p>
         )}
         <output
           aria-live="polite"
-          className={cn("text-xs text-muted-foreground", !copied && "sr-only")}
+          className={cn("text-sm text-muted-foreground", !copied && "sr-only")}
         >
           {copied ?? ""}
         </output>
         {errorBox}
-      </Pane>
+      </OrderDialog>
     )
   }
 
-  if (step === "not-received")
-    return (
-      <Pane
-        title="Not received"
+  const notReceivedDialog =
+    step === "not-received" ? (
+      <OrderDialog
+        alert
+        open
+        busy={review.isPending}
+        onOpenChange={(open) => {
+          if (open) return
+          review.reset()
+          setStep("check")
+        }}
+        title={`${money(report.claimedAmountMinor)} from ${report.payerName} not received?`}
         footer={
           <>
             <Button
@@ -794,206 +799,210 @@ function ReviewFlow({
           </>
         }
       >
-        <p className="text-sm">
-          Why can't you confirm {money(report.claimedAmountMinor)} from{" "}
-          {report.payerName}?
-        </p>
+        <p className="text-sm">Why can&apos;t you confirm it?</p>
         <ReasonBox
           value={note}
           onChange={setNote}
           disabled={review.isPending}
         />
-        <p className="text-xs text-muted-foreground">
-          Nothing is recorded. {report.orderNumber}'s balance stays{" "}
-          {money(report.balanceMinor)}. If some money did arrive, go back and
-          record what arrived instead.
+        <p className="text-sm text-muted-foreground">
+          Nothing is recorded. {report.orderNumber} still owes{" "}
+          {money(report.balanceMinor)}.
         </p>
         {errorBox}
-      </Pane>
-    )
+      </OrderDialog>
+    ) : null
 
   return (
-    <Pane
-      title={title}
-      footer={
-        <>
-          <Button
-            type="button"
-            variant="ghost"
-            className="text-destructive hover:text-destructive"
-            onClick={() => {
-              review.reset()
-              setStep("not-received")
-            }}
-          >
-            Not received
-          </Button>
-          <Button
-            type="button"
-            disabled={!canConfirm}
-            onClick={() => {
-              const at = receivedAtFromDay(day)
-              if (!at) return
-              review.reset()
-              if (!receivedAt) setStamp({ day, at })
-              setStep("confirm")
-            }}
-          >
-            <HugeiconsIcon icon={Tick02Icon} data-icon="inline-start" />
-            Confirm received
-          </Button>
-        </>
-      }
-    >
-      <div className="grid gap-5 xl:grid-cols-2">
-        <ClaimFacts report={report} timeZone={timeZone} onRetried={onRefresh} />
-        <div className="grid content-start gap-4">
-          <OrderFacts
-            report={report}
-            afterMinor={line.kind === "records" ? line.left : null}
-          />
-          <section className="grid gap-3">
-            <h3 className="text-sm font-medium">
-              What arrived in your account
-            </h3>
-            <ControlField label="Amount received">
-              <MoneyInput
-                currencyCode={report.currencyCode}
-                value={received}
-                placeholder="0.00"
-                onChange={(event) => setReceived(event.target.value)}
-              />
-            </ControlField>
-            <button
+    <>
+      <Pane
+        title={title}
+        footer={
+          <>
+            <Button
               type="button"
-              aria-pressed={receivedMinor === report.claimedAmountMinor}
-              className={cn(
-                "w-fit rounded-full border border-border px-3 py-1 text-xs transition-colors hover:bg-muted",
-                receivedMinor === report.claimedAmountMinor &&
-                  "border-primary bg-primary/10",
-              )}
-              onClick={() =>
-                setReceived(minorToMajorInput(report.claimedAmountMinor))
-              }
+              variant="ghost"
+              className="text-destructive hover:text-destructive"
+              onClick={() => {
+                review.reset()
+                setStep("not-received")
+              }}
             >
-              Same as claim: {money(report.claimedAmountMinor)}
-            </button>
-            <div className="grid gap-3 sm:grid-cols-2">
-              {accountsQuery.isSuccess &&
-              accountsQuery.data.book &&
-              eligible.length ? (
-                <ControlField label="Received into">
-                  <SelectControl
-                    aria-label="Received into"
-                    value={accountId}
-                    placeholder="Choose a bank account"
-                    onValueChange={setChosenAccount}
-                    options={eligible.map((account) => ({
-                      value: account.id,
-                      label: account.name,
-                    }))}
-                  />
-                </ControlField>
-              ) : (
-                <div className="grid gap-1.5">
-                  <span className="text-sm font-medium">Received into</span>
-                  <p className="text-xs text-muted-foreground">
-                    {accountProblem}
-                  </p>
-                </div>
-              )}
-              <ControlField
-                label="Date received"
-                error={dayProblem ?? undefined}
-              >
-                <DateControl
-                  value={day}
-                  max={today}
-                  onValueChange={setDay}
-                  aria-label="Date received"
+              Not received
+            </Button>
+            <Button
+              type="button"
+              disabled={!canConfirm}
+              onClick={() => {
+                const at = receivedAtFromDay(day)
+                if (!at) return
+                review.reset()
+                if (!receivedAt) setStamp({ day, at })
+                setStep("confirm")
+              }}
+            >
+              <HugeiconsIcon icon={Tick02Icon} data-icon="inline-start" />
+              Confirm received
+            </Button>
+          </>
+        }
+      >
+        <div className="grid gap-5 xl:grid-cols-2">
+          <ClaimFacts
+            report={report}
+            timeZone={timeZone}
+            onRetried={onRefresh}
+          />
+          <div className="grid content-start gap-4">
+            <OrderFacts
+              report={report}
+              afterMinor={line.kind === "records" ? line.left : null}
+            />
+            <section className="grid gap-3">
+              <h3 className="text-sm font-medium">
+                What arrived in your account
+              </h3>
+              <ControlField label="Amount received">
+                <MoneyInput
+                  currencyCode={report.currencyCode}
+                  value={received}
+                  placeholder="0.00"
+                  onChange={(event) => setReceived(event.target.value)}
                 />
               </ControlField>
-            </div>
-            <ControlField
-              label={
-                referenceKind === "nibss_session_id"
-                  ? "NIBSS session ID"
-                  : "Bank reference (optional)"
-              }
-              error={nibssProblem ?? undefined}
-            >
-              <Input
-                value={reference}
-                maxLength={160}
-                inputMode={
-                  referenceKind === "nibss_session_id" ? "numeric" : undefined
+              <button
+                type="button"
+                aria-pressed={receivedMinor === report.claimedAmountMinor}
+                className={cn(
+                  "w-fit rounded-full border border-border px-3 py-1 text-xs transition-colors hover:bg-muted",
+                  receivedMinor === report.claimedAmountMinor &&
+                    "border-primary bg-primary/10",
+                )}
+                onClick={() =>
+                  setReceived(minorToMajorInput(report.claimedAmountMinor))
                 }
-                placeholder={
+              >
+                Same as claim: {money(report.claimedAmountMinor)}
+              </button>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {accountsQuery.isSuccess &&
+                accountsQuery.data.book &&
+                eligible.length ? (
+                  <ControlField label="Received into">
+                    <SelectControl
+                      aria-label="Received into"
+                      value={accountId}
+                      placeholder="Choose a bank account"
+                      onValueChange={setChosenAccount}
+                      options={eligible.map((account) => ({
+                        value: account.id,
+                        label: account.name,
+                      }))}
+                    />
+                  </ControlField>
+                ) : (
+                  <div className="grid gap-1.5">
+                    <span className="text-sm font-medium">Received into</span>
+                    <p className="text-xs text-muted-foreground">
+                      {accountProblem}
+                    </p>
+                  </div>
+                )}
+                <ControlField
+                  label="Date received"
+                  error={dayProblem ?? undefined}
+                >
+                  <DateControl
+                    value={day}
+                    max={today}
+                    onValueChange={setDay}
+                    aria-label="Date received"
+                  />
+                </ControlField>
+              </div>
+              <ControlField
+                label={
                   referenceKind === "nibss_session_id"
-                    ? "30 digits from your bank record"
-                    : "From your bank app"
+                    ? "NIBSS session ID"
+                    : "Bank reference (optional)"
                 }
-                onChange={(event) => setReference(event.target.value)}
-              />
-            </ControlField>
-            {/* biome-ignore lint/a11y/noLabelWithoutControl: the switch is the label's child */}
-            <label className="flex cursor-pointer items-start justify-between gap-4 rounded-lg border border-border px-3 py-2.5">
-              <span className="grid gap-0.5">
-                <span className="text-sm font-medium">
-                  This is a NIBSS session ID
+                error={nibssProblem ?? undefined}
+              >
+                <Input
+                  value={reference}
+                  maxLength={160}
+                  inputMode={
+                    referenceKind === "nibss_session_id" ? "numeric" : undefined
+                  }
+                  placeholder={
+                    referenceKind === "nibss_session_id"
+                      ? "30 digits from your bank record"
+                      : "From your bank app"
+                  }
+                  onChange={(event) => setReference(event.target.value)}
+                />
+              </ControlField>
+              {/* biome-ignore lint/a11y/noLabelWithoutControl: the switch is the label's child */}
+              <label className="flex cursor-pointer items-start justify-between gap-4 rounded-lg border border-border px-3 py-2.5">
+                <span className="grid gap-0.5">
+                  <span className="text-sm font-medium">
+                    This is a NIBSS session ID
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    Only the 30-digit session ID from your own bank record, not
+                    the receipt or narration. It stops the same transfer being
+                    recorded twice; it isn’t a bank verification.
+                  </span>
                 </span>
-                <span className="text-xs text-muted-foreground">
-                  Only the 30-digit session ID from your own bank record, not
-                  the receipt or narration. It stops the same transfer being
-                  recorded twice; it isn’t a bank verification.
+                <Switch
+                  checked={referenceKind === "nibss_session_id"}
+                  onCheckedChange={(checked) =>
+                    setReferenceKind(
+                      checked === true ? "nibss_session_id" : "bank",
+                    )
+                  }
+                />
+              </label>
+              {line.kind === "over" && plan.kind !== "none" ? (
+                <ExcessLine
+                  plan={plan}
+                  money={money}
+                  balanceMinor={report.balanceMinor}
+                />
+              ) : (
+                <LiveLine
+                  line={line}
+                  money={money}
+                  balanceMinor={report.balanceMinor}
+                />
+              )}
+              {/* biome-ignore lint/a11y/noLabelWithoutControl: the switch is the label's child */}
+              <label className="flex cursor-pointer items-start justify-between gap-4 rounded-lg border border-border px-3 py-2.5">
+                <span className="grid gap-0.5">
+                  <span className="text-sm font-medium">
+                    I checked the bank account
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    The actual amount, receiving account and date are correct. A
+                    receipt or matching reference isn't proof on its own.
+                  </span>
                 </span>
-              </span>
-              <Switch
-                checked={referenceKind === "nibss_session_id"}
-                onCheckedChange={(checked) =>
-                  setReferenceKind(
-                    checked === true ? "nibss_session_id" : "bank",
-                  )
-                }
-              />
-            </label>
-            {line.kind === "over" && plan.kind !== "none" ? (
-              <ExcessLine
-                plan={plan}
-                money={money}
-                balanceMinor={report.balanceMinor}
-              />
-            ) : (
-              <LiveLine
-                line={line}
-                money={money}
-                balanceMinor={report.balanceMinor}
-              />
-            )}
-            {/* biome-ignore lint/a11y/noLabelWithoutControl: the switch is the label's child */}
-            <label className="flex cursor-pointer items-start justify-between gap-4 rounded-lg border border-border px-3 py-2.5">
-              <span className="grid gap-0.5">
-                <span className="text-sm font-medium">
-                  I checked the bank account
-                </span>
-                <span className="text-xs text-muted-foreground">
-                  The actual amount, receiving account and date are correct. A
-                  receipt or matching reference isn't proof on its own.
-                </span>
-              </span>
-              <Switch
-                checked={bankChecked}
-                disabled={currentKey === null}
-                onCheckedChange={(checked) =>
-                  setCheckedKey(checked === true ? currentKey : null)
-                }
-              />
-            </label>
-          </section>
+                <Switch
+                  checked={bankChecked}
+                  disabled={currentKey === null}
+                  onCheckedChange={(checked) =>
+                    setCheckedKey(checked === true ? currentKey : null)
+                  }
+                />
+              </label>
+            </section>
+          </div>
         </div>
-      </div>
-      {errorBox}
-    </Pane>
+        {errorBox}
+      </Pane>
+      {confirmDialog}
+      {notReceivedDialog}
+    </>
   )
 }
 

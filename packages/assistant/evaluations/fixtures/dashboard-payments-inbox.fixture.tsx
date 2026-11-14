@@ -38,8 +38,7 @@ const { createRoot } = await import("react-dom/client")
 notifyManager.setScheduler((callback) => queueMicrotask(callback))
 focusManager.setFocused(true)
 
-// The real observer owns activation/focus/cadence; tests trigger its 30s callback
-// deterministically instead of waiting or issuing real network requests.
+// The inbox must not start a 30s timer; any it starts is captured here.
 const realInterval = globalThis.setInterval
 const realClearInterval = globalThis.clearInterval
 const pollCallbacks = new Map<ReturnType<typeof setInterval>, () => void>()
@@ -194,9 +193,11 @@ async function flush() {
     await delay()
   })
 }
-async function tickPoll() {
+/** The inbox has no timer (14 Nov 2026): returning to the tab re-reads it. */
+async function refocus() {
   await act(async () => {
-    for (const tick of [...pollCallbacks.values()]) tick()
+    focusManager.setFocused(false)
+    focusManager.setFocused(true)
     await delay()
   })
   await flush()
@@ -294,22 +295,18 @@ test("actual inbox initial page has one RPC read and load more only reads its cu
   expect(ui.html()).toContain("Payer report-b")
 })
 
-test("unchanged first-page polls do not reread loaded pages; changed polls consume their fresh result once", async () => {
+test("the inbox sets no timer; it re-reads only on focus or after a review", async () => {
   const ui = await mounted()
   await ui.render()
   await click("Load more")
+  expect(pollCallbacks.size).toBe(0)
   const before = reads().length
-  await tickPoll()
-  expect(reads().length - before).toBe(1)
-  expect(ui.html()).toContain("Payer report-b")
   pages.first = page("report-new", "cursor-new")
   pages["cursor-new"] = page("report-a", null, 2)
-  const changed = reads().length
-  await tickPoll()
-  expect(reads().length - changed).toBe(2)
+  await refocus()
   expect(
     reads()
-      .slice(changed)
+      .slice(before)
       .map((op) => op.input),
   ).toEqual([{ limit: 20 }, { limit: 20, beforeId: "cursor-new" }])
   expect(ui.html()).toContain("Payer report-new")
@@ -351,36 +348,18 @@ test("post-review callback refreshes list and numeric badge while keeping the se
 test("refusal hides and erases claims; focus recovery obtains current financial rows", async () => {
   const ui = await mounted()
   await ui.render()
-  const olderPage = Promise.withResolvers<Page>()
-  tailGate = olderPage
   await click("Load more")
   refused = "FORBIDDEN"
-  await tickPoll()
+  await refocus()
   expect(ui.html()).not.toContain("Payer report-a")
   expect(ui.html()).toContain("Only staff who can take payments")
   for (const query of ui.client
     .getQueryCache()
     .findAll({ queryKey: options.businessBanking.pendingReports.pathKey() }))
     expect(query.state.data).toBeUndefined()
-  const deniedReads = reads().length
-  await tickPoll()
-  expect(reads()).toHaveLength(deniedReads)
-  expect(aborts).toBeGreaterThan(0)
-  await act(async () => {
-    olderPage.resolve(page("obsolete-denied-tail"))
-    await delay()
-  })
-  await flush()
-  expect(ui.html()).not.toContain("Payer obsolete-denied-tail")
-  tailGate = undefined
   refused = null
   pages.first = page("store-b-report")
-  await act(async () => {
-    focusManager.setFocused(false)
-    focusManager.setFocused(true)
-    await delay()
-  })
-  await flush()
+  await refocus()
   expect(ui.html()).toContain("Payer store-b-report")
   expect(ui.html()).not.toContain("Payer report-a")
 })
@@ -434,87 +413,6 @@ test("an existing canonical first-page cache does not replace the inbox fresh mo
   expect(firstReads()).toHaveLength(1)
   expect(ui.html()).toContain("Payer report-a")
   expect(ui.html()).not.toContain("Payer old-cached-report")
-})
-
-test("post-review refresh cancels an older poll before obtaining current first and loaded pages", async () => {
-  const ui = await mounted({ review: true })
-  await ui.render()
-  await click("Load more")
-  const pending = Promise.withResolvers<Page>()
-  gate = pending
-  await tickPoll()
-  const before = reads().length
-  gate = undefined
-  pages.first = page("after-review", "cursor-a")
-  await act(async () => {
-    await afterReview?.()
-    await delay()
-  })
-  await flush()
-  expect(aborts).toBeGreaterThan(0)
-  expect(reads().length - before).toBe(2)
-  expect(ui.html()).toContain("Payer after-review")
-  await act(async () => {
-    pending.resolve(page("obsolete-pre-review"))
-    await delay()
-  })
-  await flush()
-  expect(ui.html()).not.toContain("Payer obsolete-pre-review")
-})
-
-test("a poll completed offline cannot leave a reusable first page for a paused refresh", async () => {
-  const ui = await mounted()
-  await ui.render()
-  await click("Load more")
-  const pending = Promise.withResolvers<Page>()
-  gate = pending
-  await tickPoll()
-  await act(async () => {
-    onlineManager.setOnline(false)
-    pending.resolve(page("polled-before-reconnect", "cursor-new"))
-    await delay()
-  })
-  await flush()
-  const beforeReconnect = reads().length
-  gate = undefined
-  pages.first = page("current-after-reconnect", "cursor-new")
-  pages["cursor-new"] = page("current-tail")
-  await act(async () => {
-    onlineManager.setOnline(true)
-    await delay()
-  })
-  await flush()
-  expect(reads().length - beforeReconnect).toBe(2)
-  expect(ui.html()).toContain("Payer current-after-reconnect")
-  expect(ui.html()).toContain("Payer current-tail")
-  expect(ui.html()).not.toContain("Payer polled-before-reconnect")
-})
-
-test("a newer arrival during Load more refreshes pages even in the same clock millisecond", async () => {
-  const originalNow = Date.now
-  Date.now = () => 1_793_318_400_000
-  try {
-    const ui = await mounted()
-    await ui.render()
-    const pending = Promise.withResolvers<Page>()
-    tailGate = pending
-    await click("Load more")
-    pages.first = page("new-during-load", "cursor-new")
-    pages["cursor-new"] = page("new-tail")
-    await tickPoll()
-    tailGate = undefined
-    await act(async () => {
-      pending.resolve(page("old-tail"))
-      await delay()
-    })
-    await flush()
-    expect(firstReads()).toHaveLength(2)
-    expect(ui.html()).toContain("Payer new-during-load")
-    expect(ui.html()).toContain("Payer new-tail")
-    expect(ui.html()).not.toContain("Payer old-tail")
-  } finally {
-    Date.now = originalNow
-  }
 })
 
 process.on("exit", () => {
