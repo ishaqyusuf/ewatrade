@@ -10,7 +10,7 @@
       "id": "sales.payment.record",
       "change": "unchanged",
       "rollout": "source",
-      "note": "Receipts in chat draft this existing action with the receiving account and the receipt facts in its note; its roles, procedure, review and rollout are unchanged."
+      "note": "Receipts in chat draft this existing action with the receiving account, the receipt facts in its note and an optional receiptAttachmentId; on confirm the receipt joins the order's Notes & photos through the existing order_attachment_add executor. Roles, procedure, review lines and rollout are unchanged."
     }
   ],
   "procedures": [],
@@ -43,6 +43,18 @@
       "path": "packages/assistant/src/general/receipt-match.test.ts",
       "executed": true,
       "result": "15 tests, 34 assertions pass: names, masked account numbers, own transfer, money out purpose, order match by number/remark/sender/typed name, part and excess payment, unknown account, unreadable."
+    },
+    {
+      "kind": "test",
+      "path": "apps/api/src/assistant/general-receipt-chat.integration.test.ts",
+      "executed": true,
+      "result": "Guarded development QA (ewatrade_qa_v1, own QA business, removed after): receipt matched to the owing order by sender, payment confirmed and the receipt kept on the order, duplicate reference refused, unknown sender asked then matched by typed name, own-account transfer, money-out expense, purpose question, unknown account, not-a-receipt and unreadable. Provider read synthetic. 1 test, 20 assertions pass."
+    },
+    {
+      "kind": "test",
+      "path": "apps/api/src/assistant/channel-media-turn.test.ts",
+      "executed": true,
+      "result": "Media turn and channel proposal review suites: 14 tests, 98 assertions pass with the inert database URL."
     }
   ]
 }

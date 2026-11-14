@@ -1094,6 +1094,13 @@ async function executeCanonicalOrder(
 const paymentRecord: GeneralActionAdapter<Action<"payment_record">> = {
   async validate(ctx, payload, lock) {
     const { id, revision } = await paymentTarget(ctx, payload, lock)
+    if (payload.receiptAttachmentId)
+      // Only a file this person sent in this chat, still stored.
+      await orderAttachmentAdd.validate(ctx, {
+        action: "order_attachment_add",
+        orderId: payload.orderId,
+        attachmentId: payload.receiptAttachmentId,
+      })
     return { id, revision }
   },
   async review(ctx, payload) {
@@ -1116,7 +1123,7 @@ const paymentRecord: GeneralActionAdapter<Action<"payment_record">> = {
     "This order is unavailable or no longer accepts this payment. Check it before trying again.",
   async execute(ctx, payload, key) {
     const scope = requireGeneralScope(ctx)
-    const { action: _, ...input } = payload
+    const { action: _, receiptAttachmentId, ...input } = payload
     const result = await recordCommercialOrderPaymentInTransaction(ctx.db, {
       ...commercialOrderPaymentSchema.parse({
         ...input,
@@ -1125,6 +1132,18 @@ const paymentRecord: GeneralActionAdapter<Action<"payment_record">> = {
       tenantId: scope.tenantId,
       actorUserId: scope.userId,
     })
+    if (receiptAttachmentId)
+      // The receipt the payment was read from joins the order's Notes & photos.
+      await orderAttachmentAdd.execute(
+        ctx,
+        {
+          action: "order_attachment_add",
+          orderId: payload.orderId,
+          attachmentId: receiptAttachmentId,
+          note: "Payment receipt",
+        },
+        `${key}:receipt`,
+      )
     return {
       kind: "payment",
       recordId: result.id,

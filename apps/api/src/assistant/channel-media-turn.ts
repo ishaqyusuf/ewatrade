@@ -30,6 +30,7 @@ import {
   canDraftGeneralCapability,
   requireGeneralScope,
 } from "./general-context"
+import { receiptReadingAvailable } from "./general-receipt-availability"
 import type { GeneralTurnInput } from "./general-turn-contract"
 import { ingestAssistantWhatsAppMedia } from "./whatsapp-media/ingest"
 
@@ -283,7 +284,12 @@ export async function prepareAssistantWhatsAppMediaTurn(
     }
     return { kind: "completed" }
   }
-  if (media.kind === "IMAGE" && ctx.session.purpose === "GENERAL") {
+  if (
+    media.kind === "IMAGE" &&
+    ctx.session.purpose === "GENERAL" &&
+    // Receipt reading decides first; a photo that isn't a receipt still reaches the turn.
+    !receiptReadingAvailable(ctx)
+  ) {
     // A caption naming one visible order gets Attach / Other order / Discard.
     // Unresolved or failed lookups keep the ordinary photo turn.
     const staged = await resolveAssistantWhatsAppCaptionOrder(

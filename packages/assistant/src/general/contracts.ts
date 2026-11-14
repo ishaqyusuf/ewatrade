@@ -302,6 +302,8 @@ export const generalActionSchema = z.discriminatedUnion("action", [
       moneyAccountId: id.optional(),
       method: z.enum(["bank_transfer", "card", "cash", "other", "pos"]),
       note: z.string().trim().max(500).optional(),
+      // A transfer receipt sent in this chat, kept on the order once the payment is recorded.
+      receiptAttachmentId: id.optional(),
     })
     .strict(),
   // Omitted fields stay unchanged; null clears phone or email.

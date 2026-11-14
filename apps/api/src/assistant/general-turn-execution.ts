@@ -27,6 +27,10 @@ import { streamGeneralReply } from "./general-announced-action"
 import { type GeneralContext, canUseCapability } from "./general-context"
 import { hasCurrentTelegramEdit } from "./general-current-draft"
 import { generalProposalReferencePart } from "./general-persistence"
+import {
+  handleReceiptChat,
+  handleReceiptFollowUp,
+} from "./general-receipt-chat"
 import { handleSimpleExpenseChat } from "./general-simple-expense-chat"
 import { handleSimpleMoneyInChat } from "./general-simple-money-in-chat"
 import { handleSimpleSaleChat } from "./general-simple-sale-chat"
@@ -143,6 +147,48 @@ export async function executeGeneralTurn({
     /^(?:proceed|confirm|cancel|yes|go ahead|done|save(?: it| sale)?)[.!]*$/i.test(
       simpleInput.text.trim(),
     )
+  // Transfer receipts (photo or PDF) are read, matched and drafted before the
+  // simple money collectors; a reply to the receipt's question continues it.
+  let receiptNote: string | undefined
+  if (
+    !body.saleChoice &&
+    !(linked && (channelConfirmation || editingChannelDraft))
+  ) {
+    const receipt = attachments.length
+      ? await handleReceiptChat(ctx, {
+          conversationId,
+          text: simpleInput.text,
+          attachments,
+        })
+      : await handleReceiptFollowUp(ctx, {
+          conversationId,
+          text: simpleInput.text,
+        })
+    if (receipt?.modelNote) receiptNote = receipt.modelNote
+    else if (receipt) {
+      if (receipt.proposalId)
+        writer.write({
+          type: "data-general-proposal",
+          data: { proposalId: receipt.proposalId },
+          transient: true,
+        })
+      if (receipt.proposalSource) {
+        const reference = generalProposalReferencePart(
+          receipt.proposalSource.proposalId,
+          receipt.proposalSource,
+        )
+        if (reference) writer.write(reference)
+      }
+      writer.write({ type: "text-start", id: "receipt-reply" })
+      writer.write({
+        type: "text-delta",
+        id: "receipt-reply",
+        delta: receipt.text,
+      })
+      writer.write({ type: "text-end", id: "receipt-reply" })
+      return
+    }
+  }
   const handlers = [
     ["money_transfer_simple", handleSimpleTransferChat],
     ["expense_record_simple", handleSimpleExpenseChat],
@@ -161,7 +207,9 @@ export async function executeGeneralTurn({
     !body.saleChoice &&
     !/^Continue sale [^:]+:/u.test(simpleInput.text) &&
     /\bpayment[\s-]+links?\b/iu.test(simpleInput.text)
-  for (const [action, handler] of catalogOrder || paymentLinkRequest
+  for (const [action, handler] of catalogOrder ||
+  paymentLinkRequest ||
+  receiptNote
     ? []
     : handlers) {
     // Channel confirmations must be correlated to an exact server-issued review outside the model turn.
@@ -209,7 +257,8 @@ export async function executeGeneralTurn({
           ctx.session.channel === "telegram"
           ? telegramAssistantInstructions()
           : whatsAppAssistantInstructions()
-        : ""),
+        : "") +
+      (receiptNote ? `\n\n${receiptNote}` : ""),
     tools,
     stopWhen: stepCountIs(6),
     maxOutputTokens: 2000,
