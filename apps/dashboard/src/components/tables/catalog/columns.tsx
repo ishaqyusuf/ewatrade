@@ -163,7 +163,7 @@ export function createCatalogColumns(
             >
               {row.original.name}
             </Button>
-            <p className="truncate text-[13.5px] text-muted-foreground">
+            <p className="truncate text-sm text-muted-foreground">
               {itemDetail(row.original)}
               {row.original.product
                 ? ` · ${productUsageLabels[row.original.product.usage ?? "FOR_SALE"]}`

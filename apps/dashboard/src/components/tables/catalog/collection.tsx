@@ -27,9 +27,9 @@ type CollectionProps = {
   openDetail: (itemId: string) => void
 }
 
-// Readable sizes from the Catalog page workshop (01 Labeled view dropdown).
-const BADGE_CLASS = "px-2.5 text-[12.5px]"
-const DESCRIPTION_CLASS = "truncate text-[13.5px] text-muted-foreground"
+// 14px is the smallest dashboard text (dashboard theme and shell rules).
+const BADGE_CLASS = "px-2.5"
+const DESCRIPTION_CLASS = "truncate text-sm text-muted-foreground"
 
 function itemDescription(item: CatalogRow) {
   return `${itemDetail(item)}${
@@ -54,7 +54,7 @@ function ItemTitle({ item, onOpen }: { item: CatalogRow; onOpen: () => void }) {
   return (
     <button
       type="button"
-      className="min-w-0 truncate text-left text-[15px] font-semibold underline-offset-4 outline-none hover:underline focus-visible:underline"
+      className="min-w-0 truncate text-left text-base font-semibold underline-offset-4 outline-none hover:underline focus-visible:underline"
       onClick={onOpen}
     >
       {item.name}
@@ -153,8 +153,8 @@ function CatalogGrid({ rows, storeId, openDetail }: CollectionProps) {
                 <div className="mt-1.5">
                   <ItemBadges item={item} />
                 </div>
-                <div className="mt-auto flex items-baseline justify-between gap-2 border-t pt-2.5 text-[13.5px] tabular-nums">
-                  <span className="text-[15px] font-semibold">
+                <div className="mt-auto flex items-baseline justify-between gap-2 border-t pt-2.5 text-sm tabular-nums">
+                  <span className="text-base font-semibold">
                     {getCatalogPrice(item)}
                   </span>
                   <span className="truncate text-muted-foreground">
@@ -170,17 +170,23 @@ function CatalogGrid({ rows, storeId, openDetail }: CollectionProps) {
   )
 }
 
-/** One bordered panel with a divided row per item; figures wrap under the name on phones. */
+/**
+ * One bordered panel with a divided row per item. Phones show two lines
+ * (name, then price · stock); wider screens put price and stock in columns.
+ * Only a status other than Active gets a badge.
+ */
 function CatalogList({ rows, storeId, openDetail }: CollectionProps) {
   return (
     <ul aria-label="Catalog item list" className="divide-y rounded-lg border">
       {rows.map((row) => {
         const item = row.original
+        const price = getCatalogPrice(item)
+        const stock = getCatalogStock(item)
         return (
           <li
             key={row.id}
             data-state={row.getIsSelected() ? "selected" : undefined}
-            className="grid grid-cols-[1rem_2.5rem_minmax(0,1fr)_2rem] items-center gap-x-3.5 gap-y-1.5 px-3.5 py-2.5 data-[state=selected]:bg-muted md:grid-cols-[1rem_2.5rem_minmax(0,1fr)_auto_8rem_7rem_2rem]"
+            className="grid grid-cols-[1rem_2.5rem_minmax(0,1fr)_2.75rem] items-center gap-x-3 px-3.5 py-2.5 data-[state=selected]:bg-muted md:grid-cols-[1rem_2.5rem_minmax(0,1fr)_8rem_8rem_2.75rem] md:gap-x-4"
           >
             <RowSelectCheckbox row={row} label={`Select ${item.name}`} />
             <CatalogItemThumbnail
@@ -189,32 +195,37 @@ function CatalogList({ rows, storeId, openDetail }: CollectionProps) {
               className="size-10"
             />
             <div className="grid min-w-0 gap-0.5">
-              <ItemTitle item={item} onOpen={() => openDetail(item.id)} />
-              <p className={DESCRIPTION_CLASS}>{itemDescription(item)}</p>
+              <div className="flex min-w-0 items-center gap-2">
+                <ItemTitle item={item} onOpen={() => openDetail(item.id)} />
+                {item.status === "active" ? null : (
+                  <Badge variant="outline" className="shrink-0 capitalize">
+                    {item.status}
+                  </Badge>
+                )}
+              </div>
+              <p className={`${DESCRIPTION_CLASS} md:hidden`}>
+                <span className="text-foreground tabular-nums">{price}</span>
+                {stock === "—" ? null : (
+                  <span className="tabular-nums"> · {stock} left</span>
+                )}
+              </p>
+              <p className={`${DESCRIPTION_CLASS} max-md:hidden`}>
+                {itemDescription(item)}
+              </p>
             </div>
-            <div className="max-md:col-start-3">
-              <ItemBadges item={item} />
-            </div>
-            <ListFigure label="Price" value={getCatalogPrice(item)} />
-            <ListFigure label="Stock" value={getCatalogStock(item)} />
-            <div className="max-md:col-start-4 max-md:row-start-1">
+            <p className="text-right text-sm tabular-nums max-md:hidden">
+              {price}
+            </p>
+            <p className="text-right text-sm text-muted-foreground tabular-nums max-md:hidden">
+              {stock}
+            </p>
+            <div className="justify-self-end">
               <CatalogItemActions item={item} storeId={storeId} />
             </div>
           </li>
         )
       })}
     </ul>
-  )
-}
-
-function ListFigure({ label, value }: { label: string; value: string }) {
-  return (
-    <p className="text-sm tabular-nums max-md:col-start-3 max-md:flex max-md:gap-1.5">
-      <span className="block text-[12.5px] text-muted-foreground max-md:inline max-md:text-sm">
-        {label}
-      </span>
-      {value}
-    </p>
   )
 }
 

@@ -32,11 +32,7 @@ export function CatalogHeader({
   onViewChange: (view: DirectoryView) => void
 }) {
   return (
-    <PageHeader
-      title="Catalog"
-      eyebrow={storeName}
-      description="Goods and services you offer."
-    >
+    <PageHeader title="Catalog" eyebrow={storeName}>
       <PageToolbar
         actions={
           <>

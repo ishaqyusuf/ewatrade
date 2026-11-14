@@ -36,7 +36,6 @@ export function OpenCatalogItemSheet() {
     setChooserOpen(false)
     void setParams({ catalogItem: "create", catalogCreateKind: kind })
   }
-  const label = <HugeiconsIcon icon={Add01Icon} className="size-4" />
   if (smallScreen)
     return (
       <Sheet
@@ -60,18 +59,10 @@ export function OpenCatalogItemSheet() {
     )
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger
-        render={
-          <Button
-            type="button"
-            variant="outline"
-            size="icon"
-            aria-label="Add item"
-            className="rounded-none"
-          />
-        }
-      >
-        {label}
+      <DropdownMenuTrigger render={<Button type="button" />}>
+        <HugeiconsIcon icon={Add01Icon} data-icon="inline-start" />
+        Add item
+        <HugeiconsIcon icon={ArrowDown01Icon} data-icon="inline-end" />
       </DropdownMenuTrigger>
       <DropdownMenuContent
         appearance="dashboard"

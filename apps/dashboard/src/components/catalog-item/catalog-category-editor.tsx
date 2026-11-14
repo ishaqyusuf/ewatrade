@@ -93,7 +93,7 @@ export function CatalogCategoryEditor({
             event.preventDefault()
         }}
         showTrigger={false}
-        className="w-full rounded-none border-border bg-transparent [&>[data-slot=input-group-addon]:empty]:hidden"
+        className="w-full bg-transparent [&>[data-slot=input-group-addon]:empty]:hidden"
       >
         {category || query ? (
           <InputGroupAddon align="inline-end">
@@ -114,7 +114,7 @@ export function CatalogCategoryEditor({
           </InputGroupAddon>
         ) : null}
       </ComboboxInput>
-      <ComboboxContent className="rounded-none border border-border bg-popover shadow-md ring-0 before:hidden **:data-[slot$=-item]:rounded-none">
+      <ComboboxContent className="border border-border bg-popover shadow-md ring-0 before:hidden">
         <ComboboxEmpty>
           {loading
             ? "Searching categories…"

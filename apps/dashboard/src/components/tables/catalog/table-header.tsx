@@ -125,7 +125,7 @@ export function CatalogTableHeader({
                   <Button
                     type="button"
                     variant="ghost"
-                    className="h-auto min-w-0 rounded-none p-0 text-sm font-normal hover:bg-transparent"
+                    className="h-auto min-w-0 p-0 text-sm font-normal hover:bg-transparent"
                     aria-label={`Sort by ${label}${direction ? `, currently ${direction === "asc" ? "ascending" : "descending"}` : ", not sorted"}`}
                     onClick={(event) => {
                       event.stopPropagation()
@@ -237,7 +237,7 @@ export function CatalogTableSettings({
         <DropdownMenu>
           <DropdownMenuTrigger
             render={
-              <Button type="button" variant="outline" className="rounded-none">
+              <Button type="button" variant="outline">
                 Columns
                 <HugeiconsIcon
                   icon={ArrowDown01Icon}
@@ -282,7 +282,7 @@ export function CatalogTableSettings({
       <DropdownMenu>
         <DropdownMenuTrigger
           render={
-            <Button type="button" variant="outline" className="rounded-none">
+            <Button type="button" variant="outline">
               Sort by update
               <HugeiconsIcon
                 icon={ArrowDown01Icon}

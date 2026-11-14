@@ -95,7 +95,7 @@ export function CatalogTableView({
         table={table}
         view={view}
         selectAllLabel="Select all loaded catalog items"
-        summary={`${rows.length} items loaded`}
+        summary={`${rows.length} shown`}
       />
       {/* Sort and Columns render in the page header row beside View and Add. */}
       <CatalogTableSettings table={table} showColumns={view === "table"} />

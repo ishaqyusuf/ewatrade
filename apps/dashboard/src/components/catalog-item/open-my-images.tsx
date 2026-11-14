@@ -21,11 +21,12 @@ export function OpenMyImages({ storeId }: { storeId: string }) {
       <Button
         type="button"
         variant="outline"
-        size="sm"
+        aria-label="My images"
+        className="max-sm:size-[var(--ui-control-h)] max-sm:px-0"
         onClick={() => setOpen(true)}
       >
         <HugeiconsIcon icon={Image01Icon} aria-hidden="true" />
-        My images
+        <span className="max-sm:sr-only">My images</span>
       </Button>
       <CatalogPhotoGalleryDialog
         open={open}

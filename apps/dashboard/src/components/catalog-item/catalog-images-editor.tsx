@@ -322,7 +322,7 @@ export function CatalogImagesEditor({
                 />
               </button>
               {label ? (
-                <span className="absolute top-2 left-2 max-w-[75%] truncate rounded-md bg-background/95 px-2 py-1 text-[10px] font-semibold">
+                <span className="absolute top-2 left-2 max-w-[75%] truncate rounded-md bg-background/95 px-2 py-1 text-xs font-semibold">
                   {label}
                 </span>
               ) : null}
@@ -352,7 +352,7 @@ export function CatalogImagesEditor({
                 <button
                   type="button"
                   disabled={disabled || busy}
-                  className="absolute bottom-2 left-2 rounded-md bg-background/95 px-1.5 py-1 text-[10px]"
+                  className="absolute bottom-2 left-2 rounded-md bg-background/95 px-1.5 py-1 text-xs"
                   onClick={() =>
                     change([id, ...assetIds.filter((entry) => entry !== id)])
                   }

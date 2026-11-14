@@ -274,7 +274,7 @@ function GalleryPicker({
               </span>
             ) : null}
             {entry.state === "PENDING_REVIEW" ? (
-              <span className="absolute top-1.5 left-1.5 rounded bg-background/90 px-1.5 py-0.5 text-[11px] font-medium">
+              <span className="absolute top-1.5 left-1.5 rounded bg-background/90 px-1.5 py-0.5 text-xs font-medium">
                 Checking
               </span>
             ) : null}
