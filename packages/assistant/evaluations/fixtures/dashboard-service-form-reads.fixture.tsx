@@ -102,6 +102,10 @@ mock.module("@ewatrade/ui", () => ({
   SelectControl: leaf,
   Textarea: leaf,
   Field: leaf,
+  DropdownMenu: leaf,
+  DropdownMenuContent: leaf,
+  DropdownMenuItem: leaf,
+  DropdownMenuTrigger: leaf,
   toast() {
     throw Error("No notifications expected")
   },
