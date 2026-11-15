@@ -272,7 +272,10 @@ mock.module("@/trpc/client", () => ({
   getDataCacheGeneration: () => 0,
   useTRPC: () => ({
     catalog: { getItem: { queryOptions: () => ({ kind: "item" }) } },
-    finance: { book: { queryOptions: () => ({ kind: "book" }) } },
+    finance: {
+      book: { queryOptions: () => ({ kind: "book" }) },
+      bookStatus: { queryOptions: () => ({ kind: "bookStatus" }) },
+    },
     orders: {
       prepareReceipts: {
         queryOptions: (_input: unknown, options: object) => ({
@@ -902,7 +905,7 @@ test("Finance setup form code loads only without a Book and recovers inside its 
   financeBook = { id: "book-inert" }
   await render(workspace())
   expect(text()).toContain("finance-overview")
-  expect(text()).not.toContain("Start tracking your business money")
+  expect(text()).not.toContain("Start tracking your money")
   expect(evaluated).toEqual([])
   expect(imports).toEqual([])
 
@@ -910,7 +913,7 @@ test("Finance setup form code loads only without a Book and recovers inside its 
   failures.set("setup", 1)
   await render(workspace())
   const intro = () => container.getElementsByTagName("section")[0]
-  expect(intro()?.textContent).toContain("Start tracking your business money")
+  expect(intro()?.textContent).toContain("Start tracking your money")
   expect(intro()?.textContent).toContain("Couldn’t open this panel.")
   expect(retryCount()).toBe(1)
   expect(text()).not.toContain("page-error")
@@ -919,14 +922,14 @@ test("Finance setup form code loads only without a Book and recovers inside its 
 
   await act(async () => retry())
   await settle()
-  expect(intro()?.textContent).toContain("Start tracking your business money")
+  expect(intro()?.textContent).toContain("Start tracking your money")
   expect(mounted.get("setup")).toEqual({})
   expect(retryCount()).toBe(0)
 
   financeBook = { id: "book-inert" }
   await render(workspace())
   expect(text()).toContain("finance-overview")
-  expect(text()).not.toContain("Start tracking your business money")
+  expect(text()).not.toContain("Start tracking your money")
   expect(imports).toEqual(["setup", "setup"])
   expect(operations).toEqual(["sheet.code.load"])
 })
