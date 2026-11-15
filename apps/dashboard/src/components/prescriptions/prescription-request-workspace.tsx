@@ -138,12 +138,14 @@ export function PrescriptionRequestWorkspace({
     ),
   )
   if (detail.isLoading) {
-    return <div className="h-48 animate-pulse bg-muted" />
+    return (
+      <div className="h-48 animate-pulse rounded-[var(--ui-radius-surface)] bg-muted" />
+    )
   }
   if (detail.error || !detail.data) {
     return (
       <FormFeedback appearance="dashboard">
-        {detail.error?.message ?? "Prescription Request not found."}
+        {detail.error?.message ?? "Prescription not found."}
       </FormFeedback>
     )
   }
@@ -168,8 +170,8 @@ export function PrescriptionRequestWorkspace({
   if (allowed && !allowed.includes(request.status)) {
     return (
       <FormFeedback appearance="dashboard">
-        This request has moved to {formatPrescriptionStatus(request.status)}.
-        Close and reopen it from the queue to continue in the current workflow.
+        This prescription is now: {formatPrescriptionStatus(request.status)}.
+        Open it again from the list.
       </FormFeedback>
     )
   }
@@ -264,14 +266,12 @@ export function PrescriptionRequestWorkspace({
       />
       <dl className="grid grid-cols-2 gap-3 text-sm">
         <div>
-          <dt className="text-muted-foreground">Source</dt>
-          <dd className="mt-1 capitalize">
-            {formatPrescriptionStatus(request.source)}
-          </dd>
+          <dt className="text-muted-foreground">How it came in</dt>
+          <dd className="mt-1">{formatPrescriptionStatus(request.source)}</dd>
         </div>
         <div>
-          <dt className="text-muted-foreground">Fulfilment</dt>
-          <dd className="mt-1 capitalize">
+          <dt className="text-muted-foreground">Pickup or delivery</dt>
+          <dd className="mt-1">
             {formatPrescriptionStatus(request.fulfilmentPreference)}
           </dd>
         </div>
@@ -284,7 +284,7 @@ export function PrescriptionRequestWorkspace({
       {(mode === "attendant-review" || mode === "pharmacist-review") &&
       request.transcriptions.length ? (
         <section className="grid gap-3">
-          <h4 className="font-medium">Transcription revision history</h4>
+          <h4 className="font-medium">Typed versions</h4>
           {request.transcriptions
             .slice()
             .sort((left, right) => right.revision - left.revision)
@@ -295,7 +295,7 @@ export function PrescriptionRequestWorkspace({
                 open={revision.revision === request.currentTranscriptRevision}
               >
                 <summary className="cursor-pointer text-sm font-medium">
-                  Revision {revision.revision} ·{" "}
+                  Version {revision.revision} ·{" "}
                   {formatPrescriptionStatus(revision.status)}
                 </summary>
                 <ol className="mt-3 grid gap-1 text-sm">
@@ -314,9 +314,9 @@ export function PrescriptionRequestWorkspace({
       (request.status === "RECEIVED" || request.status === "MEDIA_REVIEW") &&
       currentMedia.length ? (
         <section className="grid gap-3 rounded-[var(--ui-radius-surface)] border border-border p-4">
-          <h4 className="font-medium">Media review</h4>
+          <h4 className="font-medium">Check the photo</h4>
           <p className="text-sm text-muted-foreground">
-            Every page must pass the private safety scan before transcription.
+            Each page is scanned before it can be typed up.
           </p>
           <div className="flex flex-wrap gap-2">
             <Button
@@ -359,11 +359,11 @@ export function PrescriptionRequestWorkspace({
         <div className="grid gap-6 xl:grid-cols-2">
           {mediaViewer}
           <section className="grid content-start gap-3">
-            <h4 className="font-medium">Verify every transcription line</h4>
+            <h4 className="font-medium">Check each line</h4>
             <p className="text-sm text-muted-foreground">
-              OCR is a draft only. Confirmation here is not clinical approval.
+              Compare each line with the prescription.
             </p>
-            <ControlField label={<>Correct, delete, or add draft lines</>}>
+            <ControlField label={<>Lines</>}>
               <Textarea
                 value={editableRevisionText}
                 onChange={(event) =>
@@ -388,7 +388,7 @@ export function PrescriptionRequestWorkspace({
               type="button"
               variant="outline"
             >
-              Save transcription revision
+              Save lines
             </Button>
             {transcript.lines.map((line) => (
               <div
@@ -396,7 +396,7 @@ export function PrescriptionRequestWorkspace({
                 className="grid gap-2 rounded-[var(--ui-radius-surface)] border p-3"
               >
                 <p className="text-xs text-muted-foreground">
-                  Draft line {line.lineNumber}
+                  Line {line.lineNumber}
                 </p>
                 <Input
                   value={
@@ -459,12 +459,9 @@ export function PrescriptionRequestWorkspace({
       request.status === "PHARMACIST_REVIEW" &&
       transcript ? (
         <section className="grid gap-3">
-          <h4 className="font-medium">
-            Pharmacist review and catalogue mapping
-          </h4>
+          <h4 className="font-medium">Pharmacist check</h4>
           <p className="text-sm text-muted-foreground">
-            Map the verified lines without changing prescribed content. Only an
-            active credentialed pharmacist can release.
+            Match each line to an item. Only a verified pharmacist can approve.
           </p>
           {transcript.lines.map((line) => {
             const mapping = lineMapping[line.id] ?? {
@@ -563,9 +560,7 @@ export function PrescriptionRequestWorkspace({
                   }
                   placeholder="Customer-visible wording"
                 />
-                <CheckboxField
-                  label={<>Explicit alternative or substitution</>}
-                >
+                <CheckboxField label={<>Alternative or substitute</>}>
                   <Checkbox
                     checked={mapping.isAlternative}
                     onCheckedChange={(checked) =>
@@ -616,13 +611,12 @@ export function PrescriptionRequestWorkspace({
             >
               <div>
                 <h5 id="pharmacist-decision-title" className="font-medium">
-                  Confirm professional decision
+                  Confirm your decision
                 </h5>
                 <p className="mt-1 text-sm">
-                  {formatPrescriptionStatus(pendingDecision)} for media revision{" "}
-                  {request.currentMediaRevision} and transcript revision{" "}
-                  {transcript.revision}. This command is audited and revalidated
-                  server-side.
+                  {formatPrescriptionStatus(pendingDecision)} photo{" "}
+                  {request.currentMediaRevision}, typed version{" "}
+                  {transcript.revision}. This is recorded under your name.
                 </p>
               </div>
               <div className="flex gap-2">
@@ -649,7 +643,7 @@ export function PrescriptionRequestWorkspace({
 
       {mode === "quote" && request.status === "READY_TO_QUOTE" && transcript ? (
         <section className="grid gap-3">
-          <h4 className="font-medium">Prepare pickup quote</h4>
+          <h4 className="font-medium">Price for pickup</h4>
           {transcript.lines.map((line) => (
             <div key={line.id} className="grid gap-1.5 text-sm">
               {line.mapping?.customerWording ??
