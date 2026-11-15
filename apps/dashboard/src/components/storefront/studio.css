@@ -607,7 +607,7 @@
 .sf-save-status { font-size:14px; }
 .sf-canvas-workspace { position:relative; grid-template-columns:320px minmax(0,1fr); }
 .sf-config-heading { min-height:64px; padding:10px 16px; font-size:16px; }
-.sf-config-template small,.sf-config-template span,.sf-canvas-pages small,.sf-outline-label small,.sf-outline-locked small,
+.sf-canvas-config summary small,.sf-config-template small,.sf-config-template span,.sf-canvas-pages small,.sf-outline-label small,.sf-outline-locked small,
 .sf-pin-name small,.sf-pin-empty,.sf-config-hint,.sf-config-editing,.sf-canvas-url,.sf-canvas-url span,.sf-fit-badge,
 .sf-picker-heading p,.sf-picker-footer p,.sf-results-count,.sf-section-card-detail,.sf-filter-row button,
 .sf-section-browser>nav button>span:last-child,.sf-template-grid p,.sf-phrases-popover p { font-size:14px; }
