@@ -134,8 +134,9 @@ function CustomerFormFrame({
   const client = useQueryClient()
   const formId = useId()
   const editing = Boolean(customerId)
+  // Contact fields and revision only; the form never shows order history.
   const current = useQuery(
-    trpc.customers.getById.queryOptions(
+    trpc.customers.contact.queryOptions(
       { customerId: customerId ?? "" },
       { enabled: editing, retry: false },
     ),

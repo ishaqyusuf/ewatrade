@@ -369,6 +369,8 @@ excluded(
   "Dashboard list projections for Finance pages; the assistant answers these amounts through supplier statements, customer statements and money account balances.",
   [
     "finance.owedSummary",
+    "finance.overview",
+    "finance.bookStatus",
     "finance.customerBalances",
     "finance.customerBalanceDirectory",
     "finance.supplierDirectory",
@@ -536,4 +538,9 @@ formOnly(
   "customers",
   "Returnables history screens: the assistant reads balances and items (returnables.read) and records movements (returnables.movement.record).",
   ["returnables.movements", "returnables.forOrder"],
+)
+formOnly(
+  "customers",
+  "Customers page Returnables card: units out and how many customers hold them. The assistant reads balances with readReturnableBalances (returnables.balances).",
+  ["returnables.summary"],
 )

@@ -32,6 +32,7 @@ import {
   returnableCount,
   useReturnableBalances,
   useReturnableItems,
+  useReturnableSummary,
 } from "./use-returnables"
 
 /** Every customer still holding returnables, biggest first. */
@@ -234,13 +235,11 @@ export function ReturnablesPage({
 /** Customers directory: a way into Returnables for businesses that use them. */
 export function ReturnablesEntry() {
   const items = useReturnableItems()
-  const balances = useReturnableBalances({
-    enabled: Boolean(items.data?.length),
-  })
+  // One aggregate, not every customer's balances.
+  const balances = useReturnableSummary(Boolean(items.data?.length))
   if (!items.data?.length) return null
-  const rows = balances.data ?? []
-  const out = rows.reduce((sum, row) => sum + row.out, 0)
-  const customers = new Set(rows.map((row) => row.customerId)).size
+  const out = balances.data?.out ?? 0
+  const customers = balances.data?.customers ?? 0
   return (
     <Link
       href="/customers/returnables"

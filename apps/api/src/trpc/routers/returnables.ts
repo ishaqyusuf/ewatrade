@@ -2,6 +2,7 @@ import {
   CatalogError,
   RETURNABLE_MOVEMENT_MAX_QUANTITY,
   RETURNABLE_MOVEMENT_NOTE_MAX_LENGTH,
+  getReturnableOutSummary,
   listReturnableBalances,
   listReturnableItems,
   listReturnableMovements,
@@ -65,6 +66,8 @@ export const returnablesRouter = createTRPCRouter({
       z
         .object({
           customerId: id.optional(),
+          /** One list page of customers. */
+          customerIds: z.array(id).max(100).optional(),
           catalogItemId: id.optional(),
           includeSettled: z.boolean().optional(),
         })
@@ -78,6 +81,14 @@ export const returnablesRouter = createTRPCRouter({
         tenantId: ctx.tenantContext.tenant.id,
       })
     }),
+
+  /** Units still out and how many customers hold them (Customers card). */
+  summary: protectedProcedure.query(async ({ ctx }) => {
+    assertCanOperateOrders(ctx.tenantContext.membership.role)
+    return getReturnableOutSummary(ctx.db, {
+      tenantId: ctx.tenantContext.tenant.id,
+    })
+  }),
 
   movements: protectedProcedure
     .input(

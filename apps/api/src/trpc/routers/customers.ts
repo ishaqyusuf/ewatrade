@@ -75,7 +75,7 @@ export const customersRouter = createTRPCRouter({
         }),
       }
     }),
-  /** Contact sheet: getById's admission and contact fields, without Order history. */
+  /** Contact and edit form: getById's admission and contact fields + revision, without Order history. */
   contact: protectedProcedure
     .input(customerGetByIdSchema)
     .query(async ({ ctx, input }) => {
@@ -85,6 +85,8 @@ export const customersRouter = createTRPCRouter({
         name: customer.name,
         email: customer.email,
         phone: customer.phone,
+        // The edit form saves against it; no order history needed.
+        revision: customerRevision(customer),
       }
     }),
   /**

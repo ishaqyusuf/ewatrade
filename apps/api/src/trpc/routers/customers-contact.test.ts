@@ -107,11 +107,13 @@ const outcome = (run: () => Promise<unknown>) =>
 
 test("the contact projection reads one Customer and returns only contact fields", async () => {
   const f = fixture()
+  const getById = await fixture().caller.getById({ customerId: "customer-a" })
   expect(await f.caller.contact({ customerId: "customer-a" })).toEqual({
     id: "customer-a",
     name: "Halima",
     email: "halima@example.invalid",
     phone: "+2348000000001",
+    revision: getById.revision,
   })
   expect(f.reads).toEqual(["customer"])
 })

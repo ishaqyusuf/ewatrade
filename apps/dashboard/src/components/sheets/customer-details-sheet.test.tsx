@@ -64,15 +64,17 @@ const rpc = createTRPCClient<AppRouter>({
                   currencyCode: "NGN",
                   balance: null,
                 }
-              : op.path === "customers.getById"
-                ? {
-                    ...contact,
-                    createdAt: stamp,
-                    updatedAt: stamp,
-                    revision: stamp.toISOString(),
-                    orders: [],
-                  }
-                : null
+              : op.path === "customers.contact"
+                ? { ...contact, revision: stamp.toISOString() }
+                : op.path === "customers.getById"
+                  ? {
+                      ...contact,
+                      createdAt: stamp,
+                      updatedAt: stamp,
+                      revision: stamp.toISOString(),
+                      orders: [],
+                    }
+                  : null
           if (!data) {
             observer.error(new TRPCClientError("Unexpected inert operation"))
             return

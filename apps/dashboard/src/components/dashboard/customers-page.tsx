@@ -6,7 +6,7 @@ import { CustomerDirectoryHeader } from "@/components/dashboard/customer-directo
 import { ReturnablesEntry } from "@/components/returnables/returnables-page"
 import {
   returnableCount,
-  useReturnableBalances,
+  useReturnableBalancesForPages,
   useReturnableItems,
 } from "@/components/returnables/use-returnables"
 import { ScrollableContent } from "@/components/scrollable-content"
@@ -26,6 +26,10 @@ type CustomerPage = {
   customers: DashboardCustomerRow[]
   nextCursor: string | null
 }
+
+/** Saved customers on one list page: what the returnables read asks for. */
+const pageCustomerIds = (rows: DashboardCustomerRow[]) =>
+  rows.flatMap((row) => (row.customerId ? [row.customerId] : []))
 
 const LOAD_ERROR =
   "Couldn’t load customers. Check your connection and try again."
@@ -69,6 +73,9 @@ export function CustomersPage({
     useCustomerDirectoryParams()
   const [customers, setCustomers] = useState(initialPage.customers)
   const [nextCursor, setNextCursor] = useState(initialPage.nextCursor)
+  const [pageIds, setPageIds] = useState(() => [
+    pageCustomerIds(initialPage.customers),
+  ])
   const [owed, setOwed] = useState(initialOwed)
   const [loading, setLoading] = useState(false)
   const [loadingMore, setLoadingMore] = useState(false)
@@ -79,11 +86,12 @@ export function CustomersPage({
     { customerDetail: parseAsString },
     { history: "push" },
   )
-  // Same reads as the Returnables card above, so no extra request.
+  // Only the customers on the loaded pages, one read per page.
   const returnableItems = useReturnableItems()
-  const returnables = useReturnableBalances({
-    enabled: Boolean(returnableItems.data?.length),
-  })
+  const returnables = useReturnableBalancesForPages(
+    pageIds,
+    Boolean(returnableItems.data?.length),
+  )
 
   const show = canSeeBalances ? customerFilter : "all"
   const search = customerQuery.trim()
@@ -97,6 +105,7 @@ export function CustomersPage({
       try {
         const page = await fetchCustomers({ search, show }, signal)
         setCustomers(page.customers)
+        setPageIds([pageCustomerIds(page.customers)])
         setNextCursor(page.nextCursor)
         if (page.owed) setOwed(page.owed)
       } catch {
@@ -127,6 +136,7 @@ export function CustomersPage({
     try {
       const page = await fetchCustomers({ search, show, cursor: nextCursor })
       setCustomers((current) => [...current, ...page.customers])
+      setPageIds((current) => [...current, pageCustomerIds(page.customers)])
       setNextCursor(page.nextCursor)
     } catch {
       setError(LOAD_ERROR)
@@ -143,7 +153,7 @@ export function CustomersPage({
 
   const returnablesOut = useMemo(() => {
     const byCustomer = new Map<string, string[]>()
-    for (const row of returnables.data ?? []) {
+    for (const row of returnables.flatMap((query) => query.data ?? [])) {
       if (!row.out) continue
       const list = byCustomer.get(row.customerId) ?? []
       list.push(`${returnableCount(row.out, row.itemName)} out`)
@@ -152,7 +162,7 @@ export function CustomersPage({
     return new Map(
       [...byCustomer].map(([id, parts]) => [id, parts.join(", ")] as const),
     )
-  }, [returnables.data])
+  }, [returnables])
 
   const filtered = Boolean(search) || show !== "all"
 

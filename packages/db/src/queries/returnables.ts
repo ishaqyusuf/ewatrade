@@ -282,14 +282,21 @@ export async function listReturnableBalances(
   input: {
     tenantId: string
     customerId?: string
+    /** One list page of customers (the Customers page reads per page). */
+    customerIds?: string[]
     catalogItemId?: string
     includeSettled?: boolean
     limit?: number
   },
 ): Promise<ReturnableBalance[]> {
+  if (input.customerIds && !input.customerIds.length) return []
   const where = {
     tenantId: input.tenantId,
-    ...(input.customerId ? { customerId: input.customerId } : {}),
+    ...(input.customerId
+      ? { customerId: input.customerId }
+      : input.customerIds
+        ? { customerId: { in: input.customerIds } }
+        : {}),
     ...(input.catalogItemId ? { catalogItemId: input.catalogItemId } : {}),
   }
   const sums = await db.returnableMovement.groupBy({
@@ -547,4 +554,26 @@ export async function listReturnableItems(
       tenantId: input.tenantId,
     },
   })
+}
+
+/**
+ * Returnables still out across the business, for the Customers page card:
+ * total units out and how many customers hold some, in one statement.
+ */
+export async function getReturnableOutSummary(
+  db: Pick<PrismaClient, "$queryRaw">,
+  input: { tenantId: string },
+) {
+  const [row] = await db.$queryRaw<Array<{ out: number; customers: number }>>`
+    SELECT COALESCE(SUM(net), 0)::int AS out, COUNT(DISTINCT "customerId")::int AS customers
+    FROM (
+      SELECT "customerId", "catalogItemId",
+        SUM(CASE WHEN kind = 'ISSUED' THEN quantity ELSE -quantity END) AS net
+      FROM "ReturnableMovement"
+      WHERE "tenantId" = ${input.tenantId}
+      GROUP BY "customerId", "catalogItemId"
+      HAVING SUM(CASE WHEN kind = 'ISSUED' THEN quantity ELSE -quantity END) > 0
+    ) held
+  `
+  return { out: Number(row?.out ?? 0), customers: Number(row?.customers ?? 0) }
 }

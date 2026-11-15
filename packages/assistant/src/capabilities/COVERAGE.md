@@ -6,10 +6,10 @@ Tickets refer to the Brain plan `.brain/plans/2026-10-09-assistant-business-oper
 
 ## Summary
 
-- Router procedures: 849 (647 merchant, 202 public/account/internal)
+- Router procedures: 850 (648 merchant, 202 public/account/internal)
 - Merchant supported by a capability: 188
 - Merchant planned: 144
-- Merchant form-only: 241
+- Merchant form-only: 242
 - Merchant excluded: 74
 - Capabilities: 171 (89 read, 82 write)
 
@@ -851,6 +851,7 @@ track conversational evaluation separately from these source test links.
 | `returnables.items` | query | read | customers | supported | returnables.read |
 | `returnables.movements` | query | read | customers | form_only | Returnables history screens: the assistant reads balances and items (returnables.read) and records movements (returnables.movement.record). |
 | `returnables.record` | mutation | orders | customers | supported | returnables.movement.record |
+| `returnables.summary` | query | read | customers | form_only | Customers page Returnables card: units out and how many customers hold them. The assistant reads balances with readReturnableBalances (returnables.balances). |
 | `search.global` | query | read | search | supported | search.records |
 | `serviceAccess.createRequestForm` | mutation | Owner/Admin only | commerce | planned | G03 |
 | `serviceAccess.createStaffQuote` | mutation | Owner/Admin only | commerce | form_only | Dashboard manager-reviewed staff quote cart. No assistant write or channel activation is added; existing canonical quote authority and customer acceptance remain required. |

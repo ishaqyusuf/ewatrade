@@ -85,6 +85,8 @@ const reads = new Set([
   // Crates and cylinders customers hold; forOrder applies orderScope.
   "returnables.items",
   "returnables.balances",
+  // Totals of the same balances for the Customers card.
+  "returnables.summary",
   "returnables.movements",
   "returnables.forOrder",
   "stores.orderVisibility",

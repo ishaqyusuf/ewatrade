@@ -1,7 +1,12 @@
 "use client"
 
 import { useTRPC } from "@/trpc/client"
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import {
+  useMutation,
+  useQueries,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query"
 
 export const RETURNABLES_LATE_DAYS = 7
 const DAY_MS = 24 * 60 * 60 * 1000
@@ -30,6 +35,36 @@ export function useReturnableBalances(input: {
       { enabled: input.enabled ?? true, retry: false },
     ),
   )
+}
+
+/** Units out and how many customers hold them, in one cheap read. */
+export function useReturnableSummary(enabled = true) {
+  const trpc = useTRPC()
+  return useQuery(
+    trpc.returnables.summary.queryOptions(undefined, {
+      enabled,
+      retry: false,
+    }),
+  )
+}
+
+/**
+ * Balances for the customers on each loaded list page, one read per page
+ * (a new page adds a read; earlier pages stay cached).
+ */
+export function useReturnableBalancesForPages(
+  pages: string[][],
+  enabled = true,
+) {
+  const trpc = useTRPC()
+  return useQueries({
+    queries: pages.map((customerIds) =>
+      trpc.returnables.balances.queryOptions(
+        { customerIds },
+        { enabled: enabled && customerIds.length > 0, retry: false },
+      ),
+    ),
+  })
 }
 
 export function useOrderReturnables(orderId: string) {
