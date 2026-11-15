@@ -616,7 +616,7 @@ export function OperationsDashboardSurface({
                         })
                       else router.push("/receipt-approvals-modal" as never)
                     },
-                    sub: "Staff sent them from chat",
+                    sub: "Sent from staff chat",
                     tint: "amber" as const,
                     title: `${receiptApprovalCount} ${receiptApprovalCount === 1 ? "receipt" : "receipts"} to approve`,
                   },

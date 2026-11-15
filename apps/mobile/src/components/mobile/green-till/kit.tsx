@@ -193,7 +193,7 @@ function AttentionCard({ item }: { item: AttentionItem }) {
     <Pressable
       accessibilityLabel={`${item.title}. ${item.sub}`}
       accessibilityRole={item.onPress ? "button" : undefined}
-      className="w-[152px] rounded-[18px] active:opacity-80"
+      className="min-w-[152px] max-w-[232px] rounded-[18px] active:opacity-80"
       disabled={!item.onPress}
       haptic
       onPress={item.onPress}
@@ -221,6 +221,7 @@ function AttentionCard({ item }: { item: AttentionItem }) {
         </View>
         <View>
           <NativeText
+            numberOfLines={1}
             style={{
               color: tint.fg,
               fontSize: 16,
@@ -231,6 +232,7 @@ function AttentionCard({ item }: { item: AttentionItem }) {
             {item.title}
           </NativeText>
           <NativeText
+            numberOfLines={2}
             style={{
               color: tint.fg,
               fontSize: 14,
