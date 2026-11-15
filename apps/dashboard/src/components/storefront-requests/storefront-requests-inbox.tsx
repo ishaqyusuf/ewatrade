@@ -68,6 +68,16 @@ const COUNT_CHECK_WINDOW_MS = 10 * 60_000
 const kinds = ["products", "services"] as const
 const filters = ["open", "confirmed", "closed", "all"] as const
 
+/** New requests stand out; every other stage is a quiet pill (both themes). */
+function stageTone(stage: string) {
+  return cn(
+    "rounded-full border-transparent",
+    stage === "received"
+      ? "bg-info text-info-foreground"
+      : "bg-[var(--neutral)] text-[var(--neutral-foreground)]",
+  )
+}
+
 function errorMessage(error: unknown) {
   return error instanceof Error ? error.message : "That didn't work. Try again."
 }
@@ -422,9 +432,7 @@ function OrderRequests({
                       item.currencyCode,
                     )}
                   </b>
-                  <Badge
-                    variant={item.stage === "received" ? "default" : "outline"}
-                  >
+                  <Badge className={stageTone(item.stage)}>
                     {stageLabels[item.stage] ?? item.stage}
                   </Badge>
                 </span>
@@ -560,10 +568,7 @@ function OrderRequestDetail({
       title={data.customerName}
       description={data.reference}
       header={
-        <Badge
-          className="w-fit"
-          variant={data.stage === "received" ? "default" : "outline"}
-        >
+        <Badge className="w-fit" className={stageTone(data.stage)}>
           {stageLabels[data.stage] ?? data.stage}
         </Badge>
       }
@@ -1243,9 +1248,7 @@ function ServiceRequests({
                     })}
                   </span>
                 </span>
-                <Badge
-                  variant={item.stage === "received" ? "default" : "outline"}
-                >
+                <Badge className={stageTone(item.stage)}>
                   {stageLabels[item.stage] ?? item.stage}
                 </Badge>
               </button>
@@ -1390,10 +1393,7 @@ function ServiceRequestDetail({ item }: { item: ServiceItem }) {
       title={request.customerName}
       description={item.reference}
       header={
-        <Badge
-          className="w-fit"
-          variant={item.stage === "received" ? "default" : "outline"}
-        >
+        <Badge className="w-fit" className={stageTone(item.stage)}>
           {stageLabels[item.stage] ?? item.stage}
         </Badge>
       }
