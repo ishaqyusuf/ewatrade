@@ -45,11 +45,6 @@ export function ActivityFeed({
   )
   return (
     <div>
-      {coverage && !coverage.complete ? (
-        <p className="mt-2 text-sm text-muted-foreground">
-          Older orders and payments show fewer details.
-        </p>
-      ) : null}
       {groups.length ? (
         groups.map((group) => (
           <ActivityDateGroup
