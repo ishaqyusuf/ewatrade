@@ -88,7 +88,7 @@ function Calendar({
         table: "w-full border-collapse",
         weekdays: cn("flex", defaultClassNames.weekdays),
         weekday: cn(
-          "text-muted-foreground flex-1 select-none rounded-lg text-[0.8rem] font-normal",
+          "text-muted-foreground flex-1 select-none rounded-lg text-[length:var(--ui-calendar-label-size,0.8rem)] font-normal",
           defaultClassNames.weekday,
         ),
         week: cn("mt-2 flex w-full", defaultClassNames.week),
@@ -97,7 +97,7 @@ function Calendar({
           defaultClassNames.week_number_header,
         ),
         week_number: cn(
-          "text-muted-foreground select-none text-[0.8rem]",
+          "text-muted-foreground select-none text-[length:var(--ui-calendar-label-size,0.8rem)]",
           defaultClassNames.week_number,
         ),
         day: cn(

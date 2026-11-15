@@ -36,6 +36,8 @@
   /* ⌘K group headings (Commands, Pages): Inter at the smallest size. */
   --ui-group-heading-font: var(--font-sans);
   --ui-group-heading-size: var(--text-xs);
+  /* Calendar weekday and week-number labels. */
+  --ui-calendar-label-size: var(--text-xs);
   --ui-radius-control: 10px;
   --ui-radius-surface: 14px;
   --ui-radius-item: 8px;
