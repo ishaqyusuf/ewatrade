@@ -7,11 +7,26 @@ import {
   previewQaPurge,
 } from "@ewatrade/db/queries"
 import { jobIds, qaPurgeHandler, triggerJob } from "@ewatrade/jobs"
+import {
+  isQaForbiddenRuntime,
+  qaPolicyTarget,
+} from "@ewatrade/utils/qa-policy-server"
 import { TRPCError } from "@trpc/server"
 import { z } from "zod"
 import { createTRPCRouter, platformAdminProcedure } from "../init"
 
 const confirmation = "PURGE ALL QA DATA"
+
+/** QA tools run in Development and Preview only (ADR-0059); Production refuses every call. */
+const qaToolsProcedure = platformAdminProcedure.use((opts) => {
+  const environment = qaPolicyTarget()
+  if (isQaForbiddenRuntime() || !environment)
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "QA tools are off in Production.",
+    })
+  return opts.next({ ctx: { ...opts.ctx, qaEnvironment: environment } })
+})
 
 function secret() {
   const value =
@@ -45,24 +60,25 @@ function valid(token: string, fingerprint: string) {
 }
 
 export const qaMaintenanceRouter = createTRPCRouter({
-  candidates: platformAdminProcedure.query(({ ctx }) =>
+  candidates: qaToolsProcedure.query(({ ctx }) =>
     discoverQaTenantCandidates(ctx.db),
   ),
-  adopt: platformAdminProcedure
+  adopt: qaToolsProcedure
     .input(z.object({ tenantIds: z.array(z.string().min(1)).min(1) }))
     .mutation(({ ctx, input }) =>
       adoptQaTenantCandidates(ctx.db, input.tenantIds),
     ),
-  preview: platformAdminProcedure.query(async ({ ctx }) => {
+  preview: qaToolsProcedure.query(async ({ ctx }) => {
     const preview = await previewQaPurge(ctx.db)
     const expiresAt = Date.now() + 10 * 60 * 1_000
     return {
       ...preview,
+      environment: ctx.qaEnvironment,
       previewExpiresAt: new Date(expiresAt),
       previewToken: sign(preview.fingerprint, expiresAt),
     }
   }),
-  start: platformAdminProcedure
+  start: qaToolsProcedure
     .input(
       z.object({
         confirmation: z.literal(confirmation),
@@ -87,7 +103,7 @@ export const qaMaintenanceRouter = createTRPCRouter({
       await triggerJob(jobIds.qaPurge, qaPurgeHandler, { runId: run.id })
       return { id: run.id, status: run.status }
     }),
-  run: platformAdminProcedure
+  run: qaToolsProcedure
     .input(z.object({ runId: z.string().min(1) }))
     .query(({ ctx, input }) => getQaPurgeRun(ctx.db, input.runId)),
 })

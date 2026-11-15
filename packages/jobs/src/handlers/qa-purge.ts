@@ -6,6 +6,7 @@ import {
   finishQaPurge,
   getQaPurgeRun,
 } from "@ewatrade/db/queries"
+import { isQaForbiddenRuntime } from "@ewatrade/utils/qa-policy-server"
 
 export type QaPurgePayload = { runId: string }
 
@@ -22,6 +23,8 @@ export async function qaPurgeHandler(
   payload: QaPurgePayload,
   _attempt: number,
 ) {
+  // QA data is never deleted from a Production runtime (ADR-0059).
+  if (isQaForbiddenRuntime()) return
   const run = await getQaPurgeRun(prisma, payload.runId)
   if (!run || run.status !== "QUEUED") return
 

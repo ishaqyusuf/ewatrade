@@ -1,5 +1,8 @@
 import { createHash } from "node:crypto"
-import { managedQaIdentity } from "@ewatrade/utils/qa-policy-server"
+import {
+  getQaPolicy,
+  managedQaIdentity,
+} from "@ewatrade/utils/qa-policy-server"
 import { Prisma, type PrismaClient } from "../../generated/prisma/client"
 import type { DbClient } from "./types"
 
@@ -48,40 +51,49 @@ export async function assertQaTenantIdentity(
   }
 }
 
+/**
+ * LIVE businesses whose active owner signs in with a managed QA email domain.
+ * The policy's domains filter in SQL, so the scan never reads every business.
+ */
 export async function discoverQaTenantCandidates(db: DbClient) {
+  const domains = [
+    ...new Set((await getQaPolicy()).entries.map((entry) => entry.qa)),
+  ].filter(Boolean)
+  if (!domains.length) return []
+  const ownerMatch = {
+    role: "OWNER" as const,
+    status: "ACTIVE" as const,
+    user: {
+      OR: domains.map((domain) => ({
+        email: { endsWith: `@${domain}`, mode: "insensitive" as const },
+      })),
+    },
+  }
   const tenants = await db.tenant.findMany({
-    where: { dataClassification: "LIVE", qaPurgeStartedAt: null },
+    where: {
+      dataClassification: "LIVE",
+      qaPurgeStartedAt: null,
+      users: { some: ownerMatch },
+    },
     select: {
       id: true,
       name: true,
       slug: true,
       createdAt: true,
       users: {
-        where: { role: "OWNER", status: "ACTIVE" },
+        where: ownerMatch,
         select: { user: { select: { email: true } } },
+        take: 1,
       },
     },
     orderBy: { createdAt: "desc" },
+    take: 200,
   })
-
-  const domains = new Map(
-    await Promise.all(
-      tenants.flatMap((t) =>
-        t.users.map(
-          async (m) =>
-            [
-              m.user.email,
-              await managedQaDomainForEmail(m.user.email),
-            ] as const,
-        ),
-      ),
-    ),
-  )
   return tenants.flatMap((tenant) => {
-    const qaSourceDomain = tenant.users
-      .map((membership) => domains.get(membership.user.email))
-      .find(Boolean)
-
+    const email = tenant.users[0]?.user.email.toLowerCase() ?? ""
+    const qaSourceDomain = domains.find((domain) =>
+      email.endsWith(`@${domain}`),
+    )
     return qaSourceDomain
       ? [
           {
