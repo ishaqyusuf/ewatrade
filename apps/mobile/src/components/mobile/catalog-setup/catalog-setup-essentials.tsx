@@ -1,6 +1,6 @@
 import * as Classic from "@/components/mobile/appearances/classic/catalog-setup"
 import { FormField } from "@/components/mobile/form-field"
-import { ProductUsagePicker } from "@/components/mobile/product-usage-picker"
+import { ProductUsageSelect } from "@/components/mobile/product-usage-select"
 import { Icon, type IconKeys } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
@@ -93,7 +93,7 @@ export function CatalogSetupEssentials({
       />
 
       {kind === "product" ? (
-        <ProductUsagePicker
+        <ProductUsageSelect
           onChange={(usage) => {
             // Returnables are never sold or stocked: drop a typed price and opening stock.
             if (usage === "RETURNABLE") {
