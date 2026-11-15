@@ -84,6 +84,8 @@ describe("server-backed commerce list filters", () => {
       limit: 25,
       priority: "urgent",
       query: "order-7",
+      sort: { direction: "desc", field: "createdAt" },
+      stage: "all",
     })
   })
 
@@ -101,6 +103,8 @@ describe("server-backed commerce list filters", () => {
       limit: 25,
       priority: undefined,
       query: undefined,
+      sort: { direction: "desc", field: "createdAt" },
+      stage: "all",
     })
   })
 })
