@@ -85,9 +85,8 @@ export function CustomerLedgerWorkspace({
       { retry: false },
     ),
   )
-  const book = useQuery(
-    trpc.finance.book.queryOptions(undefined, { retry: false }),
-  )
+  // The accounts read carries the book (currency only), so no Finance read.
+  const book = { data: query.data?.book ?? null, isPending: query.isPending }
   const ensure = useMutation(
     trpc.customerLedger.ensureAccount.mutationOptions(),
   )

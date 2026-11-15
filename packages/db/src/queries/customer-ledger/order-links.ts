@@ -193,69 +193,75 @@ export async function listCustomerOrderLinkSuggestions(
   return db.$transaction(
     async (tx) => {
       await assertFinanceManager(tx, input)
-      const customer = await readCustomer(tx, input)
-      const rows = await readMatchingUnlinkedOrders(tx, {
-        tenantId: input.tenantId,
-        customer,
-      })
-      const scanned = rows.slice(0, MAX_SCANNED_ORDERS)
-      const others = await otherCustomerContacts(tx, {
-        tenantId: input.tenantId,
-        customerId: customer.id,
-        orders: scanned,
-      })
-      const books = await tx.financeBook.findMany({
-        where: { tenantId: input.tenantId },
-        select: { currencyCode: true, startsAt: true },
-      })
-      const bookStart = new Map(
-        books.map((book) => [book.currencyCode, book.startsAt]),
-      )
-      const suggested: Array<
-        MatchedOrderRow & { matchedBy: OrderCustomerLinkMatch }
-      > = []
-      let conflictCount = 0
-      for (const row of scanned) {
-        const result = classifyOrderCustomerLink(customer, row, others)
-        if (result.eligible)
-          suggested.push({ ...row, matchedBy: result.matchedBy })
-        else if (result.reason === "CONTACT_CONFLICT") conflictCount += 1
-      }
-      return {
-        customer: {
-          id: customer.id,
-          name: customer.name,
-          hasContact: Boolean(
-            customer.normalizedPhone || customer.normalizedEmail,
-          ),
-        },
-        items: suggested.slice(0, limit).map((row) => {
-          const startsAt = bookStart.get(row.currencyCode)
-          return {
-            orderId: row.id,
-            orderNumber: row.orderNumber,
-            storeId: row.storeId,
-            storeName: row.storeName,
-            status: row.status,
-            currencyCode: row.currencyCode,
-            totalMinor: String(row.totalMinor),
-            createdAt: row.createdAt.toISOString(),
-            customerName: row.customerName,
-            customerPhone: row.customerPhone,
-            customerEmail: row.customerEmail,
-            matchedBy: row.matchedBy,
-            // Linked pre-cutoff Orders block a later starting balance import.
-            beforeBooksStart: Boolean(startsAt && row.createdAt <= startsAt),
-          }
-        }),
-        suggestedCount: suggested.length,
-        conflictCount,
-        /** More than the scan cap matched; link these, then review again. */
-        truncated: rows.length > MAX_SCANNED_ORDERS,
-      }
+      return listCustomerOrderLinkSuggestionsInTransaction(tx, input)
     },
     { isolationLevel: "RepeatableRead", maxWait: 10_000, timeout: 30_000 },
   )
+}
+
+/** Caller owns a repeatable-read transaction and has checked Owner/Admin. */
+export async function listCustomerOrderLinkSuggestionsInTransaction(
+  tx: Prisma.TransactionClient,
+  input: FinanceActor & { customerId: string; limit?: number },
+) {
+  const limit = input.limit ?? MAX_LINK_ORDERS
+  const customer = await readCustomer(tx, input)
+  const rows = await readMatchingUnlinkedOrders(tx, {
+    tenantId: input.tenantId,
+    customer,
+  })
+  const scanned = rows.slice(0, MAX_SCANNED_ORDERS)
+  const others = await otherCustomerContacts(tx, {
+    tenantId: input.tenantId,
+    customerId: customer.id,
+    orders: scanned,
+  })
+  const books = await tx.financeBook.findMany({
+    where: { tenantId: input.tenantId },
+    select: { currencyCode: true, startsAt: true },
+  })
+  const bookStart = new Map(
+    books.map((book) => [book.currencyCode, book.startsAt]),
+  )
+  const suggested: Array<
+    MatchedOrderRow & { matchedBy: OrderCustomerLinkMatch }
+  > = []
+  let conflictCount = 0
+  for (const row of scanned) {
+    const result = classifyOrderCustomerLink(customer, row, others)
+    if (result.eligible) suggested.push({ ...row, matchedBy: result.matchedBy })
+    else if (result.reason === "CONTACT_CONFLICT") conflictCount += 1
+  }
+  return {
+    customer: {
+      id: customer.id,
+      name: customer.name,
+      hasContact: Boolean(customer.normalizedPhone || customer.normalizedEmail),
+    },
+    items: suggested.slice(0, limit).map((row) => {
+      const startsAt = bookStart.get(row.currencyCode)
+      return {
+        orderId: row.id,
+        orderNumber: row.orderNumber,
+        storeId: row.storeId,
+        storeName: row.storeName,
+        status: row.status,
+        currencyCode: row.currencyCode,
+        totalMinor: String(row.totalMinor),
+        createdAt: row.createdAt.toISOString(),
+        customerName: row.customerName,
+        customerPhone: row.customerPhone,
+        customerEmail: row.customerEmail,
+        matchedBy: row.matchedBy,
+        // Linked pre-cutoff Orders block a later starting balance import.
+        beforeBooksStart: Boolean(startsAt && row.createdAt <= startsAt),
+      }
+    }),
+    suggestedCount: suggested.length,
+    conflictCount,
+    /** More than the scan cap matched; link these, then review again. */
+    truncated: rows.length > MAX_SCANNED_ORDERS,
+  }
 }
 
 export type LinkCustomerHistoricalOrdersInput = FinanceActor & {

@@ -475,6 +475,7 @@ test("account read derives repository actor and tenant from the authenticated co
       },
     },
     customerLedgerAccount: { findMany: async () => [] },
+    financeBook: { findFirst: async () => ({ currencyCode: "NGN" }) },
   }
   const db = {
     $transaction: async (callback: (transaction: typeof tx) => unknown) =>

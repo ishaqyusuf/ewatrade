@@ -72,7 +72,10 @@ export function CustomerLedgerStatement({
         staleTime: Number.POSITIVE_INFINITY,
         refetchOnWindowFocus: false,
         refetchOnReconnect: false,
-        refetchOnMount: "always",
+        // A fresh read on every visit, except data the server just sent
+        // with this page (seeded from the one statement-page read).
+        refetchOnMount: (query) =>
+          Date.now() - query.state.dataUpdatedAt > 15_000,
       },
     ),
   )

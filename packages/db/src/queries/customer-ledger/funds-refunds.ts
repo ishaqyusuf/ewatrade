@@ -606,45 +606,61 @@ export async function listCustomerFundsRefunds(
   return db.$transaction(
     async (tx) => {
       await assertFinanceManager(tx, input)
-      const rows = await tx.customerFundsRefundRequest.findMany({
-        where: {
-          tenantId: input.tenantId,
-          ...(input.accountId ? { accountId: input.accountId } : {}),
-          ...(input.status ? { status: input.status } : {}),
-          ...(input.cursor ? { id: { gt: input.cursor } } : {}),
-        },
-        orderBy: { id: "asc" },
-        take: limit + 1,
-        include: {
-          account: {
-            select: {
-              customerId: true,
-              currencyCode: true,
-              revision: true,
-              customer: { select: { name: true } },
-            },
-          },
-        },
-      })
-      const page = rows.slice(0, limit)
-      const lifecycle = await refundLifecycle(tx, page)
-      return {
-        requests: page.map((row) => ({
-          ...publicResult(row),
-          ...requiredRefundLifecycle(lifecycle, row.id),
-          bookId: row.bookId,
-          accountId: row.accountId,
-          accountRevision: row.account.revision.toString(),
-          customerId: row.account.customerId,
-          customerName: row.account.customer.name,
-          currencyCode: row.account.currencyCode,
-          reason: row.reason,
-        })),
-        nextCursor: rows.length > limit ? (page.at(-1)?.id ?? null) : null,
-      }
+      return listCustomerFundsRefundsInTransaction(tx, input)
     },
     { isolationLevel: "RepeatableRead", maxWait: 10_000, timeout: 30_000 },
   )
+}
+
+/** Caller owns a repeatable-read transaction and has checked Owner/Admin. */
+export async function listCustomerFundsRefundsInTransaction(
+  tx: Prisma.TransactionClient,
+  input: {
+    tenantId: string
+    actorUserId: string
+    accountId?: string
+    status?: "REQUESTED" | "RESERVED" | "COMPLETED" | "CANCELLED"
+    cursor?: string
+    limit?: number
+  },
+) {
+  const limit = input.limit ?? 20
+  const rows = await tx.customerFundsRefundRequest.findMany({
+    where: {
+      tenantId: input.tenantId,
+      ...(input.accountId ? { accountId: input.accountId } : {}),
+      ...(input.status ? { status: input.status } : {}),
+      ...(input.cursor ? { id: { gt: input.cursor } } : {}),
+    },
+    orderBy: { id: "asc" },
+    take: limit + 1,
+    include: {
+      account: {
+        select: {
+          customerId: true,
+          currencyCode: true,
+          revision: true,
+          customer: { select: { name: true } },
+        },
+      },
+    },
+  })
+  const page = rows.slice(0, limit)
+  const lifecycle = await refundLifecycle(tx, page)
+  return {
+    requests: page.map((row) => ({
+      ...publicResult(row),
+      ...requiredRefundLifecycle(lifecycle, row.id),
+      bookId: row.bookId,
+      accountId: row.accountId,
+      accountRevision: row.account.revision.toString(),
+      customerId: row.account.customerId,
+      customerName: row.account.customer.name,
+      currencyCode: row.account.currencyCode,
+      reason: row.reason,
+    })),
+    nextCursor: rows.length > limit ? (page.at(-1)?.id ?? null) : null,
+  }
 }
 
 export async function getCustomerFundsRefundDetail(

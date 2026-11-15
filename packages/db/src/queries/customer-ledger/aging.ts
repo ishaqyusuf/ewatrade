@@ -58,6 +58,14 @@ export async function getCustomerLedgerAgingInTransaction(
   input: FinanceActor & { accountId: string },
 ) {
   await assertFinanceManager(tx, input)
+  return readCustomerLedgerAgingInTransaction(tx, input)
+}
+
+/** Caller owns a repeatable-read transaction and has checked Owner/Admin. */
+export async function readCustomerLedgerAgingInTransaction(
+  tx: Prisma.TransactionClient,
+  input: FinanceActor & { accountId: string },
+) {
   const account = await tx.customerLedgerAccount.findFirst({
     where: { id: input.accountId, tenantId: input.tenantId },
     select: {

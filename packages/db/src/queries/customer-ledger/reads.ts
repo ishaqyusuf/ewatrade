@@ -1,4 +1,4 @@
-import type { PrismaClient } from "../../../generated/prisma/client"
+import type { Prisma, PrismaClient } from "../../../generated/prisma/client"
 import { type FinanceActor, assertFinanceManager } from "../finance/access"
 import { FinanceError } from "../finance/rules"
 import { getCustomerLedgerTotalsInTransaction } from "./balances"
@@ -34,80 +34,94 @@ export async function getCustomerLedgerStatement(
   return db.$transaction(
     async (tx) => {
       await assertFinanceManager(tx, input)
-      const account = await tx.customerLedgerAccount.findFirst({
-        where: { id: input.accountId, tenantId: input.tenantId },
-      })
-      if (!account)
-        throw new FinanceError(
-          "NOT_FOUND",
-          "Customer ledger account not found in this business.",
-        )
-      const snapshot =
-        input.snapshotSequence === undefined
-          ? account.lastSequence
-          : BigInt(input.snapshotSequence)
-      const after = BigInt(input.afterSequence ?? "0")
-      if (snapshot > account.lastSequence || after > snapshot)
-        throw new FinanceError(
-          "INVALID_JOURNAL",
-          "The statement snapshot or cursor is beyond available history.",
-        )
-      const [totals, rows] = await Promise.all([
-        getCustomerLedgerTotalsInTransaction(tx, account.id, snapshot),
-        tx.$queryRaw<
-          Array<{
-            id: string
-            sequence: bigint
-            kind: string
-            side: string
-            amountMinor: bigint
-            sourceKind: string
-            sourceId: string
-            orderId: string | null
-            storeId: string | null
-            actorUserId: string
-            reversalOfId: string | null
-            effectiveAt: Date
-            recordedAt: Date
-            description: string
-            runningBalanceMinor: string
-          }>
-        >`
-        WITH statement AS (
-          SELECT id, sequence, kind, side, "amountMinor", "sourceKind", "sourceId", "orderId",
-            "storeId", "actorUserId", "reversalOfId",
-            "effectiveAt", "recordedAt", description,
-            SUM(CASE WHEN side = 'DEBIT' THEN "amountMinor" ELSE -"amountMinor" END)
-              OVER (ORDER BY sequence ROWS UNBOUNDED PRECEDING)::text AS "runningBalanceMinor"
-          FROM "CustomerLedgerEntry"
-          WHERE "accountId" = ${account.id} AND sequence <= ${snapshot}
-        )
-        SELECT * FROM statement WHERE sequence > ${after}
-        ORDER BY sequence LIMIT ${limit + 1}
-      `,
-      ])
-      const page = rows.slice(0, limit)
-      return {
-        accountId: account.id,
-        customerId: account.customerId,
-        currencyCode: account.currencyCode,
-        currentRevision: account.revision.toString(),
-        snapshotSequence: snapshot.toString(),
-        coverage: "POSTED_CUSTOMER_LEDGER_ENTRIES" as const,
-        completeness: "INCOMPLETE_SOURCE_COVERAGE" as const,
-        totals,
-        entries: page.map((row) => ({
-          ...row,
-          sequence: row.sequence.toString(),
-          amountMinor: row.amountMinor.toString(),
-          runningBalanceMinor: row.runningBalanceMinor.toString(),
-        })),
-        nextCursor:
-          rows.length > limit
-            ? (page[page.length - 1]?.sequence.toString() ?? null)
-            : null,
-      }
+      return getCustomerLedgerStatementInTransaction(tx, input)
     },
     { isolationLevel: "RepeatableRead", maxWait: 10_000, timeout: 30_000 },
   )
+}
+
+/** Caller owns a repeatable-read transaction and has checked Owner/Admin. */
+export async function getCustomerLedgerStatementInTransaction(
+  tx: Prisma.TransactionClient,
+  input: FinanceActor & {
+    accountId: string
+    snapshotSequence?: string
+    afterSequence?: string
+    limit?: number
+  },
+) {
+  const limit = input.limit ?? 50
+  const account = await tx.customerLedgerAccount.findFirst({
+    where: { id: input.accountId, tenantId: input.tenantId },
+  })
+  if (!account)
+    throw new FinanceError(
+      "NOT_FOUND",
+      "Customer ledger account not found in this business.",
+    )
+  const snapshot =
+    input.snapshotSequence === undefined
+      ? account.lastSequence
+      : BigInt(input.snapshotSequence)
+  const after = BigInt(input.afterSequence ?? "0")
+  if (snapshot > account.lastSequence || after > snapshot)
+    throw new FinanceError(
+      "INVALID_JOURNAL",
+      "The statement snapshot or cursor is beyond available history.",
+    )
+  const [totals, rows] = await Promise.all([
+    getCustomerLedgerTotalsInTransaction(tx, account.id, snapshot),
+    tx.$queryRaw<
+      Array<{
+        id: string
+        sequence: bigint
+        kind: string
+        side: string
+        amountMinor: bigint
+        sourceKind: string
+        sourceId: string
+        orderId: string | null
+        storeId: string | null
+        actorUserId: string
+        reversalOfId: string | null
+        effectiveAt: Date
+        recordedAt: Date
+        description: string
+        runningBalanceMinor: string
+      }>
+    >`
+      WITH statement AS (
+        SELECT id, sequence, kind, side, "amountMinor", "sourceKind", "sourceId", "orderId",
+          "storeId", "actorUserId", "reversalOfId",
+          "effectiveAt", "recordedAt", description,
+          SUM(CASE WHEN side = 'DEBIT' THEN "amountMinor" ELSE -"amountMinor" END)
+            OVER (ORDER BY sequence ROWS UNBOUNDED PRECEDING)::text AS "runningBalanceMinor"
+        FROM "CustomerLedgerEntry"
+        WHERE "accountId" = ${account.id} AND sequence <= ${snapshot}
+      )
+      SELECT * FROM statement WHERE sequence > ${after}
+      ORDER BY sequence LIMIT ${limit + 1}
+    `,
+  ])
+  const page = rows.slice(0, limit)
+  return {
+    accountId: account.id,
+    customerId: account.customerId,
+    currencyCode: account.currencyCode,
+    currentRevision: account.revision.toString(),
+    snapshotSequence: snapshot.toString(),
+    coverage: "POSTED_CUSTOMER_LEDGER_ENTRIES" as const,
+    completeness: "INCOMPLETE_SOURCE_COVERAGE" as const,
+    totals,
+    entries: page.map((row) => ({
+      ...row,
+      sequence: row.sequence.toString(),
+      amountMinor: row.amountMinor.toString(),
+      runningBalanceMinor: row.runningBalanceMinor.toString(),
+    })),
+    nextCursor:
+      rows.length > limit
+        ? (page[page.length - 1]?.sequence.toString() ?? null)
+        : null,
+  }
 }

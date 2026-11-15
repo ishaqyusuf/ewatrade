@@ -1,4 +1,4 @@
-import type { PrismaClient } from "../../../generated/prisma/client"
+import type { Prisma, PrismaClient } from "../../../generated/prisma/client"
 import { type FinanceActor, assertFinanceManager } from "../finance/access"
 import { FinanceError } from "../finance/rules"
 import { getCustomerLedgerTotalsInTransaction } from "./balances"
@@ -33,47 +33,75 @@ export async function listCustomerLedgerAccounts(
     throw new FinanceError("INVALID_JOURNAL", "Invalid customer account page.")
   return db.$transaction(
     async (tx) => {
-      await assertFinanceManager(tx, input)
-      const customer = await tx.customer.findFirst({
-        where: { id: input.customerId, tenantId: input.tenantId },
-        select: customerSelection,
+      const tenant = await assertFinanceManager(tx, input)
+      return listCustomerLedgerAccountsInTransaction(tx, {
+        ...input,
+        tenantCurrencyCode: tenant.currencyCode,
       })
-      if (!customer)
-        throw new FinanceError(
-          "NOT_FOUND",
-          "Customer not found in this business.",
-        )
-      const rows = await tx.customerLedgerAccount.findMany({
-        where: {
-          tenantId: input.tenantId,
-          customerId: customer.id,
-          currencyCode: {
-            ...(input.currencyCode ? { equals: input.currencyCode } : {}),
-            ...(input.afterCurrency ? { gt: input.afterCurrency } : {}),
-          },
-        },
-        orderBy: { currencyCode: "asc" },
-        take: limit + 1,
-      })
-      const page = rows.slice(0, limit)
-      return {
-        customer,
-        accounts: page.map((account) => ({
-          id: account.id,
-          customerId: account.customerId,
-          currencyCode: account.currencyCode,
-          revision: account.revision.toString(),
-          snapshotSequence: account.lastSequence.toString(),
-          createdAt: account.createdAt,
-        })),
-        nextCursor:
-          rows.length > limit ? (page.at(-1)?.currencyCode ?? null) : null,
-        coverage: "POSTED_CUSTOMER_LEDGER_ENTRIES" as const,
-        completeness: "INCOMPLETE_SOURCE_COVERAGE" as const,
-      }
     },
     { isolationLevel: "RepeatableRead", maxWait: 10_000, timeout: 30_000 },
   )
+}
+
+/** Caller owns a repeatable-read transaction and has checked Owner/Admin. */
+export async function listCustomerLedgerAccountsInTransaction(
+  tx: Prisma.TransactionClient,
+  input: FinanceActor & {
+    customerId: string
+    currencyCode?: string
+    afterCurrency?: string
+    limit?: number
+    /** The business currency, from the Owner/Admin check. */
+    tenantCurrencyCode: string
+  },
+) {
+  const limit = input.limit ?? 20
+  // The business's book in its own currency: the statement page needs
+  // only whether it exists (and its currency) to start an account.
+  const [customer, book] = await Promise.all([
+    tx.customer.findFirst({
+      where: { id: input.customerId, tenantId: input.tenantId },
+      select: customerSelection,
+    }),
+    tx.financeBook.findFirst({
+      where: {
+        tenantId: input.tenantId,
+        currencyCode: input.tenantCurrencyCode,
+      },
+      select: { currencyCode: true },
+    }),
+  ])
+  if (!customer)
+    throw new FinanceError("NOT_FOUND", "Customer not found in this business.")
+  const rows = await tx.customerLedgerAccount.findMany({
+    where: {
+      tenantId: input.tenantId,
+      customerId: customer.id,
+      currencyCode: {
+        ...(input.currencyCode ? { equals: input.currencyCode } : {}),
+        ...(input.afterCurrency ? { gt: input.afterCurrency } : {}),
+      },
+    },
+    orderBy: { currencyCode: "asc" },
+    take: limit + 1,
+  })
+  const page = rows.slice(0, limit)
+  return {
+    customer,
+    book,
+    accounts: page.map((account) => ({
+      id: account.id,
+      customerId: account.customerId,
+      currencyCode: account.currencyCode,
+      revision: account.revision.toString(),
+      snapshotSequence: account.lastSequence.toString(),
+      createdAt: account.createdAt,
+    })),
+    nextCursor:
+      rows.length > limit ? (page.at(-1)?.currencyCode ?? null) : null,
+    coverage: "POSTED_CUSTOMER_LEDGER_ENTRIES" as const,
+    completeness: "INCOMPLETE_SOURCE_COVERAGE" as const,
+  }
 }
 
 /** Exact controls at the account's current sequence, independent of statement pagination. */
@@ -84,48 +112,52 @@ export async function getCustomerLedgerAccountDetail(
   return db.$transaction(
     async (tx) => {
       await assertFinanceManager(tx, input)
-      const account = await tx.customerLedgerAccount.findFirst({
-        where: { id: input.accountId, tenantId: input.tenantId },
-        include: { customer: { select: customerSelection } },
-      })
-      if (!account)
-        throw new FinanceError(
-          "NOT_FOUND",
-          "Customer account not found in this business.",
-        )
-      const [totals, book, reserved] = await Promise.all([
-        getCustomerLedgerTotalsInTransaction(
-          tx,
-          account.id,
-          account.lastSequence,
-        ),
-        tx.financeBook.findFirst({
-          where: {
-            tenantId: input.tenantId,
-            currencyCode: account.currencyCode,
-          },
-          select: { id: true, currencyCode: true, startsAt: true },
-        }),
-        getCustomerFundsReservedInTransaction(tx, { accountId: account.id }),
-      ])
-      return {
-        id: account.id,
-        customer: account.customer,
-        currencyCode: account.currencyCode,
-        revision: account.revision.toString(),
-        snapshotSequence: account.lastSequence.toString(),
-        book,
-        totals: {
-          ...totals,
-          availableCreditMinor: (
-            BigInt(totals.availableCreditMinor) - reserved
-          ).toString(),
-        },
-        reservedCreditMinor: reserved.toString(),
-        coverage: "POSTED_CUSTOMER_LEDGER_ENTRIES" as const,
-        completeness: "INCOMPLETE_SOURCE_COVERAGE" as const,
-      }
+      return getCustomerLedgerAccountDetailInTransaction(tx, input)
     },
     { isolationLevel: "RepeatableRead", maxWait: 10_000, timeout: 30_000 },
   )
+}
+
+/** Caller owns a repeatable-read transaction and has checked Owner/Admin. */
+export async function getCustomerLedgerAccountDetailInTransaction(
+  tx: Prisma.TransactionClient,
+  input: FinanceActor & { accountId: string },
+) {
+  const account = await tx.customerLedgerAccount.findFirst({
+    where: { id: input.accountId, tenantId: input.tenantId },
+    include: { customer: { select: customerSelection } },
+  })
+  if (!account)
+    throw new FinanceError(
+      "NOT_FOUND",
+      "Customer account not found in this business.",
+    )
+  const [totals, book, reserved] = await Promise.all([
+    getCustomerLedgerTotalsInTransaction(tx, account.id, account.lastSequence),
+    tx.financeBook.findFirst({
+      where: {
+        tenantId: input.tenantId,
+        currencyCode: account.currencyCode,
+      },
+      select: { id: true, currencyCode: true, startsAt: true },
+    }),
+    getCustomerFundsReservedInTransaction(tx, { accountId: account.id }),
+  ])
+  return {
+    id: account.id,
+    customer: account.customer,
+    currencyCode: account.currencyCode,
+    revision: account.revision.toString(),
+    snapshotSequence: account.lastSequence.toString(),
+    book,
+    totals: {
+      ...totals,
+      availableCreditMinor: (
+        BigInt(totals.availableCreditMinor) - reserved
+      ).toString(),
+    },
+    reservedCreditMinor: reserved.toString(),
+    coverage: "POSTED_CUSTOMER_LEDGER_ENTRIES" as const,
+    completeness: "INCOMPLETE_SOURCE_COVERAGE" as const,
+  }
 }
