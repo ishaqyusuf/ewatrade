@@ -266,7 +266,8 @@ function RecipientsBody({
 }) {
   const trpc = useTRPC()
   const [mount] = useState(nextReadMount)
-  const [editing, setEditing] = useState<AlertMember | null>(null)
+  // The member being edited is in the URL (?alertMember=<membershipId>).
+  const [editingId, setEditingId] = useQueryState("alertMember", parseAsString)
   const [directoryCursor, setDirectoryCursor] = useState<string | undefined>()
   // Pages keyed by the cursor that read them, so a refetch replaces a page
   // instead of appending a duplicate.
@@ -366,6 +367,10 @@ function RecipientsBody({
       active: person.status === "ACTIVE",
     }))
 
+  const editing =
+    members.find((member) => member.membershipId === editingId) ?? null
+  const setEditing = (member: AlertMember | null) =>
+    void setEditingId(member?.membershipId ?? null)
   const lastDirectoryPage = directoryPages.at(-1)
   return (
     <div className="grid gap-4">
