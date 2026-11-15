@@ -12,123 +12,267 @@ import { Prisma, type PrismaClient } from "../../../generated/prisma/client"
 
 type Row = Record<string, unknown>
 
+/**
+ * Row types are Prisma's own payload types for the selects the report used to
+ * read with `findMany`, so enum columns keep their enum types and nullability
+ * matches the schema.
+ */
 export type ServiceCommerceReportRows = {
-  tenant: { currencyCode: string; timezone: string | null }
-  stores: Array<{ id: string; name: string }>
-  serviceRequests: Array<{
-    channelOrigin: string
-    convertedAt: Date | null
-    requestedAt: Date
-    storeId: string
+  tenant: Prisma.TenantGetPayload<{
+    select: { currencyCode: true; timezone: true }
   }>
-  prescriptionReceived: Array<{
-    effectiveAt: Date
-    storeId: string
-    request: { source: string }
-  }>
-  inquiries: Array<{
-    channelOrigin: string
-    convertedAt: Date | null
-    createdAt: Date
-    storeId: string
-  }>
-  quoteVersions: Array<{
-    acceptedAt: Date | null
-    declinedAt: Date | null
-    issuedAt: Date | null
-    quote: { sourceType: string; storeId: string }
-    status: string
-  }>
-  payments: Array<{
-    amountMinor: number
-    recordedAt: Date
-    storeId: string
-    type: string
-  }>
-  bookings: Array<{
-    arrivedAt: Date | null
-    completedAt: Date | null
-    confirmedAt: Date | null
-    serviceStartedAt: Date | null
-    storeId: string
-  }>
-  pickupEvents: Array<{
-    effectiveAt: Date
-    fulfillment: { storeId: string }
-    type: string
-  }>
-  deliveryEvents: Array<{
-    assignment: { storeId: string }
-    effectiveAt: Date
-    type: string
-  }>
-  serviceEvents: Array<{
-    effectiveAt: Date
-    serviceJob: { storeId: string }
-    toStatus: string | null
-    type: string
-  }>
-  sourceLinks: Array<{
-    createdAsPrivateDraft: boolean
-    createdAt: Date
-    resolutionCapturedAt: Date | null
-    sourceType: string
-    verifiedObservationId: string | null
-  }>
-  attestations: Array<{ createdAt: Date; type: string }>
-  pricePromotions: Array<{
-    createdAt: Date
-    previousPriceMinor: number | null
-    priceMinor: number
-  }>
-  quoteOverrideLines: Array<{
-    catalogPriceEvaluationAt: Date | null
-    catalogPriceOverride: boolean
-  }>
-  graduationEvents: Array<{ effectiveAt: Date; type: string }>
-  mediaEvents: Array<{ effectiveAt: Date; lifecycle: string; type: string }>
-  attachments: Array<{ createdAt: Date; lifecycle: string }>
-  observations: Array<{ lifecycle: string; verifiedAt: Date }>
-  notificationAttempts: Array<{
-    attemptNumber: number
-    completedAt: Date | null
-    failureCode: string | null
-    startedAt: Date
-    status: string
-  }>
-  notificationReceipts: Array<{ occurredAt: Date; status: string }>
-  legacyNotificationAttempts: Array<{
-    attemptedAt: Date
-    completedAt: Date | null
-    status: string
-  }>
-  actionRecoveries: Array<{ executedAt: Date; outcome: string }>
-  usage: Array<{
-    billingOwnerSnapshot: string | null
-    bspCostMinor: number | null
-    connectionId: string | null
-    currencyCode: string | null
-    deliveryCostMinor: number | null
-    eventType: string
-    metaCostMinor: number | null
-    messageCategory: string | null
-    numberCostMinor: number | null
-    occurredAt: Date
-    paymentProviderFeeMinor: number | null
-    platformChargeMinor: number | null
-    revenueMinor: number | null
-    recipientMarket: string | null
-    subscriptionChargeMinor: number | null
-    taxMinor: number | null
-  }>
-  prescriptionUsage: Array<{
-    amounts: Prisma.JsonValue
-    eventType: string
-    occurredAt: Date
-  }>
-  profileAuditEvents: Array<{ effectiveAt: Date; type: string }>
-  connectionAuditEvents: Array<{ effectiveAt: Date; type: string }>
-  routingAlerts: Array<{ createdAt: Date; resolvedAt: Date | null }>
+  stores: Array<Prisma.StoreGetPayload<{ select: { id: true; name: true } }>>
+  serviceRequests: Array<
+    Prisma.ServiceRequestGetPayload<{
+      select: {
+        channelOrigin: true
+        convertedAt: true
+        requestedAt: true
+        storeId: true
+      }
+    }>
+  >
+  prescriptionReceived: Array<
+    Prisma.PrescriptionRequestAuditEventGetPayload<{
+      select: {
+        effectiveAt: true
+        storeId: true
+        request: { select: { source: true } }
+      }
+    }>
+  >
+  inquiries: Array<
+    Prisma.CommerceInquiryGetPayload<{
+      select: {
+        channelOrigin: true
+        convertedAt: true
+        createdAt: true
+        storeId: true
+      }
+    }>
+  >
+  quoteVersions: Array<
+    Prisma.CommerceQuoteVersionGetPayload<{
+      select: {
+        acceptedAt: true
+        declinedAt: true
+        issuedAt: true
+        quote: { select: { sourceType: true; storeId: true } }
+        status: true
+      }
+    }>
+  >
+  payments: Array<
+    Prisma.CommercialOrderPaymentGetPayload<{
+      select: { amountMinor: true; recordedAt: true; storeId: true; type: true }
+    }>
+  >
+  bookings: Array<
+    Prisma.ServiceBookingGetPayload<{
+      select: {
+        arrivedAt: true
+        completedAt: true
+        confirmedAt: true
+        serviceStartedAt: true
+        storeId: true
+      }
+    }>
+  >
+  pickupEvents: Array<
+    Prisma.PrescriptionPickupEventGetPayload<{
+      select: {
+        effectiveAt: true
+        fulfillment: { select: { storeId: true } }
+        type: true
+      }
+    }>
+  >
+  deliveryEvents: Array<
+    Prisma.PrescriptionDeliveryEventGetPayload<{
+      select: {
+        assignment: { select: { storeId: true } }
+        effectiveAt: true
+        type: true
+      }
+    }>
+  >
+  serviceEvents: Array<
+    Prisma.ServiceWorkEventGetPayload<{
+      select: {
+        effectiveAt: true
+        serviceJob: { select: { storeId: true } }
+        toStatus: true
+        type: true
+      }
+    }>
+  >
+  sourceLinks: Array<
+    Prisma.CatalogSourceLineLinkGetPayload<{
+      select: {
+        createdAsPrivateDraft: true
+        createdAt: true
+        resolutionCapturedAt: true
+        sourceType: true
+        verifiedObservationId: true
+      }
+    }>
+  >
+  attestations: Array<
+    Prisma.CatalogAvailabilityAttestationGetPayload<{
+      select: { createdAt: true; type: true }
+    }>
+  >
+  pricePromotions: Array<
+    Prisma.CatalogPricePromotionGetPayload<{
+      select: { createdAt: true; previousPriceMinor: true; priceMinor: true }
+    }>
+  >
+  quoteOverrideLines: Array<
+    Prisma.CommerceQuoteLineGetPayload<{
+      select: { catalogPriceEvaluationAt: true; catalogPriceOverride: true }
+    }>
+  >
+  graduationEvents: Array<
+    Prisma.ServiceCommerceStoreAuditEventGetPayload<{
+      select: { effectiveAt: true; type: true }
+    }>
+  >
+  mediaEvents: Array<
+    Prisma.ServiceCommerceMediaAuditEventGetPayload<{
+      select: { effectiveAt: true; lifecycle: true; type: true }
+    }>
+  >
+  attachments: Array<
+    Prisma.ServiceCommerceSourceAttachmentGetPayload<{
+      select: { createdAt: true; lifecycle: true }
+    }>
+  >
+  observations: Array<
+    Prisma.ServiceCommerceVerifiedObservationGetPayload<{
+      select: { lifecycle: true; verifiedAt: true }
+    }>
+  >
+  notificationAttempts: Array<
+    Prisma.ServiceCommerceCustomerNotificationAttemptGetPayload<{
+      select: {
+        attemptNumber: true
+        completedAt: true
+        failureCode: true
+        startedAt: true
+        status: true
+      }
+    }>
+  >
+  notificationReceipts: Array<
+    Prisma.ServiceCommerceCustomerNotificationReceiptGetPayload<{
+      select: { occurredAt: true; status: true }
+    }>
+  >
+  legacyNotificationAttempts: Array<
+    Prisma.ServiceDeliveryAttemptGetPayload<{
+      select: { attemptedAt: true; completedAt: true; status: true }
+    }>
+  >
+  actionRecoveries: Array<
+    Prisma.ServiceCommerceCustomerActionExecutionGetPayload<{
+      select: { executedAt: true; outcome: true }
+    }>
+  >
+  usage: Array<
+    Prisma.ServiceCommerceUsageEventGetPayload<{
+      select: {
+        billingOwnerSnapshot: true
+        bspCostMinor: true
+        connectionId: true
+        currencyCode: true
+        deliveryCostMinor: true
+        eventType: true
+        metaCostMinor: true
+        messageCategory: true
+        numberCostMinor: true
+        occurredAt: true
+        paymentProviderFeeMinor: true
+        platformChargeMinor: true
+        revenueMinor: true
+        recipientMarket: true
+        subscriptionChargeMinor: true
+        taxMinor: true
+      }
+    }>
+  >
+  prescriptionUsage: Array<
+    Prisma.PrescriptionUsageEventGetPayload<{
+      select: { amounts: true; eventType: true; occurredAt: true }
+    }>
+  >
+  profileAuditEvents: Array<
+    Prisma.ServiceCommerceStoreAuditEventGetPayload<{
+      select: { effectiveAt: true; type: true }
+    }>
+  >
+  connectionAuditEvents: Array<
+    Prisma.WhatsAppConnectionAuditEventGetPayload<{
+      select: { effectiveAt: true; type: true }
+    }>
+  >
+  routingAlerts: Array<
+    Prisma.WhatsAppRoutingAlertGetPayload<{
+      select: { createdAt: true; resolvedAt: true }
+    }>
+  >
+}
+
+/** Every list the statement returns; the check below keeps it complete. */
+const LIST_KEYS = [
+  "stores",
+  "serviceRequests",
+  "prescriptionReceived",
+  "inquiries",
+  "quoteVersions",
+  "payments",
+  "bookings",
+  "pickupEvents",
+  "deliveryEvents",
+  "serviceEvents",
+  "sourceLinks",
+  "attestations",
+  "pricePromotions",
+  "quoteOverrideLines",
+  "graduationEvents",
+  "mediaEvents",
+  "attachments",
+  "observations",
+  "notificationAttempts",
+  "notificationReceipts",
+  "legacyNotificationAttempts",
+  "actionRecoveries",
+  "usage",
+  "prescriptionUsage",
+  "profileAuditEvents",
+  "connectionAuditEvents",
+  "routingAlerts",
+] as const satisfies ReadonlyArray<keyof ServiceCommerceReportRows>
+
+type UncheckedList = Exclude<
+  keyof ServiceCommerceReportRows,
+  "tenant" | (typeof LIST_KEYS)[number]
+>
+/** Fails to compile if a list is added to the type but not to LIST_KEYS. */
+const listKeysComplete: [UncheckedList] extends [never] ? true : never = true
+
+/**
+ * Shape guard at the JSON boundary: the tenant row and every source list are
+ * present. Column values are what Postgres stored (enum columns can only hold
+ * their enum values), and their types are Prisma's payload types above.
+ */
+function isReportRows(value: unknown): value is ServiceCommerceReportRows {
+  if (!listKeysComplete || !value || typeof value !== "object") return false
+  const rows = value as Row
+  const tenant = rows.tenant as Row | null | undefined
+  return (
+    typeof tenant?.currencyCode === "string" &&
+    LIST_KEYS.every((key) => Array.isArray(rows[key]))
+  )
 }
 
 const TIMESTAMP = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?$/
@@ -199,5 +343,8 @@ export async function readServiceCommerceReportRows(
   `)
   const row = rows[0] ?? {}
   if (!row.tenant) throw new Error("No Tenant found")
-  return reviveDates(row) as ServiceCommerceReportRows
+  const revived = reviveDates(row)
+  if (!isReportRows(revived))
+    throw new Error("Service Commerce report rows have an unexpected shape")
+  return revived
 }
