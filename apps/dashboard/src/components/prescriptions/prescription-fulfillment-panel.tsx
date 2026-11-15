@@ -101,8 +101,8 @@ export function PrescriptionFulfillmentPanel({ storeId }: { storeId: string }) {
   }
 
   return (
-    <details className="border border-border bg-card">
-      <summary className="cursor-pointer px-5 py-4 font-medium">
+    <details className="overflow-hidden rounded-[var(--ui-radius-surface)] border border-border bg-card">
+      <summary className="flex min-h-11 cursor-pointer items-center px-5 py-3 font-medium">
         Pickup and delivery operations
       </summary>
       <div className="grid gap-6 border-t border-border p-5 xl:grid-cols-2">

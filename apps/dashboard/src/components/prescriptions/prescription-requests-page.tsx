@@ -4,8 +4,10 @@ import { ScrollableContent } from "@/components/scrollable-content"
 import { PrescriptionDataTable } from "@/components/tables/prescriptions/data-table"
 
 import { WorkspaceError } from "@/components/dashboard/workspace-error"
+import { TableToolbarSlotProvider } from "@/components/tables/core"
 import { PrescriptionTableSkeleton } from "@/components/tables/prescriptions/skeleton"
 import { useDirectoryView } from "@/hooks/use-directory-view"
+import { useMobileOverlay } from "@/hooks/use-mobile-overlay"
 import type { DirectoryViewSettings } from "@/utils/directory-view-settings"
 import type { TableSettings } from "@/utils/table-settings"
 import { Alert, AlertDescription, Button } from "@ewatrade/ui"
@@ -34,44 +36,49 @@ export function PrescriptionRequestsPage({
       queryKey: "prescriptionView",
       initialSettings: initialViewSettings,
     })
+  // Phones always get the short list.
+  const phone = useMobileOverlay()
+  const shownView = phone ? "list" : view
   return (
     <PrescriptionWorkspaceGate canManageSetup={canManageSetup} store={store}>
-      <ScrollableContent>
-        <div className="flex min-w-0 flex-1 flex-col gap-4 pt-4 pb-24 sm:pb-8">
-          <PrescriptionHeader
-            canManageSetup={canManageSetup}
-            storeId={store.id}
-            view={view}
-            onViewChange={setView}
-          />
-          {persistenceError ? (
-            <Alert appearance="dashboard" role="alert">
-              <AlertDescription>{persistenceError}</AlertDescription>
-              <Button variant="outline" size="sm" onClick={retryPersistence}>
-                Retry saving view
-              </Button>
-            </Alert>
-          ) : null}
-          <ErrorBoundary errorComponent={WorkspaceError}>
-            <Suspense
-              fallback={
-                <PrescriptionTableSkeleton
+      <TableToolbarSlotProvider>
+        <ScrollableContent>
+          <div className="flex min-w-0 flex-1 flex-col gap-4 pt-4 pb-24 sm:pb-8">
+            <PrescriptionHeader
+              canManageSetup={canManageSetup}
+              storeId={store.id}
+              view={view}
+              onViewChange={setView}
+            />
+            {persistenceError ? (
+              <Alert appearance="dashboard" role="alert">
+                <AlertDescription>{persistenceError}</AlertDescription>
+                <Button variant="outline" size="sm" onClick={retryPersistence}>
+                  Retry saving view
+                </Button>
+              </Alert>
+            ) : null}
+            <ErrorBoundary errorComponent={WorkspaceError}>
+              <Suspense
+                fallback={
+                  <PrescriptionTableSkeleton
+                    initialSettings={initialSettings}
+                    view={shownView}
+                  />
+                }
+              >
+                <PrescriptionDataTable
+                  storeId={store.id}
+                  timeZone={timeZone}
                   initialSettings={initialSettings}
-                  view={view}
+                  view={shownView}
                 />
-              }
-            >
-              <PrescriptionDataTable
-                storeId={store.id}
-                timeZone={timeZone}
-                initialSettings={initialSettings}
-                view={view}
-              />
-            </Suspense>
-          </ErrorBoundary>
-          <PrescriptionFulfillmentPanel storeId={store.id} />
-        </div>
-      </ScrollableContent>
+              </Suspense>
+            </ErrorBoundary>
+            <PrescriptionFulfillmentPanel storeId={store.id} />
+          </div>
+        </ScrollableContent>
+      </TableToolbarSlotProvider>
     </PrescriptionWorkspaceGate>
   )
 }

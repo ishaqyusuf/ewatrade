@@ -1,6 +1,7 @@
 "use client"
 import { FormFeedback } from "@/components/forms/form-feedback"
 
+import { TableToolbarSlot } from "@/components/tables/core"
 import { ViewSwitcher, directoryViewOptions } from "@/components/view-switcher"
 import { useTRPC } from "@/trpc/client"
 import type { DirectoryView } from "@/utils/directory-view-settings"
@@ -48,7 +49,8 @@ export function PrescriptionHeader({
           <PrescriptionSearchFilter storeId={storeId} />
         </div>
         <div className="flex min-w-0 items-center gap-2 sm:ml-auto">
-          <div className="max-md:hidden">
+          <div className="flex items-center gap-2 max-md:hidden">
+            <TableToolbarSlot />
             <ViewSwitcher
               label="Prescription view"
               value={view}

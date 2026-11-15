@@ -1,11 +1,12 @@
 "use client"
+import { formatWhen } from "@/components/service-work/service-utils"
 
 import {
   DirectoryCollection,
   DirectoryRecord,
-  DirectoryToolbar,
   HorizontalPagination,
   SelectionBar,
+  TableToolbarPortal,
   VirtualRow,
 } from "@/components/tables/core"
 import { useInfiniteScroll } from "@/hooks/use-infinite-scroll"
@@ -20,12 +21,11 @@ import { Button, Table, TableBody } from "@ewatrade/ui"
 import type { Table as ReactTable } from "@tanstack/react-table"
 import { useVirtualizer } from "@tanstack/react-virtual"
 import type { Virtualizer } from "@tanstack/react-virtual"
-import { type CSSProperties, type ReactNode, useMemo } from "react"
+import type { CSSProperties, ReactNode } from "react"
 import { PrescriptionActionsMenu } from "./actions-menu"
 import {
   type PrescriptionQueueRow,
   PrescriptionStatusBadge,
-  createPrescriptionDateFormatter,
   prescriptionLabel,
 } from "./columns"
 import {
@@ -84,10 +84,6 @@ export function PrescriptionTableView({
   const { sensors, handleDragEnd, sortableColumnIds } = useTableDnd(table, {
     fixedColumnIds: ["select", "reference"],
   })
-  const dateFormatter = useMemo(
-    () => createPrescriptionDateFormatter(timeZone),
-    [timeZone],
-  )
   const { getStickyStyle, getStickyClassName, isVisible } = useStickyColumns({
     table,
     stickyColumns: STICKY_COLUMNS,
@@ -139,18 +135,11 @@ export function PrescriptionTableView({
         </div>
       ) : null}
 
-      <DirectoryToolbar
-        table={table}
-        view={view}
-        selectAllLabel="Select all loaded prescription requests"
-        summary={`${rows.length} requests loaded${
-          sort
-            ? ` · sorted by ${sort[0]} ${sort[1] === "asc" ? "ascending" : "descending"}`
-            : " · most recently received first"
-        }`}
-      >
-        {view === "table" ? <PrescriptionTableSettings table={table} /> : null}
-      </DirectoryToolbar>
+      {view === "table" ? (
+        <TableToolbarPortal>
+          <PrescriptionTableSettings table={table} />
+        </TableToolbarPortal>
+      ) : null}
 
       {persistenceError ? (
         <div className="flex items-center justify-between gap-3" role="alert">
@@ -162,7 +151,41 @@ export function PrescriptionTableView({
       ) : null}
 
       {!rows.length ? (
-        <div className="border-y border-border py-10">{emptyState}</div>
+        <div className="rounded-[var(--ui-radius-surface)] border border-border bg-card py-10">
+          {emptyState}
+        </div>
+      ) : view === "list" ? (
+        <ul
+          aria-label="Prescription requests"
+          className="divide-y divide-border overflow-hidden rounded-[var(--ui-radius-surface)] border border-border bg-card"
+        >
+          {rows.map((row) => {
+            const request = row.original
+            return (
+              <li key={row.id}>
+                <button
+                  type="button"
+                  onClick={() => onRowOpen(request.id, request.status)}
+                  className="grid w-full gap-1 px-4 py-3 text-left hover:bg-[var(--hover)]"
+                >
+                  <span className="flex min-w-0 items-center justify-between gap-3">
+                    <span className="truncate text-base font-medium tabular-nums">
+                      {request.reference}
+                    </span>
+                    <PrescriptionStatusBadge status={request.status} />
+                  </span>
+                  <span className="truncate text-sm text-muted-foreground">
+                    {[
+                      prescriptionLabel(request.source),
+                      prescriptionLabel(request.fulfilmentPreference),
+                      formatWhen(request.createdAt, timeZone),
+                    ].join(" · ")}
+                  </span>
+                </button>
+              </li>
+            )
+          })}
+        </ul>
       ) : view !== "table" ? (
         <DirectoryCollection view={view} label="Prescription request">
           {rows.map((row) => {
@@ -191,7 +214,7 @@ export function PrescriptionTableView({
                     label: "Received",
                     value: (
                       <time dateTime={request.createdAt.toISOString()}>
-                        {dateFormatter.format(request.createdAt)}
+                        {formatWhen(request.createdAt, timeZone)}
                       </time>
                     ),
                   },
@@ -210,7 +233,7 @@ export function PrescriptionTableView({
       ) : (
         <section
           ref={tableScroll.setContainerRef}
-          className="max-h-[560px] overflow-auto overscroll-contain border border-border"
+          className="max-h-[640px] overflow-auto overscroll-contain rounded-[var(--ui-radius-surface)] border border-border bg-card"
           aria-label="Prescription request queue"
         >
           <DndTable

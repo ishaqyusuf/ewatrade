@@ -1,3 +1,4 @@
+import { formatWhen } from "@/components/service-work/service-utils"
 import { selectColumn } from "@/components/tables/core"
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
 import type { PrescriptionRequestStatus } from "@ewatrade/prescriptions/schemas"
@@ -8,11 +9,41 @@ import { PrescriptionActionsMenu } from "./actions-menu"
 export type PrescriptionQueueRow =
   RouterOutputs["prescriptions"]["queue"]["data"][number]
 
+/** Plain words for prescription statuses, channels and fulfilment. */
+const PLAIN_LABELS: Record<string, string> = {
+  attendant_verification: "Attendant check",
+  converted: "Order made",
+  declined: "Declined",
+  expired: "Expired",
+  media_review: "Check photo",
+  needs_clarification: "Asked customer",
+  needs_clearer_media: "Needs clearer photo",
+  pharmacist_review: "Pharmacist check",
+  quoted: "Price sent",
+  ready_to_quote: "Ready to price",
+  received: "New",
+  transcribing: "Typing up",
+  withdrawn: "Withdrawn",
+  staff_phone: "Phone",
+  staff_walk_in: "Walk-in",
+  web: "Website",
+  whatsapp: "WhatsApp",
+  delivery: "Delivery",
+  pickup: "Pickup",
+  unspecified: "Not chosen",
+}
+
 export function prescriptionLabel(value: string) {
-  return value
-    .split("_")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ")
+  const key = value.toLowerCase()
+  return (
+    PLAIN_LABELS[key] ??
+    key
+      .split("_")
+      .map((word, index) =>
+        index === 0 ? word.charAt(0).toUpperCase() + word.slice(1) : word,
+      )
+      .join(" ")
+  )
 }
 
 const statusTone: Record<string, string> = {
@@ -48,8 +79,6 @@ export function createPrescriptionColumns(
   timeZone: string,
   open: (id: string, status: PrescriptionRequestStatus) => void,
 ): ColumnDef<PrescriptionQueueRow>[] {
-  const dateFormatter = createPrescriptionDateFormatter(timeZone)
-
   return [
     selectColumn((request) => `prescription ${request.reference}`),
     {
@@ -135,7 +164,7 @@ export function createPrescriptionColumns(
       },
       cell: ({ row }) => (
         <time dateTime={row.original.createdAt.toISOString()}>
-          {dateFormatter.format(row.original.createdAt)}
+          {formatWhen(row.original.createdAt, timeZone)}
         </time>
       ),
     },
