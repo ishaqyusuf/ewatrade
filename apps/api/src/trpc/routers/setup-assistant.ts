@@ -110,6 +110,9 @@ function setupFollowUpState(entities: DraftEntities) {
   }
 }
 
+/** `quiet`: open without the server greeting; the app shows its own intro. */
+const setupOpenInput = z.object({ quiet: z.boolean().optional() }).optional()
+
 export const setupAssistantRouter = createTRPCRouter({
   attachments: setupAssistantAttachmentsRouter,
 
@@ -237,56 +240,68 @@ export const setupAssistantRouter = createTRPCRouter({
       }
     }),
 
-  start: protectedProcedure.mutation(async ({ ctx }) => {
-    const scope = requireSetupAssistantScope(ctx)
-    const existing = await findSetupConversation(ctx.db, scope)
-    if (existing) return { conversationId: existing.id }
-    // The chat opens straight into the guided setup: no offer step.
-    const opening = await composeSetupOpening(ctx.db, scope)
-    const conversation = await createSetupConversation(
-      ctx.db,
-      scope,
-      [
-        {
-          id: newAssistantMessageId(),
-          role: "assistant",
-          parts: [{ type: "text", text: opening }],
-        },
-      ],
-      { status: "ACTIVE" },
-    )
-    return { conversationId: conversation.id }
-  }),
+  start: protectedProcedure
+    .input(setupOpenInput)
+    .mutation(async ({ ctx, input }) => {
+      const scope = requireSetupAssistantScope(ctx)
+      const existing = await findSetupConversation(ctx.db, scope)
+      if (existing) return { conversationId: existing.id }
+      // The chat opens straight into the guided setup: no offer step. A quiet
+      // open leaves the greeting to the caller (Add item's own intro).
+      const opening = input?.quiet
+        ? null
+        : await composeSetupOpening(ctx.db, scope)
+      const conversation = await createSetupConversation(
+        ctx.db,
+        scope,
+        opening
+          ? [
+              {
+                id: newAssistantMessageId(),
+                role: "assistant",
+                parts: [{ type: "text", text: opening }],
+              },
+            ]
+          : [],
+        { status: "ACTIVE" },
+      )
+      return { conversationId: conversation.id }
+    }),
 
-  begin: protectedProcedure.mutation(async ({ ctx }) => {
-    const scope = requireSetupAssistantScope(ctx)
-    const { conversation, draftId } = await requireDraft(ctx.db, scope)
-    if (conversation.status === "ACTIVE") return { status: "ACTIVE" as const }
-    // Older conversations still OFFERED get the guided opening; finished or
-    // skipped ones come back with a tailored welcome.
-    const text =
-      conversation.status === "OFFERED"
-        ? await composeSetupOpening(ctx.db, scope)
-        : await composeSetupWelcome(ctx.db, scope, draftId)
-    const changed = await setAssistantConversationStatus(ctx.db, {
-      conversationId: conversation.id,
-      from: ["OFFERED", "SKIPPED", "COMPLETED"],
-      to: "ACTIVE",
-      appendMessages: [
-        {
-          id: newAssistantMessageId(),
-          role: "assistant",
-          parts: [{ type: "text", text }],
-        },
-      ],
-    })
-    if (!changed)
-      throw new TRPCError({
-        code: "CONFLICT",
-        message: "This setup conversation has already finished.",
+  begin: protectedProcedure
+    .input(setupOpenInput)
+    .mutation(async ({ ctx, input }) => {
+      const scope = requireSetupAssistantScope(ctx)
+      const { conversation, draftId } = await requireDraft(ctx.db, scope)
+      if (conversation.status === "ACTIVE") return { status: "ACTIVE" as const }
+      // Older conversations still OFFERED get the guided opening; finished or
+      // skipped ones come back with a tailored welcome. A quiet open adds none.
+      const text = input?.quiet
+        ? null
+        : conversation.status === "OFFERED"
+          ? await composeSetupOpening(ctx.db, scope)
+          : await composeSetupWelcome(ctx.db, scope, draftId)
+      const changed = await setAssistantConversationStatus(ctx.db, {
+        conversationId: conversation.id,
+        from: ["OFFERED", "SKIPPED", "COMPLETED"],
+        to: "ACTIVE",
+        appendMessages: text
+          ? [
+              {
+                id: newAssistantMessageId(),
+                role: "assistant",
+                parts: [{ type: "text", text }],
+              },
+            ]
+          : [],
       })
-    return { status: "ACTIVE" as const }
-  }),
+      if (!changed)
+        throw new TRPCError({
+          code: "CONFLICT",
+          message: "This setup conversation has already finished.",
+        })
+      return { status: "ACTIVE" as const }
+    }),
 
   /**
    * A new visit (not a reload): after a quiet gap the chat greets the owner

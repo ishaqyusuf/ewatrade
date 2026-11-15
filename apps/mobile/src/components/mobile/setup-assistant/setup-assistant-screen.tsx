@@ -5,7 +5,7 @@ import { View } from "@/components/ui/view"
 import { useAuthContext } from "@/hooks/use-auth"
 import { BottomSheetScrollView } from "@gorhom/bottom-sheet"
 import { useLocalSearchParams, useRouter } from "expo-router"
-import { useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { FlatList } from "react-native"
 import { KeyboardAvoidingView } from "react-native-keyboard-controller"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
@@ -23,6 +23,12 @@ import { HeroCard } from "../green-till/hero-card"
 import { StatusBanner } from "../status-banner"
 import { SetupAssistantQa } from "./setup-assistant-qa"
 import {
+  SetupTypingDots,
+  setupIntroKind,
+  setupIntroMessages,
+  useSetupIntroReveal,
+} from "./setup-intro"
+import {
   type SetupEntity,
   setupAreas,
   setupCommitKeys,
@@ -37,9 +43,10 @@ import { useSetupAssistant } from "./use-setup-assistant"
 
 export function SetupAssistantScreen() {
   const auth = useAuthContext()
-  const { qaState, conversationId } = useLocalSearchParams<{
+  const { qaState, conversationId, intro } = useLocalSearchParams<{
     qaState?: string
     conversationId?: string | string[]
+    intro?: string
   }>()
   const requested = assistantRouteConversation(conversationId)
   if (requested.kind === "invalid")
@@ -88,6 +95,7 @@ export function SetupAssistantScreen() {
       expectedConversationId={
         requested.kind === "saved" ? requested.conversationId : undefined
       }
+      intro={requested.kind === "saved" ? null : setupIntroKind(intro)}
     />
   )
 }
@@ -113,7 +121,12 @@ export function SetupUnavailable({
 }
 function SetupAssistantLive({
   expectedConversationId,
-}: { expectedConversationId?: string }) {
+  intro,
+}: {
+  expectedConversationId?: string
+  /** Opened from Add item: greet with that kind's intro, not the server's. */
+  intro: ReturnType<typeof setupIntroKind>
+}) {
   const vm = useSetupAssistant(expectedConversationId)
   const router = useRouter()
   const tray = useModal()
@@ -150,6 +163,64 @@ function SetupAssistantLive({
           : !vm.state.isPending && !vm.data
             ? "The setup assistant is not available for this Store."
             : null
+  // Add item's intro: open the chat quietly, then "type" the greeting in.
+  const autoOpened = useRef(false)
+  useEffect(() => {
+    if (
+      !intro ||
+      autoOpened.current ||
+      !vm.data ||
+      active ||
+      unavailable ||
+      vm.offline ||
+      vm.pending ||
+      vm.busy
+    )
+      return
+    autoOpened.current = true
+    void vm.open({ quiet: true })
+  }, [
+    intro,
+    vm.data,
+    active,
+    unavailable,
+    vm.offline,
+    vm.pending,
+    vm.busy,
+    vm.open,
+  ])
+  const introTexts = useMemo(
+    () =>
+      intro
+        ? setupIntroMessages(intro, {
+            currencyCode: vm.data?.currencyCode,
+            name: vm.auth.profile?.name,
+          })
+        : [],
+    [intro, vm.data?.currencyCode, vm.auth.profile?.name],
+  )
+  const introReady = !!intro && !!vm.data && !unavailable
+  const reveal = useSetupIntroReveal(introTexts.length, introReady)
+  // The intro sits after the messages that were there when it started.
+  const introAt = useRef<number | null>(null)
+  if (introReady && introAt.current === null) introAt.current = thread.length
+  type Row =
+    | { kind: "message"; message: (typeof thread)[number]; index: number }
+    | { kind: "intro"; id: string; text: string }
+  const rows: Row[] = thread.map((message, index) => ({
+    kind: "message",
+    message,
+    index,
+  }))
+  rows.splice(
+    Math.min(introAt.current ?? thread.length, thread.length),
+    0,
+    ...introTexts.slice(0, reveal.shown).map((text, index) => ({
+      kind: "intro" as const,
+      id: `intro-${index}`,
+      text,
+    })),
+  )
   const close = async () => {
     if (vm.offline || !vm.data?.conversation) {
       router.back()
@@ -196,9 +267,11 @@ function SetupAssistantLive({
             <FlatList
               ref={list}
               className="flex-1"
-              data={thread}
+              data={rows}
               contentContainerClassName="gap-4 px-[18px] py-4"
-              keyExtractor={(m) => m.id}
+              keyExtractor={(row) =>
+                row.kind === "intro" ? row.id : row.message.id
+              }
               keyboardShouldPersistTaps="handled"
               keyboardDismissMode="interactive"
               onScroll={(e) => {
@@ -247,7 +320,8 @@ function SetupAssistantLive({
                       tone="warning"
                     />
                   ) : null}
-                  {!active ? (
+                  {!active &&
+                  (!intro || (autoOpened.current && !vm.pending)) ? (
                     <HeroCard
                       title={
                         vm.data?.conversation
@@ -270,17 +344,26 @@ function SetupAssistantLive({
                   ) : null}
                 </View>
               }
-              renderItem={({ item, index }) => (
-                <View className="gap-4">
-                  <AssistantDayMarker times={times} ids={ids} index={index} />
-                  <AssistantBubble
-                    text={setupPlainText(item.parts)}
-                    user={item.role === "user"}
-                  />
-                </View>
-              )}
+              renderItem={({ item }) =>
+                item.kind === "intro" ? (
+                  <AssistantBubble text={item.text} />
+                ) : (
+                  <View className="gap-4">
+                    <AssistantDayMarker
+                      times={times}
+                      ids={ids}
+                      index={item.index}
+                    />
+                    <AssistantBubble
+                      text={setupPlainText(item.message.parts)}
+                      user={item.message.role === "user"}
+                    />
+                  </View>
+                )
+              }
               ListFooterComponent={
                 <View className="gap-3">
+                  {reveal.typing ? <SetupTypingDots /> : null}
                   {vm.busy ? <AssistantThinking /> : null}
                   {vm.error ? (
                     <StatusBanner
@@ -304,6 +387,13 @@ function SetupAssistantLive({
               onSend={vm.send}
               onStop={() => void vm.chat.stop()}
               busy={vm.busy}
+              placeholder={
+                intro === "service"
+                  ? "Describe your service…"
+                  : intro === "product"
+                    ? "Describe your product…"
+                    : undefined
+              }
               disabled={disabled || !active || !!vm.error?.allowance}
               reason={
                 vm.offline

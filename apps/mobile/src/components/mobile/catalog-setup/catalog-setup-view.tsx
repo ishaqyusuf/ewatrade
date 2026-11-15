@@ -411,6 +411,7 @@ export function CatalogSetupView({ model }: { model: CatalogSetupModel }) {
               onUndo={undoFill}
             />
 
+            <SetupAssistantEntry intro={kind} />
             <View className="-mb-2 flex-row items-end justify-between gap-3 px-1">
               <Text
                 accessibilityRole="header"

@@ -396,16 +396,18 @@ export function useSetupAssistant(expectedConversationId?: string) {
       if (mounted.current) setPending(null)
     }
   }
-  const open = () =>
+  /** `quiet` skips the server greeting when the screen shows its own intro. */
+  const open = (options?: { quiet?: boolean }) =>
     act("Starting…", async () => {
       if (expectedConversationId !== undefined) {
         return
       }
+      const input = options?.quiet ? { quiet: true } : undefined
       if (!data?.conversation) {
-        await start.mutateAsync(undefined)
+        await start.mutateAsync(input)
         if (!canWork()) return
       }
-      await begin.mutateAsync(undefined)
+      await begin.mutateAsync(input)
     })
   const setEntity = (key: string, next: "CONFIRMED" | "PROPOSED" | "SKIPPED") =>
     act("Saving…", () =>
