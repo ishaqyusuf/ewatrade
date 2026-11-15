@@ -568,7 +568,7 @@ function OrderRequestDetail({
       title={data.customerName}
       description={data.reference}
       header={
-        <Badge className="w-fit" className={stageTone(data.stage)}>
+        <Badge className={cn("w-fit", stageTone(data.stage))}>
           {stageLabels[data.stage] ?? data.stage}
         </Badge>
       }
@@ -1393,7 +1393,7 @@ function ServiceRequestDetail({ item }: { item: ServiceItem }) {
       title={request.customerName}
       description={item.reference}
       header={
-        <Badge className="w-fit" className={stageTone(item.stage)}>
+        <Badge className={cn("w-fit", stageTone(item.stage))}>
           {stageLabels[item.stage] ?? item.stage}
         </Badge>
       }
