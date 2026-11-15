@@ -38,6 +38,7 @@ import {
   TabsTrigger,
   cn,
 } from "@ewatrade/ui"
+import { PrescriptionReportGate } from "./prescription-report-gate"
 
 import {
   type PrescriptionReportTab,
@@ -120,6 +121,14 @@ export function PrescriptionReport({ stores }: { stores: StoreOption[] }) {
 
         {report.isPending ? (
           <PrescriptionReportLoading />
+        ) : report.isError &&
+          (report.error.data?.code === "FORBIDDEN" ||
+            report.error.data?.code === "PRECONDITION_FAILED") ? (
+          <PrescriptionReportGate
+            reason={
+              report.error.data?.code === "FORBIDDEN" ? "role" : "unavailable"
+            }
+          />
         ) : report.isError ? (
           <ReportError
             error={report.error}

@@ -2,11 +2,13 @@ import {
   PrescriptionReport,
   PrescriptionReportSkeleton,
 } from "@/components/prescriptions/prescription-report"
+import { PrescriptionReportGate } from "@/components/prescriptions/prescription-report-gate"
 import { loadPrescriptionReportParams } from "@/hooks/use-prescription-report-params"
 import { canSeePrescriptionReports } from "@/lib/sales-operations"
 import { getServerSession } from "@/lib/session"
 import { getActiveTenant } from "@/lib/tenant"
 import { HydrateClient, prefetch, trpc } from "@/trpc/server"
+import { findBusinessProfile } from "@ewatrade/utils"
 import type { Metadata } from "next"
 import { redirect } from "next/navigation"
 import { Suspense } from "react"
@@ -25,6 +27,12 @@ export default async function Page({
   if (!canSeePrescriptionReports(ctx.membership.role)) redirect("/")
   const store = ctx.activeStore ?? ctx.stores[0]
   if (!store) redirect("/setup")
+  // A business that isn't a pharmacy gets the setup card, not an empty report.
+  if (
+    findBusinessProfile(store.businessOnboarding?.businessProfileKey)?.key !==
+    "pharmacy-health-retail"
+  )
+    return <PrescriptionReportGate reason="setup" />
   const reportParams = await loadPrescriptionReportParams(searchParams)
   const { from, to } = reportParams.range
   const reportStoreId = reportParams.storeId
