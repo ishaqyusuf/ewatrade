@@ -109,3 +109,23 @@ export async function getStorefrontSummary(input: {
     domains: domains.map((domain) => ({ ...domain, status: domain.status })),
   }
 }
+
+/**
+ * Whether customers can visit the store now (same rule as the public loader
+ * and the Online store page). One SQL statement; Overview's store strip.
+ */
+export async function isStorefrontLive(tenantId: string) {
+  const site = await prisma.site.findFirst({
+    where: { tenantId, isPrimary: true },
+    select: {
+      status: true,
+      activeReleaseId: true,
+      store: { select: { status: true } },
+    },
+  })
+  return (
+    site?.status === "PUBLISHED" &&
+    site.activeReleaseId !== null &&
+    site.store.status === "ACTIVE"
+  )
+}

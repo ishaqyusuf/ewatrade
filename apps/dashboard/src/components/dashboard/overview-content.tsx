@@ -20,6 +20,7 @@ import {
   getOverviewAccess,
 } from "@/lib/dashboard-overview"
 import { canAccessDashboardPath } from "@/lib/navigation"
+import { isStorefrontLive } from "@/lib/storefront-manage"
 import type { TenantContext, TenantStore } from "@/lib/tenant"
 import { getDashboardFeatureAvailability } from "@/lib/workspace-feature-availability"
 import { prisma } from "@ewatrade/db"
@@ -105,7 +106,14 @@ export async function OverviewContent({
           allowedStoreIds,
         })
       : Promise.resolve(undefined)
-  const [scope, availability] = await Promise.all([scopeRead, availabilityRead])
+  // The store strip offers set-up until customers can visit (1 SQL).
+  const liveRead =
+    store && access.owner ? isStorefrontLive(tenant.id) : Promise.resolve(false)
+  const [scope, availability, storeLive] = await Promise.all([
+    scopeRead,
+    availabilityRead,
+    liveRead,
+  ])
   // Matches the shell's catalog sheet and assistant launcher gating.
   const navigationContext = {
     staffAccessMode: membership.staffAccessMode,
@@ -209,6 +217,7 @@ export async function OverviewContent({
         tenant={{ id: tenant.id, name: tenant.name, slug: tenant.slug }}
         hasCatalogItems={availability?.hasCatalogItems ?? false}
         itemLimit={tenant.storefrontItemLimit}
+        live={storeLive}
       />
     ) : null
   const businesses =

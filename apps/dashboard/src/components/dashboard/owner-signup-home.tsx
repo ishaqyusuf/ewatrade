@@ -86,10 +86,13 @@ export function OnlineStoreStrip({
   tenant,
   hasCatalogItems,
   itemLimit,
+  live,
 }: {
   tenant: { id: string; name: string; slug: string }
   hasCatalogItems: boolean
   itemLimit: number | null
+  /** Customers can visit (published design); before that, offer set-up. */
+  live: boolean
 }) {
   const intent = useGrowthIntent()
   const canShare = useCanShare()
@@ -108,36 +111,46 @@ export function OnlineStoreStrip({
           <h2 id="online-store-title" className="font-semibold">
             Online store
           </h2>
-          <a
-            href={url}
-            target="_blank"
-            rel="noreferrer"
-            className="block truncate text-sm text-[var(--link)] hover:underline"
-          >
-            {url.replace(/^https:\/\//, "")}
-          </a>
+          {live ? (
+            <a
+              href={url}
+              target="_blank"
+              rel="noreferrer"
+              className="block truncate text-sm text-[var(--link)] hover:underline"
+            >
+              {url.replace(/^https:\/\//, "")}
+            </a>
+          ) : (
+            <p className="text-sm text-muted-foreground">Not online yet</p>
+          )}
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {canShare ? (
+        {live ? (
+          <div className="flex flex-wrap items-center gap-2">
+            {canShare ? (
+              <Button
+                variant="outline"
+                onClick={() => void share(tenant.name, tenant.slug, true)}
+              >
+                <HugeiconsIcon icon={Share08Icon} className="size-4" />
+                Share
+              </Button>
+            ) : null}
             <Button
               variant="outline"
-              onClick={() => void share(tenant.name, tenant.slug, true)}
+              onClick={() => void share(tenant.name, tenant.slug, false)}
             >
-              <HugeiconsIcon icon={Share08Icon} className="size-4" />
-              Share
+              <HugeiconsIcon
+                icon={copied === tenant.slug ? Tick02Icon : Copy01Icon}
+                className="size-4"
+              />
+              {copied === tenant.slug ? "Copied" : "Copy link"}
             </Button>
-          ) : null}
-          <Button
-            variant="outline"
-            onClick={() => void share(tenant.name, tenant.slug, false)}
-          >
-            <HugeiconsIcon
-              icon={copied === tenant.slug ? Tick02Icon : Copy01Icon}
-              className="size-4"
-            />
-            {copied === tenant.slug ? "Copied" : "Copy link"}
+          </div>
+        ) : (
+          <Button variant="outline" render={<Link href="/storefront" />}>
+            Set up your online store
           </Button>
-        </div>
+        )}
       </div>
       {itemLimit !== null || !hasCatalogItems ? (
         <p className="flex flex-wrap gap-x-3 gap-y-1 text-sm text-muted-foreground">
