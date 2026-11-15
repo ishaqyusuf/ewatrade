@@ -30,7 +30,7 @@ function utcDate(value: string) {
 }
 
 const segment =
-  "h-11 min-w-0 rounded-none border-0 px-2 font-normal shadow-none sm:px-4 aria-pressed:bg-primary aria-pressed:font-medium aria-pressed:text-primary-foreground"
+  "h-11 min-w-0 rounded-none border-0 px-1 font-normal shadow-none max-sm:text-sm sm:px-4 aria-pressed:bg-primary aria-pressed:font-medium aria-pressed:text-primary-foreground"
 
 /**
  * Report period buttons: Today, 7, 30 and 90 days, then a calendar button for
@@ -62,7 +62,7 @@ export function ReportDateControl({
     <div className="grid w-full min-w-0 gap-1.5 sm:w-fit">
       <fieldset
         aria-label="Period"
-        className="m-0 grid w-full min-w-0 grid-cols-5 divide-x divide-border overflow-hidden rounded-[var(--ui-radius-control)] border border-[var(--ui-control-border)] bg-background p-0 sm:flex sm:w-fit"
+        className="m-0 grid w-full min-w-0 grid-cols-[repeat(4,minmax(0,1fr))_3rem] divide-x divide-border overflow-hidden rounded-[var(--ui-radius-control)] border border-[var(--ui-control-border)] bg-background p-0 sm:flex sm:w-fit"
       >
         {REPORT_RANGE_PRESETS.map((option) => (
           <Button
