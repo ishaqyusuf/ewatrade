@@ -336,45 +336,6 @@ export function CatalogSetupView({ model }: { model: CatalogSetupModel }) {
             pointerEvents={model.locked ? "none" : "auto"}
             className="gap-5 px-4 pt-4 pb-[var(--setup-main-bottom)]"
           >
-            {kind ? (
-              <Classic.CatalogLivePreview
-                currencyCode={model.currencyCode}
-                kind={kind}
-                label={
-                  kind === "product" && model.usage === "RETURNABLE"
-                    ? "Returnable"
-                    : undefined
-                }
-                name={model.name}
-                price={model.price}
-                quoteRequired={model.defaultQuoteRequired}
-                returnable={kind === "product" && model.usage === "RETURNABLE"}
-                unitName={model.unitName}
-              />
-            ) : null}
-            <Pressable
-              accessibilityHint="Apply a common setup pattern to this item."
-              accessibilityLabel="Choose a quick setup"
-              accessibilityRole="button"
-              className="min-h-11 flex-row items-center gap-3 rounded-2xl border border-border bg-card px-4 active:bg-accent"
-              haptic
-              onPress={() => setHelperPickerOpen(true)}
-              transition
-            >
-              <Icon className="size-sm text-primary" name="LayoutGrid" />
-              <Text className="min-w-0 flex-1 text-sm font-bold text-foreground">
-                {selectedHelper
-                  ? `Quick setup: ${selectedHelper.title}`
-                  : "Quick setup"}
-              </Text>
-              {!selectedHelper ? (
-                <Text className="text-xs font-bold text-primary">Optional</Text>
-              ) : null}
-              <Icon
-                className="size-sm text-muted-foreground"
-                name="ChevronRight"
-              />
-            </Pressable>
             {model.storesLoading ? (
               <StatusBanner
                 title="Loading current Store"
@@ -450,10 +411,43 @@ export function CatalogSetupView({ model }: { model: CatalogSetupModel }) {
               onUndo={undoFill}
             />
 
+            <View className="-mb-2 flex-row items-end justify-between gap-3 px-1">
+              <Text
+                accessibilityRole="header"
+                className="min-w-0 shrink text-base font-extrabold [-rn-line-height:22] text-foreground"
+              >
+                {kind === "product" ? "Item" : "Service"}
+              </Text>
+              <Pressable
+                accessibilityHint="Apply a common setup pattern to this item."
+                accessibilityLabel="Choose a quick setup"
+                accessibilityRole="button"
+                className="min-h-9 min-w-0 shrink flex-row items-center gap-1.5"
+                haptic
+                hitSlop={8}
+                noRipple
+                onPress={() => setHelperPickerOpen(true)}
+              >
+                <Icon className="size-[15px] text-primary" name="LayoutGrid" />
+                <Text
+                  className="min-w-0 shrink text-xs font-bold [-rn-line-height:18] text-primary"
+                  numberOfLines={1}
+                >
+                  {selectedHelper
+                    ? `Quick setup: ${selectedHelper.title}`
+                    : "Quick setup"}
+                </Text>
+                <Icon
+                  className="size-[14px] text-primary"
+                  name="ChevronRight"
+                />
+              </Pressable>
+            </View>
             <CatalogSetupEssentials
               model={model}
               focused
               onOpenCategory={() => openEditor("category")}
+              onOpenImages={() => openEditor("images")}
             />
             <CatalogSetupDetailRows model={model} open={openEditor} />
           </View>

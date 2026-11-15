@@ -454,6 +454,7 @@ export function CatalogEssentialsFields({
   kind,
   multiplePriceOptions,
   name,
+  nameLeading,
   onNameChange,
   onNameBlur,
   onPriceChange,
@@ -471,6 +472,8 @@ export function CatalogEssentialsFields({
   kind: CatalogItemKind
   multiplePriceOptions: boolean
   name: string
+  /** Sits beside the name field, e.g. the photo tile; stacks at large text. */
+  nameLeading?: ReactNode
   onNameChange: (value: string) => void
   onNameBlur?: () => void
   onPriceChange: (value: string) => void
@@ -481,20 +484,36 @@ export function CatalogEssentialsFields({
   unitName: string
 }) {
   const largeTextLayout = useLargeTextLayout()
+  const nameField = (
+    <FormField
+      autoCapitalize="words"
+      containerClassName={
+        nameLeading && !largeTextLayout ? "min-w-0 flex-1" : undefined
+      }
+      label={kind === "product" ? "Item name" : "Service name"}
+      maxLength={160}
+      onChangeText={onNameChange}
+      onBlur={onNameBlur}
+      placeholder={guidance.name.placeholder}
+      returnKeyType="next"
+      variant="green-gate"
+      value={name}
+    />
+  )
 
   return (
     <>
-      <FormField
-        autoCapitalize="words"
-        label={kind === "product" ? "Item name" : "Service name"}
-        maxLength={160}
-        onChangeText={onNameChange}
-        onBlur={onNameBlur}
-        placeholder={guidance.name.placeholder}
-        returnKeyType="next"
-        variant="green-gate"
-        value={name}
-      />
+      {nameLeading && !largeTextLayout ? (
+        <View className="flex-row items-stretch gap-3">
+          {nameLeading}
+          {nameField}
+        </View>
+      ) : (
+        <>
+          {nameLeading}
+          {nameField}
+        </>
+      )}
       {afterName}
       {kind === "product" && showProductEssentials ? (
         <View

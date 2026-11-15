@@ -110,13 +110,23 @@ export function CatalogDetailRow({
   )
 }
 
-type DetailTint = "mint" | "sky" | "lilac" | "amber"
+type DetailGroup = "selling" | "details"
 
-/** More details as one card of tinted rows (01 Live Card). */
+const DETAIL_GROUPS: Array<{ key: DetailGroup; title: string }> = [
+  { key: "selling", title: "Selling" },
+  { key: "details", title: "Details" },
+]
+
+/** Optional details in two cards: how it sells, then record details. */
 function ClassicDetailRows({
   model,
   open,
-}: { model: CatalogSetupModel; open: (editor: CatalogEditorKey) => void }) {
+  showPhotos,
+}: {
+  model: CatalogSetupModel
+  open: (editor: CatalogEditorKey) => void
+  showPhotos: boolean
+}) {
   const product = model.kind === "product"
   // With choices, stock is counted per choice; otherwise the single quantity.
   const choiceKeys = model.showAdvanced
@@ -137,12 +147,9 @@ function ClassicDetailRows({
   const soldInCount = model.stores.filter((store) =>
     choiceKeys.some((key) => choiceDraft(key).storeIds.includes(store.id)),
   ).length
+  const { assetIds, illustrationId, image, reused } = model.imageDraft
   const hasImage = Boolean(
-    model.imageDraft.illustrationId ||
-      model.imageDraft.image ||
-      model.imageDraft.reused ||
-      model.imageDraft.assetIds.length ||
-      model.imageUrl,
+    illustrationId || image || reused || assetIds.length || model.imageUrl,
   )
   const rows: Array<{
     key: CatalogEditorKey
@@ -150,25 +157,29 @@ function ClassicDetailRows({
     value: string
     set: boolean
     icon: IconKeys
-    tint: DetailTint
-    emoji?: string
+    group: DetailGroup
   }> = [
-    {
-      key: "images",
-      label: "Photos",
-      value: hasImage
-        ? model.imageDraft.illustrationId
-          ? "Illustration selected"
-          : model.imageDraft.assetIds.length
-            ? `${model.imageDraft.assetIds.length} image${model.imageDraft.assetIds.length === 1 ? "" : "s"}`
-            : model.imageDraft.reused
-              ? "1 photo · from My images"
-              : "1 photo · uploads when you save"
-        : "Add a photo or illustration",
-      set: hasImage,
-      icon: "Image",
-      tint: "sky",
-    },
+    // The form's photo tile covers Photos; Review has no tile, so it lists it.
+    ...(showPhotos
+      ? [
+          {
+            key: "images" as const,
+            label: "Photos",
+            value: hasImage
+              ? illustrationId
+                ? "Illustration selected"
+                : assetIds.length
+                  ? `${assetIds.length} image${assetIds.length === 1 ? "" : "s"}`
+                  : reused
+                    ? "1 photo · from My images"
+                    : "1 photo · uploads when you save"
+              : "Add a photo or illustration",
+            set: hasImage,
+            icon: "Image" as IconKeys,
+            group: "details" as const,
+          },
+        ]
+      : []),
     {
       key: "category",
       label: "Category",
@@ -177,7 +188,7 @@ function ClassicDetailRows({
         : "Uncategorized",
       set: Boolean(model.category),
       icon: "FolderPlus",
-      tint: "lilac",
+      group: "details",
     },
     ...(product
       ? [
@@ -189,7 +200,7 @@ function ClassicDetailRows({
               : "Packs, trays or cartons",
             set: model.additionalUnits.length > 0,
             icon: "Layers" as IconKeys,
-            tint: "sky" as const,
+            group: "selling" as const,
           },
         ]
       : [
@@ -201,7 +212,7 @@ function ClassicDetailRows({
               : "Charge only",
             set: model.trackServiceWork,
             icon: "Wrench" as IconKeys,
-            tint: "sky" as const,
+            group: "selling" as const,
           },
         ]),
     {
@@ -214,7 +225,7 @@ function ClassicDetailRows({
           : "Price each package",
       set: model.optionGroups.length > 0,
       icon: "SlidersHorizontal",
-      tint: "amber",
+      group: "selling",
     },
     ...(product
       ? [
@@ -224,7 +235,7 @@ function ClassicDetailRows({
             value: stockSummary ?? "Blank means not counted yet",
             set: Boolean(stockSummary),
             icon: "Package" as IconKeys,
-            tint: "mint" as const,
+            group: "details" as const,
           },
         ]
       : [
@@ -234,7 +245,7 @@ function ClassicDetailRows({
             value: model.serviceGuidance || "What to prepare before the visit",
             set: Boolean(model.serviceGuidance),
             icon: "MessageCircle" as IconKeys,
-            tint: "amber" as const,
+            group: "details" as const,
           },
         ]),
     {
@@ -243,7 +254,7 @@ function ClassicDetailRows({
       value: model.description || "What customers will receive",
       set: Boolean(model.description),
       icon: "FileText",
-      tint: "amber",
+      group: "details",
     },
     {
       key: "pricing",
@@ -253,7 +264,7 @@ function ClassicDetailRows({
         : "Fixed price or quote for each choice",
       set: false,
       icon: "Settings",
-      tint: "mint",
+      group: "selling",
     },
     ...(product
       ? [
@@ -267,39 +278,53 @@ function ClassicDetailRows({
               : "For scanning at the counter",
             set: Boolean(model.scannedBarcodeChoice),
             icon: "Hash" as IconKeys,
-            tint: "lilac" as const,
+            group: "details" as const,
           },
         ]
       : []),
   ]
+  const visible =
+    model.kind === "product" && model.usage === "RETURNABLE"
+      ? rows.filter(({ key }) => RETURNABLE_ROWS.has(key))
+      : rows
+  const groups = DETAIL_GROUPS.map((group) => ({
+    ...group,
+    rows: visible.filter((row) => row.group === group.key),
+  })).filter((group) => group.rows.length)
   return (
-    <View>
-      <View className="mb-2.5 flex-row items-baseline justify-between">
-        <Text className="text-base font-extrabold text-foreground">
-          More details
-        </Text>
-        <Text className="text-xs font-bold text-muted-foreground">
-          Optional
-        </Text>
-      </View>
-      {/* Shadow outside, rounded clip inside: each row's feedback spans the
-          card edge to edge without spilling past the corners. */}
-      <View className="rounded-[20px] bg-card shadow-sm">
-        <View className="overflow-hidden rounded-[20px] px-3.5">
-          {(model.kind === "product" && model.usage === "RETURNABLE"
-            ? rows.filter(({ key }) => RETURNABLE_ROWS.has(key))
-            : rows
-          ).map(({ key, ...row }, index) => (
-            <ClassicDetailRow
-              key={key}
-              border={index > 0}
-              disabled={model.locked}
-              {...row}
-              onPress={() => open(key)}
-            />
-          ))}
+    <View className="gap-5">
+      {groups.map((group, groupIndex) => (
+        <View key={group.key}>
+          <View className="mb-2.5 flex-row items-baseline justify-between px-1">
+            <Text
+              accessibilityRole="header"
+              className="text-base font-extrabold [-rn-line-height:22] text-foreground"
+            >
+              {group.title}
+            </Text>
+            {groupIndex === 0 ? (
+              <Text className="text-xs font-bold text-muted-foreground">
+                Optional
+              </Text>
+            ) : null}
+          </View>
+          {/* Shadow outside, rounded clip inside: each row's feedback spans
+              the card edge to edge without spilling past the corners. */}
+          <View className="rounded-[20px] bg-card shadow-sm">
+            <View className="overflow-hidden rounded-[20px]">
+              {group.rows.map(({ key, group: _group, ...row }, index) => (
+                <ClassicDetailRow
+                  key={key}
+                  border={index > 0}
+                  disabled={model.locked}
+                  {...row}
+                  onPress={() => open(key)}
+                />
+              ))}
+            </View>
+          </View>
         </View>
-      </View>
+      ))}
     </View>
   )
 }
@@ -311,7 +336,6 @@ function ClassicDetailRow({
   label,
   onPress,
   set,
-  tint,
   value,
 }: {
   border: boolean
@@ -320,36 +344,29 @@ function ClassicDetailRow({
   label: string
   onPress: () => void
   set: boolean
-  tint: DetailTint
   value: string
 }) {
-  const { colorScheme } = useColorScheme()
-  const palette = GREEN_TILL_THEME[colorScheme]
   return (
     <Pressable
       accessibilityHint={value}
       accessibilityLabel={label}
       accessibilityRole="button"
-      className="-mx-3.5 min-h-[62px] flex-row items-center gap-3 px-3.5 py-3 active:opacity-80"
+      className="min-h-[62px] flex-row items-center gap-3 px-3.5 py-3"
       disabled={disabled}
       haptic
       onPress={onPress}
     >
       {border ? <RowDivider position="top" /> : null}
       <View
-        style={{
-          alignItems: "center",
-          backgroundColor: palette[tint],
-          borderRadius: 11,
-          height: 36,
-          justifyContent: "center",
-          width: 36,
-        }}
+        className={
+          set
+            ? "size-9 items-center justify-center rounded-[11px] bg-primary/15"
+            : "size-9 items-center justify-center rounded-[11px] bg-muted"
+        }
       >
         <Icon
-          className="size-[17px]"
-          color={palette[`${tint}Foreground`]}
-          name={icon}
+          className={"size-[17px] text-primary"}
+          name={set ? "Check" : icon}
         />
       </View>
       <View className="min-w-0 flex-1">
@@ -373,11 +390,14 @@ function ClassicDetailRow({
 export function CatalogSetupDetailRows({
   model,
   open,
+  showPhotos = false,
 }: {
   model: CatalogSetupModel
   open: (editor: CatalogEditorKey) => void
+  /** List Photos as a row where the photo tile is not on screen (Review). */
+  showPhotos?: boolean
 }) {
-  return <ClassicDetailRows model={model} open={open} />
+  return <ClassicDetailRows model={model} open={open} showPhotos={showPhotos} />
 }
 
 function CatalogImageEditor({
@@ -547,7 +567,7 @@ export function CatalogFocusedEditor({
               unitName={model.unitName}
             />
           ) : null}
-          <CatalogSetupDetailRows model={model} open={open} />
+          <CatalogSetupDetailRows model={model} open={open} showPhotos />
           <StatusBanner
             icon="Info"
             message="Saves to your current Store. You can change anything later in your catalog."

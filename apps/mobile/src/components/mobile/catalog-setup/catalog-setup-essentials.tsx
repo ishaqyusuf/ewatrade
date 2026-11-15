@@ -7,16 +7,20 @@ import { Text } from "@/components/ui/text"
 import { useColorScheme } from "@/hooks/use-color"
 import { GREEN_TILL_THEME } from "@/lib/green-till-theme"
 import { Text as NativeText, View } from "react-native"
+import { CatalogPhotoTile } from "./catalog-photo-tile"
 import type { CatalogSetupModel } from "./use-catalog-setup"
 
 export function CatalogSetupEssentials({
   model,
   focused = false,
   onOpenCategory,
+  onOpenImages,
 }: {
   model: CatalogSetupModel
   focused?: boolean
   onOpenCategory?: () => void
+  /** Shows the photo tile beside the name; it opens the Photos editor. */
+  onOpenImages?: () => void
 }) {
   const {
     kind,
@@ -74,6 +78,11 @@ export function CatalogSetupEssentials({
         kind={kind}
         multiplePriceOptions={multiplePriceOptions}
         name={name}
+        nameLeading={
+          onOpenImages ? (
+            <CatalogPhotoTile model={model} onPress={onOpenImages} />
+          ) : undefined
+        }
         onNameChange={setName}
         onNameBlur={model.requestCategorySuggestions}
         onPriceChange={setPrice}
