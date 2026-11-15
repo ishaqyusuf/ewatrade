@@ -105,6 +105,6 @@ export const SERVICE_COMMERCE_CONTROLLERS = {
       "Choose which team members answer customer chats for this store.",
     implemented: true,
     requiredIds: [],
-    title: "Team members replying",
+    title: "Who replies",
   },
 } satisfies Record<ServiceCommerceSheetMode, ControllerDefinition>

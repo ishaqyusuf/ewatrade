@@ -1,5 +1,6 @@
 "use client"
 
+import { ConfirmAlert } from "@/components/forms/confirm-alert"
 import {
   SettingsHeader,
   SettingsNotice,
@@ -219,7 +220,6 @@ function PlanCard({
       {upgrade && plan.id !== "free" ? (
         <Button
           type="button"
-          size="sm"
           className="mt-3 w-full"
           disabled={disabled}
           onClick={() => {
@@ -263,9 +263,15 @@ function limitNotice(snapshot: SubscriptionSnapshot) {
   )
 }
 
-export function RetailOpsSubscriptionSettings() {
+export function RetailOpsSubscriptionSettings({
+  isOwner,
+}: {
+  /** Only the owner pays for or changes the plan; others see it. */
+  isOwner: boolean
+}) {
   const trpc = useTRPC()
   const [checkoutError, setCheckoutError] = useState<string | null>(null)
+  const [confirmPlan, setConfirmPlan] = useState<Plan | null>(null)
   const [termsAccepted, setTermsAccepted] = useState(false)
   const subscriptionQuery = useQuery(
     trpc.retailOps.subscription.queryOptions(undefined, {
@@ -278,10 +284,19 @@ export function RetailOpsSubscriptionSettings() {
       onSuccess: (intent) =>
         openSubscriptionCheckout(intent, {
           navigate: (url) => window.location.assign(url),
-          notify: (message) => toast(message),
-          error: setCheckoutError,
+          notify: (message) => {
+            setConfirmPlan(null)
+            toast(message)
+          },
+          error: (message) => {
+            setConfirmPlan(null)
+            setCheckoutError(message)
+          },
         }),
-      onError: (error) => setCheckoutError(error.message),
+      onError: (error) => {
+        setConfirmPlan(null)
+        setCheckoutError(error.message)
+      },
     }),
   )
   const queryClient = useQueryClient()
@@ -363,10 +378,7 @@ export function RetailOpsSubscriptionSettings() {
 
   return (
     <SettingsPage>
-      <SettingsHeader
-        title="Plan and billing"
-        description="Your plan, how much you've used, and what each plan includes."
-      />
+      <SettingsHeader title="Plan and billing" />
 
       {snapshot?.webBilling ? (
         <div className="flex flex-wrap gap-2">
@@ -376,7 +388,7 @@ export function RetailOpsSubscriptionSettings() {
               disabled={checkPayment.isPending}
               onClick={() => checkPayment.mutate()}
             >
-              Check payment status
+              Check payment
             </Button>
           ) : null}
           {snapshot.webBilling.hasSubscription &&
@@ -385,7 +397,7 @@ export function RetailOpsSubscriptionSettings() {
               disabled={enrollBusiness.isPending}
               onClick={() => enrollBusiness.mutate()}
             >
-              Apply plan to this business
+              Use plan for this business
             </Button>
           ) : null}
           {snapshot.webBilling.canManage ? (
@@ -513,21 +525,36 @@ export function RetailOpsSubscriptionSettings() {
                 upgrade.isPending ||
                 (Boolean(snapshot?.webBilling) && !termsAccepted)
               }
-              upgrade={currentIndex >= 0 && index > currentIndex}
+              upgrade={isOwner && currentIndex >= 0 && index > currentIndex}
               pending={
                 upgrade.isPending && upgrade.variables?.planId === plan.id
               }
-              onUpgrade={(planId) =>
-                upgrade.mutate({ planId, surface: "dashboard" })
-              }
+              onUpgrade={() => setConfirmPlan(plan)}
             />
           ))}
         </div>
         <p className="text-sm text-muted-foreground">
-          Free is free forever. Paid plans are billed monthly. Free plan orders
-          reset on the 1st of each month.
+          {isOwner
+            ? "Paid plans are billed monthly."
+            : "Only the owner can change the plan."}
         </p>
       </section>
+      <ConfirmAlert
+        open={confirmPlan !== null}
+        title={confirmPlan ? `Upgrade to ${confirmPlan.name}?` : ""}
+        description={
+          confirmPlan
+            ? `${confirmPlan.priceLabel}. You pay on Paystack, and your plan changes once the payment is confirmed.`
+            : undefined
+        }
+        action="Continue to Paystack"
+        pending={upgrade.isPending}
+        onCancel={() => setConfirmPlan(null)}
+        onConfirm={() => {
+          if (!confirmPlan || confirmPlan.id === "free") return
+          upgrade.mutate({ planId: confirmPlan.id, surface: "dashboard" })
+        }}
+      />
     </SettingsPage>
   )
 }

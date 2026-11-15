@@ -68,9 +68,6 @@ export function CreateStoreForm({
         {form.formState.errors.name ? (
           <FieldError>{form.formState.errors.name.message}</FieldError>
         ) : null}
-        <p className="text-sm text-muted-foreground">
-          It uses your business currency. Add staff to it later from Staff.
-        </p>
       </Field>
       {create.error ? (
         <FormFeedback appearance="dashboard">

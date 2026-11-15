@@ -190,12 +190,12 @@ async function mount() {
     root.render(
       <StrictMode>
         <Probe />
-        <StoreContactRow storeId="store-a" storeName="Store A" />
+        <StoreContactRow storeId="store-a" />
       </StrictMode>,
     ),
   )
   await act(async () => {
-    buttons.get("Edit contact")?.()
+    buttons.get("Edit")?.()
   })
   const submit = () => {
     const form = host.getElementsByTagName("form")[0]

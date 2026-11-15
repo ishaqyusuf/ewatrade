@@ -48,10 +48,7 @@ export default async function GeneralSettingsPage() {
 
   return (
     <SettingsPage>
-      <SettingsHeader
-        title="General"
-        description="Your business details and who is signed in."
-      />
+      <SettingsHeader title="General" />
       <SettingsSection title="Business">
         <SettingsRow label="Business name">
           <span className="text-sm font-medium">{ctx.tenant.name}</span>
@@ -59,18 +56,12 @@ export default async function GeneralSettingsPage() {
         <SettingsRow label="Currency">
           <span className="text-sm font-medium">{currencyName(currency)}</span>
         </SettingsRow>
-        <SettingsRow
-          label="Time zone"
-          description="Used for reports, opening hours and reminders."
-        >
+        <SettingsRow label="Time zone">
           <span className="text-sm font-medium">
             {timeZoneLabel(ctx.tenant.timezone)}
           </span>
         </SettingsRow>
-        <SettingsRow
-          label="Current store"
-          description="Switch stores from the store menu at the top of the dashboard."
-        >
+        <SettingsRow label="Current store">
           <span className="text-sm font-medium">
             {store?.name ?? "Not set"}
           </span>

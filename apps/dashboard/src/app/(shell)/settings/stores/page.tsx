@@ -5,10 +5,13 @@ import {
 import { getServerSession } from "@/lib/session"
 import { getActiveTenant } from "@/lib/tenant"
 import { HydrateClient, prefetch, trpc } from "@/trpc/server"
-import { getInitialDirectoryView } from "@/utils/directory-views"
 import { canManageTenant, normalizeRole } from "@ewatrade/auth/roles"
+import { prisma } from "@ewatrade/db"
+import { getRetailOpsTenantPlan } from "@ewatrade/db/retail-ops-subscriptions"
 import { redirect } from "next/navigation"
 import { Suspense } from "react"
+
+export const metadata = { title: "Stores | EwaTrade" }
 
 export default async function StoresSettingsPage() {
   const session = await getServerSession()
@@ -17,14 +20,17 @@ export default async function StoresSettingsPage() {
   const role = normalizeRole(ctx.membership.role)
   if (!role || !canManageTenant(role)) redirect("/")
   void prefetch(trpc.tenant.stores.queryOptions())
-  const initialViewSettings = await getInitialDirectoryView("stores", {
-    userId: session.user.id,
+  // Only the store allowance; the usage counts live on Plan and billing.
+  const storeLimit = await getRetailOpsTenantPlan(prisma, {
     tenantId: ctx.tenant.id,
-  })
+  }).then(
+    ({ plan }) => ({ limit: plan.limits.businesses, planName: plan.name }),
+    () => null,
+  )
   return (
     <HydrateClient>
       <Suspense fallback={<StoresSkeleton />}>
-        <StoresDirectory initialViewSettings={initialViewSettings} />
+        <StoresDirectory storeLimit={storeLimit} />
       </Suspense>
     </HydrateClient>
   )

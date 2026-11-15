@@ -25,7 +25,7 @@ export function SettingsStorePicker({
       <label htmlFor={id}>Store</label>
       <SelectControl
         id={id}
-        className="h-9 min-w-36 font-semibold text-foreground"
+        className="min-w-36 font-semibold text-foreground"
         value={value}
         options={[
           ...(includeAll ? [{ value: ALL_STORES, label: "All stores" }] : []),

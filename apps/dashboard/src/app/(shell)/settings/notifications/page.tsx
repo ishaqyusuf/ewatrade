@@ -21,10 +21,7 @@ export default async function NotificationSettingsPage() {
   if (!role || !canManageTenant(role)) redirect("/activity")
   return (
     <SettingsPage>
-      <SettingsHeader
-        title="Notifications"
-        description="Choose which alerts are on and who gets them. Alerts never show anyone records they can't already open."
-      />
+      <SettingsHeader title="Notifications" />
       <BusinessNotificationSettingsPage
         scopeKey={JSON.stringify([
           session.user.id,
@@ -37,14 +34,9 @@ export default async function NotificationSettingsPage() {
         aria-labelledby="emails-from-ewatrade"
         className="grid gap-4 border-t border-border pt-6"
       >
-        <div className="grid gap-1">
-          <h2 id="emails-from-ewatrade" className="text-lg font-semibold">
-            Emails from EwaTrade
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            Just for you, not your team. Login codes and receipts always arrive.
-          </p>
-        </div>
+        <h2 id="emails-from-ewatrade" className="text-base font-semibold">
+          Emails to you from EwaTrade
+        </h2>
         <EmailPreferencesForm />
       </section>
     </SettingsPage>

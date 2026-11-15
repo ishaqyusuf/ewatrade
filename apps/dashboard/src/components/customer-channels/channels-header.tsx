@@ -21,7 +21,6 @@ export function ChannelsHeader({
   return (
     <SettingsHeader
       title="Customer channels"
-      description="Choose how customers reach you, which store gets each chat, and who replies."
       actions={
         <>
           <SettingsStorePicker
@@ -36,7 +35,7 @@ export function ChannelsHeader({
                 : "Only an owner or admin can connect WhatsApp."
             }
           >
-            <Button disabled={!canManage} onClick={onConnect} className="h-9">
+            <Button disabled={!canManage} onClick={onConnect}>
               Connect WhatsApp
             </Button>
           </span>

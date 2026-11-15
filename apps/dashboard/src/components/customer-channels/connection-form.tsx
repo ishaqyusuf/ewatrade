@@ -58,35 +58,26 @@ export function ConnectionForm({
   )
 
   return (
-    <section className="grid gap-5 rounded-none border border-border bg-card p-5">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-            Setup
-          </p>
-          <h2 className="font-semibold">Connect WhatsApp</h2>
-          <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-            Authorize a business-owned number. EwaTrade uses one verified Meta
-            application while every sender, credential and billing owner stays
-            isolated to this business.
-          </p>
-        </div>
+    <section className="grid gap-5">
+      <div className="grid gap-3">
+        <p className="text-muted-foreground">
+          Sign in to Meta and pick a number your business owns.
+        </p>
         {embeddedSignupUrl ? (
           <a
-            className="inline-flex h-10 items-center justify-center rounded-none border border-transparent bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/80"
+            className="inline-flex min-h-11 items-center justify-center rounded-md bg-primary px-4 font-medium text-primary-foreground hover:bg-primary/80"
             href={embeddedSignupUrl}
           >
             Continue with Meta
           </a>
         ) : embeddedSignupLoading ? (
           <Button disabled type="button">
-            Checking Meta signup…
+            Checking Meta…
           </Button>
         ) : embeddedSignupError ? (
-          <div className="grid gap-2 sm:max-w-64">
+          <div className="grid gap-2">
             <FormFeedback appearance="dashboard">
-              Meta signup is temporarily unavailable. Manual setup remains
-              available.
+              Meta sign-in isn't working right now.
             </FormFeedback>
             <Button
               disabled={embeddedSignupLoading}
@@ -94,25 +85,19 @@ export function ConnectionForm({
               type="button"
               variant="outline"
             >
-              Retry Meta signup
+              Try again
             </Button>
           </div>
         ) : (
-          <div className="grid gap-2 sm:max-w-64">
-            <Button disabled type="button">
-              Embedded signup unavailable
-            </Button>
-            <p className="text-xs text-muted-foreground">
-              Meta signup is not configured for this workspace. Manual setup
-              remains available.
-            </p>
-          </div>
+          <Button disabled type="button">
+            Meta sign-in isn't set up yet
+          </Button>
         )}
       </div>
 
-      <details className="rounded-none border border-border p-4">
-        <summary className="cursor-pointer text-sm font-medium">
-          Manual setup for an approved onboarding session
+      <details className="rounded-[10px] border border-border p-4">
+        <summary className="min-h-11 cursor-pointer content-center font-medium">
+          Enter the details by hand
         </summary>
         <form className="mt-4" onSubmit={form.handleSubmit(onSubmit)}>
           <FieldGroup className="min-w-0 grid gap-4 sm:grid-cols-2">
@@ -122,7 +107,7 @@ export function ConnectionForm({
             <Field
               error={form.formState.errors.businessDisplayName?.message}
               htmlFor="channel-business-name"
-              label="Business display name"
+              label="Name customers see"
             >
               <Input
                 id="channel-business-name"
@@ -172,7 +157,7 @@ export function ConnectionForm({
             <Field
               error={form.formState.errors.testRecipient?.message}
               htmlFor="channel-test-recipient"
-              label="Consented test recipient"
+              label="Test phone (agreed to get a test message)"
             >
               <Input
                 id="channel-test-recipient"
@@ -184,7 +169,7 @@ export function ConnectionForm({
               className="sm:col-span-2"
               error={form.formState.errors.accessToken?.message}
               htmlFor="channel-access-token"
-              label="Temporary access token"
+              label="Access token"
             >
               <Input
                 autoComplete="new-password"
@@ -199,7 +184,7 @@ export function ConnectionForm({
                 disabled={isPending}
                 type="submit"
               >
-                {isPending ? "Saving…" : "Save candidate and test"}
+                {isPending ? "Saving…" : "Save and check"}
               </SubmitButton>
             </FormActions>
           </FieldGroup>

@@ -1,27 +1,25 @@
 import { beforeEach, expect, mock, test } from "bun:test"
-import {
-  type RetailOpsPlanId,
-  findRetailOpsPlan,
-} from "@ewatrade/db/subscription-plans"
+import type { RetailOpsPlanFeature } from "@ewatrade/db/subscription-plans"
 import { isValidElement } from "react"
 
 let signedIn = true
 let hasTenant = true
-let failPlan = false
-let planId: RetailOpsPlanId = "starter"
-let source = "owner_subscription"
-const planReads: { tenantId: string }[] = []
+// What the joined workspace read carried; undefined = the join failed.
+let joined: RetailOpsPlanFeature[] | undefined = ["invoices"]
+let failFallback = false
+let fallback: RetailOpsPlanFeature[] = ["invoices"]
+const fallbackReads: string[] = []
 const workspaceReads: string[] = []
 const SettingsNavigation = () => null
 
-mock.module("@ewatrade/db", () => ({ prisma: {} }))
-mock.module("@ewatrade/db/retail-ops-subscriptions", () => ({
-  getRetailOpsTenantPlan: async (_db: unknown, input: { tenantId: string }) => {
-    planReads.push(input)
-    if (failPlan) throw new Error("private database error must not be rendered")
-    const plan = findRetailOpsPlan(planId)
-    if (!plan) throw new Error("missing plan")
-    return { plan, subscription: { source } }
+mock.module("@/lib/plan-features", () => ({
+  getDashboardPlanFeatures: async (tenant: {
+    id: string
+    planFeatures?: RetailOpsPlanFeature[]
+  }) => {
+    if (tenant.planFeatures) return tenant.planFeatures
+    fallbackReads.push(tenant.id)
+    return failFallback ? undefined : fallback
   },
 }))
 mock.module("@ewatrade/db/website-domains-launch-gate", () => ({
@@ -36,7 +34,7 @@ mock.module("@/lib/tenant", () => ({
     workspaceReads.push(userId)
     return hasTenant
       ? {
-          tenant: { id: "current-workspace" },
+          tenant: { id: "current-workspace", planFeatures: joined },
           membership: { role: "OWNER" },
           stores: [],
         }
@@ -62,42 +60,38 @@ function hasReceipts(node: Awaited<ReturnType<typeof renderSettings>>) {
 beforeEach(() => {
   signedIn = true
   hasTenant = true
-  failPlan = false
-  planId = "starter"
-  source = "owner_subscription"
-  planReads.length = 0
+  joined = ["invoices"]
+  failFallback = false
+  fallback = ["invoices"]
+  fallbackReads.length = 0
   workspaceReads.length = 0
 })
 
-test("server wrapper reports the resolved plan from its single current-workspace read", async () => {
-  for (const id of ["starter", "growth", "pro", "free"] as const) {
-    planId = id
-    source = id === "free" ? "owner_billing_free" : "owner_subscription"
+test("joined plan features gate the list with no plan read of its own", async () => {
+  for (const features of [["invoices"], []] as RetailOpsPlanFeature[][]) {
+    joined = features
     const node = await renderSettings()
     expect(node.props["data-billing-plan-read"]).toBe("resolved")
-    expect(node.props["data-billing-plan-id"]).toBe(id)
-    expect(node.props["data-billing-plan-source"]).toBe(source)
-    expect(hasReceipts(node)).toBe(id !== "free")
+    expect(hasReceipts(node)).toBe(features.includes("invoices"))
     expect(node.props.children[1].props.children).toBe(
       "Existing settings content",
     )
   }
-  expect(planReads).toEqual(
-    Array.from({ length: 4 }, () => ({ tenantId: "current-workspace" })),
-  )
-  expect(workspaceReads).toEqual(Array(4).fill("current-actor"))
+  expect(fallbackReads).toEqual([])
+  expect(workspaceReads).toEqual(["current-actor", "current-actor"])
 })
 
-test("a failed fresh read reports unavailable without a stale plan, source or error", async () => {
-  await renderSettings()
-  failPlan = true
-  const node = await renderSettings()
-  expect(node.props["data-billing-plan-read"]).toBe("unavailable")
-  expect(node.props["data-billing-plan-id"]).toBeUndefined()
-  expect(node.props["data-billing-plan-source"]).toBeUndefined()
-  expect(hasReceipts(node)).toBe(true)
-  expect(JSON.stringify(node)).not.toContain("private database error")
-  expect(planReads).toHaveLength(2)
+test("a failed join uses the shared fallback once; a failed fallback stays ungated", async () => {
+  joined = undefined
+  fallback = []
+  const free = await renderSettings()
+  expect(free.props["data-billing-plan-read"]).toBe("resolved")
+  expect(hasReceipts(free)).toBe(false)
+  failFallback = true
+  const unknown = await renderSettings()
+  expect(unknown.props["data-billing-plan-read"]).toBe("unavailable")
+  expect(hasReceipts(unknown)).toBe(true)
+  expect(fallbackReads).toEqual(["current-workspace", "current-workspace"])
 })
 
 test("no session or workspace emits no plan result and starts no plan read", async () => {
@@ -107,18 +101,7 @@ test("no session or workspace emits no plan result and starts no plan read", asy
   signedIn = true
   hasTenant = false
   const noWorkspace = await renderSettings()
-  for (const node of [signedOut, noWorkspace]) {
+  for (const node of [signedOut, noWorkspace])
     expect(node.props["data-billing-plan-read"]).toBeUndefined()
-    expect(node.props["data-billing-plan-id"]).toBeUndefined()
-    expect(node.props["data-billing-plan-source"]).toBeUndefined()
-  }
-  expect(planReads).toEqual([])
-})
-
-test("launch fallback stays distinguishable from owner coverage without forcing a paid result", async () => {
-  source = "launch_default"
-  const node = await renderSettings()
-  expect(node.props["data-billing-plan-read"]).toBe("resolved")
-  expect(node.props["data-billing-plan-id"]).toBe("starter")
-  expect(node.props["data-billing-plan-source"]).toBe("launch_default")
+  expect(fallbackReads).toEqual([])
 })

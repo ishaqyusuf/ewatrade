@@ -18,7 +18,6 @@ import {
   ConversationModeSection,
   QuoteReleasePolicyRow,
 } from "./channel-management-settings"
-import { ChannelRecommendationNote } from "./channel-recommendation-note"
 import { peopleCount } from "./channel-settings-labels"
 import { ChannelsHeader } from "./channels-header"
 import { ConnectionsList } from "./connections-list"
@@ -68,7 +67,6 @@ export function CustomerChannelsWorkspace({
             <Button
               className="bg-background"
               onClick={() => void workspace.refetch()}
-              size="sm"
               variant="outline"
             >
               Try again
@@ -133,21 +131,18 @@ export function CustomerChannelsWorkspace({
         />
       ) : null}
 
-      <SettingsSection title="Who replies">
+      <SettingsSection title="Chats">
         {canManage ? (
           <ChatHoursRow
             onChange={() => openSheet("availability")}
             storeId={selectedStoreId}
           />
         ) : null}
-        <SettingsRow
-          label="Team members replying"
-          description="They answer customer chats for this store."
-        >
+        <SettingsRow label="Who replies">
           <span className="text-sm font-medium">
             {peopleCount(activeTeam.length)}
           </span>
-          <Button onClick={() => openSheet("team")} size="sm" variant="outline">
+          <Button onClick={() => openSheet("team")} variant="outline">
             Choose
           </Button>
         </SettingsRow>
@@ -157,14 +152,7 @@ export function CustomerChannelsWorkspace({
             storeId={selectedStoreId}
           />
         ) : null}
-        <SettingsRow
-          label="Customer link and QR code"
-          description={
-            linkLive
-              ? `Customers use it to message ${storeName}.`
-              : "Create a link and QR code customers can use to message you. You need one team member and one channel ready first."
-          }
-        >
+        <SettingsRow label="Customer link and QR code">
           <SettingsStatusPill tone={linkLive ? "ok" : "muted"}>
             {linkLive
               ? "Live"
@@ -180,7 +168,6 @@ export function CustomerChannelsWorkspace({
                 storeId: selectedStoreId,
               })
             }
-            size="sm"
             variant="outline"
           >
             {linkLive ? "View" : "Create"}
@@ -199,10 +186,6 @@ export function CustomerChannelsWorkspace({
           })
         }
       />
-
-      {data.recommendation ? (
-        <ChannelRecommendationNote recommendation={data.recommendation} />
-      ) : null}
     </SettingsPage>
   )
 }

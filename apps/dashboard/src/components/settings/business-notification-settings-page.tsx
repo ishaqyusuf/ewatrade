@@ -36,6 +36,7 @@ import {
 } from "@ewatrade/ui"
 import { useInfiniteQuery, useMutation, useQuery } from "@tanstack/react-query"
 import { TRPCClientError } from "@trpc/client"
+import { parseAsString, useQueryState } from "nuqs"
 import { useEffect, useState } from "react"
 
 const freshRead = {
@@ -112,10 +113,9 @@ function ReadState({
 function PolicyTab() {
   const trpc = useTRPC()
   const [mount] = useState(nextReadMount)
-  const [editing, setEditing] = useState<{
-    entry: BusinessEventCatalogItem
-    policy: BusinessNotificationPolicyView | undefined
-  } | null>(null)
+  // The alert being edited is in the URL (?alert=<type>), so the sheet can be
+  // linked to and survives a refresh.
+  const [alertType, setAlertType] = useQueryState("alert", parseAsString)
   const [error, setError] = useState<string | null>(null)
   const query = useQuery(
     mountOwnedRead(
@@ -127,6 +127,8 @@ function PolicyTab() {
     trpc.businessNotifications.updatePolicy.mutationOptions(),
   )
   const read = freshShownRead(query)
+  const setEditing = (next: { entry: BusinessEventCatalogItem } | null) =>
+    void setAlertType(next?.entry.type ?? null)
   if (read.state !== "ready")
     return (
       <ReadState
@@ -135,20 +137,32 @@ function PolicyTab() {
         onRetry={() => void query.refetch()}
       />
     )
+  const entry = alertType
+    ? read.data.catalog.find((item) => item.type === alertType)
+    : undefined
+  const editing: {
+    entry: BusinessEventCatalogItem
+    policy: BusinessNotificationPolicyView | undefined
+  } | null = entry
+    ? {
+        entry,
+        policy: read.data.items.find((item) => item.type === entry.type),
+      }
+    : null
   return (
     <div className="grid gap-3">
       {read.data.catalog.length ? (
         <NotificationPolicyContent
           items={read.data.items}
           catalog={read.data.catalog}
-          onEdit={(entry, policy) => {
+          onEdit={(entry) => {
             setError(null)
-            setEditing({ entry, policy })
+            setEditing({ entry })
           }}
         />
       ) : (
         <p className="border border-dashed px-4 py-8 text-center text-sm text-muted-foreground">
-          No alerts are available yet. More are coming.
+          No alerts yet.
         </p>
       )}
       <Sheet
@@ -190,14 +204,9 @@ function PolicyTab() {
                   },
                   {
                     onSuccess: () => setEditing(null),
-                    onError: async (err) => {
-                      setError(saveError(err))
-                      const latest = await query.refetch()
-                      const policy = latest.data?.items.find(
-                        (item) => item.type === editing.entry.type,
-                      )
-                      setEditing({ entry: editing.entry, policy })
-                    },
+                    // The refetch brings the latest revision, which remounts
+                    // the editor with the values someone else saved.
+                    onError: (err) => setError(saveError(err)),
                     onSettled: () => void query.refetch(),
                   },
                 )

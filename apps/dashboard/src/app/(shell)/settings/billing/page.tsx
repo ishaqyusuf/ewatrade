@@ -15,7 +15,9 @@ export default async function BillingSettingsPage() {
   return (
     <div className="grid min-w-0 gap-7">
       <PlanPageOpened />
-      <RetailOpsSubscriptionSettings />
+      <RetailOpsSubscriptionSettings
+        isOwner={ctx.membership.role.trim().toUpperCase() === "OWNER"}
+      />
       <AssistantAllowance />
     </div>
   )

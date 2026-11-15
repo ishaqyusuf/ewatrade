@@ -19,6 +19,8 @@ export function PendingQuoteApprovals({
   onReview: (approval: PendingApprovals[number]) => void
   query: ChannelRead<PendingApprovals>
 }) {
+  // Nothing waiting: no empty section.
+  if (!query.isError && query.data?.length === 0) return null
   return (
     <SettingsSection title="Quotes waiting for approval">
       <ChannelReadContent label="quotes waiting for approval" query={query}>
@@ -28,14 +30,14 @@ export function PendingQuoteApprovals({
               <SettingsRow
                 key={approval.id}
                 label={`${quoteSourceLabel(approval.sourceKind)} · ${formatMoney(approval.totalMinor, approval.currencyCode)}`}
-                description={`Quote ${approval.version}. ${approval.canApprove || approval.canReject ? "You can approve this quote." : "Waiting for another approver."}`}
+                description={
+                  approval.canApprove || approval.canReject
+                    ? undefined
+                    : "Waiting for another approver."
+                }
               >
-                <Button
-                  onClick={() => onReview(approval)}
-                  size="sm"
-                  variant="outline"
-                >
-                  Review quote
+                <Button onClick={() => onReview(approval)} variant="outline">
+                  Review
                 </Button>
               </SettingsRow>
             ))

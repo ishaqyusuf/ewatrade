@@ -220,7 +220,7 @@ export function MemberAlertsEditor({
       </p>
       {removeOnly ? null : (
         <fieldset className="grid gap-1">
-          <legend className="pb-1.5 text-[13px] font-medium">Stores</legend>
+          <legend className="pb-1.5 text-sm font-medium">Stores</legend>
           {scopes.map((scope) => (
             <label
               key={scope.value}
@@ -249,7 +249,7 @@ export function MemberAlertsEditor({
         </fieldset>
       )}
       <fieldset className="grid gap-1">
-        <legend className="pb-1.5 text-[13px] font-medium">Alerts</legend>
+        <legend className="pb-1.5 text-sm font-medium">Alerts</legend>
         {selectable.length ? null : (
           <p className="text-sm text-muted-foreground">
             No alerts are available yet.

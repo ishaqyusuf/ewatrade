@@ -110,7 +110,6 @@ export function CustomerMessageTemplateList({
     <>
       <SettingsHeader
         title="WhatsApp messages"
-        description="Write each message once. On an order, staff check it and send it from their own WhatsApp."
         actions={
           <>
             <SettingsStorePicker
@@ -153,14 +152,7 @@ export function CustomerMessageTemplateList({
         </output>
       ) : (
         <SettingsSection
-          title={
-            store ? `Messages at ${store.name}` : "Messages for every store"
-          }
-          description={
-            store
-              ? `${store.name} uses the business message unless you give it its own.`
-              : "Every store uses these unless it has its own message."
-          }
+          title={store ? `Messages at ${store.name}` : "Every store"}
         >
           {problem ? (
             <div className="px-4 py-3">
@@ -194,17 +186,14 @@ export function CustomerMessageTemplateList({
                 >
                   <HugeiconsIcon icon={WhatsappIcon} className="size-4" />
                 </span>
-                <div className="min-w-0 flex-[1_1_200px]">
-                  <div className="text-sm font-medium">{event.label}</div>
-                  <p className="mt-0.5 text-sm text-muted-foreground">
-                    {event.description}
-                  </p>
+                <div className="min-w-0 flex-[1_1_160px] font-medium">
+                  {event.label}
                 </div>
                 <div className="ml-auto flex shrink-0 items-center gap-2">
                   {autosave.saved(event.key) ? <SettingsSavedMark /> : null}
                   <span
                     className={cn(
-                      "rounded-full border px-2 py-0.5 text-xs whitespace-nowrap",
+                      "rounded-full border px-2.5 py-0.5 text-sm whitespace-nowrap",
                       SAVED_MESSAGE_TONE[status.tone],
                     )}
                   >
@@ -212,7 +201,6 @@ export function CustomerMessageTemplateList({
                   </span>
                   <Button
                     variant="outline"
-                    size="sm"
                     aria-label={`${state === "missing" ? "Write" : "Edit"} ${event.label}`}
                     onClick={() =>
                       void setParams({

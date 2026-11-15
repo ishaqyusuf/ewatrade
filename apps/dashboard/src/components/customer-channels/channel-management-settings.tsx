@@ -53,20 +53,13 @@ export function ChatHoursRow({
   return (
     <ChannelReadContent label="chat hours" query={query}>
       {(settings) => (
-        <SettingsRow
-          label="Chat hours"
-          description={
-            settings.manualPaused
-              ? "New chats are paused. Your team can still reply to existing chats."
-              : "Chat is open in these hours when someone is free to reply."
-          }
-        >
+        <SettingsRow label="Chat hours">
           <span className="text-sm font-medium">
             {settings.manualPaused
               ? "Paused"
               : chatHoursSummary(settings.weeklyHours)}
           </span>
-          <Button onClick={onChange} size="sm" variant="outline">
+          <Button onClick={onChange} variant="outline">
             Change
           </Button>
         </SettingsRow>
@@ -91,16 +84,13 @@ export function QuoteReleasePolicyRow({
       {(settings) => {
         const count = settings.policy.selectedApproverMembershipIds.length
         return (
-          <SettingsRow
-            label="Quotes need approval"
-            description="Another person must approve each quote before the customer sees it."
-          >
+          <SettingsRow label="Quotes need approval">
             <span className="text-sm font-medium">
               {settings.policy.mode === "approval_required"
                 ? `On · ${count === 1 ? "1 approver" : `${count} approvers`}`
                 : "Off"}
             </span>
-            <Button onClick={onChange} size="sm" variant="outline">
+            <Button onClick={onChange} variant="outline">
               Change
             </Button>
           </SettingsRow>

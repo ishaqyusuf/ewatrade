@@ -1,5 +1,6 @@
 "use client"
 
+import { ConfirmAlert } from "@/components/forms/confirm-alert"
 import { SettingsChoice } from "@/components/settings/settings-choice"
 import {
   SettingsHeader,
@@ -11,54 +12,30 @@ import { useSettingsAutosave } from "@/components/settings/use-settings-autosave
 import { useSettingsStoreParams } from "@/hooks/use-settings-store-params"
 import { useTRPC } from "@/trpc/client"
 import { Button } from "@ewatrade/ui"
-import { InformationCircleIcon } from "@hugeicons/core-free-icons"
-import { HugeiconsIcon } from "@hugeicons/react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useState } from "react"
 
 type Mode = "OFF" | "OPEN" | "APPROVAL_REQUIRED"
 type Field = "returnsMode" | "refundsMode"
 
 const RETURNS: Array<{ value: Mode; label: string; description?: string }> = [
-  {
-    value: "OPEN",
-    label: "Staff can do it",
-    description:
-      "Staff record the return. Any money back follows the refund setting.",
-  },
+  { value: "OPEN", label: "Staff can take returns" },
   {
     value: "APPROVAL_REQUIRED",
-    label: "Staff must ask first",
-    description: "An owner or admin approves each return.",
+    label: "Staff ask first",
+    description: "An owner or admin approves each one.",
   },
-  {
-    value: "OFF",
-    label: "Not allowed",
-    description: "This store doesn't take returns.",
-  },
+  { value: "OFF", label: "No returns" },
 ]
 
 const REFUNDS: Array<{ value: Mode; label: string; description?: string }> = [
-  {
-    value: "OPEN",
-    label: "Managers can do it",
-    description: "Owners, admins and managers can give money back.",
-  },
+  { value: "OPEN", label: "Managers can refund" },
   {
     value: "APPROVAL_REQUIRED",
-    label: "Staff must ask first",
-    description: "An owner or admin approves each refund.",
+    label: "Staff ask first",
+    description: "An owner or admin approves each one.",
   },
-  {
-    value: "OFF",
-    label: "Not allowed",
-    description: "No money goes back, even for a return.",
-  },
-]
-
-const FACTS = [
-  "Owners and admins never need approval.",
-  "Requests show on Home and on the order.",
-  "An approval lasts until the end of the day, for the person who asked.",
+  { value: "OFF", label: "No refunds" },
 ]
 
 /** Owner/Admin: who can take returns and give money back at each store. */
@@ -79,6 +56,7 @@ export function ReturnRefundSettings({
     trpc.orders.changePolicy.queryOptions({ storeId }, { retry: false }),
   )
   const autosave = useSettingsAutosave()
+  const [turningOff, setTurningOff] = useState<Field | null>(null)
   const update = useMutation(
     trpc.orders.updateChangePolicy.mutationOptions({
       onSettled: () =>
@@ -110,21 +88,24 @@ export function ReturnRefundSettings({
     update.mutate(
       { ...next, storeId },
       {
-        onSuccess: () =>
-          autosave.confirm(
-            field,
-            `Saved. New ${field === "returnsMode" ? "returns" : "refunds"} at ${storeName} follow this setting.`,
-            () => update.mutate({ ...previous, storeId }),
-          ),
+        onSuccess: () => {
+          setTurningOff(null)
+          autosave.confirm(field, "Saved.", () =>
+            update.mutate({ ...previous, storeId }),
+          )
+        },
+        onError: () => setTurningOff(null),
       },
     )
   }
+  // Stopping returns or refunds asks first; other answers save at once.
+  const choose = (field: Field, value: Mode) =>
+    value === "OFF" ? setTurningOff(field) : save(field, value)
 
   return (
     <SettingsPage>
       <SettingsHeader
         title="Returns and refunds"
-        description="Choose who can take returns and give money back at each store."
         actions={
           <SettingsStorePicker
             stores={stores}
@@ -133,17 +114,6 @@ export function ReturnRefundSettings({
           />
         }
       />
-      <ul className="grid gap-1 text-sm text-muted-foreground">
-        {FACTS.map((fact) => (
-          <li key={fact} className="flex items-center gap-2">
-            <HugeiconsIcon
-              icon={InformationCircleIcon}
-              className="size-4 shrink-0"
-            />
-            {fact}
-          </li>
-        ))}
-      </ul>
       {policy.isPending ? (
         <output className="text-sm text-muted-foreground">
           Loading returns and refunds…
@@ -158,7 +128,7 @@ export function ReturnRefundSettings({
       ) : (
         <>
           {!policy.data.canEdit ? (
-            <p className="text-sm text-muted-foreground">
+            <p className="text-muted-foreground">
               Only owners and admins can change this.
             </p>
           ) : null}
@@ -167,26 +137,48 @@ export function ReturnRefundSettings({
               Couldn't save. {update.error.message}
             </p>
           ) : null}
-          <SettingsSection title={`Returns at ${storeName}`}>
+          <SettingsSection title="Returns">
             <SettingsChoice
               label="Who can take a return"
               options={RETURNS}
               value={policy.data.returnsMode}
               disabled={!policy.data.canEdit || update.isPending}
               saved={autosave.saved("returnsMode")}
-              onChange={(value) => save("returnsMode", value)}
+              onChange={(value) => choose("returnsMode", value)}
             />
           </SettingsSection>
-          <SettingsSection title={`Refunds at ${storeName}`}>
+          <SettingsSection title="Refunds">
             <SettingsChoice
               label="Who can give money back"
               options={REFUNDS}
               value={policy.data.refundsMode}
               disabled={!policy.data.canEdit || update.isPending}
               saved={autosave.saved("refundsMode")}
-              onChange={(value) => save("refundsMode", value)}
+              onChange={(value) => choose("refundsMode", value)}
             />
           </SettingsSection>
+          <ConfirmAlert
+            open={turningOff !== null}
+            danger
+            title={
+              turningOff === "refundsMode"
+                ? `Stop refunds at ${storeName}?`
+                : `Stop returns at ${storeName}?`
+            }
+            description={
+              turningOff === "refundsMode"
+                ? "No one can give money back, even for a return. Refunds already given stay as they are."
+                : "Staff can't take returns. Returns already done stay as they are."
+            }
+            action={
+              turningOff === "refundsMode" ? "Stop refunds" : "Stop returns"
+            }
+            pending={update.isPending}
+            onCancel={() => setTurningOff(null)}
+            onConfirm={() => {
+              if (turningOff) save(turningOff, "OFF")
+            }}
+          />
         </>
       )}
     </SettingsPage>

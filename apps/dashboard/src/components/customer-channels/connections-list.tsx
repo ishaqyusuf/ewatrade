@@ -1,9 +1,9 @@
 "use client"
+import { SettingsSection } from "@/components/settings/settings-page"
 import {
   SettingsStatusPill,
   type SettingsStatusTone,
 } from "@/components/settings/settings-status-pill"
-import { SettingsSection } from "@/components/settings/settings-page"
 import { cn } from "@/utils"
 import { Button } from "@ewatrade/ui"
 import { WhatsappIcon } from "@hugeicons/core-free-icons"
@@ -34,18 +34,11 @@ export function ConnectionsList({
   onManage: (connectionId: string) => void
 }) {
   return (
-    <SettingsSection
-      title="WhatsApp numbers"
-      description="If you replace a number, the old one keeps working until the new one passes every check."
-    >
+    <SettingsSection title="WhatsApp numbers">
       {connections.length === 0 ? (
-        <div className="px-4 py-3.5">
-          <p className="text-sm font-medium">No WhatsApp numbers yet</p>
-          <p className="mt-0.5 text-sm text-muted-foreground">
-            Use Connect WhatsApp to add your first number. Chat on your store
-            link works without one.
-          </p>
-        </div>
+        <p className="px-4 py-3.5 text-muted-foreground">
+          No WhatsApp number yet.
+        </p>
       ) : (
         connections.map((connection) => {
           const ready = connection.readiness === "ready"
@@ -76,7 +69,7 @@ export function ConnectionsList({
                 </p>
                 {connection.lastTestFailureCode ? (
                   <p className="mt-0.5 text-sm text-destructive">
-                    The last test failed. Open Manage to test it again.
+                    The last check failed.
                   </p>
                 ) : null}
               </div>
@@ -87,7 +80,6 @@ export function ConnectionsList({
                 <Button
                   aria-label={`Manage ${connection.displayNumber}`}
                   onClick={() => onManage(connection.id)}
-                  size="sm"
                   type="button"
                   variant="outline"
                 >

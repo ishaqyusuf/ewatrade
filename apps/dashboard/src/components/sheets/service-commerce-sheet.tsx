@@ -16,6 +16,16 @@ import { Dialog, Sheet } from "@ewatrade/ui"
 import { useQueryClient } from "@tanstack/react-query"
 import { useCallback, useRef, useState } from "react"
 
+/** Customer channels settings sheets: the title is enough, no lede. */
+const CHANNEL_SETTING_MODES = new Set<string>([
+  "availability",
+  "connection",
+  "conversation_mode",
+  "entry_point",
+  "quote_policy",
+  "team",
+])
+
 export function ServiceCommerceSheet({
   storeId,
   storeIds,
@@ -35,8 +45,12 @@ export function ServiceCommerceSheet({
       ? requestedStoreId
       : storeId
   const controller = mode ? SERVICE_COMMERCE_CONTROLLERS[mode] : null
-  const Root = mode === "quote_policy" ? Dialog : Sheet
-  const Frame = mode === "quote_policy" ? ModalFrame : SheetFrame
+  // Connecting a new WhatsApp number is a modal (Midday connect pattern);
+  // managing a number already connected stays a sheet.
+  const modal =
+    mode === "quote_policy" || (mode === "connection" && !params.connectionId)
+  const Root = modal ? Dialog : Sheet
+  const Frame = modal ? ModalFrame : SheetFrame
   const [closeError, setCloseError] = useState<string | null>(null)
 
   const registerFormReset = useCallback((reset: () => void) => {
@@ -227,8 +241,16 @@ export function ServiceCommerceSheet({
     >
       {mode ? (
         <Frame
-          description={controller?.description}
-          title={controller?.title ?? "Service Commerce"}
+          description={
+            mode && CHANNEL_SETTING_MODES.has(mode)
+              ? undefined
+              : controller?.description
+          }
+          title={
+            mode === "connection" && !params.connectionId
+              ? "Connect WhatsApp"
+              : (controller?.title ?? "Service Commerce")
+          }
         >
           {closeError ? (
             <FormFeedback appearance="dashboard">{closeError}</FormFeedback>

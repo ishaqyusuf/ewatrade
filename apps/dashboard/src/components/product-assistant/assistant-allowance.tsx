@@ -13,7 +13,10 @@ export function AssistantAllowance({ compact = false }: { compact?: boolean }) {
   const query = useQuery(
     trpc.productAssistant.capabilities.queryOptions(undefined, {
       staleTime: 0,
-      refetchInterval: (query) => readPollInterval(query.state.error, 30_000),
+      // The chat counts down live; Plan and billing reads on load and focus.
+      refetchInterval: compact
+        ? (query) => readPollInterval(query.state.error, 30_000)
+        : false,
     }),
   )
   if (query.isPending)
@@ -26,7 +29,7 @@ export function AssistantAllowance({ compact = false }: { compact?: boolean }) {
     return (
       <div className="text-sm">
         <p>Couldn't load your AI messages.</p>
-        <Button variant="ghost" onClick={() => void query.refetch()}>
+        <Button variant="outline" onClick={() => void query.refetch()}>
           Try again
         </Button>
       </div>
@@ -67,9 +70,7 @@ export function AssistantAllowance({ compact = false }: { compact?: boolean }) {
                 style={{ width: `${share}%` }}
               />
             </span>
-            {allowance.exhausted
-              ? `You've used all your AI messages. ${comesBack} You can still add products with the form.`
-              : `Everyone in your business shares these. ${comesBack}`}
+            {allowance.exhausted ? `All used. ${comesBack}` : comesBack}
           </>
         }
       >

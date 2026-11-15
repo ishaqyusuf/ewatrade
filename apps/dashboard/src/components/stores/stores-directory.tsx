@@ -4,176 +4,60 @@ import { FormFeedback } from "@/components/forms/form-feedback"
 import {
   SettingsHeader,
   SettingsPage,
-  SettingsRow,
-  SettingsSection,
 } from "@/components/settings/settings-page"
-import { useSettingsAutosave } from "@/components/settings/use-settings-autosave"
-import {
-  ORDER_VISIBILITY_OPTIONS,
-  type Visibility,
-  useOrderVisibility,
-  useUpdateOrderVisibility,
-} from "@/components/staff/order-visibility-card"
-import { StoresDataTable } from "@/components/tables/stores/data-table"
-import { ViewDropdown, type ViewOption } from "@/components/view-switcher"
-import { useDirectoryView } from "@/hooks/use-directory-view"
+import { SettingsStatusPill } from "@/components/settings/settings-status-pill"
 import { useStoreParams } from "@/hooks/use-store-params"
 import { useTRPC } from "@/trpc/client"
-import type {
-  DirectoryView,
-  DirectoryViewSettings,
-} from "@/utils/directory-view-settings"
-import {
-  Alert,
-  AlertDescription,
-  Button,
-  SelectControl,
-  Skeleton,
-} from "@ewatrade/ui"
+import { Button, Skeleton } from "@ewatrade/ui"
 import {
   Add01Icon,
-  GridViewIcon,
-  LayoutTable01Icon,
-  ListViewIcon,
+  ArrowRight01Icon,
+  Store01Icon,
 } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { useQuery } from "@tanstack/react-query"
-import { useId } from "react"
-import { CreateStoreModal } from "./create-store-modal"
-import { StoreContactRow } from "./store-contact-row"
-import { StorePublicListingRow } from "./store-public-listing-row"
-
-const storeViewOptions = [
-  { value: "table", label: "Table", icon: LayoutTable01Icon },
-  { value: "list", label: "List", icon: ListViewIcon },
-  { value: "cards", label: "Grid", icon: GridViewIcon },
-] as const satisfies readonly ViewOption<DirectoryView>[]
+import { StoreSheets } from "./store-sheet"
 
 export function StoresSkeleton() {
   return (
-    <div aria-label="Loading stores" className="grid gap-4 sm:grid-cols-2">
+    <div aria-label="Loading stores" className="grid gap-3">
       {[0, 1].map((key) => (
-        <Skeleton key={key} className="h-32 w-full" />
+        <Skeleton key={key} className="h-16 w-full" />
       ))}
     </div>
   )
 }
 
-/** What cashiers and sales reps can see, one row per store; saves on change. */
-function OrderVisibilityRow({
-  storeId,
-  storeName,
-}: {
-  storeId: string
-  storeName: string
-}) {
-  const id = useId()
-  const query = useOrderVisibility(storeId)
-  const update = useUpdateOrderVisibility(storeId)
-  const autosave = useSettingsAutosave()
-  const save = (visibility: Visibility, previous?: Visibility) =>
-    update.mutate(
-      { storeId, visibility },
-      {
-        onSuccess: () =>
-          autosave.confirm(
-            storeId,
-            "Saved. Cashiers and sales reps see the change next time they open Orders.",
-            previous
-              ? () => update.mutate({ storeId, visibility: previous })
-              : undefined,
-          ),
-      },
-    )
-  return (
-    <SettingsRow
-      label={storeName}
-      htmlFor={id}
-      saved={autosave.saved(storeId)}
-      description={
-        update.isError ? (
-          <span role="alert" className="text-destructive">
-            {update.error.message}
-          </span>
-        ) : query.isError ? (
-          <span role="alert">Couldn't load this setting.</span>
-        ) : null
-      }
-    >
-      {query.isPending ? (
-        <Skeleton className="h-9 w-56" />
-      ) : query.isError ? (
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => void query.refetch()}
-        >
-          Try again
-        </Button>
-      ) : (
-        <SelectControl
-          id={id}
-          className="h-9 w-56"
-          value={query.data.salesRepOrderVisibility}
-          disabled={update.isPending}
-          options={ORDER_VISIBILITY_OPTIONS}
-          onValueChange={(visibility) =>
-            save(visibility, query.data.salesRepOrderVisibility)
-          }
-        />
-      )}
-    </SettingsRow>
-  )
+function statusLabel(status: string) {
+  const lower = status.toLowerCase().replaceAll("_", " ")
+  return lower.charAt(0).toUpperCase() + lower.slice(1)
 }
 
+/**
+ * Settings → Stores: one list of stores. A row opens that store's sheet
+ * (customer phone, business page, what cashiers see); Add store opens a sheet.
+ */
 export function StoresDirectory({
-  initialViewSettings,
+  storeLimit,
 }: {
-  initialViewSettings: DirectoryViewSettings
+  /** Stores the plan allows, from the server; null means no limit or unknown. */
+  storeLimit: { limit: number; planName: string } | null
 }) {
-  const { view, setView, persistenceError, retryPersistence } =
-    useDirectoryView({
-      pageId: "stores",
-      queryKey: "storeView",
-      initialSettings: initialViewSettings,
-    })
   const trpc = useTRPC()
   const stores = useQuery(trpc.tenant.stores.queryOptions())
-  const plan = useQuery(
-    trpc.retailOps.subscription.queryOptions(undefined, { retry: false }),
-  )
-  const storeLimit = plan.data?.entitlements.find(
-    (entitlement) => entitlement.key === "businesses",
-  )
-  const { setCreateOpen } = useStoreParams()
+  const { setCreateOpen, setDetailId } = useStoreParams()
+  const count = stores.data?.length ?? 0
   return (
     <SettingsPage>
       <SettingsHeader
         title="Stores"
-        description="Your shops or branches. Each store keeps its own stock, orders and staff."
         actions={
-          <>
-            <ViewDropdown
-              label="Store view"
-              value={view}
-              options={storeViewOptions}
-              onValueChange={setView}
-            />
-            <Button onClick={() => void setCreateOpen(true)}>
-              <HugeiconsIcon icon={Add01Icon} data-icon="inline-start" />
-              Add store
-            </Button>
-          </>
+          <Button onClick={() => void setCreateOpen(true)}>
+            <HugeiconsIcon icon={Add01Icon} data-icon="inline-start" />
+            Add store
+          </Button>
         }
       />
-      {persistenceError ? (
-        <Alert appearance="dashboard" role="alert">
-          <AlertDescription>{persistenceError}</AlertDescription>
-          <Button variant="outline" size="sm" onClick={retryPersistence}>
-            Try again
-          </Button>
-        </Alert>
-      ) : null}
       {stores.isPending ? (
         <StoresSkeleton />
       ) : stores.isError ? (
@@ -185,68 +69,48 @@ export function StoresDirectory({
             Try again
           </Button>
         </div>
-      ) : stores.data.length === 0 ? (
-        <div className="rounded-[10px] border border-dashed p-6 text-sm text-muted-foreground">
-          No stores yet. Add your first store to start selling.
-        </div>
+      ) : count === 0 ? (
+        <p className="rounded-[10px] border border-dashed p-6 text-muted-foreground">
+          No stores yet.
+        </p>
       ) : (
-        <div className="grid gap-2.5">
-          <p className="flex flex-wrap gap-x-2.5 text-sm">
-            <span>
-              {stores.data.length} store{stores.data.length === 1 ? "" : "s"}
-            </span>
-            {storeLimit?.limit ? (
-              <span className="text-muted-foreground">
-                {plan.data?.plan.name ?? "Your"} plan allows {storeLimit.limit}
-              </span>
-            ) : null}
+        <section className="grid gap-2.5" aria-label="Stores">
+          <p className="text-muted-foreground">
+            {storeLimit
+              ? `${count} of ${storeLimit.limit} stores on ${storeLimit.planName}`
+              : `${count} store${count === 1 ? "" : "s"}`}
           </p>
-          <StoresDataTable stores={stores.data} view={view} />
-        </div>
+          <ul className="divide-y divide-border overflow-hidden rounded-[10px] border border-border bg-card">
+            {stores.data.map((store) => (
+              <li key={store.id}>
+                <button
+                  type="button"
+                  data-store-row={store.id}
+                  onClick={() => void setDetailId(store.id)}
+                  className="flex min-h-16 w-full items-center gap-3 px-4 py-3 text-left hover:bg-[var(--hover)]"
+                >
+                  <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+                    <HugeiconsIcon icon={Store01Icon} className="size-5" />
+                  </span>
+                  <span className="min-w-0 flex-1 font-medium break-words">
+                    {store.name}
+                  </span>
+                  {store.status === "ACTIVE" ? null : (
+                    <SettingsStatusPill tone="muted">
+                      {statusLabel(store.status)}
+                    </SettingsStatusPill>
+                  )}
+                  <HugeiconsIcon
+                    icon={ArrowRight01Icon}
+                    className="size-4 shrink-0 text-muted-foreground"
+                  />
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
       )}
-      {stores.data?.length ? (
-        <SettingsSection
-          title="Customer contact"
-          description="Set the phone number customers use to reach each store."
-        >
-          {stores.data.map((store) => (
-            <StoreContactRow
-              key={store.id}
-              storeId={store.id}
-              storeName={store.name}
-            />
-          ))}
-        </SettingsSection>
-      ) : null}
-      {stores.data?.length ? (
-        <SettingsSection
-          title="Business page on ẸwáTrade"
-          description="List a store so customers can browse the products you choose to show. Turn on “Show on your business page” in each product's storefront settings."
-        >
-          {stores.data.map((store) => (
-            <StorePublicListingRow
-              key={store.id}
-              storeId={store.id}
-              storeName={store.name}
-            />
-          ))}
-        </SettingsSection>
-      ) : null}
-      {stores.data?.length ? (
-        <SettingsSection
-          title="What cashiers and sales reps can see"
-          description="Choose whether they see only the orders they made, or every order in their store."
-        >
-          {stores.data.map((store) => (
-            <OrderVisibilityRow
-              key={store.id}
-              storeId={store.id}
-              storeName={store.name}
-            />
-          ))}
-        </SettingsSection>
-      ) : null}
-      <CreateStoreModal />
+      <StoreSheets stores={stores.data ?? []} />
     </SettingsPage>
   )
 }

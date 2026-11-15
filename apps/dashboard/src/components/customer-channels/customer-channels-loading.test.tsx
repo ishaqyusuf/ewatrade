@@ -244,7 +244,7 @@ for (const [path, label] of labels) {
     try {
       await ui.flush()
       expect(ui.text()).toContain("WhatsApp numbers")
-      expect(ui.text()).toContain("Team members replying")
+      expect(ui.text()).toContain("Who replies")
       expect(ui.text()).toContain(`Loading ${label}`)
       if (path === approvals)
         expect(ui.text()).not.toContain("No quotes waiting for approval.")
@@ -267,7 +267,7 @@ for (const [path, label] of labels) {
     const ui = await mount()
     await ui.flush()
     expect(ui.text()).toContain("WhatsApp numbers")
-    expect(ui.text()).toContain("Team members replying")
+    expect(ui.text()).toContain("Who replies")
     expect(ui.text()).toContain(`Couldn't load ${label}.`)
     if (path === approvals)
       expect(ui.text()).not.toContain("No quotes waiting for approval.")
@@ -400,8 +400,8 @@ test("an admitted approval retains its amount/decision labels and exact review U
   const ui = await mount()
   await ui.flush()
   expect(ui.text()).toContain("Service request · ₦125.00")
-  expect(ui.text()).toContain("Quote 2. You can approve this quote.")
-  await ui.click("Review quote")
+  expect(ui.text()).not.toContain("Waiting for another approver.")
+  await ui.click("Review")
   expect(urlChanges).toEqual([
     {
       quoteApprovalId: "approval-a",

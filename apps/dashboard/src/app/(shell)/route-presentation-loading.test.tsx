@@ -49,6 +49,11 @@ mock.module("next/navigation", () => ({
 mock.module("@/utils/columns", () => ({
   getInitialTableSettings: async () => ({}),
 }))
+mock.module("@ewatrade/db/retail-ops-subscriptions", () => ({
+  getRetailOpsTenantPlan: async () => ({
+    plan: { limits: { businesses: 3 }, name: "Growth" },
+  }),
+}))
 mock.module("@/utils/directory-views", () => ({
   getInitialDirectoryView: async () => ({ scope: "display", view: null }),
 }))

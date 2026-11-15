@@ -108,7 +108,7 @@ export function ConversationModeChoice({
               ? "Customers can't message you yet because nothing is ready."
               : `Right now customers can only message you on ${conversationModeLabel(settings.effectiveMode)}.`}
           </p>
-          <Button onClick={onShowDetails} size="sm" variant="outline">
+          <Button onClick={onShowDetails} variant="outline">
             See why
           </Button>
         </div>

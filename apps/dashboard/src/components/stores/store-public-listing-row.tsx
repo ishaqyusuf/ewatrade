@@ -14,10 +14,7 @@ const marketingOrigin = new URL(
  * Owner opt-in to the ẸwáTrade business page. Listing shows only products the
  * owner switched on in each product's storefront settings; it publishes nothing.
  */
-export function StorePublicListingRow({
-  storeId,
-  storeName,
-}: { storeId: string; storeName: string }) {
+export function StorePublicListingRow({ storeId }: { storeId: string }) {
   const trpc = useTRPC()
   const queryClient = useQueryClient()
   const id = useId()
@@ -36,7 +33,7 @@ export function StorePublicListingRow({
   const url = listing.data ? `${marketingOrigin}${listing.data.path}` : null
   return (
     <SettingsRow
-      label={storeName}
+      label="Show on your ẸwáTrade page"
       htmlFor={id}
       description={
         update.isError ? (
@@ -62,17 +59,12 @@ export function StorePublicListingRow({
       }
     >
       {listing.isError ? (
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => void listing.refetch()}
-        >
+        <Button variant="outline" onClick={() => void listing.refetch()}>
           Try again
         </Button>
       ) : (
         <Switch
           id={id}
-          aria-label={`List ${storeName} on ẸwáTrade`}
           checked={listing.data?.listed ?? false}
           disabled={!listing.isSuccess || update.isPending}
           onCheckedChange={(checked) =>

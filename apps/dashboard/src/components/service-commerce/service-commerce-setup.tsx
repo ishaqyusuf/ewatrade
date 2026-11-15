@@ -1,18 +1,7 @@
 "use client"
-import {
-  Button,
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  FormActions,
-  SelectControl,
-  SubmitButton,
-  Switch,
-  toast,
-} from "@ewatrade/ui"
+import { Button, SelectControl, Switch, toast } from "@ewatrade/ui"
 
+import { ConfirmAlert } from "@/components/forms/confirm-alert"
 import { FormFeedback } from "@/components/forms/form-feedback"
 import { flattenServiceOfferings } from "@/components/service-work/service-utils"
 import {
@@ -240,7 +229,6 @@ export function ServiceCommerceSetup({
     <SettingsPage>
       <SettingsHeader
         title="Bookings and quotes"
-        description="Let customers ask for a Service, get a quote or book a time."
         actions={
           <>
             <SettingsStorePicker
@@ -259,7 +247,6 @@ export function ServiceCommerceSetup({
               >
                 <Button
                   aria-describedby={blocked ? blockersId : undefined}
-                  className="h-9"
                   disabled={isPending || blocked}
                   onClick={() => setConfirmation(!active)}
                   variant={active ? "outline" : "default"}
@@ -274,9 +261,8 @@ export function ServiceCommerceSetup({
                   <Link href={`/service-commerce/reports?store=${storeId}`} />
                 }
                 variant="outline"
-                className="h-9"
               >
-                View reports
+                Reports
               </Button>
             ) : null}
           </>
@@ -285,7 +271,7 @@ export function ServiceCommerceSetup({
 
       {!canManage ? (
         <SettingsNotice>
-          You can view these settings. Only an owner or admin can change them.
+          Only an owner or admin can change these.
         </SettingsNotice>
       ) : null}
       {data.activationBlockers.length > 0 ? (
@@ -305,60 +291,31 @@ export function ServiceCommerceSetup({
         </SettingsNotice>
       ) : null}
 
-      <Dialog
+      <ConfirmAlert
         open={confirmation !== null}
-        onOpenChange={(open, details) => {
-          if (!open && isPending) {
-            details.cancel()
-            return
-          }
-          if (!open) {
-            activationMutation.reset()
-            setConfirmation(null)
-          }
+        danger={confirmation === false}
+        title={`Turn ${confirmation ? "on" : "off"} bookings and quotes at ${selectedStore.name}?`}
+        description={
+          confirmation
+            ? "Customers can send requests, get quotes and book times."
+            : "Customers can't send new requests or book times. Requests you already have stay open."
+        }
+        action={confirmation ? "Turn on" : "Turn off"}
+        pending={isPending}
+        onCancel={() => {
+          activationMutation.reset()
+          setConfirmation(null)
         }}
+        onConfirm={() => void confirmActivation()}
       >
-        <DialogContent className="max-w-[455px] p-4" hideClose={isPending}>
-          <DialogHeader>
-            <DialogTitle>
-              Turn {confirmation ? "on" : "off"} bookings and quotes for{" "}
-              {selectedStore.name}?
-            </DialogTitle>
-            <DialogDescription>
-              {confirmation
-                ? "Customers can send requests, get quotes and book times, using the features you've turned on."
-                : "Customers can't send new requests or book times until you turn it back on."}
-            </DialogDescription>
-          </DialogHeader>
-          {activationMutation.error ? (
-            <FormFeedback appearance="dashboard">
-              {plainSetupError(activationMutation.error.message)}
-            </FormFeedback>
-          ) : null}
-          <FormActions className="mt-4">
-            <Button
-              type="button"
-              variant="outline"
-              disabled={isPending}
-              onClick={() => setConfirmation(null)}
-            >
-              Cancel
-            </Button>
-            <SubmitButton
-              type="button"
-              isSubmitting={isPending}
-              onClick={() => void confirmActivation()}
-            >
-              {confirmation ? "Turn on" : "Turn off"}
-            </SubmitButton>
-          </FormActions>
-        </DialogContent>
-      </Dialog>
+        {activationMutation.error ? (
+          <FormFeedback appearance="dashboard">
+            {plainSetupError(activationMutation.error.message)}
+          </FormFeedback>
+        ) : null}
+      </ConfirmAlert>
 
-      <SettingsSection
-        title="Features"
-        description="Turned-off or unfinished features are hidden from customers."
-      >
+      <SettingsSection title="Features">
         {SERVICE_COMMERCE_FEATURES.map((feature) => {
           const key = `capability.${feature.capability}`
           const id = `${idPrefix}-${feature.capability}`
@@ -431,10 +388,7 @@ export function ServiceCommerceSetup({
         </SettingsRow>
       </SettingsSection>
 
-      <SettingsSection
-        title="Appointments"
-        description="Set open times, or create a booking link for one customer."
-      >
+      <SettingsSection title="Appointments">
         {serviceItems.isLoading ? (
           <div className="px-4 py-3.5">
             <div className="h-9 animate-pulse rounded-md bg-muted" />
@@ -456,14 +410,13 @@ export function ServiceCommerceSetup({
           />
         ) : (
           <SettingsRow
-            label="Service"
-            description="Pick a Service to set its open times or booking link."
+            label="Open times and booking links"
             disabled={!canManage}
             htmlFor={`${idPrefix}-offering`}
           >
             <SelectControl
               id={`${idPrefix}-offering`}
-              className="h-9 min-w-48"
+              className="min-w-48"
               value=""
               disabled={!canManage}
               onValueChange={(offeringId) => {

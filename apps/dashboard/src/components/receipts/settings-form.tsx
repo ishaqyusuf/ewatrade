@@ -47,7 +47,6 @@ export function ReceiptSettingsForm({
     <SettingsPage>
       <SettingsHeader
         title="Receipts"
-        description="Choose what prints on every receipt. Orders use these automatically."
         actions={
           <SettingsStorePicker
             includeAll
@@ -152,21 +151,14 @@ function ReceiptSettingsEditor({
         title={
           scope === "store"
             ? `Receipt at ${storeName}`
-            : "What's on the receipt"
-        }
-        description={
-          inherited
-            ? `${storeName} uses the business receipt. Change it under All stores.`
-            : scope === "store"
-              ? `Only for ${storeName}. Other stores aren't changed.`
-              : "Used by every store unless a store has its own."
+            : "Every store's receipt"
         }
       >
         {scope === "store" ? (
           <SettingsRow
             label="Use the business receipt"
             htmlFor="receipt-inherit"
-            description={`Turn off to give ${storeName} its own receipt.`}
+            description={inherited ? undefined : "Off: this store has its own."}
             saved={autosave.saved("inherit")}
           >
             <Switch
@@ -189,7 +181,6 @@ function ReceiptSettingsEditor({
         <SettingsRow
           label="Show customer name"
           htmlFor="receipt-customer"
-          description="Print the customer's name at the top."
           disabled={inherited}
           saved={autosave.saved("showCustomerName")}
         >
@@ -203,7 +194,7 @@ function ReceiptSettingsEditor({
         <SettingsRow
           label="Show payment details"
           htmlFor="receipt-payments"
-          description="Show the payment received, balance due and each payment. Paid or unpaid always shows."
+          description="Amount paid and balance due."
           disabled={inherited}
           saved={autosave.saved("showPaymentBreakdown")}
         >
@@ -219,13 +210,10 @@ function ReceiptSettingsEditor({
             <label htmlFor="receipt-thank-you" className="text-sm font-medium">
               Thank-you note
             </label>
-            <span className="text-xs tabular-nums text-muted-foreground">
+            <span className="text-sm tabular-nums text-muted-foreground">
               {note.length} / {NOTE_LIMIT}
             </span>
           </div>
-          <p className="text-sm text-muted-foreground">
-            Printed at the bottom of every receipt.
-          </p>
           <Textarea
             id="receipt-thank-you"
             rows={3}
@@ -239,14 +227,12 @@ function ReceiptSettingsEditor({
             <div className="flex justify-end gap-2">
               <Button
                 variant="outline"
-                size="sm"
                 disabled={mutation.isPending}
                 onClick={() => setNote(current.thankYouNote)}
               >
                 Cancel
               </Button>
               <Button
-                size="sm"
                 disabled={mutation.isPending}
                 onClick={() =>
                   save(

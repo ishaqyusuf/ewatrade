@@ -65,7 +65,7 @@ export function SettingsChoice<T extends string>({
                   {option.label}
                 </span>
                 {option.description ? (
-                  <span className="mt-0.5 block text-[13px] text-muted-foreground">
+                  <span className="mt-0.5 block text-sm text-muted-foreground">
                     {option.description}
                   </span>
                 ) : null}

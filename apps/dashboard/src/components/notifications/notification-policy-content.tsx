@@ -87,7 +87,7 @@ export function NotificationPolicyContent({
         <section key={category} aria-labelledby={`policy-${category}`}>
           <h3
             id={`policy-${category}`}
-            className="border-b pb-2 text-[13px] font-medium"
+            className="border-b pb-2 text-sm font-medium"
           >
             {ACTIVITY_CATEGORY_LABELS[category]}
           </h3>
@@ -133,7 +133,7 @@ export function NotificationPolicyContent({
           <p className="mt-2 text-xs text-muted-foreground">
             These aren't available yet.
           </p>
-          <ul className="mt-2 grid gap-1 text-[13px] text-muted-foreground sm:grid-cols-2">
+          <ul className="mt-2 grid gap-1 text-sm text-muted-foreground sm:grid-cols-2">
             {planned.map((entry) => (
               <li key={entry.type}>
                 {ACTIVITY_CATEGORY_LABELS[entry.category]} ·{" "}
@@ -211,7 +211,7 @@ export function PolicyEditor({
         />
       </CheckboxField>
       <fieldset className="grid gap-1" disabled={!draft.defaultInApp}>
-        <legend className="pb-1.5 text-[13px] font-medium">
+        <legend className="pb-1.5 text-sm font-medium">
           Send it automatically to
         </legend>
         {POLICY_ROLES.map((role) => (

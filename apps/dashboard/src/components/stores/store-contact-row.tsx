@@ -9,7 +9,6 @@ import {
   Button,
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
   Field,
@@ -33,10 +32,7 @@ const countries = [
   ...COUNTRIES.map((country) => ({ value: country.code, label: country.name })),
 ]
 
-export function StoreContactRow({
-  storeId,
-  storeName,
-}: { storeId: string; storeName: string }) {
+export function StoreContactRow({ storeId }: { storeId: string }) {
   const trpc = useTRPC()
   const contact = useQuery(
     trpc.stores.contact.queryOptions({ storeId }, { retry: false }),
@@ -44,7 +40,7 @@ export function StoreContactRow({
   const [editing, setEditing] = useState(false)
   return (
     <SettingsRow
-      label={storeName}
+      label="Customer phone"
       description={
         contact.isError ? (
           <span role="alert">
@@ -53,27 +49,21 @@ export function StoreContactRow({
         ) : contact.isPending ? (
           <Skeleton className="h-4 w-32" />
         ) : (
-          (contact.data.supportPhone ?? "No customer phone number")
+          (contact.data.supportPhone ?? "Not set")
         )
       }
     >
       {contact.isError ? (
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => void contact.refetch()}
-        >
+        <Button variant="outline" onClick={() => void contact.refetch()}>
           Try again
         </Button>
       ) : (
         <Button
           variant="outline"
-          size="sm"
           disabled={!contact.isSuccess}
           onClick={() => setEditing(true)}
-          aria-label={`Edit contact for ${storeName}`}
         >
-          Edit contact
+          Edit
         </Button>
       )}
       {editing && contact.isSuccess ? (
@@ -120,10 +110,7 @@ function StoreContactDialog({
       <DialogContent className="max-w-[455px]">
         <div className="p-4">
           <DialogHeader className="mb-6 pr-8">
-            <DialogTitle>Customer contact · {contact.name}</DialogTitle>
-            <DialogDescription>
-              Used for enquiries and receipts when those features are available.
-            </DialogDescription>
+            <DialogTitle>Customer phone · {contact.name}</DialogTitle>
           </DialogHeader>
           <form
             onSubmit={async (event) => {
@@ -206,9 +193,6 @@ function StoreContactDialog({
                   options={countries}
                   disabled={busy}
                 />
-                <FieldDescription>
-                  Changing the country rechecks service availability.
-                </FieldDescription>
               </Field>
               <Field data-invalid={Boolean(phoneError)}>
                 <FieldLabel htmlFor={`${id}-phone`}>
@@ -227,10 +211,7 @@ function StoreContactDialog({
                   }}
                   disabled={busy}
                 />
-                <FieldDescription>
-                  Include the country code, or use a local number for the
-                  selected country. Leave blank to remove it.
-                </FieldDescription>
+                <FieldDescription>Leave blank to remove it.</FieldDescription>
                 {phoneError ? <FieldError>{phoneError}</FieldError> : null}
               </Field>
               {error ? (

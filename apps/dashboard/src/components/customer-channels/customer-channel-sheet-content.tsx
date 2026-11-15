@@ -174,8 +174,7 @@ export function CustomerChannelSheetContent({
   const saveConnection = useMutation(
     trpc.serviceCommerce.saveCustomerWhatsAppConnection.mutationOptions({
       onError: (error) => setMessage(error.message),
-      onSuccess: () =>
-        succeeded("Connection candidate saved. Readiness testing is running."),
+      onSuccess: () => succeeded("Saved. We're checking the number now."),
     }),
   )
   const completeSignup = useMutation(
@@ -184,7 +183,7 @@ export function CustomerChannelSheetContent({
       onSuccess: async () => {
         await invalidate()
         await channelParams.setParams({ whatsapp: null })
-        setMessage("Number selected. Readiness testing is running.")
+        setMessage("Number chosen. We're checking it now.")
       },
     }),
   )
@@ -192,13 +191,13 @@ export function CustomerChannelSheetContent({
     trpc.serviceCommerce.saveCustomerChannelBindings.mutationOptions({
       onError: (error) => setMessage(error.message),
       onSuccess: () =>
-        succeeded("Store assignments saved. Retest to promote new routes."),
+        succeeded("Stores saved. Check the number again to use them."),
     }),
   )
   const retest = useMutation(
     trpc.serviceCommerce.retestCustomerChannelConnection.mutationOptions({
       onError: (error) => setMessage(error.message),
-      onSuccess: () => succeeded("Connection readiness test queued."),
+      onSuccess: () => succeeded("Checking the number now."),
     }),
   )
   const lifecycle = useMutation(
@@ -207,33 +206,32 @@ export function CustomerChannelSheetContent({
       onSuccess: async () => {
         await invalidate()
         setConnectionAction(null)
-        setMessage("Connection lifecycle updated.")
+        setMessage("Saved.")
       },
     }),
   )
   const assign = useMutation(
     trpc.serviceCommerce.assignChannelAttendant.mutationOptions({
       onError: (error) => setMessage(error.message),
-      onSuccess: () => succeeded("Attendant assigned to this Store."),
+      onSuccess: () => succeeded("Added. They can reply to chats now."),
     }),
   )
   const revokeAttendant = useMutation(
     trpc.serviceCommerce.revokeChannelAttendant.mutationOptions({
       onError: (error) => setMessage(error.message),
-      onSuccess: () =>
-        succeeded("Attendant removed from future customer routing."),
+      onSuccess: () => succeeded("Removed. New chats won't go to them."),
     }),
   )
   const publish = useMutation(
     trpc.serviceCommerce.publishCustomerEntryPoint.mutationOptions({
       onError: (error) => setMessage(error.message),
-      onSuccess: () => succeeded("Customer entry link and QR are ready."),
+      onSuccess: () => succeeded("Your link and QR code are ready."),
     }),
   )
   const revokeEntry = useMutation(
     trpc.serviceCommerce.revokeCustomerEntryPoint.mutationOptions({
       onError: (error) => setMessage(error.message),
-      onSuccess: () => succeeded("Customer entry link revoked."),
+      onSuccess: () => succeeded("Link turned off."),
     }),
   )
   const updateQuotePolicy = useMutation(
@@ -250,7 +248,7 @@ export function CustomerChannelSheetContent({
           invalidateQuoteApproval(),
         ])
         policyOperationId.current = crypto.randomUUID()
-        setMessage("Quotation approval policy saved.")
+        setMessage("Saved.")
       },
     }),
   )
@@ -260,7 +258,7 @@ export function CustomerChannelSheetContent({
       onSuccess: async () => {
         await invalidateQuoteApproval()
         approvalDecisionId.current = crypto.randomUUID()
-        setMessage("Quotation approved and released to the customer.")
+        setMessage("Approved. The customer can see the quote now.")
       },
     }),
   )
@@ -270,7 +268,7 @@ export function CustomerChannelSheetContent({
       onSuccess: async () => {
         await invalidateQuoteApproval()
         rejectionDecisionId.current = crypto.randomUUID()
-        setMessage("Quotation version rejected. It remains private.")
+        setMessage("Rejected. The customer won't see it.")
       },
     }),
   )
@@ -329,9 +327,7 @@ export function CustomerChannelSheetContent({
     (connection) => connection.id === params.connectionId,
   )
   if (params.connectionId && !selectedConnection) {
-    return (
-      <SheetError message="This connection is stale or no longer authorized." />
-    )
+    return <SheetError message="This number isn't available any more." />
   }
   const pending =
     saveConnection.isPending ||
@@ -349,7 +345,6 @@ export function CustomerChannelSheetContent({
 
   return (
     <div className="grid gap-5">
-      <SetupProgress active={mode} />
       {message ? (
         <FormFeedback variant="default" appearance="dashboard">
           {message}
@@ -420,19 +415,19 @@ export function CustomerChannelSheetContent({
               }
               variant="outline"
             >
-              Retest connection
+              Check again
             </Button>
             <Button
               onClick={() => setConnectionAction("suspended")}
               variant="outline"
             >
-              Suspend
+              Pause
             </Button>
             <Button
               onClick={() => setConnectionAction("revoked")}
               variant="outline"
             >
-              Revoke
+              Disconnect
             </Button>
           </div>
         </div>
@@ -525,17 +520,17 @@ export function CustomerChannelSheetContent({
           <AlertDialogContent>
             <AlertDialogTitle className="text-lg font-medium">
               {connectionAction === "revoked"
-                ? "Revoke this connection?"
-                : "Suspend this connection?"}
+                ? `Disconnect ${selectedConnection.displayNumber}?`
+                : `Pause ${selectedConnection.displayNumber}?`}
             </AlertDialogTitle>
             <AlertDialogDescription className="text-sm text-muted-foreground">
               {connectionAction === "revoked"
-                ? "Revocation is permanent. Current Store routes will stop using this connection."
-                : "Current Store routes will stop using this connection until it is reactivated."}
+                ? "Customers can't message you on this number any more. This can't be undone."
+                : "Customers can't message you on this number until you turn it back on."}
             </AlertDialogDescription>
             <AlertDialogFooter>
               <AlertDialogCancel disabled={lifecycle.isPending}>
-                Cancel
+                Go back
               </AlertDialogCancel>
               <Button
                 disabled={lifecycle.isPending}
@@ -551,59 +546,16 @@ export function CustomerChannelSheetContent({
                 variant="destructive"
               >
                 {lifecycle.isPending
-                  ? "Updating…"
+                  ? "Saving…"
                   : connectionAction === "revoked"
-                    ? "Revoke connection"
-                    : "Suspend connection"}
+                    ? "Disconnect"
+                    : "Pause"}
               </Button>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
       ) : null}
     </div>
-  )
-}
-
-function SetupProgress({
-  active,
-}: {
-  active:
-    | "availability"
-    | "conversation_mode"
-    | "connection"
-    | "entry_point"
-    | "quote_approval"
-    | "quote_policy"
-    | "team"
-}) {
-  const steps = [
-    { active: active === "availability", label: "Availability" },
-    { active: active === "conversation_mode", label: "Channel mode" },
-    { active: active === "connection", label: "Setup & configure" },
-    { active: active === "connection", label: "Test" },
-    {
-      active:
-        active === "team" ||
-        active === "quote_policy" ||
-        active === "quote_approval",
-      label: "Team & approval",
-    },
-    { active: active === "entry_point", label: "Publish" },
-  ]
-  return (
-    <ol
-      aria-label="Customer channel setup progress"
-      className="grid grid-cols-2 gap-2 text-xs sm:grid-cols-3 lg:grid-cols-6"
-    >
-      {steps.map((step, index) => (
-        <li
-          className={`rounded-none border px-3 py-2 ${step.active ? "border-primary bg-primary/5 text-primary" : "border-border text-muted-foreground"}`}
-          key={step.label}
-        >
-          {index + 1}. {step.label}
-        </li>
-      ))}
-    </ol>
   )
 }
 
