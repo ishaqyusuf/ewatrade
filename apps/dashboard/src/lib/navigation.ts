@@ -78,6 +78,17 @@ const canManageCatalog = (
       : canManageSalesOperations(role)
     : false
 
+/** Same rule as the Staff page: scoped staff never manage staff. */
+const canManageStaffRole = (
+  role: EwaTradeRole | null,
+  context: DashboardNavContext,
+) =>
+  role
+    ? context.staffAccessMode === "SCOPED"
+      ? canManageTenant(role)
+      : canManageSalesOperations(role)
+    : false
+
 const canUseRetailOps = (role: EwaTradeRole | null) =>
   role ? canOperatePos(role) : false
 
@@ -234,7 +245,7 @@ const DASHBOARD_NAV: DashboardNavDefinition[] = [
     href: "/staff",
     icon: "staff",
     label: "Staff",
-    canAccess: canManageCatalog,
+    canAccess: canManageStaffRole,
     requiresPlanFeature: "staff",
   },
   {

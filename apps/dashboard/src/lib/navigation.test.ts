@@ -425,6 +425,13 @@ test("scoped roles expose orders and stock without catalog or staff administrati
       catalogEditor: true,
     }),
   ).toBe(true)
+  // Editing items never opens Staff for a scoped manager.
+  expect(
+    canAccessDashboardPath("/staff", "MANAGER", {
+      ...scope,
+      catalogEditor: true,
+    }),
+  ).toBe(false)
   expect(canAccessDashboardPath("/finance", "MANAGER", scope)).toBe(false)
   expect(
     canAccessDashboardPath("/sales/orders/order-1", "CASHIER", scope),
