@@ -237,81 +237,130 @@ export function FinanceBankStatementDetail({
       <FieldSet className="grid min-w-0 gap-3">
         <FieldLegend>Bank lines</FieldLegend>
         {data.rows.length ? (
-          <div className="max-h-80 overflow-auto overscroll-contain border border-border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>
+          <>
+            <ul
+              aria-label="Bank lines"
+              className="max-h-96 divide-y divide-border overflow-y-auto overscroll-contain rounded-[var(--ui-radius-surface)] border border-border md:hidden"
+            >
+              {data.rows.map((row) => (
+                <li key={row.id}>
+                  <label className="flex min-h-14 items-center gap-3 px-4 py-2.5">
                     <Checkbox
-                      aria-label={
-                        eligibleBankRowIds.length > 50
-                          ? "Select all bank lines not matched yet (more than 50; pick up to 50 one by one)"
-                          : "Select all bank lines not matched yet"
-                      }
-                      checked={allBankSelected}
-                      indeterminate={bankRowIds.length > 0 && !allBankSelected}
+                      aria-label={`Select bank line ${row.externalId}`}
+                      checked={bankRowIds.includes(row.id)}
                       disabled={
-                        selectionLocked ||
-                        eligibleBankRowIds.length === 0 ||
-                        eligibleBankRowIds.length > 50
+                        Boolean(row.activeMatchId) ||
+                        query.isFetching ||
+                        Boolean(recoveryError) ||
+                        (!bankRowIds.includes(row.id) &&
+                          bankRowIds.length >= 50)
                       }
                       onCheckedChange={(checked) =>
-                        setBankRowIds(checked ? eligibleBankRowIds : [])
+                        setBankRowIds((values) =>
+                          toggle(values, row.id, checked),
+                        )
                       }
                     />
-                  </TableHead>
-                  <TableHead>Bank ref</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Description</TableHead>
-                  <TableHead>Amount</TableHead>
-                  <TableHead>Match</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {data.rows.map((row) => (
-                  <TableRow key={row.id}>
-                    <TableCell>
-                      <Checkbox
-                        aria-label={`Select bank line ${row.externalId}`}
-                        checked={bankRowIds.includes(row.id)}
-                        disabled={
-                          Boolean(row.activeMatchId) ||
-                          query.isFetching ||
-                          Boolean(recoveryError) ||
-                          (!bankRowIds.includes(row.id) &&
-                            bankRowIds.length >= 50)
-                        }
-                        onCheckedChange={(checked) =>
-                          setBankRowIds((values) =>
-                            toggle(values, row.id, checked),
-                          )
-                        }
-                      />
-                    </TableCell>
-                    <TableCell className="font-mono text-sm">
-                      {row.externalId}
-                    </TableCell>
-                    <TableCell className="whitespace-nowrap">
-                      {formatFinanceDate(row.occurredAt)}
-                    </TableCell>
-                    <TableCell className="max-w-80 whitespace-normal break-words">
-                      {row.description || "—"}
-                    </TableCell>
-                    <TableCell className="whitespace-nowrap tabular-nums">
-                      {money(row.amountMinor)}
-                    </TableCell>
-                    <TableCell>
+                    <span className="grid min-w-0 flex-1 gap-0.5">
+                      <span className="break-words">
+                        {row.description || row.externalId}
+                      </span>
+                      <span className="text-sm text-muted-foreground">
+                        {formatFinanceDate(row.occurredAt)}
+                      </span>
+                    </span>
+                    <span className="grid shrink-0 justify-items-end gap-1">
+                      <span className="font-semibold tabular-nums">
+                        {money(row.amountMinor)}
+                      </span>
                       <Badge
                         variant={row.activeMatchId ? "secondary" : "outline"}
                       >
                         {row.activeMatchId ? "Matched" : "Not matched"}
                       </Badge>
-                    </TableCell>
+                    </span>
+                  </label>
+                </li>
+              ))}
+            </ul>
+            <div className="max-h-80 overflow-auto overscroll-contain rounded-[var(--ui-radius-surface)] border border-border max-md:hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>
+                      <Checkbox
+                        aria-label={
+                          eligibleBankRowIds.length > 50
+                            ? "Select all bank lines not matched yet (more than 50; pick up to 50 one by one)"
+                            : "Select all bank lines not matched yet"
+                        }
+                        checked={allBankSelected}
+                        indeterminate={
+                          bankRowIds.length > 0 && !allBankSelected
+                        }
+                        disabled={
+                          selectionLocked ||
+                          eligibleBankRowIds.length === 0 ||
+                          eligibleBankRowIds.length > 50
+                        }
+                        onCheckedChange={(checked) =>
+                          setBankRowIds(checked ? eligibleBankRowIds : [])
+                        }
+                      />
+                    </TableHead>
+                    <TableHead>Bank ref</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Description</TableHead>
+                    <TableHead>Amount</TableHead>
+                    <TableHead>Match</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+                </TableHeader>
+                <TableBody>
+                  {data.rows.map((row) => (
+                    <TableRow key={row.id}>
+                      <TableCell>
+                        <Checkbox
+                          aria-label={`Select bank line ${row.externalId}`}
+                          checked={bankRowIds.includes(row.id)}
+                          disabled={
+                            Boolean(row.activeMatchId) ||
+                            query.isFetching ||
+                            Boolean(recoveryError) ||
+                            (!bankRowIds.includes(row.id) &&
+                              bankRowIds.length >= 50)
+                          }
+                          onCheckedChange={(checked) =>
+                            setBankRowIds((values) =>
+                              toggle(values, row.id, checked),
+                            )
+                          }
+                        />
+                      </TableCell>
+                      <TableCell className="font-mono text-sm">
+                        {row.externalId}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap">
+                        {formatFinanceDate(row.occurredAt)}
+                      </TableCell>
+                      <TableCell className="max-w-80 whitespace-normal break-words">
+                        {row.description || "—"}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap tabular-nums">
+                        {money(row.amountMinor)}
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={row.activeMatchId ? "secondary" : "outline"}
+                        >
+                          {row.activeMatchId ? "Matched" : "Not matched"}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </>
         ) : (
           <p className="text-sm text-muted-foreground">
             This statement has no lines.
@@ -330,91 +379,129 @@ export function FinanceBankStatementDetail({
           </Alert>
         ) : null}
         {data.candidates.length ? (
-          <div className="max-h-80 overflow-auto overscroll-contain border border-border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>
+          <>
+            <ul
+              aria-label="Records not matched yet"
+              className="max-h-96 divide-y divide-border overflow-y-auto overscroll-contain rounded-[var(--ui-radius-surface)] border border-border md:hidden"
+            >
+              {data.candidates.map((line) => (
+                <li key={line.id} className="grid gap-2 px-4 py-2.5">
+                  <label className="flex min-h-11 items-center gap-3">
                     <Checkbox
-                      aria-label={
-                        candidateIds.length > 50
-                          ? "Select all records (more than 50; pick up to 50 one by one)"
-                          : "Select all records"
-                      }
-                      checked={allCandidatesSelected}
-                      indeterminate={
-                        journalLineIds.length > 0 && !allCandidatesSelected
-                      }
+                      aria-label={`Select record ${line.sequence}`}
+                      checked={journalLineIds.includes(line.id)}
                       disabled={
-                        selectionLocked ||
-                        candidateIds.length === 0 ||
-                        candidateIds.length > 50
+                        query.isFetching ||
+                        Boolean(recoveryError) ||
+                        (!journalLineIds.includes(line.id) &&
+                          journalLineIds.length >= 50)
                       }
                       onCheckedChange={(checked) =>
-                        setJournalLineIds(checked ? candidateIds : [])
+                        setJournalLineIds((values) =>
+                          toggle(values, line.id, checked),
+                        )
                       }
                     />
-                  </TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Your record</TableHead>
-                  <TableHead>Source</TableHead>
-                  <TableHead>Amount</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {data.candidates.map((line) => (
-                  <TableRow key={line.id}>
-                    <TableCell>
+                    <span className="grid min-w-0 flex-1 gap-0.5">
+                      <span className="break-words">{line.description}</span>
+                      <span className="text-sm text-muted-foreground">
+                        {formatFinanceDate(line.effectiveAt)} ·{" "}
+                        {financeSourceLabel(line.sourceKind)}
+                      </span>
+                    </span>
+                    <span className="shrink-0 font-semibold tabular-nums">
+                      {money(line.amountMinor)}
+                    </span>
+                  </label>
+                </li>
+              ))}
+            </ul>
+            <div className="max-h-80 overflow-auto overscroll-contain rounded-[var(--ui-radius-surface)] border border-border max-md:hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>
                       <Checkbox
-                        aria-label={`Select record ${line.sequence}`}
-                        checked={journalLineIds.includes(line.id)}
+                        aria-label={
+                          candidateIds.length > 50
+                            ? "Select all records (more than 50; pick up to 50 one by one)"
+                            : "Select all records"
+                        }
+                        checked={allCandidatesSelected}
+                        indeterminate={
+                          journalLineIds.length > 0 && !allCandidatesSelected
+                        }
                         disabled={
-                          query.isFetching ||
-                          Boolean(recoveryError) ||
-                          (!journalLineIds.includes(line.id) &&
-                            journalLineIds.length >= 50)
+                          selectionLocked ||
+                          candidateIds.length === 0 ||
+                          candidateIds.length > 50
                         }
                         onCheckedChange={(checked) =>
-                          setJournalLineIds((values) =>
-                            toggle(values, line.id, checked),
-                          )
+                          setJournalLineIds(checked ? candidateIds : [])
                         }
                       />
-                    </TableCell>
-                    <TableCell className="whitespace-nowrap">
-                      {formatFinanceDate(line.effectiveAt)}
-                    </TableCell>
-                    <TableCell className="max-w-80 whitespace-normal break-words">
-                      {line.description}
-                      <span className="block text-sm text-muted-foreground">
-                        Record {line.sequence}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-sm">
-                      {financeSourceLabel(line.sourceKind)}
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        disabled={query.isFetching || Boolean(recoveryError)}
-                        onClick={() =>
-                          void setParams({
-                            financeSheet: "bank-source",
-                            bankSourceEntryId: line.entryId,
-                            bankSourceAccountId: data.accountId,
-                          })
-                        }
-                      >
-                        Open original record
-                      </Button>
-                    </TableCell>
-                    <TableCell className="whitespace-nowrap tabular-nums">
-                      {money(line.amountMinor)}
-                    </TableCell>
+                    </TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Your record</TableHead>
+                    <TableHead>Source</TableHead>
+                    <TableHead>Amount</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+                </TableHeader>
+                <TableBody>
+                  {data.candidates.map((line) => (
+                    <TableRow key={line.id}>
+                      <TableCell>
+                        <Checkbox
+                          aria-label={`Select record ${line.sequence}`}
+                          checked={journalLineIds.includes(line.id)}
+                          disabled={
+                            query.isFetching ||
+                            Boolean(recoveryError) ||
+                            (!journalLineIds.includes(line.id) &&
+                              journalLineIds.length >= 50)
+                          }
+                          onCheckedChange={(checked) =>
+                            setJournalLineIds((values) =>
+                              toggle(values, line.id, checked),
+                            )
+                          }
+                        />
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap">
+                        {formatFinanceDate(line.effectiveAt)}
+                      </TableCell>
+                      <TableCell className="max-w-80 whitespace-normal break-words">
+                        {line.description}
+                        <span className="block text-sm text-muted-foreground">
+                          Record {line.sequence}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-sm">
+                        {financeSourceLabel(line.sourceKind)}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={query.isFetching || Boolean(recoveryError)}
+                          onClick={() =>
+                            void setParams({
+                              financeSheet: "bank-source",
+                              bankSourceEntryId: line.entryId,
+                              bankSourceAccountId: data.accountId,
+                            })
+                          }
+                        >
+                          Open original record
+                        </Button>
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap tabular-nums">
+                        {money(line.amountMinor)}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </>
         ) : (
           <p className="text-sm text-muted-foreground">
             No records waiting to be matched up to this statement's end date.

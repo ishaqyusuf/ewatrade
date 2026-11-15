@@ -311,9 +311,70 @@ function FinanceSupplierHistory({
       {cursors.length > 1 ? (
         <p className="text-sm text-muted-foreground">Page {cursors.length}</p>
       ) : null}
-      <InlineSelectionStatus selection={selection} />
+      <div className="max-md:hidden">
+        <InlineSelectionStatus selection={selection} />
+      </div>
+      <ul
+        aria-label="Bills and payments"
+        className="divide-y divide-border rounded-[var(--ui-radius-surface)] border border-border md:hidden"
+      >
+        {statement.data.length ? (
+          statement.data.map((entry) => {
+            const paid = entry.side === "DEBIT"
+            const toUndo: SupplierEntryToUndo | null = canUndo(entry)
+              ? {
+                  id: entry.id,
+                  kind: entry.kind as SupplierEntryToUndo["kind"],
+                  label: entryLabels[entry.kind],
+                  description: entry.description,
+                  amountMinor: entry.amountMinor,
+                  effectiveAt: entry.effectiveAt,
+                  moneyAccountId: entry.moneyAccountId,
+                }
+              : null
+            return (
+              <li key={entry.id} className="grid min-h-14 gap-1 px-4 py-2.5">
+                <div className="flex items-start justify-between gap-3">
+                  <span className="min-w-0 break-words">
+                    {entry.description}
+                  </span>
+                  <span className="shrink-0 text-right font-semibold tabular-nums">
+                    {paid ? "Paid " : "Billed "}
+                    {money(entry.amountMinor)}
+                  </span>
+                </div>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="text-sm text-muted-foreground">
+                    {plainDay(dayIn(entry.effectiveAt, book.timezone))} ·{" "}
+                    {entryLabels[entry.kind]}
+                  </span>
+                  {entry.reversalOfId ? (
+                    <Badge variant="secondary">Undo</Badge>
+                  ) : entry.reversal ? (
+                    <Badge variant="secondary">Undone</Badge>
+                  ) : toUndo ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={busy}
+                      aria-label={`Undo ${entry.description}`}
+                      onClick={() => setUndoing(toUndo)}
+                    >
+                      Undo
+                    </Button>
+                  ) : null}
+                </div>
+              </li>
+            )
+          })
+        ) : (
+          <li className="px-4 py-6 text-muted-foreground">
+            No bills or payments yet.
+          </li>
+        )}
+      </ul>
       <section
-        className="overflow-x-auto border border-border"
+        className="overflow-x-auto rounded-[var(--ui-radius-surface)] border border-border max-md:hidden"
         // biome-ignore lint/a11y/noNoninteractiveTabindex: This wide historical table needs keyboard scrolling.
         tabIndex={0}
         aria-label="Bills and payments"
