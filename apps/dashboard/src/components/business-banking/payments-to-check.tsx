@@ -83,17 +83,18 @@ export function PaymentsToCheck({
   // Only the claim list (and the notification bell) refresh after a review:
   // the open review keeps showing its result.
   const refreshList = async () => {
-    // Discard pre-command reads, then let both owners join one fresh first page.
-    await queryClient.cancelQueries({
-      queryKey: trpc.businessBanking.pendingReports.queryKey(),
-    })
+    // Discard pre-command reads, then re-read every loaded page of the list
+    // (and the bell's pending path) once.
+    await queryClient.cancelQueries({ queryKey: listKey })
     return Promise.all([
       queryClient.invalidateQueries(
-        {
-          queryKey: trpc.businessBanking.pendingReports.queryKey(),
-        },
+        { queryKey: listKey, exact: true },
         { cancelRefetch: false },
       ),
+      queryClient.invalidateQueries({
+        queryKey: trpc.businessBanking.pendingReports.pathKey(),
+        predicate: (query) => query.queryKey.at(-1) !== "payments-to-check",
+      }),
       queryClient.invalidateQueries({
         queryKey: trpc.businessBanking.pendingReportCount.pathKey(),
       }),
