@@ -75,12 +75,14 @@ const contracts = [
   {
     file: "src/components/mobile/admin-tabs/admin-create-action-sheet.tsx",
     markers: [
-      "Quick create",
       "What are you adding?",
       "buildAdminCreateActions",
-      'largeTextLayout ? ["92%"] : [actions.length > 5 ? "64%" : "56%"]',
+      "enableDynamicSizing",
       "BottomSheetScrollView",
-      '"-mx-2 min-h-16 flex-row gap-3 border-t border-border px-3 py-3"',
+      "CatalogTile",
+      'largeTextLayout ? "gap-3" : "flex-row gap-3"',
+      '"overflow-hidden rounded-[20px] bg-background"',
+      '<RowDivider position="top" />',
       'largeTextLayout ? "items-start" : "items-center"',
       "StatusBadge",
     ],

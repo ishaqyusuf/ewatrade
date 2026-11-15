@@ -263,7 +263,7 @@ const contracts = [
     markers: [
       "useLargeTextLayout",
       "BottomSheetScrollView",
-      'largeTextLayout ? ["92%"]',
+      'largeTextLayout ? "gap-3" : "flex-row gap-3"',
       'largeTextLayout ? "items-start" : "items-center"',
       'className={largeTextLayout ? "mt-1" : undefined}',
     ],

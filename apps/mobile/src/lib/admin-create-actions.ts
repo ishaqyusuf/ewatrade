@@ -63,7 +63,7 @@ export function buildAdminCreateActions(
     },
     {
       detail: availability.hasActiveSellableItems
-        ? "Create an order from active goods or services."
+        ? "Record a sale from your catalog."
         : "Record a sale — pick catalog items or type a price.",
       disabled: false,
       emphasis: "standard",
