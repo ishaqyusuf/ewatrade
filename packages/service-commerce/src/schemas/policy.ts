@@ -37,6 +37,7 @@ export const SERVICE_COMMERCE_POLICY_REASONS = [
   "ambiguous_policy",
   "prohibited_combination",
   "written_approval_required",
+  "service_default_allowed",
 ] as const
 
 export const serviceCommerceVerticalSchema = z.enum(SERVICE_COMMERCE_VERTICALS)

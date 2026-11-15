@@ -149,6 +149,73 @@ describe("Service Commerce vertical policy", () => {
     ).toMatchObject({ outcome: "allowed", reason: "policy_allowed" })
   })
 
+  test("allows ordinary online service requests and tracking by default", () => {
+    const evaluate = (
+      overrides: Partial<
+        Parameters<typeof evaluateServiceCommercePolicyFacts>[0]
+      > = {},
+    ) =>
+      evaluateServiceCommercePolicyFacts({
+        channel: "web",
+        facts: [],
+        jurisdictionCode: "NG",
+        now,
+        subject: "intake",
+        vertical: "service",
+        ...overrides,
+      })
+    for (const [channel, subject] of [
+      ["staff", "web"],
+      ["staff", "quote"],
+      ["web", "intake"],
+      ["web", "booking"],
+      ["web", "quote"],
+      ["web", "service_completion"],
+    ] as const) {
+      expect(evaluate({ channel, subject })).toMatchObject({
+        outcome: "allowed",
+        reason: "service_default_allowed",
+      })
+    }
+    expect(evaluate({ channel: "whatsapp" }).outcome).toBe("pending_evidence")
+    expect(evaluate({ vertical: "pharmacy" }).outcome).toBe("pending_evidence")
+    expect(evaluate({ subject: "payment" }).outcome).toBe("pending_evidence")
+    expect(evaluate({ jurisdictionCode: null }).reason).toBe(
+      "jurisdiction_missing",
+    )
+
+    const webIntake = { channel: "web" as const, subject: "intake" as const }
+    expect(
+      evaluate({
+        facts: [allowedFact({ ...webIntake, outcome: "restricted" })],
+      }),
+    ).toMatchObject({ outcome: "restricted", reason: "policy_restricted" })
+    expect(
+      evaluate({
+        facts: [allowedFact({ ...webIntake, outcome: "prohibited" })],
+      }).outcome,
+    ).toBe("prohibited")
+    expect(
+      evaluate({ facts: [allowedFact({ ...webIntake, expiresAt: now })] }),
+    ).toMatchObject({ outcome: "allowed", reason: "service_default_allowed" })
+    expect(
+      evaluate({
+        facts: [
+          allowedFact({
+            ...webIntake,
+            outcome: "restricted",
+            revokedAt: new Date("2026-08-10T11:00:00.000Z"),
+          }),
+        ],
+      }).reason,
+    ).toBe("service_default_allowed")
+    expect(evaluate({ facts: [allowedFact(webIntake)] })).toMatchObject({
+      outcome: "allowed",
+      policyRevision: 1,
+      reason: "policy_allowed",
+    })
+  })
+
   test("keeps progressive Catalog operations independently decidable", () => {
     const facts = [
       allowedFact({ subject: "progressive_draft_capture" }),

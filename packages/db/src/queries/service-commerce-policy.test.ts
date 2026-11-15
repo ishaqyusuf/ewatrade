@@ -203,6 +203,27 @@ describe("Service Commerce policy decisions", () => {
   })
 
   test("fails closed for a decision belonging to a different jurisdiction and for expired or revoked approval", async () => {
+    const payment = ServiceCommercePolicySubject.PAYMENT
+    for (const decision of [
+      row({ jurisdictionCode: "GH", subject: payment }),
+      row({ expiresAt: new Date(now.getTime() - 1), subject: payment }),
+      row({ revokedAt: now, subject: payment }),
+    ]) {
+      const { client } = createDb({ decisions: [decision] })
+      const [evaluation] =
+        await evaluateServiceCommercePolicyBatchInTransaction(client as never, {
+          actorUserId: "user-1",
+          purpose: "test",
+          scopes: [{ ...scope, subject: "payment" }],
+          storeId: "store-1",
+          tenantId: "tenant-1",
+        })
+      expect(evaluation).toBeDefined()
+      expect(evaluation?.outcome).not.toBe("allowed")
+    }
+  })
+
+  test("falls back to the ordinary-service default when an online intake approval lapses", async () => {
     for (const decision of [
       row({ jurisdictionCode: "GH" }),
       row({ expiresAt: new Date(now.getTime() - 1) }),
@@ -217,9 +238,25 @@ describe("Service Commerce policy decisions", () => {
           storeId: "store-1",
           tenantId: "tenant-1",
         })
-      expect(evaluation).toBeDefined()
-      expect(evaluation?.outcome).not.toBe("allowed")
+      expect(evaluation).toMatchObject({
+        outcome: "allowed",
+        reason: "service_default_allowed",
+      })
     }
+    const { client } = createDb({
+      decisions: [row({ outcome: ServiceCommercePolicyOutcome.RESTRICTED })],
+    })
+    const [restricted] = await evaluateServiceCommercePolicyBatchInTransaction(
+      client as never,
+      {
+        actorUserId: "user-1",
+        purpose: "test",
+        scopes: [scope],
+        storeId: "store-1",
+        tenantId: "tenant-1",
+      },
+    )
+    expect(restricted?.outcome).toBe("restricted")
   })
 
   test("blocks an unauthorized override but records the denied attempt", async () => {

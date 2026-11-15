@@ -47,6 +47,31 @@ function evaluation(
   }
 }
 
+/**
+ * Ordinary services (laundry, cleaning, repairs) may take online requests,
+ * quotes, preferred times and tracking without a written decision. Regulated
+ * verticals and WhatsApp stay fail closed until a decision allows them.
+ */
+const SERVICE_DEFAULT_ALLOWED = new Set<string>([
+  "staff:web",
+  "staff:quote",
+  "web:intake",
+  "web:booking",
+  "web:quote",
+  "web:service_completion",
+])
+
+function isServiceDefaultAllowed(input: {
+  channel: ServiceCommerceChannelOrigin
+  subject: ServiceCommercePolicySubject
+  vertical: ServiceCommerceVertical
+}) {
+  return (
+    input.vertical === "service" &&
+    SERVICE_DEFAULT_ALLOWED.has(`${input.channel}:${input.subject}`)
+  )
+}
+
 export function evaluateServiceCommercePolicyFacts(input: {
   channel: ServiceCommerceChannelOrigin
   facts: ServiceCommercePolicyFact[]
@@ -71,9 +96,13 @@ export function evaluateServiceCommercePolicyFacts(input: {
     jurisdictionCode === "NG" &&
     input.vertical === "pharmacy" &&
     input.channel === "whatsapp"
+  const defaultAllowed = isServiceDefaultAllowed(input)
   if (matching.length === 0) {
-    return prohibitedByDefault
-      ? evaluation("prohibited", "prohibited_combination")
+    if (prohibitedByDefault) {
+      return evaluation("prohibited", "prohibited_combination")
+    }
+    return defaultAllowed
+      ? evaluation("allowed", "service_default_allowed")
       : evaluation("pending_evidence", "pending_evidence")
   }
   if (matching.length !== 1) {
@@ -82,10 +111,23 @@ export function evaluateServiceCommercePolicyFacts(input: {
 
   const fact = matching[0]
   if (!fact) return evaluation("restricted", "ambiguous_policy")
+  const now = input.now ?? new Date()
+  if (defaultAllowed) {
+    // Only a current restriction overrides the default; a lapsed, revoked or
+    // incomplete allowance falls back to it.
+    const current =
+      !fact.revokedAt && fact.effectiveAt <= now && fact.expiresAt > now
+    if (!current || fact.outcome === "allowed") {
+      return current &&
+        fact.evidenceReferencePresent &&
+        fact.approvalReferencePresent
+        ? evaluation("allowed", "policy_allowed", fact)
+        : evaluation("allowed", "service_default_allowed")
+    }
+  }
   if (fact.revokedAt) {
     return evaluation("restricted", "approval_revoked", fact)
   }
-  const now = input.now ?? new Date()
   if (fact.effectiveAt > now) {
     return evaluation("pending_evidence", "not_effective", fact)
   }
