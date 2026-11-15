@@ -50,7 +50,7 @@ export function ReportToneDot({ tone }: { tone: ReportMetricTone | null }) {
 /** "Right now": a count at this moment that the dates do not change. */
 export function ReportNowTag() {
   return (
-    <span className="ml-1.5 rounded-full border border-border px-1.5 align-[1px] text-[11px] text-muted-foreground">
+    <span className="ml-1.5 rounded-full border border-border px-2 align-[1px] text-xs font-normal text-muted-foreground">
       Right now
     </span>
   )
@@ -186,20 +186,23 @@ export function ReportTabPanel({
 }: {
   actions?: ReactNode
   children: ReactNode
-  description: string
+  /** One short line at most; most panels need none. */
+  description?: string
   title: string
 }) {
   return (
     <section
       aria-label={title}
-      className="grid min-w-0 gap-5 border border-border bg-background p-4 sm:p-6"
+      className="grid min-w-0 gap-5 rounded-[var(--ui-radius-surface)] border border-border bg-card p-4 sm:p-6"
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <h2 className="font-semibold">{title}</h2>
-          <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
-            {description}
-          </p>
+          {description ? (
+            <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
+              {description}
+            </p>
+          ) : null}
         </div>
         {actions}
       </div>

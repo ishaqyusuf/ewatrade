@@ -304,6 +304,7 @@ export const dashboardBrowserActions = {
     action: "privacy_export",
   },
   report_print: { category: "reports", action: "print" },
+  report_share: { category: "reports", action: "report_share" },
   search: { category: "usability", action: "search" },
   filter: { category: "usability", action: "filter" },
   retry: { category: "usability", action: "retry" },

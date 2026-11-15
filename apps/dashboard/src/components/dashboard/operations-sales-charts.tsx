@@ -20,7 +20,7 @@ import {
   reportPresetRange,
   reportRangeDays,
 } from "@/lib/report-range"
-import { Button, DailyBarChart } from "@ewatrade/ui"
+import { Button, DailyBarChart, type DailyBarDatum } from "@ewatrade/ui"
 import { formatMinorMoney } from "@ewatrade/utils"
 
 import {
@@ -41,9 +41,7 @@ function ShowNinetyDays({
 }: { onRange: (range: ReportRange) => void }) {
   return (
     <Button
-      className="h-8 rounded-none"
       onClick={() => onRange(reportPresetRange(90))}
-      size="sm"
       type="button"
       variant="outline"
     >
@@ -67,6 +65,9 @@ export function SalesByDayCard({
   const money = (minor: number) => formatReportMoney(minor, currencyCode)
   const empty = totals.orderCount === 0
   const itemsTotal = totals.productMinor + totals.serviceMinor
+  // Two series only when both goods and services sold; otherwise one bar per
+  // day that matches the Sales figure exactly.
+  const mixed = totals.productMinor > 0 && totals.serviceMinor > 0
   return (
     <ReportChartCard
       note={
@@ -79,14 +80,20 @@ export function SalesByDayCard({
         empty
           ? undefined
           : {
-              columns: ["Date", "Orders", "Goods", "Services", "Sales"],
+              columns: mixed
+                ? ["Date", "Orders", "Goods", "Services", "Sales"]
+                : ["Date", "Orders", "Sales"],
               numericFrom: 1,
               rows: [...report.days].reverse().map((day) => ({
                 cells: [
                   formatReportDay(day.date, true),
                   reportCountFormat.format(day.orderCount),
-                  formatMinorMoney(day.productMinor, currencyCode),
-                  formatMinorMoney(day.serviceMinor, currencyCode),
+                  ...(mixed
+                    ? [
+                        formatMinorMoney(day.productMinor, currencyCode),
+                        formatMinorMoney(day.serviceMinor, currencyCode),
+                      ]
+                    : []),
                   formatMinorMoney(day.orderValueMinor, currencyCode),
                 ],
                 key: day.date,
@@ -98,31 +105,38 @@ export function SalesByDayCard({
       {empty ? (
         <ReportChartEmpty
           action={days < 90 ? <ShowNinetyDays onRange={onRange} /> : null}
-          description="Sales show here as soon as an Order is recorded."
+          description="Sales show here as soon as an order is recorded."
           title={`No sales ${formatReportRangeBetween(range)}`}
         />
       ) : (
         <>
-          <ReportChartLegend
-            items={[
-              {
-                color: PRODUCT_COLOR,
-                label: "Goods",
-                value: money(totals.productMinor),
-              },
-              {
-                color: SERVICE_COLOR,
-                label: "Services",
-                value: money(totals.serviceMinor),
-              },
-            ]}
-          />
+          {mixed ? (
+            <ReportChartLegend
+              items={[
+                {
+                  color: PRODUCT_COLOR,
+                  label: "Goods",
+                  value: money(totals.productMinor),
+                },
+                {
+                  color: SERVICE_COLOR,
+                  label: "Services",
+                  value: money(totals.serviceMinor),
+                },
+              ]}
+            />
+          ) : null}
           <DailyBarChart
-            data={report.days.map((day) => ({
-              date: day.date,
-              product: day.productMinor,
-              service: day.serviceMinor,
-            }))}
+            data={report.days.map(
+              (day): DailyBarDatum =>
+                mixed
+                  ? {
+                      date: day.date,
+                      product: day.productMinor,
+                      service: day.serviceMinor,
+                    }
+                  : { date: day.date, sales: day.orderValueMinor },
+            )}
             formatDay={(date) => formatReportDay(date)}
             formatDayLong={formatReportDayLong}
             formatTick={(value) =>
@@ -130,16 +144,26 @@ export function SalesByDayCard({
             }
             formatValue={money}
             label={`Sales by day, ${formatReportRangeLabel(range)}. Use the arrow keys to read each day.`}
-            series={[
-              { color: PRODUCT_COLOR, key: "product", label: "Goods" },
-              { color: SERVICE_COLOR, key: "service", label: "Services" },
-            ]}
+            series={
+              mixed
+                ? [
+                    { color: PRODUCT_COLOR, key: "product", label: "Goods" },
+                    { color: SERVICE_COLOR, key: "service", label: "Services" },
+                  ]
+                : [
+                    {
+                      color:
+                        totals.serviceMinor > 0 ? SERVICE_COLOR : PRODUCT_COLOR,
+                      key: "sales",
+                      label: "Sales",
+                    },
+                  ]
+            }
             totalLabel="Items total"
           />
-          {itemsTotal !== totals.orderValueMinor ? (
-            <p className="text-xs text-muted-foreground">
-              Goods and services are item amounts. Sales (
-              {money(totals.orderValueMinor)}) also includes Order charges and
+          {mixed && itemsTotal !== totals.orderValueMinor ? (
+            <p className="text-sm text-muted-foreground">
+              Goods and services are item amounts. Sales also counts charges and
               discounts.
             </p>
           ) : null}
@@ -153,9 +177,10 @@ export function TopSellersCard({ report }: { report: OperationsSalesReport }) {
   const { currencyCode, otherItems, topItems, totals } = report
   const money = (minor: number) => formatReportMoney(minor, currencyCode)
   const itemsTotal = totals.productMinor + totals.serviceMinor
+  const mixedKinds = new Set(topItems.map((item) => item.kind)).size > 1
   return (
     <ReportChartCard
-      subtitle="By sales in these dates"
+      subtitle="By sales"
       table={
         topItems.length
           ? {
@@ -173,18 +198,20 @@ export function TopSellersCard({ report }: { report: OperationsSalesReport }) {
             }
           : undefined
       }
-      title="Top sellers"
+      title="Top items"
     >
       {topItems.length ? (
         <>
-          <ReportChartLegend
-            items={[
-              { color: PRODUCT_COLOR, label: "Goods" },
-              { color: SERVICE_COLOR, label: "Services" },
-            ]}
-          />
+          {mixedKinds ? (
+            <ReportChartLegend
+              items={[
+                { color: PRODUCT_COLOR, label: "Goods" },
+                { color: SERVICE_COLOR, label: "Services" },
+              ]}
+            />
+          ) : null}
           <ReportBarList
-            label="Top sellers"
+            label="Top items"
             layout="stacked"
             rows={[
               ...topItems.map((item) => ({
@@ -218,7 +245,7 @@ export function TopSellersCard({ report }: { report: OperationsSalesReport }) {
           />
         </>
       ) : (
-        <p className="border border-dashed border-border p-4 text-sm text-muted-foreground">
+        <p className="rounded-[var(--ui-radius-item)] border border-dashed border-border p-4 text-sm text-muted-foreground">
           Nothing sold in these dates.
         </p>
       )}

@@ -32,12 +32,11 @@ export function useOperationsReportParams() {
         { from: range.from, to: range.to },
         { history: "push", startTransition },
       ),
-    setTab: (tab: OperationsReportTab) =>
-      setParams(
-        { operationsReportTab: tab === "inventory" ? null : tab },
-        { history: "push" },
-      ),
-    tab: params.operationsReportTab ?? "inventory",
+    /** Opens a Right now panel; null closes it. */
+    setTab: (tab: OperationsReportTab | null) =>
+      setParams({ operationsReportTab: tab }, { history: "push" }),
+    /** Nothing opens until asked: these snapshots don't follow the period. */
+    tab: params.operationsReportTab,
   }
 }
 
@@ -49,6 +48,6 @@ export async function loadOperationsReportParams(
   const params = await loadOperationsReportState(searchParams)
   return {
     range: resolveReportRange(params),
-    tab: params.operationsReportTab ?? "inventory",
+    tab: params.operationsReportTab,
   }
 }

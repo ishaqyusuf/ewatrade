@@ -1,11 +1,16 @@
 import { describe, expect, test } from "bun:test"
 import { metricTone, sectionTone } from "@/components/reports/report-metrics"
+import {
+  reportPrintDocument,
+  reportShareText,
+} from "@/components/reports/report-share"
 import { reportCsvCell } from "@/lib/report-csv"
 
 import {
   type OperationsSalesReport,
   buildInventoryGroups,
   buildSalesReportCsv,
+  buildSalesSharePack,
   buildServiceGroups,
   buildServiceJobsNow,
   countSalesDays,
@@ -43,8 +48,17 @@ const sales: OperationsSalesReport = {
       serviceMinor: 300_000,
     },
   ],
+  moneyIn: {
+    methods: [
+      { method: "CASH", totalMinor: 800_000 },
+      { method: "BANK_TRANSFER", totalMinor: 200_000 },
+    ],
+    totalMinor: 1_000_000,
+  },
   otherItems: { count: 1, totalMinor: 50 },
+  owed: { orderCount: 1, totalMinor: 250_050 },
   partial: false,
+  previous: { orderCount: 1, orderValueMinor: 500_000 },
   topItems: [
     {
       catalogItemId: "eggs",
@@ -137,5 +151,29 @@ describe("Operations report sections", () => {
     expect(lines[4]).toBe("Total,2,9500.50,3000.00,12500.50")
     expect(lines).toContain(`${reportCsvCell("=Fresh eggs")},Goods,2,9500.00`)
     expect(lines.at(-1)).toBe("Everything else (1 item),,,0.50")
+    expect(lines).toContain("Money in,,,,10000.00")
+    expect(lines).toContain("Cash,,,,8000.00")
+    expect(lines).toContain("Still owed on these orders,1,,,2500.50")
+  })
+
+  test("shares sales, money in, still owed and top items as plain lines", () => {
+    const pack = buildSalesSharePack(
+      sales,
+      {
+        from: new Date("2026-10-18T00:00:00.000Z"),
+        to: new Date("2026-10-20T00:00:00.000Z"),
+      },
+      "Main store",
+    )
+    expect(pack.subtitle).toStartWith("Main store · ")
+    const text = reportShareText(pack)
+    expect(text).toContain("Sales: ₦12,500.50")
+    expect(text).toContain("Money in: ₦10,000.00")
+    expect(text).toContain("Still owed (1 order): ₦2,500.50")
+    expect(text).toContain("Cash: ₦8,000.00")
+    expect(text).toContain("=Fresh eggs: ₦9,500.00")
+    expect(reportPrintDocument({ ...pack, title: "<b>" })).toContain(
+      "<h1>&lt;b&gt;</h1>",
+    )
   })
 })

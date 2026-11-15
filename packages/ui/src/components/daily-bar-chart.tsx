@@ -134,7 +134,7 @@ export function DailyBarChart({
           accessibilityLayer
           barCategoryGap={1}
           data={prepared}
-          margin={{ bottom: 0, left: 0, right: 4, top: 22 }}
+          margin={{ bottom: 0, left: 0, right: 16, top: 22 }}
         >
           <CartesianGrid stroke="var(--border)" vertical={false} />
           <XAxis
@@ -142,18 +142,18 @@ export function DailyBarChart({
             dataKey="date"
             interval="preserveEnd"
             minTickGap={28}
-            tick={{ fill: "var(--muted-foreground)", fontSize: 11.5 }}
+            tick={{ fill: "var(--muted-foreground)", fontSize: 14 }}
             tickFormatter={formatDay}
             tickLine={false}
           />
           <YAxis
             allowDecimals={false}
             axisLine={false}
-            tick={{ fill: "var(--muted-foreground)", fontSize: 11.5 }}
+            tick={{ fill: "var(--muted-foreground)", fontSize: 14 }}
             tickCount={3}
             tickFormatter={formatTick}
             tickLine={false}
-            width={52}
+            width={60}
           />
           <Tooltip
             content={({ active, payload }) => {

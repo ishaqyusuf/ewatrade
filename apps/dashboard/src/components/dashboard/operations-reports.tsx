@@ -1,11 +1,9 @@
 "use client"
 
 import { OfflineRecordReview } from "@/components/dashboard/offline-record-review"
-import { PageHeader, PageToolbar } from "@/components/page-header"
 import { ReportBarList } from "@/components/reports/report-bar-list"
 import { ReportDateControl } from "@/components/reports/report-date-control"
 import { ReportDelta } from "@/components/reports/report-delta"
-import { ReportDownloadButton } from "@/components/reports/report-download-button"
 import { ReportError } from "@/components/reports/report-error"
 import {
   ReportHeadlineStrip,
@@ -15,28 +13,27 @@ import {
   ReportMetricGroups,
   ReportNowTag,
   ReportTabPanel,
-  ReportTabsList,
-  ReportToneDot,
 } from "@/components/reports/report-metric-groups"
 import {
   reportCountFormat as countFormat,
   formatReportMoney,
   metricTone,
-  sectionTone,
 } from "@/components/reports/report-metrics"
+import { ReportShareButton } from "@/components/reports/report-share-dialog"
 import { ScrollableContent } from "@/components/scrollable-content"
 import {
-  isOperationsReportTab,
+  type OperationsReportTab,
   useOperationsReportParams,
 } from "@/hooks/use-operations-report-params"
-import {
-  type ReportRange,
-  previousReportRange,
-  reportRangeDays,
-} from "@/lib/report-range"
+import { type ReportRange, reportRangeDays } from "@/lib/report-range"
 import { useTRPC } from "@/trpc/client"
-import { Tabs, TabsContent, TabsTrigger, cn } from "@ewatrade/ui"
-import { Alert02Icon, Clock01Icon } from "@hugeicons/core-free-icons"
+import { Button, cn } from "@ewatrade/ui"
+import {
+  Alert02Icon,
+  Clock01Icon,
+  PackageIcon,
+  Wrench01Icon,
+} from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { useSuspenseQueries, useSuspenseQuery } from "@tanstack/react-query"
 import { ErrorBoundary } from "next/dist/client/components/error-boundary"
@@ -48,64 +45,22 @@ import {
   useTransition,
 } from "react"
 import {
-  type OperationsSalesReport,
   buildInventoryGroups,
-  buildSalesReportCsv,
+  buildSalesSharePack,
   buildServiceGroups,
   buildServiceJobsNow,
+  paymentMethodLabel,
 } from "./operations-report-sections"
 import { SalesByDayCard, TopSellersCard } from "./operations-sales-charts"
 
 type Store = { currencyCode: string; id: string; name: string }
 
-function salesInput(store: Store, range: ReportRange) {
-  return { from: range.from, storeId: store.id, to: range.to }
-}
-
+/** One read per period: sales, money in, still owed and the previous period. */
 function useSalesReport(store: Store, range: ReportRange) {
   const trpc = useTRPC()
   return useSuspenseQuery(
-    trpc.orders.salesReport.queryOptions(salesInput(store, range), {
-      retry: false,
-    }),
-  ).data
-}
-
-type SalesTotals = OperationsSalesReport["totals"]
-
-/** Change against the same days just before; shows nothing until it loads or if it fails. */
-function PreviousSalesDelta({
-  current,
-  pick,
-  range,
-  store,
-}: {
-  current: number
-  pick: (totals: SalesTotals) => number
-  range: ReportRange
-  store: Store
-}) {
-  const trpc = useTRPC()
-  const previous = useSuspenseQuery(
     trpc.orders.salesReport.queryOptions(
-      salesInput(store, previousReportRange(range)),
-      { retry: false },
-    ),
-  ).data
-  return (
-    <ReportDelta
-      current={current}
-      days={reportRangeDays(range)}
-      previous={pick(previous.totals)}
-    />
-  )
-}
-
-function useServiceSummary(store: Store) {
-  const trpc = useTRPC()
-  return useSuspenseQuery(
-    trpc.serviceReporting.summary.queryOptions(
-      { storeId: store.id },
+      { from: range.from, storeId: store.id, to: range.to },
       { retry: false },
     ),
   ).data
@@ -116,34 +71,19 @@ function SalesHeadlines({
   store,
 }: { range: ReportRange; store: Store }) {
   const report = useSalesReport(store, range)
-  const { totals } = report
+  const { moneyIn, owed, previous, totals } = report
   const money = (minor: number) => formatReportMoney(minor, report.currencyCode)
-  const servicesSold = Number(totals.serviceQuantity)
-  const delta = (current: number, pick: (totals: SalesTotals) => number) => (
-    <ErrorBoundary errorComponent={SilentFailure}>
-      <Suspense fallback={null}>
-        <PreviousSalesDelta
-          current={current}
-          pick={pick}
-          range={range}
-          store={store}
-        />
-      </Suspense>
-    </ErrorBoundary>
-  )
+  const days = reportRangeDays(range)
   return (
     <ReportHeadlineStrip
       items={[
         {
-          detail: delta(totals.orderCount, (before) => before.orderCount),
-          label: "Orders",
-          muted: totals.orderCount === 0,
-          value: countFormat.format(totals.orderCount),
-        },
-        {
-          detail: delta(
-            totals.orderValueMinor,
-            (before) => before.orderValueMinor,
+          detail: (
+            <ReportDelta
+              current={totals.orderValueMinor}
+              days={days}
+              previous={previous.orderValueMinor}
+            />
           ),
           label: "Sales",
           money: true,
@@ -151,19 +91,32 @@ function SalesHeadlines({
           value: money(totals.orderValueMinor),
         },
         {
-          detail: delta(totals.serviceMinor, (before) => before.serviceMinor),
-          label: "Service sales",
+          label: "Money in",
           money: true,
-          muted: totals.serviceMinor === 0,
-          value: money(totals.serviceMinor),
+          muted: moneyIn.totalMinor === 0,
+          value: money(moneyIn.totalMinor),
         },
         {
-          detail: delta(servicesSold, (before) =>
-            Number(before.serviceQuantity),
+          detail:
+            owed.orderCount > 0
+              ? `On ${countFormat.format(owed.orderCount)} ${owed.orderCount === 1 ? "order" : "orders"}`
+              : undefined,
+          label: "Still owed",
+          money: true,
+          muted: owed.totalMinor === 0,
+          value: money(owed.totalMinor),
+        },
+        {
+          detail: (
+            <ReportDelta
+              current={totals.orderCount}
+              days={days}
+              previous={previous.orderCount}
+            />
           ),
-          label: "Services sold",
-          muted: servicesSold === 0,
-          value: countFormat.format(servicesSold),
+          label: "Orders",
+          muted: totals.orderCount === 0,
+          value: countFormat.format(totals.orderCount),
         },
       ]}
       label="Sales"
@@ -184,8 +137,8 @@ function SalesCharts({
   return (
     <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
       {report.partial ? (
-        <output className="block border border-amber-500/30 bg-amber-500/5 p-4 text-sm text-amber-700 lg:col-span-2 dark:text-amber-400">
-          Only the first 5,000 Orders in these dates are counted. Try fewer
+        <output className="block rounded-[var(--ui-radius-surface)] border border-[var(--warning-border)] bg-[var(--warning)] p-4 text-sm text-[var(--warning-foreground)] lg:col-span-2">
+          Only the first 5,000 orders in these dates are counted. Pick fewer
           days.
         </output>
       ) : null}
@@ -195,28 +148,69 @@ function SalesCharts({
   )
 }
 
-function SalesDownload({ range, store }: { range: ReportRange; store: Store }) {
+/** Money in by payment method, one bar colour (a single series needs no legend). */
+function MoneyInCard({ range, store }: { range: ReportRange; store: Store }) {
+  const report = useSalesReport(store, range)
+  const { methods, totalMinor } = report.moneyIn
+  const money = (minor: number) => formatReportMoney(minor, report.currencyCode)
+  return (
+    <section
+      aria-label="How customers paid"
+      className="grid min-w-0 content-start gap-3.5 rounded-[var(--ui-radius-surface)] border border-border bg-card p-4 sm:p-5"
+    >
+      <div>
+        <h2 className="font-semibold">How customers paid</h2>
+        <p className="mt-0.5 text-sm text-muted-foreground">
+          Money in: <span className="tabular-nums">{money(totalMinor)}</span>
+        </p>
+      </div>
+      {methods.length ? (
+        <ReportBarList
+          label="How customers paid"
+          layout="stacked"
+          rows={methods.map((entry) => ({
+            barClassName: "bg-[var(--report-service)]",
+            detail:
+              totalMinor > 0
+                ? `${Math.round((entry.totalMinor / totalMinor) * 100)}%`
+                : undefined,
+            key: entry.method,
+            label: paymentMethodLabel(entry.method),
+            value: Math.max(0, entry.totalMinor),
+            valueLabel: money(entry.totalMinor),
+          }))}
+        />
+      ) : (
+        <p className="rounded-[var(--ui-radius-item)] border border-dashed border-border p-4 text-sm text-muted-foreground">
+          No payments recorded in these dates.
+        </p>
+      )}
+    </section>
+  )
+}
+
+function ShareReport({ range, store }: { range: ReportRange; store: Store }) {
   const report = useSalesReport(store, range)
   return (
-    <ReportDownloadButton
-      build={() => buildSalesReportCsv(report, range, store.name)}
+    <ReportShareButton
+      build={() => buildSalesSharePack(report, range, store.name)}
     />
   )
 }
 
 /** Disabled until the sales report has loaded, and if it fails. */
-function SalesDownloadButton({
+function ShareReportButton({
   range,
   store,
 }: {
   range: ReportRange
   store: Store
 }) {
-  const disabled = <ReportDownloadButton build={() => null} disabled />
+  const disabled = <ReportShareButton build={() => null} disabled />
   return (
     <ErrorBoundary errorComponent={() => disabled}>
       <Suspense fallback={disabled}>
-        <SalesDownload range={range} store={store} />
+        <ShareReport range={range} store={store} />
       </Suspense>
     </ErrorBoundary>
   )
@@ -224,8 +218,7 @@ function SalesDownloadButton({
 
 function InventoryPanel({ store }: { store: Store }) {
   const trpc = useTRPC()
-  // A cold activation has no server-prefetched Stock data. Start both independent
-  // reads before suspending instead of waiting for the first hook to resolve.
+  // Both independent reads start before suspending; they load only when opened.
   const [{ data: reconciliation }, { data: balances }] = useSuspenseQueries({
     queries: [
       trpc.inventory.reconciliationReport.queryOptions(
@@ -239,31 +232,27 @@ function InventoryPanel({ store }: { store: Store }) {
     ],
   })
   return (
-    <ReportTabPanel
-      description="Where your stock counts come from, and changes made offline that still need to sync. The dates above don't change this tab."
-      title="Stock"
-    >
+    <ReportTabPanel title="Stock check">
       <ReportMetricGroups
         groups={buildInventoryGroups({ balances, reconciliation })}
       />
       <OfflineRecordReview key={store.id} store={store} />
-      <p className="text-xs text-muted-foreground">
-        Combined stock totals are for information only. They are never used to
-        decide what can be sold.
-      </p>
     </ReportTabPanel>
   )
 }
 
 function ServicePanel({ store }: { store: Store }) {
-  const service = useServiceSummary(store)
+  const trpc = useTRPC()
+  const service = useSuspenseQuery(
+    trpc.serviceReporting.summary.queryOptions(
+      { storeId: store.id },
+      { retry: false },
+    ),
+  ).data
   return (
-    <ReportTabPanel
-      description="Jobs for Customers right now, and every job so far. The dates above don't change this tab."
-      title="Service jobs"
-    >
+    <ReportTabPanel title="Service jobs">
       <section aria-label="Jobs right now" className="grid gap-2">
-        <h3 className="text-sm font-semibold">
+        <h3 className="font-semibold">
           Jobs right now
           <ReportNowTag />
         </h3>
@@ -277,12 +266,12 @@ function ServicePanel({ store }: { store: Store }) {
                   ? "bg-destructive"
                   : metric.tone === "block"
                     ? "bg-amber-500"
-                    : "bg-primary",
+                    : "bg-[var(--report-service)]",
               hint:
                 tone === "block"
                   ? "Blocked: it can't continue until something is fixed."
                   : tone === "failure"
-                    ? "Overdue: past the time promised to the Customer."
+                    ? "Overdue: past the time promised to the customer."
                     : undefined,
               icon: metric.tone ? (
                 <HugeiconsIcon
@@ -308,18 +297,6 @@ function ServicePanel({ store }: { store: Store }) {
   )
 }
 
-/** Shares the cached summary; renders nothing until it is available. */
-function ServiceTabTone({ store }: { store: Store }) {
-  const service = useServiceSummary(store)
-  return (
-    <ReportToneDot
-      tone={sectionTone({
-        groups: [{ metrics: buildServiceJobsNow(service), title: "Now" }],
-      })}
-    />
-  )
-}
-
 function IsolatedReport({
   children,
   fallback,
@@ -342,12 +319,11 @@ function IsolatedReport({
   )
 }
 
-function SilentFailure() {
-  return null
-}
-
 const panelSkeleton = (
-  <div aria-hidden="true" className="h-72 animate-pulse bg-muted" />
+  <div
+    aria-hidden="true"
+    className="h-72 animate-pulse rounded-[var(--ui-radius-surface)] bg-muted"
+  />
 )
 
 const chartsSkeleton = (
@@ -355,42 +331,101 @@ const chartsSkeleton = (
     aria-hidden="true"
     className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]"
   >
-    <div className="h-80 animate-pulse bg-muted" />
-    <div className="h-80 animate-pulse bg-muted" />
+    <div className="h-80 animate-pulse rounded-[var(--ui-radius-surface)] bg-muted" />
+    <div className="h-80 animate-pulse rounded-[var(--ui-radius-surface)] bg-muted" />
   </div>
 )
 
-export function OperationsReports({
+const MORE: Array<{
+  icon: typeof PackageIcon
+  label: string
+  value: OperationsReportTab
+}> = [
+  { icon: PackageIcon, label: "Stock check", value: "inventory" },
+  { icon: Wrench01Icon, label: "Service jobs", value: "service" },
+]
+
+/** Stock and job snapshots ignore the period, so they open on request only. */
+function RightNowCard({
+  onTab,
+  tab,
+}: {
+  onTab: (tab: OperationsReportTab | null) => void
+  tab: OperationsReportTab | null
+}) {
+  return (
+    <section
+      aria-label="Right now"
+      className="grid min-w-0 content-start gap-3.5 rounded-[var(--ui-radius-surface)] border border-border bg-card p-4 sm:p-5"
+    >
+      <h2 className="font-semibold">Right now</h2>
+      <div className="grid gap-2 sm:grid-cols-2">
+        {MORE.map((option) => (
+          <Button
+            aria-pressed={tab === option.value}
+            className={cn(
+              "justify-start",
+              tab === option.value &&
+                "border-primary bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground",
+            )}
+            key={option.value}
+            onClick={() => onTab(tab === option.value ? null : option.value)}
+            type="button"
+            variant="outline"
+          >
+            <HugeiconsIcon
+              aria-hidden="true"
+              data-icon="inline-start"
+              icon={option.icon}
+            />
+            {option.label}
+          </Button>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+function RightNowPanel({
   store,
-  tenantName,
-}: { store: Store; tenantName: string }) {
+  tab,
+}: {
+  store: Store
+  tab: OperationsReportTab | null
+}) {
+  if (tab === "inventory")
+    return (
+      <IsolatedReport fallback={panelSkeleton} title="Stock check">
+        <InventoryPanel store={store} />
+      </IsolatedReport>
+    )
+  if (tab === "service")
+    return (
+      <IsolatedReport fallback={panelSkeleton} title="Service jobs">
+        <ServicePanel store={store} />
+      </IsolatedReport>
+    )
+  return null
+}
+
+export function OperationsReports({ store }: { store: Store }) {
   const params = useOperationsReportParams()
   const { range } = params
-  // A date change keeps the current figures on screen, dimmed, until the new ones load.
+  // A period change keeps the current figures on screen, dimmed, until the new ones load.
   const [refreshing, startTransition] = useTransition()
   const setRange = (next: ReportRange) =>
     void params.setRange(next, startTransition)
   return (
     <ScrollableContent>
-      <div className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)] gap-6 pt-6">
-        <PageHeader
-          description={`How sales, stock and service jobs are going at ${store.name}.`}
-          eyebrow={`${tenantName} · ${store.name}`}
-          title="Reports"
-        >
-          <PageToolbar
-            actions={
-              <>
-                <ReportDateControl onChange={setRange} range={range} />
-                <SalesDownloadButton range={range} store={store} />
-              </>
-            }
-          />
-        </PageHeader>
+      <div className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)] gap-5 pt-6 pb-10">
+        <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <ReportDateControl onChange={setRange} range={range} />
+          <ShareReportButton range={range} store={store} />
+        </div>
         <div
           aria-busy={refreshing}
           className={cn(
-            "grid min-w-0 grid-cols-[minmax(0,1fr)] gap-6 transition-opacity",
+            "grid min-w-0 grid-cols-[minmax(0,1fr)] gap-5 transition-opacity",
             refreshing && "opacity-60",
           )}
         >
@@ -409,35 +444,20 @@ export function OperationsReports({
             <SalesCharts onRange={setRange} range={range} store={store} />
           </IsolatedReport>
         </div>
-        <Tabs
-          className="min-w-0 gap-6"
-          onValueChange={(value) => {
-            if (isOperationsReportTab(value)) void params.setTab(value)
-          }}
-          value={params.tab}
-        >
-          <ReportTabsList label="Report sections">
-            <TabsTrigger value="inventory">Stock</TabsTrigger>
-            <TabsTrigger value="service">
-              Service jobs
-              <ErrorBoundary errorComponent={SilentFailure}>
-                <Suspense fallback={null}>
-                  <ServiceTabTone store={store} />
-                </Suspense>
-              </ErrorBoundary>
-            </TabsTrigger>
-          </ReportTabsList>
-          <TabsContent value="inventory">
-            <IsolatedReport fallback={panelSkeleton} title="Stock">
-              <InventoryPanel store={store} />
+        <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] lg:items-start">
+          <div
+            className={cn(
+              "min-w-0 transition-opacity",
+              refreshing && "opacity-60",
+            )}
+          >
+            <IsolatedReport fallback={panelSkeleton} title="How customers paid">
+              <MoneyInCard range={range} store={store} />
             </IsolatedReport>
-          </TabsContent>
-          <TabsContent value="service">
-            <IsolatedReport fallback={panelSkeleton} title="Service jobs">
-              <ServicePanel store={store} />
-            </IsolatedReport>
-          </TabsContent>
-        </Tabs>
+          </div>
+          <RightNowCard onTab={params.setTab} tab={params.tab} />
+        </div>
+        <RightNowPanel store={store} tab={params.tab} />
       </div>
     </ScrollableContent>
   )

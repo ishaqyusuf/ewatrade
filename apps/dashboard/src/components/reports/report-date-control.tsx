@@ -5,8 +5,8 @@ import {
   REPORT_RANGE_MAX_DAYS,
   REPORT_RANGE_PRESETS,
   type ReportRange,
+  formatReportPresetShort,
   formatReportRangeDates,
-  formatReportRangeName,
   matchReportRangePreset,
   reportPresetRange,
 } from "@/lib/report-range"
@@ -14,15 +14,10 @@ import {
   Button,
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
+  cn,
 } from "@ewatrade/ui"
-import { ArrowDown01Icon, Calendar03Icon } from "@hugeicons/core-free-icons"
+import { Calendar03Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { useState } from "react"
 
@@ -34,9 +29,13 @@ function utcDate(value: string) {
   return new Date(`${value}T00:00:00.000Z`)
 }
 
+const segment =
+  "h-11 min-w-0 rounded-none border-0 px-2 font-normal shadow-none sm:px-4 aria-pressed:bg-primary aria-pressed:font-medium aria-pressed:text-primary-foreground"
+
 /**
- * The Reports date button: Last 7, 30 or 90 days, then Custom dates with the
- * shared calendar. Ranges are whole UTC days with an exclusive end.
+ * Report period buttons: Today, 7, 30 and 90 days, then a calendar button for
+ * other dates (up to 366). Whole UTC days with an exclusive end. On phones the
+ * five buttons share the full width.
  */
 export function ReportDateControl({
   onChange,
@@ -46,143 +45,100 @@ export function ReportDateControl({
   range: ReportRange
 }) {
   const [open, setOpen] = useState(false)
-  const [custom, setCustom] = useState(false)
   const [draft, setDraft] = useState<{
     start: string | null
     end: string | null
   }>({ start: dateOnly(range.from), end: dateOnly(range.to) })
   const preset = matchReportRangePreset(range)
-  const name = formatReportRangeName(range)
-  const dates = formatReportRangeDates(range)
   const days =
     draft.start && draft.end
       ? (utcDate(draft.end).getTime() - utcDate(draft.start).getTime()) /
         86_400_000
       : 0
   const valid = days > 0 && days <= REPORT_RANGE_MAX_DAYS
+  const customLabel = preset ? "Dates" : formatReportRangeDates(range)
 
   return (
-    <DropdownMenu
-      onOpenChange={(next) => {
-        setOpen(next)
-        if (next) {
-          setCustom(false)
-          setDraft({ start: dateOnly(range.from), end: dateOnly(range.to) })
-        }
-      }}
-      open={open}
+    <fieldset
+      aria-label="Period"
+      className="m-0 grid w-full min-w-0 grid-cols-5 divide-x divide-border overflow-hidden rounded-[var(--ui-radius-control)] border border-[var(--ui-control-border)] bg-background p-0 sm:flex sm:w-fit"
     >
-      <DropdownMenuTrigger
-        aria-label={`Dates: ${name}, ${dates}. Choose dates`}
-        render={
-          <Button
-            className="h-9 max-w-full rounded-none"
-            type="button"
-            variant="outline"
-          />
-        }
+      {REPORT_RANGE_PRESETS.map((option) => (
+        <Button
+          aria-pressed={preset === option}
+          className={segment}
+          key={option}
+          onClick={() => onChange(reportPresetRange(option))}
+          title={formatReportRangeDates(reportPresetRange(option))}
+          type="button"
+          variant="ghost"
+        >
+          {formatReportPresetShort(option)}
+        </Button>
+      ))}
+      <DropdownMenu
+        onOpenChange={(next) => {
+          setOpen(next)
+          if (next)
+            setDraft({ start: dateOnly(range.from), end: dateOnly(range.to) })
+        }}
+        open={open}
       >
-        <HugeiconsIcon
-          aria-hidden="true"
-          className="size-4 text-muted-foreground"
-          icon={Calendar03Icon}
-        />
-        <span className="truncate">
-          {name}
-          <span className="font-normal text-muted-foreground"> · {dates}</span>
-        </span>
-        <HugeiconsIcon
-          aria-hidden="true"
-          className="size-4 text-muted-foreground"
-          icon={ArrowDown01Icon}
-        />
-      </DropdownMenuTrigger>
-      <DropdownMenuContent
-        align="start"
-        appearance="dashboard"
-        className={custom ? "max-w-[calc(100vw-32px)] p-0" : "min-w-64"}
-        sideOffset={8}
-      >
-        {custom ? (
-          <>
-            <DateRangeFilter
-              end={draft.end}
-              endExclusive
-              onSelect={setDraft}
-              start={draft.start}
+        <DropdownMenuTrigger
+          aria-label={
+            preset
+              ? "Pick dates"
+              : `Dates: ${formatReportRangeDates(range)}. Pick dates`
+          }
+          aria-pressed={!preset}
+          render={
+            <Button
+              className={cn(segment, "gap-1.5")}
+              type="button"
+              variant="ghost"
             />
-            <div className="flex items-center justify-end gap-2 border-t border-border p-2">
-              <p className="mr-auto px-1 text-xs text-muted-foreground">
-                Up to {REPORT_RANGE_MAX_DAYS} days
-              </p>
-              <Button
-                className="h-9 rounded-none"
-                onClick={() => setCustom(false)}
-                type="button"
-                variant="ghost"
-              >
-                Back
-              </Button>
-              <Button
-                className="h-9 rounded-none"
-                disabled={!valid}
-                onClick={() => {
-                  if (!valid || !draft.start || !draft.end) return
-                  onChange({
-                    from: utcDate(draft.start),
-                    to: utcDate(draft.end),
-                  })
-                  setOpen(false)
-                }}
-                type="button"
-                variant="outline"
-              >
-                Apply dates
-              </Button>
-            </div>
-          </>
-        ) : (
-          <>
-            <DropdownMenuGroup>
-              <DropdownMenuLabel>Show</DropdownMenuLabel>
-              <DropdownMenuRadioGroup
-                aria-label="Dates"
-                onValueChange={(value) => {
-                  const next = REPORT_RANGE_PRESETS.find(
-                    (option) => String(option) === value,
-                  )
-                  if (next) onChange(reportPresetRange(next))
-                }}
-                value={preset ? String(preset) : ""}
-              >
-                {REPORT_RANGE_PRESETS.map((option) => (
-                  <DropdownMenuRadioItem
-                    closeOnClick
-                    key={option}
-                    value={String(option)}
-                  >
-                    <span className="flex-1">Last {option} days</span>
-                    <span className="text-xs font-normal text-muted-foreground">
-                      {formatReportRangeDates(reportPresetRange(option))}
-                    </span>
-                  </DropdownMenuRadioItem>
-                ))}
-              </DropdownMenuRadioGroup>
-            </DropdownMenuGroup>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              closeOnClick={false}
-              onClick={() => setCustom(true)}
+          }
+        >
+          <HugeiconsIcon
+            aria-hidden="true"
+            className="size-5 shrink-0 sm:size-4"
+            icon={Calendar03Icon}
+          />
+          <span className="max-sm:sr-only truncate">{customLabel}</span>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent
+          align="end"
+          appearance="dashboard"
+          className="max-w-[calc(100vw-32px)] p-0"
+          sideOffset={8}
+        >
+          <DateRangeFilter
+            end={draft.end}
+            endExclusive
+            onSelect={setDraft}
+            start={draft.start}
+          />
+          <div className="flex items-center justify-end gap-2 border-t border-border p-2">
+            <p className="mr-auto px-1 text-xs text-muted-foreground">
+              Up to {REPORT_RANGE_MAX_DAYS} days
+            </p>
+            <Button
+              disabled={!valid}
+              onClick={() => {
+                if (!valid || !draft.start || !draft.end) return
+                onChange({
+                  from: utcDate(draft.start),
+                  to: utcDate(draft.end),
+                })
+                setOpen(false)
+              }}
+              type="button"
             >
-              <HugeiconsIcon aria-hidden="true" icon={Calendar03Icon} />
-              <span className="flex-1">Custom dates…</span>
-              <span className="text-xs font-normal text-muted-foreground">
-                Up to {REPORT_RANGE_MAX_DAYS} days
-              </span>
-            </DropdownMenuItem>
-          </>
-        )}
-      </DropdownMenuContent>
-    </DropdownMenu>
+              Show these dates
+            </Button>
+          </div>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </fieldset>
   )
 }

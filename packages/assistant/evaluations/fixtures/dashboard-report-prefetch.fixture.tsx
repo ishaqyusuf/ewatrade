@@ -38,8 +38,8 @@ mock.module(app("components/dashboard/operations-sales-charts"), () => ({
 mock.module(app("components/reports/report-date-control"), () => ({
   ReportDateControl: () => null,
 }))
-mock.module(app("components/reports/report-download-button"), () => ({
-  ReportDownloadButton: () => null,
+mock.module(app("components/reports/report-share-dialog"), () => ({
+  ReportShareButton: () => null,
 }))
 mock.module(app("components/reports/report-error"), () => ({
   ReportError: () => <div>Report failure port</div>,
@@ -49,6 +49,7 @@ mock.module("server-only", () => ({}))
 let signedIn = true
 let tenant = true
 let hasStore = true
+let role = "OWNER"
 const store = { id: "store-b", name: "B", currencyCode: "NGN" }
 mock.module(app("lib/session"), () => ({
   getServerSession: async () => (signedIn ? { user: { id: "actor" } } : null),
@@ -58,6 +59,7 @@ mock.module(app("lib/tenant"), () => ({
     tenant
       ? {
           tenant: { name: "Business" },
+          membership: { role },
           activeStore: hasStore ? store : null,
           stores: hasStore ? [store] : [],
         }
@@ -71,8 +73,14 @@ mock.module("next/navigation", () => ({
 const sales = {
   currencyCode: "NGN",
   days: [],
+  moneyIn: {
+    methods: [{ method: "CASH", totalMinor: 6000 }],
+    totalMinor: 6000,
+  },
   otherItems: { count: 0, totalMinor: 0 },
+  owed: { orderCount: 1, totalMinor: 4000 },
   partial: false,
+  previous: { orderCount: 1, orderValueMinor: 5000 },
   topItems: [],
   totals: {
     orderCount: 2,
@@ -161,6 +169,7 @@ const settle = () => new Promise<void>((resolve) => setImmediate(resolve))
 beforeEach(() => {
   calls.length = 0
   signedIn = tenant = hasStore = true
+  role = "OWNER"
   blocked = undefined
   blockedPaths = undefined
   release = undefined
@@ -194,55 +203,39 @@ async function render(children: ReactNode, params: Record<string, string>) {
   return new Response(stream).text()
 }
 
+const salesCall = {
+  from: new Date(dates.from),
+  to: new Date(dates.to),
+  storeId: store.id,
+}
+
 for (const tab of ["service", "inventory", "invalid", ""] as const) {
-  test(`Reports ${tab || "default"} prefetches only mounted consumers with matching hydration inputs`, async () => {
+  test(`Reports ${tab || "default"} prefetches one sales read and only the open Right now panel`, async () => {
     const params = { ...dates, operationsReportTab: tab }
     const page = await Analytics({ searchParams: Promise.resolve(params) })
     await settle()
-    const expected = tab === "service" ? 3 : 5
+    const expected = tab === "service" ? 2 : tab === "inventory" ? 3 : 1
     const before = [...calls]
     const html = await render(page, params)
+    // Hydration covers every read the page renders: no browser refetch.
     expect(calls).toEqual(before)
-    expect(html).toContain('aria-label="Sales"')
-    expect(html).toContain(
-      tab === "service" ? 'aria-label="Service jobs"' : 'aria-label="Stock"',
-    )
-    expect(html).not.toContain(
-      tab === "service" ? 'aria-label="Stock"' : 'aria-label="Jobs right now"',
-    )
     expect(calls).toHaveLength(expected)
-    expect(
-      calls.filter(({ path }) => path.startsWith("inventory.")),
-    ).toHaveLength(tab === "service" ? 0 : 2)
-    // Both tabs need the shared warning dot and both sales periods.
-    expect(html).toContain("has blocks")
+    expect(html).toContain('aria-label="Sales"')
+    expect(html).toContain('aria-label="How customers paid"')
+    expect(html.includes('aria-label="Stock check"')).toBe(tab === "inventory")
+    expect(html.includes('aria-label="Jobs right now"')).toBe(tab === "service")
+    // One sales read: the previous period comes back inside it.
     expect(
       calls
         .filter(({ path }) => path === "orders.salesReport")
         .map(({ input }) => input),
-    ).toEqual([
-      { from: new Date(dates.from), to: new Date(dates.to), storeId: store.id },
-      {
-        from: new Date("2026-09-24"),
-        to: new Date(dates.from),
-        storeId: store.id,
-      },
-    ])
-    // Later activation still loads the two stock queries, without new sales or
-    // service reads; a return to Service reuses its existing query generation.
-    if (tab === "service") {
-      const stock = await render(
-        <OperationsReports store={store} tenantName="Business" />,
-        { ...dates },
-      )
-      expect(stock).toContain('aria-label="Stock"')
-      expect(calls).toHaveLength(5)
-      await render(
-        <OperationsReports store={store} tenantName="Business" />,
-        params,
-      )
-      expect(calls).toHaveLength(5)
-    }
+    ).toEqual([salesCall])
+    expect(
+      calls.filter(({ path }) => path.startsWith("inventory.")),
+    ).toHaveLength(tab === "inventory" ? 2 : 0)
+    expect(
+      calls.filter(({ path }) => path === "serviceReporting.summary"),
+    ).toHaveLength(tab === "service" ? 1 : 0)
   })
 }
 
@@ -258,12 +251,12 @@ test("Reports presentation returns while selected reads remain pending", async (
   })
   await settle()
   expect(returned).toBe(true)
-  expect(calls).toHaveLength(3)
+  expect(calls).toHaveLength(2)
   release?.()
   await rendering
 })
 
-test("Reports retains auth, tenant and Store admission before any report read", async () => {
+test("Reports retains auth, tenant, role and Store admission before any report read", async () => {
   const props = { searchParams: Promise.resolve(dates) }
   signedIn = false
   await expect(Analytics(props)).rejects.toThrow("redirect:/login")
@@ -273,12 +266,18 @@ test("Reports retains auth, tenant and Store admission before any report read", 
     "redirect:/login?error=no_tenant",
   )
   tenant = true
+  // Cashiers and sales reps don't get the Reports row, so the page refuses too.
+  for (const refused of ["CASHIER", "OPERATOR", "SUPPORT", "MEMBER"]) {
+    role = refused
+    await expect(Analytics(props)).rejects.toThrow("redirect:/")
+  }
+  role = "MANAGER"
   hasStore = false
   await expect(Analytics(props)).rejects.toThrow("redirect:/setup")
   expect(calls).toHaveLength(0)
 })
 
-test("server URL loader exposes the same allowlisted tab as the client hook", async () => {
+test("server URL loader exposes the same allowlisted panel as the client hook", async () => {
   for (const tab of ["service", "inventory", "other", ""]) {
     expect(
       await loadOperationsReportParams(
@@ -286,28 +285,22 @@ test("server URL loader exposes the same allowlisted tab as the client hook", as
       ),
     ).toMatchObject({
       range: { from: new Date(dates.from), to: new Date(dates.to) },
-      tab: tab === "service" ? "service" : "inventory",
+      tab: tab === "service" || tab === "inventory" ? tab : null,
     })
   }
 })
 
-test("cold Stock activation starts both independent reads before reconciliation completes", async () => {
-  const serviceParams = { ...dates, operationsReportTab: "service" }
-  const page = await Analytics({ searchParams: Promise.resolve(serviceParams) })
+test("cold Stock check starts both independent reads before reconciliation completes", async () => {
+  const page = await Analytics({ searchParams: Promise.resolve(dates) })
   await settle()
-  expect(await render(page, serviceParams)).toContain(
-    'aria-label="Service jobs"',
-  )
-  expect(calls).toHaveLength(3)
-  expect(calls.some(({ path }) => path.startsWith("inventory."))).toBe(false)
+  expect(await render(page, dates)).not.toContain('aria-label="Stock check"')
+  expect(calls).toHaveLength(1)
   blockedPaths = new Set(["inventory.reconciliationReport"])
   blocked = new Promise<void>((resolve) => {
     release = resolve
   })
-  const rendering = render(
-    <OperationsReports store={store} tenantName="Business" />,
-    dates,
-  )
+  const stockParams = { ...dates, operationsReportTab: "inventory" }
+  const rendering = render(<OperationsReports store={store} />, stockParams)
   let html = ""
   try {
     await settle()
@@ -327,12 +320,8 @@ test("cold Stock activation starts both independent reads before reconciliation 
     release?.()
     html = await rendering
   }
-  expect(html).toContain('aria-label="Stock"')
-  expect(calls).toHaveLength(5)
-  await render(
-    <OperationsReports store={store} tenantName="Business" />,
-    serviceParams,
-  )
-  await render(<OperationsReports store={store} tenantName="Business" />, dates)
-  expect(calls).toHaveLength(5)
+  expect(html).toContain('aria-label="Stock check"')
+  expect(calls).toHaveLength(3)
+  await render(<OperationsReports store={store} />, dates)
+  expect(calls).toHaveLength(3)
 })

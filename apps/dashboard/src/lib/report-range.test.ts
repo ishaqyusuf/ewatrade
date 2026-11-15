@@ -30,6 +30,14 @@ describe("report ranges", () => {
     )
   })
 
+  test("Today is one whole day ending tomorrow at midnight", () => {
+    const range = reportPresetRange(1, now)
+    expect(range.from.toISOString()).toBe("2026-10-19T00:00:00.000Z")
+    expect(range.to.toISOString()).toBe("2026-10-20T00:00:00.000Z")
+    expect(matchReportRangePreset(range, now)).toBe(1)
+    expect(formatReportRangeLabel(range, now)).toBe("Today · 19 Oct")
+  })
+
   test("the previous period is the same length just before", () => {
     const previous = previousReportRange(reportPresetRange(7, now))
     expect(previous.from.toISOString()).toBe("2026-10-06T00:00:00.000Z")

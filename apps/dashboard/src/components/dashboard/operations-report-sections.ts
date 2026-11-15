@@ -4,7 +4,13 @@ import {
   reportMetric as metric,
 } from "@/components/reports/report-metrics"
 import { reportCsv, reportCsvMoney } from "@/lib/report-csv"
-import { type ReportRange, reportRangeFileDates } from "@/lib/report-range"
+import {
+  type ReportRange,
+  formatReportRangeLabel,
+  reportRangeFileDates,
+} from "@/lib/report-range"
+import { formatMinorMoney } from "@ewatrade/utils"
+import type { ReportSharePack } from "../reports/report-share"
 
 /** The `serviceReporting.summary` fields this page presents. */
 export type OperationsServiceSummary = {
@@ -37,6 +43,15 @@ export type OperationsSalesReport = {
     serviceMinor: number
   }>
   otherItems: { count: number; totalMinor: number }
+  /** Unpaid part of the Orders in these dates. */
+  owed: { orderCount: number; totalMinor: number }
+  /** Payments recorded in these dates, net of refunds, without customer credit. */
+  moneyIn: {
+    totalMinor: number
+    methods: Array<{ method: string; totalMinor: number }>
+  }
+  /** Orders in the same number of days just before. */
+  previous: { orderCount: number; orderValueMinor: number }
   partial: boolean
   topItems: Array<{
     catalogItemId: string
@@ -117,6 +132,18 @@ export function buildServiceGroups(
   ]
 }
 
+const PAYMENT_METHOD_LABELS: Record<string, string> = {
+  BANK_TRANSFER: "Bank transfer",
+  CARD: "Card",
+  CASH: "Cash",
+  OTHER: "Other",
+  POS: "POS",
+}
+
+export function paymentMethodLabel(method: string) {
+  return PAYMENT_METHOD_LABELS[method] ?? "Other"
+}
+
 /** Days with any sale, for the quiet-period note. */
 export function countSalesDays(report: OperationsSalesReport) {
   return report.days.filter((day) => day.orderCount > 0).length
@@ -146,6 +173,22 @@ export function buildSalesReportCsv(
       reportCsvMoney(report.totals.orderValueMinor),
     ],
     [],
+    ["Money in", "", "", "", reportCsvMoney(report.moneyIn.totalMinor)],
+    ...report.moneyIn.methods.map((entry) => [
+      paymentMethodLabel(entry.method),
+      "",
+      "",
+      "",
+      reportCsvMoney(entry.totalMinor),
+    ]),
+    [
+      "Still owed on these orders",
+      report.owed.orderCount,
+      "",
+      "",
+      reportCsvMoney(report.owed.totalMinor),
+    ],
+    [],
     ["Top sellers"],
     ["Item", "Type", "Sold", "Sales"],
     ...report.topItems.map((item) => [
@@ -168,5 +211,58 @@ export function buildSalesReportCsv(
   return {
     fileName: `sales_${reportRangeFileDates(range)}.csv`,
     text: reportCsv(rows),
+  }
+}
+
+/** The share / print / CSV pack for the Reports overview. */
+export function buildSalesSharePack(
+  report: OperationsSalesReport,
+  range: ReportRange,
+  storeName: string,
+): ReportSharePack {
+  const money = (minor: number) => formatMinorMoney(minor, report.currencyCode)
+  const orders = report.totals.orderCount
+  return {
+    csv: buildSalesReportCsv(report, range, storeName),
+    sections: [
+      {
+        rows: [
+          ["Sales", money(report.totals.orderValueMinor)],
+          ["Orders", String(orders)],
+          ["Money in", money(report.moneyIn.totalMinor)],
+          [
+            `Still owed (${report.owed.orderCount} ${report.owed.orderCount === 1 ? "order" : "orders"})`,
+            money(report.owed.totalMinor),
+          ],
+        ],
+        title: "Summary",
+      },
+      {
+        rows: report.moneyIn.methods.map((entry) => [
+          paymentMethodLabel(entry.method),
+          money(entry.totalMinor),
+        ]),
+        title: "How customers paid",
+      },
+      {
+        rows: [
+          ...report.topItems.map((item): [string, string] => [
+            item.name,
+            money(item.totalMinor),
+          ]),
+          ...(report.otherItems.count
+            ? [
+                [
+                  `Everything else (${report.otherItems.count})`,
+                  money(report.otherItems.totalMinor),
+                ] as [string, string],
+              ]
+            : []),
+        ],
+        title: "Top items",
+      },
+    ],
+    subtitle: `${storeName} · ${formatReportRangeLabel(range)}`,
+    title: "Sales report",
   }
 }

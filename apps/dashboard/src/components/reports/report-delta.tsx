@@ -23,8 +23,8 @@ export function ReportDelta({
         aria-hidden="true"
         className={
           up
-            ? "text-[10px] text-[var(--report-product)]"
-            : "text-[10px] text-destructive"
+            ? "text-xs text-[var(--success-foreground)]"
+            : "text-xs text-destructive"
         }
       >
         {up ? "▲" : "▼"}

@@ -28,11 +28,11 @@ export function ReportHeadlineStrip({
     <dl
       aria-label={label}
       data-summary-grid
-      className="grid min-w-0 grid-cols-2 gap-2 md:gap-px md:border md:border-border md:bg-border xl:grid-cols-4"
+      className="grid min-w-0 grid-cols-2 gap-2 md:gap-3 xl:grid-cols-4"
     >
       {items.map((item) => (
         <div
-          className="grid min-w-0 content-start gap-1 border border-border bg-background p-3 md:gap-1.5 md:border-0 md:px-5 md:py-4"
+          className="grid min-w-0 content-start gap-1 rounded-[var(--ui-radius-surface)] border border-border bg-card p-3 md:gap-1.5 md:px-5 md:py-4"
           key={item.label}
         >
           <dt className="text-xs text-muted-foreground md:text-sm">
@@ -41,7 +41,7 @@ export function ReportHeadlineStrip({
           <dd
             data-summary-money={item.money || undefined}
             className={cn(
-              "break-words font-normal leading-tight tabular-nums md:text-3xl",
+              "break-words font-semibold leading-tight tabular-nums md:text-3xl",
               item.money ? "text-lg" : "text-2xl",
               item.muted && "text-muted-foreground",
             )}
@@ -65,11 +65,11 @@ export function ReportHeadlineStripSkeleton({ count }: { count: number }) {
       aria-hidden="true"
       data-summary-grid
       data-summary-skeleton
-      className="grid grid-cols-2 gap-2 md:gap-px md:border md:border-border md:bg-border xl:grid-cols-4"
+      className="grid grid-cols-2 gap-2 md:gap-3 xl:grid-cols-4"
     >
       {Array.from({ length: count }, (_, index) => (
         <div
-          className="h-[4.75rem] border border-border bg-background p-3 md:h-28 md:border-0 md:p-5"
+          className="h-[4.75rem] rounded-[var(--ui-radius-surface)] border border-border bg-card p-3 md:h-28 md:p-5"
           key={`headline-skeleton-${index + 1}`}
         >
           <div className="h-full animate-pulse bg-muted" />

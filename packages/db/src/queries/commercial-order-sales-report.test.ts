@@ -3,6 +3,8 @@ import { describe, expect, test } from "bun:test"
 import {
   SALES_REPORT_TOP_ITEMS,
   salesReportDayKeys,
+  salesReportOrderOwedMinor,
+  summarizeMoneyIn,
   summarizeSalesWindow,
 } from "./commercial-order-sales-report"
 
@@ -143,5 +145,54 @@ describe("summarizeSalesWindow", () => {
       window,
     )
     expect(report.topItems[0]?.name).toBe("Health check")
+  })
+})
+
+describe("still owed and money in", () => {
+  test("counts what is unpaid on the window's Orders, never legacy-paid ones", () => {
+    const order = (
+      totalMinor: number,
+      amountPaidMinor: number,
+      paymentStatus: "PENDING" | "PARTIALLY_PAID" | "PAID",
+      paymentCount: number,
+    ) => ({
+      amountPaidMinor,
+      createdAt: new Date("2026-10-18T10:00:00.000Z"),
+      lines: [],
+      paymentCount,
+      paymentStatus,
+      totalMinor,
+    })
+    const report = summarizeSalesWindow(
+      [
+        order(500_000, 0, "PENDING", 0),
+        order(300_000, 100_000, "PARTIALLY_PAID", 1),
+        order(200_000, 200_000, "PAID", 1),
+        // Legacy Orders were marked Paid without payment records.
+        order(400_000, 0, "PAID", 0),
+      ],
+      window,
+    )
+    expect(report.owed).toEqual({ orderCount: 2, totalMinor: 700_000 })
+    expect(salesReportOrderOwedMinor(order(100, 150, "PAID", 2))).toBe(0)
+  })
+
+  test("nets refunds per method and leaves out customer credit", () => {
+    expect(
+      summarizeMoneyIn([
+        { amountMinor: 500_000, method: "CASH", type: "PAYMENT" },
+        { amountMinor: 50_000, method: "CASH", type: "REFUND" },
+        { amountMinor: 700_000, method: "BANK_TRANSFER", type: "PAYMENT" },
+        { amountMinor: 90_000, method: "CUSTOMER_CREDIT", type: "PAYMENT" },
+        { amountMinor: 10_000, method: "POS", type: "PAYMENT" },
+        { amountMinor: 10_000, method: "POS", type: "REFUND" },
+      ]),
+    ).toEqual({
+      methods: [
+        { method: "BANK_TRANSFER", totalMinor: 700_000 },
+        { method: "CASH", totalMinor: 450_000 },
+      ],
+      totalMinor: 1_150_000,
+    })
   })
 })

@@ -5,7 +5,8 @@
  */
 export type ReportRange = { from: Date; to: Date }
 
-export const REPORT_RANGE_PRESETS = [7, 30, 90] as const
+/** Period buttons: Today, then the last 7, 30 and 90 days (today included). */
+export const REPORT_RANGE_PRESETS = [1, 7, 30, 90] as const
 export type ReportRangePreset = (typeof REPORT_RANGE_PRESETS)[number]
 export const REPORT_RANGE_DEFAULT_DAYS: ReportRangePreset = 30
 export const REPORT_RANGE_MAX_DAYS = 366
@@ -76,7 +77,7 @@ export function previousReportRange(range: ReportRange): ReportRange {
   return { from: new Date(range.from.getTime() - length), to: range.from }
 }
 
-/** 7, 30 or 90 when the range is that preset ending today, else null. */
+/** 1, 7, 30 or 90 when the range is that preset ending today, else null. */
 export function matchReportRangePreset(
   range: ReportRange,
   now = new Date(),
@@ -130,9 +131,15 @@ export function formatReportRangeBetween(range: ReportRange, now = new Date()) {
     : `on ${dates}`
 }
 
-/** "Last 30 days" for a preset, otherwise "15 days". */
+/** Short button label for a preset: "Today", "7 days". */
+export function formatReportPresetShort(days: ReportRangePreset) {
+  return days === 1 ? "Today" : `${days} days`
+}
+
+/** "Today" or "Last 30 days" for a preset, otherwise "15 days". */
 export function formatReportRangeName(range: ReportRange, now = new Date()) {
   const preset = matchReportRangePreset(range, now)
+  if (preset === 1) return "Today"
   if (preset) return `Last ${preset} days`
   const days = reportRangeDays(range)
   return `${days} ${days === 1 ? "day" : "days"}`

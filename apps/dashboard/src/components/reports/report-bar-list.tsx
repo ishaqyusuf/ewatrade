@@ -68,7 +68,7 @@ export function ReportBarList({
             >
               <span
                 className={cn(
-                  "block h-full rounded-r",
+                  "block h-full rounded-r-[4px]",
                   row.value > 0 ? "min-w-0.5" : "",
                   row.barClassName ?? "bg-primary",
                 )}

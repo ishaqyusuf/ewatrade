@@ -43,7 +43,7 @@ export function ReportChartCard({
     <section
       aria-label={title}
       className={cn(
-        "grid min-w-0 content-start gap-3.5 border border-border bg-background p-4 sm:p-5",
+        "grid min-w-0 content-start gap-3.5 rounded-[var(--ui-radius-surface)] border border-border bg-card p-4 sm:p-5",
         className,
       )}
     >
@@ -65,7 +65,7 @@ export function ReportChartCard({
           <button
             aria-controls={tableId}
             aria-expanded={showTable}
-            className="justify-self-start text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground"
+            className="-my-2 min-h-11 justify-self-start text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground"
             onClick={() => setShowTable((value) => !value)}
             type="button"
           >
@@ -74,7 +74,7 @@ export function ReportChartCard({
           {showTable ? (
             <section
               aria-label={`${title} table`}
-              className="max-h-80 overflow-auto border border-border"
+              className="max-h-80 overflow-auto rounded-[var(--ui-radius-item)] border border-border"
               id={tableId}
               // biome-ignore lint/a11y/noNoninteractiveTabindex: Keyboard users must be able to scroll the report table.
               tabIndex={0}
@@ -138,7 +138,7 @@ export function ReportChartEmpty({
   title: string
 }) {
   return (
-    <div className="grid min-h-52 place-items-center border border-dashed border-border p-4 text-center">
+    <div className="grid min-h-52 place-items-center rounded-[var(--ui-radius-item)] border border-dashed border-border p-4 text-center">
       <div className="grid justify-items-center gap-1">
         <p className="font-semibold">{title}</p>
         <p className="text-sm text-muted-foreground">{description}</p>
