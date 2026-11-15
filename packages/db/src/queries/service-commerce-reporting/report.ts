@@ -12,6 +12,7 @@ import type { PrismaClient } from "../../../generated/prisma/client"
 
 import { countByUtcDay } from "../report-days"
 import { authorizeServiceCommerceReportRead } from "./audit"
+import { readServiceCommerceReportRows } from "./report-rows"
 import { getStoreConversationReportAggregates } from "./store-conversations"
 import { prescriptionUsageAmountsToServiceCommerce } from "./usage"
 
@@ -105,13 +106,6 @@ function costObservations(
   )
 }
 
-function scopeWhere(input: ServiceCommerceReportInput) {
-  return {
-    ...(input.storeId ? { storeId: input.storeId } : {}),
-    tenantId: input.tenantId,
-  }
-}
-
 type UsageEvent = Parameters<typeof costObservations>[0][number] & {
   billingOwnerSnapshot?: string | null
   connectionId?: string | null
@@ -174,9 +168,13 @@ export async function getServiceCommerceReport(
     tenantId: parsedInput.tenantId,
   })
   const input = { ...parsedInput, storeId: access.storeId }
-  const scope = scopeWhere(input)
-  const occurrence = { gte: input.start, lt: input.end }
-  const [
+  // Two statements: every report source in one bounded JSON read, and the
+  // store-conversation aggregates (was 28 + 1 separate reads).
+  const [rows, storeConversationAggregates] = await Promise.all([
+    readServiceCommerceReportRows(db, input),
+    getStoreConversationReportAggregates(db, input),
+  ])
+  const {
     tenant,
     stores,
     serviceRequests,
@@ -205,300 +203,7 @@ export async function getServiceCommerceReport(
     profileAuditEvents,
     connectionAuditEvents,
     routingAlerts,
-    storeConversationAggregates,
-  ] = await Promise.all([
-    db.tenant.findFirstOrThrow({
-      select: { currencyCode: true, timezone: true },
-      where: { id: input.tenantId },
-    }),
-    db.store.findMany({
-      select: { id: true, name: true },
-      where: {
-        ...(input.storeId ? { id: input.storeId } : {}),
-        tenantId: input.tenantId,
-      },
-      take: SERVICE_COMMERCE_REPORT_QUERY_ROW_LIMIT,
-    }),
-    db.serviceRequest.findMany({
-      select: {
-        channelOrigin: true,
-        convertedAt: true,
-        requestedAt: true,
-        storeId: true,
-      },
-      where: { ...scope, requestedAt: occurrence },
-      take: SERVICE_COMMERCE_REPORT_QUERY_ROW_LIMIT,
-    }),
-    db.prescriptionRequestAuditEvent.findMany({
-      select: {
-        effectiveAt: true,
-        storeId: true,
-        request: { select: { source: true } },
-      },
-      where: { ...scope, effectiveAt: occurrence, type: "RECEIVED" },
-      take: SERVICE_COMMERCE_REPORT_QUERY_ROW_LIMIT,
-    }),
-    db.commerceInquiry.findMany({
-      select: {
-        channelOrigin: true,
-        convertedAt: true,
-        createdAt: true,
-        storeId: true,
-      },
-      where: { ...scope, createdAt: occurrence },
-      take: SERVICE_COMMERCE_REPORT_QUERY_ROW_LIMIT,
-    }),
-    db.commerceQuoteVersion.findMany({
-      select: {
-        acceptedAt: true,
-        declinedAt: true,
-        issuedAt: true,
-        quote: { select: { sourceType: true, storeId: true } },
-        status: true,
-      },
-      where: {
-        OR: [
-          { acceptedAt: occurrence },
-          { declinedAt: occurrence },
-          { issuedAt: occurrence },
-        ],
-        quote: { is: scope },
-      },
-      take: SERVICE_COMMERCE_REPORT_QUERY_ROW_LIMIT,
-    }),
-    db.commercialOrderPayment.findMany({
-      select: {
-        amountMinor: true,
-        recordedAt: true,
-        storeId: true,
-        type: true,
-      },
-      where: {
-        ...scope,
-        recordedAt: occurrence,
-        method: { not: "CUSTOMER_CREDIT" },
-      },
-      take: SERVICE_COMMERCE_REPORT_QUERY_ROW_LIMIT,
-    }),
-    db.serviceBooking.findMany({
-      select: {
-        arrivedAt: true,
-        completedAt: true,
-        confirmedAt: true,
-        serviceStartedAt: true,
-        storeId: true,
-      },
-      where: {
-        ...scope,
-        OR: [
-          { arrivedAt: occurrence },
-          { completedAt: occurrence },
-          { confirmedAt: occurrence },
-          { serviceStartedAt: occurrence },
-        ],
-      },
-      take: SERVICE_COMMERCE_REPORT_QUERY_ROW_LIMIT,
-    }),
-    db.prescriptionPickupEvent.findMany({
-      select: {
-        effectiveAt: true,
-        fulfillment: { select: { storeId: true } },
-        type: true,
-      },
-      where: {
-        effectiveAt: occurrence,
-        fulfillment: { is: scope },
-        type: "HANDED_OFF",
-      },
-      take: SERVICE_COMMERCE_REPORT_QUERY_ROW_LIMIT,
-    }),
-    db.prescriptionDeliveryEvent.findMany({
-      select: {
-        assignment: { select: { storeId: true } },
-        effectiveAt: true,
-        type: true,
-      },
-      where: {
-        assignment: { is: scope },
-        effectiveAt: occurrence,
-        type: "DELIVERED",
-      },
-      take: SERVICE_COMMERCE_REPORT_QUERY_ROW_LIMIT,
-    }),
-    db.serviceWorkEvent.findMany({
-      select: {
-        effectiveAt: true,
-        serviceJob: { select: { storeId: true } },
-        toStatus: true,
-        type: true,
-      },
-      where: {
-        effectiveAt: occurrence,
-        serviceJob: input.storeId
-          ? { is: { storeId: input.storeId } }
-          : undefined,
-        tenantId: input.tenantId,
-        toStatus: "COMPLETED",
-      },
-      take: SERVICE_COMMERCE_REPORT_QUERY_ROW_LIMIT,
-    }),
-    db.catalogSourceLineLink.findMany({
-      select: {
-        createdAsPrivateDraft: true,
-        createdAt: true,
-        resolutionCapturedAt: true,
-        sourceType: true,
-        verifiedObservationId: true,
-      },
-      where: {
-        ...scope,
-        OR: [
-          { resolutionCapturedAt: occurrence },
-          { createdAt: occurrence, resolutionCapturedAt: null },
-        ],
-      },
-      take: SERVICE_COMMERCE_REPORT_QUERY_ROW_LIMIT,
-    }),
-    db.catalogAvailabilityAttestation.findMany({
-      select: { createdAt: true, type: true },
-      where: { ...scope, createdAt: occurrence },
-      take: SERVICE_COMMERCE_REPORT_QUERY_ROW_LIMIT,
-    }),
-    db.catalogPricePromotion.findMany({
-      select: { createdAt: true, previousPriceMinor: true, priceMinor: true },
-      where: { ...scope, createdAt: occurrence },
-      take: SERVICE_COMMERCE_REPORT_QUERY_ROW_LIMIT,
-    }),
-    db.commerceQuoteLine.findMany({
-      select: {
-        catalogPriceEvaluationAt: true,
-        catalogPriceOverride: true,
-      },
-      where: {
-        OR: [
-          { catalogPriceEvaluationAt: occurrence },
-          {
-            catalogPriceEvaluationAt: null,
-            quoteVersion: { issuedAt: occurrence },
-          },
-        ],
-        quoteVersion: { quote: { is: scope } },
-      },
-      take: SERVICE_COMMERCE_REPORT_QUERY_ROW_LIMIT,
-    }),
-    db.serviceCommerceStoreAuditEvent.findMany({
-      select: { effectiveAt: true, type: true },
-      where: {
-        ...scope,
-        effectiveAt: occurrence,
-        type: "CATALOG_GRADUATED",
-      },
-      take: SERVICE_COMMERCE_REPORT_QUERY_ROW_LIMIT,
-    }),
-    db.serviceCommerceMediaAuditEvent.findMany({
-      select: { effectiveAt: true, lifecycle: true, type: true },
-      where: { ...scope, effectiveAt: occurrence },
-      take: SERVICE_COMMERCE_REPORT_QUERY_ROW_LIMIT,
-    }),
-    db.serviceCommerceSourceAttachment.findMany({
-      select: { createdAt: true, lifecycle: true },
-      where: { ...scope, createdAt: occurrence },
-      take: SERVICE_COMMERCE_REPORT_QUERY_ROW_LIMIT,
-    }),
-    db.serviceCommerceVerifiedObservation.findMany({
-      select: { lifecycle: true, verifiedAt: true },
-      where: { ...scope, verifiedAt: occurrence },
-      take: SERVICE_COMMERCE_REPORT_QUERY_ROW_LIMIT,
-    }),
-    db.serviceCommerceCustomerNotificationAttempt.findMany({
-      select: {
-        attemptNumber: true,
-        completedAt: true,
-        failureCode: true,
-        startedAt: true,
-        status: true,
-      },
-      where: { ...scope, startedAt: occurrence },
-      take: SERVICE_COMMERCE_REPORT_QUERY_ROW_LIMIT,
-    }),
-    db.serviceCommerceCustomerNotificationReceipt.findMany({
-      select: { occurredAt: true, status: true },
-      where: { ...scope, occurredAt: occurrence },
-      take: SERVICE_COMMERCE_REPORT_QUERY_ROW_LIMIT,
-    }),
-    db.serviceDeliveryAttempt.findMany({
-      select: { attemptedAt: true, completedAt: true, status: true },
-      where: {
-        notificationIntent: { is: scope },
-        OR: [
-          { completedAt: occurrence },
-          { attemptedAt: occurrence, completedAt: null },
-        ],
-      },
-      take: SERVICE_COMMERCE_REPORT_QUERY_ROW_LIMIT,
-    }),
-    db.serviceCommerceCustomerActionExecution.findMany({
-      select: { executedAt: true, outcome: true },
-      where: { ...scope, executedAt: occurrence, outcome: "RECOVERY" },
-      take: SERVICE_COMMERCE_REPORT_QUERY_ROW_LIMIT,
-    }),
-    db.serviceCommerceUsageEvent.findMany({
-      select: {
-        billingOwnerSnapshot: true,
-        bspCostMinor: true,
-        connectionId: true,
-        currencyCode: true,
-        deliveryCostMinor: true,
-        eventType: true,
-        metaCostMinor: true,
-        messageCategory: true,
-        numberCostMinor: true,
-        occurredAt: true,
-        paymentProviderFeeMinor: true,
-        platformChargeMinor: true,
-        revenueMinor: true,
-        recipientMarket: true,
-        subscriptionChargeMinor: true,
-        taxMinor: true,
-      },
-      where: { ...scope, occurredAt: occurrence },
-      take: SERVICE_COMMERCE_REPORT_QUERY_ROW_LIMIT,
-    }),
-    db.prescriptionUsageEvent.findMany({
-      select: { amounts: true, eventType: true, occurredAt: true },
-      where: { ...scope, occurredAt: occurrence },
-      take: SERVICE_COMMERCE_REPORT_QUERY_ROW_LIMIT,
-    }),
-    db.serviceCommerceStoreAuditEvent.findMany({
-      select: { effectiveAt: true, type: true },
-      where: {
-        ...scope,
-        effectiveAt: occurrence,
-        type: { in: ["ACTIVATED", "DEACTIVATED", "SUSPENDED"] },
-      },
-      take: SERVICE_COMMERCE_REPORT_QUERY_ROW_LIMIT,
-    }),
-    db.whatsAppConnectionAuditEvent.findMany({
-      select: { effectiveAt: true, type: true },
-      where: {
-        ...scope,
-        effectiveAt: occurrence,
-        type: { in: ["readiness_passed", "readiness_failed"] },
-      },
-      take: SERVICE_COMMERCE_REPORT_QUERY_ROW_LIMIT,
-    }),
-    input.storeId
-      ? Promise.resolve([])
-      : db.whatsAppRoutingAlert.findMany({
-          select: { createdAt: true, resolvedAt: true },
-          where: {
-            tenantId: input.tenantId,
-            OR: [{ createdAt: occurrence }, { resolvedAt: occurrence }],
-          },
-          take: SERVICE_COMMERCE_REPORT_QUERY_ROW_LIMIT,
-        }),
-    getStoreConversationReportAggregates(db, input),
-  ])
+  } = rows
 
   if (input.storeId && !stores.some((store) => store.id === input.storeId)) {
     throw new Error("REPORT_STORE_NOT_FOUND")

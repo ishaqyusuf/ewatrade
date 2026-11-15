@@ -59,6 +59,128 @@ function reportAccessClient(client: Record<string, unknown>) {
   )
 }
 
+/** UTC wall time as the report's JSON read returns it (no zone). */
+const wall = (iso: string) => iso.replace("Z", "")
+
+/** What the one report read returns: each source as a JSON row list. */
+function reportRowsFor(storeScoped: boolean) {
+  const activated = {
+    effectiveAt: wall("2031-02-09T08:00:00.000Z"),
+    type: "ACTIVATED",
+  }
+  return {
+    tenant: { currencyCode: "NGN", timezone: null },
+    stores: [{ id: scope.storeId, name: "Appointment Store" }],
+    serviceRequests: [
+      {
+        channelOrigin: "WHATSAPP",
+        convertedAt: wall("2031-02-05T09:00:00.000Z"),
+        requestedAt: wall("2031-02-03T09:00:00.000Z"),
+        storeId: scope.storeId,
+      },
+    ],
+    prescriptionReceived: [],
+    inquiries: [],
+    quoteVersions: [
+      {
+        acceptedAt: wall("2031-02-05T09:00:00.000Z"),
+        declinedAt: null,
+        issuedAt: wall("2031-02-04T09:00:00.000Z"),
+        quote: { sourceType: "SERVICE_REQUEST", storeId: scope.storeId },
+        status: "ACCEPTED",
+      },
+      {
+        acceptedAt: wall("2031-02-06T09:00:00.000Z"),
+        declinedAt: null,
+        issuedAt: wall("2031-01-31T09:00:00.000Z"),
+        quote: { sourceType: "SERVICE_REQUEST", storeId: scope.storeId },
+        status: "ACCEPTED",
+      },
+    ],
+    payments: [
+      {
+        amountMinor: 25_000,
+        recordedAt: wall("2031-02-08T09:00:00.000Z"),
+        storeId: scope.storeId,
+        type: "PAYMENT",
+      },
+    ],
+    bookings: [
+      {
+        arrivedAt: null,
+        completedAt: wall("2031-02-10T11:00:00.000Z"),
+        confirmedAt: wall("2031-02-07T10:00:00.000Z"),
+        serviceStartedAt: wall("2031-02-10T10:00:00.000Z"),
+        storeId: scope.storeId,
+      },
+      {
+        arrivedAt: wall("2031-02-11T10:00:00.000Z"),
+        completedAt: wall("2031-01-30T11:00:00.000Z"),
+        confirmedAt: wall("2031-01-28T10:00:00.000Z"),
+        serviceStartedAt: wall("2031-02-11T10:00:00.000Z"),
+        storeId: scope.storeId,
+      },
+    ],
+    pickupEvents: [],
+    deliveryEvents: [],
+    serviceEvents: [],
+    sourceLinks: [],
+    attestations: [],
+    pricePromotions: [],
+    quoteOverrideLines: [],
+    graduationEvents: [activated],
+    mediaEvents: [
+      {
+        effectiveAt: wall("2031-02-09T11:00:00.000Z"),
+        lifecycle: "SAFE",
+        type: "SAFETY_RECORDED",
+      },
+    ],
+    attachments: [],
+    observations: [],
+    notificationAttempts: [],
+    notificationReceipts: [],
+    legacyNotificationAttempts: [
+      {
+        attemptedAt: wall("2031-02-09T08:00:00.000Z"),
+        completedAt: wall("2031-02-09T08:00:00.000Z"),
+        status: "SENT",
+      },
+    ],
+    actionRecoveries: [],
+    usage: [
+      {
+        billingOwnerSnapshot: "tenant",
+        bspCostMinor: null,
+        connectionId: "connection_1",
+        currencyCode: "NGN",
+        eventType: "MESSAGE_DELIVERED",
+        metaCostMinor: 19,
+        messageCategory: "utility",
+        occurredAt: wall("2031-02-09T08:00:00.000Z"),
+        recipientMarket: "NG",
+      },
+    ],
+    prescriptionUsage: [],
+    profileAuditEvents: [activated],
+    connectionAuditEvents: [
+      {
+        effectiveAt: wall("2031-02-09T08:00:00.000Z"),
+        type: "readiness_passed",
+      },
+    ],
+    // Routing alerts are Business-wide, so a Store-scoped read gets none.
+    routingAlerts: storeScoped
+      ? []
+      : [
+          {
+            createdAt: wall("2031-02-09T08:00:00.000Z"),
+            resolvedAt: wall("2031-02-10T08:00:00.000Z"),
+          },
+        ],
+  }
+}
+
 function reportingClient(calls: Array<{ name: string; value: unknown }>) {
   function findMany(name: string, rows: unknown[] = []) {
     return async (value: unknown) => {
@@ -73,6 +195,11 @@ function reportingClient(calls: Array<{ name: string; value: unknown }>) {
         typeof value === "object" && value !== null && "sql" in value
           ? String((value as { sql: unknown }).sql)
           : ""
+      if (sql.includes('AS "serviceRequests"')) {
+        calls.push({ name: "reportRows.queryRaw", value })
+        const values = (value as { values?: unknown[] }).values ?? []
+        return [reportRowsFor(values.includes(scope.storeId))]
+      }
       if (!sql.includes("StoreConversationAuditEvent")) {
         return [{ id: "membership_1" }]
       }
@@ -386,59 +513,36 @@ describe("Service Commerce reporting repository contract", () => {
       },
     })
 
-    const byName = Object.fromEntries(
-      calls.map((call) => [call.name, call.value]),
+    // One statement reads every source; it is scoped and half-open.
+    const reads = calls.filter((call) => call.name === "reportRows.queryRaw")
+    expect(reads).toHaveLength(1)
+    const read = reads[0]?.value as { sql: string; values: unknown[] }
+    expect(read.values).toEqual(
+      expect.arrayContaining([
+        scope.tenantId,
+        scope.storeId,
+        window.start,
+        window.end,
+        10_000,
+      ]),
     )
-    const halfOpen = { gte: window.start, lt: window.end }
-
-    expect(byName["tenant.findFirstOrThrow"]).toMatchObject({
-      where: { id: scope.tenantId },
-    })
-    expect(byName["store.findMany"]).toMatchObject({
-      where: { id: scope.storeId, tenantId: scope.tenantId },
-    })
-    expect(byName["serviceRequest.findMany"]).toMatchObject({
-      where: { ...scope, requestedAt: halfOpen },
-    })
-    expect(byName["commerceQuoteVersion.findMany"]).toMatchObject({
-      where: {
-        OR: [
-          { acceptedAt: halfOpen },
-          { declinedAt: halfOpen },
-          { issuedAt: halfOpen },
-        ],
-        quote: { is: scope },
-      },
-    })
-    expect(byName["commercialOrderPayment.findMany"]).toMatchObject({
-      where: { ...scope, recordedAt: halfOpen },
-    })
-    expect(byName["serviceBooking.findMany"]).toMatchObject({
-      where: {
-        ...scope,
-        OR: [
-          { arrivedAt: halfOpen },
-          { completedAt: halfOpen },
-          { confirmedAt: halfOpen },
-          { serviceStartedAt: halfOpen },
-        ],
-      },
-    })
-    expect(byName["serviceDeliveryAttempt.findMany"]).toMatchObject({
-      where: {
-        notificationIntent: { is: scope },
-        OR: [
-          { completedAt: halfOpen },
-          { attemptedAt: halfOpen, completedAt: null },
-        ],
-      },
-    })
-    expect(byName["serviceCommerceMediaAuditEvent.findMany"]).toMatchObject({
-      where: { ...scope, effectiveAt: halfOpen },
-    })
-    expect(byName["serviceCommerceUsageEvent.findMany"]).toMatchObject({
-      where: { ...scope, occurredAt: halfOpen },
-    })
+    for (const table of [
+      "ServiceRequest",
+      "CommerceQuoteVersion",
+      "CommercialOrderPayment",
+      "ServiceBooking",
+      "ServiceDeliveryAttempt",
+      "ServiceCommerceMediaAuditEvent",
+      "ServiceCommerceUsageEvent",
+    ])
+      expect(read.sql).toContain(`"${table}"`)
+    expect(read.sql).toContain('r."requestedAt" >=')
+    expect(read.sql).toContain('r."requestedAt" <')
+    expect(read.sql).toContain("p.\"method\" <> 'CUSTOMER_CREDIT'")
+    expect(read.sql).toContain('d."completedAt" IS NULL')
+    expect(
+      calls.filter((call) => call.name.endsWith(".findMany")),
+    ).toHaveLength(0)
     expect(report.usageCostsByDimension).toEqual([
       expect.objectContaining({
         billingOwner: "tenant",
@@ -447,11 +551,6 @@ describe("Service Commerce reporting repository contract", () => {
         recipientMarket: "NG",
       }),
     ])
-    for (const call of calls.filter((call) =>
-      call.name.endsWith(".findMany"),
-    )) {
-      expect(call.value).toMatchObject({ take: 10_000 })
-    }
   })
 
   test("keeps unavailable external costs unknown instead of silently reporting zero", () => {
