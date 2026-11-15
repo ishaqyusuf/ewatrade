@@ -10,16 +10,16 @@ has the status, evidence and limitation for each case.
 
 ## Scorecard
 
-Current, 15 November 2026, after runtime runs 1–10, all of T1–T8 landing, and the
+Current, 15 November 2026, after runtime runs 1–11, all of T1–T8 landing, and the
 owner's instruction to keep data-dependent retail cases blocked:
 
 | Business | Passed | Fail | Blocked | Not assessed |
 | --- | ---: | ---: | ---: | ---: |
 | Jawdah poultry | 10/12 | 0 | 0 | 2 |
-| Laundry | 4/12 | 0 | 3 | 5 |
+| Laundry | 5/12 | 1 | 1 | 5 |
 | Hypnos Man Collection | 0/24 | 0 | 23 | 1 |
 | Alhaq Tech | 0/24 | 0 | 23 | 1 |
-| **Total** | **14/72 (19.4%)** | **0** | **49** | **9** |
+| **Total** | **15/72 (20.8%)** | **1** | **47** | **9** |
 
 Earlier on 10 November the count was 5/72 passed; J06 moved from PASS to FAIL in
 run 2. All case passes are local-window passes (see runtime runs 1–2). A separate
@@ -555,3 +555,40 @@ FAIL results are kept in history.
 - **L05 stays BLOCKED.** Withholding and explaining the tracking link fixes the
   misleading link. The public service request, quote, preferred time and
   tracking journey still needs a live Service Commerce policy decision.
+
+## Runtime run 11: ordinary-service default (L05, L07)
+
+15 November 2026. The owner first approved a temporary local QA policy window,
+then decided that ordinary services should be "Allow by default".
+
+- **Temporary policy window.** Six decisions for the Heritage Main store only,
+  reference `OWNER-2026-11-15-LOCAL-QA-HERITAGE-L05-L07`, expiring 23:39 UTC,
+  plus one request form. All six were revoked through the canonical revoke
+  command before the runs below, so these results reflect the new default only.
+- **Code.** `8261ebfd8` and `b05fd37e9` make the `service` vertical allowed by
+  default for:
+  - the channels themselves (`staff:staff`, `web:web`);
+  - staff request forms (`staff:web`) and quotes (`staff:quote`);
+  - customer web requests, preferred time, quotes and tracking (`web:intake`,
+    `web:booking`, `web:quote`, `web:service_completion`).
+
+  A current explicit restriction still blocks. Pharmacy, WhatsApp and web
+  payment stay fail closed. Brain ADR-0075 records the decision.
+- **L07 → PASS.** The tracking link is offered again. The customer page shows
+  ORD-006 Completed, the service line and the promised date, with no private
+  notes, problem text or photos. Photos, notes and problems passed in runs 7
+  and 10. Minor: the tracking line reads "Ready" after completion.
+- **L05 → FAIL.** The merchant setup works: Service settings profile activated,
+  owner added as attendant, customer entry point published, and a dashboard
+  request link created. The three Settings steps went through the same domain
+  commands those screens call, because the hidden browser pane couldn't operate
+  their sheets. The customer link then forwards to the Store chat, which fails
+  with "Conversation unavailable · Messages could not be loaded". The timeline
+  returned 503 for one of two bootstrapped conversations, and the page looped
+  through about 500 requests. After a reload it showed "This conversation
+  changed. Refresh the chat and try again." No request could be sent. The chat
+  also shows the internal Store name "Main store" to the customer.
+- **Not related to this change.** The unit test
+  `packages/db/src/queries/service-commerce-catalog.test.ts` (private draft
+  graph) fails because its mock DB lacks the `$executeRaw` now used by
+  `retail-ops-subscriptions.ts`.
