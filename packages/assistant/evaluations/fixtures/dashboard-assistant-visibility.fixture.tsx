@@ -604,7 +604,7 @@ test("actual retained panel and answer-card record stop hidden reads and require
   await ui.render(true)
   await showRecord()
   expect(ui.html()).toContain(
-    'href="https://example.invalid/sales?catalogDetail=item-a"',
+    'href="https://example.invalid/open/catalog-item/item-a"',
   )
   expect(recordReads).toBeGreaterThan(0)
   await act(async () => vm.setDraft("Retained record draft"))
@@ -617,7 +617,7 @@ test("actual retained panel and answer-card record stop hidden reads and require
   expect(recordReads).toBe(hiddenReads)
   expect(ui.html()).toContain("quick-assistant-panel")
   expect(ui.html()).not.toContain(
-    'href="https://example.invalid/sales?catalogDetail=item-a"',
+    'href="https://example.invalid/open/catalog-item/item-a"',
   )
   const gate = Promise.withResolvers<RecordContext>()
   recordGate = gate
@@ -626,7 +626,7 @@ test("actual retained panel and answer-card record stop hidden reads and require
   expect(recordReads).toBeGreaterThan(hiddenReads)
   expect(ui.html()).toContain("Checking record access")
   expect(ui.html()).not.toContain(
-    'href="https://example.invalid/sales?catalogDetail=item-a"',
+    'href="https://example.invalid/open/catalog-item/item-a"',
   )
   expect(vm.draft).toBe("Retained record draft")
   await act(async () => {
@@ -634,7 +634,7 @@ test("actual retained panel and answer-card record stop hidden reads and require
     await delay(20)
   })
   expect(ui.html()).not.toContain(
-    'href="https://example.invalid/sales?catalogDetail=item-a"',
+    'href="https://example.invalid/open/catalog-item/item-a"',
   )
   expect(ui.html()).toContain("Select the original business")
 })
@@ -646,7 +646,7 @@ test("record refusals stop intervals, erase payload and recover on focus", async
       await ui.render(true)
       await showRecord()
       expect(ui.html()).toContain(
-        'href="https://example.invalid/sales?catalogDetail=item-a"',
+        'href="https://example.invalid/open/catalog-item/item-a"',
       )
       recordError = code
       await act(async () => {
@@ -663,7 +663,7 @@ test("record refusals stop intervals, erase payload and recover on focus", async
         ]),
       ).toBeUndefined()
       expect(ui.html()).not.toContain(
-        'href="https://example.invalid/sales?catalogDetail=item-a"',
+        'href="https://example.invalid/open/catalog-item/item-a"',
       )
       await act(async () => {
         await delay(50)
@@ -685,7 +685,7 @@ test("record refusals stop intervals, erase payload and recover on focus", async
       })
       expect(recordReads).toBeGreaterThan(recoveredReads)
       expect(ui.html()).toContain(
-        'href="https://example.invalid/sales?catalogDetail=item-a"',
+        'href="https://example.invalid/open/catalog-item/item-a"',
       )
     } finally {
       await ui.close()
@@ -728,7 +728,7 @@ test("transient record errors retain interval recovery and minimizing aborts an 
   })
   expect(recordReads).toBe(hiddenReads)
   expect(ui.html()).not.toContain(
-    'href="https://example.invalid/sales?catalogDetail=item-a"',
+    'href="https://example.invalid/open/catalog-item/item-a"',
   )
 })
 
