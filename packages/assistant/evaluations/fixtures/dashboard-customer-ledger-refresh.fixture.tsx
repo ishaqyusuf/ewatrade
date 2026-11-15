@@ -163,6 +163,12 @@ mock.module("next/link", () => ({ default: leaf }))
 mock.module(app("components/customers/customer-form-sheet"), () => ({
   CustomerFormSheet: () => null,
 }))
+mock.module(app("components/returnables/returnable-cards"), () => ({
+  CustomerReturnablesSection: () => null,
+}))
+mock.module(app("components/tables/customer-ledger/empty-states"), () => ({
+  CustomerLedgerEmptyState: () => null,
+}))
 mock.module(app("components/scrollable-content"), () => ({
   ScrollableContent: leaf,
 }))
