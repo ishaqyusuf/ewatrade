@@ -413,6 +413,21 @@ export function FinanceBankStatementDetail({
                       {money(line.amountMinor)}
                     </span>
                   </label>
+                  <Button
+                    variant="outline"
+                    className="justify-self-start"
+                    disabled={query.isFetching || Boolean(recoveryError)}
+                    aria-label={`Open original record ${line.sequence}`}
+                    onClick={() =>
+                      void setParams({
+                        financeSheet: "bank-source",
+                        bankSourceEntryId: line.entryId,
+                        bankSourceAccountId: data.accountId,
+                      })
+                    }
+                  >
+                    Open original record
+                  </Button>
                 </li>
               ))}
             </ul>
