@@ -67,8 +67,14 @@ export function BusinessNotificationSettingsPage({
   scopeKey: string
   stores: Array<{ id: string; name: string }>
 }) {
+  // A linked member sheet opens on its own tab.
+  const [alertMember] = useQueryState("alertMember", parseAsString)
   return (
-    <Tabs defaultValue="types" className="grid gap-5" key={scopeKey}>
+    <Tabs
+      defaultValue={alertMember ? "recipients" : "types"}
+      className="grid gap-5"
+      key={scopeKey}
+    >
       <TabsList variant="line">
         <TabsTrigger value="types">Alerts</TabsTrigger>
         <TabsTrigger value="recipients">Who gets them</TabsTrigger>
