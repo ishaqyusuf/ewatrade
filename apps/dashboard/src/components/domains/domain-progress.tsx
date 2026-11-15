@@ -29,7 +29,8 @@ const REGISTRATION: Record<string, string> = {
 /**
  * After paying: payment and registration status. While this sheet is open
  * and the tab is visible it checks every 5 s (30 s when the result is
- * uncertain) for at most 10 minutes; then it waits for "Check again".
+ * uncertain) until registered or refunded, for at most 10 minutes; then
+ * it waits for "Check again".
  */
 export function DomainProgress() {
   const trpc = useTRPC()
@@ -54,7 +55,6 @@ export function DomainProgress() {
       const current = query.state.data
       if (
         current?.registrationStatus === "REGISTERED" ||
-        current?.registrationStatus === "FAILED" ||
         current?.paymentStatus === "REFUNDED" ||
         Date.now() - since > CHECK_WINDOW_MS
       ) {
@@ -75,7 +75,11 @@ export function DomainProgress() {
   const complete = data?.registrationStatus === "REGISTERED"
   const failed = data?.registrationStatus === "FAILED"
   const uncertain = data?.registrationStatus === "UNCERTAIN"
-  const stopped = !complete && !failed && Date.now() - since > CHECK_WINDOW_MS
+  // A failed registration keeps checking while its refund is on the way.
+  const stopped =
+    !complete &&
+    data?.paymentStatus !== "REFUNDED" &&
+    Date.now() - since > CHECK_WINDOW_MS
 
   return (
     <div className="grid gap-5">
