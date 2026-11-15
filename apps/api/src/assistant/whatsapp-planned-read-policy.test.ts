@@ -27,6 +27,11 @@ const plannedReads = [
     paths: ["retailOps.staffStatusReceipt"],
   },
   {
+    id: "staff.removal.review",
+    tool: "reviewStaffRemoval",
+    paths: ["retailOps.staffRemovalReview"],
+  },
+  {
     id: "staff.invitations.read",
     tool: "readStaffInvitations",
     paths: ["retailOps.staffInvitations"],
