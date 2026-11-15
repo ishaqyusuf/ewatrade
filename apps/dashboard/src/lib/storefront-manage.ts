@@ -1,7 +1,7 @@
 import "server-only"
 
 import { prisma } from "@ewatrade/db"
-import { buildInternalTenantHostname } from "@ewatrade/utils"
+import { storefrontUrl } from "./storefront-url"
 
 export type StorefrontState = "none" | "draft" | "live" | "paused"
 
@@ -24,14 +24,6 @@ export type StorefrontSummary = {
     status: string
     isPrimary: boolean
   }>
-}
-
-export function storefrontUrl(slug: string) {
-  return `https://${buildInternalTenantHostname({
-    tenantSlug: slug,
-    surface: "storefront",
-    platformDomain: process.env.NEXT_PUBLIC_PLATFORM_DOMAIN ?? "ewatrade.com",
-  })}`
 }
 
 /**

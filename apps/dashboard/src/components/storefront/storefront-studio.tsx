@@ -1,6 +1,9 @@
 "use client"
 
+import { ConfirmAlert } from "@/components/forms/confirm-alert"
+import { SheetBodyLoading, SheetFrame } from "@/components/sheets/sheet-frame"
 import { useStorefrontParams } from "@/hooks/use-storefront-params"
+import { storefrontUrl } from "@/lib/storefront-url"
 import { getDataCacheGeneration, useTRPC, useTRPCClient } from "@/trpc/client"
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
 import { applyStorefrontContent } from "@ewatrade/storefront-contracts/content"
@@ -38,8 +41,6 @@ import {
   DialogTitle,
   Input,
   Sheet,
-  SheetContent,
-  SheetTitle,
   Textarea,
 } from "@ewatrade/ui"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
@@ -59,6 +60,13 @@ import "./studio.css"
 
 type Draft = NonNullable<RouterOutputs["storefront"]["draft"]>
 type Store = { id: string; name: string; operatingModel?: string | null }
+const versionDate = new Intl.DateTimeFormat("en-GB", {
+  day: "numeric",
+  month: "short",
+  year: "numeric",
+  hour: "numeric",
+  minute: "2-digit",
+})
 const message = (error: unknown) =>
   error instanceof Error
     ? error.message
@@ -216,7 +224,9 @@ function StudioEditor({
   )
   const [libraryOpen, setLibraryOpen] = useState(false)
   const [templatesOpen, setTemplatesOpen] = useState(false)
-  const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [sidebarOpen, setSidebarOpen] = useState(
+    () => typeof window === "undefined" || window.innerWidth >= 1024,
+  )
   const [exitOpen, setExitOpen] = useState(false)
   const [phrases, setPhrases] = useState<{
     id: string
@@ -230,7 +240,11 @@ function StudioEditor({
     initialComposition.pages[0]?.sections[0]?.id ?? "",
   )
   const [review, setReview] = useState(false)
-  const [consent, setConsent] = useState(false)
+  const [versionsOpen, setVersionsOpen] = useState(false)
+  const [restoreTarget, setRestoreTarget] = useState<{
+    id: string
+    createdAt: string | Date
+  } | null>(null)
   const [error, setError] = useState("")
   const [status, setStatus] = useState("")
   const [conflict, setConflict] = useState<{
@@ -259,7 +273,8 @@ function StudioEditor({
   const history = useQuery(
     trpc.storefront.history.queryOptions(
       { take: 20 },
-      { retry: false, refetchOnWindowFocus: false },
+      // Past versions read only when that sheet opens.
+      { enabled: versionsOpen, retry: false, refetchOnWindowFocus: false },
     ),
   )
   const dirty =
@@ -291,7 +306,6 @@ function StudioEditor({
       setRedo([])
       setUndo((items) => [...items.slice(-19), composition])
       setComposition(next)
-      setConsent(false)
       setStatus("")
       return true
     },
@@ -415,7 +429,6 @@ function StudioEditor({
     if (
       dirty ||
       conflict ||
-      !consent ||
       !readiness.data?.canPublish ||
       readiness.data.draftRevision !== saved.revision
     )
@@ -432,22 +445,19 @@ function StudioEditor({
     })
     if (!current(generation)) return
     if (!result.ok) {
-      setError(
-        "The draft or live release changed. Refresh readiness and review again.",
-      )
+      setError("Your store changed somewhere else. Check it and try again.")
       await readiness.refetch()
       return
     }
-    setConsent(false)
     setStatus(
       result.activeReleaseId === result.releaseId
-        ? `Revision ${saved.revision} activated. Delivery is unverified.`
-        : "This publication was already recorded. Another release is now active; refresh status to review it.",
+        ? "Published. Customers see this design now."
+        : "This was already published. A newer version is live now.",
     )
     await Promise.all([readiness.refetch(), history.refetch()])
   }
   const rollback = async (releaseId: string) => {
-    if (!readiness.data || !consent || dirty || conflict) return
+    if (!readiness.data || dirty || conflict) return
     const generation = getDataCacheGeneration()
     const result = await api.storefront.rollback.mutate({
       expectedSiteId: initial.siteId,
@@ -458,18 +468,32 @@ function StudioEditor({
       ),
     })
     if (!current(generation)) return
-    setConsent(false)
     if (!result.ok)
-      setError("The live release changed. Reload readiness before restoring.")
+      setError("Your store changed somewhere else. Check it and try again.")
     else
       setStatus(
         result.activeReleaseId === result.releaseId
-          ? "Selected release restored. The draft is unchanged; delivery is unverified."
-          : "This restore was already recorded. Another release is now active; refresh status to review it.",
+          ? "Done. Customers see that version now. Your draft didn’t change."
+          : "This was already done. A newer version is live now.",
       )
-    await Promise.all([readiness.refetch(), history.refetch()])
+    await Promise.all([
+      readiness.refetch(),
+      versionsOpen ? history.refetch() : null,
+    ])
   }
   const blocked = busy || !!candidatePreview
+  // Nothing new to publish: the saved draft is the live design.
+  const upToDate =
+    !dirty &&
+    readiness.data?.publication.activeRelease?.draftRevision === saved.revision
+  const liveDomain = readiness.data?.hostnames.customDomains.find(
+    (domain) => domain.status === "ACTIVE" && domain.linkedToSite,
+  )
+  const liveUrl = liveDomain
+    ? `https://${liveDomain.hostname}`
+    : readiness.data
+      ? storefrontUrl(readiness.data.hostnames.tenantSlug)
+      : null
   const store = stores.find((entry) => entry.id === initial.storeId)
   const model = store?.operatingModel?.toLowerCase() ?? ""
   const fit = model.includes("mixed")
@@ -509,19 +533,18 @@ function StudioEditor({
             aria-expanded={sidebarOpen}
             onClick={() => setSidebarOpen(!sidebarOpen)}
           >
-            ☰
+            <span aria-hidden="true">☰</span>
           </button>
           <Button
             variant="ghost"
+            aria-label="Back to Online store"
             onClick={() =>
               dirty ? setExitOpen(true) : router.push("/storefront")
             }
           >
-            ← Online store
+            <span aria-hidden="true">←</span>
+            <span className="sf-back-label">Online store</span>
           </Button>
-          <span className="sf-canvas-store">
-            {store?.name ?? "Storefront studio"}
-          </span>
           <button
             type="button"
             className="sf-canvas-template-trigger"
@@ -570,9 +593,10 @@ function StudioEditor({
             <span className="sf-content-toolbar-label">Generate content</span>
           </Button>
           <span className="sf-save-status">
-            {dirty ? "● Unsaved changes" : `✓ Saved · rev ${saved.revision}`}
+            {dirty ? "Not saved" : "Saved"}
           </span>
           <Button
+            className="sf-history-action"
             variant="ghost"
             disabled={blocked || !undo.length}
             onClick={() => {
@@ -581,13 +605,13 @@ function StudioEditor({
                 setRedo((items) => [...items, composition])
                 setComposition(previous)
                 setUndo(undo.slice(0, -1))
-                setConsent(false)
               }
             }}
           >
             Undo
           </Button>
           <Button
+            className="sf-history-action"
             variant="ghost"
             disabled={blocked || !redo.length}
             onClick={() => {
@@ -596,7 +620,6 @@ function StudioEditor({
                 setUndo((items) => [...items, composition])
                 setComposition(next)
                 setRedo(redo.slice(0, -1))
-                setConsent(false)
               }
             }}
           >
@@ -611,9 +634,11 @@ function StudioEditor({
               })
             }
           >
-            {busy ? "Working…" : "Save draft"}
+            {busy ? "Saving…" : "Save"}
           </Button>
-          <Button onClick={() => setReview(true)}>Review & publish</Button>
+          <Button disabled={upToDate} onClick={() => setReview(true)}>
+            {upToDate ? "Published" : "Publish"}
+          </Button>
         </div>
       </header>
       {!isCanvasComposition(initialComposition) &&
@@ -658,7 +683,6 @@ function StudioEditor({
                 setConflict(null)
                 setUndo([])
                 setRedo([])
-                setConsent(false)
               }}
             >
               Load revision {conflict.revision}
@@ -668,7 +692,6 @@ function StudioEditor({
               onClick={() => {
                 setSaved(conflict)
                 setConflict(null)
-                setConsent(false)
               }}
             >
               Keep my edits
@@ -685,13 +708,20 @@ function StudioEditor({
             aria-label="Storefront configuration"
           >
             <div className="sf-config-heading">
-              <strong>Storefront config</strong>
-              <small>
-                Draft rev {saved.revision} ·{" "}
+              <strong>
                 {readiness.data?.publication.activeRelease
-                  ? `Live rev ${readiness.data.publication.activeRelease.draftRevision}`
-                  : "Not published"}
-              </small>
+                  ? "Your store is live"
+                  : "Not live yet"}
+              </strong>
+              {readiness.data?.publication.activeRelease ? (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setVersionsOpen(true)}
+                >
+                  Past versions
+                </Button>
+              ) : null}
             </div>
             <div className="sf-config-template">
               <div>
@@ -1045,7 +1075,6 @@ function StudioEditor({
                   })
                   setUndo([])
                   setConflict(null)
-                  setConsent(false)
                   setSectionId(next.pages[0]?.sections[0]?.id ?? "")
                   setStatus(
                     `Design accepted as draft revision ${result.acceptedRevision}. Live content is unchanged.`,
@@ -1221,106 +1250,129 @@ function StudioEditor({
           </div>
         </DialogContent>
       </Dialog>
-      <Sheet
+      <ConfirmAlert
         open={review}
-        onOpenChange={(open) => {
-          setReview(open)
-          if (!open) setConsent(false)
-        }}
+        title={
+          dirty
+            ? "Save your changes first"
+            : readiness.data?.publication.activeRelease
+              ? "Publish your changes?"
+              : "Publish your store?"
+        }
+        description={
+          dirty ? (
+            "Publishing uses your saved design."
+          ) : liveUrl ? (
+            <>
+              Customers will see this design at{" "}
+              <span className="break-all font-medium text-foreground">
+                {liveUrl.replace(/^https:\/\//, "")}
+              </span>
+              .
+            </>
+          ) : null
+        }
+        cancelLabel="Not now"
+        action={dirty ? "Save" : busy ? "Publishing…" : "Publish"}
+        pending={busy}
+        disabled={
+          !!conflict ||
+          (!dirty &&
+            (!readiness.data?.canPublish ||
+              readiness.data.draftRevision !== saved.revision))
+        }
+        onCancel={() => setReview(false)}
+        onConfirm={() =>
+          void run(async () => {
+            if (dirty) {
+              await save()
+              return
+            }
+            await publish()
+            setReview(false)
+          })
+        }
       >
-        <SheetContent title="Review storefront publication">
-          <SheetTitle>Review & publish</SheetTitle>
-          <div className="sf-studio-review">
-            {error ? <p role="alert">{error}</p> : null}
-            {status ? <output>{status}</output> : null}
-            <p>
-              Candidate: draft revision {saved.revision} · {manifest.name}{" "}
-              {manifest.version}
-            </p>
-            <p>
-              {dirty
-                ? "Save your changes before publishing."
-                : "All local changes are saved."}
-            </p>
-            {conflict ? <p>Resolve the save conflict first.</p> : null}
-            {readiness.error ? (
-              <p role="alert">
-                Readiness unavailable: {readiness.error.message}
-              </p>
-            ) : null}
-            {readiness.data?.blockers.map((blocker) => (
-              <p key={blocker} role="alert">
-                {blocker}
-              </p>
+        {conflict ? (
+          <p role="alert">
+            Someone else saved a change. Choose which to keep first.
+          </p>
+        ) : null}
+        {readiness.error ? (
+          <p role="alert">
+            Couldn’t check your store. Close this and try again.
+          </p>
+        ) : null}
+        {!dirty && readiness.data?.blockers.length ? (
+          <ul className="grid list-disc gap-1 pl-5" role="alert">
+            {readiness.data.blockers.map((blocker) => (
+              <li key={blocker}>{blocker}</li>
             ))}
-            <label>
-              <input
-                type="checkbox"
-                checked={consent}
-                disabled={busy || dirty || !!conflict}
-                onChange={(event) => setConsent(event.target.checked)}
-              />{" "}
-              I approve public browsing of this saved design, or restoring the
-              release I choose below.
-            </label>
-            <Button
-              disabled={
-                busy ||
-                dirty ||
-                !!conflict ||
-                !consent ||
-                !readiness.data?.canPublish ||
-                readiness.data.draftRevision !== saved.revision
-              }
-              onClick={() => void run(publish)}
-            >
-              Publish revision {saved.revision}
-            </Button>
-            <p>
-              Release activation and public delivery are separate. Delivery:
-              unverified.
-            </p>
-            <Button
-              variant="outline"
-              disabled={busy}
-              onClick={() =>
-                void run(async () => {
-                  await Promise.all([readiness.refetch(), history.refetch()])
-                })
-              }
-            >
-              Refresh status
-            </Button>
-            <h2>Release history</h2>
-            {history.error ? <p role="alert">{history.error.message}</p> : null}
-            {!history.data?.releases.length ? (
-              <p>No releases yet.</p>
-            ) : (
-              <ul>
-                {history.data.releases.map((release) => (
-                  <li key={release.id}>
-                    <span>
-                      Revision {release.draftRevision} ·{" "}
-                      {new Date(release.createdAt).toLocaleString()}{" "}
-                      {release.active ? "· Active" : ""}
+          </ul>
+        ) : null}
+        {error ? <p role="alert">{error}</p> : null}
+      </ConfirmAlert>
+      <Sheet open={versionsOpen} onOpenChange={setVersionsOpen}>
+        <SheetFrame title="Past versions">
+          {history.error ? (
+            <p role="alert">Couldn’t load past versions.</p>
+          ) : !history.data ? (
+            <SheetBodyLoading />
+          ) : (
+            <ul className="divide-y divide-border overflow-hidden rounded-[var(--ui-radius-surface)] border border-border bg-card">
+              {history.data.releases.map((release) => (
+                <li
+                  key={release.id}
+                  className="flex min-h-16 items-center gap-3 px-4 py-2"
+                >
+                  <span className="grid min-w-0 flex-1">
+                    <span className="font-medium">
+                      {versionDate.format(new Date(release.createdAt))}
                     </span>
-                    {!release.active ? (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        disabled={busy || dirty || !!conflict || !consent}
-                        onClick={() => void run(() => rollback(release.id))}
-                      >
-                        Restore
-                      </Button>
+                    {release.active ? (
+                      <span className="text-sm text-[var(--success-foreground)]">
+                        Live now
+                      </span>
                     ) : null}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </SheetContent>
+                  </span>
+                  {release.active ? null : (
+                    <Button
+                      variant="outline"
+                      disabled={busy || dirty || !!conflict}
+                      onClick={() => setRestoreTarget(release)}
+                    >
+                      Use this
+                    </Button>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+          {dirty ? (
+            <p className="text-muted-foreground">
+              Save or undo your changes before using a past version.
+            </p>
+          ) : null}
+        </SheetFrame>
       </Sheet>
+      <ConfirmAlert
+        open={!!restoreTarget}
+        title="Put this version back online?"
+        description={
+          restoreTarget
+            ? `Customers will see the design from ${versionDate.format(new Date(restoreTarget.createdAt))} at once. Your draft stays as it is.`
+            : null
+        }
+        action={busy ? "Putting it back…" : "Put it back"}
+        pending={busy}
+        onCancel={() => setRestoreTarget(null)}
+        onConfirm={() =>
+          void run(async () => {
+            if (restoreTarget) await rollback(restoreTarget.id)
+            setRestoreTarget(null)
+          })
+        }
+      />
     </section>
   )
 }

@@ -1,6 +1,6 @@
 import { DomainsDirectory } from "@/components/domains/domains-directory"
 import { getServerSession } from "@/lib/session"
-import { storefrontUrl } from "@/lib/storefront-manage"
+import { storefrontUrl } from "@/lib/storefront-url"
 import { getActiveTenant } from "@/lib/tenant"
 import { HydrateClient, prefetch, trpc } from "@/trpc/server"
 import { canManageTenant, normalizeRole } from "@ewatrade/auth/roles"
