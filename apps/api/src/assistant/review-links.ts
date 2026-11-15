@@ -66,7 +66,15 @@ type UnavailableStatus =
   | "scope_mismatch"
   | "unavailable"
 export type AssistantReviewLinkResult =
-  | { status: UnavailableStatus }
+  | { status: Exclude<UnavailableStatus, "scope_mismatch"> }
+  | {
+      /** The signed-in member's own draft, saved under another business or Store. */
+      status: "scope_mismatch"
+      tenantId: string
+      storeId: string
+      businessName: string
+      storeName: string
+    }
   | {
       status: "ready"
       proposal: GeneralProposal
@@ -117,7 +125,7 @@ async function resolveReview(
     scope.tenantId !== saved.proposal.tenantId ||
     scope.storeId !== saved.proposal.storeId
   )
-    return { status: "scope_mismatch" as const }
+    return { status: "scope_mismatch" as const, saved }
   assertGeneralActionAuthority(
     ctx,
     generalActionSchema.parse(saved.proposal.payload).action,
@@ -148,6 +156,24 @@ export async function readAssistantReviewLink(
   if (source.expiresAt <= Date.now()) return { status: "expired" }
   try {
     const result = await resolveReview(ctx, source)
+    if (result.status === "scope_mismatch") {
+      // Identity, grant and membership already matched the proposal's scope.
+      const store = await ctx.db.store.findFirst({
+        where: {
+          id: result.saved.proposal.storeId,
+          tenantId: result.saved.proposal.tenantId,
+        },
+        select: { name: true, tenant: { select: { name: true } } },
+      })
+      if (!store) return { status: "unavailable" }
+      return {
+        status: "scope_mismatch",
+        tenantId: result.saved.proposal.tenantId,
+        storeId: result.saved.proposal.storeId,
+        businessName: store.tenant.name,
+        storeName: store.name,
+      }
+    }
     if (result.status !== "ready") return { status: result.status }
     return {
       status: "ready",

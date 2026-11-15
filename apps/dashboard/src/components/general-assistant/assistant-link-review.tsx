@@ -1,5 +1,6 @@
 "use client"
 
+import { AuthShell } from "@/components/auth/auth-shell"
 import { useTRPCClient } from "@/trpc/client"
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
 import {
@@ -10,33 +11,23 @@ import type {
   GeneralAction,
   GeneralProposal,
 } from "@ewatrade/assistant/general/contracts"
-import {
-  Button,
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@ewatrade/ui"
+import { Button } from "@ewatrade/ui"
 import Link from "next/link"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { GeneralPaymentLinksReceipt } from "./general-payment-links"
 import { GeneralProposalCard } from "./general-proposal-card"
 import { GeneralProposalEditor } from "./general-proposal-editor"
+import { switchLinkWorkspace } from "./switch-link-workspace"
 
 type Review = RouterOutputs["assistant"]["reviewLink"]
 type Ready = Extract<Review, { status: "ready" }>
-const notices = {
-  expired: "This review link has expired. Ask for a new review in WhatsApp.",
-  used: "This link is no longer active. Check WhatsApp for the latest result.",
-  changed: "The draft has changed. Open the latest review link from WhatsApp.",
-  scope_mismatch:
-    "This review belongs to another business or Store. Select that workspace in EwaTrade, then reopen the link.",
-  unavailable:
-    "This review is unavailable for this account. Use the account connected to WhatsApp, or request a new link.",
-} as const
+const WHATSAPP_URL = "https://wa.me/2349047125343"
 
-/** Only the existing proposal review/editor is mounted; this page has no chat. */
+/**
+ * WhatsApp review link page. The draft shows inline (the page is the review,
+ * so no dialog); each other state is one title, one line and one action.
+ * Only the existing proposal card/editor is mounted; this page has no chat.
+ */
 export function AssistantLinkReview({
   initialToken,
 }: { initialToken: string }) {
@@ -47,7 +38,6 @@ export function AssistantLinkReview({
   const [loading, setLoading] = useState(Boolean(initialToken))
   const [busy, setBusy] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
-  const [open, setOpen] = useState(true)
   const [editing, setEditing] = useState(false)
   const current = useRef(0)
   const running = useRef(false)
@@ -72,9 +62,7 @@ export function AssistantLinkReview({
         if (mounted.current && current.current === generation) setReview(next)
       } catch {
         if (mounted.current && current.current === generation)
-          setNotice(
-            "Couldn’t check this review. Sign in again or try checking its status.",
-          )
+          setNotice("Check your connection and try again.")
       } finally {
         if (mounted.current && current.current === generation) setLoading(false)
       }
@@ -130,14 +118,11 @@ export function AssistantLinkReview({
       if (!mounted.current || current.current !== generation) return
       setResult(outcome)
       setReview(null)
-      setOpen(false)
       replaceLocator()
     } catch {
       if (mounted.current && current.current === generation) {
         setReview(null)
-        setNotice(
-          "Couldn’t verify the result. Check status before trying again.",
-        )
+        setNotice("We couldn’t confirm the result. Check WhatsApp first.")
       }
     } finally {
       running.current = false
@@ -166,7 +151,7 @@ export function AssistantLinkReview({
         setReview(null)
         setEditing(false)
         setNotice(
-          "Couldn’t verify the updated draft. Check status or open the newest WhatsApp link.",
+          "We couldn’t confirm your changes. Open the newest link in WhatsApp.",
         )
       }
     } finally {
@@ -176,120 +161,52 @@ export function AssistantLinkReview({
   }
 
   const ready = review?.status === "ready" ? review : null
-  const completed = result?.status === "COMPLETED"
-  const cancelled = result?.status === "CANCELLED"
-  return (
-    <main className="flex min-h-svh flex-col bg-background px-5 py-8 text-foreground sm:py-12">
-      <div className="mx-auto flex w-full max-w-lg flex-1 flex-col gap-6">
-        <Link
-          href="/"
-          className="self-start text-lg font-semibold tracking-tight"
-        >
-          EwaTrade
-        </Link>
-        <section
-          className="flex flex-col gap-3 rounded-lg border bg-card p-6"
-          aria-live="polite"
-        >
-          <h1 className="text-xl font-semibold">
-            {loading
-              ? "Checking your review…"
-              : completed
-                ? (result?.receipt?.title ?? "Saved")
-                : cancelled
-                  ? "Draft cancelled"
-                  : result
-                    ? "Check your result"
-                    : ready
-                      ? "Review your WhatsApp draft"
-                      : "Review link"}
-          </h1>
-          {completed && result?.receipt?.kind === "payment_links" ? (
-            <GeneralPaymentLinksReceipt
-              receipt={result.receipt}
-              heading={false}
-            />
-          ) : result ? (
-            <p className="text-sm text-muted-foreground">
-              {completed
-                ? (result?.receipt?.detail ??
-                  "Your change was saved. Return to WhatsApp to continue.")
-                : cancelled
-                  ? "The draft was cancelled. No business changes were saved."
-                  : "This action has no confirmed successful result. Check WhatsApp before starting it again."}
-            </p>
-          ) : ready ? (
-            <>
-              <p className="text-sm text-muted-foreground">
-                {ready.businessName} · {ready.storeName}
-              </p>
-              <p className="text-sm text-muted-foreground">
-                Your draft is waiting for your review.
-              </p>
-              <Button onClick={() => setOpen(true)} className="self-start">
-                Review draft
-              </Button>
-            </>
-          ) : review && review.status !== "ready" ? (
-            <p className="text-sm text-muted-foreground">
-              {notices[review.status]}
-            </p>
-          ) : null}
+  const view = reviewView({
+    loading,
+    notice,
+    result,
+    review,
+  })
+
+  async function switchToDraft() {
+    if (review?.status !== "scope_mismatch" || busy) return
+    setBusy(true)
+    setNotice(null)
+    try {
+      await switchLinkWorkspace(review)
+    } catch (cause) {
+      setNotice(cause instanceof Error ? cause.message : "Couldn’t switch.")
+      setBusy(false)
+    }
+  }
+
+  const back = (
+    <a
+      href={WHATSAPP_URL}
+      rel="noreferrer"
+      className="font-medium text-[var(--link)] underline-offset-4 hover:underline"
+    >
+      Back to WhatsApp
+    </a>
+  )
+
+  if (ready)
+    return (
+      <AuthShell
+        width="wide"
+        plain
+        title={editing ? "Edit your draft" : "Review your draft"}
+        description={`${ready.businessName} · ${ready.storeName}`}
+        footer={back}
+      >
+        <div className="grid gap-4" aria-live="polite">
           {notice ? (
-            <p role="alert" className="text-sm text-destructive">
+            <p role="alert" className="text-destructive">
               {notice}
             </p>
           ) : null}
-          {!result && !loading && token ? (
-            <Button
-              variant="outline"
-              className="self-start"
-              disabled={busy}
-              onClick={() => void load(token)}
-            >
-              Check status
-            </Button>
-          ) : null}
-        </section>
-        <a
-          href="https://wa.me/2349047125343"
-          rel="noreferrer"
-          className="self-start text-sm underline underline-offset-4"
-        >
-          Return to WhatsApp
-        </a>
-      </div>
-      <Dialog
-        open={Boolean(ready) && open}
-        onOpenChange={(value) => {
-          if (!running.current) {
-            setOpen(value)
-            if (!value) setEditing(false)
-          }
-        }}
-      >
-        {ready ? (
-          <DialogContent
-            className="flex max-h-[85svh] max-w-lg flex-col gap-4 rounded-lg p-6 text-foreground shadow-lg"
-            hideClose={busy}
-          >
-            <DialogHeader className="pr-8">
-              <DialogTitle className="text-lg leading-none font-semibold">
-                {editing ? "Edit draft" : "Review draft"}
-              </DialogTitle>
-              <DialogDescription className="text-sm text-muted-foreground">
-                {ready.businessName} · {ready.storeName}
-                {editing
-                  ? ". Save changes, then review again before confirming."
-                  : ". Nothing is saved until you confirm."}
-              </DialogDescription>
-            </DialogHeader>
-            {notice ? (
-              <p role="alert" className="text-sm text-destructive">
-                {notice}
-              </p>
-            ) : null}
-            {editing ? (
+          {editing ? (
+            <div className="rounded-[var(--ui-radius-surface)] border border-border bg-card p-4 sm:p-6">
               <GeneralProposalEditor
                 key={`${ready.proposal.id}:${ready.proposal.revision}`}
                 proposal={ready.proposal}
@@ -298,23 +215,172 @@ export function AssistantLinkReview({
                 onCancel={() => setEditing(false)}
                 onSave={(payload) => void save(payload)}
               />
-            ) : (
-              <GeneralProposalCard
-                key={`${ready.proposal.id}:${ready.proposal.revision}`}
-                proposal={{ ...ready.proposal, expiresAt: ready.expiresAt }}
-                currencyCode={ready.currencyCode}
-                expanded
-                confirmLabel="Approve and save"
-                disabled={busy}
-                onConfirm={() => void decide(ready, "confirm")}
-                onCancel={() => void decide(ready, "cancel")}
-                onEdit={() => setEditing(true)}
-                onReply={() => setEditing(true)}
-              />
-            )}
-          </DialogContent>
-        ) : null}
-      </Dialog>
-    </main>
+            </div>
+          ) : (
+            <GeneralProposalCard
+              key={`${ready.proposal.id}:${ready.proposal.revision}`}
+              proposal={{ ...ready.proposal, expiresAt: ready.expiresAt }}
+              currencyCode={ready.currencyCode}
+              expanded
+              confirmLabel="Approve and save"
+              disabled={busy}
+              onConfirm={() => void decide(ready, "confirm")}
+              onCancel={() => void decide(ready, "cancel")}
+              onEdit={() => setEditing(true)}
+              onReply={() => setEditing(true)}
+            />
+          )}
+        </div>
+      </AuthShell>
+    )
+
+  return (
+    <AuthShell
+      title={view.title}
+      description={
+        <span aria-live="polite">
+          {result?.status === "COMPLETED" &&
+          result.receipt?.kind === "payment_links"
+            ? null
+            : view.detail}
+        </span>
+      }
+      footer={view.action === "whatsapp" ? null : back}
+    >
+      {loading ? (
+        <div className="h-11 animate-pulse rounded-[var(--ui-radius-control)] bg-muted" />
+      ) : (
+        <div className="grid gap-4">
+          {result?.status === "COMPLETED" &&
+          result.receipt?.kind === "payment_links" ? (
+            <GeneralPaymentLinksReceipt
+              receipt={result.receipt}
+              heading={false}
+            />
+          ) : null}
+          {notice && view.action !== "retry" ? (
+            <p role="alert" className="text-destructive">
+              {notice}
+            </p>
+          ) : null}
+          {view.action === "switch" && review?.status === "scope_mismatch" ? (
+            <Button
+              className="w-full"
+              disabled={busy}
+              onClick={() => void switchToDraft()}
+            >
+              {busy ? "Switching…" : `Switch to ${review.businessName}`}
+            </Button>
+          ) : view.action === "account" ? (
+            <Button
+              className="w-full"
+              render={
+                <Link
+                  href={`/login?next=${encodeURIComponent(currentPath(token))}`}
+                />
+              }
+            >
+              Use another account
+            </Button>
+          ) : view.action === "retry" ? (
+            <Button
+              className="w-full"
+              disabled={busy}
+              onClick={() => void load(token)}
+            >
+              Try again
+            </Button>
+          ) : (
+            <Button
+              className="w-full"
+              render={<Link href={WHATSAPP_URL} rel="noreferrer" />}
+            >
+              Back to WhatsApp
+            </Button>
+          )}
+        </div>
+      )}
+    </AuthShell>
   )
+}
+
+function currentPath(token: string) {
+  return (token && assistantReviewPath(token)) || "/assistant-review"
+}
+
+type ReviewView = {
+  title: string
+  detail?: string
+  action: "whatsapp" | "switch" | "account" | "retry"
+}
+
+/** One title, at most one short line and one action per state. */
+function reviewView({
+  loading,
+  notice,
+  result,
+  review,
+}: {
+  loading: boolean
+  notice: string | null
+  result: GeneralProposal | null
+  review: Review | null
+}): ReviewView {
+  if (loading) return { title: "Opening your review…", action: "whatsapp" }
+  if (result?.status === "COMPLETED")
+    return {
+      title: result.receipt?.title ?? "Saved",
+      detail: result.receipt?.detail ?? "Your change is saved.",
+      action: "whatsapp",
+    }
+  if (result?.status === "CANCELLED")
+    return {
+      title: "Draft cancelled",
+      detail: "Nothing was saved.",
+      action: "whatsapp",
+    }
+  if (result)
+    return {
+      title: "Check WhatsApp first",
+      detail: "We couldn’t confirm it saved. Check before trying again.",
+      action: "whatsapp",
+    }
+  if (!review)
+    return notice
+      ? { title: "Couldn’t open this review", detail: notice, action: "retry" }
+      : { title: "Opening your review…", action: "whatsapp" }
+  switch (review.status) {
+    case "expired":
+      return {
+        title: "This link has expired",
+        detail: "Ask for a new review in WhatsApp.",
+        action: "whatsapp",
+      }
+    case "used":
+      return {
+        title: "This draft is already done",
+        detail: "WhatsApp has the result.",
+        action: "whatsapp",
+      }
+    case "changed":
+      return {
+        title: "This draft has changed",
+        detail: "Open the newest link in WhatsApp.",
+        action: "whatsapp",
+      }
+    case "scope_mismatch":
+      return {
+        title: "This draft is for another business",
+        detail: `${review.businessName} · ${review.storeName}`,
+        action: "switch",
+      }
+    case "ready":
+      return { title: "Review your draft", action: "whatsapp" }
+    default:
+      return {
+        title: "This link isn’t for you",
+        detail: "Sign in with the account that uses this WhatsApp number.",
+        action: "account",
+      }
+  }
 }

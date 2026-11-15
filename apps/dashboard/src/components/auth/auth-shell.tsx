@@ -11,12 +11,18 @@ export function AuthShell({
   description,
   brandHref = "/",
   footer,
+  width = "narrow",
+  plain = false,
   children,
 }: {
   title: ReactNode
   description?: ReactNode
   brandHref?: string
   footer?: ReactNode
+  /** "wide" (32rem) fits a record review such as an assistant draft. */
+  width?: "narrow" | "wide"
+  /** No card surface: for content that brings its own card. */
+  plain?: boolean
   children?: ReactNode
 }) {
   return (
@@ -44,8 +50,16 @@ export function AuthShell({
         </Link>
       </header>
       <main className="flex flex-1 justify-center px-4 pb-12 pt-4 sm:items-center sm:pb-24 sm:pt-0">
-        <div className="w-full max-w-[26rem]">
-          <section className="rounded-[var(--ui-radius-surface)] border border-border bg-card p-6 sm:p-8">
+        <div
+          className={`w-full ${width === "wide" ? "max-w-[32rem]" : "max-w-[26rem]"}`}
+        >
+          <section
+            className={
+              plain
+                ? ""
+                : "rounded-[var(--ui-radius-surface)] border border-border bg-card p-6 sm:p-8"
+            }
+          >
             <h1 className="text-[1.75rem] leading-tight">{title}</h1>
             {description ? (
               <div className="mt-2 text-muted-foreground">{description}</div>

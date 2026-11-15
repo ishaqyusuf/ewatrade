@@ -75,6 +75,7 @@ const decisions: { token: string; decision: string; approvalToken?: string }[] =
 const edits: { token: string; payload: GeneralAction }[] = []
 mock.module(new URL("../../trpc/client", import.meta.url).pathname, () => ({
   useTRPCClient: () => client,
+  clearDashboardDataCache: () => {},
 }))
 const client = {
   assistant: {
@@ -173,7 +174,7 @@ async function mount(initialToken = originalToken) {
 test("focused review reads without saving, edits to a fresh link, and confirms or cancels through exact token-aware authority", async () => {
   const invalid = await mount("invalid-local-review")
   expect(reads).toHaveLength(0)
-  expect(invalid.text()).toContain("This review is unavailable")
+  expect(invalid.text()).toContain("This link isn’t for you")
   await invalid.unmount()
   const view = await mount()
   expect(reads).toEqual([originalToken])

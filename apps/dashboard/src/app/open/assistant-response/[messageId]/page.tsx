@@ -9,7 +9,7 @@ import { notFound, redirect } from "next/navigation"
 
 export const dynamic = "force-dynamic"
 export const metadata: Metadata = {
-  title: "Your saved response — EwaTrade",
+  title: "Your saved reply — EwaTrade",
   robots: { index: false, follow: false },
   referrer: "no-referrer",
 }

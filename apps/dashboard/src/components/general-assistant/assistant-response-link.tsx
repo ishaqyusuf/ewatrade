@@ -1,10 +1,7 @@
 "use client"
 
-import {
-  clearDashboardDataCache,
-  getDataCacheGeneration,
-  useTRPC,
-} from "@/trpc/client"
+import { AuthLink, AuthShell } from "@/components/auth/auth-shell"
+import { getDataCacheGeneration, useTRPC } from "@/trpc/client"
 import {
   assistantResponseConversationPath,
   assistantResponsePath,
@@ -14,7 +11,9 @@ import { useMutation } from "@tanstack/react-query"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
+import { switchLinkWorkspace } from "./switch-link-workspace"
 
+/** Opens a saved assistant reply from a WhatsApp or Telegram link. */
 export function AssistantResponseLink({ messageId }: { messageId: string }) {
   const trpc = useTRPC()
   const router = useRouter()
@@ -54,86 +53,76 @@ export function AssistantResponseLink({ messageId }: { messageId: string }) {
     setSwitching(true)
     setError(null)
     try {
-      for (const [path, body] of [
-        [
-          "/api/tenants/active",
-          { tenantId: result.tenantId, path: location.pathname },
-        ],
-        ["/api/stores/active", { storeId: result.storeId }],
-      ] as const) {
-        const response = await fetch(path, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body),
-        })
-        if (!response.ok)
-          throw Error(
-            "This workspace could not be selected. Check your access and try again.",
-          )
-      }
-      clearDashboardDataCache()
-      // Re-resolve under the explicitly selected workspace before opening any content.
-      window.location.reload()
+      // Re-resolves under the selected workspace before opening any content.
+      await switchLinkWorkspace(result)
     } catch (cause) {
-      setError(
-        cause instanceof Error
-          ? cause.message
-          : "Could not select this workspace.",
-      )
+      setError(cause instanceof Error ? cause.message : "Couldn’t switch.")
       setSwitching(false)
     }
   }
 
+  const failed = lookupError || Boolean(error)
+  const title =
+    result?.status === "scope_mismatch"
+      ? "This reply is for another business"
+      : result?.status === "unavailable"
+        ? "This link isn’t for you"
+        : lookupError
+          ? "Couldn’t open this reply"
+          : "Opening your saved reply…"
+  const detail =
+    result?.status === "scope_mismatch"
+      ? `${result.businessName} · ${result.storeName}`
+      : result?.status === "unavailable"
+        ? "Sign in with the account that got this reply."
+        : lookupError
+          ? "Check your connection and try again."
+          : undefined
+
   return (
-    <main className="mx-auto flex min-h-svh max-w-md flex-col justify-center gap-5 px-6 py-10">
-      <h1 className="text-2xl font-bold tracking-tight">
-        {result?.status === "scope_mismatch"
-          ? "Switch to view this response"
-          : result?.status === "unavailable"
-            ? "This response isn't available for this account"
-            : lookupError || error
-              ? "Couldn’t open this response"
-              : "Opening your saved response…"}
-      </h1>
-      {result?.status === "scope_mismatch" ? (
-        <>
-          <p className="text-muted-foreground">
-            {result.businessName} · {result.storeName}
-          </p>
-          <p className="text-sm text-muted-foreground">
-            Your WhatsApp workspace will stay as it is.
-          </p>
-          <Button disabled={switching} onClick={() => void switchWorkspace()}>
-            {switching ? "Switching…" : "Switch and view response"}
-          </Button>
-        </>
-      ) : result?.status === "unavailable" ? (
-        <>
-          <p className="text-muted-foreground">
-            Use the account connected to WhatsApp. The response may have been
-            removed, or your access may have changed.
-          </p>
-          <Link
-            href={`/login?next=${encodeURIComponent(assistantResponsePath(messageId))}`}
-            className="underline"
-          >
-            Switch account
-          </Link>
-        </>
-      ) : null}
-      {lookupError || error ? (
-        <p role="alert">
-          {error ?? "Couldn't check this response. Sign in again or try again."}
-        </p>
-      ) : null}
-      {lookupError ? (
-        <Button onClick={() => setRetry((value) => value + 1)}>
-          Try again
-        </Button>
-      ) : null}
-      <Link href="/assistant" className="text-sm underline">
-        Open assistant
-      </Link>
-    </main>
+    <AuthShell
+      title={title}
+      description={detail}
+      footer={<AuthLink href="/assistant">Open assistant</AuthLink>}
+    >
+      {!result && !failed ? (
+        <div className="h-11 animate-pulse rounded-[var(--ui-radius-control)] bg-muted" />
+      ) : (
+        <div className="grid gap-4">
+          {error ? (
+            <p role="alert" className="text-destructive">
+              {error}
+            </p>
+          ) : null}
+          {result?.status === "scope_mismatch" ? (
+            <Button
+              className="w-full"
+              disabled={switching}
+              onClick={() => void switchWorkspace()}
+            >
+              {switching ? "Switching…" : `Switch to ${result.businessName}`}
+            </Button>
+          ) : result?.status === "unavailable" ? (
+            <Button
+              className="w-full"
+              render={
+                <Link
+                  href={`/login?next=${encodeURIComponent(assistantResponsePath(messageId))}`}
+                />
+              }
+            >
+              Use another account
+            </Button>
+          ) : lookupError ? (
+            <Button
+              className="w-full"
+              onClick={() => setRetry((value) => value + 1)}
+            >
+              Try again
+            </Button>
+          ) : null}
+        </div>
+      )}
+    </AuthShell>
   )
 }
