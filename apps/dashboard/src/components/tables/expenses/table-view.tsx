@@ -2,7 +2,10 @@
 
 import { expensePill } from "@/components/finance/expense-status"
 import { FinanceRow, FinanceRowList } from "@/components/finance/finance-rows"
-import type { FinanceBillRow, FinanceBook } from "@/components/finance/types"
+import type {
+  FinanceBillRow,
+  FinanceBookStatus,
+} from "@/components/finance/types"
 import { Pill } from "@/components/orders/overview/order-overview-parts"
 import {
   BottomBar,
@@ -64,7 +67,7 @@ export function ExpenseTableView({
   persistenceError,
   retryPersistence,
 }: {
-  book: FinanceBook
+  book: FinanceBookStatus
   table: ReactTable<FinanceBillRow>
   view: DirectoryView
   sort?: ExpenseSort

@@ -24,12 +24,12 @@ import {
   accountSortParam,
   sortMoneyAccounts,
 } from "./money-account-sort"
-import type { FinanceBook } from "./types"
+import type { FinanceBookStatus } from "./types"
 export function FinanceAccounts({
   book,
   view,
 }: {
-  book: FinanceBook
+  book: FinanceBookStatus
   view: DirectoryView
 }) {
   const { financeAccountId, setParams } = useFinanceParams()

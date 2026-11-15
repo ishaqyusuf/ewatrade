@@ -62,7 +62,13 @@ export async function FinanceRoute({
   const overviewDocument =
     view === "overview" &&
     (await headers()).get(DASHBOARD_REQUEST_KIND_HEADER) === "document"
-  const bookRead = queryClient.fetchQuery(trpc.finance.book.queryOptions())
+  // Pages gate on the slim Book status; Bank and Reports also list accounts,
+  // so their full Book read starts in the same tick (one batched request).
+  const bookRead = queryClient.fetchQuery(
+    trpc.finance.bookStatus.queryOptions(),
+  )
+  if (view === "bank" || view === "reports")
+    void queryClient.prefetchQuery(trpc.finance.book.queryOptions())
   const overviewReads = overviewDocument
     ? startFinanceOverviewReads(tenant.tenant.currencyCode)
     : null

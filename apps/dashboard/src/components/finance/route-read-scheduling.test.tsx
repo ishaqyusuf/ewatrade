@@ -46,6 +46,8 @@ mock.module("@/utils/directory-views", () => ({
     return { scope: "display-scope", view: null }
   },
 }))
+// A navigation request: the Overview's document-only server reads stay off.
+mock.module("next/headers", () => ({ headers: async () => new Headers() }))
 mock.module("next/navigation", () => ({
   redirect: (path: string) => {
     throw new Error(`redirect:${path}`)
@@ -63,11 +65,14 @@ mock.module("@/components/tables/service-work/skeleton", () => ({
 mock.module("./finance-workspace", () => ({ FinanceWorkspace: () => null }))
 mock.module("@/trpc/server", () => ({
   getQueryClient: () => client,
+  // Document Overview reads go through the server client; these tests don't load one.
+  getServerClient: () => ({}),
   prefetch: (options: FetchQueryOptions) => client.prefetchQuery(options),
   HydrateClient: () => null,
   trpc: {
     finance: {
       book: endpoint("finance.book", { id: "book-a" }),
+      bookStatus: endpoint("finance.bookStatus", { id: "book-a" }),
       bankStatements: {
         list: endpoint("finance.bankStatements.list", { nextCursor: null }),
       },
@@ -118,14 +123,18 @@ test("Finance starts its authorized book read while independent display cookies 
   })
   try {
     await settle()
-    expect(paths()).toContain("finance.book")
+    expect(paths()).toContain("finance.bookStatus")
   } finally {
     table.resolve()
     view.resolve()
     await loading
   }
   await settle()
-  expect(paths()).toEqual(["finance.bankStatements.list", "finance.book"])
+  expect(paths()).toEqual([
+    "finance.bankStatements.list",
+    "finance.book",
+    "finance.bookStatus",
+  ])
   expect(
     reads.find((read) => read.path === "finance.bankStatements.list")?.input,
   ).toEqual({
@@ -257,5 +266,5 @@ test("Services intake still has its catalog while request links combine with the
 test("Finance overview does not start unselected bank, supplier or expense lists", async () => {
   await FinanceRoute({ view: "overview" })
   await settle()
-  expect(paths()).toEqual(["finance.book"])
+  expect(paths()).toEqual(["finance.bookStatus"])
 })

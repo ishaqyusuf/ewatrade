@@ -24,7 +24,7 @@ import {
   financeRowViewOptions,
 } from "./finance-directory-view"
 import { FinanceHeader, type FinanceView } from "./finance-header"
-import type { FinanceBook } from "./types"
+import type { FinanceBook, FinanceBookStatus } from "./types"
 
 // Each view's code loads only when its route selects it; SSR stays on. Page
 // views keep the header during code loading; directory tables suspend into
@@ -111,7 +111,11 @@ export function FinanceWorkspace({
   initialViewSettings: DirectoryViewSettingsById<FinanceDirectoryPageId>
 }) {
   const trpc = useTRPC()
-  const { data: book } = useSuspenseQuery(trpc.finance.book.queryOptions())
+  // Pages gate on the slim status (one statement); Bank and Reports also read
+  // the full Book because they list its accounts.
+  const { data: book } = useSuspenseQuery(
+    trpc.finance.bookStatus.queryOptions(),
+  )
   const page = (viewControl?: ReactNode, body?: ReactNode) => (
     <ScrollableContent>
       <div className="grid min-w-0 gap-6 pt-6">
@@ -126,7 +130,11 @@ export function FinanceWorkspace({
   )
   if (!book) return page()
   if (view === "overview") return page(null, <FinanceOverview book={book} />)
-  if (view === "reports") return page(null, <FinanceReports book={book} />)
+  if (view === "reports")
+    return page(
+      null,
+      <WithFullBook>{(full) => <FinanceReports book={full} />}</WithFullBook>,
+    )
   return (
     <TableToolbarSlotProvider>
       <FinanceDirectoryPage
@@ -148,7 +156,7 @@ function FinanceDirectoryPage({
   page,
 }: {
   view: Exclude<FinanceView, "overview" | "reports">
-  book: FinanceBook
+  book: FinanceBookStatus
   initialTableSettings?: TableSettings
   initialViewSettings: DirectoryViewSettingsById<FinanceDirectoryPageId>
   page: (viewControl: ReactNode, body: ReactNode) => ReactNode
@@ -177,12 +185,16 @@ function FinanceDirectoryPage({
                   />
                 }
               >
-                <FinanceBankStatements
-                  key={book.id}
-                  book={book}
-                  initialTableSettings={initialTableSettings}
-                  view={directoryView}
-                />
+                <WithFullBook>
+                  {(full) => (
+                    <FinanceBankStatements
+                      key={full.id}
+                      book={full}
+                      initialTableSettings={initialTableSettings}
+                      view={directoryView}
+                    />
+                  )}
+                </WithFullBook>
               </Suspense>
             </ErrorBoundary>,
           )
@@ -275,6 +287,17 @@ function FinanceDirectoryPage({
       }
     </FinanceDirectoryView>
   )
+}
+
+/** The full Book (with its accounts) for the views that list accounts. */
+function WithFullBook({
+  children,
+}: {
+  children: (book: FinanceBook) => ReactNode
+}) {
+  const trpc = useTRPC()
+  const { data: book } = useSuspenseQuery(trpc.finance.book.queryOptions())
+  return book ? children(book) : null
 }
 
 function FinanceSetupIntro() {

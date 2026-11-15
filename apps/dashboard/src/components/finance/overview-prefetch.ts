@@ -1,7 +1,7 @@
 import "server-only"
 
 import { getQueryClient, getServerClient, trpc } from "@/trpc/server"
-import type { FinanceBook } from "./types"
+import type { FinanceBookStatus } from "./types"
 
 function settled<T>(read: Promise<T>) {
   return read.then(
@@ -10,21 +10,15 @@ function settled<T>(read: Promise<T>) {
   )
 }
 
-/** Independent protected reads; only the admitted Book may own their cache data. */
+/** One protected read of all three panels; only the admitted Book may own its cache data. */
 export function startFinanceOverviewReads(currentCurrency: string) {
   const client = getServerClient()
   const controller = new AbortController()
   const options = { signal: controller.signal }
   return {
     cancel: () => controller.abort(),
-    balances: settled(
-      client.finance.balances.query({ currentCurrency }, options),
-    ),
-    owed: settled(
-      client.finance.owedSummary.query({ currentCurrency }, options),
-    ),
-    bills: settled(
-      client.finance.bills.query({ currentCurrency, limit: 5 }, options),
+    overview: settled(
+      client.finance.overview.query({ currentCurrency }, options),
     ),
   }
 }
@@ -40,43 +34,21 @@ function missingCurrentBook(error: unknown) {
   )
 }
 
-async function admittedRead<T extends { resolvedBookId?: string }>(
-  read: ReturnType<typeof settled<T>>,
-  bookId: string,
-  fallback: () => Promise<T>,
-) {
-  const result = await read
-  if (result.ok && result.data.resolvedBookId === bookId) return result.data
-  if (!result.ok && !missingCurrentBook(result.error)) throw result.error
-  // Currency/Book changed during independent reads; fetch the admitted identity.
-  return fallback()
-}
-
 export function prefetchAdmittedFinanceOverview(
   reads: ReturnType<typeof startFinanceOverviewReads>,
-  book: FinanceBook,
+  book: Pick<FinanceBookStatus, "id">,
 ) {
   const client = getServerClient()
   const queryClient = getQueryClient()
   void queryClient.prefetchQuery({
-    ...trpc.finance.balances.queryOptions({ bookId: book.id }),
-    queryFn: () =>
-      admittedRead(reads.balances, book.id, () =>
-        client.finance.balances.query({ bookId: book.id }),
-      ),
-  })
-  void queryClient.prefetchQuery({
-    ...trpc.finance.owedSummary.queryOptions({ bookId: book.id }),
-    queryFn: () =>
-      admittedRead(reads.owed, book.id, () =>
-        client.finance.owedSummary.query({ bookId: book.id }),
-      ),
-  })
-  void queryClient.prefetchQuery({
-    ...trpc.finance.bills.queryOptions({ bookId: book.id, limit: 5 }),
-    queryFn: () =>
-      admittedRead(reads.bills, book.id, () =>
-        client.finance.bills.query({ bookId: book.id, limit: 5 }),
-      ),
+    ...trpc.finance.overview.queryOptions({ bookId: book.id }),
+    queryFn: async () => {
+      const result = await reads.overview
+      if (result.ok && result.data.balances.resolvedBookId === book.id)
+        return result.data
+      if (!result.ok && !missingCurrentBook(result.error)) throw result.error
+      // Currency/Book changed during the read; fetch the admitted identity.
+      return client.finance.overview.query({ bookId: book.id })
+    },
   })
 }

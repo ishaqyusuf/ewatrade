@@ -1,6 +1,9 @@
 "use client"
 
-import type { FinanceBillRow, FinanceBook } from "@/components/finance/types"
+import type {
+  FinanceBillRow,
+  FinanceBookStatus,
+} from "@/components/finance/types"
 import { useLoadedRowSelection } from "@/components/tables/core"
 import { expenseSortFields } from "@/hooks/sort-params"
 import { useFinanceParams } from "@/hooks/use-finance-params"
@@ -23,7 +26,7 @@ export function ExpenseDataTable({
   initialSettings,
   view,
 }: {
-  book: FinanceBook
+  book: FinanceBookStatus
   initialSettings?: Partial<TableSettings>
   view: DirectoryView
 }) {

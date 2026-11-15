@@ -112,6 +112,16 @@ mock.module(app("trpc/client"), () => ({
           },
         }),
       },
+      // Pages gate on the slim Book status (15 Nov); the full Book is only for Bank/Reports.
+      bookStatus: {
+        queryOptions: () => ({
+          queryKey: ["finance", "bookStatus"],
+          queryFn: () => {
+            reads.push("finance.bookStatus")
+            throw Error("inert transport")
+          },
+        }),
+      },
       setup: {
         mutationOptions: (options: object) => ({
           ...options,
@@ -169,7 +179,7 @@ async function serverHtml(book: object | null) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   })
-  client.setQueryData(["finance", "book"], book)
+  client.setQueryData(["finance", "bookStatus"], book)
   const errors: unknown[] = []
   const stream = await renderToReadableStream(
     <QueryClientProvider client={client}>

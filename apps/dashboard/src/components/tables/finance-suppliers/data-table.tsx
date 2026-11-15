@@ -1,6 +1,6 @@
 "use client"
 
-import type { FinanceBook } from "@/components/finance/types"
+import type { FinanceBookStatus } from "@/components/finance/types"
 import { useLoadedRowSelection } from "@/components/tables/core"
 import { useFinanceParams } from "@/hooks/use-finance-params"
 import { useTableSettings } from "@/hooks/use-table-settings"
@@ -21,7 +21,7 @@ export function FinanceSupplierDataTable({
   initialSettings,
   view,
 }: {
-  book: FinanceBook
+  book: FinanceBookStatus
   initialSettings?: Partial<TableSettings>
   view: DirectoryView
 }) {

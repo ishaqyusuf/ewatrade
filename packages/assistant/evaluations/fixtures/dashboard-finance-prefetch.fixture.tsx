@@ -232,6 +232,18 @@ const initialData: Record<string, unknown> = {
   "finance.bankStatements.list": { items: [], nextCursor: null },
   "finance.supplierDirectory": { items: [], nextCursor: null },
 }
+// Pages gate on the slim Book status; the Overview reads its three panels as one.
+initialData["finance.bookStatus"] = {
+  id: "book-a",
+  currencyCode: "NGN",
+  timezone: "UTC",
+  startsAt: new Date("2026-01-01Z"),
+}
+initialData["finance.overview"] = {
+  balances: initialData["finance.balances"],
+  owed: initialData["finance.owedSummary"],
+  bills: initialData["finance.bills"],
+}
 let data = { ...initialData }
 let failure: string | null = null
 const gates = new Map<
@@ -294,11 +306,19 @@ const rpc = createTRPCClient<AppRouter>({
               )
             } else {
               const value = currentData[op.path] ?? data[op.path]
+              const parts = value as Record<string, object>
               observer.next({
                 result: {
-                  data: current
-                    ? { ...(value as object), resolvedBookId }
-                    : data[op.path],
+                  data: !current
+                    ? data[op.path]
+                    : op.path === "finance.overview"
+                      ? Object.fromEntries(
+                          Object.entries(parts).map(([key, part]) => [
+                            key,
+                            { ...part, resolvedBookId },
+                          ]),
+                        )
+                      : { ...(value as object), resolvedBookId },
                 },
               })
               observer.complete()
@@ -400,28 +420,23 @@ afterEach(async () => {
   browser.clear()
 })
 
-test("document panels start while Book metadata is pending, without waiting for its identifier", async () => {
+test("document Overview read starts while Book status is pending, without waiting for its identifier", async () => {
   const gate = Promise.withResolvers<unknown>()
-  gates.set("finance.book", gate)
+  gates.set("finance.bookStatus", gate)
   const pending = FinanceRoute({ view: "overview" })
   await turn()
   await turn()
   const started = calls.map((call) => call.path).sort()
   gate.resolve(undefined)
   await pending
-  expect(started).toEqual(["finance.book", ...panels].sort())
+  expect(started).toEqual(["finance.bookStatus", ...panels].sort())
 })
 
-test("Finance Overview starts only its three real panel reads before hydration, and consumers do not read twice", async () => {
+test("Finance Overview starts one status read and one snapshot read before hydration, and consumers do not read twice", async () => {
   const page = await FinanceRoute({ view: "overview" })
   await turn()
   expect(calls.map((call) => call.path).sort()).toEqual(
-    [
-      "finance.book",
-      "finance.balances",
-      "finance.owedSummary",
-      "finance.bills",
-    ].sort(),
+    ["finance.bookStatus", "finance.overview"].sort(),
   )
   const before = [...calls]
   const view = await mount(page)
@@ -429,16 +444,15 @@ test("Finance Overview starts only its three real panel reads before hydration, 
   expect(view.text()).toContain("Inert customer")
   expect(view.text()).toContain("Inert spending")
   expect(calls).toEqual(before)
-  expect(calls.find((call) => call.path === "finance.bills")?.input).toEqual({
-    currentCurrency: "NGN",
-    limit: 5,
-  })
+  expect(calls.find((call) => call.path === "finance.overview")?.input).toEqual(
+    { currentCurrency: "NGN" },
+  )
 })
 
-const panels = ["finance.balances", "finance.owedSummary", "finance.bills"]
+const panels = ["finance.overview"]
 
-test("pending panels start together without holding the route and settle independently after hydration", async () => {
-  for (const path of panels) gates.set(path, Promise.withResolvers<unknown>())
+test("a pending Overview read does not hold the route and fills all three panels when it settles", async () => {
+  gates.set("finance.overview", Promise.withResolvers<unknown>())
   let returned = false
   const result = FinanceRoute({ view: "overview" }).then((page) => {
     returned = true
@@ -448,43 +462,36 @@ test("pending panels start together without holding the route and settle indepen
   await turn()
   expect(returned).toBe(true)
   expect(calls.map((call) => call.path).sort()).toEqual(
-    ["finance.book", ...panels].sort(),
+    ["finance.bookStatus", ...panels].sort(),
   )
   expect(
     server
       .getQueryCache()
       .getAll()
       .filter((query) => query.state.status === "pending"),
-  ).toHaveLength(3)
+  ).toHaveLength(1)
   const view = await mount(await result)
   expect(view.text()).toContain("Money you have")
   expect(view.text()).not.toContain("Inert cash")
-  gates.get("finance.balances")?.resolve(undefined)
+  gates.get("finance.overview")?.resolve(undefined)
   await flush()
   expect(view.text()).toContain("Inert cash")
-  expect(view.text()).not.toContain("Inert customer")
-  expect(view.text()).not.toContain("Inert spending")
-  gates.get("finance.bills")?.resolve(undefined)
-  await flush()
-  expect(view.text()).toContain("Inert spending")
-  expect(view.text()).not.toContain("Inert customer")
-  gates.get("finance.owedSummary")?.resolve(undefined)
-  await flush()
   expect(view.text()).toContain("Inert customer")
-  expect(calls).toHaveLength(4)
+  expect(view.text()).toContain("Inert spending")
+  expect(calls).toHaveLength(2)
 })
 
-test("Book admission still controls hydration and cancels unused reads when missing or refused", async () => {
-  gates.set("finance.book", Promise.withResolvers<unknown>())
+test("Book admission still controls hydration and cancels the unused read when missing or refused", async () => {
+  gates.set("finance.bookStatus", Promise.withResolvers<unknown>())
   const pending = FinanceRoute({ view: "overview" })
   await turn()
   expect(calls.map((call) => call.path).sort()).toEqual(
-    ["finance.book", ...panels].sort(),
+    ["finance.bookStatus", ...panels].sort(),
   )
-  data["finance.book"] = null
-  gates.get("finance.book")?.resolve(undefined)
+  data["finance.bookStatus"] = null
+  gates.get("finance.bookStatus")?.resolve(undefined)
   const view = await mount(await pending)
-  expect(calls).toHaveLength(4)
+  expect(calls).toHaveLength(2)
   expect(view.text()).not.toContain("Money you have")
   expect(view.text()).not.toContain("Inert cash")
   expect(
@@ -492,13 +499,15 @@ test("Book admission still controls hydration and cancels unused reads when miss
       .getQueryCache()
       .getAll()
       .map((query) => query.queryKey),
-  ).toEqual([serverOptions.finance.book.queryKey()])
+  ).toEqual([serverOptions.finance.bookStatus.queryKey()])
   server.clear()
-  failure = "finance.book"
+  failure = "finance.bookStatus"
   await expect(FinanceRoute({ view: "overview" })).rejects.toBeInstanceOf(
     TRPCClientError,
   )
-  expect(calls.filter((call) => call.path === "finance.book")).toHaveLength(2)
+  expect(
+    calls.filter((call) => call.path === "finance.bookStatus"),
+  ).toHaveLength(2)
   expect(server.getQueryCache().getAll()).toHaveLength(1)
 })
 
@@ -524,6 +533,7 @@ for (const view of [
     expect(
       calls.some(
         (call) =>
+          call.path === "finance.overview" ||
           call.path === "finance.balances" ||
           call.path === "finance.owedSummary",
       ),
@@ -536,11 +546,18 @@ for (const view of [
           : view === "bank"
             ? "finance.bankStatements.list"
             : null
+    // Bank and Reports list the Book's accounts, so they also read the full Book.
+    const gate =
+      view === "bank" || view === "reports"
+        ? ["finance.bookStatus", "finance.book"]
+        : ["finance.bookStatus"]
     expect(calls.map((call) => call.path)).toEqual(
-      expected ? ["finance.book", expected] : ["finance.book"],
+      expected ? [...gate, expected] : gate,
     )
     if (expected)
-      expect(calls[1]?.input).toMatchObject({ bookId: "book-a", limit: 30 })
+      expect(calls.find((call) => call.path === expected)?.input).toMatchObject(
+        { bookId: "book-a", limit: 30 },
+      )
   })
 }
 
@@ -572,56 +589,47 @@ test("the Finance route evaluates only the selected view's code", async () => {
   )
 })
 
-test("pending Book-B balances cannot consume a retained Book-A query", async () => {
+test("a pending Book-B Overview cannot consume a retained Book-A query", async () => {
   resolvedBookId = "book-b"
-  data["finance.book"] = {
-    ...(initialData["finance.book"] as object),
+  data["finance.bookStatus"] = {
+    ...(initialData["finance.bookStatus"] as object),
     id: "book-b",
   }
   browser.setQueryData(
-    browserOptions.finance.balances.queryKey({ bookId: "book-a" }),
+    browserOptions.finance.overview.queryKey({ bookId: "book-a" }),
     {
-      snapshotSequence: "1",
-      currencyCode: "NGN",
-      startsAt: new Date("2026-01-01Z"),
-      monthStart: new Date("2026-01-01Z"),
-      accounts: [
-        {
-          id: "private-a",
-          bookId: "book-a",
-          code: "1000",
-          kind: "ASSET",
-          createdAt: new Date("2026-01-01Z"),
-          paymentMethods: [],
-          paymentsPausedAt: null,
-          mobileMoney: false,
-          bankName: null,
-          bankAccountNumber: null,
-          bankAccountHolder: null,
-          debitMinor: "999",
-          creditMinor: "0",
-          monthDebitMinor: "999",
-          monthCreditMinor: "0",
-          name: "Private A cash",
-          purpose: "CASH",
-          archivedAt: null,
-          balanceMinor: "999",
-        },
-      ],
-    },
+      ...(initialData["finance.overview"] as object),
+      balances: {
+        snapshotSequence: "1",
+        currencyCode: "NGN",
+        startsAt: new Date("2026-01-01Z"),
+        monthStart: new Date("2026-01-01Z"),
+        accounts: [
+          {
+            id: "private-a",
+            name: "Private A cash",
+            purpose: "CASH",
+            archivedAt: null,
+            mobileMoney: false,
+            paymentsPausedAt: null,
+            balanceMinor: "999",
+          },
+        ],
+      },
+    } as never,
   )
-  gates.set("finance.balances", Promise.withResolvers<unknown>())
+  gates.set("finance.overview", Promise.withResolvers<unknown>())
   const page = await FinanceRoute({ view: "overview" })
   const view = await mount(page)
   expect(view.text()).not.toContain("Private A cash")
   expect(view.text()).not.toContain("Inert cash")
-  gates.get("finance.balances")?.resolve(undefined)
+  gates.get("finance.overview")?.resolve(undefined)
   await flush()
   expect(view.text()).toContain("Inert cash")
   expect(view.text()).not.toContain("Private A cash")
   for (const call of calls.filter((call) => panels.includes(call.path)))
     expect(call.input).toMatchObject({ currentCurrency: "NGN" })
-  expect(calls).toHaveLength(4)
+  expect(calls).toHaveLength(2)
 })
 
 const { useFinanceInvalidation } = await import(
@@ -633,7 +641,7 @@ function InvalidationOwner() {
   return null
 }
 
-test("the canonical invalidation still refreshes all four active projections and erases a refused panel", async () => {
+test("the canonical invalidation refreshes the status and Overview reads and erases a refused Overview", async () => {
   const view = await mount(
     <>
       <InvalidationOwner />
@@ -641,26 +649,25 @@ test("the canonical invalidation still refreshes all four active projections and
     </>,
   )
   expect(view.text()).toContain("Inert customer")
-  expect(calls).toHaveLength(4)
-  failure = "finance.owedSummary"
+  expect(calls).toHaveLength(2)
+  failure = "finance.overview"
   await act(async () => {
     await invalidate?.()
   })
   await flush()
-  expect(calls).toHaveLength(8)
+  expect(calls).toHaveLength(4)
   expect(view.text()).not.toContain("Inert customer")
+  expect(view.text()).not.toContain("Inert cash")
   expect(view.text()).toContain("We couldn't load this.")
-  expect(view.text()).toContain("Inert cash")
-  expect(view.text()).toContain("Inert spending")
   expect(
     browser.getQueryData(
-      browserOptions.finance.owedSummary.queryKey({ bookId: "book-a" }),
+      browserOptions.finance.overview.queryKey({ bookId: "book-a" }),
     ),
   ).toBeUndefined()
 })
 
-test("an initial refused panel remains local while the other prefetched panels display", async () => {
-  failure = "finance.owedSummary"
+test("an initial refused Overview shows the retry state in its panels", async () => {
+  failure = "finance.overview"
   const page = await FinanceRoute({ view: "overview" })
   await turn()
   const view = await mount(page)
@@ -674,22 +681,17 @@ test("an initial refused panel remains local while the other prefetched panels d
     await act(async () => {
       await new Promise((resolve) => setTimeout(resolve, 10))
     })
-  expect(view.text()).toContain("Inert cash")
-  expect(view.text()).toContain("Inert spending")
+  expect(view.text()).not.toContain("Inert cash")
   expect(view.text()).not.toContain("Inert customer")
   expect(view.text()).toContain("We couldn't load this.")
-  expect(calls.filter((call) => call.path === "finance.balances")).toHaveLength(
-    1,
+  expect(calls.filter((call) => call.path === "finance.overview")).toHaveLength(
+    2,
   )
-  expect(calls.filter((call) => call.path === "finance.bills")).toHaveLength(1)
-  expect(
-    calls.filter((call) => call.path === "finance.owedSummary"),
-  ).toHaveLength(2)
 })
 
-test("a warm soft return preserves retained panels without three redundant server reads", async () => {
+test("a warm soft return preserves the retained Overview without a redundant server read", async () => {
   await mount(await FinanceRoute({ view: "overview" }))
-  expect(calls).toHaveLength(4)
+  expect(calls).toHaveLength(2)
   server.clear()
   server = makeQueryClient()
   serverOptions = createTRPCOptionsProxy<AppRouter>({
@@ -699,9 +701,9 @@ test("a warm soft return preserves retained panels without three redundant serve
   requestHeaders = new Headers({ "x-ewatrade-request-kind": "navigation" })
   const page = await FinanceRoute({ view: "overview" })
   expect(calls.map((call) => call.path)).toEqual([
-    "finance.book",
+    "finance.bookStatus",
     ...panels,
-    "finance.book",
+    "finance.bookStatus",
   ])
   const before = [...calls]
   const view = await mount(page)
@@ -711,13 +713,13 @@ test("a warm soft return preserves retained panels without three redundant serve
   expect(calls).toEqual(before)
 })
 
-test("a cold soft visit keeps its original browser-owned panel reads", async () => {
+test("a cold soft visit keeps its original browser-owned Overview read", async () => {
   requestHeaders = new Headers({ "x-ewatrade-request-kind": "navigation" })
   const page = await FinanceRoute({ view: "overview" })
-  expect(calls.map((call) => call.path)).toEqual(["finance.book"])
+  expect(calls.map((call) => call.path)).toEqual(["finance.bookStatus"])
   const view = await mount(page)
   expect(calls.map((call) => call.path).sort()).toEqual(
-    ["finance.book", ...panels].sort(),
+    ["finance.bookStatus", ...panels].sort(),
   )
   expect(view.text()).toContain("Inert cash")
   expect(view.text()).toContain("Inert spending")
@@ -726,17 +728,17 @@ test("a cold soft visit keeps its original browser-owned panel reads", async () 
 test("missing document marker falls back to browser ownership", async () => {
   requestHeaders = new Headers()
   const page = await FinanceRoute({ view: "overview" })
-  expect(calls.map((call) => call.path)).toEqual(["finance.book"])
+  expect(calls.map((call) => call.path)).toEqual(["finance.bookStatus"])
   const view = await mount(page)
   expect(view.text()).toContain("Inert cash")
-  expect(calls).toHaveLength(4)
+  expect(calls).toHaveLength(2)
 })
 
 for (const refused of [false, true]) {
-  test(`unused pending current-book reads cancel when Book is ${refused ? "refused" : "missing"}`, async () => {
+  test(`an unused pending current-book Overview cancels when the Book is ${refused ? "refused" : "missing"}`, async () => {
     for (const path of panels) gates.set(path, Promise.withResolvers<unknown>())
-    if (refused) failure = "finance.book"
-    else data["finance.book"] = null
+    if (refused) failure = "finance.bookStatus"
+    else data["finance.bookStatus"] = null
     const route = FinanceRoute({ view: "overview" })
     if (refused) await expect(route).rejects.toBeInstanceOf(TRPCClientError)
     else await route
@@ -745,33 +747,33 @@ for (const refused of [false, true]) {
     expect(server.getQueryCache().getAll()).toHaveLength(1)
     expect(
       server.getQueryData(
-        serverOptions.finance.balances.queryKey({ bookId: "book-a" }),
+        serverOptions.finance.overview.queryKey({ bookId: "book-a" }),
       ),
     ).toBeUndefined()
   })
 }
 
 test("same-currency Book identity mismatch cannot hydrate early results into another Book's cache", async () => {
-  data["finance.book"] = {
-    ...(initialData["finance.book"] as object),
+  data["finance.bookStatus"] = {
+    ...(initialData["finance.bookStatus"] as object),
     id: "book-b",
   }
-  currentData["finance.balances"] = {
-    accounts: [
-      {
-        id: "old",
-        name: "Private A cash",
-        purpose: "CASH",
-        balanceMinor: "999",
-      },
-    ],
-  }
-  currentData["finance.owedSummary"] = {
-    ...(initialData["finance.owedSummary"] as object),
-    privateSentinel: "Private A debt",
-  }
-  currentData["finance.bills"] = {
-    items: [{ description: "Private A spending" }],
+  currentData["finance.overview"] = {
+    balances: {
+      accounts: [
+        {
+          id: "old",
+          name: "Private A cash",
+          purpose: "CASH",
+          balanceMinor: "999",
+        },
+      ],
+    },
+    owed: {
+      ...(initialData["finance.owedSummary"] as object),
+      privateSentinel: "Private A debt",
+    },
+    bills: { items: [{ description: "Private A spending" }] },
   }
   const view = await mount(await FinanceRoute({ view: "overview" }))
   expect(view.text()).toContain("Inert cash")
@@ -786,7 +788,7 @@ test("same-currency Book identity mismatch cannot hydrate early results into ano
         .map((query) => query.state.data),
     ),
   ).not.toContain("Private A")
-  expect(server.getQueryCache().getAll()).toHaveLength(4)
+  expect(server.getQueryCache().getAll()).toHaveLength(2)
   expect(
     calls
       .filter(
@@ -797,17 +799,13 @@ test("same-currency Book identity mismatch cannot hydrate early results into ano
           "bookId" in call.input,
       )
       .map((call) => call.input),
-  ).toEqual([
-    { bookId: "book-b" },
-    { bookId: "book-b" },
-    { bookId: "book-b", limit: 5 },
-  ])
-  expect(calls).toHaveLength(7)
+  ).toEqual([{ bookId: "book-b" }])
+  expect(calls).toHaveLength(3)
 })
 
 test("a current-currency race retries only the admitted Book identity without changing cache ownership", async () => {
-  data["finance.book"] = {
-    ...(initialData["finance.book"] as object),
+  data["finance.bookStatus"] = {
+    ...(initialData["finance.bookStatus"] as object),
     id: "book-b",
     currencyCode: "USD",
   }
@@ -816,15 +814,15 @@ test("a current-currency race retries only the admitted Book identity without ch
   expect(view.text()).toContain("Inert cash")
   expect(view.text()).toContain("Inert customer")
   expect(view.text()).toContain("Inert spending")
-  expect(calls).toHaveLength(7)
+  expect(calls).toHaveLength(3)
   expect(
     server.getQueryData(
-      serverOptions.finance.balances.queryKey({ bookId: "book-a" }),
+      serverOptions.finance.overview.queryKey({ bookId: "book-a" }),
     ),
   ).toBeUndefined()
   expect(
     server.getQueryData(
-      serverOptions.finance.balances.queryKey({ bookId: "book-b" }),
+      serverOptions.finance.overview.queryKey({ bookId: "book-b" }),
     ),
   ).toBeDefined()
 })
@@ -866,7 +864,7 @@ async function headersThroughNext(
   return forwarded
 }
 
-test("through the actual Next adapter, a full load overlaps all four reads and a soft navigation reads only its fresh Book", async () => {
+test("through the actual Next adapter, a full load overlaps both reads and a soft navigation reads only its fresh Book status", async () => {
   requestHeaders = await headersThroughNext({
     "sec-fetch-dest": "document",
     "sec-fetch-mode": "navigate",
@@ -875,7 +873,7 @@ test("through the actual Next adapter, a full load overlaps all four reads and a
   expect(requestHeaders.get("x-ewatrade-request-kind")).toBe("document")
   await mount(await FinanceRoute({ view: "overview" }))
   expect(calls.map((call) => call.path).sort()).toEqual(
-    ["finance.book", ...panels].sort(),
+    ["finance.bookStatus", ...panels].sort(),
   )
   server.clear()
   server = makeQueryClient()
@@ -896,7 +894,9 @@ test("through the actual Next adapter, a full load overlaps all four reads and a
   expect(requestHeaders.get("x-ewatrade-request-kind")).toBe("navigation")
   expect(requestHeaders.get("rsc")).toBeNull()
   const page = await FinanceRoute({ view: "overview" })
-  expect(calls.slice(4).map((call) => call.path)).toEqual(["finance.book"])
+  expect(calls.slice(2).map((call) => call.path)).toEqual([
+    "finance.bookStatus",
+  ])
   const before = [...calls]
   const view = await mount(page)
   expect(view.text()).toContain("Inert cash")

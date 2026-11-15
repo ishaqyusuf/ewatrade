@@ -3,6 +3,7 @@ import { Pill } from "@/components/orders/overview/order-overview-parts"
 import { moneyAccountPurposeLabel } from "@/components/tables/finance-accounts/purpose-label"
 import { useFinanceParams } from "@/hooks/use-finance-params"
 import { useTRPC } from "@/trpc/client"
+import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
 import { Button, Skeleton } from "@ewatrade/ui"
 import { formatFinanceMoney } from "@ewatrade/utils/finance-money"
 import { useQuery } from "@tanstack/react-query"
@@ -12,7 +13,7 @@ import type { ReactNode } from "react"
 import { expensePill } from "./expense-status"
 import { FinanceRow } from "./finance-rows"
 import { formatFinanceShortDate } from "./format-date"
-import type { FinanceBook } from "./types"
+import type { FinanceBookStatus } from "./types"
 
 const MONEY_PURPOSES = ["CASH", "BANK", "CLEARING"]
 
@@ -20,16 +21,38 @@ const MONEY_PURPOSES = ["CASH", "BANK", "CLEARING"]
  * Money first: the total you have and where it is, then who owes what, then
  * recent spending. Every row opens its record.
  */
-export function FinanceOverview({ book }: { book: FinanceBook }) {
+export function FinanceOverview({ book }: { book: FinanceBookStatus }) {
+  const trpc = useTRPC()
+  // One read, one snapshot: balances, who owes what and the latest expenses.
+  const overview = useQuery(
+    trpc.finance.overview.queryOptions({ bookId: book.id }),
+  )
+  const read = <T,>(pick: (data: OverviewData) => T): PanelRead<T> => ({
+    isPending: overview.isPending,
+    isError: overview.isError,
+    data: overview.data ? pick(overview.data) : undefined,
+    refetch: () => void overview.refetch(),
+  })
   return (
     <div className="grid gap-4 pb-8">
       <div className="grid items-start gap-4 lg:grid-cols-2">
-        <OverviewAccounts book={book} />
-        <OverviewOwed book={book} />
+        <OverviewAccounts
+          book={book}
+          balances={read((data) => data.balances)}
+        />
+        <OverviewOwed book={book} owed={read((data) => data.owed)} />
       </div>
-      <OverviewSpending book={book} />
+      <OverviewSpending book={book} bills={read((data) => data.bills)} />
     </div>
   )
+}
+
+type OverviewData = RouterOutputs["finance"]["overview"]
+type PanelRead<T> = {
+  isPending: boolean
+  isError: boolean
+  data: T | undefined
+  refetch: () => void
 }
 
 function Panel({
@@ -103,12 +126,14 @@ function PanelError({ retry }: { retry: () => void }) {
   )
 }
 
-function OverviewAccounts({ book }: { book: FinanceBook }) {
-  const trpc = useTRPC()
+function OverviewAccounts({
+  book,
+  balances,
+}: {
+  book: FinanceBookStatus
+  balances: PanelRead<OverviewData["balances"]>
+}) {
   const router = useRouter()
-  const balances = useQuery(
-    trpc.finance.balances.queryOptions({ bookId: book.id }),
-  )
   const accounts =
     balances.data?.accounts.filter(
       (account) =>
@@ -123,7 +148,7 @@ function OverviewAccounts({ book }: { book: FinanceBook }) {
       title="Money you have"
       link={{ href: "/finance/accounts", label: "Accounts" }}
       lead={
-        balances.isSuccess && accounts.length ? (
+        balances.data && accounts.length ? (
           <p className="text-3xl font-semibold tabular-nums">
             {formatFinanceMoney(total.toString(), book.currencyCode)}
           </p>
@@ -133,7 +158,7 @@ function OverviewAccounts({ book }: { book: FinanceBook }) {
       {balances.isPending ? (
         <PanelSkeleton />
       ) : balances.isError ? (
-        <PanelError retry={() => void balances.refetch()} />
+        <PanelError retry={balances.refetch} />
       ) : !accounts.length ? (
         <PanelState>No money accounts yet.</PanelState>
       ) : (
@@ -158,13 +183,15 @@ function OverviewAccounts({ book }: { book: FinanceBook }) {
   )
 }
 
-function OverviewOwed({ book }: { book: FinanceBook }) {
-  const trpc = useTRPC()
+function OverviewOwed({
+  book,
+  owed,
+}: {
+  book: FinanceBookStatus
+  owed: PanelRead<OverviewData["owed"]>
+}) {
   const router = useRouter()
   const { setParams } = useFinanceParams()
-  const owed = useQuery(
-    trpc.finance.owedSummary.queryOptions({ bookId: book.id }),
-  )
   const money = (value: string) => formatFinanceMoney(value, book.currencyCode)
   const plural = (count: number, noun: string) =>
     `${count} ${noun}${count === 1 ? "" : "s"}`
@@ -175,8 +202,8 @@ function OverviewOwed({ book }: { book: FinanceBook }) {
     >
       {owed.isPending ? (
         <PanelSkeleton />
-      ) : owed.isError ? (
-        <PanelError retry={() => void owed.refetch()} />
+      ) : owed.isError || !owed.data ? (
+        <PanelError retry={owed.refetch} />
       ) : (
         <PanelRows label="Who owes what">
           <FinanceRow
@@ -222,12 +249,14 @@ function OverviewOwed({ book }: { book: FinanceBook }) {
   )
 }
 
-function OverviewSpending({ book }: { book: FinanceBook }) {
-  const trpc = useTRPC()
+function OverviewSpending({
+  book,
+  bills,
+}: {
+  book: FinanceBookStatus
+  bills: PanelRead<OverviewData["bills"]>
+}) {
   const { setParams } = useFinanceParams()
-  const bills = useQuery(
-    trpc.finance.bills.queryOptions({ bookId: book.id, limit: 5 }),
-  )
   return (
     <Panel
       title="Recent spending"
@@ -235,8 +264,8 @@ function OverviewSpending({ book }: { book: FinanceBook }) {
     >
       {bills.isPending ? (
         <PanelSkeleton />
-      ) : bills.isError ? (
-        <PanelError retry={() => void bills.refetch()} />
+      ) : bills.isError || !bills.data ? (
+        <PanelError retry={bills.refetch} />
       ) : !bills.data.items.length ? (
         <PanelState>No spending yet.</PanelState>
       ) : (

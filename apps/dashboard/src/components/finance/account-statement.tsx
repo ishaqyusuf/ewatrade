@@ -26,13 +26,13 @@ import { useQuery } from "@tanstack/react-query"
 import { useEffect, useMemo, useState } from "react"
 import { formatFinanceDate } from "./format-date"
 import { FinanceStatementExport } from "./statement-export"
-import type { FinanceBook } from "./types"
+import type { FinanceBookStatus } from "./types"
 
 export function FinanceAccountStatement({
   book,
   accountId,
 }: {
-  book: FinanceBook
+  book: FinanceBookStatus
   accountId: string
 }) {
   const start = new Date(book.startsAt).toISOString().slice(0, 10)
@@ -77,7 +77,7 @@ function StatementPages({
   from,
   through,
 }: {
-  book: FinanceBook
+  book: FinanceBookStatus
   accountId: string
   from: string
   through: string

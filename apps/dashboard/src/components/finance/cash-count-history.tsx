@@ -11,9 +11,9 @@ import { formatFinanceMoney } from "@ewatrade/utils/finance-money"
 import { useInfiniteQuery } from "@tanstack/react-query"
 import { useMemo } from "react"
 import { OpenFinanceSheet } from "./open-finance-sheet"
-import type { FinanceBook } from "./types"
+import type { FinanceBookStatus } from "./types"
 
-export function FinanceCashCountHistory({ book }: { book: FinanceBook }) {
+export function FinanceCashCountHistory({ book }: { book: FinanceBookStatus }) {
   const trpc = useTRPC()
   const { setParams } = useFinanceParams()
   const query = useInfiniteQuery(
