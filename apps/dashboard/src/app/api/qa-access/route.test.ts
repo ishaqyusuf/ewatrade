@@ -68,11 +68,37 @@ mock.module("@ewatrade/db/qa-access", () => ({
     }
   },
 }))
+// QA availability comes from the central QA policy (fetched over HTTP), not from
+// QA_ACCELERATOR_ENABLED. Stand in for it here; production stays refused by the
+// real isQaForbiddenRuntime whatever the policy says.
+let policyEnabled = true
+const { isQaForbiddenRuntime } = await import("@ewatrade/utils/qa-policy")
+function qaPolicyTarget(env: Record<string, string | undefined> = process.env) {
+  if (isQaForbiddenRuntime(env)) return null
+  const value = (env.APP_ENV || env.NODE_ENV || "").trim().toLowerCase()
+  if (["local", "dev", "development"].includes(value)) return "development"
+  return value === "preview" ? "preview" : null
+}
+mock.module("@ewatrade/utils/qa-policy-server", () => ({
+  qaPolicyTarget,
+  getQaPolicyEnvironment: async () => {
+    const enabled = Boolean(qaPolicyTarget() && policyEnabled)
+    return {
+      ...process.env,
+      EMAIL_QA_DOMAIN_ROUTES: JSON.stringify(
+        enabled ? { "ishaq.qa.test": "qa-inbox@example.test" } : {},
+      ),
+      QA_TOOLS_ENABLED: String(enabled),
+      QA_ACCELERATOR_ENABLED: String(enabled),
+    }
+  },
+}))
 const { GET, POST } = await import("./route.qa")
 
 beforeEach(() => {
   calls.length = 0
   stale = false
+  policyEnabled = true
   backendFailure = null
   process.env.APP_ENV = "local"
   process.env.NODE_ENV = "development"
@@ -118,8 +144,16 @@ test.each(["local", "dev", "preview"])(
   },
 )
 test("Production and disabled entry make no authorization or session calls", async () => {
-  process.env.QA_ACCELERATOR_ENABLED = "false"
+  // Production refuses QA even when the central policy says it is on.
   process.env.APP_ENV = "production"
+  expect((await GET(request())).status).toBe(404)
+  expect(
+    (await POST(request({ action: "authorize", qaDomain: "ishaq.qa.test" })))
+      .status,
+  ).toBe(404)
+  // A policy that turns QA off closes it in Development too.
+  process.env.APP_ENV = "local"
+  policyEnabled = false
   expect((await GET(request())).status).toBe(404)
   expect(
     (await POST(request({ action: "authorize", qaDomain: "ishaq.qa.test" })))
