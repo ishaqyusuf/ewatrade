@@ -11,6 +11,8 @@ import {
   getServerClient,
   trpc,
 } from "@/trpc/server"
+import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
+import { canManageTenant, normalizeRole } from "@ewatrade/auth/roles"
 import type { Metadata } from "next"
 import { redirect } from "next/navigation"
 import { Suspense } from "react"
@@ -33,15 +35,44 @@ export default async function CustomerChannelsPage({ searchParams }: Props) {
   const store = requestedStore ?? ctx.activeStore ?? ctx.stores[0]
   if (!store) redirect("/setup")
 
-  // One server read for the whole page, seeded into each piece's own query
-  // key: components, sheets and their invalidations keep their procedures.
-  // If it fails, the components read their pieces themselves.
-  const snapshot = await getServerClient()
-    .serviceCommerce.channelSettings.query({ storeId: store.id })
-    .catch(() => null)
+  const stores = ctx.stores.map((option) => ({
+    id: option.id,
+    name: option.name,
+  }))
+  const role = normalizeRole(ctx.membership.role)
+  // Only owners/admins can read the snapshot; anyone else (or a failed read)
+  // lets the components read their own pieces. The read starts now and the
+  // page returns its loading state at once.
+  const snapshot =
+    role && canManageTenant(role)
+      ? getServerClient()
+          .serviceCommerce.channelSettings.query({ storeId: store.id })
+          .catch(() => null)
+      : Promise.resolve(null)
+  return (
+    <Suspense fallback={<CustomerChannelsSkeleton />}>
+      <SeededChannels snapshot={snapshot} storeId={store.id} stores={stores} />
+    </Suspense>
+  )
+}
+
+/**
+ * One server read for the whole page, seeded into each piece's own query key:
+ * components, sheets and their invalidations keep their procedures.
+ */
+async function SeededChannels({
+  snapshot: pending,
+  storeId,
+  stores,
+}: {
+  snapshot: Promise<RouterOutputs["serviceCommerce"]["channelSettings"] | null>
+  storeId: string
+  stores: Array<{ id: string; name: string }>
+}) {
+  const snapshot = await pending
   if (snapshot) {
     const queryClient = getQueryClient()
-    const input = { storeId: store.id }
+    const input = { storeId }
     const seed = <T,>(queryKey: readonly unknown[], data: T) =>
       queryClient.setQueryData(queryKey, data)
     seed(
@@ -67,18 +98,9 @@ export default async function CustomerChannelsPage({ searchParams }: Props) {
       snapshot.channelMode,
     )
   }
-
   return (
     <HydrateClient>
-      <Suspense fallback={<CustomerChannelsSkeleton />}>
-        <CustomerChannelsWorkspace
-          initialStoreId={store.id}
-          stores={ctx.stores.map((option) => ({
-            id: option.id,
-            name: option.name,
-          }))}
-        />
-      </Suspense>
+      <CustomerChannelsWorkspace initialStoreId={storeId} stores={stores} />
     </HydrateClient>
   )
 }

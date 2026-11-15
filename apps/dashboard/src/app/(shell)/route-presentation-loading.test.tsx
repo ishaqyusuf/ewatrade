@@ -96,6 +96,18 @@ mock.module("@/components/orders/overview/order-page", () => ({
 }))
 mock.module("@/trpc/server", () => ({
   prefetch: (options: FetchQueryOptions) => client.prefetchQuery(options),
+  getQueryClient: () => client,
+  getServerClient: () => ({
+    serviceCommerce: {
+      channelSettings: {
+        query: async (input: unknown) => {
+          reads.push({ path: "serviceCommerce.channelSettings", input })
+          await gate
+          return null
+        },
+      },
+    },
+  }),
   HydrateClient: () => null,
   trpc: {
     catalog: { listItems: endpoint("catalog.listItems") },
@@ -148,7 +160,8 @@ const { default: Conversations } = await import("./conversations/page")
 const { default: Order } = await import("./sales/orders/[orderId]/page")
 const props = () => ({ searchParams: Promise.resolve({ storeId: "store-b" }) })
 const routes = [
-  ["Channels", () => Channels(props()), 5],
+  // One snapshot read, seeded into the five pieces' keys.
+  ["Channels", () => Channels(props()), 1],
   // Setup tab: only its own read; the other tabs read when opened.
   ["Compliance", () => Compliance(props()), 1],
   ["Service commerce", () => ServiceCommerce(props()), 2],
@@ -244,10 +257,8 @@ test("channel operator scheduling does not acquire manager settings", async () =
   role = "OPERATOR"
   release()
   await Channels(props())
-  expect(reads.map((read) => read.path).sort()).toEqual([
-    "serviceCommerce.channelWorkspace",
-    "serviceCommerce.pendingQuoteApprovals",
-  ])
+  // The snapshot is Owner/Admin only; others read their own pieces on the client.
+  expect(reads).toEqual([])
 })
 
 test("open booking preserves selected offering and request dependencies", async () => {
