@@ -1,4 +1,5 @@
 "use client"
+import { ConfirmAlert } from "@/components/forms/confirm-alert"
 import { FormFeedback } from "@/components/forms/form-feedback"
 import {
   Badge,
@@ -10,6 +11,7 @@ import {
   MoneyInput,
   SelectControl,
   Textarea,
+  cn,
 } from "@ewatrade/ui"
 
 import { useStoreCurrency } from "@/hooks/use-store-currency"
@@ -21,7 +23,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useState } from "react"
 import { useFormContext } from "react-hook-form"
 
-import type { PrescriptionSheetMode } from "@/hooks/use-prescription-params"
+import {
+  type PrescriptionSheetMode,
+  prescriptionSheetModeForStatus,
+} from "@/hooks/use-prescription-params"
 import type { PrescriptionWorkspaceFormValues } from "./form-context"
 import {
   type PrescriptionMediaGrant,
@@ -38,8 +43,19 @@ function currentTranscript(request: RequestDetail) {
   )
 }
 
+/** What happens next for a prescription that has no step for staff. */
+const DETAIL_NEXT: Partial<Record<string, string>> = {
+  QUOTED: "Waiting for the customer to accept the price.",
+  NEEDS_CLARIFICATION: "Waiting for the customer to reply.",
+  CONVERTED: "The customer accepted. The order was made.",
+  DECLINED: "This prescription was declined.",
+  EXPIRED: "The price expired before the customer accepted.",
+  WITHDRAWN: "The customer withdrew this prescription.",
+  TRANSCRIBING: "Being typed up. This takes a moment.",
+}
+
 export function PrescriptionRequestWorkspace({
-  mode,
+  mode: requestedMode,
   requestId,
   storeId,
 }: {
@@ -66,6 +82,7 @@ export function PrescriptionRequestWorkspace({
   const [mediaGrants, setMediaGrants] = useState<
     Record<string, PrescriptionMediaGrant>
   >({})
+  const [confirmQuote, setConfirmQuote] = useState(false)
   const [pendingDecision, setPendingDecision] = useState<
     "declined" | "needs_clarification" | "released" | null
   >(null)
@@ -166,15 +183,12 @@ export function PrescriptionRequestWorkspace({
     "pharmacist-review": ["PHARMACIST_REVIEW"],
     quote: ["READY_TO_QUOTE"],
   }
-  const allowed = allowedStatuses[mode]
-  if (allowed && !allowed.includes(request.status)) {
-    return (
-      <FormFeedback appearance="dashboard">
-        This prescription is now: {formatPrescriptionStatus(request.status)}.
-        Open it again from the list.
-      </FormFeedback>
-    )
-  }
+  const allowed = allowedStatuses[requestedMode]
+  // After a step saves, the record moves on: follow it to the step for its new status.
+  const mode =
+    allowed && !allowed.includes(request.status)
+      ? prescriptionSheetModeForStatus(request.status)
+      : requestedMode
   const isPending =
     startTranscription.isPending ||
     clearerMedia.isPending ||
@@ -243,6 +257,20 @@ export function PrescriptionRequestWorkspace({
     )
   }
 
+  const quoteTotalMinor = (transcript?.lines ?? []).reduce((sum, line) => {
+    const price = Number(prices[line.id])
+    const quantity = Number(line.mapping?.quantity ?? 1)
+    return Number.isFinite(price) && Number.isFinite(quantity) && price > 0
+      ? sum + Math.round(price * 100) * quantity
+      : sum
+  }, 0)
+  const formatQuoteMoney = (minor: number) =>
+    new Intl.NumberFormat("en-NG", {
+      currency: currencyCode,
+      maximumFractionDigits: 2,
+      minimumFractionDigits: minor % 100 === 0 ? 0 : 2,
+      style: "currency",
+    }).format(minor / 100)
   const quote = () => {
     if (!transcript) return
     issueQuote.mutate(
@@ -255,6 +283,7 @@ export function PrescriptionRequestWorkspace({
         requestId,
         storeId,
       }),
+      { onSettled: () => setConfirmQuote(false) },
     )
   }
 
@@ -276,6 +305,10 @@ export function PrescriptionRequestWorkspace({
           </dd>
         </div>
       </dl>
+
+      {mode === "details" && DETAIL_NEXT[request.status] ? (
+        <p className="text-sm">{DETAIL_NEXT[request.status]}</p>
+      ) : null}
 
       {["details", "media-review", "pharmacist-review"].includes(mode)
         ? mediaViewer
@@ -395,8 +428,17 @@ export function PrescriptionRequestWorkspace({
                 key={line.id}
                 className="grid gap-2 rounded-[var(--ui-radius-surface)] border p-3"
               >
-                <p className="text-xs text-muted-foreground">
+                <p className="flex items-center justify-between gap-2 text-sm text-muted-foreground">
                   Line {line.lineNumber}
+                  {line.status === "VERIFIED" ? (
+                    <Badge className="rounded-full bg-success text-success-foreground">
+                      Checked
+                    </Badge>
+                  ) : line.status === "UNREADABLE" ? (
+                    <Badge className="rounded-full bg-warning text-warning-foreground">
+                      Unreadable
+                    </Badge>
+                  ) : null}
                 </p>
                 <Input
                   value={
@@ -413,6 +455,7 @@ export function PrescriptionRequestWorkspace({
                 <div className="flex flex-wrap gap-2">
                   <Button
                     variant="outline"
+                    className={cn(line.status === "VERIFIED" && "hidden")}
                     disabled={verifyLine.isPending}
                     onClick={() =>
                       verifyLine.mutate({
@@ -478,87 +521,95 @@ export function PrescriptionRequestWorkspace({
                 <p className="font-medium">
                   {line.verifiedText ?? "Unreadable line"}
                 </p>
-                <SelectControl
-                  value={mapping.availability}
-                  onValueChange={(value) =>
-                    setValue(
-                      "lineMapping",
-                      {
-                        ...lineMapping,
-                        [line.id]: {
-                          ...mapping,
-                          availability: value as typeof mapping.availability,
+                <ControlField label="Can you supply it?">
+                  <SelectControl
+                    value={mapping.availability}
+                    onValueChange={(value) =>
+                      setValue(
+                        "lineMapping",
+                        {
+                          ...lineMapping,
+                          [line.id]: {
+                            ...mapping,
+                            availability: value as typeof mapping.availability,
+                          },
                         },
-                      },
-                      { shouldDirty: true },
-                    )
-                  }
-                  options={[
-                    { value: "available", label: <>Available</> },
-                    { value: "partial", label: <>Partially available</> },
-                    { value: "unavailable", label: <>Unavailable</> },
-                    { value: "restricted", label: <>Restricted</> },
-                    { value: "declined", label: <>Declined</> },
-                  ]}
-                />
-                <SelectControl
-                  value={mapping.offeringId}
-                  onValueChange={(value) =>
-                    setValue(
-                      "lineMapping",
-                      {
-                        ...lineMapping,
-                        [line.id]: {
-                          ...mapping,
-                          offeringId: value,
+                        { shouldDirty: true },
+                      )
+                    }
+                    options={[
+                      { value: "available", label: <>Yes</> },
+                      { value: "partial", label: <>Some of it</> },
+                      { value: "unavailable", label: <>Not in stock</> },
+                      { value: "restricted", label: <>Restricted medicine</> },
+                      { value: "declined", label: <>Won’t supply</> },
+                    ]}
+                  />
+                </ControlField>
+                <ControlField label="Item">
+                  <SelectControl
+                    value={mapping.offeringId}
+                    onValueChange={(value) =>
+                      setValue(
+                        "lineMapping",
+                        {
+                          ...lineMapping,
+                          [line.id]: {
+                            ...mapping,
+                            offeringId: value,
+                          },
                         },
-                      },
-                      { shouldDirty: true },
-                    )
-                  }
-                  options={[
-                    { value: "", label: <>No Product Offering</> },
-                    ...((offerings.data ?? []).map((offering) => ({
-                      value: offering.id,
-                      label: offering.label,
-                    })) ?? []),
-                  ]}
-                />
-                <Input
-                  value={mapping.quantity}
-                  onChange={(event) =>
-                    setValue(
-                      "lineMapping",
-                      {
-                        ...lineMapping,
-                        [line.id]: {
-                          ...mapping,
-                          quantity: event.target.value,
+                        { shouldDirty: true },
+                      )
+                    }
+                    options={[
+                      { value: "", label: <>Choose an item</> },
+                      ...((offerings.data ?? []).map((offering) => ({
+                        value: offering.id,
+                        label: [...new Set(offering.label.split(" · "))].join(
+                          " · ",
+                        ),
+                      })) ?? []),
+                    ]}
+                  />
+                </ControlField>
+                <ControlField label="Quantity">
+                  <Input
+                    value={mapping.quantity}
+                    onChange={(event) =>
+                      setValue(
+                        "lineMapping",
+                        {
+                          ...lineMapping,
+                          [line.id]: {
+                            ...mapping,
+                            quantity: event.target.value,
+                          },
                         },
-                      },
-                      { shouldDirty: true },
-                    )
-                  }
-                  inputMode="decimal"
-                  placeholder="Quantity"
-                />
-                <Input
-                  value={mapping.customerWording}
-                  onChange={(event) =>
-                    setValue(
-                      "lineMapping",
-                      {
-                        ...lineMapping,
-                        [line.id]: {
-                          ...mapping,
-                          customerWording: event.target.value,
+                        { shouldDirty: true },
+                      )
+                    }
+                    inputMode="decimal"
+                  />
+                </ControlField>
+                <ControlField label="Wording the customer sees">
+                  <Input
+                    value={mapping.customerWording}
+                    onChange={(event) =>
+                      setValue(
+                        "lineMapping",
+                        {
+                          ...lineMapping,
+                          [line.id]: {
+                            ...mapping,
+                            customerWording: event.target.value,
+                          },
                         },
-                      },
-                      { shouldDirty: true },
-                    )
-                  }
-                  placeholder="Customer-visible wording"
-                />
+                        { shouldDirty: true },
+                      )
+                    }
+                  />
+                </ControlField>
                 <CheckboxField label={<>Alternative or substitute</>}>
                   <Checkbox
                     checked={mapping.isAlternative}
@@ -585,14 +636,14 @@ export function PrescriptionRequestWorkspace({
               disabled={isPending}
               onClick={() => setPendingDecision("released")}
             >
-              Release for quote
+              Approve
             </Button>
             <Button
               variant="outline"
               disabled={isPending}
               onClick={() => setPendingDecision("needs_clarification")}
             >
-              Request clarification
+              Ask the customer
             </Button>
             <Button
               variant="destructive"
@@ -602,80 +653,89 @@ export function PrescriptionRequestWorkspace({
               Decline
             </Button>
           </div>
-          {pendingDecision ? (
-            <div
-              className="grid gap-3 rounded-[var(--ui-radius-surface)] border border-warning-border bg-warning p-4 text-warning-foreground"
-              role="alertdialog"
-              aria-labelledby="pharmacist-decision-title"
-            >
-              <div>
-                <h5 id="pharmacist-decision-title" className="font-medium">
-                  Confirm your decision
-                </h5>
-                <p className="mt-1 text-sm">
-                  {formatPrescriptionStatus(pendingDecision)} photo{" "}
-                  {request.currentMediaRevision}, typed version{" "}
-                  {transcript.revision}. This is recorded under your name.
-                </p>
-              </div>
-              <div className="flex gap-2">
-                <Button
-                  disabled={pharmacistReview.isPending}
-                  onClick={confirmPharmacistDecision}
-                >
-                  {pharmacistReview.isPending
-                    ? "Confirming…"
-                    : "Confirm decision"}
-                </Button>
-                <Button
-                  disabled={pharmacistReview.isPending}
-                  onClick={() => setPendingDecision(null)}
-                  variant="outline"
-                >
-                  Cancel
-                </Button>
-              </div>
-            </div>
-          ) : null}
+          <ConfirmAlert
+            open={Boolean(pendingDecision)}
+            title={
+              pendingDecision === "released"
+                ? `Approve ${request.reference}?`
+                : pendingDecision === "needs_clarification"
+                  ? `Ask the customer about ${request.reference}?`
+                  : `Decline ${request.reference}?`
+            }
+            description={`Photo ${request.currentMediaRevision}, typed version ${transcript.revision}. This is recorded under your name.`}
+            action={
+              pendingDecision === "released"
+                ? "Approve"
+                : pendingDecision === "needs_clarification"
+                  ? "Ask the customer"
+                  : "Decline"
+            }
+            danger={pendingDecision === "declined"}
+            pending={pharmacistReview.isPending}
+            onCancel={() => setPendingDecision(null)}
+            onConfirm={confirmPharmacistDecision}
+          />
         </section>
       ) : null}
 
       {mode === "quote" && request.status === "READY_TO_QUOTE" && transcript ? (
         <section className="grid gap-3">
           <h4 className="font-medium">Price for pickup</h4>
-          {transcript.lines.map((line) => (
-            <div key={line.id} className="grid gap-1.5 text-sm">
-              {line.mapping?.customerWording ??
-                line.verifiedText ??
-                "Unavailable line"}
-              {line.mapping?.availability === "AVAILABLE" ||
-              line.mapping?.availability === "PARTIAL" ? (
-                <MoneyInput
-                  currencyCode={currencyCode}
-                  aria-label={`Unit price for ${line.mapping?.customerWording ?? line.verifiedText ?? "prescription line"}`}
-                  inputMode="decimal"
-                  placeholder="Unit price"
-                  value={prices[line.id] ?? ""}
-                  onChange={(event) =>
-                    setValue(
-                      "prices",
-                      { ...prices, [line.id]: event.target.value },
-                      { shouldDirty: true },
-                    )
-                  }
-                />
-              ) : (
-                <Badge className="w-fit rounded-full">
-                  {formatPrescriptionStatus(
-                    line.mapping?.availability ?? "unavailable",
-                  )}
-                </Badge>
-              )}
-            </div>
-          ))}
-          <Button disabled={isPending} onClick={quote}>
-            Issue pickup quote
+          {transcript.lines.map((line) => {
+            const name =
+              line.mapping?.customerWording ??
+              line.verifiedText ??
+              "Line not available"
+            return (
+              <div
+                key={line.id}
+                className="grid gap-2 rounded-[var(--ui-radius-surface)] border border-border p-3"
+              >
+                <p className="font-medium">{name}</p>
+                {line.mapping?.availability === "AVAILABLE" ||
+                line.mapping?.availability === "PARTIAL" ? (
+                  <ControlField label="Price each">
+                    <MoneyInput
+                      currencyCode={currencyCode}
+                      aria-label={`Price each for ${name}`}
+                      inputMode="decimal"
+                      value={prices[line.id] ?? ""}
+                      onChange={(event) =>
+                        setValue(
+                          "prices",
+                          { ...prices, [line.id]: event.target.value },
+                          { shouldDirty: true },
+                        )
+                      }
+                    />
+                  </ControlField>
+                ) : (
+                  <Badge className="w-fit rounded-full">
+                    {formatPrescriptionStatus(
+                      line.mapping?.availability ?? "unavailable",
+                    )}
+                  </Badge>
+                )}
+              </div>
+            )
+          })}
+          <Button
+            disabled={isPending || !(quoteTotalMinor > 0)}
+            onClick={() => setConfirmQuote(true)}
+          >
+            {quoteTotalMinor > 0
+              ? `Send price · ${formatQuoteMoney(quoteTotalMinor)}`
+              : "Send price"}
           </Button>
+          <ConfirmAlert
+            open={confirmQuote}
+            title={`Send a ${formatQuoteMoney(quoteTotalMinor)} pickup price for ${request.reference}?`}
+            description="The customer sees the price and can accept it. Nothing is charged now."
+            action={`Send ${formatQuoteMoney(quoteTotalMinor)}`}
+            pending={issueQuote.isPending}
+            onCancel={() => setConfirmQuote(false)}
+            onConfirm={quote}
+          />
         </section>
       ) : null}
 

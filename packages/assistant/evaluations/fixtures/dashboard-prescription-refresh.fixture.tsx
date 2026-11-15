@@ -15,8 +15,8 @@ import { FormProvider, useForm } from "react-hook-form"
 const app = (path: string) =>
   new URL(`../../../../apps/dashboard/src/${path}`, import.meta.url).pathname
 const leaf = ({ children }: { children?: ReactNode }) => <div>{children}</div>
-mock.module("@ewatrade/ui", () =>
-  Object.fromEntries(
+mock.module("@ewatrade/ui", () => ({
+  ...Object.fromEntries(
     [
       "Badge",
       "Button",
@@ -32,7 +32,12 @@ mock.module("@ewatrade/ui", () =>
       "Textarea",
     ].map((name) => [name, leaf]),
   ),
-)
+  cn: (...classes: Array<string | false | null | undefined>) =>
+    classes.filter(Boolean).join(" "),
+}))
+mock.module(app("components/forms/confirm-alert"), () => ({
+  ConfirmAlert: leaf,
+}))
 mock.module(app("components/forms/form-feedback"), () => ({
   FormFeedback: leaf,
 }))
@@ -48,6 +53,7 @@ mock.module(app("components/prescriptions/prescription-sheet-header"), () => ({
 }))
 let selected: unknown
 mock.module(app("hooks/use-prescription-params"), () => ({
+  prescriptionSheetModeForStatus: () => "details",
   usePrescriptionParams: () => ({
     setParams: (value: unknown) => {
       selected = value
