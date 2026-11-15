@@ -13,17 +13,15 @@ export function FinancePeriodHistory({ book }: { book: FinanceBook }) {
   const query = useQuery(trpc.finance.periods.queryOptions({ bookId: book.id }))
   const [historyOpen, setHistoryOpen] = useState(false)
   return (
-    <section className="grid gap-4 border-t border-border pt-6">
+    <section className="grid gap-4 rounded-[var(--ui-radius-surface)] border border-border bg-card p-4 sm:p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-lg font-medium">Months</h2>
+        <h2 className="font-semibold">Close a month</h2>
         <OpenFinanceSheet mode="period" secondary>
           Close or reopen a month
         </OpenFinanceSheet>
       </div>
       <p className="text-sm text-muted-foreground">
-        Close a month after you've checked your reports and records. Closing
-        stops anyone changing records up to that date. It doesn't prove every
-        naira is accounted for.
+        Closing stops changes to records up to that date.
       </p>
       {query.isPending ? (
         <output>Loading months…</output>
@@ -41,7 +39,7 @@ export function FinancePeriodHistory({ book }: { book: FinanceBook }) {
           <details
             onToggle={(event) => setHistoryOpen(event.currentTarget.open)}
           >
-            <summary className="cursor-pointer text-sm font-medium">
+            <summary className="flex min-h-11 cursor-pointer items-center text-sm font-medium">
               Close and reopen history
             </summary>
             {historyOpen ? (

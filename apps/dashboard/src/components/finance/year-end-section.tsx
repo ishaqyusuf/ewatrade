@@ -197,8 +197,8 @@ export function FinanceYearEnd({ book }: { book: FinanceBook }) {
     (view === "settings" && Boolean(fiscal.data)) ||
     (view === "preview" && Boolean(preview.data))
   return (
-    <section className="grid gap-4 border-t border-border pt-6">
-      <h2 className="text-lg font-medium">Year end</h2>
+    <section className="grid gap-4 rounded-[var(--ui-radius-surface)] border border-border bg-card p-4 sm:p-6">
+      <h2 className="font-semibold">Year end</h2>
       {body}
       <Sheet
         open={sheetOpen}

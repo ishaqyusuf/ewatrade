@@ -17,13 +17,13 @@ export function ReportSection({
   return (
     <section
       className={cn(
-        "grid min-w-0 gap-5 border border-border bg-background p-4 sm:p-6",
+        "grid min-w-0 gap-5 rounded-[var(--ui-radius-surface)] border border-border bg-card p-4 sm:p-6",
         className,
       )}
     >
       <div className="flex min-w-0 flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <h2 className="text-sm font-medium">{title}</h2>
+          <h2 className="font-semibold">{title}</h2>
           {description ? (
             <p className="mt-2 text-sm text-muted-foreground">{description}</p>
           ) : null}
@@ -41,7 +41,7 @@ export function ReportSectionSkeleton({
 }: { count: number; title: string }) {
   return (
     <section aria-label={`Loading ${title}`} className="grid min-w-0 gap-4">
-      <h2 className="text-sm font-medium">{title}</h2>
+      <h2 className="font-semibold">{title}</h2>
       <div
         aria-hidden="true"
         data-summary-grid
@@ -50,7 +50,7 @@ export function ReportSectionSkeleton({
       >
         {Array.from({ length: count }, (_, index) => (
           <div
-            className="h-28 animate-pulse border border-border bg-muted"
+            className="h-28 animate-pulse rounded-[var(--ui-radius-surface)] bg-muted"
             key={`${title}-${index + 1}`}
           />
         ))}

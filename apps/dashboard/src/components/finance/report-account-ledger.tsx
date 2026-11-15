@@ -1,11 +1,11 @@
 "use client"
 import { FormFeedback } from "@/components/forms/form-feedback"
+import { SheetFrame } from "@/components/sheets/sheet-frame"
 import { useFinanceParams } from "@/hooks/use-finance-params"
 import { useTRPC } from "@/trpc/client"
-import { Button } from "@ewatrade/ui"
+import { Button, Sheet } from "@ewatrade/ui"
 import { formatFinanceMoney } from "@ewatrade/utils/finance-money"
 import { useInfiniteQuery } from "@tanstack/react-query"
-import { useEffect, useRef } from "react"
 import { financeSourceLabel } from "./bank-source-detail"
 import { formatFinanceDate } from "./format-date"
 import { FinanceReportLedgerExport } from "./report-ledger-export"
@@ -43,7 +43,6 @@ export function ReportAccountLink({
   )
 }
 export function FinanceReportAccountLedger({ book }: { book: FinanceBook }) {
-  const region = useRef<HTMLElement>(null)
   const {
     reportAccountId,
     reportFrom,
@@ -51,49 +50,49 @@ export function FinanceReportAccountLedger({ book }: { book: FinanceBook }) {
     reportSnapshot,
     setParams,
   } = useFinanceParams()
-  useEffect(() => {
-    if (reportAccountId && reportFrom && reportThrough && reportSnapshot)
-      region.current?.scrollIntoView({ block: "start", behavior: "instant" })
-  }, [reportAccountId, reportFrom, reportThrough, reportSnapshot])
-  if (!reportAccountId || !reportFrom || !reportThrough || !reportSnapshot)
-    return null
-  const from = new Date(reportFrom)
-  const through = new Date(reportThrough)
+  const open = Boolean(
+    reportAccountId && reportFrom && reportThrough && reportSnapshot,
+  )
+  const close = () =>
+    void setParams({
+      reportAccountId: null,
+      reportFrom: null,
+      reportThrough: null,
+      reportSnapshot: null,
+    })
+  const from = reportFrom ? new Date(reportFrom) : null
+  const through = reportThrough ? new Date(reportThrough) : null
+  // Viewing one account's entries is a record view: a URL right sheet.
   return (
-    <section ref={region} className="grid gap-4 border border-border p-4">
-      <div className="flex flex-wrap justify-between gap-3">
-        <h2 className="font-medium">Report account entries</h2>
-        <Button
-          variant="outline"
-          onClick={() =>
-            void setParams({
-              reportAccountId: null,
-              reportFrom: null,
-              reportThrough: null,
-              reportSnapshot: null,
-            })
-          }
-        >
-          Close account entries
-        </Button>
-      </div>
-      {!Number.isFinite(from.getTime()) ||
-      !Number.isFinite(through.getTime()) ||
-      !/^\d{1,19}$/.test(reportSnapshot) ? (
-        <FormFeedback appearance="dashboard">
-          This account link is out of date. Open it again from the report.
-        </FormFeedback>
-      ) : (
-        <LedgerRows
-          key={`${book.id}:${reportAccountId}:${reportFrom}:${reportThrough}:${reportSnapshot}`}
-          book={book}
-          accountId={reportAccountId}
-          from={from}
-          through={through}
-          snapshot={reportSnapshot}
-        />
-      )}
-    </section>
+    <Sheet
+      open={open}
+      onOpenChange={(next) => {
+        if (!next) close()
+      }}
+    >
+      {open && reportAccountId && reportSnapshot ? (
+        <SheetFrame title="Account entries">
+          {!from ||
+          !through ||
+          !Number.isFinite(from.getTime()) ||
+          !Number.isFinite(through.getTime()) ||
+          !/^\d{1,19}$/.test(reportSnapshot) ? (
+            <FormFeedback appearance="dashboard">
+              This account link is out of date. Open it again from the report.
+            </FormFeedback>
+          ) : (
+            <LedgerRows
+              key={`${book.id}:${reportAccountId}:${reportFrom}:${reportThrough}:${reportSnapshot}`}
+              book={book}
+              accountId={reportAccountId}
+              from={from}
+              through={through}
+              snapshot={reportSnapshot}
+            />
+          )}
+        </SheetFrame>
+      ) : null}
+    </Sheet>
   )
 }
 function LedgerRows({
@@ -140,23 +139,32 @@ function LedgerRows({
   const entries = query.data.pages.flatMap((page) => page.items)
   const money = (value: string) => formatFinanceMoney(value, book.currencyCode)
   return (
-    <>
-      <h3 className="font-medium">{first.account.name}</h3>
+    <div className="grid gap-4">
+      <div className="grid gap-1">
+        <h3 className="font-semibold">{first.account.name}</h3>
+        <p className="text-sm text-muted-foreground">
+          {formatFinanceDate(from)} to {formatFinanceDate(through)}
+        </p>
+      </div>
+      <dl data-summary-grid className="grid grid-cols-2 gap-2">
+        {[
+          ["Start", first.openingBalanceMinor],
+          ["End", first.closingBalanceMinor],
+          ["Debits", first.debitMinor],
+          ["Credits", first.creditMinor],
+        ].map(([label, value]) => (
+          <div
+            key={label}
+            className="grid gap-1 rounded-[var(--ui-radius-item)] border border-border p-3"
+          >
+            <dt className="text-sm text-muted-foreground">{label}</dt>
+            <dd className="font-semibold tabular-nums">
+              {money(value ?? "0")}
+            </dd>
+          </div>
+        ))}
+      </dl>
       <FinanceReportLedgerExport bookId={book.id} ledger={first} />
-      <p className="text-xs text-muted-foreground">
-        Only money recorded in Finance. Debit and credit are the two sides
-        accountants use for every entry.
-      </p>
-      <p className="text-sm text-muted-foreground">
-        {formatFinanceDate(from)} to {formatFinanceDate(through)}. A positive
-        balance is on this account’s usual {first.normalSide.toLowerCase()}{" "}
-        side.
-      </p>
-      <p className="text-sm">
-        Opening {money(first.openingBalanceMinor)} · Debits{" "}
-        {money(first.debitMinor)} · Credits {money(first.creditMinor)} · Closing{" "}
-        {money(first.closingBalanceMinor)}
-      </p>
       {!entries.length ? (
         <p>No entries in this period.</p>
       ) : (
@@ -171,7 +179,7 @@ function LedgerRows({
                 Debit {money(entry.debitMinor)} · Credit{" "}
                 {money(entry.creditMinor)} · Balance {money(entry.balanceMinor)}
               </p>
-              <p className="break-all text-xs text-muted-foreground">
+              <p className="break-all text-sm text-muted-foreground">
                 {financeSourceLabel(entry.sourceKind)}
               </p>
               {entry.reversalOfId ? (
@@ -205,6 +213,6 @@ function LedgerRows({
           {query.isFetchingNextPage ? "Loading…" : "Load more entries"}
         </Button>
       ) : null}
-    </>
+    </div>
   )
 }

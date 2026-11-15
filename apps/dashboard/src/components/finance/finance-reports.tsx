@@ -1,18 +1,14 @@
 "use client"
-import { DateRangeControl } from "@/components/date-range-control"
 import { FormFeedback } from "@/components/forms/form-feedback"
+import { ReportDateControl } from "@/components/reports/report-date-control"
 import { ReportError } from "@/components/reports/report-error"
 import {
-  ReportSection,
-  ReportSectionSkeleton,
-} from "@/components/reports/report-section"
-import {
-  InlineRowCheckbox,
-  InlineSelectAllCheckbox,
-  InlineSelectionStatus,
-  useInlineSelection,
-} from "@/components/tables/core"
+  ReportHeadlineStrip,
+  ReportHeadlineStripSkeleton,
+} from "@/components/reports/report-headline-strip"
+import { ReportSection } from "@/components/reports/report-section"
 import { useFinanceRangeParams } from "@/hooks/use-finance-range-params"
+import type { ReportRange } from "@/lib/report-range"
 import { useTRPC } from "@/trpc/client"
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
 import {
@@ -27,7 +23,8 @@ import {
 } from "@ewatrade/ui"
 import { formatFinanceMoney } from "@ewatrade/utils/finance-money"
 import { useQuery } from "@tanstack/react-query"
-import { useMemo, useState } from "react"
+import { type ReactNode, useState } from "react"
+import { formatFinanceDate } from "./format-date"
 import { FinancePeriodHistory } from "./period-history"
 import {
   FinanceReportAccountLedger,
@@ -37,43 +34,47 @@ import { FinanceReportExport } from "./report-export"
 import type { FinanceBook } from "./types"
 import { FinanceYearEnd } from "./year-end-section"
 
+const DAY_MS = 86_400_000
+
+/** Inclusive Finance dates as a Reports period (exclusive end) and back. */
+function financeRange(from: string, through: string): ReportRange {
+  return {
+    from: new Date(`${from}T00:00:00.000Z`),
+    to: new Date(new Date(`${through}T00:00:00.000Z`).getTime() + DAY_MS),
+  }
+}
+
 export function FinanceReports({ book }: { book: FinanceBook }) {
   const start = new Date(book.startsAt).toISOString().slice(0, 10)
   const { from, through, setRange } = useFinanceRangeParams({ minimum: start })
   const [revision, setRevision] = useState(0)
   return (
-    <section className="grid gap-6">
-      <div className="border border-border bg-background p-6">
-        <h2 className="font-medium">Not your full profit yet</h2>
-        <p className="mt-2 text-sm text-muted-foreground">
-          These reports include only entries posted in Finance. Sales, Customer,
-          stock and opening records may be incomplete, so the totals aren't your
-          full profit.
-        </p>
-      </div>
-      <div className="grid gap-2">
-        <DateRangeControl
-          label="Report date range"
-          start={from}
-          end={through}
-          min={start}
-          onApply={(range) => {
-            void setRange(range).then(() => setRevision((value) => value + 1))
-          }}
-        />
-        <p className="text-xs text-muted-foreground">
-          Days run midnight to midnight UTC (1 am in Lagos).
-        </p>
-      </div>
-      <FinancePeriodHistory book={book} />
-      <FinanceYearEnd book={book} />
-      <FinanceReportAccountLedger book={book} />
+    <section className="grid min-w-0 gap-5">
       <ReportResults
         key={`${book.id}:${from}:${through}:${revision}`}
         book={book}
         from={from}
         through={through}
+        period={
+          <ReportDateControl
+            range={financeRange(from, through)}
+            onChange={(range) => {
+              // Nothing before the book starts; the last day is inclusive here.
+              const first = range.from.toISOString().slice(0, 10)
+              const last = new Date(range.to.getTime() - DAY_MS)
+                .toISOString()
+                .slice(0, 10)
+              void setRange({
+                start: first < start ? start : first,
+                end: last < start ? start : last,
+              }).then(() => setRevision((value) => value + 1))
+            }}
+          />
+        }
       />
+      <FinanceReportAccountLedger book={book} />
+      <FinancePeriodHistory book={book} />
+      <FinanceYearEnd book={book} />
     </section>
   )
 }
@@ -82,7 +83,13 @@ function ReportResults({
   book,
   from,
   through,
-}: { book: FinanceBook; from: string; through: string }) {
+  period,
+}: {
+  book: FinanceBook
+  from: string
+  through: string
+  period: ReactNode
+}) {
   const trpc = useTRPC()
   const query = useQuery(
     trpc.finance.reports.queryOptions(
@@ -94,26 +101,75 @@ function ReportResults({
       { staleTime: 0, refetchOnWindowFocus: false },
     ),
   )
+  const toolbar = (actions: ReactNode) => (
+    <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      {period}
+      {actions}
+    </div>
+  )
   if (query.isPending)
-    return <ReportSectionSkeleton count={4} title="Reports" />
+    return (
+      <>
+        {toolbar(null)}
+        <ReportHeadlineStripSkeleton count={4} />
+      </>
+    )
   if (query.isError)
     return (
-      <ReportError error={query.error} retry={() => void query.refetch()} />
+      <>
+        {toolbar(null)}
+        <ReportError error={query.error} retry={() => void query.refetch()} />
+      </>
     )
   const report = query.data
   const money = (value: string) => formatFinanceMoney(value, book.currencyCode)
   const profit = report.profitAndLoss
   const orders = report.orderCollections
+  const negative = (value: string) => value.startsWith("-")
   return (
-    <div className="grid gap-8">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-4">
-        <h2 className="font-medium">Totals for these dates</h2>
-        <FinanceReportExport report={report} />
-      </div>
-      <p className="text-xs text-muted-foreground">
-        {from} to {through} · {book.currencyCode}
+    <div className="grid min-w-0 gap-5">
+      {toolbar(<FinanceReportExport report={report} />)}
+      <ReportHeadlineStrip
+        label="Totals for these dates"
+        items={[
+          {
+            label: "Sales",
+            money: true,
+            muted: profit.revenueMinor === "0",
+            value: money(profit.revenueMinor),
+          },
+          {
+            label: "Expenses",
+            money: true,
+            muted: profit.expensesMinor === "0",
+            value: money(profit.expensesMinor),
+          },
+          {
+            label: "Profit",
+            money: true,
+            muted: profit.netProfitMinor === "0",
+            value: (
+              <span
+                className={
+                  negative(profit.netProfitMinor) ? "text-destructive" : ""
+                }
+              >
+                {money(profit.netProfitMinor)}
+              </span>
+            ),
+          },
+          {
+            label: "Money at the end",
+            money: true,
+            value: money(report.cashFlow.closingMinor),
+          },
+        ]}
+      />
+      <p className="text-sm text-muted-foreground">
+        Counts only what's recorded in Finance, so it may not be your full
+        profit.
       </p>
-      <ReportSection title="Profit and loss" description="Did you make money?">
+      <ReportSection title="Profit and loss">
         <dl className="grid gap-3">
           {[
             { label: "Sales", amount: profit.revenueMinor },
@@ -173,12 +229,6 @@ function ReportResults({
         </Disclosure>
       </ReportSection>
       <ReportSection title="Money in and out">
-        <p className="text-sm text-muted-foreground">
-          Money still on its way isn't counted. Moves between your own accounts
-          cancel out; moves to or from money on its way show separately.
-          Expenses the owner paid from their own pocket don't change business
-          money.
-        </p>
         <dl className="grid gap-3">
           {[
             {
@@ -232,13 +282,9 @@ function ReportResults({
           </FormFeedback>
         ) : null}
       </ReportSection>
-      <ReportSection title={<>What you own and owe on {through}</>}>
-        <p className="text-sm text-muted-foreground">
-          What you own, what you owe and the owner's money add up everything
-          recorded up to this date. Profit not yet closed counts all income and
-          expenses up to this date, whatever start date you picked for the
-          profit report.
-        </p>
+      <ReportSection
+        title={<>What you own and owe on {formatFinanceDate(report.through)}</>}
+      >
         {[
           {
             title: "What you own",
@@ -316,17 +362,8 @@ function ReportResults({
         ) : null}
       </ReportSection>
       <ReportSection
-        title={
-          <>
-            Account totals for your accountant (trial balance) as of {through}
-          </>
-        }
+        title={<>Account totals on {formatFinanceDate(report.through)}</>}
       >
-        <p className="text-sm text-muted-foreground">
-          Everything recorded from your start date up to this date. When the two
-          sides match, your records add up. That doesn't mean nothing is
-          missing.
-        </p>
         {!report.trialBalance.balanced ? (
           <FormFeedback appearance="dashboard">
             Your records don't add up by{" "}
@@ -334,7 +371,9 @@ function ReportResults({
             relying on these reports.
           </FormFeedback>
         ) : null}
-        <TrialBalanceTable report={report} money={money} />
+        <Disclosure title={<>For your accountant (trial balance)</>}>
+          <TrialBalanceTable report={report} money={money} />
+        </Disclosure>
       </ReportSection>
     </div>
   )
@@ -342,7 +381,7 @@ function ReportResults({
 
 type FinanceReport = RouterOutputs["finance"]["reports"]
 
-/** Account rows are selectable; the Total footer remains a report summary. */
+/** Every account's closing debit and credit, with the total. */
 function TrialBalanceTable({
   report,
   money,
@@ -350,98 +389,65 @@ function TrialBalanceTable({
   report: FinanceReport
   money: (value: string) => string
 }) {
-  const accountIds = useMemo(
-    () => report.trialBalance.accounts.map((account) => account.accountId),
-    [report.trialBalance.accounts],
-  )
-  const selection = useInlineSelection({
-    ids: accountIds,
-    scope: `${report.snapshotSequence}:${report.through}`,
-  })
   return (
-    <>
-      <InlineSelectionStatus
-        selection={selection}
-        note="The CSV export includes every account"
-      />
-      <section
-        className="overflow-x-auto"
-        // biome-ignore lint/a11y/noNoninteractiveTabindex: Keyboard users must be able to scroll the report table.
-        tabIndex={0}
-        aria-label="Account totals table"
-      >
-        <Table className="w-full min-w-[600px] text-sm">
-          <TableHeader>
-            <TableRow className="border-b border-border">
-              <TableHead scope="col" className="w-10 p-3">
-                <InlineSelectAllCheckbox
-                  selection={selection}
-                  label="Select all accounts"
+    <section
+      className="mt-3 overflow-x-auto"
+      // biome-ignore lint/a11y/noNoninteractiveTabindex: Keyboard users must be able to scroll the report table.
+      tabIndex={0}
+      aria-label="Account totals table"
+    >
+      <Table className="w-full min-w-[560px] text-sm">
+        <TableHeader>
+          <TableRow className="border-b border-border">
+            <TableHead scope="col" className="p-3 text-left">
+              Account
+            </TableHead>
+            <TableHead scope="col" className="p-3 text-right">
+              Debit
+            </TableHead>
+            <TableHead scope="col" className="p-3 text-right">
+              Credit
+            </TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {report.trialBalance.accounts.map((account) => (
+            <TableRow
+              key={account.accountId}
+              className="border-b border-border"
+            >
+              <TableCell className="p-3">
+                <ReportAccountLink
+                  accountId={account.accountId}
+                  label={`${account.code} · ${account.name}`}
+                  from={report.bookkeepingStartsAt}
+                  through={report.through}
+                  snapshot={report.snapshotSequence}
                 />
-              </TableHead>
-              <TableHead scope="col" className="p-3 text-left">
-                Account
-              </TableHead>
-              <TableHead scope="col" className="p-3 text-right">
-                Debit (money in or owned)
-              </TableHead>
-              <TableHead scope="col" className="p-3 text-right">
-                Credit (money out or owed)
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {report.trialBalance.accounts.map((account) => (
-              <TableRow
-                key={account.accountId}
-                className="border-b border-border"
-                data-state={
-                  selection.isSelected(account.accountId)
-                    ? "selected"
-                    : undefined
-                }
-              >
-                <TableCell className="p-3">
-                  <InlineRowCheckbox
-                    selection={selection}
-                    id={account.accountId}
-                    label={`Select ${account.code} ${account.name}`}
-                  />
-                </TableCell>
-                <TableCell className="p-3">
-                  <ReportAccountLink
-                    accountId={account.accountId}
-                    label={`${account.code} · ${account.name}`}
-                    from={report.bookkeepingStartsAt}
-                    through={report.through}
-                    snapshot={report.snapshotSequence}
-                  />
-                </TableCell>
-                <TableCell className="p-3 text-right tabular-nums">
-                  {money(account.closingDebitMinor)}
-                </TableCell>
-                <TableCell className="p-3 text-right tabular-nums">
-                  {money(account.closingCreditMinor)}
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-          <TableFooter className="bg-muted text-foreground">
-            <TableRow className="font-medium">
-              <TableCell className="p-3" />
-              <TableHead scope="row" className="p-3 text-left">
-                Total
-              </TableHead>
-              <TableCell className="p-3 text-right tabular-nums">
-                {money(report.trialBalance.debitMinor)}
               </TableCell>
               <TableCell className="p-3 text-right tabular-nums">
-                {money(report.trialBalance.creditMinor)}
+                {money(account.closingDebitMinor)}
+              </TableCell>
+              <TableCell className="p-3 text-right tabular-nums">
+                {money(account.closingCreditMinor)}
               </TableCell>
             </TableRow>
-          </TableFooter>
-        </Table>
-      </section>
-    </>
+          ))}
+        </TableBody>
+        <TableFooter className="bg-muted text-foreground">
+          <TableRow className="font-medium">
+            <TableHead scope="row" className="p-3 text-left">
+              Total
+            </TableHead>
+            <TableCell className="p-3 text-right tabular-nums">
+              {money(report.trialBalance.debitMinor)}
+            </TableCell>
+            <TableCell className="p-3 text-right tabular-nums">
+              {money(report.trialBalance.creditMinor)}
+            </TableCell>
+          </TableRow>
+        </TableFooter>
+      </Table>
+    </section>
   )
 }
