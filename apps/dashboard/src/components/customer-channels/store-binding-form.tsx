@@ -66,20 +66,8 @@ export function StoreBindingForm({
   const selected = form.watch("storeIds") ?? []
 
   return (
-    <section className="grid gap-4 rounded-none border border-primary/30 bg-primary/5 p-5">
-      <div>
-        <p className="text-xs font-medium uppercase tracking-wide text-primary">
-          Store assignments
-        </p>
-        <h2 className="font-semibold">
-          Route {connection.businessDisplayName || connection.displayNumber}
-        </h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          A central number may serve several locations, but customers must enter
-          through a Store-specific link or choose a branch before sending
-          content.
-        </p>
-      </div>
+    <section className="grid gap-4 rounded-[10px] border border-border bg-card p-4">
+      <h2 className="font-semibold">Stores that use this number</h2>
       <form onSubmit={form.handleSubmit(onSubmit)}>
         <FieldGroup className="min-w-0 grid gap-3">
           <input type="hidden" {...form.register("connectionId")} />
@@ -113,7 +101,7 @@ export function StoreBindingForm({
               disabled={isPending}
               type="submit"
             >
-              {isPending ? "Saving…" : "Save Store assignments"}
+              {isPending ? "Saving…" : "Save"}
             </SubmitButton>
             <Button onClick={onCancel} type="button" variant="outline">
               Cancel
