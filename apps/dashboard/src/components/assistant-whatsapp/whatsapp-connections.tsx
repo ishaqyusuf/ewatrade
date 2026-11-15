@@ -162,13 +162,11 @@ export function WhatsAppConnections({ actorUserId }: { actorUserId: string }) {
       aria-labelledby="whatsapp-connections-title"
     >
       <div>
-        <h2 id="whatsapp-connections-title" className="font-medium">
+        <h2 id="whatsapp-connections-title" className="text-lg font-semibold">
           Your WhatsApp access
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Remove access here even if you no longer have access to a business or
-          Store. To reconnect, choose that business and Store in EwaTrade, then
-          create a new link above.
+          You can remove access at any time.
         </p>
       </div>
       {connections.isPending ? (
@@ -178,7 +176,7 @@ export function WhatsAppConnections({ actorUserId }: { actorUserId: string }) {
         <div className="grid justify-items-start gap-2">
           <p role="alert" className="text-sm">
             {needsAccountSession
-              ? "Sign in with your own account to manage WhatsApp access. Demo and restricted sessions cannot manage personal connections."
+              ? "Sign in with your own account to manage WhatsApp access."
               : "Could not load your connections."}
           </p>
           {!needsAccountSession ? (
@@ -222,7 +220,7 @@ export function WhatsAppConnections({ actorUserId }: { actorUserId: string }) {
         )
       ) : null}
       {fresh && !rows.length ? (
-        <p className="border p-5 text-sm text-muted-foreground">
+        <p className="rounded-[var(--ui-radius-surface)] border border-border bg-card p-5 text-muted-foreground">
           You have no WhatsApp assistant connections.
         </p>
       ) : null}

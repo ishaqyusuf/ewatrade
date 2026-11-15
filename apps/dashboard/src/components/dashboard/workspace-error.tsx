@@ -5,12 +5,17 @@ import { useEffect } from "react"
 
 type ErrorProps = { error: unknown; retry: () => void }
 
+/**
+ * The shell's error state (route error.tsx, sheets, modals, page sections):
+ * a short title, one line, and Try again.
+ */
 export function WorkspaceError({
   error,
   retry,
-  title = "Something went wrong",
+  title = "Couldn’t load this",
+  detail = "Check your connection and try again.",
   className = "min-h-64",
-}: ErrorProps & { title?: string; className?: string }) {
+}: ErrorProps & { title?: string; detail?: string; className?: string }) {
   useEffect(() => {
     if (process.env.NODE_ENV !== "production") {
       console.error(
@@ -24,12 +29,13 @@ export function WorkspaceError({
   return (
     <div
       role="alert"
-      className={`flex flex-col items-center justify-center space-y-4 ${className}`}
+      className={`flex flex-col items-center justify-center gap-4 px-4 text-center ${className}`}
     >
-      <h2 className="text-base">{title}</h2>
-      <Button variant="outline" onClick={retry}>
-        Try again
-      </Button>
+      <div className="grid gap-1">
+        <h2 className="text-lg font-semibold">{title}</h2>
+        {detail ? <p className="text-muted-foreground">{detail}</p> : null}
+      </div>
+      <Button onClick={retry}>Try again</Button>
     </div>
   )
 }

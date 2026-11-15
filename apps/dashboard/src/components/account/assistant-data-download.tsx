@@ -92,17 +92,16 @@ export function AssistantDataDownload() {
   }
 
   return (
-    <section className="grid gap-4 border p-5">
-      <div className="grid gap-2">
-        <h2 className="font-medium">Download your assistant data</h2>
-        <p className="text-sm text-muted-foreground">
-          Download your private General, Setup and Product chats, drafts and
-          retained original files from EwaTrade and WhatsApp. Shared business
-          records are excluded. The download lists expired or unavailable files
-          explicitly.
-        </p>
-      </div>
-      <Button className="w-fit" disabled={busy} onClick={() => void download()}>
+    <section className="grid gap-4 rounded-[var(--ui-radius-surface)] border border-border bg-card p-5">
+      <p className="text-muted-foreground">
+        Your private chats, drafts and files from EwaTrade and WhatsApp. Shared
+        business records aren’t included.
+      </p>
+      <Button
+        className="w-full sm:w-fit"
+        disabled={busy}
+        onClick={() => void download()}
+      >
         {busy ? "Preparing download…" : "Download assistant data"}
       </Button>
       {error ? (

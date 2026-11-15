@@ -1,10 +1,8 @@
+import { AccountLink, AccountPage } from "@/components/account/account-page"
 import { ConnectTelegram } from "@/components/assistant-telegram/connect-telegram"
 import { TelegramConnections } from "@/components/assistant-telegram/telegram-connections"
-import { SignOut } from "@/components/dashboard/sign-out"
-import { PageHeader } from "@/components/page-header"
 import { getServerSession } from "@/lib/session"
 import { getActiveTenant } from "@/lib/tenant"
-import Link from "next/link"
 import { redirect } from "next/navigation"
 
 export const metadata = { title: "Telegram assistant | EwaTrade" }
@@ -17,18 +15,17 @@ export default async function TelegramAssistantAccountPage() {
   const sessionKey = `${session.user.id}:${session.sessionId}`
 
   return (
-    <main className="mx-auto grid w-full max-w-2xl gap-8 px-4 py-8">
-      <div className="flex items-center justify-between gap-4">
-        <Link href="/" className="text-sm underline">
-          Back to EwaTrade
-        </Link>
-        <SignOut appearance="button" />
-      </div>
-      <PageHeader
-        eyebrow="Your account"
-        title="Telegram assistant"
-        description="Connect Telegram to your EwaTrade assistant and manage its business access."
-      />
+    <AccountPage
+      title="Telegram assistant"
+      links={
+        <>
+          <AccountLink href="/">Back to EwaTrade</AccountLink>
+          <AccountLink href="/account/assistant-data">
+            Download your assistant data
+          </AccountLink>
+        </>
+      }
+    >
       {context && store ? (
         <ConnectTelegram
           key={`${sessionKey}:${context.tenant.id}:${store.id}`}
@@ -41,15 +38,11 @@ export default async function TelegramAssistantAccountPage() {
           }}
         />
       ) : (
-        <p className="border p-5 text-sm text-muted-foreground">
-          Choose an accessible business and Store in EwaTrade to connect
-          Telegram.
+        <p className="rounded-[var(--ui-radius-surface)] border border-border bg-card p-5 text-muted-foreground">
+          Choose a business in EwaTrade to connect Telegram.
         </p>
       )}
       <TelegramConnections key={sessionKey} actorUserId={session.user.id} />
-      <Link href="/account/assistant-data" className="text-sm underline">
-        Download your assistant data
-      </Link>
-    </main>
+    </AccountPage>
   )
 }

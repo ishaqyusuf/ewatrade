@@ -203,20 +203,19 @@ export function ConnectWhatsApp({ scope }: { scope: WhatsAppConnectScope }) {
 
   return (
     <section
-      className="grid gap-4 border p-5"
+      className="grid gap-4 rounded-[var(--ui-radius-surface)] border border-border bg-card p-5"
       aria-labelledby="whatsapp-connect-title"
     >
       <div>
-        <h2 id="whatsapp-connect-title" className="font-medium">
+        <h2 id="whatsapp-connect-title" className="text-lg font-semibold">
           Connect your WhatsApp
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
           {scope.businessName} · {scope.storeName}
         </p>
         <p className="mt-2 text-sm text-muted-foreground">
-          Use your EwaTrade assistant from WhatsApp. You will send a prefilled
-          message to EwaTrade, then approve the number here. Access follows your
-          current business permissions.
+          Send a short message to EwaTrade in WhatsApp, then approve your number
+          here.
         </p>
       </div>
       {context.isPending || (available.isPending && contextMatches) ? (
@@ -245,8 +244,7 @@ export function ConnectWhatsApp({ scope }: { scope: WhatsAppConnectScope }) {
       ) : null}
       {contextMatches && available.isSuccess && !available.data.enabled ? (
         <p className="text-sm text-muted-foreground">
-          WhatsApp assistant is not available for this account yet. You can
-          still remove existing access below.
+          The WhatsApp assistant isn’t on for this account yet.
         </p>
       ) : null}
       {enabled && connected ? (

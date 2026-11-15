@@ -28,26 +28,7 @@ export function AuthShell({
   return (
     <div className="flex min-h-svh flex-col bg-[var(--canvas)] text-foreground">
       <header className="flex h-16 shrink-0 items-center px-4 md:px-6">
-        <Link
-          href={brandHref}
-          aria-label="EwaTrade home"
-          className="inline-flex rounded-[var(--ui-radius-item)]"
-        >
-          <img
-            src="/brand/ewatrade-logo-precision-rise-v1-mono.svg"
-            alt="ẸwáTrade"
-            width={128}
-            height={28}
-            className="block h-7 w-auto dark:hidden"
-          />
-          <img
-            src="/brand/ewatrade-logo-precision-rise-v1-reverse.svg"
-            alt="ẸwáTrade"
-            width={128}
-            height={28}
-            className="hidden h-7 w-auto dark:block"
-          />
-        </Link>
+        <PublicBrand href={brandHref} />
       </header>
       <main className="flex flex-1 justify-center px-4 pb-12 pt-4 sm:items-center sm:pb-24 sm:pt-0">
         <div
@@ -74,6 +55,38 @@ export function AuthShell({
         </div>
       </main>
     </div>
+  )
+}
+
+/** The logo link at the top of every public page. */
+export function PublicBrand({
+  href = "/",
+  label = "EwaTrade home",
+}: {
+  href?: string
+  label?: string
+}) {
+  return (
+    <Link
+      href={href}
+      aria-label={label}
+      className="inline-flex rounded-[var(--ui-radius-item)]"
+    >
+      <img
+        src="/brand/ewatrade-logo-precision-rise-v1-mono.svg"
+        alt="ẸwáTrade"
+        width={128}
+        height={28}
+        className="block h-7 w-auto dark:hidden"
+      />
+      <img
+        src="/brand/ewatrade-logo-precision-rise-v1-reverse.svg"
+        alt="ẸwáTrade"
+        width={128}
+        height={28}
+        className="hidden h-7 w-auto dark:block"
+      />
+    </Link>
   )
 }
 

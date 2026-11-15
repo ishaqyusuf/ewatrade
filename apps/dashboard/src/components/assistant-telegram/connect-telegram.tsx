@@ -265,23 +265,19 @@ export function ConnectTelegram({ scope }: { scope: TelegramConnectScope }) {
 
   return (
     <section
-      className="grid gap-4 border p-5"
+      className="grid gap-4 rounded-[var(--ui-radius-surface)] border border-border bg-card p-5"
       aria-labelledby="telegram-connect-title"
     >
       <div>
-        <h2 id="telegram-connect-title" className="font-medium">
+        <h2 id="telegram-connect-title" className="text-lg font-semibold">
           Connect your Telegram
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
           {scope.businessName} · {scope.storeName}
         </p>
         <p className="mt-2 text-sm text-muted-foreground">
-          Open the EwaTrade bot in Telegram, tap Start, then return here to
-          confirm your Telegram account.
-        </p>
-        <p className="mt-2 text-sm text-muted-foreground">
-          To switch businesses or Stores, make the selection in EwaTrade and
-          connect again.
+          Open the EwaTrade bot in Telegram, tap Start, then come back here to
+          confirm.
         </p>
       </div>
       {context.isPending || (matches && availability.isPending) ? (

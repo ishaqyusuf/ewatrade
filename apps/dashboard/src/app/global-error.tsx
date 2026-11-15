@@ -1,9 +1,13 @@
 "use client"
 
+import "@ewatrade/ui/globals.css"
+import "@/styles/dashboard.css"
+import { AuthShell } from "@/components/auth/auth-shell"
 import { captureDashboardError } from "@/observability/sentry"
 import { Button } from "@ewatrade/ui"
 import { useEffect } from "react"
 
+/** Replaces the root layout when it fails, so it brings its own styles. */
 export default function GlobalError({
   error,
   reset,
@@ -16,18 +20,16 @@ export default function GlobalError({
   }, [error])
 
   return (
-    <html lang="en">
-      <body className="flex min-h-screen items-center justify-center bg-background px-6 text-foreground">
-        <main className="max-w-md space-y-4 text-center">
-          <h1 className="text-2xl font-semibold">Workspace unavailable</h1>
-          <p className="text-muted-foreground">
-            We couldn&apos;t load this EwaTrade workspace. If you just completed
-            an action, check its current status before repeating it.
-          </p>
-          <Button type="button" onClick={reset}>
+    <html lang="en" className="ewatrade-dashboard">
+      <body className="bg-background font-sans antialiased">
+        <AuthShell
+          title="Something went wrong"
+          description="If you just saved something, check it before trying again."
+        >
+          <Button className="w-full" onClick={reset}>
             Try again
           </Button>
-        </main>
+        </AuthShell>
       </body>
     </html>
   )

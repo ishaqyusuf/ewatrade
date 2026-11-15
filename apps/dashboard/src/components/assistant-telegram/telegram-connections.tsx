@@ -69,12 +69,11 @@ export function TelegramConnections({ actorUserId }: { actorUserId: string }) {
       aria-labelledby="telegram-connections-title"
     >
       <div>
-        <h2 id="telegram-connections-title" className="font-medium">
+        <h2 id="telegram-connections-title" className="text-lg font-semibold">
           Your Telegram access
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          You can remove a connection even after you lose access to its business
-          or Store.
+          You can remove access at any time.
         </p>
       </div>
       {connections.isPending && !connections.isPaused ? (
@@ -95,7 +94,7 @@ export function TelegramConnections({ actorUserId }: { actorUserId: string }) {
         </div>
       ) : null}
       {fresh && rows.length === 0 ? (
-        <p className="border p-5 text-sm text-muted-foreground">
+        <p className="rounded-[var(--ui-radius-surface)] border border-border bg-card p-5 text-muted-foreground">
           You have no Telegram assistant connections.
         </p>
       ) : null}
