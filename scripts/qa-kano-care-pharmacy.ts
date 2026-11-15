@@ -8,11 +8,15 @@ import { loadRootEnvironment } from "./environment-profile.mjs"
 
 // Deliberately specific: synthetic local walkthrough fixture for the Kano Care
 // demo pharmacy, not a pharmacy, licence or release approval. Mirrors
-// qa-freshcare-service-commerce.ts. Usage: bun scripts/qa-kano-care-pharmacy.ts [--apply]
+// qa-freshcare-service-commerce.ts.
+// Usage: bun scripts/qa-kano-care-pharmacy.ts [--apply] [--member]
+//   --apply   synthetic pharmacy policy decisions for 24h
+//   --member  a QA cashier member with no pharmacy role (role checks)
 const storeId = "cmuzed8be0007bw9kqpeqb95e"
 const tenantSlug = "video-20261008-video-v1-web-pharmacy-qa"
 const email = "video.20261008-video-v1.web.pharmacy@ishaq.qa.test"
 const reference = "local-qa-only:KanoCarePharmacy:2026-11-15"
+const memberEmail = "kano-care-cashier-20261115@ishaq.qa.test"
 // The scopes setPrescriptionStoreActivation checks for a pickup-only Store.
 const scopes = [
   ["web", "web"],
@@ -102,6 +106,50 @@ try {
       existingDecisions: decisions.length,
     }),
   )
+  if (process.argv.includes("--member")) {
+    const user = await prisma.user.upsert({
+      where: { email: memberEmail },
+      update: { ageBand: "ADULT", ageDeclaredAt: new Date() },
+      create: {
+        ageBand: "ADULT",
+        ageDeclaredAt: new Date(),
+        email: memberEmail,
+        name: "Kano Care QA Cashier",
+        displayName: "Kano Care QA Cashier",
+        metadata: { qaFixture: reference },
+      },
+      select: { id: true },
+    })
+    const existing = await prisma.membership.findFirst({
+      where: { tenantId: store.tenantId, userId: user.id },
+      select: { id: true, role: true },
+    })
+    assert(
+      !existing || existing.role === "CASHIER",
+      "Refusing to change an existing non-cashier membership",
+    )
+    if (!existing)
+      await prisma.membership.create({
+        data: {
+          tenantId: store.tenantId,
+          userId: user.id,
+          role: "CASHIER",
+          status: "ACTIVE",
+          invitedById: owner.userId,
+          invitedAt: new Date(),
+          acceptedAt: new Date(),
+        },
+      })
+    console.info(
+      JSON.stringify({
+        member: memberEmail,
+        role: "CASHIER",
+        pharmacyRole: null,
+        created: !existing,
+        syntheticOnly: true,
+      }),
+    )
+  }
   if (process.argv.includes("--apply")) {
     const effectiveAt = new Date()
     const expiresAt = new Date(effectiveAt.getTime() + 24 * 60 * 60 * 1000)
@@ -135,7 +183,11 @@ try {
       })
     }
     console.info(
-      JSON.stringify({ applied: scopes.length, expiresAt, syntheticOnly: true }),
+      JSON.stringify({
+        applied: scopes.length,
+        expiresAt,
+        syntheticOnly: true,
+      }),
     )
   }
 } finally {
