@@ -11,6 +11,7 @@ import {
   SparklesIcon,
   Store04Icon,
   UserCircle02Icon,
+  Wrench01Icon,
 } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 
@@ -24,6 +25,7 @@ const NAV_ICONS = {
   inventory: Archive01Icon,
   products: Package01Icon,
   prescriptions: Store04Icon,
+  qa: Wrench01Icon,
   sales: ShoppingCart01Icon,
   services: Store04Icon,
   settings: Settings01Icon,

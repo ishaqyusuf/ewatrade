@@ -25,6 +25,7 @@ export type DashboardNavIcon =
   | "inventory"
   | "products"
   | "prescriptions"
+  | "qa"
   | "sales"
   | "services"
   | "settings"
@@ -454,7 +455,8 @@ const DASHBOARD_NAV: DashboardNavDefinition[] = [
   {
     description: "Platform quality assurance tools",
     href: "/platform/qa-maintenance",
-    icon: "settings",
+    // Its own icon, so platform staff don't see two Settings gears.
+    icon: "qa",
     label: "QA maintenance",
     canAccess: (_role, context) => context.isPlatformAdmin === true,
     isVisible: (context) => context.qaMaintenanceAvailable === true,
