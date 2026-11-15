@@ -29,12 +29,16 @@ export default async function ConversationsPage({
   if (!activeStore) redirect("/setup")
 
   const params = await loadStoreConversationParams(searchParams)
-  // The top bar store picker chooses the inbox's store.
-  const selectedStore = activeStore.id
+  // The top bar store picker chooses the inbox's store; the chat sheet may
+  // name another of the user's stores (`?store=`), as the sheet itself does.
   const input = getStoreConversationQueueInput(
-    { ...params, store: selectedStore },
+    { ...params, store: activeStore.id },
     activeStore.id,
   )
+  const sheetStore =
+    params.store && ctx.stores.some((store) => store.id === params.store)
+      ? params.store
+      : activeStore.id
   void prefetch(
     trpc.serviceCommerce.storeConversationQueue.queryOptions(input, {
       retry: false,
@@ -45,7 +49,7 @@ export default async function ConversationsPage({
       trpc.serviceCommerce.storeConversationTimeline.queryOptions({
         conversationId: params.conversationId,
         limit: 50,
-        storeId: selectedStore,
+        storeId: sheetStore,
       }),
     ).catch(() => undefined)
   }

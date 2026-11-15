@@ -167,6 +167,8 @@ const routes = [
         }),
       }),
     2,
+    // The inbox follows the top bar store; the chat reads the linked store.
+    { "serviceCommerce.storeConversationQueue": "store-a" },
   ],
   ["Order", () => Order({ params: Promise.resolve({ orderId: "order" }) }), 3],
 ] as const
@@ -189,7 +191,7 @@ afterEach(() => {
   client.clear()
 })
 
-for (const [name, render, count] of routes) {
+for (const [name, render, count, storeByPath] of routes) {
   test(`${name} returns its loading owner while all presentation reads remain pending`, async () => {
     let rendered = false
     const rendering = render().then(() => {
@@ -205,7 +207,10 @@ for (const [name, render, count] of routes) {
           typeof read.input === "object" &&
           "storeId" in read.input
         )
-          expect(read.input.storeId).toBe("store-b")
+          expect(read.input.storeId).toBe(
+            (storeByPath as Record<string, string> | undefined)?.[read.path] ??
+              "store-b",
+          )
       }
     } finally {
       release()
