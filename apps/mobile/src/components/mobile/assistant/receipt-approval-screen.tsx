@@ -317,7 +317,11 @@ export function ReceiptApprovalScreen({ id }: { id: string | undefined }) {
           </View>
         </View>
         <ActionButton
-          variant="destructive"
+          className={
+            locked ? undefined : "bg-destructive active:bg-destructive/90"
+          }
+          foregroundColor={colors.destructiveForeground}
+          labelClassName={locked ? undefined : "text-destructive-foreground"}
           disabled={locked}
           isLoading={busy === "decline"}
           onPress={() => void decide("decline")}
