@@ -49,7 +49,7 @@ export const ADOPTION_CTA = {
   assistantChannel: "/account/whatsapp",
   sitePublish: "/storefront",
   domains: "/settings/domains",
-  moneyAccounts: "/finance/accounts?financeSheet=account",
+  moneyAccounts: "/finance/accounts",
   staffInvite: "/staff?staffSheet=invite",
   reports: "/analytics",
   home: "/",

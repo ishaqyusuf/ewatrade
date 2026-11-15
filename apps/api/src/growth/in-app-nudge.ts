@@ -49,7 +49,7 @@ const NUDGE_COPY: Record<string, NudgeCopy> = {
     title: "Keep cash and bank apart",
     body: "Add your bank account next to cash so each sale's money lands in the right place.",
     ctaLabel: "Add an account",
-    ctaPath: "/finance/accounts?financeSheet=account",
+    ctaPath: "/finance/accounts",
   },
 }
 

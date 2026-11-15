@@ -243,7 +243,7 @@ describe("P06 money accounts", () => {
 
   test("fires at 10 orders with one or no money account", () => {
     expect(moneyAccountsPlay.eligible(makeContext(base))).toMatchObject({
-      ctaPath: "/finance/accounts?financeSheet=account",
+      ctaPath: "/finance/accounts",
       inAppKey: "money_accounts",
       data: { ordersTotal: 10, moneyAccounts: 1 },
     })

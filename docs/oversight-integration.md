@@ -43,6 +43,20 @@ GRANT SELECT ("inboxId", "state", "createdAt") ON "AssistantTelegramOutbox" TO o
 
 Column grants keep message content, phone/sender identifiers and payloads unreadable. `Tenant` (`id`, `dataClassification`, `qaPurgeStartedAt`) is already in the reader's scope. Until the grant is applied the endpoint returns the sanitized 503, which Oversight must show as unavailable, never as zero.
 
+## Growth (Oversight Growth page)
+
+`GET /api/oversight/v1/growth/{overview,leads,businesses/:id}` read `packages/db/src/queries/growth-metrics.ts`. Applied to Production by the database owner on 15 November 2026:
+
+```sql
+GRANT SELECT ON "BusinessGrowthSnapshot" TO oversight_reader_20261004;
+GRANT SELECT ON "GrowthFeatureIntent" TO oversight_reader_20261004;
+GRANT SELECT ("id", "tenantId", "playId", "periodKey", "variant", "channel", "status", "suppressedReason", "senderUserId", "sentAt", "deliveredAt", "clickedAt", "dismissedAt", "convertedAt", "createdAt") ON "LifecycleMessage" TO oversight_reader_20261004;
+GRANT SELECT ("planId", "environment", "status", "currentPeriodEndsAt", "createdAt", "cancelledAt") ON "OwnerBillingSubscription" TO oversight_reader_20261004;
+GRANT SELECT ("key", "monthlyPriceMinor", "currencyCode") ON "SubscriptionPlan" TO oversight_reader_20261004;
+```
+
+Snapshots and See-plans counters hold business metrics only, so they are granted whole. The ledger's `userId`, `payload` and provider ids, and the billing account and provider references, stay unreadable. `MarketingPreference` is not granted. A new column read by `growth-metrics.ts` needs its grant here first.
+
 ## QA data (Oversight QA page) — 13 November 2026
 
 `POST /api/office/qa` on the main API lists QA testers' businesses with counts and deletes one tester's QA businesses (all of them, or selected ones). Requests are signed with `OVERSIGHT_QA_KEY` (HMAC envelope, header `X-Oversight-Signature`, 60-second window); the key must be at least 32 characters and differ from the read and privacy keys. The route answers 404 on a production runtime: QA never runs in production.
