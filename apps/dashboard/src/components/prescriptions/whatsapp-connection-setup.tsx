@@ -26,49 +26,47 @@ const CONNECTION_STATUS_LABELS: Record<string, string> = {
 
 const MANUAL_FIELDS: Array<{
   autoComplete?: string
-  help: string
+  help?: string
   label: string
   name: string
   required?: boolean
   type?: string
 }> = [
   {
-    help: "The name customers see on WhatsApp.",
-    label: "Business name (optional)",
+    label: "Name customers see (optional)",
     name: "businessDisplayName",
   },
   {
-    help: "With the country code, for example +234 801 234 5678.",
+    help: "With the country code.",
     label: "WhatsApp number",
     name: "displayNumber",
     required: true,
   },
   {
-    help: "In Meta Business Suite, under WhatsApp accounts.",
+    help: "Meta Business Suite → WhatsApp accounts.",
     label: "WhatsApp Business account ID",
     name: "wabaId",
     required: true,
   },
   {
-    help: "In WhatsApp Manager, under API setup, next to your number.",
+    help: "WhatsApp Manager → API setup.",
     label: "Phone number ID",
     name: "phoneNumberId",
     required: true,
   },
   {
-    help: "Who pays Meta for messages, if not the pharmacy.",
     label: "Who pays Meta (optional)",
     name: "billingOwner",
   },
   {
-    help: "A number that has agreed to get messages from you. We send it one test message.",
-    label: "Number to send a test to",
+    help: "Someone who agreed to get one test message.",
+    label: "Test phone number",
     name: "testRecipient",
     required: true,
   },
   {
     autoComplete: "new-password",
-    help: "A permanent access token from your Meta app. We store it securely.",
+    help: "A permanent token from your Meta app.",
     label: "Meta access token",
     name: "accessToken",
     required: true,
@@ -159,7 +157,7 @@ export function WhatsAppConnectionSetup({ storeId }: { storeId: string }) {
   )
 
   const connectAction = embedded.isLoading ? (
-    <Button disabled size="sm" type="button">
+    <Button disabled type="button">
       Checking…
     </Button>
   ) : embedded.data?.available && embedded.data.url ? (
@@ -171,7 +169,6 @@ export function WhatsAppConnectionSetup({ storeId }: { storeId: string }) {
   return (
     <SettingsSection
       title="Pharmacy WhatsApp number"
-      description="Connect your pharmacy's own WhatsApp Business number. Messages to customers come from it."
       action={connections.error ? null : connectAction}
     >
       {connections.isLoading ? (
@@ -184,7 +181,6 @@ export function WhatsAppConnectionSetup({ storeId }: { storeId: string }) {
           <p className="text-sm">Couldn't load your WhatsApp numbers.</p>
           <Button
             onClick={() => void connections.refetch()}
-            size="sm"
             type="button"
             variant="outline"
           >
@@ -196,12 +192,10 @@ export function WhatsAppConnectionSetup({ storeId }: { storeId: string }) {
           {embedded.error ? (
             <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3.5">
               <p className="min-w-0 flex-[1_1_220px] text-sm">
-                We couldn't check Connect with Meta. You can still set up the
-                number by hand below.
+                Meta sign-in isn't working right now.
               </p>
               <Button
                 onClick={() => void embedded.refetch()}
-                size="sm"
                 type="button"
                 variant="outline"
               >
@@ -210,8 +204,7 @@ export function WhatsAppConnectionSetup({ storeId }: { storeId: string }) {
             </div>
           ) : embedded.data && !embedded.data.available ? (
             <p className="px-4 py-3.5 text-sm text-muted-foreground">
-              Connect with Meta isn't available right now. You can set up the
-              number by hand below.
+              Meta sign-in isn't available. Enter the number by hand.
             </p>
           ) : null}
 
@@ -241,14 +234,13 @@ export function WhatsAppConnectionSetup({ storeId }: { storeId: string }) {
                       htmlFor={`${ids}recipient`}
                       className="text-sm font-medium"
                     >
-                      Number to send a test to
+                      Test phone number
                     </label>
                     <p
                       id={`${ids}recipient-help`}
                       className="-mt-1 text-sm text-muted-foreground"
                     >
-                      A number that has agreed to get messages from you. We send
-                      it one test message to check the connection.
+                      Someone who agreed to get one test message.
                     </p>
                     <Input
                       aria-describedby={`${ids}recipient-help`}
@@ -296,8 +288,7 @@ export function WhatsAppConnectionSetup({ storeId }: { storeId: string }) {
                 </div>
               ) : (
                 <p className="text-sm text-destructive">
-                  This choice has expired. Select Connect with Meta to start
-                  again.
+                  This expired. Connect with Meta again.
                 </p>
               )}
             </div>
@@ -324,7 +315,6 @@ export function WhatsAppConnectionSetup({ storeId }: { storeId: string }) {
                       onClick={() =>
                         retest.mutate({ connectionId: connection.id, storeId })
                       }
-                      size="sm"
                       type="button"
                       variant="outline"
                     >
@@ -343,7 +333,6 @@ export function WhatsAppConnectionSetup({ storeId }: { storeId: string }) {
                             storeId,
                           })
                         }
-                        size="sm"
                         type="button"
                         variant="outline"
                       >
@@ -360,7 +349,6 @@ export function WhatsAppConnectionSetup({ storeId }: { storeId: string }) {
                             storeId,
                           })
                         }
-                        size="sm"
                         type="button"
                         variant="outline"
                       >
@@ -400,7 +388,7 @@ export function WhatsAppConnectionSetup({ storeId }: { storeId: string }) {
             ))
           ) : (
             <p className="px-4 py-3.5 text-sm text-muted-foreground">
-              No WhatsApp number connected yet.
+              No WhatsApp number yet.
             </p>
           )}
 
@@ -409,8 +397,8 @@ export function WhatsAppConnectionSetup({ storeId }: { storeId: string }) {
             open={manualSetupOpen}
             onToggle={(event) => setManualSetupOpen(event.currentTarget.open)}
           >
-            <summary className="cursor-pointer px-4 py-3.5 text-sm font-medium">
-              Set up the number by hand
+            <summary className="min-h-11 cursor-pointer content-center px-4 py-3 font-medium">
+              Enter the number by hand
             </summary>
             <form
               className="grid border-t border-border"
@@ -441,7 +429,9 @@ export function WhatsAppConnectionSetup({ storeId }: { storeId: string }) {
                     label={field.label}
                   >
                     <Input
-                      aria-describedby={`${ids}${field.name}-help`}
+                      aria-describedby={
+                        field.help ? `${ids}${field.name}-help` : undefined
+                      }
                       autoComplete={field.autoComplete}
                       id={`${ids}${field.name}`}
                       name={field.name}
@@ -463,7 +453,6 @@ export function WhatsAppConnectionSetup({ storeId }: { storeId: string }) {
                 <SubmitButton
                   className="ml-auto"
                   isSubmitting={connect.isPending}
-                  size="sm"
                 >
                   Save and send a test
                 </SubmitButton>
@@ -472,8 +461,7 @@ export function WhatsAppConnectionSetup({ storeId }: { storeId: string }) {
           </details>
 
           <p className="px-4 py-3 text-sm text-muted-foreground">
-            Meta bills your pharmacy directly for WhatsApp messages. EwaTrade
-            and payment fees are separate.
+            Meta bills you directly for WhatsApp messages.
           </p>
         </>
       )}
