@@ -82,7 +82,7 @@ export function financeSupplierColumns(
           >
             {row.original.name}
           </button>
-          <span className="truncate text-[13px] text-muted-foreground">
+          <span className="truncate text-sm text-muted-foreground">
             {row.original.code}
           </span>
         </div>

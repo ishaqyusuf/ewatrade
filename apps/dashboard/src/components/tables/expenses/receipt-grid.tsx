@@ -79,7 +79,7 @@ function ExpenseReceiptCard({
         >
           {bill.description}
         </button>
-        <span className="truncate text-[13px] text-muted-foreground">
+        <span className="truncate text-sm text-muted-foreground">
           {bill.payeeName} · {formatExpenseDate(bill.incurredAt, timezone)}
         </span>
         <span className="mt-2.5 text-xl font-semibold tabular-nums">
@@ -89,7 +89,7 @@ function ExpenseReceiptCard({
           <ExpenseStatusPill status={bill.status} />
         </span>
       </div>
-      <div className="flex items-center justify-between gap-2 border-t border-border px-4 py-2 text-[13px] text-muted-foreground">
+      <div className="flex items-center justify-between gap-2 border-t border-border px-4 py-2 text-sm text-muted-foreground">
         <span>
           {bill.status === "VOID"
             ? "Cancelled"
@@ -116,7 +116,7 @@ function ReceiptPreview({ bill }: { bill: FinanceBillRow }) {
   return (
     <span
       className={cn(
-        "grid size-full place-content-center justify-items-center gap-1.5 text-[13px]",
+        "grid size-full place-content-center justify-items-center gap-1.5 text-sm",
         attached || bill.status === "VOID"
           ? "text-muted-foreground"
           : "text-amber-700 dark:text-amber-300",
