@@ -1,50 +1,57 @@
 "use client"
-import {
-  Button,
-  ControlField,
-  FieldGroup,
-  FormActions,
-  Input,
-  SubmitButton,
-} from "@ewatrade/ui"
 
-import { useDomainParams } from "@/hooks/use-domain-params"
 import { useTRPC } from "@/trpc/client"
-
+import { Button, ControlField, Input } from "@ewatrade/ui"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { type FormEvent, useState } from "react"
+import { RecordRow } from "./domain-badge"
 
+type Verification = {
+  id: string
+  hostname: string
+  name: string | null
+  type: string | null
+  value: string | null
+}
+
+/**
+ * Connect your own web address (modal): type it, add one record where it was
+ * bought (each value has Copy), then check. Checks run only on a tap.
+ */
 export function ExternalDomainFlow({
   store,
+  onDone,
 }: {
   store: { id: string; name: string }
+  onDone: () => void
 }) {
   const trpc = useTRPC()
   const queryClient = useQueryClient()
-  const { setParams } = useDomainParams()
   const [domain, setDomain] = useState("")
   const [error, setError] = useState<string | null>(null)
-  const [verification, setVerification] = useState<{
-    id: string
-    name: string | null
-    type: string | null
-    value: string | null
-  } | null>(null)
+  const [checked, setChecked] = useState<"found" | "missing" | null>(null)
+  const [verification, setVerification] = useState<Verification | null>(null)
+  const refreshList = () =>
+    queryClient.invalidateQueries(trpc.domains.list.queryFilter())
   const connect = useMutation(
     trpc.domains.connectExternal.mutationOptions({
-      onError: (mutationError) => setError(mutationError.message),
-      onSuccess: (result) =>
-        setVerification({ id: result.id, ...result.verification }),
+      onError: (failure) => setError(failure.message),
+      onSuccess: (result) => {
+        setVerification({
+          id: result.id,
+          hostname: result.hostname,
+          ...result.verification,
+        })
+        void refreshList()
+      },
     }),
   )
   const verify = useMutation(
     trpc.domains.verifyConnection.mutationOptions({
-      onError: (mutationError) => setError(mutationError.message),
-      onSuccess: async () => {
-        await queryClient.invalidateQueries({
-          queryKey: trpc.domains.list.queryKey(),
-        })
-        setParams(null)
+      onError: (failure) => setError(failure.message),
+      onSuccess: (result) => {
+        setChecked(result.status === "OWNERSHIP_PENDING" ? "missing" : "found")
+        void refreshList()
       },
     }),
   )
@@ -52,67 +59,118 @@ export function ExternalDomainFlow({
   if (verification) {
     return (
       <div className="grid gap-5">
-        <div className="border border-border p-4">
-          <p className="text-sm font-medium">
-            Add this TXT record at your current DNS provider
+        <ol className="grid gap-4">
+          <Step
+            number={1}
+            title={`Sign in where you bought ${verification.hostname}`}
+          >
+            Open its DNS settings.
+          </Step>
+          <Step number={2} title="Add this record">
+            <dl className="mt-2 grid rounded-[var(--ui-radius-control)] border border-border bg-card px-3 py-1">
+              <RecordRow label="Type" value={verification.type ?? "TXT"} />
+              <RecordRow label="Name" value={verification.name ?? ""} copy />
+              <RecordRow label="Value" value={verification.value ?? ""} copy />
+            </dl>
+          </Step>
+          <Step number={3} title="Come back and check">
+            Your current website keeps working.
+          </Step>
+        </ol>
+        {checked === "found" ? (
+          <output className="block rounded-[var(--ui-radius-control)] bg-success p-4 text-success-foreground">
+            Record found. We’re connecting {verification.hostname} now. This can
+            take up to an hour.
+          </output>
+        ) : checked === "missing" ? (
+          <output className="block rounded-[var(--ui-radius-control)] bg-warning p-4 text-warning-foreground">
+            Not found yet. Records can take up to an hour to show. Check again
+            later.
+          </output>
+        ) : null}
+        {error ? (
+          <p role="alert" className="text-destructive">
+            {error}
           </p>
-          <dl className="mt-4 grid gap-3 text-sm">
-            <div>
-              <dt className="text-muted-foreground">Name</dt>
-              <dd className="mt-1 break-all font-mono">{verification.name}</dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">Value</dt>
-              <dd className="mt-1 break-all font-mono">{verification.value}</dd>
-            </div>
-          </dl>
+        ) : null}
+        <div className="flex flex-wrap justify-end gap-2">
+          <Button variant="outline" onClick={onDone}>
+            {checked === "found" ? "Done" : "Finish later"}
+          </Button>
+          {checked === "found" ? null : (
+            <Button
+              disabled={verify.isPending}
+              onClick={() => {
+                setError(null)
+                verify.mutate({ connectionId: verification.id })
+              }}
+            >
+              {verify.isPending ? "Checking…" : "Check now"}
+            </Button>
+          )}
         </div>
-        <p className="text-sm text-muted-foreground">
-          DNS can take a few minutes to update. Your current website stays
-          untouched until verification succeeds.
-        </p>
-        {error ? <p className="text-sm text-destructive">{error}</p> : null}
-        <Button
-          disabled={verify.isPending}
-          onClick={() => verify.mutate({ connectionId: verification.id })}
-        >
-          {verify.isPending ? "Checking DNS…" : "I added the record"}
-        </Button>
       </div>
     )
   }
 
   return (
     <form
+      className="grid gap-5"
       onSubmit={(event: FormEvent<HTMLFormElement>) => {
         event.preventDefault()
         setError(null)
         connect.mutate({ domain, storeId: store.id })
       }}
     >
-      <FieldGroup className="min-w-0 grid gap-5">
-        <ControlField label={<>Domain you already own</>}>
-          <Input
-            placeholder="yourbusiness.com"
-            value={domain}
-            onChange={(event) => setDomain(event.target.value)}
-          />
-        </ControlField>
-        <p className="text-sm text-muted-foreground">
-          You keep the domain at your current registrar. We only verify
-          ownership and connect it to your EwaTrade storefront.
+      <ControlField label="Your web address">
+        <Input
+          autoCapitalize="none"
+          autoComplete="off"
+          inputMode="url"
+          placeholder="yourbusiness.com"
+          spellCheck={false}
+          value={domain}
+          onChange={(event) => setDomain(event.target.value)}
+        />
+      </ControlField>
+      {error ? (
+        <p role="alert" className="text-destructive">
+          {error}
         </p>
-        {error ? <p className="text-sm text-destructive">{error}</p> : null}
-        <FormActions>
-          <SubmitButton
-            isSubmitting={connect.isPending}
-            type="submit"
-            disabled={connect.isPending}
-          >
-            {connect.isPending ? "Preparing record…" : "Continue"}
-          </SubmitButton>
-        </FormActions>
-      </FieldGroup>
+      ) : null}
+      <div className="flex flex-wrap justify-end gap-2">
+        <Button type="button" variant="outline" onClick={onDone}>
+          Cancel
+        </Button>
+        <Button type="submit" disabled={connect.isPending || !domain.trim()}>
+          {connect.isPending ? "Getting your record…" : "Continue"}
+        </Button>
+      </div>
     </form>
+  )
+}
+
+export function Step({
+  number,
+  title,
+  children,
+}: {
+  number: number
+  title: string
+  children: React.ReactNode
+}) {
+  return (
+    <li className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3">
+      <span
+        aria-hidden="true"
+        className="grid size-7 place-items-center rounded-full bg-muted text-sm font-semibold"
+      >
+        {number}
+      </span>
+      <div className="min-w-0">
+        <p className="font-medium">{title}</p>
+        <div className="text-muted-foreground">{children}</div>
+      </div>
+    </li>
   )
 }

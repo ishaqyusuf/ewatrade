@@ -880,7 +880,19 @@ export async function listDomainConnections(
   },
 ) {
   const connections = await db.domainConnection.findMany({
-    include: {
+    // Only what the list returns; token hashes and provider ids stay unread.
+    select: {
+      activeAt: true,
+      createdAt: true,
+      hostname: true,
+      id: true,
+      isPrimary: true,
+      status: true,
+      type: true,
+      updatedAt: true,
+      verificationRecordName: true,
+      verificationRecordType: true,
+      verificationRecordValue: true,
       managedDomain: {
         select: {
           expiresAt: true,

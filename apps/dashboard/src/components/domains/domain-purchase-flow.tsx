@@ -109,7 +109,7 @@ export function DomainPurchaseFlow({ store }: { store: Store }) {
     return (
       <form onSubmit={saveOwner}>
         <FieldGroup className="min-w-0 grid gap-4">
-          <div className="border border-border bg-muted/40 p-4">
+          <div className="rounded-[var(--ui-radius-surface)] border border-border bg-muted/40 p-4">
             <p className="font-medium">{form.quote?.normalizedDomain}</p>
             <p className="mt-1 text-sm text-muted-foreground">
               The domain owner must match a real person or registered business.
@@ -189,13 +189,13 @@ export function DomainPurchaseFlow({ store }: { store: Store }) {
     const profileId = form.profileId ?? profileQuery.data?.id ?? null
     return (
       <div className="grid gap-5">
-        <div className="border border-border p-5">
-          <p className="text-sm text-muted-foreground">Domain</p>
+        <div className="rounded-[var(--ui-radius-surface)] border border-border p-5">
+          <p className="text-sm text-muted-foreground">Web address</p>
           <p className="mt-1 text-lg font-semibold">
             {form.quote?.normalizedDomain}
           </p>
           <p className="mt-4 text-sm text-muted-foreground">Due today</p>
-          <p className="mt-1 text-2xl font-semibold">
+          <p className="mt-1 text-2xl font-semibold tabular-nums">
             {form.quote
               ? formatMoney(
                   form.quote.retailPriceMinor,
@@ -205,9 +205,7 @@ export function DomainPurchaseFlow({ store }: { store: Store }) {
           </p>
         </div>
         <p className="text-sm text-muted-foreground">
-          By paying, you authorize EwaTrade to register this domain for one year
-          using the saved legal owner details. Provider costs and taxes are
-          included in the displayed price.
+          You pay for one year. The price includes all fees and taxes.
         </p>
         <CheckboxField
           label=<span>
@@ -261,16 +259,15 @@ export function DomainPurchaseFlow({ store }: { store: Store }) {
     <form onSubmit={search}>
       <FieldGroup className="min-w-0 grid gap-5">
         <div>
-          <ControlField label={<>Find your domain</>}>
+          <ControlField label={<>Find a web address</>}>
             <Input
               placeholder="yourbusiness.com.ng"
               value={form.domain}
               onChange={(event) => form.setDomain(event.target.value)}
             />
           </ControlField>
-          <p className="mt-2 text-xs text-muted-foreground">
-            .com.ng is registered through GO54. .com is registered through
-            Openprovider. You always see one final NGN price.
+          <p className="mt-2 text-sm text-muted-foreground">
+            You see one final price in naira.
           </p>
         </div>
         {error ? <p className="text-sm text-destructive">{error}</p> : null}

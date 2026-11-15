@@ -1,49 +1,37 @@
 "use client"
 
-import { DomainHeader } from "@/components/domains/domain-header"
-import { DomainSearchFilter } from "@/components/domains/domain-search-filter"
-import { SettingsPage } from "@/components/settings/settings-page"
-import { DirectoryCollectionSkeleton } from "@/components/tables/core"
-import { DomainDataTable } from "@/components/tables/domains/data-table"
-import { DomainTableSkeleton } from "@/components/tables/domains/skeleton"
-import { useDirectoryView } from "@/hooks/use-directory-view"
-import type { DirectoryViewSettings } from "@/utils/directory-view-settings"
-import { Alert, AlertDescription, Button } from "@ewatrade/ui"
+import {
+  SettingsHeader,
+  SettingsPage,
+} from "@/components/settings/settings-page"
+import { useDomainParams } from "@/hooks/use-domain-params"
+import { Button } from "@ewatrade/ui"
 import { Suspense } from "react"
+import { DomainList, DomainListSkeleton } from "./domain-list"
 
-export function DomainsDirectory({
-  initialViewSettings,
-}: {
-  initialViewSettings: DirectoryViewSettings
-}) {
-  const { view, setView, persistenceError, retryPersistence } =
-    useDirectoryView({
-      pageId: "domains",
-      queryKey: "domainView",
-      initialSettings: initialViewSettings,
-    })
+/** Settings → Domains: connect your own address (modal) or buy one (sheet). */
+export function DomainsDirectory({ freeAddress }: { freeAddress: string }) {
+  const { setParams } = useDomainParams()
   return (
     <SettingsPage>
-      <DomainHeader view={view} onViewChange={setView} />
-      {persistenceError ? (
-        <Alert appearance="dashboard" role="alert">
-          <AlertDescription>{persistenceError}</AlertDescription>
-          <Button variant="outline" size="sm" onClick={retryPersistence}>
-            Try again
-          </Button>
-        </Alert>
-      ) : null}
-      <DomainSearchFilter />
-      <Suspense
-        fallback={
-          view === "table" ? (
-            <DomainTableSkeleton />
-          ) : (
-            <DirectoryCollectionSkeleton label="domains" />
-          )
+      <SettingsHeader
+        title="Domains"
+        actions={
+          <>
+            <Button onClick={() => void setParams({ domainMode: "connect" })}>
+              Connect your own
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => void setParams({ domainMode: "buy" })}
+            >
+              Buy one
+            </Button>
+          </>
         }
-      >
-        <DomainDataTable view={view} />
+      />
+      <Suspense fallback={<DomainListSkeleton />}>
+        <DomainList freeAddress={freeAddress} />
       </Suspense>
     </SettingsPage>
   )

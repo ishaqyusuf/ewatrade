@@ -6,7 +6,6 @@ import { useQuery } from "@tanstack/react-query"
 import { DomainDetails } from "./domain-details"
 import { DomainProgress } from "./domain-progress"
 import { DomainPurchaseFlow } from "./domain-purchase-flow"
-import { ExternalDomainFlow } from "./external-domain-flow"
 
 export function DomainContent({
   store,
@@ -20,7 +19,6 @@ export function DomainContent({
     domains.data?.find((domain) => domain.id === domainId) ?? null
 
   if (mode === "buy") return <DomainPurchaseFlow store={store} />
-  if (mode === "connect") return <ExternalDomainFlow store={store} />
   if (mode === "progress") return <DomainProgress />
   return <DomainDetails domain={selected} />
 }

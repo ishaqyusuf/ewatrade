@@ -2,23 +2,21 @@
 
 import { FormFeedback } from "@/components/forms/form-feedback"
 import { SettingsNotice } from "@/components/settings/settings-page"
-import { copyDomainAddress } from "@/components/tables/domains/actions-menu"
-import {
-  type DomainRow,
-  DomainStatusBadge,
-} from "@/components/tables/domains/columns"
 import { useDomainParams } from "@/hooks/use-domain-params"
 import { useTRPC } from "@/trpc/client"
-import { Button, toast } from "@ewatrade/ui"
+import { Button } from "@ewatrade/ui"
 import { Copy01Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { type ReactNode, useState } from "react"
+import { DomainStatusBadge, RecordRow, copyDomainAddress } from "./domain-badge"
 import {
+  type DomainRow,
   domainBoughtFrom,
   domainNeedsRecord,
   domainRenews,
 } from "./domain-status"
+import { Step } from "./external-domain-flow"
 
 /** One domain: what it is, and for one waiting on its record, the steps. */
 export function DomainDetails({ domain }: { domain: DomainRow | null }) {
@@ -52,7 +50,7 @@ export function DomainDetails({ domain }: { domain: DomainRow | null }) {
 
   return (
     <div className="grid gap-5">
-      <dl className="grid grid-cols-2 gap-x-4 gap-y-3 rounded-[10px] border border-border bg-card p-4 text-sm">
+      <dl className="grid grid-cols-2 gap-x-4 gap-y-3 rounded-[var(--ui-radius-surface)] border border-border bg-card p-4">
         <Fact label="Status">
           <DomainStatusBadge domain={domain} />
         </Fact>
@@ -73,7 +71,7 @@ export function DomainDetails({ domain }: { domain: DomainRow | null }) {
             Open its DNS settings.
           </Step>
           <Step number={2} title="Add this record">
-            <dl className="mt-2 grid gap-2 rounded-[10px] border border-border bg-card p-3 text-sm">
+            <dl className="mt-2 grid gap-2 rounded-[var(--ui-radius-control)] border border-border bg-card px-3 py-1">
               <RecordRow
                 label="Type"
                 value={domain.verification.type ?? "TXT"}
@@ -110,13 +108,15 @@ export function DomainDetails({ domain }: { domain: DomainRow | null }) {
         <FormFeedback appearance="dashboard">{problem}</FormFeedback>
       ) : null}
       <div className="flex flex-wrap items-center gap-2 border-t border-border pt-4">
-        <Button
-          variant="ghost"
-          onClick={() => copyDomainAddress(domain.hostname)}
-        >
-          <HugeiconsIcon icon={Copy01Icon} data-icon="inline-start" />
-          Copy web address
-        </Button>
+        {domain.status === "ACTIVE" ? (
+          <Button
+            variant="ghost"
+            onClick={() => copyDomainAddress(domain.hostname)}
+          >
+            <HugeiconsIcon icon={Copy01Icon} data-icon="inline-start" />
+            Copy web address
+          </Button>
+        ) : null}
         <span className="ml-auto flex flex-wrap gap-2">
           <Button variant="outline" onClick={() => void setParams(null)}>
             Close
@@ -143,65 +143,6 @@ function Fact({ label, children }: { label: string; children: ReactNode }) {
     <div className="grid gap-1">
       <dt className="text-muted-foreground">{label}</dt>
       <dd className="font-medium">{children}</dd>
-    </div>
-  )
-}
-
-function Step({
-  number,
-  title,
-  children,
-}: {
-  number: number
-  title: string
-  children: ReactNode
-}) {
-  return (
-    <li className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3">
-      <span
-        aria-hidden="true"
-        className="grid size-6 place-items-center rounded-full bg-muted text-xs font-semibold"
-      >
-        {number}
-      </span>
-      <div className="min-w-0">
-        <p className="text-sm font-medium">{title}</p>
-        <div className="text-sm text-muted-foreground">{children}</div>
-      </div>
-    </li>
-  )
-}
-
-function RecordRow({
-  label,
-  value,
-  copy = false,
-}: {
-  label: string
-  value: string
-  copy?: boolean
-}) {
-  return (
-    <div className="grid grid-cols-[3.5rem_minmax(0,1fr)_auto] items-center gap-2">
-      <dt className="text-muted-foreground">{label}</dt>
-      <dd className="break-all font-mono text-foreground">{value}</dd>
-      {copy ? (
-        <Button
-          size="icon-sm"
-          variant="ghost"
-          aria-label={`Copy ${label.toLowerCase()}`}
-          onClick={() =>
-            void navigator.clipboard
-              .writeText(value)
-              .then(() => toast(`${label} copied.`))
-              .catch(() => toast("Couldn’t copy. Try again."))
-          }
-        >
-          <HugeiconsIcon icon={Copy01Icon} className="size-4" />
-        </Button>
-      ) : (
-        <span />
-      )}
     </div>
   )
 }

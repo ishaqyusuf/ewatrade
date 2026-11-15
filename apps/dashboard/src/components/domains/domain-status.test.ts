@@ -9,9 +9,9 @@ import {
 
 test("statuses read as plain words, never codes", () => {
   expect(DOMAIN_STATUS.ACTIVE.label).toBe("Live")
-  expect(DOMAIN_STATUS.OWNERSHIP_PENDING.label).toBe("Waiting for DNS record")
-  expect(DOMAIN_STATUS.DNS_CONFIGURING.label).toBe("Setting up")
-  expect(DOMAIN_STATUS.VERIFYING.label).toBe("Checking")
+  expect(DOMAIN_STATUS.OWNERSHIP_PENDING.label).toBe("Needs one record")
+  expect(DOMAIN_STATUS.DNS_CONFIGURING.label).toBe("Connecting")
+  expect(DOMAIN_STATUS.VERIFYING.label).toBe("Connecting")
   expect(DOMAIN_STATUS.FAILED.label).toBe("Needs attention")
 })
 

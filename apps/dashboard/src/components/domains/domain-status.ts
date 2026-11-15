@@ -9,18 +9,18 @@ export const DOMAIN_STATUS: Record<
   { label: string; tone: "ok" | "warn" | "info" | "bad" | "muted" }
 > = {
   ACTIVE: { label: "Live", tone: "ok" },
-  OWNERSHIP_PENDING: { label: "Waiting for DNS record", tone: "warn" },
-  DNS_CONFIGURING: { label: "Setting up", tone: "info" },
-  VERIFYING: { label: "Checking", tone: "info" },
+  OWNERSHIP_PENDING: { label: "Needs one record", tone: "warn" },
+  DNS_CONFIGURING: { label: "Connecting", tone: "info" },
+  VERIFYING: { label: "Connecting", tone: "info" },
   FAILED: { label: "Needs attention", tone: "bad" },
   DISCONNECTED: { label: "Disconnected", tone: "muted" },
 }
 
 export const DOMAIN_STATUS_TONE = {
-  ok: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300",
-  warn: "bg-amber-500/15 text-amber-700 dark:text-amber-300",
-  info: "bg-sky-500/15 text-sky-700 dark:text-sky-300",
-  bad: "bg-red-500/15 text-red-700 dark:text-red-300",
+  ok: "bg-success text-success-foreground",
+  warn: "bg-warning text-warning-foreground",
+  info: "bg-info text-info-foreground",
+  bad: "bg-danger text-danger-foreground",
   muted: "bg-muted text-muted-foreground",
 } as const
 

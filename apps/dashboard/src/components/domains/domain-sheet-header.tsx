@@ -3,21 +3,20 @@ import { type DomainRow, domainNeedsRecord } from "./domain-status"
 
 const copy: Record<DomainSheetMode, { description: string; title: string }> = {
   buy: {
-    title: "Buy a domain",
-    description: "Search, add the legal owner, and pay in a few steps.",
+    title: "Buy a web address",
+    description: "Find a name, add the owner, then pay.",
   },
   connect: {
-    title: "Connect a domain",
-    description:
-      "Prove ownership with one DNS record, then we connect hosting.",
+    title: "Connect your own web address",
+    description: "Use a domain you already own.",
   },
   details: {
-    title: "Domain details",
+    title: "Web address",
     description: "Its status, store and renewal date.",
   },
   progress: {
-    title: "Domain setup",
-    description: "Payment and registration continue safely in the background.",
+    title: "Buying your web address",
+    description: "You can close this. It carries on without you.",
   },
 }
 
