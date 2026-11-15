@@ -40,11 +40,11 @@ export function ActivityCategoryIcon({
     <span
       aria-hidden="true"
       className={cn(
-        "flex size-8 shrink-0 items-center justify-center border bg-muted text-foreground",
+        "flex size-10 shrink-0 items-center justify-center rounded-full bg-[var(--neutral)] text-[var(--neutral-foreground)]",
         className,
       )}
     >
-      <HugeiconsIcon icon={ICONS[category]} className="size-4" />
+      <HugeiconsIcon icon={ICONS[category]} className="size-5" />
     </span>
   )
 }

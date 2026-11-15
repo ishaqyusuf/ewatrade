@@ -46,8 +46,8 @@ export function ActivityFeed({
   return (
     <div>
       {coverage && !coverage.complete ? (
-        <p className="mt-3 border bg-muted px-3 py-2 text-[13px] text-muted-foreground">
-          {coverage.detail}
+        <p className="mt-2 text-sm text-muted-foreground">
+          Older orders and payments show fewer details.
         </p>
       ) : null}
       {groups.length ? (
@@ -87,8 +87,8 @@ export function ActivityFeed({
           </Button>
         </div>
       ) : groups.length ? (
-        <p className="py-6 text-center text-xs text-muted-foreground">
-          End of recorded activity for this period
+        <p className="py-6 text-center text-sm text-muted-foreground">
+          That's everything for these dates
         </p>
       ) : null}
     </div>
@@ -105,7 +105,7 @@ export function ActivityEmptyState({
   onClearFilters: () => void
 }) {
   return (
-    <div className="mt-3 flex min-h-56 flex-col items-center justify-center border border-dashed px-5 text-center">
+    <div className="mt-4 flex min-h-56 flex-col items-center justify-center rounded-[var(--ui-radius-surface)] border border-dashed px-5 text-center">
       <HugeiconsIcon
         icon={Activity01Icon}
         className="size-6 text-muted-foreground"
@@ -119,10 +119,10 @@ export function ActivityEmptyState({
       </p>
       <p className="mt-1 text-sm text-muted-foreground">
         {filtered
-          ? "Try another person, Store or date range."
+          ? "Try another person, store or date."
           : partial
-            ? "Some older history isn't available, so this may not be everything."
-            : "Recorded orders, payments and staff changes appear here."}
+            ? "Older history may be missing."
+            : "Orders, payments and staff changes show here."}
       </p>
       {filtered ? (
         <Button variant="outline" className="mt-4" onClick={onClearFilters}>
@@ -140,14 +140,13 @@ export function ActivityFeedSkeleton() {
         <div
           // biome-ignore lint/suspicious/noArrayIndexKey: static placeholders
           key={index}
-          className="flex items-start gap-3.5 border-b px-2 py-3"
+          className="flex items-start gap-3 px-3 py-3"
         >
-          <Skeleton className="size-8 rounded-none" />
+          <Skeleton className="size-10 rounded-full" />
           <div className="flex flex-1 flex-col gap-2">
-            <Skeleton className="h-4 w-3/5 rounded-none" />
-            <Skeleton className="h-3 w-2/5 rounded-none" />
+            <Skeleton className="h-5 w-3/5" />
+            <Skeleton className="h-4 w-2/5" />
           </div>
-          <Skeleton className="h-4 w-16 rounded-none" />
         </div>
       ))}
     </output>

@@ -15,6 +15,7 @@ import { HugeiconsIcon } from "@hugeicons/react"
 import { ActivityCategoryIcon } from "./activity-category-icon"
 import {
   activityAuthor,
+  activitySentence,
   activityStatusTone,
   activityTitle,
   formatActivityAmount,
@@ -27,6 +28,7 @@ import {
 } from "./activity-format"
 import { useActivityViewer } from "./activity-viewer"
 
+/** The event as one plain sentence, with the person and amount emphasised. */
 export function ActivitySummary({
   event,
   showFlag = true,
@@ -34,14 +36,26 @@ export function ActivitySummary({
   event: BusinessActivityView
   showFlag?: boolean
 }) {
-  const { actor, rest } = splitActivitySummary(event)
+  const viewer = useActivityViewer()
   return (
     <>
-      {actor ? <strong className="font-medium">{actor}</strong> : null}
-      {event.actor.coverage !== "recorded" && !actor ? (
-        <span className="sr-only">Author not recorded. </span>
-      ) : null}
-      {rest}
+      {activitySentence(event, viewer).map((part, index) =>
+        part.emphasis ? (
+          <strong
+            // biome-ignore lint/suspicious/noArrayIndexKey: parts are a fixed sentence.
+            key={index}
+            className={cn(
+              "font-semibold",
+              part.emphasis === "amount" && "tabular-nums whitespace-nowrap",
+            )}
+          >
+            {part.text}
+          </strong>
+        ) : (
+          // biome-ignore lint/suspicious/noArrayIndexKey: parts are a fixed sentence.
+          <span key={index}>{part.text}</span>
+        ),
+      )}
       {showFlag && recordedThroughAssistant(event) ? (
         <>
           {" "}
@@ -72,9 +86,9 @@ export function AssistantFlag() {
   return (
     <span
       title="Prepared by the EwaTrade Assistant and confirmed by the person shown"
-      className="inline-flex h-[18px] items-center gap-1 border border-violet-200 bg-violet-50 px-1.5 align-[1px] text-[11.5px] font-medium whitespace-nowrap text-violet-700 dark:border-violet-900 dark:bg-violet-950/60 dark:text-violet-300"
+      className="inline-flex h-6 items-center gap-1 rounded-full border border-[var(--highlight-border)] bg-[var(--highlight)] px-2 align-[1px] text-xs font-medium whitespace-nowrap text-[var(--highlight-foreground)]"
     >
-      <HugeiconsIcon icon={SparklesIcon} className="size-3" aria-hidden />
+      <HugeiconsIcon icon={SparklesIcon} className="size-3.5" aria-hidden />
       Assistant
     </span>
   )
@@ -203,6 +217,21 @@ export function ActivityMeta({
   )
 }
 
+/** Status words for the row's second line: "now cancelled". */
+function currentStatusNote(event: BusinessActivityView) {
+  const now = event.currentStatus?.value
+  if (!now || now === event.statusAtEvent?.value) return null
+  return {
+    negative: activityStatusTone(now) === "negative",
+    text: `Now ${formatActivityStatus(now).toLowerCase()}`,
+  }
+}
+
+/**
+ * One activity as a sentence ("Ada recorded a ₦5,000 cash payment on
+ * ORD-041"), then time, Store and any later status. The whole row opens the
+ * entry's sheet.
+ */
 export function ActivityRow({
   event,
   timeZone,
@@ -215,52 +244,60 @@ export function ActivityRow({
   onOpen: (event: BusinessActivityView, trigger: HTMLButtonElement) => void
 }) {
   const time = formatActivityTime(event.occurredAt, timeZone)
+  const status = currentStatusNote(event)
+  const later = wasRecordedLater(event, timeZone)
   return (
-    <li className="border-b">
+    <li>
       <button
         type="button"
         data-activity-key={event.key}
         onClick={(e) => onOpen(event, e.currentTarget)}
-        className="flex w-full items-start gap-3.5 px-2 py-3 text-left outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset max-sm:gap-2.5 max-sm:px-0.5"
+        className="flex min-h-16 w-full items-start gap-3 rounded-[var(--ui-radius-item)] px-3 py-3 text-left outline-none hover:bg-[var(--hover)] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset max-sm:px-2"
       >
-        <ActivityCategoryIcon
-          category={event.category}
-          className="max-sm:size-7"
-        />
-        <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-          <span className="text-sm">
-            <ActivityTitle event={event} />
-            <ActivityStatusBadges event={event} />
+        <ActivityCategoryIcon category={event.category} />
+        <span className="flex min-w-0 flex-1 flex-col gap-1">
+          <span className="text-base leading-snug break-words">
+            <ActivitySummary event={event} />
           </span>
-          {
-            <span className="flex flex-wrap items-center gap-x-1 gap-y-0.5 text-[13px] text-muted-foreground">
-              <ActivityMeta event={event} showStore={showStore} />
-              {wasRecordedLater(event, timeZone) ? (
-                <span className="ml-1 border px-1 text-xs whitespace-nowrap">
-                  Recorded{" "}
+          <span className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-sm text-muted-foreground">
+            <time dateTime={event.occurredAt} className="tabular-nums">
+              {time}
+            </time>
+            {showStore && event.store?.name ? (
+              <>
+                <span aria-hidden="true">·</span>
+                <span>{event.store.name}</span>
+              </>
+            ) : null}
+            {later ? (
+              <>
+                <span aria-hidden="true">·</span>
+                <span>
+                  Entered{" "}
                   {new Intl.DateTimeFormat("en-GB", {
                     timeZone,
                     day: "numeric",
                     month: "short",
                   }).format(new Date(event.recordedAt))}
                 </span>
-              ) : null}
-              {event.coverage !== "snapshot" ? (
-                <span className="ml-1 border px-1 text-xs whitespace-nowrap">
-                  Earlier record
+              </>
+            ) : null}
+            {status ? (
+              <>
+                <span aria-hidden="true">·</span>
+                <span
+                  className={cn(
+                    "font-medium",
+                    status.negative
+                      ? "text-destructive"
+                      : "text-[var(--success-foreground)]",
+                  )}
+                >
+                  {status.text}
                 </span>
-              ) : null}
-            </span>
-          }
-        </span>
-        <span className="flex min-w-[76px] flex-col items-end gap-0.5 max-sm:min-w-[58px]">
-          <ActivityAmount event={event} />
-          <time
-            dateTime={event.occurredAt}
-            className="text-xs tabular-nums text-muted-foreground"
-          >
-            {time}
-          </time>
+              </>
+            ) : null}
+          </span>
         </span>
       </button>
     </li>

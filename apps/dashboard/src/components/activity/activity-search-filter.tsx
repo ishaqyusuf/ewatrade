@@ -30,7 +30,7 @@ import { useId } from "react"
 import { ACTIVITY_CATEGORY_LABELS, formatRole } from "./activity-format"
 
 const subContentClass =
-  "min-w-48 max-w-[calc(100vw-32px)] rounded-none bg-popover p-0 shadow-md before:hidden"
+  "min-w-48 max-w-[calc(100vw-32px)] bg-popover p-0 shadow-md before:hidden"
 
 export function ActivitySearchFilter({
   filter,
@@ -54,9 +54,7 @@ export function ActivitySearchFilter({
 }) {
   const fromId = useId()
   const toId = useId()
-  const categories = [
-    ...new Set((options?.types ?? []).map((type) => type.category)),
-  ]
+
   const actors = options?.actors ?? []
   const stores = options?.stores ?? []
   const actorName = (id: string) =>
@@ -68,6 +66,9 @@ export function ActivitySearchFilter({
   const typeChoices = (options?.types ?? []).filter(
     (type) => type.availability !== "planned",
   )
+  // Only kinds of activity this Business actually records; planned ones
+  // would always come back empty.
+  const categories = [...new Set(typeChoices.map((type) => type.category))]
   const typeLabel = (type: string) =>
     typeChoices.find((choice) => choice.type === type)?.label ?? type
   const storeName = (id: string) =>
@@ -201,17 +202,6 @@ export function ActivitySearchFilter({
               ...optionsState,
             },
             {
-              id: "types",
-              label: "Event",
-              multiple: true,
-              allLabel: "All events",
-              options: typeChoices.map((choice) => ({
-                value: choice.type,
-                label: choice.label,
-              })),
-              ...optionsState,
-            },
-            {
               id: "person",
               label: "Person",
               allLabel: "Anyone",
@@ -259,9 +249,10 @@ export function ActivitySearchFilter({
                 (value): value is BusinessActivityCategory =>
                   value in ACTIVITY_CATEGORY_LABELS,
               ),
+              // Phones filter by kind only; a typed-in event list is kept.
               types: typeChoices
                 .map((choice) => choice.type)
-                .filter((type) => draft.types?.includes(type)),
+                .filter((type) => (draft.types ?? filter.types).includes(type)),
               person: draft.person?.[0] ?? null,
               storeIds: draft.stores ?? [],
             }),

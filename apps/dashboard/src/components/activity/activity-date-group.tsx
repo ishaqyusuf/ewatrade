@@ -15,10 +15,13 @@ export function ActivityDateGroup({
 }) {
   const id = `activity-day-${group.day}`
   return (
-    <section aria-labelledby={id} className="mt-3.5">
+    <section
+      aria-labelledby={id}
+      className="mt-4 overflow-hidden rounded-[var(--ui-radius-surface)] border border-border bg-card"
+    >
       <h2
         id={id}
-        className="sticky top-0 z-[1] flex items-baseline gap-2.5 border-b bg-background pt-2.5 pb-2 text-[13px] font-medium"
+        className="flex items-baseline gap-2.5 border-b border-border px-4 py-3 text-sm font-semibold"
       >
         <span>{group.title}</span>
         {group.subtitle ? (
@@ -27,7 +30,7 @@ export function ActivityDateGroup({
           </span>
         ) : null}
       </h2>
-      <ul>
+      <ul className="grid gap-0.5 p-1.5">
         {group.items.map((event) => (
           <ActivityRow
             key={event.key}

@@ -125,7 +125,7 @@ function ActivitySheetBody({
               {original.label}
             </Button>
           ) : original ? (
-            <span className="text-xs text-muted-foreground">
+            <span className="text-sm text-muted-foreground">
               {original.unavailable}
             </span>
           ) : null}
@@ -153,7 +153,7 @@ function ActivitySheetBody({
         />
       ) : (
         <output aria-live="polite" className="text-sm text-muted-foreground">
-          Checking this activity against your current access…
+          Loading…
         </output>
       )}
     </SheetFrame>

@@ -48,7 +48,7 @@ export function ActivityPage({
 }) {
   return (
     <ScrollableContent>
-      <div className="flex min-w-0 flex-1 flex-col gap-5 pt-6 pb-10">
+      <div className="flex min-w-0 flex-1 flex-col gap-4 pt-6 pb-10">
         <ActivityViewerProvider membershipId={viewerMembershipId}>
           <ActivityPageBody key={scopeKey} timeZone={timeZone} />
         </ActivityViewerProvider>
@@ -101,20 +101,20 @@ function ActivityPageBody({ timeZone }: { timeZone: string }) {
   return (
     <>
       <ActivityHeader
-        scope={options?.scope ?? null}
         refreshing={filters.isFetching || list.isFetching}
         onRefresh={restart}
-      />
-      <ActivitySearchFilter
-        filter={filter}
-        setFilter={setFilter}
-        options={options}
-        optionsError={!drift && filters.isError}
-        onRetryOptions={() => void filters.refetch()}
-        now={now}
-        personNames={drift ? NO_NAMES : personNames}
-        onSearchPeople={() => setPickerOpen(true)}
-      />
+      >
+        <ActivitySearchFilter
+          filter={filter}
+          setFilter={setFilter}
+          options={options}
+          optionsError={!drift && filters.isError}
+          onRetryOptions={() => void filters.refetch()}
+          now={now}
+          personNames={drift ? NO_NAMES : personNames}
+          onSearchPeople={() => setPickerOpen(true)}
+        />
+      </ActivityHeader>
       <ActivityPersonPicker
         open={pickerOpen && !drift}
         onOpenChange={setPickerOpen}
@@ -129,12 +129,11 @@ function ActivityPageBody({ timeZone }: { timeZone: string }) {
       {drift ? (
         <div
           role="alert"
-          className="flex min-h-56 flex-col items-center justify-center gap-3 border border-dashed text-center"
+          className="flex min-h-56 flex-col items-center justify-center gap-3 rounded-[var(--ui-radius-surface)] border border-dashed px-5 text-center"
         >
           <p className="font-medium">Your access has changed</p>
           <p className="text-sm text-muted-foreground">
-            Activity shown earlier was cleared. Reload to see what you can
-            access now.
+            Reload to see what you can open now.
           </p>
           <Button variant="outline" onClick={restart}>
             Reload activity
@@ -145,12 +144,11 @@ function ActivityPageBody({ timeZone }: { timeZone: string }) {
       ) : list.isError && !list.isFetchNextPageError ? (
         <div
           role="alert"
-          className="flex min-h-56 flex-col items-center justify-center gap-3 border border-dashed text-center"
+          className="flex min-h-56 flex-col items-center justify-center gap-3 rounded-[var(--ui-radius-surface)] border border-dashed px-5 text-center"
         >
           <p className="font-medium">Activity couldn't load</p>
           <p className="text-sm text-muted-foreground">
-            It may not be available with your current access. Your filters are
-            kept.
+            Check your connection, then try again.
           </p>
           <Button variant="outline" onClick={() => void list.refetch()}>
             Try again
@@ -208,7 +206,7 @@ function ActivityList({
   const total = first?.total ?? null
   return (
     <section aria-label="Recorded activity">
-      <p aria-live="polite" className="text-[13px] text-muted-foreground">
+      <p aria-live="polite" className="text-sm text-muted-foreground">
         {total === null
           ? `${items.length} ${items.length === 1 ? "event" : "events"} shown`
           : `${total} ${total === 1 ? "event" : "events"}`}

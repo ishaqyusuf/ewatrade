@@ -179,3 +179,131 @@ export function recordedThroughAssistant(event: BusinessActivityView) {
 export function formatRole(role: string | null) {
   return role ? formatActivityStatus(role) : ""
 }
+
+/** One piece of an Activity sentence; `who` and `amount` are emphasised. */
+export type ActivitySentencePart = {
+  text: string
+  emphasis?: "who" | "amount"
+}
+
+/** "Bank transfer" → "bank transfer"; acronyms such as POS stay. */
+function methodWords(method: string | null) {
+  if (!method) return null
+  const text = method.trim()
+  return /^[A-Z]{2,}$/.test(text) ? text : text.toLowerCase()
+}
+
+/** "a ₦5,000" or "an ₦8,000": the article follows the spoken amount. */
+function article(amount: string) {
+  return /^[^\d]*(8|11|18|80|8\d\d)(\D|$)/.test(amount) ? "an" : "a"
+}
+
+/**
+ * The row as one plain sentence: "Ada recorded a ₦5,000 cash payment on
+ * ORD-041". Known event types are written from their fields; others fall back
+ * to the server summary with the viewer's own actions as "You".
+ */
+export function activitySentence(
+  event: BusinessActivityView,
+  viewerMembershipId: string | null = null,
+): ActivitySentencePart[] {
+  const recorded = event.actor.coverage === "recorded" && event.actor.name
+  const who: ActivitySentencePart = {
+    emphasis: "who",
+    text: recorded ? activityAuthor(event, viewerMembershipId) : "Someone",
+  }
+  // Sentences read "₦5,000", not "-₦5,000.00": the words say it is a refund.
+  const amount =
+    formatActivityAmount(event)?.replace(/^-/, "").replace(/\.00$/, "") ?? null
+  const money = (text: string): ActivitySentencePart => ({
+    emphasis: "amount",
+    text,
+  })
+  const order = event.subject?.label ?? null
+  const detail = event.coverage === "legacy_fact" ? null : event.detail
+  switch (event.type) {
+    case "order.recorded": {
+      // "Ada recorded order ORD-041 (₦5,000) for Musa"; walk-ins name no one.
+      const forWhom =
+        !detail || /^walk-?in$/i.test(detail) ? "" : ` for ${detail}`
+      const name = order ? ` ${order}` : ""
+      return amount
+        ? [
+            who,
+            { text: ` recorded order${name} (` },
+            money(amount),
+            { text: `)${forWhom}` },
+          ]
+        : [who, { text: ` recorded order${name}${forWhom}` }]
+    }
+    case "payment.recorded":
+    case "payment.refund_recorded": {
+      const refund = event.type === "payment.refund_recorded"
+      const method = methodWords(event.detail)
+      const noun = refund ? "refund" : "payment"
+      const on = order ? ` on ${order}` : ""
+      if (!amount) return [who, { text: ` recorded a ${noun}${on}` }]
+      return [
+        who,
+        { text: ` recorded ${article(amount)} ` },
+        money(amount),
+        { text: ` ${method ? `${method} ` : ""}${noun}${on}` },
+      ]
+    }
+    case "finance.movement_recorded": {
+      const [from, to] = (event.detail ?? "").split(" → ")
+      const kind = event.summary.endsWith("a transfer")
+        ? "transfer"
+        : event.summary.endsWith("money in")
+          ? "in"
+          : event.summary.endsWith("money out")
+            ? "out"
+            : "reversal"
+      if (!amount) break
+      if (kind === "transfer")
+        return [
+          who,
+          { text: " moved " },
+          money(amount),
+          { text: from && to ? ` from ${from} to ${to}` : "" },
+        ]
+      if (kind === "in")
+        return [
+          who,
+          { text: " put in " },
+          money(amount),
+          { text: to || from ? ` to ${to || from}` : "" },
+        ]
+      if (kind === "out")
+        return [
+          who,
+          { text: " took out " },
+          money(amount),
+          { text: from ? ` from ${from}` : "" },
+        ]
+      return [
+        who,
+        { text: ` reversed ${article(amount)} ` },
+        money(amount),
+        { text: " money record" },
+      ]
+    }
+    case "staff.invitation_accepted":
+      return [
+        who,
+        { text: event.detail ? ` joined as ${event.detail}` : " joined" },
+      ]
+  }
+  const { actor, rest } = splitActivitySummary(event)
+  return actor ? [who, { text: rest }] : [{ text: event.summary }]
+}
+
+/** The sentence as plain text, for labels and tests. */
+export function activitySentenceText(
+  event: BusinessActivityView,
+  viewerMembershipId: string | null = null,
+) {
+  return activitySentence(event, viewerMembershipId)
+    .map((part) => part.text)
+    .join("")
+}

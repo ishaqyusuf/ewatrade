@@ -16,7 +16,7 @@ import {
   recordedThroughAssistant,
   wasRecordedLater,
 } from "./activity-format"
-import { ActivityAmount, AssistantFlag } from "./activity-row"
+import { AssistantFlag } from "./activity-row"
 
 const ORIGIN_LABELS: Record<
   NonNullable<BusinessActivityView["origin"]>["channel"],
@@ -34,8 +34,8 @@ const ORIGIN_LABELS: Record<
 
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div className="grid grid-cols-[112px_1fr] gap-3 border-b py-2.5 text-sm max-sm:grid-cols-[96px_1fr]">
-      <dt className="text-[13px] text-muted-foreground">{label}</dt>
+    <div className="grid grid-cols-[112px_1fr] gap-3 border-b py-3 text-sm max-sm:grid-cols-[100px_1fr]">
+      <dt className="text-muted-foreground">{label}</dt>
       <dd className="min-w-0 break-words">{children}</dd>
     </div>
   )
@@ -59,17 +59,10 @@ export function ActivityDetailContent({
         {ACTIVITY_CATEGORY_LABELS[event.category]}
         {event.store?.name ? ` · ${event.store.name}` : ""}
       </p>
-      {event.amount ? (
-        <p className="text-2xl">
-          <ActivityAmount event={event} />
-        </p>
-      ) : null}
       {event.actor.coverage !== "recorded" ? (
-        <p className="flex items-start gap-2 border bg-muted px-3 py-2.5 text-[13px]">
+        <p className="flex items-start gap-2 rounded-[var(--ui-radius-item)] bg-[var(--neutral)] px-3 py-2.5 text-sm text-[var(--neutral-foreground)]">
           <HugeiconsIcon icon={HelpCircleIcon} className="mt-0.5 size-4" />
-          {event.coverage === "legacy_fact"
-            ? "Recorded before Activity tracking started. Who recorded it wasn't captured, so EwaTrade doesn't guess."
-            : "Who recorded this wasn't captured, so EwaTrade doesn't guess."}
+          We don't know who recorded this.
         </p>
       ) : null}
       <dl className="border-t">
@@ -79,9 +72,7 @@ export function ActivityDetailContent({
         {wasRecordedLater(event, timeZone) ? (
           <Field label="Recorded">
             {formatActivityDateTime(event.recordedAt, timeZone)}
-            <span className="block text-muted-foreground">
-              Entered later with an earlier date
-            </span>
+            <span className="block text-muted-foreground">Entered later</span>
           </Field>
         ) : null}
         <Field label="Person">
@@ -96,7 +87,7 @@ export function ActivityDetailContent({
           <Field label="Status">
             {atEvent ? (
               <span className="block">
-                <span className="bg-secondary px-1.5 text-xs">
+                <span className="rounded-full bg-[var(--neutral)] px-2 py-0.5 text-xs text-[var(--neutral-foreground)]">
                   {formatActivityStatus(atEvent)}
                 </span>{" "}
                 <span className="text-muted-foreground">when recorded</span>
@@ -106,10 +97,10 @@ export function ActivityDetailContent({
               <span className="mt-1 block">
                 <span
                   className={cn(
-                    "px-1.5 text-xs",
+                    "rounded-full px-2 py-0.5 text-xs",
                     activityStatusTone(now) === "negative"
-                      ? "bg-destructive/10 text-destructive"
-                      : "bg-emerald-50 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300",
+                      ? "bg-[var(--danger)] text-[var(--danger-foreground)]"
+                      : "bg-[var(--success)] text-[var(--success-foreground)]",
                   )}
                 >
                   {formatActivityStatus(now)}
@@ -148,7 +139,7 @@ export function ActivityDetailContent({
       </dl>
       {changes.length ? (
         <section aria-labelledby="activity-changes" className="grid gap-2">
-          <h3 id="activity-changes" className="text-sm font-medium">
+          <h3 id="activity-changes" className="font-semibold">
             What changed
           </h3>
           <dl className="border-t">
@@ -164,9 +155,6 @@ export function ActivityDetailContent({
           </dl>
         </section>
       ) : null}
-      <p className="text-xs text-muted-foreground">
-        Activity is a read-only history. Changes happen on the original record.
-      </p>
     </div>
   )
 }

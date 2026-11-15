@@ -1,34 +1,23 @@
 "use client"
 
-import { PageTitleHeading } from "@/components/dashboard/page-title"
-import type { BusinessActivityFilterOptions } from "@ewatrade/notifications/business-events"
 import { Button } from "@ewatrade/ui"
 import { RefreshIcon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
+import type { ReactNode } from "react"
 
-const SCOPE_COPY: Record<BusinessActivityFilterOptions["scope"], string> = {
-  business: "Everything recorded in this Business that you can see.",
-  stores: "Activity in the Stores you can access.",
-  own: "Records your role can open.",
-}
-
+/** Search and filters, then one Refresh button; the top bar names the page. */
 export function ActivityHeader({
-  scope,
+  children,
   refreshing,
   onRefresh,
 }: {
-  scope: BusinessActivityFilterOptions["scope"] | null
+  children: ReactNode
   refreshing: boolean
   onRefresh: () => void
 }) {
   return (
-    <div className="flex items-end justify-between gap-4">
-      <div className="min-w-0">
-        <PageTitleHeading title="Activity" />
-        <p className="mt-1 text-sm text-muted-foreground">
-          {scope ? SCOPE_COPY[scope] : "What happened, newest first."}
-        </p>
-      </div>
+    <div className="flex min-w-0 items-start gap-2">
+      <div className="min-w-0 flex-1 md:max-w-xl">{children}</div>
       <Button
         variant="outline"
         size="icon"
@@ -36,13 +25,14 @@ export function ActivityHeader({
         title="Refresh"
         disabled={refreshing}
         onClick={onRefresh}
+        className="ml-auto shrink-0"
       >
         <HugeiconsIcon
           icon={RefreshIcon}
           className={
             refreshing
-              ? "size-4 animate-spin motion-reduce:animate-none"
-              : "size-4"
+              ? "size-5 animate-spin motion-reduce:animate-none"
+              : "size-5"
           }
         />
       </Button>
