@@ -513,9 +513,11 @@ function StudioEditor({
           </button>
           <Button
             variant="ghost"
-            onClick={() => (dirty ? setExitOpen(true) : router.push("/"))}
+            onClick={() =>
+              dirty ? setExitOpen(true) : router.push("/storefront")
+            }
           >
-            ← Back to dashboard
+            ← Online store
           </Button>
           <span className="sf-canvas-store">
             {store?.name ?? "Storefront studio"}
@@ -1202,7 +1204,7 @@ function StudioEditor({
             <Button
               variant="outline"
               disabled={busy}
-              onClick={() => router.push("/")}
+              onClick={() => router.push("/storefront")}
             >
               Leave without saving
             </Button>
@@ -1210,7 +1212,7 @@ function StudioEditor({
               disabled={busy || !!conflict}
               onClick={() =>
                 void run(async () => {
-                  if (await save()) router.push("/")
+                  if (await save()) router.push("/storefront")
                 })
               }
             >

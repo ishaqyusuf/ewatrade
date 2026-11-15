@@ -163,10 +163,10 @@ const DASHBOARD_NAV: DashboardNavDefinition[] = [
     canAccess: canManageCatalog,
   },
   {
-    description: "Edit, preview and publish your public Store design",
+    description: "Your online store: link, design, items and web address",
     href: "/storefront",
     icon: "products",
-    label: "Storefront",
+    label: "Online store",
     canAccess: canManageTenantRole,
   },
   {

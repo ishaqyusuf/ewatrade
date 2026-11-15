@@ -123,7 +123,7 @@ export function useAssistantReceipt() {
       case "storefront_design_run":
       case "storefront_design_draft":
         return router.push(
-          `/storefront?designRun=${encodeURIComponent(receipt.recordId)}`,
+          `/storefront/studio?designRun=${encodeURIComponent(receipt.recordId)}`,
         )
       case "store_receipt_settings":
       case "store_reminder_settings":

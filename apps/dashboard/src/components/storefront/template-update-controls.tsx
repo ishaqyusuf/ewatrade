@@ -20,14 +20,14 @@ export function TemplateUpdateControls({
       const result = await fetch("/api/tenants/active", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tenantId, path: "/storefront" }),
+        body: JSON.stringify({ tenantId, path: "/storefront/studio" }),
       })
       if (!result.ok)
         throw Error(
           "This business is no longer available. Refresh and try again.",
         )
       clearDashboardDataCache()
-      window.location.assign("/storefront")
+      window.location.assign("/storefront/studio")
     } catch (cause) {
       setError(
         cause instanceof Error ? cause.message : "Could not open Studio.",
@@ -50,7 +50,7 @@ export function TemplateUpdateControls({
   return (
     <div className="space-y-5">
       <Button onClick={openStudio} disabled={busy}>
-        Open Storefront Studio
+        Open the studio
       </Button>
       <div className="border-t border-border pt-5 text-sm">
         <p>
