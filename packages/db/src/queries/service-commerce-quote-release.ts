@@ -188,6 +188,14 @@ export async function getServiceCommerceQuoteReleaseSettings(
   input: { actorUserId: string; storeId: string; tenantId: string },
 ) {
   await assertStoreManager(db, input)
+  return readServiceCommerceQuoteReleaseSettings(db, input)
+}
+
+/** The settings read after the caller has admitted an Owner/Admin and Store. */
+export async function readServiceCommerceQuoteReleaseSettings(
+  db: DbClient,
+  input: { storeId: string; tenantId: string },
+) {
   const [policy, assignments, options] = await Promise.all([
     db.serviceCommerceQuoteReleasePolicy.findFirst({
       select: {

@@ -8,7 +8,10 @@ import {
 } from "@ewatrade/service-commerce"
 
 import { isPrescriptionProductionLaunchApproved } from "./prescription-launch-gate"
-import { evaluateServiceCommercePolicyBatchInTransaction } from "./service-commerce-policy"
+import {
+  evaluateServiceCommercePolicyBatchInTransaction,
+  evaluateServiceCommercePolicyBatchReadOnlyInTransaction,
+} from "./service-commerce-policy"
 import { projectStoredStoreConversationAvailabilityConfiguration } from "./store-conversation-availability"
 import { projectStoredStoreConversationDesiredMode } from "./store-conversation-channel-mode"
 import type { DbClient } from "./types"
@@ -111,7 +114,13 @@ function connectionIsReady(connection: {
 
 export async function resolveStoreConversationChannelProjectionInTransaction(
   db: DbClient,
-  input: { now?: Date; storeId: string; tenantId: string },
+  input: {
+    now?: Date
+    /** Settings page snapshots read without writing policy READ audit rows. */
+    readOnly?: boolean
+    storeId: string
+    tenantId: string
+  },
 ) {
   const now = input.now ?? new Date()
   const store = await db.store.findFirst({
@@ -266,7 +275,10 @@ export async function resolveStoreConversationChannelProjectionInTransaction(
   const attendant =
     store.serviceCommerceStoreTeamAssignments?.[0] ?? legacyAttendant
   const preloadedPolicy = store.serviceCommercePolicyDecisions
-  const outcomes = await evaluateServiceCommercePolicyBatchInTransaction(db, {
+  const evaluatePolicies = input.readOnly
+    ? evaluateServiceCommercePolicyBatchReadOnlyInTransaction
+    : evaluateServiceCommercePolicyBatchInTransaction
+  const outcomes = await evaluatePolicies(db, {
     actorUserId: "public_customer_entry",
     ...(preloadedPolicy === undefined
       ? {}

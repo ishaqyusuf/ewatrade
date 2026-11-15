@@ -1,4 +1,3 @@
-import { reviewGeneralQuoteDecision } from "../../../assistant/general-quote-decision"
 import { quoteDecisionAction } from "@ewatrade/assistant/general/quote-decision"
 import { canManageTenant, normalizeRole } from "@ewatrade/auth/roles"
 import {
@@ -9,8 +8,8 @@ import {
 import {
   CommerceQuoteError,
   CustomerChannelsError,
-  ServiceCommerceQuoteReleaseError,
   ServiceCommercePolicyError,
+  ServiceCommerceQuoteReleaseError,
   StoreConversationAvailabilityError,
   StoreConversationChannelModeError,
   approveCommerceQuoteVersion,
@@ -18,6 +17,7 @@ import {
   completeCustomerChannelEmbeddedSignup,
   getCommerceQuoteApprovalDetail,
   getCustomerChannelEmbeddedSignupSession,
+  getCustomerChannelSettingsSnapshot,
   getCustomerChannelWorkspace,
   getPublicCustomerEntryPoint,
   getServiceCommerceQuoteReleaseSettings,
@@ -41,13 +41,14 @@ import {
   enqueueWhatsAppConnectionTest,
 } from "@ewatrade/jobs"
 import { TRPCError } from "@trpc/server"
+import { reviewGeneralQuoteDecision } from "../../../assistant/general-quote-decision"
 import {
-  readGeneralQuoteApproval,
   readGeneralPendingQuoteApprovals,
+  readGeneralQuoteApproval,
 } from "../../../assistant/general-quote-reads"
 import {
-  generalQuoteApprovalReadInput,
   generalPendingQuoteApprovalsInput,
+  generalQuoteApprovalReadInput,
 } from "../../../schemas/assistant-quote-reads"
 
 import {
@@ -186,7 +187,7 @@ function storeId(
 export const serviceCommerceChannelsRouter = createTRPCRouter({
   assistantQuoteDecisionReview: protectedProcedure
     .input(quoteDecisionAction)
-    .query(({ctx,input}) => reviewGeneralQuoteDecision(ctx,input)),
+    .query(({ ctx, input }) => reviewGeneralQuoteDecision(ctx, input)),
   assistantQuoteApprovalDetail: protectedProcedure
     .input(generalQuoteApprovalReadInput)
     .query(async ({ ctx, input }) => {
@@ -305,6 +306,33 @@ export const serviceCommerceChannelsRouter = createTRPCRouter({
           tenantId: ctx.tenantContext.tenant.id,
         })
       } catch (error) {
+        mapCustomerChannelsError(error)
+      }
+    }),
+
+  /**
+   * Settings → Customer channels in one read (workspace, chat hours, quote
+   * approval settings, channel mode, pending approvals), each in its own
+   * procedure's shape. Owner/Admin only, read-only policy evaluation.
+   */
+  channelSettings: protectedProcedure
+    .input(customerChannelWorkspaceSchema)
+    .query(async ({ ctx, input }) => {
+      try {
+        assertCustomerChannelsManager(ctx.tenantContext.membership.role)
+        return await getCustomerChannelSettingsSnapshot(ctx.db, {
+          actorUserId: ctx.session.user.id,
+          storeId: storeId(ctx, input.storeId),
+          tenantId: ctx.tenantContext.tenant.id,
+        })
+      } catch (error) {
+        if (error instanceof StoreConversationAvailabilityError)
+          mapStoreConversationAvailabilityError(error)
+        if (
+          error instanceof ServiceCommerceQuoteReleaseError ||
+          error instanceof CommerceQuoteError
+        )
+          mapQuoteReleaseError(error)
         mapCustomerChannelsError(error)
       }
     }),

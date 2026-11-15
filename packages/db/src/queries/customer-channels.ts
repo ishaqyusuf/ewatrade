@@ -9,8 +9,16 @@ import { readBusinessOnboardingFactsFromStoreMetadata } from "@ewatrade/utils"
 
 import { Prisma, type PrismaClient } from "../../generated/prisma/client"
 import { MembershipRole, MembershipStatus } from "../../generated/prisma/enums"
-import { getServiceCommerceWorkspaceAccess } from "./service-commerce-access"
+import {
+  getServiceCommerceWorkspaceAccess,
+  getServiceCommerceWorkspaceAccessReadOnly,
+} from "./service-commerce-access"
 import { revalidateCustomerActionCapabilityInTransaction } from "./service-commerce-actions/projection"
+import {
+  listPendingServiceCommerceQuoteApprovals,
+  readServiceCommerceQuoteReleaseSettings,
+} from "./service-commerce-quote-release"
+import { loadStoreConversationAvailabilityConfiguration } from "./store-conversation-availability"
 import { resolveStoreConversationChannelProjectionInTransaction } from "./store-conversation-channel-projection"
 import { releaseStoreConversationsForIneligibleMembership } from "./store-conversations-assignments"
 import type { DbClient } from "./types"
@@ -124,6 +132,20 @@ export async function getCustomerChannelWorkspace(
   input: { actorUserId: string; storeId: string; tenantId: string },
 ) {
   const { store } = await assertStoreManager(db, input)
+  return (await buildCustomerChannelWorkspace(db, input, store, false))
+    .workspace
+}
+
+/**
+ * The workspace for an admitted Owner/Admin and Store. `readOnly` evaluates
+ * the same policies without READ audit rows (settings page snapshot).
+ */
+async function buildCustomerChannelWorkspace(
+  db: PrismaClient,
+  input: { actorUserId: string; storeId: string; tenantId: string },
+  store: { metadata: Prisma.JsonValue },
+  readOnly: boolean,
+) {
   const [
     connections,
     assignments,
@@ -188,15 +210,20 @@ export async function getCustomerChannelWorkspace(
       },
       where: { storeId: input.storeId, tenantId: input.tenantId },
     }),
-    getServiceCommerceWorkspaceAccess(db, input),
-    resolveStoreConversationChannelProjectionInTransaction(db, input),
+    readOnly
+      ? getServiceCommerceWorkspaceAccessReadOnly(db, input)
+      : getServiceCommerceWorkspaceAccess(db, input),
+    resolveStoreConversationChannelProjectionInTransaction(db, {
+      ...input,
+      readOnly,
+    }),
   ])
 
   const onboarding = readBusinessOnboardingFactsFromStoreMetadata(
     store.metadata,
   )
 
-  return {
+  const workspace = {
     access: access.access,
     channelMode: conversationChannels?.channelMode ?? null,
     connections: connections.map((connection) => ({
@@ -261,6 +288,51 @@ export async function getCustomerChannelWorkspace(
       role: membership.role.toLowerCase(),
       userId: membership.user.id,
     })),
+  }
+  return { channelMode: conversationChannels?.channelMode ?? null, workspace }
+}
+
+/**
+ * Settings → Customer channels in one read: one Owner/Admin and Store
+ * admission, then the workspace, chat hours, quote approval settings, channel
+ * mode and pending approvals. Each piece has the same shape as its own
+ * procedure, so callers can seed those caches. Policy evaluation is read-only
+ * (no READ audit rows), and the pending-approvals transaction (which may
+ * supersede stale approvals) only runs when an approval is pending.
+ */
+export async function getCustomerChannelSettingsSnapshot(
+  db: PrismaClient,
+  input: { actorUserId: string; storeId: string; tenantId: string },
+) {
+  const { store } = await assertStoreManager(db, input)
+  const [built, availability, quoteRelease, pendingQuoteApprovals] =
+    await Promise.all([
+      buildCustomerChannelWorkspace(db, input, store, true),
+      loadStoreConversationAvailabilityConfiguration(db, input),
+      readServiceCommerceQuoteReleaseSettings(db, input),
+      db.serviceCommerceQuoteApproval
+        .count({
+          where: {
+            status: "PENDING",
+            storeId: input.storeId,
+            tenantId: input.tenantId,
+          },
+        })
+        .then((pending) =>
+          pending > 0
+            ? listPendingServiceCommerceQuoteApprovals(db, input)
+            : [],
+        ),
+    ])
+  if (!built.channelMode) {
+    throw new CustomerChannelsError("NOT_FOUND", "Store not found.")
+  }
+  return {
+    availability,
+    channelMode: built.channelMode,
+    pendingQuoteApprovals,
+    quoteRelease,
+    workspace: built.workspace,
   }
 }
 

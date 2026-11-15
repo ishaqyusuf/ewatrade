@@ -4,6 +4,7 @@ import type { PrismaClient } from "../../generated/prisma/client"
 import {
   CustomerChannelsError,
   assignCustomerChannelAttendant,
+  getCustomerChannelSettingsSnapshot,
   getCustomerChannelWorkspace,
   getPublicCustomerEntryPoint,
   publishCustomerEntryPoint,
@@ -73,8 +74,7 @@ function channelProjectionStore(input?: {
     prescriptionSettings: input?.pharmacyConfigured
       ? { status: "ACTIVE" }
       : null,
-    serviceCommercePolicyDecisions:
-      allowedServiceCommercePolicyDecisionRows(),
+    serviceCommercePolicyDecisions: allowedServiceCommercePolicyDecisionRows(),
     serviceCommerceProfile: {
       intakeEnabled: true,
       status: "ACTIVE",
@@ -370,6 +370,88 @@ describe("customer channels workspace", () => {
       select: { id: true, metadata: true, name: true },
       where: { id: "store_1", tenantId: "tenant_1" },
     })
+  })
+})
+
+describe("customer channels settings snapshot", () => {
+  function snapshotDb(pending: number) {
+    const db = createDb()
+    const client = db.client as unknown as Record<string, unknown>
+    const store = client.store as {
+      findFirst: (args: Record<string, unknown>) => Promise<object>
+    }
+    const findStore = store.findFirst
+    store.findFirst = async (args) => ({
+      ...(await findStore(args)),
+      storeConversationAvailabilityConfiguration: null,
+      tenant: { timezone: "Africa/Lagos" },
+    })
+    client.serviceCommerceQuoteApproval = {
+      count: async (args: Record<string, unknown>) => {
+        db.calls.push({ args, name: "approval.count" })
+        return pending
+      },
+      findMany: async (args: Record<string, unknown>) => {
+        db.calls.push({ args, name: "approval.findMany" })
+        return []
+      },
+    }
+    client.serviceCommerceQuoteReleasePolicy = {
+      findFirst: async (args: Record<string, unknown>) => {
+        db.calls.push({ args, name: "releasePolicy.findFirst" })
+        return null
+      },
+    }
+    return db
+  }
+  const input = {
+    actorUserId: "manager_1",
+    storeId: "store_1",
+    tenantId: "tenant_1",
+  }
+
+  test("returns each piece in its procedure's shape without policy audit writes", async () => {
+    const db = snapshotDb(0)
+    const snapshot = await getCustomerChannelSettingsSnapshot(db.client, input)
+    expect(Object.keys(snapshot).sort()).toEqual([
+      "availability",
+      "channelMode",
+      "pendingQuoteApprovals",
+      "quoteRelease",
+      "workspace",
+    ])
+    expect(snapshot.workspace.storeId).toBe("store_1")
+    expect(snapshot.pendingQuoteApprovals).toEqual([])
+    expect(snapshot.availability.timezone).toBe("Africa/Lagos")
+    expect(
+      db.calls.some((call) => call.name === "policyAudit.createMany"),
+    ).toBe(false)
+    // Nothing pending: the superseding approvals transaction never starts.
+    expect(db.calls.some((call) => call.name === "approval.findMany")).toBe(
+      false,
+    )
+    expect(JSON.stringify(snapshot)).not.toContain("secret")
+  })
+
+  test("the workspace procedure keeps its audited policy read", async () => {
+    const db = snapshotDb(0)
+    await getCustomerChannelWorkspace(db.client, input)
+    expect(
+      db.calls.some((call) => call.name === "policyAudit.createMany"),
+    ).toBe(true)
+  })
+
+  test("refuses a non-manager before reading anything else", async () => {
+    const db = snapshotDb(0)
+    await expect(
+      getCustomerChannelSettingsSnapshot(db.client, {
+        ...input,
+        actorUserId: "operator_1",
+      }),
+    ).rejects.toMatchObject({ code: "FORBIDDEN" })
+    expect(db.calls.some((call) => call.name === "connection.findMany")).toBe(
+      false,
+    )
   })
 })
 

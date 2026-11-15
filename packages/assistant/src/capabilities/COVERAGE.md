@@ -6,10 +6,10 @@ Tickets refer to the Brain plan `.brain/plans/2026-10-09-assistant-business-oper
 
 ## Summary
 
-- Router procedures: 852 (650 merchant, 202 public/account/internal)
+- Router procedures: 853 (651 merchant, 202 public/account/internal)
 - Merchant supported by a capability: 188
 - Merchant planned: 144
-- Merchant form-only: 242
+- Merchant form-only: 243
 - Merchant excluded: 76
 - Capabilities: 171 (89 read, 82 write)
 
@@ -887,6 +887,7 @@ track conversational evaluation separately from these source test links.
 | `serviceCommerce.catalogPriceSuggestions` | query | Owner/Admin only | catalog | planned | B02 |
 | `serviceCommerce.channelEmbeddedSignupSession` | query | Owner/Admin only | commerce | form_only | Messaging channel connection uses provider sign-up and credentials. |
 | `serviceCommerce.channelEmbeddedSignupUrl` | query | Owner/Admin only | commerce | form_only | Messaging channel connection uses provider sign-up and credentials. |
+| `serviceCommerce.channelSettings` | query | Owner/Admin only | commerce | form_only | Messaging channel connection uses provider sign-up and credentials. |
 | `serviceCommerce.channelWorkspace` | query | Owner/Admin only | commerce | form_only | Messaging channel connection uses provider sign-up and credentials. |
 | `serviceCommerce.claimStoreConversation` | mutation | Owner/Admin only | commerce | form_only | Customer conversations are answered by staff in the inbox, not by the assistant. |
 | `serviceCommerce.completeChannelEmbeddedSignup` | mutation | Owner/Admin only | commerce | form_only | Messaging channel connection uses provider sign-up and credentials. |

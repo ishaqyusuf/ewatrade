@@ -477,6 +477,7 @@ formOnly(
     "serviceCommerce.*ChannelAttendant",
     "serviceCommerce.*hannelEmbeddedSignup*",
     "serviceCommerce.channelWorkspace",
+    "serviceCommerce.channelSettings",
     "serviceCommerce.*CustomerEntryPoint",
     "serviceCommerce.*CustomerChannel*",
     "serviceCommerce.saveCustomerWhatsAppConnection",
