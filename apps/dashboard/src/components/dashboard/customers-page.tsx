@@ -1,10 +1,7 @@
 "use client"
 
 import { CustomerFormSheet } from "@/components/customers/customer-form-sheet"
-import {
-  CustomerList,
-  filterCustomers,
-} from "@/components/customers/customer-list"
+import { CustomerList } from "@/components/customers/customer-list"
 import { CustomerDirectoryHeader } from "@/components/dashboard/customer-directory-header"
 import { ReturnablesEntry } from "@/components/returnables/returnables-page"
 import {
@@ -13,7 +10,6 @@ import {
   useReturnableItems,
 } from "@/components/returnables/use-returnables"
 import { ScrollableContent } from "@/components/scrollable-content"
-import { describeCustomerBalance } from "@/components/tables/customers/columns"
 import { useCustomerDirectoryParams } from "@/hooks/use-customer-directory-params"
 import { useCustomerSheetParams } from "@/hooks/use-customer-sheet-params"
 import type { DashboardCustomerRow } from "@/lib/sales-operations"
@@ -23,37 +19,59 @@ import { ArrowRight01Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import Link from "next/link"
 import { parseAsString, useQueryStates } from "nuqs"
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
-type CustomersResponse = {
+type Owed = { owingCount: number; owedMinor: string } | null
+type CustomerPage = {
   customers: DashboardCustomerRow[]
+  nextCursor: string | null
 }
 
 const LOAD_ERROR =
   "Couldn’t load customers. Check your connection and try again."
 
-async function fetchCustomers() {
-  const response = await fetch("/api/customers")
+async function fetchCustomers(
+  input: { search: string; show: string; cursor?: string },
+  signal?: AbortSignal,
+) {
+  const params = new URLSearchParams()
+  if (input.search) params.set("search", input.search)
+  if (input.show !== "all") params.set("show", input.show)
+  if (input.cursor) params.set("cursor", input.cursor)
+  const response = await fetch(`/api/customers?${params.toString()}`, {
+    signal,
+  })
   if (!response.ok) throw new Error(LOAD_ERROR)
-  return ((await response.json()) as CustomersResponse).customers
+  return (await response.json()) as CustomerPage & { owed: Owed }
 }
 
 /**
- * The customer book: search and filter happen on the device over the loaded
- * book (no request per letter); a row opens the customer's details sheet.
+ * The customer book, 50 at a time from the server. Search and the balance
+ * filter run in SQL (one request after a pause in typing), Load more reads
+ * the next page, and "Owed to you" comes from one aggregate, not the rows.
+ * A row opens the customer's details sheet.
  */
 export function CustomersPage({
-  initialCustomers,
+  initialPage,
+  initialOwed,
+  initialKey,
   canSeeBalances,
   store,
 }: {
-  initialCustomers: DashboardCustomerRow[]
+  initialPage: CustomerPage
+  initialOwed: Owed
+  /** The search and filter the server page was read with. */
+  initialKey: string
   canSeeBalances: boolean
   store: { currencyCode: string; id: string; name: string }
 }) {
   const { customerQuery, setCustomerQuery, customerFilter, setCustomerFilter } =
     useCustomerDirectoryParams()
-  const [customers, setCustomers] = useState(initialCustomers)
+  const [customers, setCustomers] = useState(initialPage.customers)
+  const [nextCursor, setNextCursor] = useState(initialPage.nextCursor)
+  const [owed, setOwed] = useState(initialOwed)
+  const [loading, setLoading] = useState(false)
+  const [loadingMore, setLoadingMore] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const { openCreate } = useCustomerSheetParams()
@@ -67,34 +85,61 @@ export function CustomersPage({
     enabled: Boolean(returnableItems.data?.length),
   })
 
-  const reload = useCallback(async () => {
+  const show = canSeeBalances ? customerFilter : "all"
+  const search = customerQuery.trim()
+  const key = `${search}:${show}`
+  const lastKey = useRef(initialKey)
+
+  const reload = useCallback(
+    async (signal?: AbortSignal) => {
+      setError(null)
+      setLoading(true)
+      try {
+        const page = await fetchCustomers({ search, show }, signal)
+        setCustomers(page.customers)
+        setNextCursor(page.nextCursor)
+        if (page.owed) setOwed(page.owed)
+      } catch {
+        if (!signal?.aborted) setError(LOAD_ERROR)
+      } finally {
+        if (!signal?.aborted) setLoading(false)
+      }
+    },
+    [search, show],
+  )
+
+  // A new search or filter reads the first page again after a short pause.
+  useEffect(() => {
+    if (lastKey.current === key) return
+    lastKey.current = key
+    const controller = new AbortController()
+    const timer = setTimeout(() => void reload(controller.signal), 250)
+    return () => {
+      clearTimeout(timer)
+      controller.abort()
+    }
+  }, [key, reload])
+
+  async function loadMore() {
+    if (!nextCursor || loadingMore) return
+    setLoadingMore(true)
     setError(null)
     try {
-      setCustomers(await fetchCustomers())
+      const page = await fetchCustomers({ search, show, cursor: nextCursor })
+      setCustomers((current) => [...current, ...page.customers])
+      setNextCursor(page.nextCursor)
     } catch {
       setError(LOAD_ERROR)
+    } finally {
+      setLoadingMore(false)
     }
-  }, [])
+  }
 
   useEffect(() => {
     if (!notice) return
     const timer = setTimeout(() => setNotice(null), 5000)
     return () => clearTimeout(timer)
   }, [notice])
-
-  const owed = useMemo(() => {
-    let total = BigInt(0)
-    let count = 0
-    for (const customer of customers) {
-      const view = customer.balance
-        ? describeCustomerBalance(customer.balance)
-        : null
-      if (view?.kind !== "owes") continue
-      total += BigInt(view.amountMinor)
-      count += 1
-    }
-    return { total: total.toString(), count }
-  }, [customers])
 
   const returnablesOut = useMemo(() => {
     const byCustomer = new Map<string, string[]>()
@@ -109,16 +154,7 @@ export function CustomersPage({
     )
   }, [returnables.data])
 
-  const rows = useMemo(
-    () =>
-      filterCustomers(
-        customers,
-        customerQuery,
-        canSeeBalances ? customerFilter : "all",
-      ),
-    [customers, customerQuery, customerFilter, canSeeBalances],
-  )
-  const filtered = Boolean(customerQuery.trim()) || customerFilter !== "all"
+  const filtered = Boolean(search) || show !== "all"
 
   return (
     <>
@@ -136,10 +172,13 @@ export function CustomersPage({
                       Owed to you
                     </span>
                     <span className="block text-lg font-semibold tabular-nums">
-                      {formatFinanceMoney(owed.total, store.currencyCode)}
+                      {formatFinanceMoney(
+                        owed?.owedMinor ?? "0",
+                        store.currencyCode,
+                      )}
                       <span className="ml-2 text-sm font-normal text-muted-foreground">
-                        {owed.count
-                          ? `${owed.count} ${owed.count === 1 ? "customer" : "customers"}`
+                        {owed?.owingCount
+                          ? `${owed.owingCount} ${owed.owingCount === 1 ? "customer" : "customers"}`
                           : "Nobody owes you"}
                       </span>
                     </span>
@@ -180,17 +219,27 @@ export function CustomersPage({
             </output>
           ) : null}
 
-          {rows.length ? (
-            <CustomerList
-              key={`${customerQuery}:${customerFilter}`}
-              rows={rows}
-              currencyCode={store.currencyCode}
-              canSeeBalances={canSeeBalances}
-              returnablesOut={returnablesOut}
-              onOpen={(customerId) =>
-                void setDetail({ customerDetail: customerId })
-              }
-            />
+          {customers.length ? (
+            <div
+              aria-busy={loading}
+              className={loading ? "opacity-60 transition-opacity" : undefined}
+            >
+              <CustomerList
+                rows={customers}
+                currencyCode={store.currencyCode}
+                canSeeBalances={canSeeBalances}
+                returnablesOut={returnablesOut}
+                onOpen={(customerId) =>
+                  void setDetail({ customerDetail: customerId })
+                }
+                loadingMore={loadingMore}
+                onLoadMore={nextCursor ? () => void loadMore() : undefined}
+              />
+            </div>
+          ) : loading ? (
+            <output aria-busy="true" className="text-sm text-muted-foreground">
+              Loading…
+            </output>
           ) : (
             <div className="grid justify-items-center gap-3 rounded-[var(--ui-radius-surface)] border border-dashed border-border bg-card px-4 py-12 text-center">
               <p className="font-medium">

@@ -1,4 +1,7 @@
-import { getDashboardCustomerBook } from "@/lib/sales-data"
+import {
+  getDashboardCustomerPage,
+  getDashboardOwedSummary,
+} from "@/lib/sales-data"
 import { canUseSalesOperations } from "@/lib/sales-operations"
 import { getServerSession } from "@/lib/session"
 import { getActiveTenant } from "@/lib/tenant"
@@ -55,17 +58,28 @@ export async function GET(request: NextRequest) {
   if ("error" in customersContext) return customersContext.error
 
   const { ctx, session, store } = customersContext
-  const customers = await getDashboardCustomerBook({
-    currencyCode: store.currencyCode,
-    role: ctx.membership.role,
-    search: url.searchParams.get("search")?.trim() || undefined,
-    storeId: store.id,
-    tenantId: ctx.tenant.id,
-    userId: session.user.id,
-  })
+  const show = url.searchParams.get("show")
+  const cursor = url.searchParams.get("cursor") ?? undefined
+  const [page, owed] = await Promise.all([
+    getDashboardCustomerPage({
+      currencyCode: store.currencyCode,
+      role: ctx.membership.role,
+      search: url.searchParams.get("search")?.trim() || undefined,
+      filter: show === "owe" || show === "ahead" ? show : "all",
+      cursor,
+      storeId: store.id,
+      tenantId: ctx.tenant.id,
+      userId: session.user.id,
+    }),
+    // The summary card only needs refreshing with the first page.
+    cursor
+      ? null
+      : getDashboardOwedSummary({
+          role: ctx.membership.role,
+          tenantId: ctx.tenant.id,
+          currencyCode: store.currencyCode,
+        }),
+  ])
 
-  return NextResponse.json({
-    customers,
-    store,
-  })
+  return NextResponse.json({ ...page, owed })
 }

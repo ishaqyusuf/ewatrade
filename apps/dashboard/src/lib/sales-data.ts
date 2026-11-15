@@ -4,68 +4,82 @@ import {
 } from "@/lib/sales-operations"
 import { prisma } from "@ewatrade/db"
 import {
-  listCustomerBook,
-  listCustomerLedgerBalances,
+  type CustomerBookFilter,
+  getCustomerBookOwedSummary,
+  listCustomerBookPage,
   resolveOrderScope,
 } from "@ewatrade/db/queries"
 
-export async function getDashboardCustomerBook(input: {
+/**
+ * One page of the store's customer book (50 by default) with search and the
+ * balance filter applied in SQL; one statement after the order scope.
+ * Balances come only for roles allowed to see them.
+ */
+export async function getDashboardCustomerPage(input: {
   /** Balances load in this currency; leave it out when they are not shown. */
   currencyCode?: string
   role: string
   search?: string
+  filter?: CustomerBookFilter
+  cursor?: string
+  limit?: number
   storeId: string
   tenantId: string
   userId: string
-}) {
+}): Promise<{ customers: DashboardCustomerRow[]; nextCursor: string | null }> {
   const scope = await resolveOrderScope(prisma, {
     ...input,
     activeStoreId: input.storeId,
     allowedStoreIds: [input.storeId],
   })
-  const customers = await listCustomerBook(prisma, {
+  const balances = Boolean(
+    input.currencyCode && canReviewCustomerBalances(input.role),
+  )
+  const page = await listCustomerBookPage(prisma, {
     ...scope,
-    query: input.search,
     storeId: input.storeId,
     // Saved customers belong to the business; own-sales views leave them out.
     includeSavedCustomers: !scope.createdByUserId,
+    currencyCode: balances ? input.currencyCode : undefined,
+    query: input.search,
+    filter: balances ? input.filter : "all",
+    cursor: input.cursor,
+    limit: input.limit,
   })
-  const balances =
-    input.currencyCode && canReviewCustomerBalances(input.role)
-      ? await listCustomerLedgerBalances(prisma, {
-          tenantId: input.tenantId,
-          currencyCode: input.currencyCode,
-          customerIds: [
-            ...new Set(
-              customers.flatMap((customer) =>
-                customer.customerId ? [customer.customerId] : [],
-              ),
-            ),
-          ],
-        })
-      : new Map()
+  return {
+    customers: page.rows.map(
+      (customer) =>
+        ({
+          ...customer,
+          firstSeenAt: customer.firstSeenAt.toISOString(),
+          lastOrder: customer.lastOrder
+            ? {
+                ...customer.lastOrder,
+                createdAt: customer.lastOrder.createdAt.toISOString(),
+              }
+            : null,
+          lastSeenAt: customer.lastSeenAt.toISOString(),
+        }) satisfies DashboardCustomerRow,
+    ),
+    nextCursor: page.nextCursor,
+  }
+}
 
-  return customers.map((customer) => {
-    const balance = customer.customerId
-      ? balances.get(customer.customerId)
-      : undefined
-    return {
-      ...customer,
-      balance: balance
-        ? {
-            owedMinor: balance.outstandingDebtMinor,
-            paidAheadMinor: balance.availableCreditMinor,
-            netMinor: balance.netBalanceMinor,
-          }
-        : null,
-      firstSeenAt: customer.firstSeenAt.toISOString(),
-      lastOrder: customer.lastOrder
-        ? {
-            ...customer.lastOrder,
-            createdAt: customer.lastOrder.createdAt.toISOString(),
-          }
-        : null,
-      lastSeenAt: customer.lastSeenAt.toISOString(),
-    } satisfies DashboardCustomerRow
-  })
+/** Global search: the first matches only. */
+export async function getDashboardCustomerBook(
+  input: Parameters<typeof getDashboardCustomerPage>[0],
+) {
+  return (
+    await getDashboardCustomerPage({ ...input, limit: input.limit ?? 10 })
+  ).customers
+}
+
+/** "Owed to you": one aggregate over every customer account, owners/admins. */
+export async function getDashboardOwedSummary(input: {
+  role: string
+  tenantId: string
+  currencyCode: string
+}) {
+  if (!canReviewCustomerBalances(input.role)) return null
+  return getCustomerBookOwedSummary(prisma, input)
 }

@@ -4,9 +4,6 @@ import { describeCustomerBalance } from "@/components/tables/customers/columns"
 import type { DashboardCustomerRow } from "@/lib/sales-operations"
 import { Button, cn } from "@ewatrade/ui"
 import { formatFinanceMoney } from "@ewatrade/utils/finance-money"
-import { useState } from "react"
-
-const PAGE = 50
 
 export const customerFilters = [
   { id: "all", label: "All" },
@@ -14,30 +11,6 @@ export const customerFilters = [
   { id: "ahead", label: "Paid ahead" },
 ] as const
 export type CustomerFilter = (typeof customerFilters)[number]["id"]
-
-/** Search and filter the loaded customer book on the device. */
-export function filterCustomers(
-  rows: DashboardCustomerRow[],
-  query: string,
-  filter: CustomerFilter,
-) {
-  const needle = query.trim().toLowerCase()
-  const digits = needle.replace(/\D/g, "")
-  return rows.filter((row) => {
-    if (filter !== "all") {
-      const view = row.balance ? describeCustomerBalance(row.balance) : null
-      if (filter === "owe" && view?.kind !== "owes") return false
-      if (filter === "ahead" && view?.kind !== "paidAhead") return false
-    }
-    if (!needle) return true
-    return (
-      row.name.toLowerCase().includes(needle) ||
-      (row.email ?? "").toLowerCase().includes(needle) ||
-      (digits.length >= 3 &&
-        (row.phone ?? "").replace(/\D/g, "").includes(digits))
-    )
-  })
-}
 
 function initials(name: string) {
   const words = name.replace(/[^\p{L}\p{N} ]/gu, "").split(/\s+/)
@@ -48,7 +21,8 @@ const orders = (count: number) => `${count} ${count === 1 ? "order" : "orders"}`
 
 /**
  * Every customer in one list. Owners and admins see what each owes; everyone
- * sees returnables still out. A row opens the customer's details sheet.
+ * sees returnables still out. A row opens the customer's details sheet;
+ * the server sends 50 at a time.
  */
 export function CustomerList({
   rows,
@@ -56,6 +30,8 @@ export function CustomerList({
   canSeeBalances,
   returnablesOut,
   onOpen,
+  loadingMore,
+  onLoadMore,
 }: {
   rows: DashboardCustomerRow[]
   currencyCode: string
@@ -63,16 +39,17 @@ export function CustomerList({
   /** customerId → "3 egg crates out" */
   returnablesOut: Map<string, string>
   onOpen: (customerId: string) => void
+  loadingMore: boolean
+  /** Next page from the server; absent when everything is loaded. */
+  onLoadMore?: () => void
 }) {
-  const [shown, setShown] = useState(PAGE)
-  const visible = rows.slice(0, shown)
   return (
     <div className="grid gap-3">
       <ul
         aria-label="Customers"
         className="divide-y divide-border overflow-hidden rounded-[var(--ui-radius-surface)] border border-border bg-card"
       >
-        {visible.map((row) => {
+        {rows.map((row) => {
           const walkIn = row.identityType === "walk-in"
           const view =
             canSeeBalances && row.balance
@@ -158,13 +135,14 @@ export function CustomerList({
           )
         })}
       </ul>
-      {rows.length > shown ? (
+      {onLoadMore ? (
         <Button
           variant="outline"
           className="w-full sm:w-fit"
-          onClick={() => setShown((count) => count + PAGE)}
+          disabled={loadingMore}
+          onClick={onLoadMore}
         >
-          {`Show more (${rows.length - shown})`}
+          {loadingMore ? "Loading…" : "Load more"}
         </Button>
       ) : null}
     </div>

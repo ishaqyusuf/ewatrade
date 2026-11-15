@@ -1,12 +1,17 @@
 import { CustomersContent } from "@/components/dashboard/customers-content"
 import { PageLoading } from "@/components/dashboard/page-loading"
+import { loadCustomerDirectoryState } from "@/hooks/customer-directory-params"
 import { canUseSalesOperations } from "@/lib/sales-operations"
 import { getServerSession } from "@/lib/session"
 import { getActiveTenant } from "@/lib/tenant"
 import { redirect } from "next/navigation"
 import { Suspense } from "react"
 
-export default async function CustomersRoutePage() {
+export default async function CustomersRoutePage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>
+}) {
   const session = await getServerSession()
 
   if (!session) {
@@ -29,6 +34,9 @@ export default async function CustomersRoutePage() {
     redirect("/setup")
   }
 
+  const { customerQuery, customerShow } =
+    await loadCustomerDirectoryState(searchParams)
+
   return (
     <Suspense fallback={<PageLoading />}>
       <CustomersContent
@@ -36,6 +44,8 @@ export default async function CustomersRoutePage() {
         role={ctx.membership.role}
         tenantId={ctx.tenant.id}
         userId={session.user.id}
+        search={customerQuery}
+        filter={customerShow ?? "all"}
       />
     </Suspense>
   )
