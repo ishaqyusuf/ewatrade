@@ -359,3 +359,50 @@
     --header-height: 60px;
   }
 }
+
+/*
+ * Confirm dialogs (AlertDialog). packages/ui makes them full-screen white on
+ * phones; the dashboard keeps a card over a dim overlay at every width, and on
+ * phones anchors it to the bottom with a 16px gutter and its content height.
+ */
+.ewatrade-dashboard [data-slot="alert-dialog-overlay"] {
+  background: rgb(16 20 28 / 0.45);
+}
+
+.ewatrade-dashboard.dark [data-slot="alert-dialog-overlay"] {
+  background: rgb(0 0 0 / 0.6);
+}
+
+.ewatrade-dashboard [data-slot="alert-dialog-content"] {
+  border: 1px solid var(--border);
+  border-radius: var(--ui-radius-surface);
+  background: var(--background);
+  color: var(--foreground);
+  box-shadow: 0 24px 48px -24px rgb(16 20 28 / 0.45);
+}
+
+/* Base UI renders no backdrop for a confirm opened from a sheet (nested), so
+   the card draws the dim itself. */
+.ewatrade-dashboard [data-slot="alert-dialog-content"][data-nested] {
+  box-shadow:
+    0 24px 48px -24px rgb(16 20 28 / 0.45),
+    0 0 0 100vmax rgb(16 20 28 / 0.45);
+}
+
+.ewatrade-dashboard.dark [data-slot="alert-dialog-content"][data-nested] {
+  box-shadow: 0 0 0 100vmax rgb(0 0 0 / 0.6);
+}
+
+@media (width < 48rem) {
+  .ewatrade-dashboard [data-slot="alert-dialog-content"] {
+    inset: auto 16px max(16px, env(safe-area-inset-bottom)) 16px;
+    /* Beats packages/ui's [data-mobile-overlay] { width: 100% !important }. */
+    width: calc(100% - 32px) !important;
+    max-width: none;
+    height: auto;
+    max-height: calc(100dvh - 32px);
+    translate: none;
+    transform: none;
+    padding: 20px 16px;
+  }
+}
