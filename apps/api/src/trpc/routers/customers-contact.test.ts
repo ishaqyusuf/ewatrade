@@ -252,7 +252,7 @@ test("the details summary shares contact admission and shows a balance only to o
     customerId: "customer-a",
   })
   expect(cashier).toMatchObject({ canSeeBalance: false, balance: null })
-  expect(staffProcedureAction("customers.summary")).toBe(
-    staffProcedureAction("customers.contact"),
+  expect(staffProcedureAction("customers.summary", "query")).toBe(
+    staffProcedureAction("customers.contact", "query"),
   )
 })
