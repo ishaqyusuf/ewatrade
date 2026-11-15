@@ -80,7 +80,9 @@ export function PrescriptionFulfillmentPanel({ storeId }: { storeId: string }) {
   )
 
   if (pickup.isLoading || delivery.isLoading) {
-    return <div className="h-48 animate-pulse bg-muted" />
+    return (
+      <div className="h-48 animate-pulse rounded-[var(--ui-radius-surface)] bg-muted" />
+    )
   }
   const queryError = pickup.error ?? delivery.error
   if (queryError) {
@@ -168,7 +170,6 @@ export function PrescriptionFulfillmentPanel({ storeId }: { storeId: string }) {
                         <SubmitButton
                           isSubmitting={ready.isPending}
                           disabled={ready.isPending}
-                          size="sm"
                           type="submit"
                         >
                           Confirm checks and mark ready
@@ -209,9 +210,7 @@ export function PrescriptionFulfillmentPanel({ storeId }: { storeId: string }) {
                         placeholder="Relationship (optional)"
                       />
                       <FormActions>
-                        <Button size="sm" type="submit">
-                          Record handoff
-                        </Button>
+                        <Button type="submit">Record handoff</Button>
                       </FormActions>
                     </FieldGroup>
                   </form>
@@ -275,7 +274,6 @@ export function PrescriptionFulfillmentPanel({ storeId }: { storeId: string }) {
                           <SubmitButton
                             isSubmitting={pickupException.isPending}
                             disabled={pickupException.isPending}
-                            size="sm"
                             type="submit"
                             variant="outline"
                           >
@@ -353,7 +351,6 @@ export function PrescriptionFulfillmentPanel({ storeId }: { storeId: string }) {
                         <SubmitButton
                           isSubmitting={deliveryReady.isPending}
                           disabled={deliveryReady.isPending}
-                          size="sm"
                           type="submit"
                         >
                           Mark packed and ready
@@ -393,9 +390,7 @@ export function PrescriptionFulfillmentPanel({ storeId }: { storeId: string }) {
                         required
                       />
                       <FormActions>
-                        <Button size="sm" type="submit">
-                          Assign courier
-                        </Button>
+                        <Button type="submit">Assign courier</Button>
                       </FormActions>
                     </FieldGroup>
                   </form>
@@ -461,7 +456,6 @@ export function PrescriptionFulfillmentPanel({ storeId }: { storeId: string }) {
                           <SubmitButton
                             isSubmitting={transition.isPending}
                             disabled={transition.isPending}
-                            size="sm"
                             type="submit"
                             variant="outline"
                           >
@@ -508,7 +502,6 @@ export function PrescriptionFulfillmentPanel({ storeId }: { storeId: string }) {
                               <SubmitButton
                                 isSubmitting={assign.isPending}
                                 disabled={assign.isPending}
-                                size="sm"
                                 type="submit"
                                 variant="outline"
                               >

@@ -121,7 +121,6 @@ export function PrescriptionMediaViewer({
         <div className="flex gap-2">
           <Button
             type="button"
-            size="sm"
             variant="outline"
             disabled={selectedIndex === 0}
             onClick={() => {
@@ -133,7 +132,6 @@ export function PrescriptionMediaViewer({
           </Button>
           <Button
             type="button"
-            size="sm"
             variant="outline"
             disabled={selectedIndex === media.length - 1}
             onClick={() => {
@@ -147,7 +145,6 @@ export function PrescriptionMediaViewer({
         <div className="flex gap-2">
           <Button
             type="button"
-            size="sm"
             variant="outline"
             disabled={!selectedUrl}
             onClick={() => setRotation((degrees) => degrees - 90)}
@@ -156,7 +153,6 @@ export function PrescriptionMediaViewer({
           </Button>
           <Button
             type="button"
-            size="sm"
             variant="outline"
             disabled={!selectedUrl}
             onClick={() => setRotation((degrees) => degrees + 90)}
@@ -166,7 +162,6 @@ export function PrescriptionMediaViewer({
           {selectedUrl ? (
             <Button
               type="button"
-              size="sm"
               variant="outline"
               disabled={isAuthorizing}
               onClick={() => onAuthorize(selected.id)}
@@ -182,7 +177,6 @@ export function PrescriptionMediaViewer({
           <li key={item.id}>
             <Button
               type="button"
-              size="sm"
               variant={index === selectedIndex ? "default" : "outline"}
               aria-current={index === selectedIndex ? "page" : undefined}
               onClick={() => {

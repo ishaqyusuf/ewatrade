@@ -410,9 +410,9 @@ export function PrescriptionRequestWorkspace({
                     )
                   }
                 />
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   <Button
-                    size="sm"
+                    variant="outline"
                     disabled={verifyLine.isPending}
                     onClick={() =>
                       verifyLine.mutate({
@@ -429,8 +429,7 @@ export function PrescriptionRequestWorkspace({
                     Verify line
                   </Button>
                   <Button
-                    size="sm"
-                    variant="outline"
+                    variant="ghost"
                     disabled={verifyLine.isPending}
                     onClick={() =>
                       verifyLine.mutate({
