@@ -241,9 +241,11 @@ export function StaffMemberSheet({
                   disabled={busy}
                   onClick={() => runAction(main)}
                 >
-                  {busy && (main === "resend" || main === "reactivate")
+                  {busy && main === "resend"
                     ? "Sending…"
-                    : ACTION_LABEL[main]}
+                    : busy && main === "reactivate"
+                      ? "Reactivating…"
+                      : ACTION_LABEL[main]}
                 </Button>
               ) : null}
               {historyAllowed ? (
