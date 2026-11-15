@@ -443,11 +443,11 @@ function ComposerBox({
           Shorten the message to 8,000 characters before sending.
         </p>
       ) : voice?.hint ? (
-        <p className="mt-1.5 px-4 text-[11px] text-muted-foreground">
+        <p className="mt-1.5 px-4 text-xs text-muted-foreground">
           Check the voice note text and fix anything it misheard before sending.
         </p>
       ) : footer ? (
-        <div className="mt-1.5 px-4 text-[11px] text-muted-foreground">
+        <div className="mt-1.5 px-4 text-xs text-muted-foreground">
           {footer}
         </div>
       ) : null}
