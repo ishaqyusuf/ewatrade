@@ -69,16 +69,21 @@ test("cash history pages backward to nearest newer originals with stable ties an
   }
   const queries: Array<{ orderBy: unknown; take: number }> = []
   const tx = {
-    $queryRaw: async () => [],
-    membership: { findFirst: async () => ({ tenant: { isActive: true } }) },
-    financeBook: {
-      findFirst: async ({
-        where,
-      }: { where: { tenantId: string; id: string } }) =>
-        where.tenantId === "tenant" && where.id === "book"
-          ? { id: "book", currencyCode: "NGN" }
-          : null,
-    },
+    // The reader's one-row Membership lock + Owner check + Book snapshot.
+    $queryRaw: async () => [
+      {
+        id: "tenant",
+        currencyCode: "NGN",
+        timezone: "Africa/Lagos",
+        isActive: true,
+        role: "OWNER",
+        status: "ACTIVE",
+        bookId: "book",
+        bookCurrencyCode: "NGN",
+        bookLastSequence: 8n,
+        bookStartsAt: new Date("2026-01-01Z"),
+      },
+    ],
     financeReconciliation: {
       findFirst: async ({ where }: { where: Record<string, unknown> }) =>
         rows.find((row) => matches(row, where)) ?? null,

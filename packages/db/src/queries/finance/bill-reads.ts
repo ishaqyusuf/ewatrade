@@ -5,7 +5,10 @@ import {
   buildScopedListPageWhere,
 } from "../list-sort"
 import { type FinanceActor, assertFinanceManager } from "./access"
-import { getFinanceManagerBookSnapshot } from "./manager-snapshot"
+import {
+  type FinanceManagerBook,
+  getFinanceManagerBookSnapshot,
+} from "./manager-snapshot"
 import {
   type FinanceReadBookScope,
   financeReadBookIdentity,
@@ -43,152 +46,166 @@ export async function listFinanceBills(
     throw new FinanceError("INVALID_JOURNAL", "Invalid expense filters.")
   }
   return db.$transaction(
-    async (tx) => {
-      const book = await getFinanceManagerBookSnapshot(tx, input)
-      const where: Prisma.FinanceBillWhereInput = {
-        bookId: book.id,
-        kind: "EXPENSE",
-        voidedAt: input.status === "VOID" ? { not: null } : null,
-        storeId: input.storeId,
-        ...(input.query
-          ? {
-              OR: [
-                { payeeName: { contains: input.query, mode: "insensitive" } },
-                { description: { contains: input.query, mode: "insensitive" } },
-                { reference: { contains: input.query, mode: "insensitive" } },
-              ],
-            }
-          : {}),
-        ...(input.status === "UNPAID"
-          ? { paidMinor: BigInt(0) }
-          : input.status === "PAID"
-            ? { paidMinor: { equals: tx.financeBill.fields.totalMinor } }
-            : input.status === "PARTIAL"
-              ? {
-                  paidMinor: {
-                    gt: BigInt(0),
-                    lt: tx.financeBill.fields.totalMinor,
-                  },
-                }
-              : input.status === "OPEN"
-                ? { paidMinor: { lt: tx.financeBill.fields.totalMinor } }
-                : input.status === "NO_RECEIPT"
-                  ? {
-                      expenseReceiptAssets: {
-                        none: { attachmentState: "ATTACHED" },
-                      },
-                    }
-                  : {}),
-      }
-      const sortFields: Array<{
-        direction: "asc" | "desc"
-        field:
-          | "incurredAt"
-          | "description"
-          | "payeeName"
-          | "totalMinor"
-          | "paidMinor"
-      }> = input.sort
-        ? [
-            {
-              field: input.sort.field,
-              direction: input.sort.direction,
-            },
-          ]
-        : [{ field: "incurredAt", direction: "desc" }]
-      const tieDirection = input.sort ? "asc" : "desc"
-      const cursor = input.cursor
-        ? await tx.financeBill.findFirst({
-            where: buildScopedListCursorWhere(
-              where,
-              input.cursor,
-            ) as Prisma.FinanceBillWhereInput,
-          })
-        : null
-      if (input.cursor && !cursor)
-        throw new FinanceError(
-          "CONFLICT",
-          "The expense list changed. Refresh to continue.",
-        )
-      const orderBy = [
-        ...sortFields.map(({ field, direction }) => ({ [field]: direction })),
-        { id: tieDirection },
-      ] as Prisma.FinanceBillOrderByWithRelationInput[]
-      const continuationKeys: ListSortKey[] = cursor
-        ? [
-            ...sortFields.map(({ field, direction }) => ({
-              field,
-              direction,
-              value: cursor[field],
-            })),
-            { field: "id", direction: tieDirection, value: cursor.id },
-          ]
-        : []
-      const [rows, totals, count] = await Promise.all([
-        tx.financeBill.findMany({
-          where: cursor
-            ? (buildScopedListPageWhere(
-                where,
-                continuationKeys,
-              ) as Prisma.FinanceBillWhereInput)
-            : where,
-          orderBy,
-          take: limit + 1,
-        }),
-        tx.financeBill.aggregate({
-          where: { AND: [where, { voidedAt: null }] },
-          _sum: { totalMinor: true, paidMinor: true },
-        }),
-        tx.financeBill.count({ where }),
-      ])
-      const totalMinor = totals._sum.totalMinor ?? BigInt(0)
-      const paidMinor = totals._sum.paidMinor ?? BigInt(0)
-      const page = rows.slice(0, limit)
-      // Attached receipts per expense, so lists can show which still need one.
-      const receiptGroups = page.length
-        ? await tx.financeExpenseReceiptAsset.groupBy({
-            by: ["billId"],
-            where: {
-              bookId: book.id,
-              billId: { in: page.map((bill) => bill.id) },
-              attachmentState: "ATTACHED",
-            },
-            _count: { _all: true },
-          })
-        : []
-      const receiptCounts = new Map(
-        receiptGroups.map((group) => [group.billId, group._count._all]),
-      )
-      return {
-        ...financeReadBookIdentity(input, book.id),
-        currencyCode: book.currencyCode,
-        count,
-        summary: {
-          incurredMinor: totalMinor.toString(),
-          paidAgainstBillsMinor: paidMinor.toString(),
-          outstandingMinor: (totalMinor - paidMinor).toString(),
-        },
-        nextCursor: rows.length > limit ? (page.at(-1)?.id ?? null) : null,
-        items: page.map((bill) => ({
-          ...bill,
-          totalMinor: bill.totalMinor.toString(),
-          paidMinor: bill.paidMinor.toString(),
-          outstandingMinor: bill.voidedAt
-            ? "0"
-            : (bill.totalMinor - bill.paidMinor).toString(),
-          receiptCount: receiptCounts.get(bill.id) ?? 0,
-          status: bill.voidedAt
-            ? ("VOID" as const)
-            : bill.paidMinor === bill.totalMinor
-              ? ("PAID" as const)
-              : bill.paidMinor > BigInt(0)
-                ? ("PARTIAL" as const)
-                : ("UNPAID" as const),
-        })),
-      }
-    },
+    async (tx) =>
+      readFinanceBillsInSnapshot(
+        tx,
+        input,
+        await getFinanceManagerBookSnapshot(tx, input),
+      ),
     { maxWait: 10_000, timeout: 30_000, isolationLevel: "RepeatableRead" },
   )
+}
+
+type FinanceBillsReadInput = Parameters<typeof listFinanceBills>[1]
+
+/** One expense page inside a caller's RepeatableRead snapshot, after its admission. */
+export async function readFinanceBillsInSnapshot(
+  tx: Prisma.TransactionClient,
+  input: FinanceBillsReadInput,
+  book: FinanceManagerBook,
+) {
+  const limit = input.limit ?? 30
+  const where: Prisma.FinanceBillWhereInput = {
+    bookId: book.id,
+    kind: "EXPENSE",
+    voidedAt: input.status === "VOID" ? { not: null } : null,
+    storeId: input.storeId,
+    ...(input.query
+      ? {
+          OR: [
+            { payeeName: { contains: input.query, mode: "insensitive" } },
+            { description: { contains: input.query, mode: "insensitive" } },
+            { reference: { contains: input.query, mode: "insensitive" } },
+          ],
+        }
+      : {}),
+    ...(input.status === "UNPAID"
+      ? { paidMinor: BigInt(0) }
+      : input.status === "PAID"
+        ? { paidMinor: { equals: tx.financeBill.fields.totalMinor } }
+        : input.status === "PARTIAL"
+          ? {
+              paidMinor: {
+                gt: BigInt(0),
+                lt: tx.financeBill.fields.totalMinor,
+              },
+            }
+          : input.status === "OPEN"
+            ? { paidMinor: { lt: tx.financeBill.fields.totalMinor } }
+            : input.status === "NO_RECEIPT"
+              ? {
+                  expenseReceiptAssets: {
+                    none: { attachmentState: "ATTACHED" },
+                  },
+                }
+              : {}),
+  }
+  const sortFields: Array<{
+    direction: "asc" | "desc"
+    field:
+      | "incurredAt"
+      | "description"
+      | "payeeName"
+      | "totalMinor"
+      | "paidMinor"
+  }> = input.sort
+    ? [
+        {
+          field: input.sort.field,
+          direction: input.sort.direction,
+        },
+      ]
+    : [{ field: "incurredAt", direction: "desc" }]
+  const tieDirection = input.sort ? "asc" : "desc"
+  const cursor = input.cursor
+    ? await tx.financeBill.findFirst({
+        where: buildScopedListCursorWhere(
+          where,
+          input.cursor,
+        ) as Prisma.FinanceBillWhereInput,
+      })
+    : null
+  if (input.cursor && !cursor)
+    throw new FinanceError(
+      "CONFLICT",
+      "The expense list changed. Refresh to continue.",
+    )
+  const orderBy = [
+    ...sortFields.map(({ field, direction }) => ({ [field]: direction })),
+    { id: tieDirection },
+  ] as Prisma.FinanceBillOrderByWithRelationInput[]
+  const continuationKeys: ListSortKey[] = cursor
+    ? [
+        ...sortFields.map(({ field, direction }) => ({
+          field,
+          direction,
+          value: cursor[field],
+        })),
+        { field: "id", direction: tieDirection, value: cursor.id },
+      ]
+    : []
+  const [rows, totals, count] = await Promise.all([
+    tx.financeBill.findMany({
+      where: cursor
+        ? (buildScopedListPageWhere(
+            where,
+            continuationKeys,
+          ) as Prisma.FinanceBillWhereInput)
+        : where,
+      orderBy,
+      take: limit + 1,
+    }),
+    tx.financeBill.aggregate({
+      where: { AND: [where, { voidedAt: null }] },
+      _sum: { totalMinor: true, paidMinor: true },
+    }),
+    tx.financeBill.count({ where }),
+  ])
+  const totalMinor = totals._sum.totalMinor ?? BigInt(0)
+  const paidMinor = totals._sum.paidMinor ?? BigInt(0)
+  const page = rows.slice(0, limit)
+  // Attached receipts per expense, so lists can show which still need one.
+  const receiptGroups = page.length
+    ? await tx.financeExpenseReceiptAsset.groupBy({
+        by: ["billId"],
+        where: {
+          bookId: book.id,
+          billId: { in: page.map((bill) => bill.id) },
+          attachmentState: "ATTACHED",
+        },
+        _count: { _all: true },
+      })
+    : []
+  const receiptCounts = new Map(
+    receiptGroups.map((group) => [group.billId, group._count._all]),
+  )
+  return {
+    ...financeReadBookIdentity(input, book.id),
+    currencyCode: book.currencyCode,
+    count,
+    summary: {
+      incurredMinor: totalMinor.toString(),
+      paidAgainstBillsMinor: paidMinor.toString(),
+      outstandingMinor: (totalMinor - paidMinor).toString(),
+    },
+    nextCursor: rows.length > limit ? (page.at(-1)?.id ?? null) : null,
+    items: page.map((bill) => ({
+      ...bill,
+      totalMinor: bill.totalMinor.toString(),
+      paidMinor: bill.paidMinor.toString(),
+      outstandingMinor: bill.voidedAt
+        ? "0"
+        : (bill.totalMinor - bill.paidMinor).toString(),
+      receiptCount: receiptCounts.get(bill.id) ?? 0,
+      status: bill.voidedAt
+        ? ("VOID" as const)
+        : bill.paidMinor === bill.totalMinor
+          ? ("PAID" as const)
+          : bill.paidMinor > BigInt(0)
+            ? ("PARTIAL" as const)
+            : ("UNPAID" as const),
+    })),
+  }
 }
 
 export async function getFinanceBill(

@@ -1,7 +1,10 @@
-import type { PrismaClient } from "../../../generated/prisma/client"
+import type { Prisma, PrismaClient } from "../../../generated/prisma/client"
 import { type FinanceActor, assertFinanceManager } from "./access"
 import { getFinanceAccountBalanceProjection } from "./account-balance-projection"
-import { getFinanceManagerBookSnapshot } from "./manager-snapshot"
+import {
+  type FinanceManagerBook,
+  getFinanceManagerBookSnapshot,
+} from "./manager-snapshot"
 import {
   type FinanceReadBookScope,
   financeReadBookIdentity,
@@ -13,29 +16,40 @@ export async function getFinanceAccountBalances(
   input: FinanceActor & FinanceReadBookScope,
 ) {
   return db.$transaction(
-    async (tx) => {
-      const book = await getFinanceManagerBookSnapshot(tx, input)
-      // Finance dates are UTC, so "this month" starts at 00:00 UTC on the 1st.
-      const now = new Date()
-      const monthStart = new Date(
-        Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1),
-      )
-      const accounts = await getFinanceAccountBalanceProjection(tx, {
-        bookId: book.id,
-        snapshot: book.lastSequence,
-        monthStart,
-      })
-      return {
-        ...financeReadBookIdentity(input, book.id),
-        snapshotSequence: book.lastSequence.toString(),
-        currencyCode: book.currencyCode,
-        startsAt: book.startsAt,
-        monthStart,
-        accounts,
-      }
-    },
+    async (tx) =>
+      readFinanceAccountBalancesInSnapshot(
+        tx,
+        input,
+        await getFinanceManagerBookSnapshot(tx, input),
+      ),
     { maxWait: 10_000, timeout: 30_000, isolationLevel: "RepeatableRead" },
   )
+}
+
+/** Balances inside a caller's RepeatableRead snapshot, after its admission. */
+export async function readFinanceAccountBalancesInSnapshot(
+  tx: Prisma.TransactionClient,
+  input: FinanceReadBookScope,
+  book: FinanceManagerBook,
+) {
+  // Finance dates are UTC, so "this month" starts at 00:00 UTC on the 1st.
+  const now = new Date()
+  const monthStart = new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1),
+  )
+  const accounts = await getFinanceAccountBalanceProjection(tx, {
+    bookId: book.id,
+    snapshot: book.lastSequence,
+    monthStart,
+  })
+  return {
+    ...financeReadBookIdentity(input, book.id),
+    snapshotSequence: book.lastSequence.toString(),
+    currencyCode: book.currencyCode,
+    startsAt: book.startsAt,
+    monthStart,
+    accounts,
+  }
 }
 
 export async function listFinanceJournal(

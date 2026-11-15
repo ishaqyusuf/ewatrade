@@ -10,12 +10,14 @@ import {
   getFinanceAccountBalances,
   getFinanceBill,
   getFinanceBook,
+  getFinanceBookStatus,
   getFinanceCashCount,
   getFinanceCommandStatus,
   getFinanceFiscalCalendar,
   getFinanceInventoryReconciliation,
   getFinanceMoneyMovement,
   getFinanceOpeningEquityReconciliation,
+  getFinanceOverview,
   getFinanceOwedSummary,
   getFinancePeriodCloseChecklist,
   getFinancePeriods,
@@ -400,6 +402,10 @@ export const financeRouter = createTRPCRouter({
     .query(({ ctx, input }) =>
       listFinanceMoneyAccounts(ctx.db, { ...input, ...ctx.financeActor }),
     ),
+  /** Dashboard page gate: does the Book exist, and its id, currency, time zone, start. */
+  bookStatus: financeProcedure.query(({ ctx }) =>
+    getFinanceBookStatus(ctx.db, ctx.financeActor),
+  ),
   book: financeProcedure.query(({ ctx }) =>
     getFinanceBook(
       ctx.db,
@@ -434,6 +440,12 @@ export const financeRouter = createTRPCRouter({
     .input(financeReadBookSchema)
     .query(({ ctx, input }) =>
       getFinanceOwedSummary(ctx.db, { ...input, ...ctx.financeActor }),
+    ),
+  /** Dashboard Overview: balances, owed and the latest 5 expenses in one snapshot. */
+  overview: financeProcedure
+    .input(financeReadBookSchema)
+    .query(({ ctx, input }) =>
+      getFinanceOverview(ctx.db, { ...input, ...ctx.financeActor }),
     ),
   customerBalances: financeProcedure
     .input(financeCustomerBalancesSchema)

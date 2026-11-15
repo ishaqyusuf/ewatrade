@@ -88,3 +88,8 @@ export async function getFinanceManagerBookSnapshot(
     startsAt: row.bookStartsAt,
   }
 }
+
+/** The admitted Book a snapshot reader works on. */
+export type FinanceManagerBook = Awaited<
+  ReturnType<typeof getFinanceManagerBookSnapshot>
+>

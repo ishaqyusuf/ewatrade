@@ -6,11 +6,11 @@ Tickets refer to the Brain plan `.brain/plans/2026-10-09-assistant-business-oper
 
 ## Summary
 
-- Router procedures: 850 (648 merchant, 202 public/account/internal)
+- Router procedures: 852 (650 merchant, 202 public/account/internal)
 - Merchant supported by a capability: 188
 - Merchant planned: 144
 - Merchant form-only: 242
-- Merchant excluded: 74
+- Merchant excluded: 76
 - Capabilities: 171 (89 read, 82 write)
 
 ## Capabilities
@@ -597,6 +597,7 @@ track conversational evaluation separately from these source test links.
 | `finance.bill` | query | Owner/Admin only | finance | supported | finance.bill.read |
 | `finance.bills` | query | Owner/Admin only | finance | supported | finance.bills.read |
 | `finance.book` | query | Owner/Admin only | finance | planned | E01 |
+| `finance.bookStatus` | query | Owner/Admin only | finance | excluded | Dashboard list projections for Finance pages; the assistant answers these amounts through supplier statements, customer statements and money account balances. |
 | `finance.cashCount` | query | Owner/Admin only | finance | supported | finance.cash_count.read |
 | `finance.cashCounts` | query | Owner/Admin only | finance | supported | finance.cash_counts.read |
 | `finance.changePeriod` | mutation | Owner/Admin only | finance | form_only | Period close, reopen and fiscal calendar changes are privileged Finance actions. |
@@ -619,6 +620,7 @@ track conversational evaluation separately from these source test links.
 | `finance.moneyAccounts` | query | Owner/Admin only | finance | supported | finance.cash_accounts.read, finance.money_accounts.read |
 | `finance.moneyMovement` | query | Owner/Admin only | finance | planned | E03 |
 | `finance.openingEquityReconciliation` | query | Owner/Admin only | finance | form_only | Period close, reopen and fiscal calendar changes are privileged Finance actions. |
+| `finance.overview` | query | Owner/Admin only | finance | excluded | Dashboard list projections for Finance pages; the assistant answers these amounts through supplier statements, customer statements and money account balances. |
 | `finance.owedSummary` | query | Owner/Admin only | finance | excluded | Dashboard list projections for Finance pages; the assistant answers these amounts through supplier statements, customer statements and money account balances. |
 | `finance.payBill` | mutation | Owner/Admin only | finance | supported | finance.bill.pay |
 | `finance.payPurchase` | mutation | Owner/Admin only | finance | supported | finance.purchase.pay |

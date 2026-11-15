@@ -1,5 +1,6 @@
 import type { Prisma, PrismaClient } from "../../../generated/prisma/client"
 import { type FinanceActor, assertFinanceManager } from "./access"
+import { getFinanceManagerBookSnapshot } from "./manager-snapshot"
 import { FinanceError } from "./rules"
 import { supplierAgingSourceSelect } from "./supplier-aging"
 import {
@@ -45,13 +46,8 @@ export async function listFinanceSupplierDirectory(
     throw new FinanceError("INVALID_JOURNAL", "Invalid Supplier list.")
   return db.$transaction(
     async (tx) => {
-      await assertFinanceManager(tx, input)
-      const book = await tx.financeBook.findFirst({
-        where: { id: input.bookId, tenantId: input.tenantId },
-        select: { id: true, startsAt: true, lastSequence: true },
-      })
-      if (!book)
-        throw new FinanceError("NOT_FOUND", "Financial book not found.")
+      // One row: Membership lock, Owner/Admin check and Book (shared snapshot).
+      const book = await getFinanceManagerBookSnapshot(tx, input)
       const suppliers = await tx.financeSupplierAccount.findMany({
         where: {
           bookId: book.id,

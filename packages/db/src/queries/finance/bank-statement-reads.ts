@@ -3,6 +3,7 @@ import { type FinanceActor, assertFinanceManager } from "./access"
 import { FINANCE_BANK_STATEMENT_MAX_ROWS } from "./bank-statement-csv"
 import { financeBankRevision } from "./bank-statement-rules"
 import { getFinanceBankStatementSource } from "./bank-statement-source"
+import { getFinanceManagerBookSnapshot } from "./manager-snapshot"
 import { FinanceError } from "./rules"
 
 async function bankReadBook(
@@ -141,7 +142,8 @@ export async function listFinanceBankStatements(
     )
   return db.$transaction(
     async (tx) => {
-      const book = await bankReadBook(tx, input)
+      // One row: Membership lock, Owner/Admin check and Book (shared snapshot).
+      const book = await getFinanceManagerBookSnapshot(tx, input)
       const namedAccounts = query
         ? await tx.financeAccount.findMany({
             where: {

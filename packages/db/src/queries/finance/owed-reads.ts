@@ -1,7 +1,10 @@
-import type { PrismaClient } from "../../../generated/prisma/client"
+import type { Prisma, PrismaClient } from "../../../generated/prisma/client"
 import { listCustomerLedgerBalances } from "../customer-ledger/totals-projection"
 import { type FinanceActor, assertFinanceManager } from "./access"
-import { getFinanceManagerBookSnapshot } from "./manager-snapshot"
+import {
+  type FinanceManagerBook,
+  getFinanceManagerBookSnapshot,
+} from "./manager-snapshot"
 import { getFinanceOwedSummaryProjection } from "./owed-summary-projection"
 import {
   type FinanceReadBookScope,
@@ -18,22 +21,33 @@ export async function getFinanceOwedSummary(
   input: FinanceActor & FinanceReadBookScope,
 ) {
   return db.$transaction(
-    async (tx) => {
-      const book = await getFinanceManagerBookSnapshot(tx, input)
-      const projection = await getFinanceOwedSummaryProjection(tx, {
-        tenantId: input.tenantId,
-        currencyCode: book.currencyCode,
-        bookId: book.id,
-        snapshot: book.lastSequence,
-      })
-      return {
-        ...financeReadBookIdentity(input, book.id),
-        currencyCode: book.currencyCode,
-        ...projection,
-      }
-    },
+    async (tx) =>
+      readFinanceOwedSummaryInSnapshot(
+        tx,
+        input,
+        await getFinanceManagerBookSnapshot(tx, input),
+      ),
     { maxWait: 10_000, timeout: 30_000, isolationLevel: "RepeatableRead" },
   )
+}
+
+/** Who owes what inside a caller's RepeatableRead snapshot, after its admission. */
+export async function readFinanceOwedSummaryInSnapshot(
+  tx: Prisma.TransactionClient,
+  input: FinanceActor & FinanceReadBookScope,
+  book: FinanceManagerBook,
+) {
+  const projection = await getFinanceOwedSummaryProjection(tx, {
+    tenantId: input.tenantId,
+    currencyCode: book.currencyCode,
+    bookId: book.id,
+    snapshot: book.lastSequence,
+  })
+  return {
+    ...financeReadBookIdentity(input, book.id),
+    currencyCode: book.currencyCode,
+    ...projection,
+  }
 }
 
 /** What each listed saved customer owes, or has paid ahead, in the book currency. */

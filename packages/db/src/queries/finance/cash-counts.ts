@@ -5,6 +5,7 @@ import {
   lockFinanceBook,
 } from "./access"
 import { financeDocumentCommand } from "./commands"
+import { getFinanceManagerBookSnapshot } from "./manager-snapshot"
 import { FinanceError } from "./rules"
 
 export function cashCountAmount(value: string) {
@@ -285,13 +286,8 @@ export async function listFinanceCashCounts(
   }
   return db.$transaction(
     async (tx) => {
-      await assertFinanceManager(tx, input)
-      const book = await tx.financeBook.findFirst({
-        where: { id: input.bookId, tenantId: input.tenantId },
-        select: { id: true, currencyCode: true },
-      })
-      if (!book)
-        throw new FinanceError("NOT_FOUND", "Financial book not found.")
+      // One row: Membership lock, Owner/Admin check and Book (shared snapshot).
+      const book = await getFinanceManagerBookSnapshot(tx, input)
       const where: Prisma.FinanceReconciliationWhereInput = {
         bookId: book.id,
         accountId: input.accountId,
