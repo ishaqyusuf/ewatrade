@@ -87,6 +87,15 @@ export const TRIGGER_JOB_ENV_KEYS = [
   "EMAIL_DELIVERY_MODE",
   "EMAIL_FROM",
   "EMAIL_REPLY_TO",
+  // Lifecycle marketing sweep (packages/jobs/src/lifecycle.ts).
+  "GROWTH_LIFECYCLE_ENABLED",
+  "GROWTH_LIFECYCLE_PLAYS",
+  "LIFECYCLE_EMAIL_FROM",
+  "LIFECYCLE_EMAIL_REPLY_TO",
+  "LIFECYCLE_LINK_SECRET",
+  "LIFECYCLE_API_URL",
+  "NEXT_PUBLIC_API_URL",
+  "NEXT_PUBLIC_PLATFORM_DOMAIN",
   "QA_POLICY_URL",
   "QA_POLICY_READ_KEY",
   "MARKETING_INBOX_EMAILS",
@@ -355,6 +364,7 @@ export function syncedTriggerJobEnvironment(env) {
     "OWNER_BILLING_ENABLED",
     "STORE_BILLING_ENABLED",
     "APP_STORE_REVIEW_SANDBOX_ENABLED",
+    "GROWTH_LIFECYCLE_ENABLED",
   ])
     result[key] = env[key]?.trim() === "true" ? "true" : "false"
   result.STORE_BILLING_ENVIRONMENT = env.STORE_BILLING_ENVIRONMENT?.trim() || ""

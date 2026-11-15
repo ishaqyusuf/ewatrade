@@ -127,6 +127,34 @@ describe("Trigger jobs selected deployment profile", () => {
     ).toBe(false)
   })
 
+  test("lifecycle sweep settings reach hosted jobs and the switch clears when omitted", () => {
+    const lifecycle = {
+      GROWTH_LIFECYCLE_ENABLED: "true",
+      GROWTH_LIFECYCLE_PLAYS: "P13_monthly_report",
+      LIFECYCLE_EMAIL_FROM: "Ishaq from EwaTrade <ishaq@mail.example.test>",
+      LIFECYCLE_LINK_SECRET: "fixture-link-secret-not-real-0000000000",
+      NEXT_PUBLIC_API_URL: "https://preview-api.example.test",
+    }
+    const synced = syncedTriggerJobEnvironment(
+      selectedTriggerDeployEnvironment(
+        preview,
+        { ...preview, ...lifecycle },
+        production,
+      ),
+    )
+    for (const [key, value] of Object.entries(lifecycle))
+      expect(synced[key]).toBe(value)
+    const omitted = syncedTriggerJobEnvironment(
+      selectedTriggerDeployEnvironment(
+        { ...preview, ...lifecycle },
+        preview,
+        production,
+      ),
+    )
+    expect(omitted.GROWTH_LIFECYCLE_ENABLED).toBe("false")
+    expect(omitted.LIFECYCLE_LINK_SECRET).toBeUndefined()
+  })
+
   test("receipt worker admission resets every gate and requires its dedicated selected-profile key", () => {
     const gates = [
       "MANUAL_RECEIPT_PROCESSING_ENABLED",
