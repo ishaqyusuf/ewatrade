@@ -52,13 +52,14 @@ function BusinessReportQuery({ target }: { target: BusinessReportTarget }) {
   return (
     <>
       {query.isPending || query.isFetching || query.isPaused ? (
-        <output aria-live="polite">Loading current report…</output>
+        <output aria-live="polite" className="text-muted-foreground">
+          Loading…
+        </output>
       ) : query.isError ? (
         <div role="alert" className="grid gap-3">
           <p>
-            This report is unavailable for your current access or setup. Return
-            to its original business and Store or request a fresh report. No
-            value or zero is inferred.
+            This report isn't available. Switch back to its business and store,
+            or ask the assistant for a new one.
           </p>
           <Button variant="outline" onClick={() => void query.refetch()}>
             Try again
@@ -122,15 +123,14 @@ export function BusinessReportSheet() {
     >
       {isOpen ? (
         <SheetFrame
-          title="Business report"
-          description="Authorized source totals and original records."
+          title="Report"
           header={target ? <BusinessReportSheetHeader target={target} /> : null}
         >
           {target ? (
             <BusinessReportQuery key={JSON.stringify(target)} target={target} />
           ) : (
             <p role="alert">
-              This report link is invalid. Close it and open a fresh report.
+              This report link no longer works. Ask the assistant for a new one.
             </p>
           )}
         </SheetFrame>
