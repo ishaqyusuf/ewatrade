@@ -7,9 +7,8 @@ export function StaffHistorySnapshot({ value }: { value: Snapshot }) {
   if (!("mode" in value))
     return <p className="text-muted-foreground">Not saved</p>
   return (
-    <div className="grid gap-2">
+    <div className="grid gap-1">
       <div>
-        <p className="text-xs text-muted-foreground">Stores</p>
         {value.assignments == null ? (
           <p>Not saved</p>
         ) : value.assignments.length === 0 ? (
@@ -32,7 +31,9 @@ export function StaffHistorySnapshot({ value }: { value: Snapshot }) {
       {value.defaultStore ? <p>Starts in {value.defaultStore.name}</p> : null}
       {value.catalogEditor == null ? null : (
         <p>
-          Can edit Products and prices: {value.catalogEditor ? "Yes" : "No"}
+          {value.catalogEditor
+            ? "Can change items and prices"
+            : "Can’t change items or prices"}
         </p>
       )}
       {value.hiddenStoreReferences ? (

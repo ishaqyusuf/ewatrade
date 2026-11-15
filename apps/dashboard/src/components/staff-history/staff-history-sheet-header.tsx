@@ -29,7 +29,7 @@ export function StaffHistorySheetHeader({
   ].filter((line): line is string => Boolean(line))
   if (!lines.length) return null
   return (
-    <div className="grid gap-1 text-xs text-muted-foreground">
+    <div className="grid gap-1 text-sm text-muted-foreground">
       {lines.map((line) => (
         <p key={line}>{line}</p>
       ))}

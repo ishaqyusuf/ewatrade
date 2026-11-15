@@ -32,58 +32,72 @@ const when = new Intl.DateTimeFormat("en-NG", {
   timeStyle: "short",
 })
 
-export function StaffHistoryEvent({ event }: { event: Event }) {
+function change(label: string, before: string | null, after: string | null) {
+  if (!after || before === after) return null
+  return before ? `${label}: ${before} → ${after}` : `${label}: ${after}`
+}
+
+/** One change: what happened, when and by whom, then what changed. */
+export function StaffHistoryEvent({
+  event,
+  showSubject,
+}: {
+  event: Event
+  /** Off when the sheet shows one person's history. */
+  showSubject: boolean
+}) {
+  const lines =
+    event.stream === "STORE_ACCESS"
+      ? []
+      : [
+          change(
+            "Role",
+            event.before.role ? getStaffRoleLabel(event.before.role) : null,
+            event.after.role ? getStaffRoleLabel(event.after.role) : null,
+          ),
+          change(
+            "Status",
+            event.before.status
+              ? getStaffStatusLabel(event.before.status)
+              : null,
+            event.after.status ? getStaffStatusLabel(event.after.status) : null,
+          ),
+        ].filter((line): line is string => Boolean(line))
   return (
-    <article className="grid gap-4 border-b pb-6 text-sm">
-      <div className="grid gap-1">
+    <article className="grid gap-3 border-b border-border pb-5 text-base">
+      <div className="grid gap-0.5">
         <h3 className="font-medium">
           {staffHistoryEventTitle(event.eventType)}
         </h3>
-        <p>
-          {event.subject.name ?? "A former staff member"}
-          {event.subject.email ? ` · ${event.subject.email}` : ""}
+        {showSubject ? (
+          <p>{event.subject.name ?? "A former staff member"}</p>
+        ) : null}
+        <p className="text-sm text-muted-foreground">
+          <time dateTime={event.at}>{when.format(new Date(event.at))}</time>
+          {event.actor.name ? ` · by ${event.actor.name}` : ""}
         </p>
-        {event.actor.name ? (
-          <p className="text-muted-foreground">by {event.actor.name}</p>
-        ) : null}
-        <time dateTime={event.at} className="text-muted-foreground">
-          {when.format(new Date(event.at))}
-        </time>
         {"reason" in event && event.reason ? (
-          <p>Reason: {event.reason}</p>
+          <p className="text-sm">Reason: {event.reason}</p>
         ) : null}
       </div>
-      <div className="grid grid-cols-2 gap-6">
-        {(["before", "after"] as const).map((side) => (
-          <section key={side} className="min-w-0 break-words">
-            <h4 className="mb-2 font-medium">
-              {side === "before" ? "Before" : "After"}
-            </h4>
-            {event.stream === "STORE_ACCESS" ? (
+      {event.stream === "STORE_ACCESS" ? (
+        <div className="grid gap-4 sm:grid-cols-2">
+          {(["before", "after"] as const).map((side) => (
+            <section key={side} className="min-w-0 break-words">
+              <h4 className="mb-1 text-sm text-muted-foreground">
+                {side === "before" ? "Before" : "After"}
+              </h4>
               <StaffHistorySnapshot value={event[side]} />
-            ) : (
-              <dl className="grid gap-2">
-                <div>
-                  <dt className="text-xs text-muted-foreground">Role</dt>
-                  <dd>
-                    {event[side].role
-                      ? getStaffRoleLabel(event[side].role)
-                      : "Not saved"}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-xs text-muted-foreground">Status</dt>
-                  <dd>
-                    {event[side].status
-                      ? getStaffStatusLabel(event[side].status)
-                      : "Not saved"}
-                  </dd>
-                </div>
-              </dl>
-            )}
-          </section>
-        ))}
-      </div>
+            </section>
+          ))}
+        </div>
+      ) : lines.length ? (
+        <ul className="grid gap-0.5 text-sm">
+          {lines.map((line) => (
+            <li key={line}>{line}</li>
+          ))}
+        </ul>
+      ) : null}
     </article>
   )
 }

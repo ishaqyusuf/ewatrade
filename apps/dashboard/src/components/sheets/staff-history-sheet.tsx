@@ -26,20 +26,15 @@ export function StaffHistorySheet() {
       {isOpen ? (
         <SheetFrame
           title="History"
-          description="Changes to role, status and stores."
           header={
             target ? <StaffHistorySheetHeader filters={target.filters} /> : null
           }
           footer={
-            target && query.data && !query.isError ? (
+            target &&
+            query.data &&
+            !query.isError &&
+            (target.filters.cursor || query.data.nextCursor) ? (
               <>
-                <Button
-                  variant="outline"
-                  disabled={query.isFetching}
-                  onClick={() => void query.refetch()}
-                >
-                  Refresh
-                </Button>
                 {target.filters.cursor ? (
                   <Button
                     variant="outline"
@@ -51,11 +46,12 @@ export function StaffHistorySheet() {
                       })
                     }}
                   >
-                    First page
+                    Newest
                   </Button>
                 ) : null}
                 {query.data.nextCursor ? (
                   <Button
+                    variant="outline"
                     disabled={query.isFetching}
                     onClick={() => {
                       const cursor = query.data.nextCursor
@@ -66,35 +62,33 @@ export function StaffHistorySheet() {
                         })
                     }}
                   >
-                    Next page
+                    Older changes
                   </Button>
                 ) : null}
-                <span className="text-xs text-muted-foreground">
-                  {query.isFetching
-                    ? "Refreshing…"
-                    : query.data.nextCursor
-                      ? null
-                      : "That’s everything."}
-                </span>
               </>
             ) : null
           }
         >
           {!target ? (
-            <p role="alert">
-              This link no longer works. Ask the assistant again.
-            </p>
+            <p role="alert">This link no longer works.</p>
           ) : query.isPending ? (
             <output aria-live="polite">Loading…</output>
           ) : query.isError ? (
             <div role="alert" className="grid gap-3">
-              <p>You don’t have access to staff history.</p>
-              <Button variant="outline" onClick={() => void query.refetch()}>
+              <p>You can’t see staff history.</p>
+              <Button
+                variant="outline"
+                className="justify-self-start"
+                onClick={() => void query.refetch()}
+              >
                 Try again
               </Button>
             </div>
           ) : (
-            <StaffHistoryContent page={query.data} />
+            <StaffHistoryContent
+              page={query.data}
+              showSubject={!target.filters.membershipId}
+            />
           )}
         </SheetFrame>
       ) : null}

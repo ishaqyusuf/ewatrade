@@ -1,25 +1,26 @@
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
 import { StaffHistoryEvent } from "./staff-history-event"
+
 export function StaffHistoryContent({
   page,
-}: { page: RouterOutputs["retailOps"]["staffHistoryPage"] }) {
+  showSubject,
+}: {
+  page: RouterOutputs["retailOps"]["staffHistoryPage"]
+  showSubject: boolean
+}) {
   return (
-    <div className="grid gap-6 text-sm">
-      <div className="grid gap-2">
-        <p className="text-lg font-medium">
-          {page.total === null
-            ? `At least ${page.knownMatchingEvents} ${page.knownMatchingEvents === 1 ? "change" : "changes"}`
-            : `${page.total} ${page.total === 1 ? "change" : "changes"}`}
+    <div className="grid gap-5">
+      {page.total === null ? (
+        <p className="text-sm text-muted-foreground">
+          Some older changes couldn’t be loaded.
         </p>
-        {page.total === null ? (
-          <output>Some older changes couldn’t be loaded.</output>
-        ) : null}
-      </div>
+      ) : null}
       {page.data.length ? (
         page.data.map((event) => (
           <StaffHistoryEvent
             key={`${event.stream}:${event.id}`}
             event={event}
+            showSubject={showSubject}
           />
         ))
       ) : (
