@@ -19,7 +19,8 @@ function AlertDialogContent({
     <AlertDialogPrimitive.Portal>
       <AlertDialogPrimitive.Backdrop
         data-slot="alert-dialog-overlay"
-        className="fixed inset-0 z-50 bg-[#f6f6f3]/60 transition-opacity duration-100 data-[starting-style]:opacity-0 data-[ending-style]:opacity-0 dark:bg-[#0C0C0C]/80" />
+        className="fixed inset-0 z-50 bg-[#f6f6f3]/60 transition-opacity duration-100 data-[starting-style]:opacity-0 data-[ending-style]:opacity-0 dark:bg-[#0C0C0C]/80"
+      />
       <AlertDialogPrimitive.Popup
         data-slot="alert-dialog-content"
         data-mobile-overlay=""

@@ -384,9 +384,8 @@
 /* Base UI renders no backdrop for a confirm opened from a sheet (nested), so
    the card draws the dim itself. */
 .ewatrade-dashboard [data-slot="alert-dialog-content"][data-nested] {
-  box-shadow:
-    0 24px 48px -24px rgb(16 20 28 / 0.45),
-    0 0 0 100vmax rgb(16 20 28 / 0.45);
+  box-shadow: 0 24px 48px -24px rgb(16 20 28 / 0.45), 0 0 0 100vmax
+    rgb(16 20 28 / 0.45);
 }
 
 .ewatrade-dashboard.dark [data-slot="alert-dialog-content"][data-nested] {
