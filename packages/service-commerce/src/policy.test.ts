@@ -165,6 +165,8 @@ describe("Service Commerce vertical policy", () => {
         ...overrides,
       })
     for (const [channel, subject] of [
+      ["staff", "staff"],
+      ["web", "web"],
       ["staff", "web"],
       ["staff", "quote"],
       ["web", "intake"],
@@ -180,6 +182,9 @@ describe("Service Commerce vertical policy", () => {
     expect(evaluate({ channel: "whatsapp" }).outcome).toBe("pending_evidence")
     expect(evaluate({ vertical: "pharmacy" }).outcome).toBe("pending_evidence")
     expect(evaluate({ subject: "payment" }).outcome).toBe("pending_evidence")
+    expect(
+      evaluate({ channel: "staff", subject: "progressive_catalog" }).outcome,
+    ).toBe("pending_evidence")
     expect(evaluate({ jurisdictionCode: null }).reason).toBe(
       "jurisdiction_missing",
     )

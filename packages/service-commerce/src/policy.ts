@@ -53,6 +53,8 @@ function evaluation(
  * verticals and WhatsApp stay fail closed until a decision allows them.
  */
 const SERVICE_DEFAULT_ALLOWED = new Set<string>([
+  "staff:staff",
+  "web:web",
   "staff:web",
   "staff:quote",
   "web:intake",
