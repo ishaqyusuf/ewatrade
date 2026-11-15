@@ -1,7 +1,15 @@
+import {
+  businessDayKey,
+  businessDayStart,
+  shiftDayKey,
+} from "@ewatrade/utils/business-day"
+
 /**
- * Report date windows. Every Reports page uses whole UTC days with an
- * exclusive end, matching the report APIs: "Last 30 days" is the 30 UTC days
- * ending today, so `to` is the start of tomorrow.
+ * Report date windows. A range holds business calendar days as UTC-midnight
+ * dates (what the URL stores) with an exclusive end: "Last 30 days" is the 30
+ * business days ending today, so `to` is tomorrow. `reportRangeInstants`
+ * turns it into the business-time-zone instants the report APIs read, so
+ * "Today" in Lagos starts at local midnight, as on the Overview.
  */
 export type ReportRange = { from: Date; to: Date }
 
@@ -36,9 +44,23 @@ function startOfUtcDay(value: Date) {
   )
 }
 
-export function reportPresetRange(days: number, now = new Date()): ReportRange {
-  const to = new Date(startOfUtcDay(now).getTime() + DAY_MS)
+/** The last `days` business days, today included, in `timeZone`. */
+export function reportPresetRange(
+  days: number,
+  now = new Date(),
+  timeZone = "UTC",
+): ReportRange {
+  const tomorrow = shiftDayKey(businessDayKey(now, timeZone), 1)
+  const to = new Date(`${tomorrow}T00:00:00.000Z`)
   return { from: new Date(to.getTime() - days * DAY_MS), to }
+}
+
+/** The instants a report API reads for `range`: local midnights in `timeZone`. */
+export function reportRangeInstants(range: ReportRange, timeZone = "UTC") {
+  return {
+    from: businessDayStart(range.from.toISOString().slice(0, 10), timeZone),
+    to: businessDayStart(range.to.toISOString().slice(0, 10), timeZone),
+  }
 }
 
 export function reportRangeDays(range: ReportRange) {
@@ -56,6 +78,7 @@ function isWholeUtcDay(value: Date) {
 export function resolveReportRange(
   params: { from: Date | null; to: Date | null },
   now = new Date(),
+  timeZone = "UTC",
 ): ReportRange {
   const { from, to } = params
   if (
@@ -68,7 +91,7 @@ export function resolveReportRange(
   ) {
     return { from, to }
   }
-  return reportPresetRange(REPORT_RANGE_DEFAULT_DAYS, now)
+  return reportPresetRange(REPORT_RANGE_DEFAULT_DAYS, now, timeZone)
 }
 
 /** The same number of days just before `range`. */
@@ -81,10 +104,11 @@ export function previousReportRange(range: ReportRange): ReportRange {
 export function matchReportRangePreset(
   range: ReportRange,
   now = new Date(),
+  timeZone = "UTC",
 ): ReportRangePreset | null {
   return (
     REPORT_RANGE_PRESETS.find((days) => {
-      const preset = reportPresetRange(days, now)
+      const preset = reportPresetRange(days, now, timeZone)
       return (
         preset.from.getTime() === range.from.getTime() &&
         preset.to.getTime() === range.to.getTime()
@@ -137,8 +161,12 @@ export function formatReportPresetShort(days: ReportRangePreset) {
 }
 
 /** "Today" or "Last 30 days" for a preset, otherwise "15 days". */
-export function formatReportRangeName(range: ReportRange, now = new Date()) {
-  const preset = matchReportRangePreset(range, now)
+export function formatReportRangeName(
+  range: ReportRange,
+  now = new Date(),
+  timeZone = "UTC",
+) {
+  const preset = matchReportRangePreset(range, now, timeZone)
   if (preset === 1) return "Today"
   if (preset) return `Last ${preset} days`
   const days = reportRangeDays(range)
@@ -146,8 +174,12 @@ export function formatReportRangeName(range: ReportRange, now = new Date()) {
 }
 
 /** "Last 30 days · 20 Sep – 19 Oct". */
-export function formatReportRangeLabel(range: ReportRange, now = new Date()) {
-  return `${formatReportRangeName(range, now)} · ${formatReportRangeDates(range, now)}`
+export function formatReportRangeLabel(
+  range: ReportRange,
+  now = new Date(),
+  timeZone = "UTC",
+) {
+  return `${formatReportRangeName(range, now, timeZone)} · ${formatReportRangeDates(range, now)}`
 }
 
 /** "2026-09-20" for the first included day; `to` is shown as the last included day. */

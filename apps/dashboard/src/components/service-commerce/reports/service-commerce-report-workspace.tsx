@@ -40,6 +40,7 @@ import {
   sectionTone,
 } from "@/components/reports/report-metrics"
 import { ReportShareButton } from "@/components/reports/report-share-dialog"
+import { useReportTimeZone } from "@/components/reports/report-time-zone"
 import { ScrollableContent } from "@/components/scrollable-content"
 import {
   type ServiceCommerceReportDetail,
@@ -58,6 +59,7 @@ import {
   formatReportRangeLabel,
   reportPresetRange,
   reportRangeDays,
+  reportRangeInstants,
 } from "@/lib/report-range"
 import { useTRPC } from "@/trpc/client"
 import type { ServiceCommerceReportOutput } from "@ewatrade/service-commerce"
@@ -262,26 +264,33 @@ export function ServiceCommerceReportWorkspace({
   stores: StoreOption[]
 }) {
   const trpc = useTRPC()
+  const timeZone = useReportTimeZone()
   const params = useServiceCommerceReportParams()
   const scope = useMemo(() => {
     if (params.from && params.to && params.to > params.from) {
-      return resolveServiceCommerceReportRange({
-        from: params.from,
-        to: params.to,
-      })
+      return resolveServiceCommerceReportRange(
+        { from: params.from, to: params.to },
+        new Date(),
+        timeZone,
+      )
     }
     return initialRange
-  }, [initialRange, params.from, params.to])
+  }, [initialRange, params.from, params.to, timeZone])
+  const window = reportRangeInstants(scope, timeZone)
   const storeId = stores.some((store) => store.id === params.store)
     ? params.store
     : null
   const storeName =
     stores.find((store) => store.id === storeId)?.name ?? "All Stores"
-  const reportInput = (range: ReportRange) => ({
-    end: range.to,
-    ...(storeId ? { storeId } : {}),
-    start: range.from,
-  })
+  // Report APIs read business-time-zone instants for the chosen days.
+  const reportInput = (range: ReportRange) => {
+    const instants = reportRangeInstants(range, timeZone)
+    return {
+      end: instants.to,
+      ...(storeId ? { storeId } : {}),
+      start: instants.from,
+    }
+  }
   // New dates or Store keep the current figures on screen, dimmed, until the new ones load.
   const report = useQuery(
     trpc.serviceCommerce.report.queryOptions(reportInput(scope), {
@@ -321,7 +330,12 @@ export function ServiceCommerceReportWorkspace({
             <ReportShareButton
               build={() =>
                 report.data && !report.isPlaceholderData
-                  ? buildServiceCommerceSharePack(report.data, scope, storeName)
+                  ? buildServiceCommerceSharePack(
+                      report.data,
+                      scope,
+                      storeName,
+                      timeZone,
+                    )
                   : null
               }
               disabled={!report.data || report.isPlaceholderData}
@@ -347,7 +361,11 @@ export function ServiceCommerceReportWorkspace({
             <div className="mt-3 flex flex-wrap gap-2">
               {reportRangeDays(scope) < 90 ? (
                 <Button
-                  onClick={() => setScope({ range: reportPresetRange(90) })}
+                  onClick={() =>
+                    setScope({
+                      range: reportPresetRange(90, new Date(), timeZone),
+                    })
+                  }
                   type="button"
                   variant="outline"
                 >
@@ -384,12 +402,12 @@ export function ServiceCommerceReportWorkspace({
               </output>
             ) : null}
             <ReportContent
-              end={scope.to}
+              end={window.to}
               onSectionChange={(section) => void params.setSection(section)}
               range={scope}
               report={report.data}
               section={params.section}
-              start={scope.from}
+              start={window.from}
               storeId={storeId}
             />
           </div>
@@ -406,6 +424,7 @@ function RequestsByDayCard({
   range: ReportRange
   report: ServiceCommerceReportOutput
 }) {
+  const timeZone = useReportTimeZone()
   const days = reportRangeDays(range)
   const requestDays = countRequestDays(report)
   const total = report.lifecycle.requestsReceived
@@ -418,7 +437,7 @@ function RequestsByDayCard({
           ? `Quiet period: requests on ${requestDays} of ${days} days.`
           : undefined
       }
-      subtitle={formatReportRangeLabel(range)}
+      subtitle={formatReportRangeLabel(range, new Date(), timeZone)}
       table={
         total > 0 && daily.length
           ? {
@@ -466,7 +485,7 @@ function RequestsByDayCard({
             formatDayLong={formatReportDayLong}
             formatTick={formatReportCountCompact}
             formatValue={(value) => countFormat.format(value)}
-            label={`Requests by day, ${formatReportRangeLabel(range)}. Use the arrow keys to read each day.`}
+            label={`Requests by day, ${formatReportRangeLabel(range, new Date(), timeZone)}. Use the arrow keys to read each day.`}
             series={[
               {
                 color: "var(--report-product)",
@@ -498,6 +517,7 @@ function ReportContent({
   start: Date
   storeId: string | null
 }) {
+  const timeZone = useReportTimeZone()
   const sections = useMemo(() => buildReportSections(report), [report])
   const { lifecycle } = report
   const showStores =
@@ -544,7 +564,7 @@ function ReportContent({
       <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
         <RequestsByDayCard range={range} report={report} />
         <ReportChartCard
-          subtitle={formatReportRangeLabel(range)}
+          subtitle={formatReportRangeLabel(range, new Date(), timeZone)}
           title="From request to payment"
         >
           <ReportFunnel

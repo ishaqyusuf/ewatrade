@@ -3,7 +3,9 @@ import {
   PrescriptionReportSkeleton,
 } from "@/components/prescriptions/prescription-report"
 import { PrescriptionReportGate } from "@/components/prescriptions/prescription-report-gate"
+import { ReportTimeZoneProvider } from "@/components/reports/report-time-zone"
 import { loadPrescriptionReportParams } from "@/hooks/use-prescription-report-params"
+import { reportRangeInstants } from "@/lib/report-range"
 import { canSeePrescriptionReports } from "@/lib/sales-operations"
 import { getServerSession } from "@/lib/session"
 import { getActiveTenant } from "@/lib/tenant"
@@ -33,8 +35,13 @@ export default async function Page({
     "pharmacy-health-retail"
   )
     return <PrescriptionReportGate reason="setup" />
-  const reportParams = await loadPrescriptionReportParams(searchParams)
-  const { from, to } = reportParams.range
+  // Business days, so "Today" matches the Overview.
+  const timeZone = ctx.tenant.timezone ?? "UTC"
+  const reportParams = await loadPrescriptionReportParams(
+    searchParams,
+    timeZone,
+  )
+  const { from, to } = reportRangeInstants(reportParams.range, timeZone)
   const reportStoreId = reportParams.storeId
     ? (ctx.stores.find((item) => item.id === reportParams.storeId)?.id ?? null)
     : null
@@ -48,12 +55,14 @@ export default async function Page({
   return (
     <HydrateClient>
       <Suspense fallback={<PrescriptionReportSkeleton />}>
-        <PrescriptionReport
-          stores={ctx.stores.map((item) => ({
-            id: item.id,
-            name: item.name,
-          }))}
-        />
+        <ReportTimeZoneProvider timeZone={timeZone}>
+          <PrescriptionReport
+            stores={ctx.stores.map((item) => ({
+              id: item.id,
+              name: item.name,
+            }))}
+          />
+        </ReportTimeZoneProvider>
       </Suspense>
     </HydrateClient>
   )

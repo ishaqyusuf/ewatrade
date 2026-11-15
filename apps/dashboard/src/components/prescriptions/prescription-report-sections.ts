@@ -276,6 +276,7 @@ export function buildPrescriptionSharePack(
   report: PrescriptionReportData,
   range: ReportRange,
   storeName: string,
+  timeZone = "UTC",
 ): ReportSharePack {
   const count = (value: number) => value.toLocaleString("en-NG")
   return {
@@ -305,7 +306,7 @@ export function buildPrescriptionSharePack(
         title: "Stores",
       },
     ],
-    subtitle: `${storeName} · ${formatReportRangeLabel(range)}`,
+    subtitle: `${storeName} · ${formatReportRangeLabel(range, new Date(), timeZone)}`,
     title: "Prescriptions report",
   }
 }

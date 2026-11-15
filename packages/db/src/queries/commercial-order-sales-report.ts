@@ -1,3 +1,8 @@
+import {
+  businessDayKey,
+  businessDayStart,
+  shiftDayKey,
+} from "@ewatrade/utils/business-day"
 import { addExactDecimals } from "@ewatrade/utils/exact-decimal"
 
 import type {
@@ -73,9 +78,11 @@ export function salesReportOrderOwedMinor(order: SalesReportOrder) {
 export function summarizeSalesWindow(
   orders: SalesReportOrder[],
   window: { from: Date; to: Date },
+  /** Days are business days in this zone (UTC by default). */
+  timeZone = "UTC",
 ) {
   const days = new Map<string, SalesReportDay>(
-    salesReportDayKeys(window.from, window.to).map((date) => [
+    salesReportDayKeys(window.from, window.to, timeZone).map((date) => [
       date,
       {
         date,
@@ -96,7 +103,7 @@ export function summarizeSalesWindow(
       owedMinor += owed
       owedOrderCount += 1
     }
-    const day = days.get(utcDayKey(order.createdAt))
+    const day = days.get(utcDayKey(order.createdAt, timeZone))
     if (day) {
       day.orderCount += 1
       day.orderValueMinor += order.totalMinor
@@ -199,15 +206,22 @@ export function summarizeMoneyIn(
  */
 export async function getCommercialOrderSalesReport(
   db: PrismaClient,
-  input: OrderScope & { from: Date; to: Date },
+  input: OrderScope & { from: Date; to: Date; timeZone?: string },
 ) {
+  const timeZone = input.timeZone ?? "UTC"
   const scope = {
     createdByUserId: input.createdByUserId,
     tenantId: input.tenantId,
     ...(input.storeId ? { storeId: input.storeId } : {}),
   }
-  const previousFrom = new Date(
-    input.from.getTime() - (input.to.getTime() - input.from.getTime()),
+  // The same number of business days just before (DST-safe).
+  const dayCount = Math.max(
+    1,
+    salesReportDayKeys(input.from, input.to, timeZone).length,
+  )
+  const previousFrom = businessDayStart(
+    shiftDayKey(businessDayKey(input.from, timeZone), -dayCount),
+    timeZone,
   )
   const [orders, payments, previous] = await Promise.all([
     db.commercialOrder.findMany({
@@ -265,7 +279,7 @@ export async function getCommercialOrderSalesReport(
     partial ? orders.slice(0, SALES_REPORT_ORDER_LIMIT) : orders
   ).map(({ _count, ...order }) => ({ ...order, paymentCount: _count.payments }))
   return {
-    ...summarizeSalesWindow(counted, input),
+    ...summarizeSalesWindow(counted, input, timeZone),
     moneyIn: summarizeMoneyIn(
       payments.map((row) => ({
         amountMinor: row._sum.amountMinor ?? 0,

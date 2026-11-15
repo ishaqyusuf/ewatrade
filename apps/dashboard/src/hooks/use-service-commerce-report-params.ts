@@ -1,3 +1,4 @@
+import { reportPresetRange } from "@/lib/report-range"
 import { useQueryStates } from "nuqs"
 import {
   createLoader,
@@ -69,31 +70,18 @@ export function withServiceCommerceReportUserNavigation<T>(
   return (values: T) => setParams(values, { history: "push" })
 }
 
-function startOfNextUtcDay(value: Date) {
-  return new Date(
-    Date.UTC(
-      value.getUTCFullYear(),
-      value.getUTCMonth(),
-      value.getUTCDate() + 1,
-    ),
-  )
-}
-
-/** The default includes the current UTC day and uses an exclusive end. */
+/** The default is the last 30 business days, today included, exclusive end. */
 export function getServiceCommerceReportDefaultRange(
   now = new Date(),
+  timeZone = "UTC",
 ): ServiceCommerceReportRange {
-  const to = startOfNextUtcDay(now)
-
-  return {
-    from: new Date(to.getTime() - 30 * 24 * 60 * 60 * 1_000),
-    to,
-  }
+  return reportPresetRange(30, now, timeZone)
 }
 
 export function resolveServiceCommerceReportRange(
   params: { from: Date | null; to: Date | null },
   now = new Date(),
+  timeZone = "UTC",
 ): ServiceCommerceReportRange {
   if (
     params.from &&
@@ -106,7 +94,7 @@ export function resolveServiceCommerceReportRange(
     return { from: params.from, to: params.to }
   }
 
-  return getServiceCommerceReportDefaultRange(now)
+  return getServiceCommerceReportDefaultRange(now, timeZone)
 }
 
 export function useServiceCommerceReportParams() {

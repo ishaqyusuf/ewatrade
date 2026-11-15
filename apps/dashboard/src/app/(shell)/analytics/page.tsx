@@ -1,5 +1,7 @@
 import { OperationsReports } from "@/components/dashboard/operations-reports"
+import { ReportTimeZoneProvider } from "@/components/reports/report-time-zone"
 import { loadOperationsReportParams } from "@/hooks/use-operations-report-params"
+import { reportRangeInstants } from "@/lib/report-range"
 import { canManageSalesReports } from "@/lib/sales-operations"
 import { getServerSession } from "@/lib/session"
 import { getActiveTenant } from "@/lib/tenant"
@@ -33,15 +35,21 @@ export default async function AnalyticsPage({ searchParams }: Props) {
   if (!canManageSalesReports(ctx.membership.role)) redirect("/")
   const store = ctx.activeStore ?? ctx.stores[0]
   if (!store) redirect("/setup")
-  const { range, tab } = await loadOperationsReportParams(searchParams)
+  // Report days are business days, so Reports' Today matches the Overview's.
+  const timeZone = ctx.tenant.timezone ?? "UTC"
+  const { range, tab } = await loadOperationsReportParams(
+    searchParams,
+    timeZone,
+  )
+  const window = reportRangeInstants(range, timeZone)
   // One sales read covers the figures, charts and change line; the Right now
   // panels load only when one is open.
   void Promise.allSettled([
     prefetch(
       trpc.orders.salesReport.queryOptions({
-        from: range.from,
+        from: window.from,
         storeId: store.id,
-        to: range.to,
+        to: window.to,
       }),
     ),
     ...(tab === "inventory"
@@ -82,7 +90,9 @@ export default async function AnalyticsPage({ searchParams }: Props) {
           </div>
         }
       >
-        <OperationsReports store={store} />
+        <ReportTimeZoneProvider timeZone={timeZone}>
+          <OperationsReports store={store} />
+        </ReportTimeZoneProvider>
       </Suspense>
     </HydrateClient>
   )

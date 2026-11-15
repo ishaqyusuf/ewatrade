@@ -22,6 +22,7 @@ import {
   formatReportMoney,
 } from "@/components/reports/report-metrics"
 import { ReportShareButton } from "@/components/reports/report-share-dialog"
+import { useReportTimeZone } from "@/components/reports/report-time-zone"
 import { ScrollableContent } from "@/components/scrollable-content"
 import {
   Button,
@@ -53,6 +54,7 @@ import {
   formatReportRangeLabel,
   reportPresetRange,
   reportRangeDays,
+  reportRangeInstants,
 } from "@/lib/report-range"
 import { useTRPC } from "@/trpc/client"
 import { keepPreviousData, useQuery } from "@tanstack/react-query"
@@ -71,7 +73,8 @@ type StoreOption = { id: string; name: string }
 
 export function PrescriptionReport({ stores }: { stores: StoreOption[] }) {
   const trpc = useTRPC()
-  const params = usePrescriptionReportParams()
+  const timeZone = useReportTimeZone()
+  const params = usePrescriptionReportParams(timeZone)
   const { range } = params
   const storeId = stores.some((store) => store.id === params.storeId)
     ? params.storeId
@@ -81,7 +84,7 @@ export function PrescriptionReport({ stores }: { stores: StoreOption[] }) {
   // New dates or Store keep the current figures on screen, dimmed, until the new ones load.
   const report = useQuery(
     trpc.prescriptions.report.queryOptions(
-      { from: range.from, storeId, to: range.to },
+      { ...reportRangeInstants(range, timeZone), storeId },
       { placeholderData: keepPreviousData, retry: false },
     ),
   )
@@ -111,7 +114,12 @@ export function PrescriptionReport({ stores }: { stores: StoreOption[] }) {
             <ReportShareButton
               build={() =>
                 report.data && !report.isPlaceholderData
-                  ? buildPrescriptionSharePack(report.data, range, storeName)
+                  ? buildPrescriptionSharePack(
+                      report.data,
+                      range,
+                      storeName,
+                      timeZone,
+                    )
                   : null
               }
               disabled={!report.data || report.isPlaceholderData}
@@ -147,7 +155,11 @@ export function PrescriptionReport({ stores }: { stores: StoreOption[] }) {
             <div className="mt-3 flex flex-wrap gap-2">
               {reportRangeDays(range) < 90 ? (
                 <Button
-                  onClick={() => void params.setRange(reportPresetRange(90))}
+                  onClick={() =>
+                    void params.setRange(
+                      reportPresetRange(90, new Date(), timeZone),
+                    )
+                  }
                   type="button"
                   variant="outline"
                 >
@@ -198,6 +210,7 @@ function RequestsByDayCard({
   range: ReportRange
   report: PrescriptionReportData
 }) {
+  const timeZone = useReportTimeZone()
   const daily = report.daily ?? []
   const days = reportRangeDays(range)
   const requestDays = countPrescriptionRequestDays(report)
@@ -208,7 +221,7 @@ function RequestsByDayCard({
           ? `Quiet period: requests on ${requestDays} of ${days} days.`
           : undefined
       }
-      subtitle={formatReportRangeLabel(range)}
+      subtitle={formatReportRangeLabel(range, new Date(), timeZone)}
       table={
         report.requestCount > 0 && daily.length
           ? {
@@ -258,7 +271,7 @@ function RequestsByDayCard({
             formatDayLong={formatReportDayLong}
             formatTick={formatReportCountCompact}
             formatValue={(value) => countFormat.format(value)}
-            label={`Prescription requests by day, ${formatReportRangeLabel(range)}. Use the arrow keys to read each day.`}
+            label={`Prescription requests by day, ${formatReportRangeLabel(range, new Date(), timeZone)}. Use the arrow keys to read each day.`}
             series={[
               {
                 color: "var(--report-product)",
@@ -284,6 +297,7 @@ function PrescriptionReportContent({
   report: PrescriptionReportData
   tab: PrescriptionReportTab
 }) {
+  const timeZone = useReportTimeZone()
   const sections = useMemo(
     () => buildPrescriptionReportSections(report),
     [report],
@@ -332,7 +346,7 @@ function PrescriptionReportContent({
       <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
         <RequestsByDayCard range={range} report={report} />
         <ReportChartCard
-          subtitle={formatReportRangeLabel(range)}
+          subtitle={formatReportRangeLabel(range, new Date(), timeZone)}
           title="From request to payment"
         >
           <ReportFunnel

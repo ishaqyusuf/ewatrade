@@ -20,6 +20,7 @@ import {
 import { Calendar03Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { useState } from "react"
+import { useReportTimeZone } from "./report-time-zone"
 
 function dateOnly(value: Date) {
   return value.toISOString().slice(0, 10)
@@ -44,12 +45,13 @@ export function ReportDateControl({
   onChange: (range: ReportRange) => void
   range: ReportRange
 }) {
+  const timeZone = useReportTimeZone()
   const [open, setOpen] = useState(false)
   const [draft, setDraft] = useState<{
     start: string | null
     end: string | null
   }>({ start: dateOnly(range.from), end: dateOnly(range.to) })
-  const preset = matchReportRangePreset(range)
+  const preset = matchReportRangePreset(range, new Date(), timeZone)
   const days =
     draft.start && draft.end
       ? (utcDate(draft.end).getTime() - utcDate(draft.start).getTime()) /
@@ -69,8 +71,12 @@ export function ReportDateControl({
             aria-pressed={preset === option}
             className={segment}
             key={option}
-            onClick={() => onChange(reportPresetRange(option))}
-            title={formatReportRangeDates(reportPresetRange(option))}
+            onClick={() =>
+              onChange(reportPresetRange(option, new Date(), timeZone))
+            }
+            title={formatReportRangeDates(
+              reportPresetRange(option, new Date(), timeZone),
+            )}
             type="button"
             variant="ghost"
           >

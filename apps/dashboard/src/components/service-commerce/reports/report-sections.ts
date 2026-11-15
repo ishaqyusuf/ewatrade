@@ -576,6 +576,7 @@ export function buildServiceCommerceSharePack(
   report: ServiceCommerceReportOutput,
   range: ReportRange,
   storeName: string,
+  timeZone = "UTC",
 ): ReportSharePack {
   const { lifecycle } = report
   const count = (value: number) => reportCountFormat.format(value)
@@ -603,7 +604,7 @@ export function buildServiceCommerceSharePack(
         title: "Stores",
       },
     ],
-    subtitle: `${storeName} · ${formatReportRangeLabel(range)}`,
+    subtitle: `${storeName} · ${formatReportRangeLabel(range, new Date(), timeZone)}`,
     title: "Requests and quotes",
   }
 }

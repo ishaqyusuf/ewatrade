@@ -29,10 +29,10 @@ const prescriptionReportParamsSchema = {
   to: parseAsIsoDate,
 }
 
-export function usePrescriptionReportParams() {
+export function usePrescriptionReportParams(timeZone = "UTC") {
   const [params, setParams] = useQueryStates(prescriptionReportParamsSchema)
   return {
-    range: resolveReportRange(params),
+    range: resolveReportRange(params, new Date(), timeZone),
     /** Dates are user navigation, so they create a history entry. */
     setRange: (range: ReportRange) =>
       setParams({ from: range.from, to: range.to }, { history: "push" }),
@@ -53,10 +53,11 @@ const loadPrescriptionReportState = createLoader(prescriptionReportParamsSchema)
 
 export async function loadPrescriptionReportParams(
   searchParams: Parameters<typeof loadPrescriptionReportState>[0],
+  timeZone = "UTC",
 ) {
   const params = await loadPrescriptionReportState(searchParams)
   return {
-    range: resolveReportRange(params),
+    range: resolveReportRange(params, new Date(), timeZone),
     storeId: params.prescriptionReportStore,
     tab: params.prescriptionReportTab ?? "lifecycle",
   }

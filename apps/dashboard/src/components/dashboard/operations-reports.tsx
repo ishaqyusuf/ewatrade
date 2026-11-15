@@ -20,12 +20,17 @@ import {
   metricTone,
 } from "@/components/reports/report-metrics"
 import { ReportShareButton } from "@/components/reports/report-share-dialog"
+import { useReportTimeZone } from "@/components/reports/report-time-zone"
 import { ScrollableContent } from "@/components/scrollable-content"
 import {
   type OperationsReportTab,
   useOperationsReportParams,
 } from "@/hooks/use-operations-report-params"
-import { type ReportRange, reportRangeDays } from "@/lib/report-range"
+import {
+  type ReportRange,
+  reportRangeDays,
+  reportRangeInstants,
+} from "@/lib/report-range"
 import { useTRPC } from "@/trpc/client"
 import { Button, cn } from "@ewatrade/ui"
 import {
@@ -58,9 +63,10 @@ type Store = { currencyCode: string; id: string; name: string }
 /** One read per period: sales, money in, still owed and the previous period. */
 function useSalesReport(store: Store, range: ReportRange) {
   const trpc = useTRPC()
+  const window = reportRangeInstants(range, useReportTimeZone())
   return useSuspenseQuery(
     trpc.orders.salesReport.queryOptions(
-      { from: range.from, storeId: store.id, to: range.to },
+      { from: window.from, storeId: store.id, to: window.to },
       { retry: false },
     ),
   ).data
@@ -191,9 +197,10 @@ function MoneyInCard({ range, store }: { range: ReportRange; store: Store }) {
 
 function ShareReport({ range, store }: { range: ReportRange; store: Store }) {
   const report = useSalesReport(store, range)
+  const timeZone = useReportTimeZone()
   return (
     <ReportShareButton
-      build={() => buildSalesSharePack(report, range, store.name)}
+      build={() => buildSalesSharePack(report, range, store.name, timeZone)}
     />
   )
 }
@@ -409,7 +416,7 @@ function RightNowPanel({
 }
 
 export function OperationsReports({ store }: { store: Store }) {
-  const params = useOperationsReportParams()
+  const params = useOperationsReportParams(useReportTimeZone())
   const { range } = params
   // A period change keeps the current figures on screen, dimmed, until the new ones load.
   const [refreshing, startTransition] = useTransition()

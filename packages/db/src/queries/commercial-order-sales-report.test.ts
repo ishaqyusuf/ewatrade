@@ -196,3 +196,38 @@ describe("still owed and money in", () => {
     })
   })
 })
+
+describe("business days", () => {
+  test("Lagos orders after local midnight count on the new day", () => {
+    const lagos = {
+      from: new Date("2026-11-13T23:00:00.000Z"),
+      to: new Date("2026-11-15T23:00:00.000Z"),
+    }
+    const report = summarizeSalesWindow(
+      [
+        {
+          // 00:30 on 15 Nov in Lagos; 14 Nov in UTC.
+          createdAt: new Date("2026-11-14T23:30:00.000Z"),
+          lines: [],
+          totalMinor: 5_000,
+        },
+      ],
+      lagos,
+      "Africa/Lagos",
+    )
+    expect(report.days.map((day) => [day.date, day.orderValueMinor])).toEqual([
+      ["2026-11-14", 0],
+      ["2026-11-15", 5_000],
+    ])
+  })
+
+  test("a DST change keeps one entry per local day (London, 25 Oct)", () => {
+    expect(
+      salesReportDayKeys(
+        new Date("2026-10-23T23:00:00.000Z"),
+        new Date("2026-10-27T00:00:00.000Z"),
+        "Europe/London",
+      ),
+    ).toEqual(["2026-10-24", "2026-10-25", "2026-10-26"])
+  })
+})

@@ -1,3 +1,4 @@
+import { ReportTimeZoneProvider } from "@/components/reports/report-time-zone"
 import {
   ServiceCommerceReportSkeleton,
   ServiceCommerceReportWorkspace,
@@ -6,6 +7,7 @@ import {
   loadServiceCommerceReportParams,
   resolveServiceCommerceReportRange,
 } from "@/hooks/use-service-commerce-report-params"
+import { reportRangeInstants } from "@/lib/report-range"
 import { canManageSalesReports } from "@/lib/sales-operations"
 import { getServerSession } from "@/lib/session"
 import { getActiveTenant } from "@/lib/tenant"
@@ -32,29 +34,34 @@ export default async function ServiceCommerceReportsPage({
   if (ctx.stores.length === 0) redirect("/setup")
 
   const params = await loadServiceCommerceReportParams(searchParams)
-  const range = resolveServiceCommerceReportRange(params)
+  // Business days, so "Today" matches the Overview.
+  const timeZone = ctx.tenant.timezone ?? "UTC"
+  const range = resolveServiceCommerceReportRange(params, new Date(), timeZone)
+  const window = reportRangeInstants(range, timeZone)
   const storeId = ctx.stores.some((store) => store.id === params.store)
     ? params.store
     : undefined
 
   void prefetch(
     trpc.serviceCommerce.report.queryOptions({
-      end: range.to,
+      end: window.to,
       ...(storeId ? { storeId } : {}),
-      start: range.from,
+      start: window.from,
     }),
   ).catch(() => undefined)
 
   return (
     <HydrateClient>
       <Suspense fallback={<ServiceCommerceReportSkeleton />}>
-        <ServiceCommerceReportWorkspace
-          initialRange={range}
-          stores={ctx.stores.map((store) => ({
-            id: store.id,
-            name: store.name,
-          }))}
-        />
+        <ReportTimeZoneProvider timeZone={timeZone}>
+          <ServiceCommerceReportWorkspace
+            initialRange={range}
+            stores={ctx.stores.map((store) => ({
+              id: store.id,
+              name: store.name,
+            }))}
+          />
+        </ReportTimeZoneProvider>
       </Suspense>
     </HydrateClient>
   )

@@ -205,6 +205,8 @@ export async function getPrescriptionOperationsReport(
     from: Date
     storeId?: string | null
     tenantId: string
+    /** Business time zone for the daily counts (UTC by default). */
+    timeZone?: string
     to: Date
   },
 ) {
@@ -329,15 +331,21 @@ export async function getPrescriptionOperationsReport(
   return {
     channelMix,
     costs: summarizePrescriptionUsageAmounts(usage),
-    daily: countByUtcDay(input, {
-      amountPaidMinor: paid.map((intent) => ({
-        amountMinor: intent.amountMinor,
-        at: intent.paidAt,
-      })),
-      paidOrders: paid.map((intent) => ({ at: intent.paidAt })),
-      quotesIssued: quoteVersions.map((version) => ({ at: version.issuedAt })),
-      requests: requests.map((request) => ({ at: request.createdAt })),
-    }),
+    daily: countByUtcDay(
+      input,
+      {
+        amountPaidMinor: paid.map((intent) => ({
+          amountMinor: intent.amountMinor,
+          at: intent.paidAt,
+        })),
+        paidOrders: paid.map((intent) => ({ at: intent.paidAt })),
+        quotesIssued: quoteVersions.map((version) => ({
+          at: version.issuedAt,
+        })),
+        requests: requests.map((request) => ({ at: request.createdAt })),
+      },
+      input.timeZone ?? "UTC",
+    ),
     currencyCode: tenant.currencyCode,
     conversionRate:
       requests.length > 0

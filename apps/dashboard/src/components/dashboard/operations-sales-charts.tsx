@@ -11,6 +11,7 @@ import {
   formatReportMoneyCompact,
   reportCountFormat,
 } from "@/components/reports/report-metrics"
+import { useReportTimeZone } from "@/components/reports/report-time-zone"
 import {
   type ReportRange,
   formatReportDay,
@@ -39,9 +40,10 @@ function formatQuantity(quantity: string) {
 function ShowNinetyDays({
   onRange,
 }: { onRange: (range: ReportRange) => void }) {
+  const timeZone = useReportTimeZone()
   return (
     <Button
-      onClick={() => onRange(reportPresetRange(90))}
+      onClick={() => onRange(reportPresetRange(90, new Date(), timeZone))}
       type="button"
       variant="outline"
     >
@@ -60,6 +62,7 @@ export function SalesByDayCard({
   report: OperationsSalesReport
 }) {
   const { currencyCode, totals } = report
+  const timeZone = useReportTimeZone()
   const days = reportRangeDays(range)
   const salesDays = countSalesDays(report)
   const money = (minor: number) => formatReportMoney(minor, currencyCode)
@@ -75,7 +78,7 @@ export function SalesByDayCard({
           ? `Quiet period: sales on ${salesDays} of ${days} days.`
           : undefined
       }
-      subtitle={formatReportRangeLabel(range)}
+      subtitle={formatReportRangeLabel(range, new Date(), timeZone)}
       table={
         empty
           ? undefined
@@ -143,7 +146,7 @@ export function SalesByDayCard({
               formatReportMoneyCompact(value, currencyCode)
             }
             formatValue={money}
-            label={`Sales by day, ${formatReportRangeLabel(range)}. Use the arrow keys to read each day.`}
+            label={`Sales by day, ${formatReportRangeLabel(range, new Date(), timeZone)}. Use the arrow keys to read each day.`}
             series={
               mixed
                 ? [

@@ -282,6 +282,7 @@ export const prescriptionsRouter = createTRPCRouter({
         ...input,
         storeId,
         tenantId: ctx.tenantContext.tenant.id,
+        timeZone: ctx.tenantContext.tenant.timezone ?? "UTC",
       })
     }),
 

@@ -19,10 +19,11 @@ const operationsReportParams = {
   to: parseAsIsoDate,
 }
 
-export function useOperationsReportParams() {
+/** `timeZone` is the business's: the default period ends with its today. */
+export function useOperationsReportParams(timeZone = "UTC") {
   const [params, setParams] = useQueryStates(operationsReportParams)
   return {
-    range: resolveReportRange(params),
+    range: resolveReportRange(params, new Date(), timeZone),
     /** Dates and tabs are user navigation, so they create a history entry. */
     setRange: (
       range: ReportRange,
@@ -44,10 +45,11 @@ const loadOperationsReportState = createLoader(operationsReportParams)
 
 export async function loadOperationsReportParams(
   searchParams: Parameters<typeof loadOperationsReportState>[0],
+  timeZone = "UTC",
 ) {
   const params = await loadOperationsReportState(searchParams)
   return {
-    range: resolveReportRange(params),
+    range: resolveReportRange(params, new Date(), timeZone),
     tab: params.operationsReportTab,
   }
 }

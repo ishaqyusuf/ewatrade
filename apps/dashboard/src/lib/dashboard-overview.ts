@@ -4,6 +4,7 @@ import {
   normalizeRole,
 } from "@ewatrade/auth/roles"
 import type { WorkspaceFeatureAvailability } from "@ewatrade/db/queries"
+import { businessDayKey, businessDayStart } from "@ewatrade/utils/business-day"
 
 export type GettingStartedAction = {
   catalogCreateKind?: "product" | "service"
@@ -80,45 +81,12 @@ export function getOverviewAccess(role: string | null | undefined) {
   }
 }
 
-/** Milliseconds `timeZone` is ahead of UTC at `at`. */
-function zoneOffset(at: number, timeZone: string) {
-  const parts: Record<string, number> = Object.fromEntries(
-    new Intl.DateTimeFormat("en-US", {
-      timeZone,
-      hourCycle: "h23",
-      year: "numeric",
-      month: "numeric",
-      day: "numeric",
-      hour: "numeric",
-      minute: "numeric",
-      second: "numeric",
-    })
-      .formatToParts(new Date(at))
-      .map((part) => [part.type, Number(part.value)]),
-  )
-  const part = (type: string) => parts[type] ?? 0
-  const asUtc = Date.UTC(
-    part("year"),
-    part("month") - 1,
-    part("day"),
-    part("hour"),
-    part("minute"),
-    part("second"),
-  )
-  return asUtc - Math.floor(at / 1000) * 1000
-}
-
 /** Start of today and of this month in the business's time zone. */
 export function getOverviewPeriods(timeZone: string, now = new Date()) {
-  const offset = zoneOffset(now.getTime(), timeZone)
-  const local = new Date(now.getTime() + offset)
-  const midnight = (day: number) => {
-    const guess = Date.UTC(local.getUTCFullYear(), local.getUTCMonth(), day)
-    // Re-read the offset at the guess so a DST change that day stays exact.
-    return new Date(guess - zoneOffset(guess - offset, timeZone))
-  }
+  // The same business days as Reports and Activity (DST-safe).
+  const today = businessDayKey(now, timeZone)
   return {
-    todayStart: midnight(local.getUTCDate()),
-    monthStart: midnight(1),
+    todayStart: businessDayStart(today, timeZone),
+    monthStart: businessDayStart(`${today.slice(0, 8)}01`, timeZone),
   }
 }

@@ -6,6 +6,11 @@ import {
   businessEventTypes,
 } from "@ewatrade/notifications/business-events"
 import {
+  businessDayKey,
+  businessDayStart,
+  shiftDayKey,
+} from "@ewatrade/utils/business-day"
+import {
   type LoaderInput,
   createLoader,
   type inferParserType,
@@ -103,61 +108,10 @@ export function hasActivityFilters(filter: ActivityFilters) {
   )
 }
 
-/** Calendar day (YYYY-MM-DD) of an instant in the Business time zone. */
-export function businessDay(instant: Date, timeZone: string) {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(instant)
-}
-
-function dayParts(day: string): [number, number, number] {
-  const [y = Number.NaN, m = Number.NaN, d = Number.NaN] = day
-    .split("-")
-    .map(Number)
-  return [y, m, d]
-}
-
-export function shiftDay(day: string, days: number) {
-  const [y, m, d] = dayParts(day)
-  return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10)
-}
-
-function zoneOffsetMs(instant: number, timeZone: string) {
-  const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone,
-    hourCycle: "h23",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  }).formatToParts(instant)
-  const part = (type: string) =>
-    Number(parts.find((p) => p.type === type)?.value)
-  const asUtc = Date.UTC(
-    part("year"),
-    part("month") - 1,
-    part("day"),
-    part("hour"),
-    part("minute"),
-    part("second"),
-  )
-  return asUtc - Math.floor(instant / 1000) * 1000
-}
-
-/** UTC instant of local midnight starting `day` in the Business time zone. */
-export function businessDayStart(day: string, timeZone: string) {
-  const [y, m, d] = dayParts(day)
-  const guess = Date.UTC(y, m - 1, d)
-  let instant = guess - zoneOffsetMs(guess, timeZone)
-  // A second pass settles days whose offset changes around midnight.
-  instant = guess - zoneOffsetMs(instant, timeZone)
-  return new Date(instant)
-}
+// One business-day implementation for Activity, Reports and the Overview.
+const businessDay = businessDayKey
+const shiftDay = shiftDayKey
+export { businessDay, businessDayStart, shiftDay }
 
 /** Half-open [from, to) window for the chosen range, in UTC ISO strings. */
 export function activityDateWindow(

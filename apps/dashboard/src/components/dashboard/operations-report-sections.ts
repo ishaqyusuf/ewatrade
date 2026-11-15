@@ -219,6 +219,7 @@ export function buildSalesSharePack(
   report: OperationsSalesReport,
   range: ReportRange,
   storeName: string,
+  timeZone = "UTC",
 ): ReportSharePack {
   const money = (minor: number) => formatMinorMoney(minor, report.currencyCode)
   const orders = report.totals.orderCount
@@ -262,7 +263,7 @@ export function buildSalesSharePack(
         title: "Top items",
       },
     ],
-    subtitle: `${storeName} · ${formatReportRangeLabel(range)}`,
+    subtitle: `${storeName} · ${formatReportRangeLabel(range, new Date(), timeZone)}`,
     title: "Sales report",
   }
 }

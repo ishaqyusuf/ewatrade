@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test"
 
+import { getOverviewPeriods } from "./dashboard-overview"
 import {
   formatReportDay,
   formatReportDayLong,
@@ -10,6 +11,7 @@ import {
   reportPresetRange,
   reportRangeDays,
   reportRangeFileDates,
+  reportRangeInstants,
   resolveReportRange,
 } from "./report-range"
 
@@ -80,5 +82,36 @@ describe("report ranges", () => {
   test("formats day keys", () => {
     expect(formatReportDay("2026-10-19")).toBe("19 Oct")
     expect(formatReportDayLong("2026-10-19")).toBe("Mon 19 Oct 2026")
+  })
+})
+
+describe("report periods in the business time zone", () => {
+  test("Lagos Today starts at local midnight and matches the Overview", () => {
+    // 00:30 on 15 Nov in Lagos is still 14 Nov in UTC.
+    const lagosNow = new Date("2026-11-14T23:30:00.000Z")
+    const today = reportPresetRange(1, lagosNow, "Africa/Lagos")
+    expect(today.from.toISOString()).toBe("2026-11-15T00:00:00.000Z")
+    expect(matchReportRangePreset(today, lagosNow, "Africa/Lagos")).toBe(1)
+    const window = reportRangeInstants(today, "Africa/Lagos")
+    expect(window.from.toISOString()).toBe("2026-11-14T23:00:00.000Z")
+    expect(window.to.toISOString()).toBe("2026-11-15T23:00:00.000Z")
+    expect(window.from).toEqual(
+      getOverviewPeriods("Africa/Lagos", lagosNow).todayStart,
+    )
+  })
+
+  test("a DST zone keeps whole local days (London, clocks back 25 Oct)", () => {
+    const londonNow = new Date("2026-10-26T12:00:00.000Z")
+    const week = reportPresetRange(7, londonNow, "Europe/London")
+    const window = reportRangeInstants(week, "Europe/London")
+    // 20 Oct is still summer time (UTC+1); 27 Oct is winter time (UTC+0).
+    expect(window.from.toISOString()).toBe("2026-10-19T23:00:00.000Z")
+    expect(window.to.toISOString()).toBe("2026-10-27T00:00:00.000Z")
+    expect(
+      reportRangeInstants(
+        reportPresetRange(1, londonNow, "Europe/London"),
+        "Europe/London",
+      ).from,
+    ).toEqual(getOverviewPeriods("Europe/London", londonNow).todayStart)
   })
 })

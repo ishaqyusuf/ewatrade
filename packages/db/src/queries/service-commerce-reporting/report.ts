@@ -632,6 +632,8 @@ export async function getServiceCommerceReport(
           ...inquiries.map((inquiry) => ({ at: inquiry.createdAt })),
         ],
       },
+      // Business days, so "Today" matches the Overview.
+      tenant.timezone ?? "UTC",
     ),
     lifecycle: {
       bookingsCompleted: bookings.filter(

@@ -1,31 +1,29 @@
-const DAY_MS = 86_400_000
+import { businessDayKey, businessDayKeys } from "@ewatrade/utils/business-day"
 
-/** UTC calendar day ("2026-10-19"); report windows use UTC day boundaries. */
-export function utcDayKey(value: Date) {
-  return value.toISOString().slice(0, 10)
+/** Calendar day ("2026-10-19") of an instant in `timeZone` (UTC by default). */
+export function utcDayKey(value: Date, timeZone = "UTC") {
+  return timeZone === "UTC"
+    ? value.toISOString().slice(0, 10)
+    : businessDayKey(value, timeZone)
 }
 
-/** Every UTC day in `[from, to)`, so quiet days appear as zeros. */
-export function utcDayKeys(from: Date, to: Date) {
-  const keys: string[] = []
-  const start = Date.UTC(
-    from.getUTCFullYear(),
-    from.getUTCMonth(),
-    from.getUTCDate(),
-  )
-  for (let time = start; time < to.getTime(); time += DAY_MS)
-    keys.push(utcDayKey(new Date(time)))
-  return keys
+/**
+ * Every day that starts in `[from, to)`, so quiet days appear as zeros. With a
+ * business time zone the days run from local midnight (Lagos: 23:00 UTC).
+ */
+export function utcDayKeys(from: Date, to: Date, timeZone = "UTC") {
+  return businessDayKeys(from, to, timeZone)
 }
 
-/** Counts (and optional amounts) per UTC day, one entry for every day in the window. */
+/** Counts (and optional amounts) per day, one entry for every day in the window. */
 export function countByUtcDay<Field extends string>(
   window: { from: Date; to: Date },
   series: Record<Field, Array<{ at: Date | null; amountMinor?: number }>>,
+  timeZone = "UTC",
 ) {
   const fields = Object.keys(series) as Field[]
   const days = new Map(
-    utcDayKeys(window.from, window.to).map((date) => [
+    utcDayKeys(window.from, window.to, timeZone).map((date) => [
       date,
       Object.fromEntries([
         ["date", date],
@@ -36,7 +34,7 @@ export function countByUtcDay<Field extends string>(
   for (const field of fields) {
     for (const entry of series[field]) {
       if (!entry.at || entry.at < window.from || entry.at >= window.to) continue
-      const day = days.get(utcDayKey(entry.at))
+      const day = days.get(utcDayKey(entry.at, timeZone))
       if (day) (day as Record<Field, number>)[field] += entry.amountMinor ?? 1
     }
   }

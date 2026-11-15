@@ -366,6 +366,8 @@ export const ordersRouter = createTRPCRouter({
       const report = await getCommercialOrderSalesReport(ctx.db, {
         ...(await orderScope(ctx, { storeId })),
         from: input.from,
+        // Days in the business time zone, as on the Overview.
+        timeZone: ctx.tenantContext.tenant.timezone ?? "UTC",
         to: input.to,
       })
       return {
