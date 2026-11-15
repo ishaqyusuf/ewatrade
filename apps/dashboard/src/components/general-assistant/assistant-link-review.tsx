@@ -162,6 +162,7 @@ export function AssistantLinkReview({
 
   const ready = review?.status === "ready" ? review : null
   const view = reviewView({
+    hasLink: Boolean(token),
     loading,
     notice,
     result,
@@ -316,17 +317,25 @@ type ReviewView = {
 
 /** One title, at most one short line and one action per state. */
 function reviewView({
+  hasLink,
   loading,
   notice,
   result,
   review,
 }: {
+  hasLink: boolean
   loading: boolean
   notice: string | null
   result: GeneralProposal | null
   review: Review | null
 }): ReviewView {
   if (loading) return { title: "Opening your review…", action: "whatsapp" }
+  if (!hasLink && !result)
+    return {
+      title: "Open your review from WhatsApp",
+      detail: "Tap the review link in the chat.",
+      action: "whatsapp",
+    }
   if (result?.status === "COMPLETED")
     return {
       title: result.receipt?.title ?? "Saved",
