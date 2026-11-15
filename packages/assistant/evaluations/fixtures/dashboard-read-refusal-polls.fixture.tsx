@@ -196,8 +196,8 @@ const { usePendingChangeApprovals } = await import(
 const { makeQueryClient } = await import(
   "../../../../apps/dashboard/src/trpc/query-client"
 )
-function Staff({ review = true }: { review?: boolean }) {
-  useOrderVisibility("store-a", review)
+function Staff() {
+  useOrderVisibility("store-a")
   return null
 }
 function Approvals() {
@@ -219,16 +219,6 @@ const owners = [
     name: "Assistant allowance link",
     path: "assistant.allowance",
     render: () => <AssistantLinks pending={[]} onReview={() => {}} />,
-  },
-  {
-    name: "staff review",
-    path: "stores.orderVisibility",
-    render: () => <Staff />,
-  },
-  {
-    name: "approval queue",
-    path: "orders.pendingChangeApprovals",
-    render: () => <Approvals />,
   },
 ]
 const count = (path: string) => calls.filter((value) => value === path).length
@@ -336,19 +326,55 @@ for (const owner of owners) {
       expect(query.state.status).toBe("success")
   })
 }
-test("staff directory uses no review interval but retains fresh focus reads", async () => {
-  await mounted(() => <Staff review={false} />)
-  const before = count("stores.orderVisibility")
-  await tick()
-  expect(count("stores.orderVisibility")).toBe(before)
-  await act(async () => {
-    focusManager.setFocused(false)
-    focusManager.setFocused(true)
-    await delay()
-  })
-  await flush()
-  expect(count("stores.orderVisibility")).toBeGreaterThan(before)
-})
+// These reads never poll (Staff order rule since 15 Nov 2026, Sales approval
+// queue since 61eaf2ed6): refusals leave no data and focus reads again.
+const quiet = [
+  {
+    name: "staff order rule",
+    path: "stores.orderVisibility",
+    render: () => <Staff />,
+  },
+  {
+    name: "approval queue",
+    path: "orders.pendingChangeApprovals",
+    render: () => <Approvals />,
+  },
+]
+for (const owner of quiet)
+  for (const code of ["FORBIDDEN", "UNAUTHORIZED", "NOT_FOUND"] as const)
+    test(`${owner.name} has no interval, stops on ${code} and recovers on focus`, async () => {
+      const { path } = owner
+      const { client } = await mounted(owner.render)
+      const loaded = count(path)
+      expect(loaded).toBeGreaterThan(0)
+      await tick()
+      expect(count(path)).toBe(loaded)
+      failures.set(path, code)
+      await act(async () => {
+        await client.invalidateQueries({ predicate: target(path) })
+        await delay()
+      })
+      await flush()
+      for (const query of client
+        .getQueryCache()
+        .findAll({ predicate: target(path) }))
+        expect(query.state.data).toBeUndefined()
+      const refused = count(path)
+      await tick()
+      expect(count(path)).toBe(refused)
+      failures.delete(path)
+      await act(async () => {
+        focusManager.setFocused(false)
+        focusManager.setFocused(true)
+        await delay()
+      })
+      await flush()
+      expect(count(path)).toBeGreaterThan(refused)
+      for (const query of client
+        .getQueryCache()
+        .findAll({ predicate: target(path) }))
+        expect(query.state.status).toBe("success")
+    })
 process.on("exit", () => {
   globalThis.setInterval = realInterval
   globalThis.clearInterval = realClear
