@@ -23,6 +23,7 @@ import type {
   GeneralTransactionContext,
 } from "./general-actions"
 import { requireGeneralScope } from "./general-context"
+import { generalReviewTime } from "./general-review-time"
 import {
   createReviewedNewBook,
   isReviewedNewBookDefault,
@@ -284,7 +285,7 @@ export const simpleMoneyInRecord = {
         input.amountMinor === undefined
           ? "Amount pending"
           : `${generalMoney(input.amountMinor, info.options.currencyCode)} into ${info.account?.name ?? input.accountName ?? "an account"}${input.createAccount ? " (new account)" : ""}`,
-        `Owner funds · ${input.effectiveAt ? `${input.effectiveAt} (UTC) · ${timezone}` : "Posting date pending"} · recorded by you`,
+        `Owner funds · ${input.effectiveAt ? generalReviewTime(input.effectiveAt, timezone) : "Posting date pending"} · recorded by you`,
         ...(input.description ? [input.description] : []),
       ],
       presentation: simpleMoneyInReviewPresentation(input, {

@@ -23,6 +23,7 @@ import type {
   GeneralTransactionContext,
 } from "./general-actions"
 import { requireGeneralScope } from "./general-context"
+import { generalReviewTime } from "./general-review-time"
 import { proposalDigest } from "./proposal-security"
 function refuse(message: string): never {
   throw new TRPCError({ code: "BAD_REQUEST", message })
@@ -326,7 +327,7 @@ export const simpleTransferRecord = {
           ? "Amount pending"
           : `${generalMoney(input.amountMinor, info.options.currencyCode)} from ${input.fromAccountName ?? "an account"} to ${input.toAccountName ?? "an account"}${input.newToAccount ? " (new account)" : ""}`,
         input.effectiveAt
-          ? `${input.effectiveAt} (UTC) · ${book.timezone} · recorded by you`
+          ? `${generalReviewTime(input.effectiveAt, book.timezone)} · recorded by you`
           : "Posting date pending",
         ...(input.note ? [input.note] : []),
       ],
