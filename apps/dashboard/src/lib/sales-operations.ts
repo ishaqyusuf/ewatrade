@@ -104,6 +104,11 @@ export function canReviewCustomerBalances(role: string | null | undefined) {
   return ["OWNER", "ADMIN"].includes(String(role ?? "").toUpperCase())
 }
 
+/** Prescription reports: owners and admins, as `prescriptions.report` checks. */
+export function canSeePrescriptionReports(role: string | null | undefined) {
+  return canReviewCustomerBalances(role)
+}
+
 export function canManageSalesReports(role: string | null | undefined) {
   const normalizedRole = normalizeRole(role)
 

@@ -2,6 +2,7 @@
 import {
   Button,
   DailyBarChart,
+  Disclosure,
   SelectControl,
   Table,
   TableBody,
@@ -15,14 +16,11 @@ import {
   cn,
 } from "@ewatrade/ui"
 
-import { PageHeader, PageToolbar } from "@/components/page-header"
 import {
   ReportChartCard,
   ReportChartEmpty,
 } from "@/components/reports/report-chart-card"
 import { ReportDateControl } from "@/components/reports/report-date-control"
-import { ReportDelta } from "@/components/reports/report-delta"
-import { ReportDownloadButton } from "@/components/reports/report-download-button"
 import { ReportError } from "@/components/reports/report-error"
 import {
   ReportHeadlineStrip,
@@ -42,13 +40,8 @@ import {
   formatReportMoney,
   sectionTone,
 } from "@/components/reports/report-metrics"
+import { ReportShareButton } from "@/components/reports/report-share-dialog"
 import { ScrollableContent } from "@/components/scrollable-content"
-import {
-  InlineRowCheckbox,
-  InlineSelectAllCheckbox,
-  InlineSelectionStatus,
-  useInlineSelection,
-} from "@/components/tables/core"
 import {
   type ServiceCommerceReportDetail,
   type ServiceCommerceReportRange,
@@ -64,7 +57,6 @@ import {
   formatReportDayLong,
   formatReportRangeBetween,
   formatReportRangeLabel,
-  previousReportRange,
   reportPresetRange,
   reportRangeDays,
 } from "@/lib/report-range"
@@ -76,7 +68,7 @@ import { useMemo } from "react"
 import {
   type ReportSectionContent,
   buildReportSections,
-  buildServiceCommerceReportCsv,
+  buildServiceCommerceSharePack,
   countRequestDays,
   humanizeReportValue,
   lifecycleFunnel,
@@ -159,15 +151,6 @@ function ReportDailyDetail({
       { retry: false },
     ),
   )
-  const rowKeys = useMemo(
-    () => drilldown.data?.rows.map(drilldownRowKey) ?? [],
-    [drilldown.data],
-  )
-  const selection = useInlineSelection({
-    ids: rowKeys,
-    scope: `${category}:${storeId ?? "all"}:${start.toISOString()}:${end.toISOString()}`,
-    disabled: drilldown.isFetching,
-  })
   const showDetails = Boolean(
     drilldown.data?.rows.some((row) => usageAttributionLabel(row)),
   )
@@ -175,14 +158,8 @@ function ReportDailyDetail({
   return (
     <section
       aria-label={`${DETAIL_LABELS[category]} day by day`}
-      className="grid min-w-0 gap-3 border-t border-border pt-5"
+      className="grid min-w-0 gap-3"
     >
-      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-        <h3 className="text-sm font-semibold">Day by day</h3>
-        <p className="text-sm text-muted-foreground">
-          Totals for each day. Message text and photos are never shown.
-        </p>
-      </div>
       {drilldown.data?.mayBeTruncated ? (
         <output className="block text-sm text-amber-700 dark:text-amber-400">
           Some days may be missing. Try fewer days.
@@ -191,7 +168,7 @@ function ReportDailyDetail({
       {drilldown.isPending ? (
         <output
           aria-label="Loading the day-by-day table"
-          className="block h-32 animate-pulse bg-muted"
+          className="block h-32 animate-pulse rounded-[var(--ui-radius-item)] bg-muted"
         />
       ) : drilldown.isError ? (
         <div className="grid gap-3" role="alert">
@@ -199,9 +176,8 @@ function ReportDailyDetail({
             The day-by-day table didn't load.
           </p>
           <Button
-            className="w-fit rounded-none"
+            className="w-fit"
             onClick={() => void drilldown.refetch()}
-            size="sm"
             type="button"
             variant="outline"
           >
@@ -210,9 +186,8 @@ function ReportDailyDetail({
         </div>
       ) : drilldown.data?.rows.length ? (
         <>
-          <InlineSelectionStatus selection={selection} />
           <section
-            className="overflow-x-auto border border-border"
+            className="overflow-x-auto rounded-[var(--ui-radius-item)] border border-border"
             // biome-ignore lint/a11y/noNoninteractiveTabindex: Keyboard users must be able to scroll the report table.
             tabIndex={0}
             aria-label="Day-by-day table"
@@ -220,12 +195,6 @@ function ReportDailyDetail({
             <Table className="w-full min-w-[32rem] text-left text-sm">
               <TableHeader className="bg-muted/40 text-xs text-muted-foreground">
                 <TableRow>
-                  <TableHead scope="col" className="w-10 px-4 py-2 font-normal">
-                    <InlineSelectAllCheckbox
-                      selection={selection}
-                      label="Select all day-by-day rows"
-                    />
-                  </TableHead>
                   <TableHead scope="col" className="px-4 py-2 font-normal">
                     Date
                   </TableHead>
@@ -253,19 +222,7 @@ function ReportDailyDetail({
                   <TableRow
                     className="border-b border-border/70 last:border-b-0"
                     key={drilldownRowKey(row)}
-                    data-state={
-                      selection.isSelected(drilldownRowKey(row))
-                        ? "selected"
-                        : undefined
-                    }
                   >
-                    <TableCell className="px-4 py-2">
-                      <InlineRowCheckbox
-                        selection={selection}
-                        id={drilldownRowKey(row)}
-                        label={`Select ${formatReportDay(row.date)} ${humanizeReportValue(row.category)} ${humanizeReportValue(row.outcome)}`}
-                      />
-                    </TableCell>
                     <TableCell className="px-4 py-2 tabular-nums">
                       {formatReportDay(row.date)}
                     </TableCell>
@@ -290,7 +247,7 @@ function ReportDailyDetail({
           </section>
         </>
       ) : (
-        <p className="border border-dashed border-border p-4 text-sm text-muted-foreground">
+        <p className="rounded-[var(--ui-radius-item)] border border-dashed border-border p-4 text-sm text-muted-foreground">
           Nothing was recorded on any day in these dates.
         </p>
       )}
@@ -333,12 +290,6 @@ export function ServiceCommerceReportWorkspace({
       retry: false,
     }),
   )
-  const previous = useQuery(
-    trpc.serviceCommerce.report.queryOptions(
-      reportInput(previousReportRange(scope)),
-      { retry: false },
-    ),
-  )
   const setScope = (next: { range?: ReportRange; store?: string | null }) =>
     void params.setScope({
       from: next.range?.from ?? scope.from,
@@ -348,48 +299,36 @@ export function ServiceCommerceReportWorkspace({
 
   return (
     <ScrollableContent>
-      <div className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)] gap-6 pt-6">
-        <PageHeader
-          eyebrow="Reports"
-          title="Requests and quotes"
-          description="What Customers asked for, the Quotes you sent and what got paid. Message text, contacts and photos are never shown."
-        >
-          <PageToolbar
-            actions={
-              <>
-                <SelectControl
-                  aria-label="Store"
-                  className="h-9 w-full sm:w-64"
-                  onValueChange={(value) => setScope({ store: value || null })}
-                  value={storeId ?? ""}
-                  options={[
-                    { value: "", label: <>All Stores</> },
-                    ...stores.map((store) => ({
-                      value: store.id,
-                      label: store.name,
-                    })),
-                  ]}
-                />
-                <ReportDateControl
-                  onChange={(range) => setScope({ range })}
-                  range={scope}
-                />
-                <ReportDownloadButton
-                  build={() =>
-                    report.data && !report.isPlaceholderData
-                      ? buildServiceCommerceReportCsv(
-                          report.data,
-                          scope,
-                          storeName,
-                        )
-                      : null
-                  }
-                  disabled={!report.data || report.isPlaceholderData}
-                />
-              </>
-            }
+      <div className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)] gap-5 pt-6 pb-10">
+        <div className="flex min-w-0 flex-col gap-3 lg:flex-row lg:items-center">
+          <SelectControl
+            aria-label="Store"
+            className="w-full lg:w-56"
+            onValueChange={(value) => setScope({ store: value || null })}
+            value={storeId ?? ""}
+            options={[
+              { value: "", label: <>All stores</> },
+              ...stores.map((store) => ({
+                value: store.id,
+                label: store.name,
+              })),
+            ]}
           />
-        </PageHeader>
+          <ReportDateControl
+            onChange={(range) => setScope({ range })}
+            range={scope}
+          />
+          <div className="lg:ml-auto">
+            <ReportShareButton
+              build={() =>
+                report.data && !report.isPlaceholderData
+                  ? buildServiceCommerceSharePack(report.data, scope, storeName)
+                  : null
+              }
+              disabled={!report.data || report.isPlaceholderData}
+            />
+          </div>
+        </div>
 
         {report.isPending ? (
           <ReportLoading />
@@ -399,19 +338,16 @@ export function ServiceCommerceReportWorkspace({
             retry={() => void report.refetch()}
           />
         ) : !report.data ? null : !hasReportActivity(report.data) ? (
-          <section className="grid gap-1 border border-border bg-background p-6">
+          <section className="grid gap-1 rounded-[var(--ui-radius-surface)] border border-border bg-card p-6">
             <h2 className="font-semibold">
               No requests {formatReportRangeBetween(scope)}
             </h2>
             <p className="text-sm text-muted-foreground">
-              Requests show here when a Customer asks for a Product or Service
-              on WhatsApp, your website or through staff. Try more days or
-              another Store.
+              Try more days or another store.
             </p>
             <div className="mt-3 flex flex-wrap gap-2">
               {reportRangeDays(scope) < 90 ? (
                 <Button
-                  className="h-9 rounded-none"
                   onClick={() => setScope({ range: reportPresetRange(90) })}
                   type="button"
                   variant="outline"
@@ -421,12 +357,11 @@ export function ServiceCommerceReportWorkspace({
               ) : null}
               {storeId ? (
                 <Button
-                  className="h-9 rounded-none"
                   onClick={() => setScope({ store: null })}
                   type="button"
                   variant="outline"
                 >
-                  Show all Stores
+                  Show all stores
                 </Button>
               ) : null}
             </div>
@@ -445,19 +380,13 @@ export function ServiceCommerceReportWorkspace({
               </output>
             ) : null}
             {report.data.mayBeTruncated ? (
-              <output className="block border border-amber-500/30 bg-amber-500/5 p-4 text-sm text-amber-700 dark:text-amber-400">
-                Some figures may be missing because the date range is very long.
-                Try fewer days.
+              <output className="block rounded-[var(--ui-radius-surface)] border border-[var(--warning-border)] bg-[var(--warning)] p-4 text-sm text-[var(--warning-foreground)]">
+                Some figures may be missing. Pick fewer days.
               </output>
             ) : null}
             <ReportContent
               end={scope.to}
               onSectionChange={(section) => void params.setSection(section)}
-              previous={
-                previous.data && !report.isPlaceholderData
-                  ? previous.data
-                  : undefined
-              }
               range={scope}
               report={report.data}
               section={params.section}
@@ -556,7 +485,6 @@ function RequestsByDayCard({
 function ReportContent({
   end,
   onSectionChange,
-  previous,
   range,
   report,
   section,
@@ -565,7 +493,6 @@ function ReportContent({
 }: {
   end: Date
   onSectionChange: (section: ServiceCommerceReportSection) => void
-  previous: ServiceCommerceReportOutput | undefined
   range: ReportRange
   report: ServiceCommerceReportOutput
   section: ServiceCommerceReportSection
@@ -574,7 +501,6 @@ function ReportContent({
 }) {
   const sections = useMemo(() => buildReportSections(report), [report])
   const { lifecycle } = report
-  const days = reportRangeDays(range)
   const showStores =
     report.scope.storeId === null && report.storeBreakdown.length > 0
   const activeSection =
@@ -588,21 +514,13 @@ function ReportContent({
           {
             label: "Requests",
             value: countFormat.format(lifecycle.requestsReceived),
-            detail: previous ? (
-              <ReportDelta
-                current={lifecycle.requestsReceived}
-                days={days}
-                previous={previous.lifecycle.requestsReceived}
-              />
-            ) : (
-              "In these dates"
-            ),
+            detail: `${countFormat.format(lifecycle.quotesAccepted)} quotes accepted`,
             muted: lifecycle.requestsReceived === 0,
           },
           {
             label: "Quotes sent",
             value: countFormat.format(lifecycle.quotesIssued),
-            detail: `${countFormat.format(lifecycle.quotesAccepted)} accepted`,
+            detail: undefined,
             muted: lifecycle.quotesIssued === 0,
           },
           {
@@ -617,15 +535,7 @@ function ReportContent({
               lifecycle.paymentValueMinor,
               report.currencyCode,
             ),
-            detail: previous ? (
-              <ReportDelta
-                current={lifecycle.paymentValueMinor}
-                days={days}
-                previous={previous.lifecycle.paymentValueMinor}
-              />
-            ) : (
-              `${countFormat.format(lifecycle.paymentsSucceeded)} ${lifecycle.paymentsSucceeded === 1 ? "payment" : "payments"}`
-            ),
+            detail: `${countFormat.format(lifecycle.paymentsSucceeded)} ${lifecycle.paymentsSucceeded === 1 ? "payment" : "payments"}`,
             money: true,
             muted: lifecycle.paymentValueMinor === 0,
           },
@@ -677,10 +587,7 @@ function ReportContent({
         ))}
         {showStores ? (
           <TabsContent value="stores">
-            <ReportTabPanel
-              description="Each Store's requests, Quotes and payments in these dates."
-              title="Stores"
-            >
+            <ReportTabPanel title="Stores">
               <StoreBreakdownTable report={report} />
             </ReportTabPanel>
           </TabsContent>
@@ -702,24 +609,29 @@ function SectionTab({
   storeId: string | null
 }) {
   return (
-    <ReportTabPanel description={content.description} title={content.title}>
+    <ReportTabPanel title={content.title}>
       {content.groups.length ? (
         <ReportMetricGroups groups={content.groups} />
       ) : content.key === "costs" ? (
-        <p className="border border-dashed border-border p-4 text-sm text-muted-foreground">
+        <p className="rounded-[var(--ui-radius-item)] border border-dashed border-border p-4 text-sm text-muted-foreground">
           No charges in these dates.
         </p>
       ) : null}
       {content.footnote ? (
-        <p className="text-xs text-muted-foreground">{content.footnote}</p>
+        <p className="text-sm text-muted-foreground">{content.footnote}</p>
       ) : null}
       {isServiceCommerceReportDetail(content.key) ? (
-        <ReportDailyDetail
-          category={content.key}
-          end={end}
-          start={start}
-          storeId={storeId}
-        />
+        // The day table is its own read, so it loads only when asked for.
+        <Disclosure title={<>Day by day</>}>
+          <div className="mt-3">
+            <ReportDailyDetail
+              category={content.key}
+              end={end}
+              start={start}
+              storeId={storeId}
+            />
+          </div>
+        </Disclosure>
       ) : null}
     </ReportTabPanel>
   )
@@ -730,19 +642,10 @@ function StoreBreakdownTable({
 }: {
   report: ServiceCommerceReportOutput
 }) {
-  const storeIds = useMemo(
-    () => report.storeBreakdown.map((store) => store.storeId),
-    [report.storeBreakdown],
-  )
-  const selection = useInlineSelection({
-    ids: storeIds,
-    scope: JSON.stringify(report.scope),
-  })
   return (
     <div className="grid min-w-0 gap-3">
-      <InlineSelectionStatus selection={selection} />
       <section
-        className="overflow-x-auto border border-border"
+        className="overflow-x-auto rounded-[var(--ui-radius-item)] border border-border"
         // biome-ignore lint/a11y/noNoninteractiveTabindex: Keyboard users must be able to scroll the report table.
         tabIndex={0}
         aria-label="Stores table"
@@ -750,12 +653,6 @@ function StoreBreakdownTable({
         <Table className="w-full min-w-[36rem] text-left text-sm">
           <TableHeader className="bg-muted/40 text-xs text-muted-foreground">
             <TableRow>
-              <TableHead scope="col" className="w-10 px-4 py-2 font-normal">
-                <InlineSelectAllCheckbox
-                  selection={selection}
-                  label="Select all Stores"
-                />
-              </TableHead>
               <TableHead scope="col" className="px-4 py-2 font-normal">
                 Store
               </TableHead>
@@ -775,17 +672,7 @@ function StoreBreakdownTable({
               <TableRow
                 className="border-b border-border/70 last:border-b-0"
                 key={store.storeId}
-                data-state={
-                  selection.isSelected(store.storeId) ? "selected" : undefined
-                }
               >
-                <TableCell className="px-4 py-2">
-                  <InlineRowCheckbox
-                    selection={selection}
-                    id={store.storeId}
-                    label={`Select ${store.name}`}
-                  />
-                </TableCell>
                 <TableCell className="px-4 py-2 font-normal">
                   {store.name}
                 </TableCell>
@@ -825,8 +712,8 @@ function ReportLoading() {
         aria-hidden="true"
         className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]"
       >
-        <div className="h-80 animate-pulse bg-muted" />
-        <div className="h-80 animate-pulse bg-muted" />
+        <div className="h-80 animate-pulse rounded-[var(--ui-radius-surface)] bg-muted" />
+        <div className="h-80 animate-pulse rounded-[var(--ui-radius-surface)] bg-muted" />
       </div>
       <ReportTabsSkeleton />
     </div>

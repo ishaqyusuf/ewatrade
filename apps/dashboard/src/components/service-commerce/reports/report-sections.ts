@@ -3,12 +3,19 @@ import {
   type ReportMetricGroup,
   type ReportMetricTone,
   buildReportFunnel,
+  reportCountFormat,
   reportMetric,
 } from "@/components/reports/report-metrics"
 import type { ServiceCommerceReportSection } from "@/hooks/use-service-commerce-report-params"
 import { reportCsv, reportCsvMoney } from "@/lib/report-csv"
-import { type ReportRange, reportRangeFileDates } from "@/lib/report-range"
+import {
+  type ReportRange,
+  formatReportRangeLabel,
+  reportRangeFileDates,
+} from "@/lib/report-range"
 import type { ServiceCommerceReportOutput } from "@ewatrade/service-commerce"
+import { formatMinorMoney } from "@ewatrade/utils"
+import type { ReportSharePack } from "../../reports/report-share"
 
 export type ReportSectionContent = {
   key: Exclude<ServiceCommerceReportSection, "stores">
@@ -561,5 +568,42 @@ export function buildServiceCommerceReportCsv(
   return {
     fileName: `requests-and-quotes_${reportRangeFileDates(range)}.csv`,
     text: reportCsv(rows),
+  }
+}
+
+/** Share / print / CSV pack for Requests and quotes. */
+export function buildServiceCommerceSharePack(
+  report: ServiceCommerceReportOutput,
+  range: ReportRange,
+  storeName: string,
+): ReportSharePack {
+  const { lifecycle } = report
+  const count = (value: number) => reportCountFormat.format(value)
+  return {
+    csv: buildServiceCommerceReportCsv(report, range, storeName),
+    sections: [
+      {
+        rows: [
+          ["Requests", count(lifecycle.requestsReceived)],
+          ["Quotes sent", count(lifecycle.quotesIssued)],
+          ["Quotes accepted", count(lifecycle.quotesAccepted)],
+          ["Bookings", count(lifecycle.bookingsConfirmed)],
+          [
+            "Amount paid",
+            formatMinorMoney(lifecycle.paymentValueMinor, report.currencyCode),
+          ],
+        ],
+        title: "Summary",
+      },
+      {
+        rows: report.storeBreakdown.map((store): [string, string] => [
+          store.name,
+          `${count(store.requestsReceived)} requests · ${count(store.paymentsSucceeded)} paid`,
+        ]),
+        title: "Stores",
+      },
+    ],
+    subtitle: `${storeName} · ${formatReportRangeLabel(range)}`,
+    title: "Requests and quotes",
   }
 }

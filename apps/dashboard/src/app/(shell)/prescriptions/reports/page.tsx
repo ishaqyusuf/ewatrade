@@ -3,6 +3,7 @@ import {
   PrescriptionReportSkeleton,
 } from "@/components/prescriptions/prescription-report"
 import { loadPrescriptionReportParams } from "@/hooks/use-prescription-report-params"
+import { canSeePrescriptionReports } from "@/lib/sales-operations"
 import { getServerSession } from "@/lib/session"
 import { getActiveTenant } from "@/lib/tenant"
 import { HydrateClient, prefetch, trpc } from "@/trpc/server"
@@ -20,6 +21,8 @@ export default async function Page({
   const session = await getServerSession()
   const ctx = session ? await getActiveTenant(session.user.id) : null
   if (!session || !ctx) redirect("/")
+  // Owners and admins only, as the API and the Reports sidebar row require.
+  if (!canSeePrescriptionReports(ctx.membership.role)) redirect("/")
   const store = ctx.activeStore ?? ctx.stores[0]
   if (!store) redirect("/setup")
   const reportParams = await loadPrescriptionReportParams(searchParams)

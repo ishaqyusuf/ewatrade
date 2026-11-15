@@ -6,7 +6,13 @@ import {
 } from "@/components/reports/report-metrics"
 import type { PrescriptionReportTab } from "@/hooks/use-prescription-report-params"
 import { reportCsv, reportCsvMoney } from "@/lib/report-csv"
-import { type ReportRange, reportRangeFileDates } from "@/lib/report-range"
+import {
+  type ReportRange,
+  formatReportRangeLabel,
+  reportRangeFileDates,
+} from "@/lib/report-range"
+import { formatMinorMoney } from "@ewatrade/utils"
+import type { ReportSharePack } from "../reports/report-share"
 
 type CostSummary = {
   amountMinor: number | null
@@ -262,5 +268,44 @@ export function buildPrescriptionReportCsv(
   return {
     fileName: `prescriptions_${reportRangeFileDates(range)}.csv`,
     text: reportCsv(rows),
+  }
+}
+
+/** Share / print / CSV pack for Prescription reports (counts and money only). */
+export function buildPrescriptionSharePack(
+  report: PrescriptionReportData,
+  range: ReportRange,
+  storeName: string,
+): ReportSharePack {
+  const count = (value: number) => value.toLocaleString("en-NG")
+  return {
+    csv: buildPrescriptionReportCsv(report, range, storeName),
+    sections: [
+      {
+        rows: [
+          ["Requests", count(report.requestCount)],
+          ["Quotes sent", count(report.quoteCount)],
+          ["Quotes accepted", count(report.quoteOutcomes.accepted)],
+          ["Paid orders", count(report.payment.paidCount)],
+          [
+            "Amount paid",
+            formatMinorMoney(
+              report.payment.paidAmountMinor,
+              report.currencyCode,
+            ),
+          ],
+        ],
+        title: "Summary",
+      },
+      {
+        rows: report.storeBreakdown.map((store): [string, string] => [
+          store.name,
+          `${count(store.requestCount)} requests`,
+        ]),
+        title: "Stores",
+      },
+    ],
+    subtitle: `${storeName} · ${formatReportRangeLabel(range)}`,
+    title: "Prescriptions report",
   }
 }

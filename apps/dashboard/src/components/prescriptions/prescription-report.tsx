@@ -1,12 +1,9 @@
 "use client"
-import { PageHeader, PageToolbar } from "@/components/page-header"
 import {
   ReportChartCard,
   ReportChartEmpty,
 } from "@/components/reports/report-chart-card"
 import { ReportDateControl } from "@/components/reports/report-date-control"
-import { ReportDelta } from "@/components/reports/report-delta"
-import { ReportDownloadButton } from "@/components/reports/report-download-button"
 import { ReportError } from "@/components/reports/report-error"
 import {
   ReportHeadlineStrip,
@@ -24,13 +21,8 @@ import {
   formatReportCountCompact,
   formatReportMoney,
 } from "@/components/reports/report-metrics"
+import { ReportShareButton } from "@/components/reports/report-share-dialog"
 import { ScrollableContent } from "@/components/scrollable-content"
-import {
-  InlineRowCheckbox,
-  InlineSelectAllCheckbox,
-  InlineSelectionStatus,
-  useInlineSelection,
-} from "@/components/tables/core"
 import {
   Button,
   DailyBarChart,
@@ -46,9 +38,6 @@ import {
   TabsTrigger,
   cn,
 } from "@ewatrade/ui"
-import { ArrowLeft01Icon } from "@hugeicons/core-free-icons"
-import { HugeiconsIcon } from "@hugeicons/react"
-import Link from "next/link"
 
 import {
   type PrescriptionReportTab,
@@ -61,7 +50,6 @@ import {
   formatReportDayLong,
   formatReportRangeBetween,
   formatReportRangeLabel,
-  previousReportRange,
   reportPresetRange,
   reportRangeDays,
 } from "@/lib/report-range"
@@ -70,8 +58,8 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query"
 import { useMemo } from "react"
 import {
   type PrescriptionReportData,
-  buildPrescriptionReportCsv,
   buildPrescriptionReportSections,
+  buildPrescriptionSharePack,
   countPrescriptionRequestDays,
   hasPrescriptionReportActivity,
   prescriptionConversionPercent,
@@ -96,72 +84,39 @@ export function PrescriptionReport({ stores }: { stores: StoreOption[] }) {
       { placeholderData: keepPreviousData, retry: false },
     ),
   )
-  const previousRange = previousReportRange(range)
-  const previous = useQuery(
-    trpc.prescriptions.report.queryOptions(
-      { from: previousRange.from, storeId, to: previousRange.to },
-      { retry: false },
-    ),
-  )
 
   return (
     <ScrollableContent>
-      <div className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)] content-start gap-6 pt-6">
-        <PageHeader
-          eyebrow="Reports"
-          title="Prescriptions"
-          description="Prescription requests, Quotes and payments. Patient and prescription details are never shown."
-        >
-          <PageToolbar
-            actions={
-              <>
-                <SelectControl
-                  aria-label="Store"
-                  className="h-9 w-full sm:w-64"
-                  value={storeId ?? ""}
-                  onValueChange={(value) =>
-                    void params.setStoreId(value || null)
-                  }
-                  options={[
-                    { value: "", label: <>All Stores</> },
-                    ...stores.map((store) => ({
-                      value: store.id,
-                      label: store.name,
-                    })),
-                  ]}
-                />
-                <ReportDateControl
-                  onChange={(next) => void params.setRange(next)}
-                  range={range}
-                />
-                <ReportDownloadButton
-                  build={() =>
-                    report.data && !report.isPlaceholderData
-                      ? buildPrescriptionReportCsv(
-                          report.data,
-                          range,
-                          storeName,
-                        )
-                      : null
-                  }
-                  disabled={!report.data || report.isPlaceholderData}
-                />
-                <Button
-                  render={<Link href="/prescriptions" />}
-                  variant="ghost"
-                  className="h-9 rounded-none"
-                >
-                  <HugeiconsIcon
-                    aria-hidden="true"
-                    className="size-4"
-                    icon={ArrowLeft01Icon}
-                  />
-                  Back to prescriptions
-                </Button>
-              </>
-            }
+      <div className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)] content-start gap-5 pt-6 pb-10">
+        <div className="flex min-w-0 flex-col gap-3 lg:flex-row lg:items-center">
+          <SelectControl
+            aria-label="Store"
+            className="w-full lg:w-56"
+            value={storeId ?? ""}
+            onValueChange={(value) => void params.setStoreId(value || null)}
+            options={[
+              { value: "", label: <>All stores</> },
+              ...stores.map((store) => ({
+                value: store.id,
+                label: store.name,
+              })),
+            ]}
           />
-        </PageHeader>
+          <ReportDateControl
+            onChange={(next) => void params.setRange(next)}
+            range={range}
+          />
+          <div className="lg:ml-auto">
+            <ReportShareButton
+              build={() =>
+                report.data && !report.isPlaceholderData
+                  ? buildPrescriptionSharePack(report.data, range, storeName)
+                  : null
+              }
+              disabled={!report.data || report.isPlaceholderData}
+            />
+          </div>
+        </div>
 
         {report.isPending ? (
           <PrescriptionReportLoading />
@@ -173,18 +128,16 @@ export function PrescriptionReport({ stores }: { stores: StoreOption[] }) {
         ) : !report.data ? null : !hasPrescriptionReportActivity(
             report.data,
           ) ? (
-          <section className="grid gap-1 border border-border bg-background p-6">
+          <section className="grid gap-1 rounded-[var(--ui-radius-surface)] border border-border bg-card p-6">
             <h2 className="font-semibold">
               No prescription requests {formatReportRangeBetween(range)}
             </h2>
             <p className="text-sm text-muted-foreground">
-              Requests show here when a Customer sends a prescription. Try more
-              days or another Store.
+              Try more days or another store.
             </p>
             <div className="mt-3 flex flex-wrap gap-2">
               {reportRangeDays(range) < 90 ? (
                 <Button
-                  className="h-9 rounded-none"
                   onClick={() => void params.setRange(reportPresetRange(90))}
                   type="button"
                   variant="outline"
@@ -194,12 +147,11 @@ export function PrescriptionReport({ stores }: { stores: StoreOption[] }) {
               ) : null}
               {storeId ? (
                 <Button
-                  className="h-9 rounded-none"
                   onClick={() => void params.setStoreId(null)}
                   type="button"
                   variant="outline"
                 >
-                  Show all Stores
+                  Show all stores
                 </Button>
               ) : null}
             </div>
@@ -219,14 +171,8 @@ export function PrescriptionReport({ stores }: { stores: StoreOption[] }) {
             ) : null}
             <PrescriptionReportContent
               onTabChange={(tab) => void params.setTab(tab)}
-              previous={
-                previous.data && !report.isPlaceholderData
-                  ? previous.data
-                  : undefined
-              }
               range={range}
               report={report.data}
-              scopeKey={`${storeId ?? "all"}:${range.from.toISOString()}:${range.to.toISOString()}`}
               tab={params.tab}
             />
           </div>
@@ -320,17 +266,13 @@ function RequestsByDayCard({
 
 function PrescriptionReportContent({
   onTabChange,
-  previous,
   range,
   report,
-  scopeKey,
   tab,
 }: {
   onTabChange: (tab: PrescriptionReportTab) => void
-  previous: PrescriptionReportData | undefined
   range: ReportRange
   report: PrescriptionReportData
-  scopeKey: string
   tab: PrescriptionReportTab
 }) {
   const sections = useMemo(
@@ -341,8 +283,6 @@ function PrescriptionReportContent({
     report.scope === "tenant" && report.storeBreakdown.length > 0
   const activeTab = tab === "stores" && !showStores ? "lifecycle" : tab
   const conversion = prescriptionConversionPercent(report)
-  const days = reportRangeDays(range)
-
   return (
     <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-6">
       <ReportHeadlineStrip
@@ -351,17 +291,8 @@ function PrescriptionReportContent({
           {
             label: "Requests",
             value: countFormat.format(report.requestCount),
-            detail: previous ? (
-              <ReportDelta
-                current={report.requestCount}
-                days={days}
-                previous={previous.requestCount}
-              />
-            ) : conversion === null ? (
-              "None in these dates"
-            ) : (
-              `${conversion}% became Orders`
-            ),
+            detail:
+              conversion === null ? undefined : `${conversion}% became orders`,
             muted: report.requestCount === 0,
           },
           {
@@ -382,15 +313,7 @@ function PrescriptionReportContent({
               report.payment.paidAmountMinor,
               report.currencyCode,
             ),
-            detail: previous ? (
-              <ReportDelta
-                current={report.payment.paidAmountMinor}
-                days={days}
-                previous={previous.payment.paidAmountMinor}
-              />
-            ) : (
-              "In these dates"
-            ),
+            detail: undefined,
             money: true,
             muted: report.payment.paidAmountMinor === 0,
           },
@@ -431,21 +354,15 @@ function PrescriptionReportContent({
         </ReportTabsList>
         {sections.map((section) => (
           <TabsContent key={section.key} value={section.key}>
-            <ReportTabPanel
-              description={section.description}
-              title={section.title}
-            >
+            <ReportTabPanel title={section.title}>
               <ReportMetricGroups groups={section.groups} />
             </ReportTabPanel>
           </TabsContent>
         ))}
         {showStores ? (
           <TabsContent value="stores">
-            <ReportTabPanel
-              description="Each Store's requests in these dates."
-              title="Stores"
-            >
-              <PrescriptionStoreTable report={report} scopeKey={scopeKey} />
+            <ReportTabPanel title="Stores">
+              <PrescriptionStoreTable report={report} />
             </ReportTabPanel>
           </TabsContent>
         ) : null}
@@ -456,21 +373,13 @@ function PrescriptionReportContent({
 
 function PrescriptionStoreTable({
   report,
-  scopeKey,
 }: {
   report: PrescriptionReportData
-  scopeKey: string
 }) {
-  const storeIds = useMemo(
-    () => report.storeBreakdown.map((store) => store.storeId),
-    [report.storeBreakdown],
-  )
-  const selection = useInlineSelection({ ids: storeIds, scope: scopeKey })
   return (
     <div className="grid min-w-0 gap-3">
-      <InlineSelectionStatus selection={selection} />
       <section
-        className="overflow-x-auto border border-border"
+        className="overflow-x-auto rounded-[var(--ui-radius-item)] border border-border"
         // biome-ignore lint/a11y/noNoninteractiveTabindex: Keyboard users must be able to scroll the report table.
         tabIndex={0}
         aria-label="Stores table"
@@ -478,12 +387,6 @@ function PrescriptionStoreTable({
         <Table className="w-full min-w-[24rem] text-left text-sm">
           <TableHeader className="bg-muted/40 text-xs text-muted-foreground">
             <TableRow>
-              <TableHead scope="col" className="w-10 px-4 py-2 font-normal">
-                <InlineSelectAllCheckbox
-                  selection={selection}
-                  label="Select all Stores"
-                />
-              </TableHead>
               <TableHead scope="col" className="px-4 py-2 font-normal">
                 Store
               </TableHead>
@@ -500,17 +403,7 @@ function PrescriptionStoreTable({
               <TableRow
                 className="border-b border-border/70 last:border-b-0"
                 key={store.storeId}
-                data-state={
-                  selection.isSelected(store.storeId) ? "selected" : undefined
-                }
               >
-                <TableCell className="px-4 py-2">
-                  <InlineRowCheckbox
-                    selection={selection}
-                    id={store.storeId}
-                    label={`Select ${store.name}`}
-                  />
-                </TableCell>
                 <TableCell className="px-4 py-2">{store.name}</TableCell>
                 <TableCell
                   className={cn(
@@ -538,8 +431,8 @@ function PrescriptionReportLoading() {
         aria-hidden="true"
         className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]"
       >
-        <div className="h-80 animate-pulse bg-muted" />
-        <div className="h-80 animate-pulse bg-muted" />
+        <div className="h-80 animate-pulse rounded-[var(--ui-radius-surface)] bg-muted" />
+        <div className="h-80 animate-pulse rounded-[var(--ui-radius-surface)] bg-muted" />
       </div>
       <ReportTabsSkeleton />
     </div>
