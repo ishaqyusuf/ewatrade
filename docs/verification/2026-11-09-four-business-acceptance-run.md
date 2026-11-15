@@ -10,16 +10,16 @@ has the status, evidence and limitation for each case.
 
 ## Scorecard
 
-Current, 11 November 2026, after runtime runs 1–9, all of T1–T8 landing, and the
+Current, 15 November 2026, after runtime runs 1–10, all of T1–T8 landing, and the
 owner's instruction to keep data-dependent retail cases blocked:
 
 | Business | Passed | Fail | Blocked | Not assessed |
 | --- | ---: | ---: | ---: | ---: |
-| Jawdah poultry | 9/12 | 1 | 0 | 2 |
-| Laundry | 3/12 | 2 | 2 | 5 |
+| Jawdah poultry | 10/12 | 0 | 0 | 2 |
+| Laundry | 4/12 | 0 | 3 | 5 |
 | Hypnos Man Collection | 0/24 | 0 | 23 | 1 |
 | Alhaq Tech | 0/24 | 0 | 23 | 1 |
-| **Total** | **12/72 (16.7%)** | **3** | **48** | **9** |
+| **Total** | **14/72 (19.4%)** | **0** | **49** | **9** |
 
 Earlier on 10 November the count was 5/72 passed; J06 moved from PASS to FAIL in
 run 2. All case passes are local-window passes (see runtime runs 1–2). A separate
@@ -529,3 +529,29 @@ the broader phase fixture suite also reproduced on the archived baseline
 native cash/day navigation, the raw Service payment fixture and the Service
 Request tool fixture. Lockfile SHA-256
 `d46df37ad728068b27917a729b0dde05013583519c802c51a7ee5c615e0d9f65`.
+
+## Runtime run 10: fix reruns (J01, L05, L07, L10)
+
+15 November 2026, same local window. The shared API on 3095 was restarted at
+06:36 with `NODE_ENV=development APP_ENV=local`. Fixes under test: `a284ac2ae`
+(code sign-in), `2d6ecd83b` and `44af5cde5` (job photos and hand-over). Earlier
+FAIL results are kept in history.
+
+- **J01 → PASS.** The passwordless Jawdah Acceptance owner chose "Sign in with an
+  email code", got "Code sent… works for 10 minutes", and reached Overview with
+  the local development code. A wrong code was refused ("The verification code
+  is incorrect"). Real email delivery was not checked.
+- **L10 → PASS.** On completed, fully paid ORD-006, "Mark collected" opened a
+  hand-over step (Customer collected / Delivered). The job now shows "Handed
+  over · Collected… by Heritage QA Owner", `handedOffAt` was set once, and the
+  action is gone. The unpaid path was read back from the fix session's ORD-007:
+  delivered with ₦1,000 still owed and payment unchanged. "Mark delivered" for
+  an online delivery order was not exercised.
+- **L07 → BLOCKED.** "Add photo" now uploads a real image. The synthetic PNG
+  shows as "Photo … · private", served only by the team API. Notes and problems
+  stand from run 7. The customer-tracking half needs the same Service Commerce
+  policy as L05; the job now says "No tracking link: Tracking pages aren't open
+  for this business yet".
+- **L05 stays BLOCKED.** Withholding and explaining the tracking link fixes the
+  misleading link. The public service request, quote, preferred time and
+  tracking journey still needs a live Service Commerce policy decision.
