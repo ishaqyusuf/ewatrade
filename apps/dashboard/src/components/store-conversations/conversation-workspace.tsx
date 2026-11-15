@@ -11,10 +11,15 @@ import {
   hasStoreConversationFilters,
   useStoreConversationParams,
 } from "@/hooks/use-store-conversation-params"
-import { INBOX_CHECK_MS, boundedCheckInterval } from "@/lib/bounded-refresh"
+import {
+  INBOX_CHECK_MS,
+  boundedCheckInterval,
+  onInputAfterIdle,
+} from "@/lib/bounded-refresh"
 import { useTRPC } from "@/trpc/client"
 import { Button } from "@ewatrade/ui"
 import { useQuery } from "@tanstack/react-query"
+import { useEffect } from "react"
 import {
   ConversationInboxList,
   ConversationInboxSkeleton,
@@ -50,6 +55,10 @@ export function ConversationWorkspace({
       refetchOnWindowFocus: "always",
     }),
   )
+  // Back from an idle stop: the first tap or key press reads once and
+  // restarts the minute checks.
+  const { refetch } = queue
+  useEffect(() => onInputAfterIdle(() => void refetch()), [refetch])
   const filter = inboxFilterOf(params)
   const forbidden = queue.isError && queue.error.data?.code === "FORBIDDEN"
 
