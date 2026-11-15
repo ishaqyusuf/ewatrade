@@ -8,14 +8,17 @@ import {
 } from "@/components/staff-member-content"
 import { RemoveStaffAlert } from "@/components/staff/remove-staff-alert"
 import { StaffAccessForm } from "@/components/staff/staff-access-form"
-import { StaffSuspendForm } from "@/components/staff/staff-suspend-form"
+import { SuspendStaffAlert } from "@/components/staff/suspend-staff-alert"
 import { useRemoveStaff } from "@/hooks/use-remove-staff"
 import { staffAccessQueryKey, useStaffAccess } from "@/hooks/use-staff-access"
 import { useStaffInvitationActions } from "@/hooks/use-staff-invitation-actions"
-import { useStaffInvitationParams } from "@/hooks/use-staff-invitation-params"
 import { STAFF_LIST_QUERY_KEY } from "@/hooks/use-staff-list"
 import { useStaffMemberParams } from "@/hooks/use-staff-member-params"
-import { type StaffAction, getStaffActions } from "@/lib/staff-management"
+import {
+  type StaffAction,
+  getStaffActions,
+  getStaffContact,
+} from "@/lib/staff-management"
 import { useTRPC } from "@/trpc/client"
 import { Button, Sheet, toast } from "@ewatrade/ui"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
@@ -23,17 +26,20 @@ import { useState } from "react"
 import { SheetFrame } from "./sheet-frame"
 
 const ACTION_LABEL: Record<StaffAction, string> = {
-  access: "Change access",
+  access: "Change role or stores",
   cancel: "Cancel invite",
   reactivate: "Reactivate",
   remove: "Remove",
-  resend: "Resend invite",
+  resend: "Send invite again",
   suspend: "Suspend",
 }
 
+const DESTRUCTIVE: StaffAction[] = ["suspend", "cancel", "remove"]
+
 /**
- * One person's details. Change access and Suspend are views inside this
- * sheet with Back; Cancel invite is an alert over it.
+ * One person: role and stores in plain words, one main action. Change role
+ * or stores is a view inside this sheet with Back; Suspend, Cancel invite
+ * and Remove are alerts over it.
  */
 export function StaffMemberSheet({
   historyAllowed,
@@ -43,7 +49,6 @@ export function StaffMemberSheet({
   const trpc = useTRPC()
   const client = useQueryClient()
   const workflow = useDashboardWorkflow()
-  const invitationSheet = useStaffInvitationParams()
   const invitations = useStaffInvitationActions()
   const [notice, setNotice] = useState<{
     text: string
@@ -59,35 +64,22 @@ export function StaffMemberSheet({
     ),
   )
   const member = query.data
-  // Store access and invite links are Owner and Admin reads.
+  // Store access and the live invite link are Owner and Admin reads.
   const access = useStaffAccess(historyAllowed && member ? member.userId : null)
-  const invites = useQuery(
-    trpc.retailOps.staffInvitations.queryOptions(
-      { membershipId: membershipId ?? "" },
-      {
-        enabled: isOpen && historyAllowed && member?.status === "INVITED",
-        retry: false,
-      },
-    ),
-  )
-  const invitation = invites.data?.data.find((row) =>
-    ["ACTIVE", "EXPIRED"].includes(row.status),
-  )
-  const inviteCommandId = invitation?.commandId ?? null
   const row = member
-    ? memberAsStaffRow(
-        member,
-        access.data,
-        invitation,
-        !(historyAllowed && member.status === "INVITED" && invites.isLoading),
-      )
+    ? memberAsStaffRow(member, historyAllowed ? access.data : undefined)
     : null
-  const actions = row
-    ? getStaffActions(row).filter(
-        (action) =>
-          historyAllowed || action === "suspend" || action === "reactivate",
-      )
-    : []
+  const accessLoading = historyAllowed && access.isPending
+  const actions =
+    row && !accessLoading
+      ? getStaffActions(row).filter(
+          (action) =>
+            historyAllowed || action === "suspend" || action === "reactivate",
+        )
+      : []
+  const main = actions.find((action) => !DESTRUCTIVE.includes(action))
+  const others = actions.filter((action) => action !== main)
+  const invitationId = row?.access?.invitationId ?? null
 
   async function refreshAll() {
     await Promise.all([
@@ -137,21 +129,22 @@ export function StaffMemberSheet({
   }
 
   async function resendInvite() {
-    if (!member || !invitation) return
+    if (!member || !invitationId) return
     setBusy(true)
     setNotice(null)
     try {
-      await invitations.run("RESEND", invitation.id)
+      await invitations.run("RESEND", invitationId)
       await refreshAll()
-      await invites.refetch()
-      setNotice({ text: `Invite sent again to ${member.email}.` })
+      setNotice({
+        text: `Invite sent again to ${getStaffContact(member.email) ?? member.name}.`,
+      })
     } catch (failure) {
       setNotice({
         error: true,
         text:
           failure instanceof Error && failure.message
             ? failure.message
-            : "Couldn’t change this invite. Try again.",
+            : "Couldn’t send the invite again. Try again.",
       })
     } finally {
       setBusy(false)
@@ -165,7 +158,7 @@ export function StaffMemberSheet({
       await removeStaff.mutateAsync(member.userId)
       toast(
         removeMode === "cancel"
-          ? `Invite cancelled for ${member.email}.`
+          ? `Invite cancelled for ${member.name}.`
           : `${member.name} was removed.`,
       )
       setRemoveMode(null)
@@ -184,6 +177,7 @@ export function StaffMemberSheet({
   }
 
   function runAction(action: StaffAction) {
+    setNotice(null)
     if (action === "access" || action === "suspend") void setView(action)
     else if (action === "reactivate") void reactivate()
     else if (action === "resend") void resendInvite()
@@ -198,9 +192,7 @@ export function StaffMemberSheet({
     if (!membershipId)
       return (
         <SheetFrame title="Staff">
-          <p role="alert">
-            This link no longer works. Ask the assistant again.
-          </p>
+          <p role="alert">This link no longer works.</p>
         </SheetFrame>
       )
     if (query.isPending)
@@ -213,8 +205,12 @@ export function StaffMemberSheet({
       return (
         <SheetFrame title="Staff">
           <div role="alert" className="grid gap-3">
-            <p>You don’t have access to this person.</p>
-            <Button variant="outline" onClick={() => void query.refetch()}>
+            <p>You can’t see this person.</p>
+            <Button
+              variant="outline"
+              className="justify-self-start"
+              onClick={() => void query.refetch()}
+            >
               Try again
             </Button>
           </div>
@@ -222,29 +218,11 @@ export function StaffMemberSheet({
       )
     if (view === "access" && actions.includes("access"))
       return (
-        <SheetFrame
-          title="Change access"
-          description={`${member.name} · ${member.email}`}
-          back={back}
-        >
+        <SheetFrame title="Change role or stores" back={back}>
           <StaffAccessForm
             userId={member.userId}
-            onSaved={() => finishView(`Access saved for ${member.name}.`)}
-            onCancel={() => void setView(null)}
-          />
-        </SheetFrame>
-      )
-    if (view === "suspend" && actions.includes("suspend"))
-      return (
-        <SheetFrame
-          title={`Suspend ${member.name}`}
-          description={member.email}
-          back={back}
-        >
-          <StaffSuspendForm
-            userId={member.userId}
             name={member.name}
-            onSaved={() => finishView(`${member.name} is suspended.`)}
+            onSaved={() => finishView(`Saved ${member.name}’s access.`)}
             onCancel={() => void setView(null)}
           />
         </SheetFrame>
@@ -252,46 +230,49 @@ export function StaffMemberSheet({
     return (
       <SheetFrame
         title={member.name}
-        description={member.email}
+        description={getStaffContact(member.email) ?? undefined}
         footer={
-          <>
-            {actions.map((action, index) => (
-              <Button
-                key={action}
-                type="button"
-                variant={
-                  index === 0
-                    ? "default"
-                    : action === "suspend" ||
-                        action === "cancel" ||
-                        action === "remove"
-                      ? "ghost"
-                      : "outline"
-                }
-                className={
-                  index > 0 &&
-                  (action === "suspend" ||
-                    action === "cancel" ||
-                    action === "remove")
-                    ? "text-destructive"
-                    : undefined
-                }
-                disabled={busy}
-                onClick={() => runAction(action)}
-              >
-                {ACTION_LABEL[action]}
-              </Button>
-            ))}
-            {historyAllowed ? (
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => void openHistory(member.membershipId)}
-              >
-                See history
-              </Button>
-            ) : null}
-          </>
+          actions.length || historyAllowed ? (
+            <div className="grid w-full gap-2 sm:flex sm:flex-wrap sm:justify-end">
+              {main ? (
+                <Button
+                  type="button"
+                  className="sm:order-last"
+                  disabled={busy}
+                  onClick={() => runAction(main)}
+                >
+                  {busy && (main === "resend" || main === "reactivate")
+                    ? "Sending…"
+                    : ACTION_LABEL[main]}
+                </Button>
+              ) : null}
+              {historyAllowed ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => void openHistory(member.membershipId)}
+                >
+                  History
+                </Button>
+              ) : null}
+              {others.map((action) => (
+                <Button
+                  key={action}
+                  type="button"
+                  variant="outline"
+                  className={
+                    DESTRUCTIVE.includes(action)
+                      ? "text-destructive sm:order-first sm:mr-auto"
+                      : undefined
+                  }
+                  disabled={busy}
+                  onClick={() => runAction(action)}
+                >
+                  {ACTION_LABEL[action]}
+                </Button>
+              ))}
+            </div>
+          ) : undefined
         }
       >
         <div className="grid gap-5">
@@ -306,12 +287,7 @@ export function StaffMemberSheet({
           <StaffMemberContent
             row={row}
             showStores={historyAllowed}
-            loading={historyAllowed && (access.isPending || invites.isLoading)}
-            onOpenInvitation={
-              inviteCommandId
-                ? () => void invitationSheet.open(inviteCommandId)
-                : undefined
-            }
+            loading={accessLoading}
           />
         </div>
       </SheetFrame>
@@ -339,6 +315,17 @@ export function StaffMemberSheet({
         }}
         onConfirm={() => void confirmRemove()}
       />
+      {member ? (
+        <SuspendStaffAlert
+          open={view === "suspend" && actions.includes("suspend")}
+          userId={member.userId}
+          name={member.name}
+          onOpenChange={(open) => {
+            if (!open) void setView(null)
+          }}
+          onSuspended={() => finishView(`${member.name} is suspended.`)}
+        />
+      ) : null}
     </Sheet>
   )
 }

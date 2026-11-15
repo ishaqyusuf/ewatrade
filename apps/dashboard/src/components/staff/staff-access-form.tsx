@@ -7,9 +7,21 @@ import {
   type StaffAccessResponse,
   useStaffAccess,
 } from "@/hooks/use-staff-access"
-import type { StaffInviteRole } from "@/lib/staff-management"
-import { Button, Checkbox } from "@ewatrade/ui"
-import { useId, useState } from "react"
+import {
+  type StaffInviteRole,
+  getStaffRoleLabel,
+  staffRoleRank,
+} from "@/lib/staff-management"
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogTitle,
+  Button,
+} from "@ewatrade/ui"
+import { useRef, useState } from "react"
 import {
   StaffRolePicker,
   type StaffRolePickerValue,
@@ -17,14 +29,16 @@ import {
   pickerHasManager,
 } from "./staff-role-picker"
 
-/** Change access: a view inside the member sheet. Saves one role across the chosen stores. */
+/** Change role or stores: a view inside the member sheet. Taking access away asks first. */
 export function StaffAccessForm({
   userId,
+  name,
   onSaved,
   onCancel,
   onSavingChange,
 }: {
   userId: string
+  name: string
   onSaved: () => Promise<void> | void
   onCancel: () => void
   onSavingChange?: (saving: boolean) => void
@@ -42,6 +56,7 @@ export function StaffAccessForm({
     <AccessFormBody
       key={query.data.access.staffAccessRevision}
       userId={userId}
+      name={name}
       data={query.data}
       access={query.data.access}
       onSaved={onSaved}
@@ -51,8 +66,48 @@ export function StaffAccessForm({
   )
 }
 
+/** What saving takes away, in plain words; empty when nothing is lowered. */
+export function describeAccessCut(input: {
+  legacy: boolean
+  before: Array<{ storeId: string; role: string }>
+  beforeCatalogEditor: boolean
+  after: Array<{ storeId: string; role: string }>
+  afterCatalogEditor: boolean
+  stores: Array<{ id: string; name: string }>
+}) {
+  const storeName = (id: string) =>
+    input.stores.find((store) => store.id === id)?.name ?? "a closed store"
+  const after = new Map(
+    input.after.map((row) => [row.storeId, row.role.toUpperCase()]),
+  )
+  const cuts: string[] = []
+  if (input.legacy) {
+    cuts.push(
+      after.size
+        ? `They can use every store today. After this, only ${[...after.keys()].map(storeName).join(", ")}.`
+        : "They can use every store today. After this, no store.",
+    )
+  } else {
+    for (const row of input.before) {
+      const next = after.get(row.storeId)
+      if (!next) cuts.push(`They lose ${storeName(row.storeId)}.`)
+      else if (
+        (staffRoleRank[next] ?? 9) >
+        (staffRoleRank[row.role.toUpperCase()] ?? 9)
+      )
+        cuts.push(
+          `They become ${getStaffRoleLabel(next)} in ${storeName(row.storeId)}.`,
+        )
+    }
+  }
+  if (input.beforeCatalogEditor && !input.afterCatalogEditor)
+    cuts.push("They can no longer change items and prices.")
+  return cuts
+}
+
 function AccessFormBody({
   userId,
+  name,
   data,
   access,
   onSaved,
@@ -60,6 +115,7 @@ function AccessFormBody({
   onSavingChange,
 }: {
   userId: string
+  name: string
   data: StaffAccessResponse
   access: StaffAccessRecord
   onSaved: () => Promise<void> | void
@@ -67,7 +123,7 @@ function AccessFormBody({
   onSavingChange?: (saving: boolean) => void
 }) {
   const workflow = useDashboardWorkflow()
-  const confirmId = useId()
+  const keepRef = useRef<HTMLButtonElement>(null)
   const assignments = access.staffStoreAssignments
   const roles = new Set(assignments.map((row) => row.role.toLowerCase()))
   const legacy = access.staffAccessMode === "LEGACY"
@@ -93,9 +149,22 @@ function AccessFormBody({
           )
         : null,
   })
-  const [confirmed, setConfirmed] = useState(false)
+  const [cuts, setCuts] = useState<string[] | null>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  function review() {
+    const next = describeAccessCut({
+      legacy,
+      before: assignments,
+      beforeCatalogEditor: access.catalogEditor,
+      after: pickerAssignments(value),
+      afterCatalogEditor: pickerHasManager(value) && value.catalogEditor,
+      stores: data.stores,
+    })
+    if (next.length) setCuts(next)
+    else void save()
+  }
 
   async function save() {
     if (saving) return
@@ -110,7 +179,8 @@ function AccessFormBody({
           operation: "access",
           staffUserId: userId,
           expectedRevision: access.staffAccessRevision,
-          confirmLegacyCutover: confirmed,
+          // Leaving "every store" was confirmed in the alert.
+          confirmLegacyCutover: legacy,
           assignments: pickerAssignments(value),
           defaultStoreId: value.storeIds.length ? value.startStoreId : null,
           catalogEditor: pickerHasManager(value) && value.catalogEditor,
@@ -118,9 +188,11 @@ function AccessFormBody({
       })
       const result = (await response.json()) as { error?: string }
       if (!response.ok) throw new Error(result.error)
+      setCuts(null)
       await onSaved()
     } catch {
-      setError("Couldn’t save access. Try again.")
+      setCuts(null)
+      setError("Couldn’t save. Try again.")
     } finally {
       setSaving(false)
       onSavingChange?.(false)
@@ -132,7 +204,7 @@ function AccessFormBody({
       className="grid gap-5"
       onSubmit={(event) => {
         event.preventDefault()
-        void save()
+        review()
       }}
     >
       {error ? (
@@ -143,15 +215,9 @@ function AccessFormBody({
           Store access can’t be changed yet. Try again later.
         </FormFeedback>
       ) : null}
-      {legacy ? (
-        <p className="text-sm text-muted-foreground">
-          They can use every store today. Choose the stores they should keep.
-        </p>
-      ) : null}
       {roles.size > 1 && !value.storeRoles ? (
         <FormFeedback appearance="dashboard" variant="default">
-          They have different roles in different stores today. Saving gives them
-          this role in every store.
+          Saving gives them this role in every store you pick.
         </FormFeedback>
       ) : null}
       <StaffRolePicker
@@ -162,32 +228,16 @@ function AccessFormBody({
       />
       {!value.storeIds.length ? (
         <p className="text-sm text-muted-foreground">
-          No stores. They can’t open any store.
+          No stores picked. They won’t be able to sign in to any store.
         </p>
       ) : null}
-      {legacy ? (
-        <label className="flex items-start gap-2.5 text-sm" htmlFor={confirmId}>
-          <Checkbox
-            id={confirmId}
-            checked={confirmed}
-            disabled={saving}
-            onCheckedChange={(checked) => setConfirmed(checked === true)}
-          />
-          I understand they’ll lose the stores I don’t choose.
-        </label>
-      ) : null}
-      <p className="text-sm text-muted-foreground">
-        Removing a store stops access to that store only. To stop all access,
-        suspend them.
-      </p>
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         <Button
           type="submit"
           disabled={
             !data.storeAccessReady ||
             saving ||
-            (value.storeIds.length > 0 && !value.startStoreId) ||
-            (legacy && !confirmed)
+            (value.storeIds.length > 0 && !value.startStoreId)
           }
         >
           {saving ? "Saving…" : "Save"}
@@ -201,6 +251,39 @@ function AccessFormBody({
           Cancel
         </Button>
       </div>
+      <AlertDialog
+        open={cuts !== null}
+        onOpenChange={(open) => {
+          if (!open && !saving) setCuts(null)
+        }}
+      >
+        <AlertDialogContent initialFocus={keepRef}>
+          <AlertDialogTitle className="text-lg font-medium">
+            Lower {name}’s access?
+          </AlertDialogTitle>
+          <AlertDialogDescription
+            render={<div />}
+            className="grid gap-1 text-base text-muted-foreground"
+          >
+            {(cuts ?? []).map((cut) => (
+              <p key={cut}>{cut}</p>
+            ))}
+          </AlertDialogDescription>
+          <AlertDialogFooter>
+            <AlertDialogCancel ref={keepRef} disabled={saving}>
+              Go back
+            </AlertDialogCancel>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={saving}
+              onClick={() => void save()}
+            >
+              {saving ? "Saving…" : "Lower access"}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </form>
   )
 }

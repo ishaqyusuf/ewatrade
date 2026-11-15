@@ -100,7 +100,7 @@ export function StaffRolePicker({
       <Button
         type="button"
         variant="link"
-        className="h-auto justify-self-start p-0"
+        className="h-11 justify-self-start px-0"
         disabled={disabled}
         onClick={() => setPerStore(!perStore)}
       >
@@ -109,6 +109,8 @@ export function StaffRolePicker({
           : "Use a different role in each store"}
       </Button>
     ) : null
+  const rowClass =
+    "flex min-h-11 cursor-pointer items-center gap-3 rounded-[var(--ui-radius-item)] border border-border px-3 py-2.5 text-base"
 
   return (
     <div className="grid gap-5">
@@ -120,10 +122,10 @@ export function StaffRolePicker({
             return (
               <div
                 key={store.id}
-                className="grid grid-cols-[minmax(0,1fr)_10rem] items-center gap-3"
+                className="grid grid-cols-[minmax(0,1fr)_9.5rem] items-center gap-3"
               >
                 <label
-                  className="flex items-center gap-2 text-sm"
+                  className="flex min-h-11 items-center gap-3 text-base"
                   htmlFor={`${id}-store-${store.id}`}
                 >
                   <Checkbox
@@ -133,7 +135,7 @@ export function StaffRolePicker({
                       toggleStore(store.id, next === true)
                     }
                   />
-                  {store.name}
+                  <span className="min-w-0 truncate">{store.name}</span>
                 </label>
                 <SelectControl
                   aria-label={`Role in ${store.name}`}
@@ -156,16 +158,6 @@ export function StaffRolePicker({
               </div>
             )
           })}
-          <ul className="mt-1 grid gap-0.5 text-sm text-muted-foreground">
-            {STORE_ROLES.map((role) => (
-              <li key={role}>
-                <span className="font-medium text-foreground">
-                  {roleLabel(role)}:
-                </span>{" "}
-                {staffRoleDescriptions[role.toUpperCase()]}
-              </li>
-            ))}
-          </ul>
           {switchLink}
         </fieldset>
       ) : (
@@ -178,9 +170,8 @@ export function StaffRolePicker({
                 <label
                   key={role}
                   className={cn(
-                    "flex cursor-pointer items-start gap-2.5 border px-3 py-2.5 text-sm",
-                    checked &&
-                      "border-primary bg-primary/5 ring-1 ring-primary",
+                    rowClass,
+                    checked && "border-foreground ring-1 ring-foreground",
                   )}
                 >
                   <input
@@ -188,12 +179,12 @@ export function StaffRolePicker({
                     name={`${id}-role`}
                     value={role}
                     checked={checked}
-                    className="mt-0.5 accent-primary"
+                    className="size-4 shrink-0 accent-[var(--foreground)]"
                     onChange={() => onChange({ ...value, role })}
                   />
-                  <span className="grid gap-0.5">
+                  <span className="grid min-w-0 gap-0.5">
                     <span className="font-medium">{roleLabel(role)}</span>
-                    <span className="text-muted-foreground">
+                    <span className="text-sm text-muted-foreground">
                       {staffRoleDescriptions[role.toUpperCase()]}
                     </span>
                   </span>
@@ -201,13 +192,13 @@ export function StaffRolePicker({
               )
             })}
           </fieldset>
-          <fieldset className="grid gap-3" disabled={disabled}>
-            <legend className="mb-2 text-sm font-medium">Stores</legend>
-            <div className="flex flex-wrap gap-x-5 gap-y-2">
+          {stores.length > 1 ? (
+            <fieldset className="grid gap-2" disabled={disabled}>
+              <legend className="mb-2 text-sm font-medium">Stores</legend>
               {stores.map((store) => (
                 <label
                   key={store.id}
-                  className="flex items-center gap-2 text-sm"
+                  className={rowClass}
                   htmlFor={`${id}-store-${store.id}`}
                 >
                   <Checkbox
@@ -217,19 +208,16 @@ export function StaffRolePicker({
                       toggleStore(store.id, checked === true)
                     }
                   />
-                  {store.name}
+                  <span className="min-w-0 truncate">{store.name}</span>
                 </label>
               ))}
-            </div>
-            <p className="text-sm text-muted-foreground">
-              Same role in each store.
-            </p>
-            {switchLink}
-          </fieldset>
+              {switchLink}
+            </fieldset>
+          ) : null}
         </>
       )}
       {chosen.length > 1 ? (
-        <Field className="max-w-sm">
+        <Field>
           <FieldLabel htmlFor={`${id}-start`}>Starts in</FieldLabel>
           <SelectControl
             id={`${id}-start`}
@@ -245,10 +233,7 @@ export function StaffRolePicker({
         </Field>
       ) : null}
       {pickerHasManager(value) ? (
-        <label
-          className="flex items-start gap-2.5 text-sm"
-          htmlFor={`${id}-catalog`}
-        >
+        <label className={rowClass} htmlFor={`${id}-catalog`}>
           <Checkbox
             id={`${id}-catalog`}
             checked={value.catalogEditor}
@@ -257,12 +242,7 @@ export function StaffRolePicker({
               onChange({ ...value, catalogEditor: checked === true })
             }
           />
-          <span className="grid gap-0.5">
-            Can edit Products and prices
-            <span className="text-muted-foreground">
-              Changes apply to every store.
-            </span>
-          </span>
+          Can change items and prices
         </label>
       ) : null}
     </div>

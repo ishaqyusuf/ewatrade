@@ -32,7 +32,7 @@ import {
   toInternationalPhone,
 } from "@ewatrade/utils/countries"
 import type { FormEvent } from "react"
-import { useEffect, useRef, useState } from "react"
+import { useRef, useState } from "react"
 
 type InviteChannel = "email" | "whatsapp" | "both"
 type InviteForm = {
@@ -73,7 +73,8 @@ function inviteContacts(form: InviteForm) {
     showsPhone && form.phone.trim()
       ? toInternationalPhone(getCountry(form.phoneCountry).dialCode, form.phone)
       : ""
-  const errors: { email?: string; phone?: string } = {}
+  const errors: { email?: string; name?: string; phone?: string } = {}
+  if (!form.name.trim()) errors.name = "Add their name"
   if (showsEmail) {
     if (!email) errors.email = "Add their email address"
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
@@ -91,15 +92,18 @@ export function StaffInviteContent({
   onClose,
   onInvited,
   storeId,
+  stores,
+  storeAccessReady,
 }: {
   storeId: string
+  stores: Array<{ id: string; name: string }>
+  storeAccessReady: boolean
   onClose: () => Promise<unknown>
   /** `contact` is the email and/or WhatsApp number the invite went to. */
   onInvited: (contact: string, qaInviteUrl: string | null) => Promise<void>
 }) {
   const workflow = useDashboardWorkflow()
   const [inviteForm, setInviteForm] = useState<InviteForm>(emptyInviteForm)
-  const [stores, setStores] = useState<Array<{ id: string; name: string }>>([])
   const [access, setAccess] = useState<StaffRolePickerValue>({
     role: "cashier",
     storeIds: [storeId],
@@ -107,29 +111,6 @@ export function StaffInviteContent({
     catalogEditor: false,
     storeRoles: null,
   })
-  const [storeAccessReady, setStoreAccessReady] = useState(false)
-  useEffect(() => {
-    const controller = new AbortController()
-    void fetch("/api/staff", { signal: controller.signal })
-      .then(async (response) => {
-        const result = await response.json()
-        if (!response.ok)
-          throw new Error(
-            "Couldn’t load your stores. Close this and try again.",
-          )
-        setStores(result.stores)
-        setStoreAccessReady(result.storeAccessReady === true)
-      })
-      .catch((failure) => {
-        if (!controller.signal.aborted)
-          setError(
-            failure instanceof Error
-              ? failure.message
-              : "Couldn’t load your stores. Close this and try again.",
-          )
-      })
-    return () => controller.abort()
-  }, [])
   const [isSaving, setIsSaving] = useState(false)
   const [attempted, setAttempted] = useState(false)
   const contacts = inviteContacts(inviteForm)
@@ -153,7 +134,11 @@ export function StaffInviteContent({
       return
     }
 
-    if (contacts.errors.email || contacts.errors.phone) {
+    if (
+      contacts.errors.email ||
+      contacts.errors.phone ||
+      contacts.errors.name
+    ) {
       setAttempted(true)
       return
     }
@@ -239,6 +224,26 @@ export function StaffInviteContent({
         }}
       />
       <FieldGroup>
+        <Field data-invalid={Boolean(fieldErrors.name)}>
+          <FieldLabel htmlFor="staff-invite-name">Name</FieldLabel>
+          <Input
+            id="staff-invite-name"
+            disabled={isSaving}
+            autoComplete="off"
+            aria-invalid={Boolean(fieldErrors.name)}
+            value={inviteForm.name}
+            onChange={(event) =>
+              setInviteForm((current) => ({
+                ...current,
+                name: event.target.value,
+              }))
+            }
+          />
+          {fieldErrors.name ? (
+            <FieldError>{fieldErrors.name}</FieldError>
+          ) : null}
+        </Field>
+
         <Field>
           <FieldLabel id="staff-invite-by">Invite by</FieldLabel>
           <ToggleGroup<InviteChannel>
@@ -254,7 +259,7 @@ export function StaffInviteContent({
           >
             {CHANNELS.map((option) => (
               <ToggleGroupItem
-                className="rounded-none"
+                className="h-11 px-4"
                 key={option.value}
                 value={option.value}
               >
@@ -295,7 +300,7 @@ export function StaffInviteContent({
             <div className="flex gap-2">
               <SelectControl
                 aria-label="Phone country"
-                className="w-36 shrink-0 rounded-none"
+                className="w-32 shrink-0"
                 disabled={isSaving}
                 options={COUNTRY_OPTIONS}
                 value={inviteForm.phoneCountry}
@@ -326,45 +331,24 @@ export function StaffInviteContent({
           </Field>
         ) : null}
 
-        <Field>
-          <FieldLabel htmlFor="staff-invite-name">Name (optional)</FieldLabel>
-          <Input
-            id="staff-invite-name"
-            disabled={isSaving}
-            value={inviteForm.name}
-            onChange={(event) =>
-              setInviteForm((current) => ({
-                ...current,
-                name: event.target.value,
-              }))
-            }
-          />
-        </Field>
-
         <StaffRolePicker
           value={access}
           stores={stores}
           disabled={isSaving || !stores.length}
           onChange={setAccess}
         />
-        <p className="text-sm text-muted-foreground">
-          Owners and admins already have every store.
-        </p>
       </FieldGroup>
 
-      <FormFeedback appearance="dashboard" variant="default">
-        {storeAccessReady
-          ? contacts.showsPhone
-            ? "They’ll open the link we send and sign in with their WhatsApp number or email."
-            : "They’ll set a password from the link in the email."
-          : "You can invite staff once store access is set up."}
-      </FormFeedback>
+      {storeAccessReady ? null : (
+        <FormFeedback appearance="dashboard">
+          You can invite staff once store access is set up.
+        </FormFeedback>
+      )}
 
       <FormActions>
         <Button
           type="button"
           variant="outline"
-          className="rounded-none"
           disabled={isSaving}
           onClick={() => void onClose().catch(handleCloseError)}
         >

@@ -1,7 +1,6 @@
 "use client"
 
 import { useTRPC } from "@/trpc/client"
-import { readPollInterval } from "@/trpc/query-read-errors"
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
 import { Button, Select, Skeleton } from "@ewatrade/ui"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
@@ -18,17 +17,13 @@ export const ORDER_VISIBILITY_OPTIONS: Array<{
   { value: "ALL_STORE_ORDERS", label: "All orders in this store" },
 ]
 
-export function useOrderVisibility(storeId: string, review = false) {
+/** Read on load and when the tab regains focus; never on a timer. */
+export function useOrderVisibility(storeId: string) {
   const trpc = useTRPC()
   return useQuery(
     trpc.stores.orderVisibility.queryOptions(
       { storeId },
-      {
-        refetchOnWindowFocus: "always",
-        refetchInterval: review
-          ? (query) => readPollInterval(query.state.error, 30_000)
-          : false,
-      },
+      { refetchOnWindowFocus: "always" },
     ),
   )
 }

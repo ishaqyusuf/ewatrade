@@ -1,18 +1,13 @@
 import { PageLoading } from "@/components/dashboard/page-loading"
 import { StaffContent } from "@/components/dashboard/staff-content"
-import { loadStaffDirectoryParams } from "@/hooks/staff-directory-params"
 import { getServerSession } from "@/lib/session"
 import { canManageStaff } from "@/lib/staff-management"
 import { getActiveTenant } from "@/lib/tenant"
-import { getInitialDirectoryView } from "@/utils/directory-views"
+import { STAFF_STORE_ACCESS_ROLLOUT_READY } from "@ewatrade/db/queries"
 import { redirect } from "next/navigation"
 import { Suspense } from "react"
 
-export default async function StaffRoutePage({
-  searchParams,
-}: {
-  searchParams: Promise<Record<string, string | string[] | undefined>>
-}) {
+export default async function StaffRoutePage() {
   const session = await getServerSession()
 
   if (!session) {
@@ -36,14 +31,6 @@ export default async function StaffRoutePage({
     redirect("/setup")
   }
 
-  const [{ staffQuery, staffRole }, initialViewSettings] = await Promise.all([
-    loadStaffDirectoryParams(searchParams),
-    getInitialDirectoryView("staff", {
-      userId: session.user.id,
-      tenantId: ctx.tenant.id,
-    }),
-  ])
-
   return (
     <Suspense fallback={<PageLoading />}>
       <StaffContent
@@ -54,11 +41,12 @@ export default async function StaffRoutePage({
           (ctx.membership.role === "MANAGER" &&
             ctx.membership.staffAccessMode === "LEGACY")
         }
-        initialViewSettings={initialViewSettings}
         store={store}
+        stores={ctx.stores
+          .filter((item) => item.status === "ACTIVE")
+          .map((item) => ({ id: item.id, name: item.name }))}
+        storeAccessReady={STAFF_STORE_ACCESS_ROLLOUT_READY}
         tenantId={ctx.tenant.id}
-        search={staffQuery}
-        role={staffRole}
       />
     </Suspense>
   )

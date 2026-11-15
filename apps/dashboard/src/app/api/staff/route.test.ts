@@ -44,8 +44,21 @@ mock.module("@/lib/tenant", () => ({
     stores: [store],
   }),
 }))
-mock.module("@/lib/staff-data", () => ({ getDashboardStaff: async () => [] }))
-mock.module("@ewatrade/db", () => ({ prisma: {} }))
+const listStaff = mock(async (_input: unknown) => [])
+mock.module("@/lib/staff-data", () => ({ getDashboardStaff: listStaff }))
+const findMembership = mock(async (_input: unknown) => ({
+  role: "CASHIER",
+  status: "INVITED",
+  staffAccessMode: "SCOPED",
+  catalogEditor: false,
+  staffAccessRevision: 1,
+  staffStoreAssignments: [{ storeId: "store", role: "CASHIER" }],
+  retailOpsStaffProfile: null,
+  retailOpsStaffInviteTokens: [{ id: "token", expiresAt: new Date(0) }],
+}))
+mock.module("@ewatrade/db", () => ({
+  prisma: { membership: { findUnique: findMembership } },
+}))
 mock.module("@ewatrade/db/queries", () => ({
   STAFF_STORE_ACCESS_ROLLOUT_READY: true,
   StaffStoreAccessError: class extends Error {},
@@ -72,7 +85,7 @@ mock.module("@ewatrade/jobs/staff-invitations", () => ({
   enqueueRetailOpsStaffInviteNotification: notify,
   sendStaffInviteWhatsApp: sendWhatsApp,
 }))
-const { POST } = await import("./route")
+const { GET, POST } = await import("./route")
 async function postRequest(request: NextRequest) {
   const response = await POST(request)
   if (!response) throw new Error("Staff route returned no response")
@@ -186,7 +199,7 @@ test("Owner can remove every Store without suspending the Membership", async () 
   )
   expect(response.status).toBe(200)
   expect(updateAccess).toHaveBeenCalledWith(
-    {},
+    expect.anything(),
     expect.objectContaining({
       staffUserId: "staff",
       expectedRevision: 4,
@@ -216,7 +229,7 @@ test("Owner can remove someone who never joined, with a reason", async () => {
   expect(response.status).toBe(200)
   expect(response.headers.get("Cache-Control")).toBe("no-store")
   expect(remove).toHaveBeenCalledWith(
-    {},
+    expect.anything(),
     expect.objectContaining({
       actorUserId: "owner",
       staffUserId: "staff",
@@ -242,7 +255,7 @@ test("suspend passes the optional reason through", async () => {
     reason: "On leave",
   })
   expect(updateStatus).toHaveBeenCalledWith(
-    {},
+    expect.anything(),
     expect.objectContaining({ status: "suspended", reason: "On leave" }),
   )
 })
@@ -266,4 +279,61 @@ test("a WhatsApp-only invitation sends no email and reports WhatsApp delivery", 
   expect(notify).not.toHaveBeenCalled()
   expect(body.delivery).toEqual({ email: false, whatsapp: "LOCAL_ONLY" })
   expect(body.qaInviteUrl).toBeUndefined()
+})
+
+test("one person's access reads no staff list and returns their live invite", async () => {
+  const response = await GET(
+    new NextRequest(
+      "https://ewatrade-dashboard.localhost/api/staff?staffUserId=staff",
+    ),
+  )
+  const body = (await response.json()) as {
+    access: { invitation: { id: string } | null } | null
+    staff?: unknown
+  }
+  expect(response.status).toBe(200)
+  expect(listStaff).not.toHaveBeenCalled()
+  expect(body.staff).toBeUndefined()
+  expect(body.access?.invitation?.id).toBe("token")
+})
+
+test("legacy Manager may suspend but not invite, change access or remove", async () => {
+  local()
+  role = "MANAGER"
+  staffAccessMode = "LEGACY"
+  expect((await postRequest(request("staff@ishaq.qa.test"))).status).toBe(403)
+  expect(invite).not.toHaveBeenCalled()
+  const post = (body: unknown) =>
+    postRequest(
+      new NextRequest("https://ewatrade-dashboard.localhost/api/staff", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      }),
+    )
+  expect(
+    (await post({ operation: "remove", staffUserId: "staff" })).status,
+  ).toBe(403)
+  expect(
+    (
+      await post({
+        operation: "access",
+        staffUserId: "staff",
+        expectedRevision: 1,
+        assignments: [],
+        defaultStoreId: null,
+      })
+    ).status,
+  ).toBe(403)
+  expect(remove).not.toHaveBeenCalled()
+  expect(updateAccess).not.toHaveBeenCalled()
+  expect(
+    (
+      await post({
+        operation: "status",
+        staffUserId: "staff",
+        status: "suspended",
+      })
+    ).status,
+  ).toBe(200)
 })

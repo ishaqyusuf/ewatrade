@@ -70,6 +70,11 @@ export function getStaffDisplayName(staff: StaffMemberRow) {
   )
 }
 
+/** Their email, unless they were invited by WhatsApp only (placeholder address). */
+export function getStaffContact(email: string | null | undefined) {
+  return email && !email.endsWith(".invalid") ? email : null
+}
+
 export function getStaffRoleLabel(role: string) {
   switch (role.trim().toUpperCase()) {
     case "OWNER":
@@ -89,11 +94,20 @@ export function getStaffRoleLabel(role: string) {
 
 /** What each role can do, in the words the Staff page uses. */
 export const staffRoleDescriptions: Record<string, string> = {
-  OWNER: "Owns the business. Can do everything, including billing.",
-  ADMIN: "Runs every store, the catalog, staff and reports.",
-  MANAGER: "Runs their stores: orders, stock, cash counts and reports.",
-  CASHIER: "Sells and takes payments. Can’t change stock or prices.",
-  OPERATOR: "Sells, takes payments and updates stock. Can’t change prices.",
+  OWNER: "Can do everything, including billing",
+  ADMIN: "Runs every store, items, staff and reports",
+  MANAGER: "Runs their stores: orders, stock and cash",
+  CASHIER: "Sells and takes payments",
+  OPERATOR: "Sells, takes payments and updates stock",
+}
+
+/** Lower number = more access; used to spot an access cut before saving. */
+export const staffRoleRank: Record<string, number> = {
+  OWNER: 0,
+  ADMIN: 1,
+  MANAGER: 2,
+  OPERATOR: 3,
+  CASHIER: 4,
 }
 
 /**
@@ -111,6 +125,26 @@ export function getStaffWorkingRole(staff: StaffMemberRow): string | null {
 export function getStaffWorkingRoleLabel(staff: StaffMemberRow) {
   const role = getStaffWorkingRole(staff)
   return role ? getStaffRoleLabel(role) : "Mixed roles"
+}
+
+/**
+ * Role and stores in one line: "Cashier · Main store", "Owner · All stores",
+ * or each store with its role when they differ.
+ */
+export function getStaffAccessLine(staff: StaffMemberRow) {
+  const access = staff.access
+  const working = getStaffWorkingRole(staff)
+  if (!access) return getStaffRoleLabel(staff.role)
+  if (access.allStores) return `${getStaffRoleLabel(staff.role)} · All stores`
+  if (!access.stores.length)
+    return `${getStaffRoleLabel(staff.role)} · No stores`
+  if (!working)
+    return access.stores
+      .map((store) => `${store.storeName} (${getStaffRoleLabel(store.role)})`)
+      .join(", ")
+  return `${getStaffRoleLabel(working)} · ${access.stores
+    .map((store) => store.storeName)
+    .join(", ")}`
 }
 
 export type StaffStatusKey =

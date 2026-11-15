@@ -10,6 +10,8 @@ export type StaffAccessRecord = {
   catalogEditor: boolean
   staffStoreAssignments: Array<{ storeId: string; role: string }>
   retailOpsStaffProfile: { defaultStoreId: string | null } | null
+  /** Live invite link, while they have not joined. */
+  invitation: { id: string; expiresAt: string } | null
 }
 
 export type StaffAccessResponse = {
@@ -22,7 +24,7 @@ export function staffAccessQueryKey(userId: string) {
   return ["dashboard-staff-access", userId] as const
 }
 
-/** One person's Store access; Owners and Admins only (null for others). */
+/** One person's Store access and live invite link; Owners and Admins only (null for others). */
 export function useStaffAccess(userId: string | null) {
   return useQuery({
     queryKey: staffAccessQueryKey(userId ?? ""),

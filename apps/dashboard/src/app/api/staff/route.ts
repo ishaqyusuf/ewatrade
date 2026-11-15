@@ -154,6 +154,19 @@ function hideStaffInviteAcceptanceToken(invitedStaff: InvitedRetailOpsStaff) {
   }
 }
 
+/** Inviting, changing access and removing are Owner and Admin work. */
+function canAdministerStaff(role: string) {
+  return role === "OWNER" || role === "ADMIN"
+}
+
+function activeStores(
+  stores: Array<{ id: string; name: string; status: string }>,
+) {
+  return stores
+    .filter((item) => item.status === "ACTIVE")
+    .map((item) => ({ id: item.id, name: item.name }))
+}
+
 function createExternalId(operation: string) {
   return `dashboard:${operation}:${crypto.randomUUID()}`
 }
@@ -217,16 +230,10 @@ export async function GET(request: NextRequest) {
   if ("error" in staffContext) return staffContext.error
 
   const { ctx, store } = staffContext
-  const staff = await getDashboardStaff({
-    role,
-    search,
-    status,
-    tenantId: ctx.tenant.id,
-  })
-
   const staffUserId = url.searchParams.get("staffUserId")
-  const access =
-    staffUserId && ["OWNER", "ADMIN"].includes(ctx.membership.role)
+  // One person's Store access for the member sheet: no staff list read.
+  if (staffUserId) {
+    const access = canAdministerStaff(ctx.membership.role)
       ? await prisma.membership.findUnique({
           where: {
             tenantId_userId: { tenantId: ctx.tenant.id, userId: staffUserId },
@@ -239,20 +246,38 @@ export async function GET(request: NextRequest) {
             staffAccessRevision: true,
             staffStoreAssignments: {
               where: { status: "ACTIVE" },
+              orderBy: { createdAt: "asc" },
               select: { storeId: true, role: true },
             },
             retailOpsStaffProfile: { select: { defaultStoreId: true } },
+            retailOpsStaffInviteTokens: {
+              where: { status: "ACTIVE", acceptedAt: null, revokedAt: null },
+              orderBy: { createdAt: "desc" },
+              take: 1,
+              select: { id: true, expiresAt: true },
+            },
           },
         })
       : null
-  return NextResponse.json({
-    staff,
-    access,
-    storeAccessReady: STAFF_STORE_ACCESS_ROLLOUT_READY,
+    return NextResponse.json({
+      access: access
+        ? (({ retailOpsStaffInviteTokens, ...rest }) => ({
+            ...rest,
+            invitation: retailOpsStaffInviteTokens[0] ?? null,
+          }))(access)
+        : null,
+      storeAccessReady: STAFF_STORE_ACCESS_ROLLOUT_READY,
+      stores: activeStores(ctx.stores),
+    })
+  }
 
-    stores: ctx.stores.filter((item) => item.status === "ACTIVE"),
-    store,
+  const staff = await getDashboardStaff({
+    role,
+    search,
+    status,
+    tenantId: ctx.tenant.id,
   })
+  return NextResponse.json({ staff, store })
 }
 
 export async function POST(request: NextRequest) {
@@ -271,6 +296,15 @@ export async function POST(request: NextRequest) {
   if ("error" in staffContext) return staffContext.error
 
   const { ctx, session, store } = staffContext
+
+  if (
+    parsed.data.operation !== "status" &&
+    !canAdministerStaff(ctx.membership.role)
+  )
+    return NextResponse.json(
+      { error: "Only owners and admins can do this." },
+      { status: 403 },
+    )
 
   try {
     if (parsed.data.operation === "invite") {

@@ -38,10 +38,10 @@ export function RemoveStaffAlert({
         <AlertDialogTitle className="text-lg font-medium">
           {cancel ? `Cancel invite for ${name}?` : `Remove ${name}?`}
         </AlertDialogTitle>
-        <AlertDialogDescription className="text-sm text-muted-foreground">
+        <AlertDialogDescription className="text-base text-muted-foreground">
           {cancel
-            ? "The link in their email will stop working and they’ll leave this list. You can invite them again later."
-            : "They never joined. They’ll leave this list and their seat is freed. You can invite them again later."}
+            ? `The link we sent ${name} stops working and they leave your staff list. You can invite them again later.`
+            : `${name} never joined. They leave your staff list and their seat is freed. You can invite them again later.`}
         </AlertDialogDescription>
         <AlertDialogFooter>
           <AlertDialogCancel ref={keepRef}>

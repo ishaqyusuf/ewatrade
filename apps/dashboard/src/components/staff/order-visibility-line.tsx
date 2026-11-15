@@ -9,8 +9,6 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from "@ewatrade/ui"
-import { InformationCircleIcon } from "@hugeicons/core-free-icons"
-import { HugeiconsIcon } from "@hugeicons/react"
 import {
   ORDER_VISIBILITY_OPTIONS,
   type Visibility,
@@ -28,12 +26,12 @@ export function OrderVisibilityLine({
 }) {
   const query = useOrderVisibility(storeId)
   const update = useUpdateOrderVisibility(storeId)
-  if (query.isPending) return <div className="h-8" />
+  if (query.isPending) return <div className="h-[72px]" />
   if (query.isError)
     return (
       <p role="alert" className="text-sm text-muted-foreground">
         Couldn’t load which orders cashiers and sales reps see.{" "}
-        <Button variant="link" size="sm" onClick={() => void query.refetch()}>
+        <Button variant="link" onClick={() => void query.refetch()}>
           Try again
         </Button>
       </p>
@@ -42,18 +40,15 @@ export function OrderVisibilityLine({
     (option) => option.value === query.data.salesRepOrderVisibility,
   )
   return (
-    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-      <HugeiconsIcon
-        icon={InformationCircleIcon}
-        className="size-4 shrink-0"
-        aria-hidden="true"
-      />
-      <p className="min-w-0">
-        In {storeName}, cashiers and sales reps see{" "}
-        <span className="font-semibold text-foreground">
-          {current?.label.toLowerCase()}
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-3 rounded-[var(--ui-radius-surface)] border border-border bg-card px-4 py-3">
+      <p className="grid min-w-0 flex-1 basis-56 gap-0.5">
+        <span className="text-sm text-muted-foreground">
+          Cashiers and sales reps in {storeName} see
         </span>
-        .{update.isPending ? " Saving…" : ""}
+        <span className="text-base font-medium">
+          {current?.label}
+          {update.isPending ? " · Saving…" : ""}
+        </span>
       </p>
       <DropdownMenu>
         <DropdownMenuTrigger
@@ -61,15 +56,14 @@ export function OrderVisibilityLine({
             <Button
               type="button"
               variant="outline"
-              size="sm"
-              className="shrink-0 rounded-none"
+              className="shrink-0"
               disabled={update.isPending}
             >
               Change
             </Button>
           }
         />
-        <DropdownMenuContent appearance="dashboard" align="start">
+        <DropdownMenuContent appearance="dashboard" align="end">
           <DropdownMenuLabel>
             Cashiers and sales reps in {storeName} see
           </DropdownMenuLabel>
@@ -92,9 +86,9 @@ export function OrderVisibilityLine({
         </DropdownMenuContent>
       </DropdownMenu>
       {update.isError ? (
-        <span role="alert" className="text-destructive">
+        <p role="alert" className="basis-full text-sm text-destructive">
           {update.error.message}
-        </span>
+        </p>
       ) : null}
     </div>
   )
