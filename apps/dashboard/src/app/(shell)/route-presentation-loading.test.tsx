@@ -149,7 +149,8 @@ const { default: Order } = await import("./sales/orders/[orderId]/page")
 const props = () => ({ searchParams: Promise.resolve({ storeId: "store-b" }) })
 const routes = [
   ["Channels", () => Channels(props()), 5],
-  ["Compliance", () => Compliance(props()), 7],
+  // Setup tab: only its own read; the other tabs read when opened.
+  ["Compliance", () => Compliance(props()), 1],
   ["Service commerce", () => ServiceCommerce(props()), 2],
   ["Receipts", () => Receipts(props()), 1],
   ["Returns", () => Returns(props()), 1],

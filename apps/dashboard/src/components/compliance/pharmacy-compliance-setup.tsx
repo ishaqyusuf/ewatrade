@@ -116,11 +116,16 @@ function formValuesFrom(
 }
 
 export function PharmacyComplianceSetup({
+  showSetup = true,
   storeId,
   stores,
+  tabs,
 }: {
+  /** False on the other compliance tabs: header and tabs only. */
+  showSetup?: boolean
   storeId: string
   stores: Array<{ id: string; name: string }>
+  tabs?: ReactNode
 }) {
   const trpc = useTRPC()
   const queryClient = useQueryClient()
@@ -153,7 +158,6 @@ export function PharmacyComplianceSetup({
   const header = (actions?: ReactNode) => (
     <SettingsHeader
       title="Pharmacy compliance"
-      description="Set how your pharmacy handles prescriptions. Customers can't send one until this is on."
       actions={
         <>
           <SettingsStorePicker
@@ -238,7 +242,9 @@ export function PharmacyComplianceSetup({
         </>,
       )}
 
-      {!ready ? (
+      {tabs}
+
+      {showSetup && !ready ? (
         <SettingsNotice tone="warning">
           <div id={noticeId}>
             <p className="font-semibold">Before you can turn this on</p>
@@ -251,19 +257,22 @@ export function PharmacyComplianceSetup({
         </SettingsNotice>
       ) : null}
 
-      <PharmacyPolicyForm
-        key={storeId}
-        settings={setup.settings}
-        storeId={storeId}
-        onSaved={invalidateSetup}
-      />
-
-      <PharmacyStaffRoles
-        eligibleMembers={setup.eligibleMembers}
-        onChanged={invalidateSetup}
-        roles={setup.roles}
-        storeId={storeId}
-      />
+      {showSetup ? (
+        <>
+          <PharmacyPolicyForm
+            key={storeId}
+            settings={setup.settings}
+            storeId={storeId}
+            onSaved={invalidateSetup}
+          />
+          <PharmacyStaffRoles
+            eligibleMembers={setup.eligibleMembers}
+            onChanged={invalidateSetup}
+            roles={setup.roles}
+            storeId={storeId}
+          />
+        </>
+      ) : null}
 
       <AlertDialog
         open={activationDialogOpen}
@@ -279,7 +288,7 @@ export function PharmacyComplianceSetup({
               : "Customers can send prescriptions to this store. Your team handles them the way you set on this page."}
           </AlertDialogDescription>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>Go back</AlertDialogCancel>
             <Button
               disabled={activationMutation.isPending}
               onClick={() => {
@@ -376,7 +385,7 @@ function PharmacyPolicyForm({
           render={({ field }) => (
             <SettingsRow
               label="You deliver"
-              description="Set delivery areas and fees under Delivery areas below."
+              description="Set delivery areas under Delivery and records."
               htmlFor={`${ids}delivery`}
             >
               <Switch

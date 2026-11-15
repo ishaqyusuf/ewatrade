@@ -69,7 +69,7 @@ export default async function GeneralSettingsPage() {
       </SettingsSection>
       <SettingsSection title="Your account">
         <SettingsRow label="Signed in as">
-          <span className="grid text-right text-sm font-medium">
+          <span className="grid min-w-0 text-right text-sm font-medium [overflow-wrap:anywhere]">
             {session.user.displayName ?? session.user.email}
             {session.user.displayName ? (
               <span className="font-normal text-muted-foreground">

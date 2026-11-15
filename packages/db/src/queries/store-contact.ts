@@ -87,8 +87,42 @@ function normalizeContact(input: StoreContactFields): StoreContactFields {
   return { countryCode, supportPhone: phone.phoneE164 }
 }
 
-export function getStoreContact(db: PrismaClient, actor: StoreContactActor) {
-  return runInOwnTransaction(db, (tx) => lockContactStore(tx, actor, false))
+/**
+ * A read takes no locks: the same Owner/Admin and active-Store checks as the
+ * write, as two plain selects (was a locking transaction of ~10 statements).
+ */
+export async function getStoreContact(
+  db: PrismaClient,
+  actor: StoreContactActor,
+) {
+  const [membership, store] = await Promise.all([
+    db.membership.findFirst({
+      where: {
+        tenantId: actor.tenantId,
+        userId: actor.actorUserId,
+        status: "ACTIVE",
+        role: { in: ["OWNER", "ADMIN"] },
+      },
+      select: {
+        tenant: { select: { isActive: true, qaPurgeStartedAt: true } },
+      },
+    }),
+    db.store.findFirst({
+      where: { id: actor.storeId, tenantId: actor.tenantId, status: "ACTIVE" },
+      select: contactSelect,
+    }),
+  ])
+  if (!membership?.tenant.isActive || membership.tenant.qaPurgeStartedAt)
+    throw new StoreContactError(
+      "FORBIDDEN",
+      "Current Owner or Admin access is required to manage Store contact details.",
+    )
+  if (!store)
+    throw new StoreContactError(
+      "NOT_FOUND",
+      "Store not found for this business.",
+    )
+  return store
 }
 
 /** Expected original fields fence concurrent edits; an already-applied value is a safe repeat. */

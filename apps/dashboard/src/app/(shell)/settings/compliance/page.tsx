@@ -7,7 +7,11 @@ import { HydrateClient, prefetch, trpc } from "@/trpc/server"
 import { canManageTenant, normalizeRole } from "@ewatrade/auth/roles"
 import type { Metadata } from "next"
 import { redirect } from "next/navigation"
-import type { SearchParams } from "nuqs/server"
+import {
+  type SearchParams,
+  createLoader,
+  parseAsStringLiteral,
+} from "nuqs/server"
 import { Suspense } from "react"
 
 export const metadata: Metadata = {
@@ -15,6 +19,9 @@ export const metadata: Metadata = {
 }
 
 const COMPLIANCE_PATH = "/settings/compliance"
+const loadTab = createLoader({
+  tab: parseAsStringLiteral(["setup", "link", "records"] as const),
+})
 
 export default async function ComplianceSettingsPage({
   searchParams,
@@ -37,22 +44,30 @@ export default async function ComplianceSettingsPage({
   if (navItem?.href !== COMPLIANCE_PATH) redirect("/settings")
 
   const stores = ctx.stores.map((store) => ({ id: store.id, name: store.name }))
-  const { storeId: requestedStoreId } =
-    await loadSettingsStoreParams(searchParams)
+  const [{ storeId: requestedStoreId }, { tab }] = await Promise.all([
+    loadSettingsStoreParams(searchParams),
+    loadTab(searchParams),
+  ])
   const storeId =
     stores.find((store) => store.id === requestedStoreId)?.id ?? activeStore.id
 
-  void Promise.all([
-    prefetch(trpc.prescriptions.setup.queryOptions({ storeId })),
-    prefetch(trpc.prescriptions.channelInfo.queryOptions({ storeId })),
-    prefetch(trpc.prescriptions.whatsappConnections.queryOptions()),
-    prefetch(trpc.prescriptions.deliveryZones.queryOptions({ storeId })),
-    prefetch(trpc.prescriptions.retentionPolicy.queryOptions({ storeId })),
-    prefetch(
-      trpc.prescriptions.manualDeliveryReviews.queryOptions({ storeId }),
-    ),
-    prefetch(trpc.prescriptions.complianceEvents.queryOptions({ storeId })),
-  ]).catch(() => undefined)
+  // Only the open tab's reads; the others load when their tab opens.
+  const reads = [prefetch(trpc.prescriptions.setup.queryOptions({ storeId }))]
+  if (tab === "link")
+    reads.push(
+      prefetch(trpc.prescriptions.channelInfo.queryOptions({ storeId })),
+      prefetch(trpc.prescriptions.whatsappConnections.queryOptions()),
+    )
+  if (tab === "records")
+    reads.push(
+      prefetch(trpc.prescriptions.deliveryZones.queryOptions({ storeId })),
+      prefetch(trpc.prescriptions.retentionPolicy.queryOptions({ storeId })),
+      prefetch(
+        trpc.prescriptions.manualDeliveryReviews.queryOptions({ storeId }),
+      ),
+      prefetch(trpc.prescriptions.complianceEvents.queryOptions({ storeId })),
+    )
+  void Promise.all(reads).catch(() => undefined)
 
   return (
     <HydrateClient>

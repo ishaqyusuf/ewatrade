@@ -120,7 +120,7 @@ export function SettingsRow({
         ) : null}
       </div>
       {children || saved ? (
-        <div className="ml-auto flex shrink-0 items-center gap-2">
+        <div className="ml-auto flex min-w-0 max-w-full shrink-0 items-center gap-2">
           {saved ? <SettingsSavedMark /> : null}
           {children}
         </div>
