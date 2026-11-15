@@ -2,7 +2,6 @@
 import {
   Button,
   DailyBarChart,
-  Disclosure,
   SelectControl,
   Table,
   TableBody,
@@ -64,7 +63,7 @@ import { useTRPC } from "@/trpc/client"
 import type { ServiceCommerceReportOutput } from "@ewatrade/service-commerce"
 
 import { keepPreviousData, useQuery } from "@tanstack/react-query"
-import { useMemo } from "react"
+import { useMemo, useState } from "react"
 import {
   type ReportSectionContent,
   buildReportSections,
@@ -597,6 +596,30 @@ function ReportContent({
   )
 }
 
+/** The day table is its own read, so it loads only when asked for. */
+function DayByDay(props: {
+  category: ServiceCommerceReportDetail
+  end: Date
+  start: Date
+  storeId: string | null
+}) {
+  const [open, setOpen] = useState(false)
+  return (
+    <div className="grid gap-3">
+      <Button
+        aria-expanded={open}
+        className="w-fit"
+        onClick={() => setOpen((value) => !value)}
+        type="button"
+        variant="outline"
+      >
+        {open ? "Hide day by day" : "Show day by day"}
+      </Button>
+      {open ? <ReportDailyDetail {...props} /> : null}
+    </div>
+  )
+}
+
 function SectionTab({
   content,
   end,
@@ -621,17 +644,12 @@ function SectionTab({
         <p className="text-sm text-muted-foreground">{content.footnote}</p>
       ) : null}
       {isServiceCommerceReportDetail(content.key) ? (
-        // The day table is its own read, so it loads only when asked for.
-        <Disclosure title={<>Day by day</>}>
-          <div className="mt-3">
-            <ReportDailyDetail
-              category={content.key}
-              end={end}
-              start={start}
-              storeId={storeId}
-            />
-          </div>
-        </Disclosure>
+        <DayByDay
+          category={content.key}
+          end={end}
+          start={start}
+          storeId={storeId}
+        />
       ) : null}
     </ReportTabPanel>
   )
