@@ -64,6 +64,8 @@ export type DashboardNavContext = Partial<
   planFeatures?: RetailOpsPlanFeature[]
   /** Website & domain launch gate; hidden and redirected unless true. */
   websiteDomainsEnabled?: boolean
+  /** QA tools exist only off Production (ADR-0059); false hides the row. */
+  qaMaintenanceAvailable?: boolean
 }
 
 const canUseDashboard = (role: EwaTradeRole | null) => role !== null
@@ -455,6 +457,7 @@ const DASHBOARD_NAV: DashboardNavDefinition[] = [
     icon: "settings",
     label: "QA maintenance",
     canAccess: (_role, context) => context.isPlatformAdmin === true,
+    isVisible: (context) => context.qaMaintenanceAvailable === true,
   },
 ]
 

@@ -41,6 +41,11 @@ const Sidebar = () => null
 const empty = () => null
 mock.module("@ewatrade/db", () => ({ prisma }))
 mock.module("@ewatrade/db/retail-ops-subscriptions", () => ({ ...billing }))
+// lib/plan-features is server-only; the real module runs against the mock DB.
+mock.module("server-only", () => ({}))
+mock.module("@ewatrade/utils/qa-policy-server", () => ({
+  isQaForbiddenRuntime: () => false,
+}))
 mock.module("@ewatrade/db/website-domains-launch-gate", () => ({
   isWebsiteDomainsLaunchApproved: () => false,
 }))

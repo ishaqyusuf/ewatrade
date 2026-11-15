@@ -364,9 +364,10 @@ describe("dashboard navigation policy", () => {
       ),
     ).toBe(false)
     expect(
-      getDashboardNavigation("MEMBER", { isPlatformAdmin: true }).some(
-        (item) => item.href === "/platform/qa-maintenance",
-      ),
+      getDashboardNavigation("MEMBER", {
+        isPlatformAdmin: true,
+        qaMaintenanceAvailable: true,
+      }).some((item) => item.href === "/platform/qa-maintenance"),
     ).toBe(true)
     expect(canAccessDashboardPath("/platform/qa-maintenance", "OWNER")).toBe(
       false,

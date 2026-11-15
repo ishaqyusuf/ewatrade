@@ -22,6 +22,7 @@ import { getServerSession } from "@/lib/session"
 import { getActiveTenant } from "@/lib/tenant"
 import { canManageTenant, normalizeRole } from "@ewatrade/auth/roles"
 import { isWebsiteDomainsLaunchApproved } from "@ewatrade/db/website-domains-launch-gate"
+import { isQaForbiddenRuntime } from "@ewatrade/utils/qa-policy-server"
 import { cookies, headers } from "next/headers"
 import { redirect } from "next/navigation"
 import { Suspense } from "react"
@@ -79,6 +80,7 @@ async function ResolvedShell({ children }: { children: React.ReactNode }) {
     businessProfileKey: store.businessOnboarding?.businessProfileKey,
     planFeatures,
     websiteDomainsEnabled: isWebsiteDomainsLaunchApproved(),
+    qaMaintenanceAvailable: !isQaForbiddenRuntime(),
   }
 
   if (
