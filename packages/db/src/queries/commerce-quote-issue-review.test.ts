@@ -2,7 +2,10 @@ import { afterAll, expect, setSystemTime, spyOn, test } from "bun:test"
 import { currentEffectiveLegalPublication } from "@ewatrade/utils/legal-approval"
 import { Prisma } from "../../generated/prisma/client"
 import { reviewCommerceQuoteIssueReadOnlyInTransaction } from "./commerce-quote-issue-review"
-import { allowedServiceCommercePolicyDecisionRows } from "./test-helpers/service-commerce-policy"
+import {
+  allowedServiceCommercePolicyDecisionRows,
+  restrictedServiceCommercePolicyDecisionRows,
+} from "./test-helpers/service-commerce-policy"
 
 // Actual review parent and actual source-owned options/pricing calculator.
 // A whitelist of in-memory read delegates stands in for persistence. Every
@@ -283,7 +286,9 @@ function fixture() {
     },
     serviceCommercePolicyDecision: {
       findMany: () =>
-        state.policyAllowed ? allowedServiceCommercePolicyDecisionRows() : [],
+        state.policyAllowed
+          ? allowedServiceCommercePolicyDecisionRows()
+          : restrictedServiceCommercePolicyDecisionRows(),
     },
     serviceCommerceQuoteReleasePolicy: { findFirst: () => state.releasePolicy },
     serviceCommerceStoreTeamAssignment: { findMany: () => state.team },
@@ -642,9 +647,9 @@ test("current read and catalog evaluation clocks do not change digest, but real 
     ],
   }
   try {
-    setSystemTime(new Date("2026-10-16T12:00:00Z"))
+    setSystemTime(new Date("2026-11-13T12:00:00Z"))
     const first = await f.review(input)
-    setSystemTime(new Date("2026-10-16T12:01:00Z"))
+    setSystemTime(new Date("2026-11-13T12:01:00Z"))
     const second = await f.review(input)
     expect(second.target.revision).toBe(first.target.revision)
     f.state.offering.fixedPriceMinor = 200

@@ -30,3 +30,14 @@ export function allowedServiceCommercePolicyDecisionRows() {
     ),
   )
 }
+
+/**
+ * Ordinary service quotes and intake are allowed with no decision
+ * (ADR-0075), so "policy blocked" fixtures need a current restriction.
+ */
+export function restrictedServiceCommercePolicyDecisionRows() {
+  return allowedServiceCommercePolicyDecisionRows().map((row) => ({
+    ...row,
+    outcome: ServiceCommercePolicyOutcome.RESTRICTED,
+  }))
+}

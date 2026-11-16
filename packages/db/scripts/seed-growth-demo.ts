@@ -5,6 +5,7 @@
 //   APP_ENV=local DEV_PROFILE=local node ../../scripts/with-workspace-env.mjs \
 //     bun scripts/seed-growth-demo.ts            # seed (replaces earlier demo rows)
 //   ... bun scripts/seed-growth-demo.ts --clean  # remove every demo row
+import type { Prisma } from "../generated/prisma/client"
 import { prisma } from "../src/client"
 
 if (process.env.APP_ENV !== "local" || process.env.DEV_PROFILE !== "local")
@@ -66,15 +67,9 @@ async function seed() {
     "Bakery",
     "Salon",
   ]
-  const snapshots: Parameters<
-    typeof prisma.businessGrowthSnapshot.createMany
-  >[0]["data"] = []
-  const messages: Parameters<
-    typeof prisma.lifecycleMessage.createMany
-  >[0]["data"] = []
-  const intents: Parameters<
-    typeof prisma.growthFeatureIntent.createMany
-  >[0]["data"] = []
+  const snapshots: Prisma.BusinessGrowthSnapshotCreateManyInput[] = []
+  const messages: Prisma.LifecycleMessageCreateManyInput[] = []
+  const intents: Prisma.GrowthFeatureIntentCreateManyInput[] = []
   for (let i = 0; i < BUSINESSES; i++) {
     const ageDays = Math.floor(rand() * 180) + 3
     const createdAt = new Date(

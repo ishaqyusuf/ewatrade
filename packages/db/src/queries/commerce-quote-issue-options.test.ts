@@ -9,7 +9,10 @@ import {
   readCommerceQuoteIssueOptionsInTransaction,
 } from "./commerce-quotes"
 import { resolveServiceCommerceCatalogSourceLine } from "./service-commerce-catalog-source"
-import { allowedServiceCommercePolicyDecisionRows } from "./test-helpers/service-commerce-policy"
+import {
+  allowedServiceCommercePolicyDecisionRows,
+  restrictedServiceCommercePolicyDecisionRows,
+} from "./test-helpers/service-commerce-policy"
 
 type FixtureUnit = {
   id: string
@@ -154,7 +157,9 @@ function fixture(initialOfferings = [offering()]) {
     },
     serviceCommercePolicyDecision: {
       findMany: () =>
-        state.policyAllowed ? allowedServiceCommercePolicyDecisionRows() : [],
+        state.policyAllowed
+          ? allowedServiceCommercePolicyDecisionRows()
+          : restrictedServiceCommercePolicyDecisionRows(),
     },
     serviceRequest: {
       findFirst: ({ where }: { where: SourceWhere }) =>

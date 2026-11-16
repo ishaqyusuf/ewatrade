@@ -1,6 +1,9 @@
 import { currentEffectiveLegalPublication } from "@ewatrade/utils/legal-approval"
 import { Prisma, type PrismaClient } from "../../../generated/prisma/client"
-import { allowedServiceCommercePolicyDecisionRows } from "./service-commerce-policy"
+import {
+  allowedServiceCommercePolicyDecisionRows,
+  restrictedServiceCommercePolicyDecisionRows,
+} from "./service-commerce-policy"
 
 export const decisionScope = {
   actorUserId: "checker-user",
@@ -113,10 +116,16 @@ export function fixture(rows = [decision()], allowNativeWrites = false) {
       throw new Error("Nested transaction is forbidden")
     },
     legalAcceptance: delegate("legalAcceptance", {
-      findUnique: ({where}) => {
+      findUnique: ({ where }) => {
         const publication = currentEffectiveLegalPublication()
-        return state.termsAccepted && publication && where.userId_version.version === publication.version && [decisionScope.actorUserId,"maker-user"].includes(where.userId_version.userId)
-          ? {documentHash: publication.documentHash} : null
+        return state.termsAccepted &&
+          publication &&
+          where.userId_version.version === publication.version &&
+          [decisionScope.actorUserId, "maker-user"].includes(
+            where.userId_version.userId,
+          )
+          ? { documentHash: publication.documentHash }
+          : null
       },
     }),
     membership: delegate("membership", {
@@ -169,7 +178,9 @@ export function fixture(rows = [decision()], allowNativeWrites = false) {
     }),
     serviceCommercePolicyDecision: delegate("vertical-policy", {
       findMany: () =>
-        state.policyAllowed ? allowedServiceCommercePolicyDecisionRows() : [],
+        state.policyAllowed
+          ? allowedServiceCommercePolicyDecisionRows()
+          : restrictedServiceCommercePolicyDecisionRows(),
     }),
     serviceCommercePolicyAuditEvent: delegate("policy-audit", {}),
     serviceCommerceQuoteApproval: delegate("approval", {

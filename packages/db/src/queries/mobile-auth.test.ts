@@ -725,7 +725,7 @@ describe("mobile auth queries", () => {
         ],
         findUser(where) {
           const qaTenant = {
-            dataClassification: "QA",
+            dataClassification: "QA" as const,
             qaSourceDomain: "ishaq.qa.test",
             qaPurgeStartedAt: null,
           }

@@ -189,7 +189,7 @@ function fixture() {
   return { tx, state, reads, forbidden, accept }
 }
 
-beforeEach(() => setSystemTime(new Date("2026-10-16T12:00:00Z")))
+beforeEach(() => setSystemTime(new Date("2026-11-13T12:00:00Z")))
 afterEach(() => setSystemTime())
 
 describe("read-only Quote issue authority", () => {
@@ -511,7 +511,19 @@ describe("read-only Quote issue authority", () => {
     }
   })
 
-  test("refuses revoked, expired, future, foreign jurisdiction and missing policy without writes", async () => {
+  test("lapsed or missing ordinary-service quote policy falls back to the default; a current restriction refuses", async () => {
+    const exactQuotePolicy = (f: ReturnType<typeof fixture>) => {
+      const row = f.state.policies.find(
+        (row) =>
+          row.vertical === "SERVICE" &&
+          row.channel === "STAFF" &&
+          row.subject === "QUOTE",
+      )
+      if (!row) throw Error("Missing exact policy")
+      return row
+    }
+    // ADR-0075: ordinary service quotes are allowed without a decision, so a
+    // revoked, expired, future or foreign allowance is not a refusal.
     for (const change of [
       (row: PolicyRow) => {
         row.revokedAt = new Date("2026-10-15")
@@ -527,24 +539,30 @@ describe("read-only Quote issue authority", () => {
       },
     ]) {
       const f = fixture()
-      const row = f.state.policies.find(
-        (row) =>
-          row.vertical === "SERVICE" &&
-          row.channel === "STAFF" &&
-          row.subject === "QUOTE",
-      )
-      if (!row) throw Error("Missing exact policy")
-      change(row)
+      change(exactQuotePolicy(f))
+      await expect(
+        readCommerceQuoteIssueAuthorityInTransaction(f.tx, scope, publication),
+      ).resolves.toMatchObject({ actor: { role: "OWNER" } })
+      expect(f.forbidden).toEqual([])
+    }
+    const missing = fixture()
+    missing.state.policies = []
+    await expect(
+      readCommerceQuoteIssueAuthorityInTransaction(
+        missing.tx,
+        scope,
+        publication,
+      ),
+    ).resolves.toMatchObject({ actor: { role: "OWNER" } })
+
+    for (const outcome of ["RESTRICTED", "PROHIBITED", "PENDING_EVIDENCE"]) {
+      const f = fixture()
+      Object.assign(exactQuotePolicy(f), { outcome })
       await expect(
         readCommerceQuoteIssueAuthorityInTransaction(f.tx, scope, publication),
       ).rejects.toMatchObject({ code: "FORBIDDEN" })
       expect(f.forbidden).toEqual([])
     }
-    const f = fixture()
-    f.state.policies = []
-    await expect(
-      readCommerceQuoteIssueAuthorityInTransaction(f.tx, scope, publication),
-    ).rejects.toMatchObject({ code: "FORBIDDEN" })
   })
 
   test("requires current attendant and a different selected active approver", async () => {

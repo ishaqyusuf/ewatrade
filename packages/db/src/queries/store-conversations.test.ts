@@ -219,6 +219,21 @@ describe("Store Conversation repositories", () => {
       ...publicEntryDependencies({ pharmacyAllowed: false }),
       $transaction: async (callback: (tx: unknown) => Promise<unknown>) =>
         callback(client),
+      // A new guest conversation needs a plan that receives customer messages.
+      tenant: {
+        findUnique: async () => ({
+          isActive: true,
+          metadata: { retailOpsPlanId: "growth" },
+          subscription: {
+            billingSubscriptionId: null,
+            currentPeriodEndsAt: null,
+            plan: { key: "growth" },
+            provider: "MANUAL",
+            status: "ACTIVE",
+          },
+        }),
+        findMany: async () => [],
+      },
       storeConversation: {
         findFirst: async () => conversation,
         upsert: async (args: { create: Record<string, unknown> }) => {

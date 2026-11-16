@@ -1,7 +1,10 @@
 import { currentEffectiveLegalPublication } from "@ewatrade/utils/legal-approval"
 import { Prisma } from "../../../generated/prisma/client"
 import { reviewCommerceQuoteIssueReadOnlyInTransaction } from "../commerce-quote-issue-review"
-import { allowedServiceCommercePolicyDecisionRows } from "./service-commerce-policy"
+import {
+  allowedServiceCommercePolicyDecisionRows,
+  restrictedServiceCommercePolicyDecisionRows,
+} from "./service-commerce-policy"
 // Actual read helpers and native issuer, inert delegate state only. No real transaction or SQL acceptance.
 const scope = {
   actorUserId: "actor-1",
@@ -282,7 +285,9 @@ function fixture() {
     },
     serviceCommercePolicyDecision: {
       findMany: () =>
-        state.policyAllowed ? allowedServiceCommercePolicyDecisionRows() : [],
+        state.policyAllowed
+          ? allowedServiceCommercePolicyDecisionRows()
+          : restrictedServiceCommercePolicyDecisionRows(),
     },
     serviceCommerceQuoteReleasePolicy: { findFirst: () => state.releasePolicy },
     serviceCommerceStoreTeamAssignment: { findMany: () => state.team },

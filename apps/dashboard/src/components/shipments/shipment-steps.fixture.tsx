@@ -46,8 +46,12 @@ const line = (id: string, outstandingQuantity: string) => ({
   outstandingQuantity,
   expectedQuantity: outstandingQuantity,
   receivedQuantity: "0",
-  balanceSourceId: `balance-${id}`,
-  stockItem: { name: id, variantName: null },
+  // Nullable so the unmapped-stock case can clear them.
+  balanceSourceId: `balance-${id}` as string | null,
+  stockItem: { name: id, variantName: null } as {
+    name: string
+    variantName: null
+  } | null,
   description: id,
   landedUnitMinor: "100",
   landedMinor: "100",

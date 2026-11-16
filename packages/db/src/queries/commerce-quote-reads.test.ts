@@ -5,7 +5,10 @@ import {
   getCommerceQuoteApprovalReadOnlyInTransaction,
   listPendingCommerceQuoteApprovalsReadOnlyInTransaction,
 } from "./commerce-quotes"
-import { allowedServiceCommercePolicyDecisionRows } from "./test-helpers/service-commerce-policy"
+import {
+  allowedServiceCommercePolicyDecisionRows,
+  restrictedServiceCommercePolicyDecisionRows,
+} from "./test-helpers/service-commerce-policy"
 
 const scope = {
   actorUserId: "checker-user",
@@ -147,7 +150,9 @@ function fixture(rows = [decision()], allowNativeWrites = false) {
     }),
     serviceCommercePolicyDecision: delegate("vertical-policy", {
       findMany: () =>
-        state.policyAllowed ? allowedServiceCommercePolicyDecisionRows() : [],
+        state.policyAllowed
+          ? allowedServiceCommercePolicyDecisionRows()
+          : restrictedServiceCommercePolicyDecisionRows(),
     }),
     serviceCommercePolicyAuditEvent: delegate("policy-audit", {}),
     serviceCommerceQuoteApproval: delegate("approval", {
@@ -204,7 +209,9 @@ function fixture(rows = [decision()], allowNativeWrites = false) {
         return {
           kind: state.product ? "PRODUCT_UNIT" : "SERVICE",
           status: "ACTIVE",
+          name: "Inspection",
           variantId: "variant-1",
+          variant: { id: "variant-1", name: "Standard" },
           storeAvailability: [{ isAvailable: true }],
           productUnitOffering: state.product
             ? {

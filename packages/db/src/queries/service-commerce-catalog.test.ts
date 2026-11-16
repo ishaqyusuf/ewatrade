@@ -317,6 +317,8 @@ describe("Service Commerce Progressive Catalog repositories", () => {
     const calls: string[] = []
     const tx = {
       ...policyFakes("progressive_draft_capture"),
+      // The product cap check takes a per-tenant advisory lock first.
+      $executeRaw: async () => 0,
       // Launch Starter plan: the Free product cap does not apply.
       subscriptionPlan: { findMany: async () => [] },
       tenant: {

@@ -315,7 +315,7 @@ describeWithServiceCommerceDatabase("Catalog option photos", () => {
         where: { id: assetId },
         select: catalogPhotoUsageSelect,
       })
-      expect(catalogPhotoUsage(persisted)).toEqual(usages[0])
+      expect(catalogPhotoUsage(persisted)).toEqual(usages[0] ?? [])
       await expect(
         replaceCatalogItemPhotos(db, {
           ...shared,
