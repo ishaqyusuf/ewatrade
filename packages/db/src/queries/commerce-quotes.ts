@@ -1,4 +1,8 @@
 import { createHash, randomBytes } from "node:crypto"
+import {
+  customerFacingStoreName,
+  customerFacingStoreSelect,
+} from "./customer-facing-store-name"
 import { saleEligibleCatalogItem } from "./product-usage"
 
 import {
@@ -3594,7 +3598,11 @@ export async function getPublicCommerceQuote(
         quote: {
           include: {
             store: {
-              select: { name: true, supportEmail: true, supportPhone: true },
+              select: {
+                ...customerFacingStoreSelect,
+                supportEmail: true,
+                supportPhone: true,
+              },
             },
           },
         },
@@ -3692,7 +3700,7 @@ export async function getPublicCommerceQuote(
       requiresSelection: payableState.requiresSelection,
       selectedOptionId: version.optionSelection?.optionId ?? null,
       sourceType: version.quote.sourceType.toLowerCase(),
-      storeName: version.quote.store.name,
+      storeName: customerFacingStoreName(version.quote.store),
       storeSupportEmail: version.quote.store.supportEmail,
       storeSupportPhone: version.quote.store.supportPhone,
       subtotalMinor: payable?.subtotalMinor ?? 0,

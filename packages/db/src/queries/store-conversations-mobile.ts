@@ -9,6 +9,10 @@ import {
   storeConversationTransferCreateInputSchema,
   storeConversationTransferRedeemInputSchema,
 } from "@ewatrade/service-commerce"
+import {
+  customerFacingStoreName,
+  customerFacingStoreSelect,
+} from "./customer-facing-store-name"
 
 import { Prisma, type PrismaClient } from "../../generated/prisma/client"
 import {
@@ -246,7 +250,7 @@ export async function listMobileStoreConversations(
                 customerEntryPoint: {
                   select: { publicToken: true, status: true },
                 },
-                name: true,
+                ...customerFacingStoreSelect,
               },
             },
           },
@@ -354,10 +358,12 @@ export async function listMobileStoreConversations(
                   : null,
                 publicToken: entry.publicToken,
                 state: projectConversationState(access.conversation),
-                storeName: access.conversation.store.name,
+                storeName: customerFacingStoreName(access.conversation.store),
                 storeAvatar: {
                   kind: "initials" as const,
-                  label: projectStoreInitials(access.conversation.store.name),
+                  label: projectStoreInitials(
+                    customerFacingStoreName(access.conversation.store),
+                  ),
                 },
               },
             ]

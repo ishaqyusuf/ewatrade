@@ -1,4 +1,8 @@
 import { randomBytes } from "node:crypto"
+import {
+  customerFacingStoreName,
+  customerFacingStoreSelect,
+} from "./customer-facing-store-name"
 import { assertStorefrontCustomerMessages } from "./public-storefront"
 
 import {
@@ -824,7 +828,7 @@ async function getStoreConversationTimelineForCustomer(
             : conversation.lifecycle === StoreConversationLifecycle.ARCHIVED
               ? "archived"
               : "active",
-        storeName: conversation.store.name,
+        storeName: customerFacingStoreName(conversation.store),
       },
       messages: selected.reverse().map((message) =>
         projectStoreConversationMessage({

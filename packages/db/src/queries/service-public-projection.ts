@@ -3,6 +3,10 @@ import {
   CatalogRecordStatus,
   OfferingPricingPolicy,
 } from "../../generated/prisma/enums"
+import {
+  customerFacingStoreName,
+  customerFacingStoreSelect,
+} from "./customer-facing-store-name"
 
 export const publicServiceRequestFormInclude = {
   offerings: {
@@ -17,7 +21,7 @@ export const publicServiceRequestFormInclude = {
       },
     },
   },
-  store: { select: { currencyCode: true, name: true } },
+  store: { select: { currencyCode: true, ...customerFacingStoreSelect } },
 } satisfies Prisma.ServiceRequestFormInclude
 
 type PublicServiceRequestFormRow = Prisma.ServiceRequestFormGetPayload<{
@@ -57,6 +61,9 @@ export function projectPublicServiceRequestForm(
         },
       ]
     }),
-    store: form.store,
+    store: {
+      currencyCode: form.store.currencyCode,
+      name: customerFacingStoreName(form.store),
+    },
   }
 }

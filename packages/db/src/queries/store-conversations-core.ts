@@ -1,4 +1,8 @@
 import { createHash } from "node:crypto"
+import {
+  customerFacingStoreName,
+  customerFacingStoreSelect,
+} from "./customer-facing-store-name"
 
 import {
   STORE_CONVERSATION_PRESENTATION_TOMBSTONE,
@@ -553,7 +557,7 @@ export async function loadStoreConversationForGuest(
 ) {
   const credential = await resolveStoreConversationGuestCredential(db, input)
   const conversation = await db.storeConversation.findFirst({
-    include: { store: { select: { name: true } } },
+    include: { store: { select: customerFacingStoreSelect } },
     where: {
       id: input.conversationId,
       OR: [

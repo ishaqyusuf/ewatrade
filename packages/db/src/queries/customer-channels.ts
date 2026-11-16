@@ -1,4 +1,8 @@
 import { createHash, randomBytes } from "node:crypto"
+import {
+  customerFacingStoreName,
+  customerFacingStoreSelect,
+} from "./customer-facing-store-name"
 
 import {
   type ServiceCommercePublicEntryAction,
@@ -722,9 +726,7 @@ export async function resolveCustomerEntryPointContextInTransaction(
     select: {
       id: true,
       revision: true,
-      store: {
-        select: { name: true },
-      },
+      store: { select: customerFacingStoreSelect },
       storeId: true,
       tenantId: true,
     },
@@ -758,9 +760,7 @@ export async function resolveCustomerEntryPointContextInTransaction(
         select: {
           id: true,
           revision: true,
-          store: {
-            select: { name: true },
-          },
+          store: { select: customerFacingStoreSelect },
           storeId: true,
           tenantId: true,
         },
@@ -815,7 +815,7 @@ export async function resolveCustomerEntryPointContextInTransaction(
     entryPointRevision: entryPoint.revision,
     requestKinds,
     storeId: entryPoint.storeId,
-    storeName: entryPoint.store.name,
+    storeName: customerFacingStoreName(entryPoint.store),
     tenantId: entryPoint.tenantId,
     webVerticals,
   }

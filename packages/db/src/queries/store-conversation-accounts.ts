@@ -10,6 +10,10 @@ import {
   storeConversationAccountInvitationDismissInputSchema,
   storeConversationAccountLinkInputSchema,
 } from "@ewatrade/service-commerce"
+import {
+  customerFacingStoreName,
+  customerFacingStoreSelect,
+} from "./customer-facing-store-name"
 
 import { Prisma, type PrismaClient } from "../../generated/prisma/client"
 import {
@@ -475,7 +479,7 @@ export async function listGuestStoreConversationAccountCandidates(
           select: { status: true },
           take: 1,
         },
-        store: { select: { name: true } },
+        store: { select: customerFacingStoreSelect },
       },
       orderBy: [{ lastActivityAt: "desc" }, { id: "desc" }],
       take: parsed.pageSize + 1,
@@ -539,9 +543,11 @@ export async function listGuestStoreConversationAccountCandidates(
               : ("active" as const),
         storeAvatar: {
           kind: "initials" as const,
-          label: projectStoreInitials(conversation.store.name),
+          label: projectStoreInitials(
+            customerFacingStoreName(conversation.store),
+          ),
         },
-        storeName: conversation.store.name,
+        storeName: customerFacingStoreName(conversation.store),
       })),
       nextCursor:
         rows.length > parsed.pageSize && last
@@ -666,7 +672,7 @@ export async function listStoreConversationAccountConversations(
                 customerEntryPoint: {
                   select: { publicToken: true, status: true },
                 },
-                name: true,
+                ...customerFacingStoreSelect,
               },
             },
           },
@@ -754,9 +760,11 @@ export async function listStoreConversationAccountConversations(
                       : ("active" as const),
                 storeAvatar: {
                   kind: "initials" as const,
-                  label: projectStoreInitials(access.conversation.store.name),
+                  label: projectStoreInitials(
+                    customerFacingStoreName(access.conversation.store),
+                  ),
                 },
-                storeName: access.conversation.store.name,
+                storeName: customerFacingStoreName(access.conversation.store),
                 unreadStoreMessages:
                   unreadStoreMessages.get(access.conversation.id) ?? 0,
               },
