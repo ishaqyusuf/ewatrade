@@ -22,7 +22,51 @@ function value(data: FormData, key: string) {
   return typeof result === "string" ? result.trim() : ""
 }
 
-export async function submitStoreConversationServiceAction(data: FormData) {
+export type StoreConversationServiceFormError =
+  | "contact"
+  | "invalid"
+  | "items"
+  | "time"
+
+/** Returned on a correctable error so the form keeps what the customer typed. */
+export type StoreConversationServiceFormState = {
+  error: StoreConversationServiceFormError | null
+  submission: number
+  values: Record<string, string>
+}
+
+const KEPT_FIELDS = [
+  "customerEmail",
+  "customerName",
+  "customerPhone",
+  "details",
+  "preferredDate",
+  "preferredTime",
+]
+
+function keptValues(data: FormData) {
+  const values: Record<string, string> = {}
+  for (const [key, entry] of data.entries()) {
+    if (
+      typeof entry === "string" &&
+      (KEPT_FIELDS.includes(key) || key.startsWith("quantity:"))
+    )
+      values[key] = entry.slice(0, 4_000)
+  }
+  return values
+}
+
+export async function submitStoreConversationServiceAction(
+  previous: StoreConversationServiceFormState,
+  data: FormData,
+): Promise<StoreConversationServiceFormState> {
+  const fail = (
+    error: StoreConversationServiceFormError,
+  ): StoreConversationServiceFormState => ({
+    error,
+    submission: previous.submission + 1,
+    values: keptValues(data),
+  })
   const existingMessageId = value(data, "messageId")
   const clientOperationId = value(data, "clientOperationId")
   const selectedOfferingId = value(data, "serviceOfferingId")
@@ -37,12 +81,25 @@ export async function submitStoreConversationServiceAction(data: FormData) {
     preferredTime: value(data, "preferredTime") || undefined,
     publicToken: value(data, "publicToken"),
   })
-  if (!parsed.success) notFound()
+  if (!parsed.success) {
+    const customerField = parsed.error.issues.every((issue) =>
+      [undefined, "customerEmail", "customerName", "customerPhone"].includes(
+        issue.path[0] as string | undefined,
+      ),
+    )
+    if (customerField) return fail("contact")
+    if (
+      parsed.error.issues.every((issue) =>
+        ["preferredDate", "preferredTime"].includes(issue.path[0] as string),
+      )
+    )
+      return fail("time")
+    notFound()
+  }
   const input = parsed.data
   const selectionQuery = selectedOfferingId
     ? `&serviceOfferingId=${encodeURIComponent(selectedOfferingId)}`
     : ""
-  const returnTo = `/r/${encodeURIComponent(input.publicToken)}/service?conversationId=${encodeURIComponent(input.conversationId)}&${existingMessageId ? `messageId=${encodeURIComponent(existingMessageId)}` : `clientOperationId=${encodeURIComponent(clientOperationId)}`}${selectionQuery}`
   const credentialToken = (await cookies()).get(
     STORE_CONVERSATION_GUEST_COOKIE,
   )?.value
@@ -81,7 +138,7 @@ export async function submitStoreConversationServiceAction(data: FormData) {
       const quantity = value(data, `quantity:${offering.id}`)
       return quantity ? [{ offeringId: offering.id, quantity }] : []
     })
-    if (lines.length === 0) redirect(`${returnTo}&error=items`)
+    if (lines.length === 0) return fail("items")
     const request = {
       ...input,
       lines,
@@ -100,15 +157,13 @@ export async function submitStoreConversationServiceAction(data: FormData) {
         clientOperationId,
       })
   } catch (error) {
-    if (error instanceof StoreConversationServicePreferenceError) {
-      redirect(`${returnTo}&error=time`)
-    }
+    if (error instanceof StoreConversationServicePreferenceError)
+      return fail("time")
     if (
       isPublicServiceUnavailable(error) ||
       error instanceof StoreConversationError
-    ) {
-      redirect(`${returnTo}&error=invalid`)
-    }
+    )
+      return fail("invalid")
     throw error
   }
   redirect(`/r/${encodeURIComponent(input.publicToken)}?request=service`)

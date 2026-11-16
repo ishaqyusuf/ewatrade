@@ -12,7 +12,7 @@ import {
   serviceRequestFormHref,
 } from "@/lib/service-request-selection"
 
-import { submitStoreConversationServiceAction } from "./actions"
+import { ServiceRequestForm } from "./service-request-form"
 
 export const dynamic = "force-dynamic"
 
@@ -21,7 +21,6 @@ type Props = {
   searchParams: Promise<{
     conversationId?: string
     clientOperationId?: string
-    error?: string
     messageId?: string
     serviceOfferingId?: string
   }>
@@ -58,17 +57,6 @@ export default async function StoreConversationServicePage({
   )
   if (query.serviceOfferingId && !selectedOffering) notFound()
   const offerings = selectedOffering ? [selectedOffering] : form.offerings
-  const error =
-    query.error === "items"
-      ? "Choose at least one service and enter a quantity."
-      : query.error === "contact"
-        ? "Enter your name and either a phone number or email address."
-        : query.error === "time"
-          ? "Choose both a day and a time, later than now and within six months, or leave both empty."
-          : query.error
-            ? "This Request could not be linked. Return to the conversation and try again."
-            : null
-
   return (
     <main className="min-h-screen bg-background text-foreground">
       <header className="border-b border-border bg-surface">
@@ -94,145 +82,37 @@ export default async function StoreConversationServicePage({
         </div>
       </header>
       <section className="mx-auto max-w-3xl px-5 py-8 md:px-8">
-        {error ? (
-          <p
-            className="mb-5 border border-destructive/20 bg-destructive/10 p-4 text-sm text-destructive"
-            role="alert"
-          >
-            {error}
-          </p>
-        ) : null}
-        <form
-          action={submitStoreConversationServiceAction}
-          className="grid gap-6"
-        >
-          <input name="publicToken" type="hidden" value={token} />
-          <input name="conversationId" type="hidden" value={conversationId} />
-          <input name="messageId" type="hidden" value={messageId ?? ""} />
-          <input
-            name="serviceOfferingId"
-            type="hidden"
-            value={selectedOffering?.id ?? ""}
-          />
-          <input
-            name="clientOperationId"
-            type="hidden"
-            value={clientOperationId}
-          />
-          <section className="grid border border-border">
-            <h2 className="p-5 font-semibold">Services</h2>
-            {offerings.map((offering) => (
-              <div
-                className="grid gap-3 border-t border-border p-5 sm:grid-cols-[1fr_110px] sm:items-center"
-                key={offering.id}
-              >
-                <div>
-                  <p className="font-medium">
-                    {publicServiceDisplayName(
-                      offering.catalogItemName,
-                      offering.variantName,
-                      offering.name,
-                    )}
-                  </p>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    {offering.pricingPolicy === "fixed" &&
-                    offering.fixedPriceMinor !== null
-                      ? formatMinorMoney(
-                          offering.fixedPriceMinor,
-                          form.store.currencyCode,
-                        )
-                      : "Quote required"}
-                  </p>
-                  {offering.guidance ? (
-                    <p className="mt-2 text-xs text-muted-foreground">
-                      {offering.guidance}
-                    </p>
-                  ) : null}
-                </div>
-                <input
-                  aria-label={`${publicServiceDisplayName(offering.catalogItemName, offering.variantName, offering.name)} quantity`}
-                  className="h-11 border border-border bg-background px-3 text-sm"
-                  inputMode="decimal"
-                  name={`quantity:${offering.id}`}
-                  placeholder="Quantity"
-                  defaultValue={
-                    selectedOffering?.id === offering.id ? "1" : undefined
-                  }
-                />
-              </div>
-            ))}
-          </section>
-          {selectedOffering ? (
-            <a
-              className="text-sm underline underline-offset-4"
-              href={serviceRequestFormHref({
-                publicToken: token,
-                conversationId,
-              })}
-            >
-              Choose another service
-            </a>
-          ) : null}
-          <fieldset className="grid gap-4 border border-border p-5">
-            <legend className="px-1 font-semibold">
-              Preferred day and time (optional)
-            </legend>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <label className="grid gap-1 text-sm">
-                Day
-                <input
-                  className="h-11 border border-border bg-background px-3 text-sm"
-                  name="preferredDate"
-                  type="date"
-                />
-              </label>
-              <label className="grid gap-1 text-sm">
-                Time
-                <input
-                  className="h-11 border border-border bg-background px-3 text-sm"
-                  name="preferredTime"
-                  step={900}
-                  type="time"
-                />
-              </label>
-            </div>
-          </fieldset>
-          <section className="grid gap-4 border border-border p-5">
-            <h2 className="font-semibold">Contact details</h2>
-            <input
-              className="h-11 border border-border bg-background px-3 text-sm"
-              name="customerName"
-              placeholder="Name"
-              required
-            />
-            <div className="grid gap-4 sm:grid-cols-2">
-              <input
-                className="h-11 border border-border bg-background px-3 text-sm"
-                inputMode="tel"
-                name="customerPhone"
-                placeholder="Phone"
-              />
-              <input
-                className="h-11 border border-border bg-background px-3 text-sm"
-                inputMode="email"
-                name="customerEmail"
-                placeholder="Email"
-                type="email"
-              />
-            </div>
-            <textarea
-              className="min-h-28 border border-border bg-background p-3 text-sm"
-              name="details"
-              placeholder="Extra details (optional)"
-            />
-          </section>
-          <button
-            className="h-12 bg-foreground px-5 font-medium text-background"
-            type="submit"
-          >
-            Add Service Request to conversation
-          </button>
-        </form>
+        <ServiceRequestForm
+          changeServiceHref={
+            selectedOffering
+              ? serviceRequestFormHref({ publicToken: token, conversationId })
+              : null
+          }
+          clientOperationId={clientOperationId}
+          conversationId={conversationId}
+          messageId={messageId}
+          offerings={offerings.map((offering) => ({
+            defaultQuantity:
+              selectedOffering?.id === offering.id ? "1" : undefined,
+            guidance: offering.guidance ?? null,
+            id: offering.id,
+            name: publicServiceDisplayName(
+              offering.catalogItemName,
+              offering.variantName,
+              offering.name,
+            ),
+            price:
+              offering.pricingPolicy === "fixed" &&
+              offering.fixedPriceMinor !== null
+                ? formatMinorMoney(
+                    offering.fixedPriceMinor,
+                    form.store.currencyCode,
+                  )
+                : "Quote required",
+          }))}
+          publicToken={token}
+          selectedOfferingId={selectedOffering?.id ?? null}
+        />
       </section>
     </main>
   )
