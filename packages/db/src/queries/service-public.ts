@@ -1233,6 +1233,14 @@ export async function getPublicServiceTracking(
         ready:
           line.status === ServiceJobLineStatus.READY_FOR_HANDOFF ||
           line.status === ServiceJobLineStatus.COMPLETED,
+        status:
+          line.status === ServiceJobLineStatus.COMPLETED
+            ? ("completed" as const)
+            : line.status === ServiceJobLineStatus.CANCELLED
+              ? ("cancelled" as const)
+              : line.status === ServiceJobLineStatus.READY_FOR_HANDOFF
+                ? ("ready" as const)
+                : ("in_progress" as const),
       })),
       messages: job.notificationIntents,
       milestone: publicMilestone(job.lines.map((line) => line.status)),

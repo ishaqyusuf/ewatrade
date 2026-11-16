@@ -59,13 +59,15 @@ export default async function Page({
                 </p>
               </div>
               <span className="text-sm text-muted-foreground">
-                {isCleaningServiceName(line.item) && line.ready
-                  ? job.milestone === "completed"
-                    ? "Completed"
-                    : "Customer sign-off"
-                  : line.ready
-                    ? "Ready"
-                    : "In progress"}
+                {line.status === "completed"
+                  ? "Completed"
+                  : line.status === "cancelled"
+                    ? "Cancelled"
+                    : line.status === "ready"
+                      ? isCleaningServiceName(line.item)
+                        ? "Customer sign-off"
+                        : "Ready"
+                      : "In progress"}
               </span>
             </div>
           ))}
