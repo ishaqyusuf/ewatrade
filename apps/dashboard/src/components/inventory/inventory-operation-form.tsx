@@ -982,7 +982,7 @@ export function InventoryOperationForm({
           <ControlField label={<>What was it used for? (optional)</>}>
             <Textarea
               value={reason}
-              placeholder="e.g. Fed layers, house A"
+              placeholder="e.g. Used for a customer order"
               onChange={(event) => setReason(event.target.value)}
             />
           </ControlField>

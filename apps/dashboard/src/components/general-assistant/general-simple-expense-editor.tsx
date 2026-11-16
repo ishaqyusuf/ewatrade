@@ -151,7 +151,7 @@ export function GeneralSimpleExpenseEditor({
           value={expense.description ?? ""}
           disabled={disabled}
           maxLength={200}
-          placeholder="e.g. feed"
+          placeholder="e.g. transport"
           onChange={(event) =>
             patch({ description: event.target.value || undefined })
           }

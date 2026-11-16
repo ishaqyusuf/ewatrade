@@ -181,7 +181,11 @@ export function ServiceRequestForm({ store }: { store: StoreSummary }) {
               setFormLabel(event.target.value)
               setFieldErrors((current) => ({ ...current, label: undefined }))
             }}
-            placeholder="e.g. Book a farm service"
+            placeholder={
+              offerings[0]
+                ? `e.g. ${offerings[0].displayName} requests`
+                : "e.g. Book a service"
+            }
           />
         </ControlField>
         <FieldSet className="grid gap-1">
