@@ -375,25 +375,31 @@ test("credits show why and how the total dropped, oldest first", async () => {
   ])
 })
 
+const crateMove = (
+  id: string,
+  kind: "ISSUED" | "RETURNED" | "WRITTEN_OFF",
+  time: string,
+  quantity: number,
+  orderId: string | null,
+  actorUserId = "ishaq",
+) => ({
+  id,
+  actorUserId,
+  kind,
+  occurredAt: at(time),
+  createdAt: at(time),
+  quantity,
+  orderId,
+  customerId: "customer",
+  catalogItemId: "crate",
+  catalogItem: { name: "Egg crate" },
+})
+
 test("returnables that went out with the order and came back read in time order", async () => {
   const timeline = await getCommercialOrderTimeline(
     fakeDb({ ...baseOrder, lines: [], payments: [], amendments: [] }, [
-      {
-        id: "rm1",
-        actorUserId: "ishaq",
-        kind: "ISSUED",
-        occurredAt: at("10:00:00"),
-        quantity: 58,
-        catalogItem: { name: "Egg crate" },
-      },
-      {
-        id: "rm2",
-        actorUserId: "musa",
-        kind: "RETURNED",
-        occurredAt: at("12:00:00"),
-        quantity: 20,
-        catalogItem: { name: "Egg crate" },
-      },
+      crateMove("rm1", "ISSUED", "10:00:00", 58, "order"),
+      crateMove("rm2", "RETURNED", "12:00:00", 20, "order", "musa"),
     ]),
     scope,
   )
@@ -403,4 +409,23 @@ test("returnables that went out with the order and came back read in time order"
     ["RETURNED", [{ label: "Egg crate", quantity: "20" }]],
   ])
   expect(moves[1]?.actor).toEqual({ id: "musa", name: "Musa" })
+})
+
+test("returns recorded on the customer show with the count that cleared this order", async () => {
+  const timeline = await getCommercialOrderTimeline(
+    fakeDb({ ...baseOrder, lines: [], payments: [], amendments: [] }, [
+      // An older order's 3 crates clear first.
+      crateMove("old", "ISSUED", "09:00:00", 3, "older-order"),
+      crateMove("rm1", "ISSUED", "10:00:00", 58, "order"),
+      crateMove("back", "RETURNED", "12:00:00", 5, null),
+      crateMove("lost", "WRITTEN_OFF", "13:00:00", 4, null),
+    ]),
+    scope,
+  )
+  const moves = timeline.items.filter((item) => item.kind === "returnable")
+  expect(moves.map((item) => [item.id, item.disposition, item.lines])).toEqual([
+    ["returnable:rm1", "ISSUED", [{ label: "Egg crate", quantity: "58" }]],
+    ["returnable:back", "RETURNED", [{ label: "Egg crate", quantity: "2" }]],
+    ["returnable:lost", "WRITTEN_OFF", [{ label: "Egg crate", quantity: "4" }]],
+  ])
 })

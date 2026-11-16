@@ -3,6 +3,7 @@ import type { PrismaClient } from "../../generated/prisma/client"
 import { CatalogError } from "./catalog-errors"
 import { catalogFreeLineKindForRole } from "./catalog-free-lines"
 import type { OrderScope } from "./order-visibility"
+import { readOrderReturnableMoves } from "./returnables"
 import { loadTenantActors } from "./tenant-actors"
 
 export type CommercialOrderTimelineKind =
@@ -263,16 +264,9 @@ export async function getCommercialOrderTimeline(
         createdAt: true,
       },
     }),
-    db.returnableMovement.findMany({
-      where: { orderId: order.id, tenantId: input.tenantId },
-      select: {
-        id: true,
-        actorUserId: true,
-        kind: true,
-        occurredAt: true,
-        quantity: true,
-        catalogItem: { select: { name: true } },
-      },
+    readOrderReturnableMoves(db, {
+      orderId: order.id,
+      tenantId: input.tenantId,
     }),
   ])
   const operationById = new Map(operations.map((row) => [row.id, row] as const))
@@ -399,7 +393,9 @@ export async function getCommercialOrderTimeline(
       })
   }
 
-  // Crates and other returnables that went out with, or came back against, this order.
+  // Crates and other returnables that went out with this order, and every
+  // return or write-off that cleared some of them (also ones recorded on the
+  // customer with no order), with the count that applies to this order.
   for (const movement of returnables)
     items.push({
       ...empty(),

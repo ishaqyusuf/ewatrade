@@ -464,6 +464,69 @@ export async function readOrderReturnables(
   }
 }
 
+/**
+ * Ledger lines for an order's timeline: what went out with it, then each
+ * return or write-off that cleared some of it (a return recorded on the
+ * customer with no order included), with only the count that applies here.
+ */
+export async function readOrderReturnableMoves(
+  db: Pick<DbClient, "returnableMovement">,
+  input: { tenantId: string; orderId: string },
+) {
+  const issued = await db.returnableMovement.findMany({
+    select: { catalogItemId: true, customerId: true },
+    where: { kind: "ISSUED", orderId: input.orderId, tenantId: input.tenantId },
+  })
+  if (!issued.length) return []
+  const moves = await db.returnableMovement.findMany({
+    select: {
+      ...allocationSelect,
+      id: true,
+      actorUserId: true,
+      catalogItem: { select: { name: true } },
+    },
+    where: {
+      OR: [
+        ...new Map(
+          issued.map((row) => [
+            `${row.customerId}:${row.catalogItemId}`,
+            { catalogItemId: row.catalogItemId, customerId: row.customerId },
+          ]),
+        ).values(),
+      ],
+      tenantId: input.tenantId,
+    },
+  })
+  type Move = (typeof moves)[number]
+  const lines: Move[] = []
+  const groups = new Map<string, Move[]>()
+  for (const move of moves) {
+    const key = `${move.customerId}:${move.catalogItemId}`
+    groups.set(key, [...(groups.get(key) ?? []), move])
+  }
+  for (const group of groups.values()) {
+    const cleared = new Map<string, { move: Move; count: number }>()
+    for (const row of allocateReturnables(group)) {
+      if (row.orderId !== input.orderId) continue
+      lines.push(row)
+      for (const { move, count } of row.clearedBy) {
+        const seen = cleared.get(move.id)
+        cleared.set(move.id, { count: (seen?.count ?? 0) + count, move })
+      }
+    }
+    for (const { move, count } of cleared.values())
+      lines.push({ ...move, quantity: count })
+  }
+  return lines.map((move) => ({
+    actorUserId: move.actorUserId,
+    catalogItem: move.catalogItem,
+    id: move.id,
+    kind: move.kind,
+    occurredAt: move.occurredAt,
+    quantity: move.quantity,
+  }))
+}
+
 const allocationSelect = {
   catalogItemId: true,
   createdAt: true,
@@ -499,6 +562,8 @@ export function allocateReturnables<T extends AllocationMove>(moves: T[]) {
       open: move.quantity,
       returned: 0,
       writtenOff: 0,
+      /** Each return or write-off that cleared some of these items, and how many. */
+      clearedBy: [] as Array<{ move: T; count: number }>,
     }))
   for (const clear of moves
     .filter((move) => move.kind !== "ISSUED")
@@ -508,10 +573,12 @@ export function allocateReturnables<T extends AllocationMove>(moves: T[]) {
       for (const row of rows) {
         if (!left) return
         const count = Math.min(left, row.open)
+        if (!count) continue
         row.open -= count
         left -= count
         if (clear.kind === "RETURNED") row.returned += count
         else row.writtenOff += count
+        row.clearedBy.push({ count, move: clear })
       }
     }
     if (clear.orderId)

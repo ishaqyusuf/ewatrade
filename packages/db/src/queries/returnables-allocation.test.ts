@@ -40,6 +40,26 @@ describe("returnables allocation", () => {
     ])
   })
 
+  test("each issue records which returns cleared it, and how many", () => {
+    const back = move("RETURNED", 30, 3)
+    const lost = move("WRITTEN_OFF", 4, 4, "#1042")
+    const rows = allocateReturnables([
+      move("ISSUED", 20, 1, "#1031"),
+      move("ISSUED", 58, 2, "#1042"),
+      back,
+      lost,
+    ])
+    expect(
+      rows.map((row) => row.clearedBy.map(({ move, count }) => [move, count])),
+    ).toEqual([
+      [[back, 20]],
+      [
+        [back, 10],
+        [lost, 4],
+      ],
+    ])
+  })
+
   test("order follows time, not input order", () => {
     const rows = allocateReturnables([
       move("RETURNED", 5, 9),
