@@ -2,45 +2,27 @@ import { describe, expect, test } from "bun:test"
 import { stackTransitions, tabTransitions } from "./screen-transitions"
 
 describe("stack transitions", () => {
-  test("Android gets explicit native animations instead of its static default", () => {
+  test("ordinary routes and full-screen modals use different directions", () => {
     const android = stackTransitions("android")
-    expect(android.push.animation).toBe("ios_from_right")
-    expect(android.modal).toEqual({
-      presentation: "modal",
-      animation: "slide_from_bottom",
-    })
-    expect(android.gate.animation).toBe("fade")
-  })
-
-  test("iOS keeps its native push, swipe-back and modal sheet", () => {
     const ios = stackTransitions("ios")
+    expect(android.push.animation).toBe("ios_from_right")
     expect(ios.push).toEqual({})
-    expect(ios.modal).toEqual({ presentation: "modal" })
+    expect(android.fullScreenModal.animation).toBe("slide_from_bottom")
+    expect(ios.fullScreenModal.animation).toBe("slide_from_bottom")
+    // Keep child routes pushable above a workflow on the same native stack.
+    expect(ios.fullScreenModal.presentation).toBeUndefined()
+    expect(ios.fullScreenModal.gestureDirection).toBe("vertical")
+    expect(ios.fullScreenModal.gestureResponseDistance).toEqual({ top: 56 })
     expect(ios.gate).toEqual({ animation: "fade", animationDuration: 220 })
   })
-})
 
-describe("stack transitions under Reduce Motion", () => {
-  test("pushes and Android modals fade instead of sliding", () => {
-    const android = stackTransitions("android", true)
-    expect(android.push).toEqual({ animation: "fade" })
-    expect(android.modal).toEqual({ presentation: "modal", animation: "fade" })
-    expect(android.gate.animation).toBe("fade")
-    const ios = stackTransitions("ios", true)
-    expect(ios.push).toEqual({ animation: "fade" })
-  })
-
-  test("the iOS modal sheet keeps its system presentation", () => {
-    expect(stackTransitions("ios", true).modal).toEqual({
-      presentation: "modal",
-    })
-  })
-
-  test("the default is unchanged when Reduce Motion is off", () => {
-    expect(stackTransitions("android", false)).toEqual(
-      stackTransitions("android"),
-    )
-    expect(stackTransitions("ios", false)).toEqual(stackTransitions("ios"))
+  test("full-screen modals and pushes fade under Reduce Motion", () => {
+    for (const os of ["android", "ios"]) {
+      const { push, fullScreenModal, gate } = stackTransitions(os, true)
+      expect(push.animation).toBe("fade")
+      expect(fullScreenModal).toEqual({ animation: "fade" })
+      expect(gate.animation).toBe("fade")
+    }
   })
 })
 

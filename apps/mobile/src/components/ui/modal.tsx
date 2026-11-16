@@ -42,6 +42,7 @@ import {
   View,
   useWindowDimensions,
 } from "react-native"
+import { Easing } from "react-native-reanimated"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { Path, Svg } from "react-native-svg"
 
@@ -53,6 +54,12 @@ import { useColors } from "@/hooks/use-color"
 import { COMPACT_CONTROL_FONT_SCALE_CAP } from "@/lib/mobile-accessibility-layout"
 import { Pressable } from "./pressable"
 import { Text } from "./text"
+
+// The same easing drives the surface and its position-linked backdrop.
+const SHEET_MOTION = {
+  duration: 300,
+  easing: Easing.bezier(0.22, 0.61, 0.36, 1),
+}
 
 const FLOATING_SHEET_RADIUS = 32
 const FLOATING_SHEET_SIDE_INSET = 8
@@ -253,6 +260,8 @@ export const Modal = React.forwardRef(
         {...detachedProps}
         ref={modal.ref}
         index={0}
+        animateOnMount={props.animateOnMount ?? true}
+        animationConfigs={props.animationConfigs ?? SHEET_MOTION}
         onChange={handleChange}
         onDismiss={handleDismiss}
         snapPoints={snapPoints}

@@ -122,12 +122,7 @@ const InitialLayout = ({
     profile?.role?.trim().toUpperCase() === "ADMIN"
   // Native stack presets; Reduce Motion fades pushes instead of sliding.
   const transitions = stackTransitions(Platform.OS, useReducedMotion())
-  // Task routes: full-screen pages on iOS (push + swipe-back); Android keeps
-  // its slide-from-bottom modal. Sheets inside screens stay overlays.
-  const modalOptions = {
-    headerShown: false,
-    ...(Platform.OS === "ios" ? transitions.push : transitions.modal),
-  }
+  const modalOptions = { headerShown: false, ...transitions.fullScreenModal }
   const gateOptions = { headerShown: false, ...transitions.gate }
 
   return (

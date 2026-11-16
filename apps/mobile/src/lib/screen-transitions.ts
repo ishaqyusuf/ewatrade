@@ -10,8 +10,8 @@ type StackScreenOptions = Exclude<
 export type StackTransitions = {
   /** Default for every stack screen: an ordinary push such as Order detail. */
   push: StackScreenOptions
-  /** Routes presented as modals: create flows, settings and Finance sheets. */
-  modal: StackScreenOptions
+  /** Full-screen workflows that rise over the current route. */
+  fullScreenModal: StackScreenOptions
   /**
    * Entry, auth and shell routes that are reached through Redirect,
    * router.replace or a Stack.Protected guard flip rather than a user push.
@@ -19,16 +19,8 @@ export type StackTransitions = {
   gate: StackScreenOptions
 }
 
-// Screen changes stay on the native stack, as T3 Code does: no JS-driven
-// interpolators, so native gestures and frame pacing are kept. We only choose
-// which native animation each kind of route uses. Without an explicit choice
-// Android falls back to its OS default, which reads as a static swap and
-// treats presentation "modal" exactly like a push. iOS keeps its native push,
-// swipe-back and modal sheet.
-//
-// With the OS Reduce Motion setting on, pushes (and Android modals) fade
-// instead of sliding; the iOS modal sheet stays system presentation. Gestures
-// and history are unchanged.
+// Keep motion on the native stack. Full-screen workflow routes are cards
+// with a vertical transition so they can still push child routes in this stack.
 export function stackTransitions(
   os: string,
   reduceMotion = false,
@@ -40,10 +32,10 @@ export function stackTransitions(
       : android
         ? { animation: "ios_from_right" }
         : {},
-    modal: {
-      presentation: "modal",
-      ...(android
-        ? { animation: reduceMotion ? "fade" : "slide_from_bottom" }
+    fullScreenModal: {
+      animation: reduceMotion ? "fade" : "slide_from_bottom",
+      ...(os === "ios" && !reduceMotion
+        ? { gestureDirection: "vertical", gestureResponseDistance: { top: 56 } }
         : {}),
     },
     // animationDuration only applies on iOS; Android uses its native timing.

@@ -18,6 +18,7 @@ import {
 } from "react"
 import { Keyboard, Modal as NativeModal, View } from "react-native"
 import { GestureHandlerRootView } from "react-native-gesture-handler"
+import { useReducedMotion } from "react-native-reanimated"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 type ModalBackAction = () => boolean
@@ -107,6 +108,7 @@ export function FullScreenForm({
   onClose: () => void
 }) {
   const insets = useSafeAreaInsets()
+  const reduceMotion = useReducedMotion()
   const backActions = useRef(new Set<ModalBackAction>())
   const registerBackAction = useCallback((action: ModalBackAction) => {
     backActions.current.add(action)
@@ -121,7 +123,7 @@ export function FullScreenForm({
   }
   return (
     <NativeModal
-      animationType="slide"
+      animationType={reduceMotion ? "fade" : "slide"}
       presentationStyle="fullScreen"
       statusBarTranslucent
       navigationBarTranslucent

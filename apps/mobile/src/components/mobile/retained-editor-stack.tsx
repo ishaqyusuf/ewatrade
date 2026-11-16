@@ -11,6 +11,7 @@ import Animated, {
   ReduceMotion,
   SlideInRight,
   SlideOutRight,
+  useReducedMotion,
 } from "react-native-reanimated"
 
 export type RetainedEditor = {
@@ -21,7 +22,7 @@ export type RetainedEditor = {
 }
 
 // A nested editor slides over its parent and back out (the first one rides the
-// Modal's own slide). Reduce Motion turns both into an instant swap.
+// Modal's own slide). Reduce Motion skips the nested slides.
 const editorEnter = SlideInRight.duration(260)
   .easing(Easing.out(Easing.cubic))
   .reduceMotion(ReduceMotion.System)
@@ -45,13 +46,14 @@ export function RetainedEditorStack({
   obscured?: boolean
   onScrollTouch?: () => void
 }) {
+  const reduceMotion = useReducedMotion()
   const back = () => {
     Keyboard.dismiss()
     onBack()
   }
   return (
     <Modal
-      animationType="slide"
+      animationType={reduceMotion ? "fade" : "slide"}
       presentationStyle="fullScreen"
       statusBarTranslucent
       navigationBarTranslucent
