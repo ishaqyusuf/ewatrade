@@ -317,9 +317,12 @@ export async function validateServiceCommerceMediaIntakeReadiness(
       }
     : fullValidation
   if (!validation.accepted) {
-    throw new ServiceCommerceMediaError(
-      "INTAKE_BLOCKED",
-      `Media intake is blocked: ${validation.blockers.join(", ")}.`,
+    throw Object.assign(
+      new ServiceCommerceMediaError(
+        "INTAKE_BLOCKED",
+        `Media intake is blocked: ${validation.blockers.join(", ")}.`,
+      ),
+      { blockers: [...validation.blockers] },
     )
   }
   return validation

@@ -38,6 +38,7 @@ import {
 import { getAuthorizedServiceCommerceMediaViewInTransaction } from "./service-commerce-attachments"
 import { resolveServiceCommerceCatalogSourceLine } from "./service-commerce-catalog-source"
 import {
+  ServiceCommerceMediaError,
   auditMedia,
   getScopedAsset,
   validateServiceCommerceMediaIntakeReadiness,
@@ -451,24 +452,69 @@ export async function resolveGuestStoreConversationAttachmentCapability(
   >,
   dependencies: { resolveEntry?: ResolveEntry } = {},
 ) {
-  const resolved = await resolveGuestStoreConversationAttachmentUpload(
-    db,
-    {
-      ...input,
-      // A known-valid byte envelope exercises the same current Store, Request,
-      // provider and policy authorization before the picker opens. The upload
-      // route repeats authorization with the actual verified bytes.
-      file: {
-        attachmentCount: 1,
-        byteSize: 1,
-        kind: "image",
-        mimeType: "image/jpeg",
-        signatureMimeType: "image/jpeg",
+  try {
+    const resolved = await resolveGuestStoreConversationAttachmentUpload(
+      db,
+      {
+        ...input,
+        // A known-valid byte envelope exercises the same current Store,
+        // Request, provider and policy authorization before the picker opens.
+        // The upload route repeats authorization with the actual verified bytes.
+        file: {
+          attachmentCount: 1,
+          byteSize: 1,
+          kind: "image",
+          mimeType: "image/jpeg",
+          signatureMimeType: "image/jpeg",
+        },
       },
-    },
-    dependencies,
+      dependencies,
+    )
+    return resolved.capability
+  } catch (error) {
+    // A Store that does not take attachments is a capability answer, not an
+    // error: the composer shows attachments as unavailable.
+    const blockers = unavailableAttachmentBlockers(error)
+    if (!blockers) throw error
+    return {
+      acceptedMimeTypes: [],
+      allowedKinds: [],
+      available: false,
+      blockers,
+      limits: {
+        maxAudioBytes: STORE_CONVERSATION_VOICE_NOTE_MAX_BYTES,
+        maxBytes: SERVICE_COMMERCE_MEDIA_MAX_ATTACHMENT_BYTES,
+        maxCount: 1,
+        maxDurationMs: STORE_CONVERSATION_VOICE_NOTE_MAX_DURATION_MS,
+      },
+      uploadAuthorization: null,
+    } satisfies Awaited<
+      ReturnType<typeof resolveGuestStoreConversationAttachmentUpload>
+    >["capability"]
+  }
+}
+
+const STORE_UNAVAILABLE_ATTACHMENT_BLOCKERS = [
+  "attachments_disabled",
+  "channel_unavailable",
+  "policy_restricted",
+  "private_media_provider_unavailable",
+] as const
+
+export function unavailableAttachmentBlockers(error: unknown) {
+  if (!(error instanceof ServiceCommerceMediaError)) return null
+  if (error.code === "NOT_READY") return ["attachments_disabled" as const]
+  if (error.code !== "INTAKE_BLOCKED") return null
+  const reported = Reflect.get(error, "blockers")
+  if (!Array.isArray(reported)) return null
+  const blockers = STORE_UNAVAILABLE_ATTACHMENT_BLOCKERS.filter((blocker) =>
+    reported.includes(blocker),
   )
-  return resolved.capability
+  // Only Store-level blockers; a file-level refusal cannot come from the
+  // fixed probe envelope and stays an error.
+  return blockers.length > 0 && blockers.length === reported.length
+    ? blockers
+    : null
 }
 
 type StoreConversationMediaSafetyCursor = {
