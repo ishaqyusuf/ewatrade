@@ -10,16 +10,16 @@ has the status, evidence and limitation for each case.
 
 ## Scorecard
 
-Current, 16 November 2026, after runtime runs 1–12, all of T1–T8 landing, and the
+Current, 16 November 2026, after runtime runs 1–13, all of T1–T8 landing, and the
 owner's instruction to keep data-dependent retail cases blocked:
 
 | Business | Passed | Fail | Blocked | Not assessed |
 | --- | ---: | ---: | ---: | ---: |
 | Jawdah poultry | 10/12 | 0 | 0 | 2 |
-| Laundry | 5/12 | 1 | 1 | 5 |
+| Laundry | 6/12 | 0 | 1 | 5 |
 | Hypnos Man Collection | 0/24 | 0 | 23 | 1 |
 | Alhaq Tech | 0/24 | 0 | 23 | 1 |
-| **Total** | **15/72 (20.8%)** | **1** | **47** | **9** |
+| **Total** | **16/72 (22.2%)** | **0** | **47** | **9** |
 
 Earlier on 10 November the count was 5/72 passed; J06 moved from PASS to FAIL in
 run 2. All case passes are local-window passes (see runtime runs 1–2). A separate
@@ -628,3 +628,29 @@ details on the QA test domain. No provider send, WhatsApp message or AI call.
   `mobile-auth.test.ts`). Untouched failures: `store-conversations.test.ts`
   (its mock lacks the plan check that bootstrap now runs) and six storefront
   route tests that need a database address.
+
+## Runtime run 13: preferred time (L05)
+
+16 November 2026, same runtime as run 12, plus 3b8a62ba4 hot-reloaded in the
+storefront and dashboard. Synthetic guest, contact and quote; no provider send.
+
+- **Change, 3b8a62ba4.** The Store chat request form has an optional
+  "Preferred day and time", both or neither. They are read in the business's
+  time zone and stored as the request's preferred time. A past time, or one
+  more than six months away, is refused with a message on the form. The
+  dashboard shows "Prefers …" under Received in Customer requests and on the
+  request; website day-only preferences still show as a day.
+- **L05 → PASS.** A day without a time was refused with the message. Laundry ×
+  1 for 18 Nov 2026, 10:30 went through, stored as 09:30 UTC (Lagos is UTC+1).
+  The owner saw "Prefers 18 Nov 2026, 10:30" in the list and on the request,
+  then created a ₦1,000 test quote. The customer opened the quote link, saw
+  the line and the agreed scope, and accepted it: "Quote accepted. Your order
+  was created once."
+- **Limits.** The API on 3095 was not restarted for this run. After any error
+  the form comes back empty (existing behaviour). The customer still sees the
+  internal Store name "Main store".
+- **Tests.** New preferred-time unit tests pass (4), the existing chat request
+  tests pass (19) and service-commerce passes (198). Storefront typecheck is
+  clean; dashboard and DB typecheck errors remain only in untouched files
+  (`shipment-steps.fixture.tsx`, `catalog-option-photos.integration.test.ts`,
+  `mobile-auth.test.ts`).
