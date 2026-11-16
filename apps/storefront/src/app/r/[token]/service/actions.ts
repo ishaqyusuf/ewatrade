@@ -7,6 +7,7 @@ import { notFound, redirect } from "next/navigation"
 import { prisma } from "@ewatrade/db"
 import {
   StoreConversationError,
+  StoreConversationServicePreferenceError,
   getStoreEntryServiceRequestForm,
   startStoreConversationServiceRequest,
   submitStoreConversationServiceRequest,
@@ -32,6 +33,8 @@ export async function submitStoreConversationServiceAction(data: FormData) {
     customerPhone: value(data, "customerPhone") || undefined,
     details: value(data, "details") || undefined,
     messageId: existingMessageId || clientOperationId,
+    preferredDate: value(data, "preferredDate") || undefined,
+    preferredTime: value(data, "preferredTime") || undefined,
     publicToken: value(data, "publicToken"),
   })
   if (!parsed.success) notFound()
@@ -97,6 +100,9 @@ export async function submitStoreConversationServiceAction(data: FormData) {
         clientOperationId,
       })
   } catch (error) {
+    if (error instanceof StoreConversationServicePreferenceError) {
+      redirect(`${returnTo}&error=time`)
+    }
     if (
       isPublicServiceUnavailable(error) ||
       error instanceof StoreConversationError

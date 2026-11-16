@@ -23,6 +23,18 @@ export function formatPrice(value: number | null, currencyCode: string) {
   }).format(value / 100)
 }
 
+/** A customer's preferred day, or day and time, in the business's time zone. */
+export function formatPreferred(
+  value: string | Date,
+  dateOnly: boolean,
+  timeZone = "Africa/Lagos",
+) {
+  return new Intl.DateTimeFormat("en-NG", {
+    dateStyle: "medium",
+    ...(dateOnly ? { timeZone: "UTC" } : { timeStyle: "short", timeZone }),
+  }).format(new Date(value))
+}
+
 export function formatDue(
   value: string | Date | null,
   timeZone = "Africa/Lagos",

@@ -234,7 +234,7 @@ export async function listServiceRequests(
         },
       },
       requestForm: { select: { label: true } },
-      storefrontContext: { select: { reference: true } },
+      storefrontContext: { select: { preferredTime: true, reference: true } },
     },
     orderBy: { createdAt: "desc" },
     take: Math.min(Math.max(input.limit ?? 100, 1), 200),
@@ -287,6 +287,13 @@ export async function listServiceRequests(
       // Storefront receipt reference (S-…); null for requests from other channels.
       reference: request.storefrontContext?.reference ?? null,
       requestedAt: request.requestedAt,
+      // Website requests may carry a day only (stored at UTC noon); every
+      // other preference is an exact time.
+      requestedAtDateOnly: Boolean(
+        request.requestedAt &&
+          request.storefrontContext &&
+          !request.storefrontContext.preferredTime,
+      ),
       staffResponse: request.staffResponse,
       status: request.status,
       storeId: request.storeId,

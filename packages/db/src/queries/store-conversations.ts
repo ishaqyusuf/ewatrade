@@ -94,6 +94,7 @@ export {
   type GuestStoreConversationAttachmentUploadProjection,
 } from "./store-conversation-attachments"
 export {
+  StoreConversationServicePreferenceError,
   getStoreEntryServiceRequestForm,
   submitStoreConversationServiceRequest,
 } from "./store-conversation-service-intake"

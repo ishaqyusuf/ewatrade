@@ -10,7 +10,10 @@ import {
   assertGuestAgeAuthority,
 } from "./store-conversation-age-authority"
 import { assertGuestStoreConversationTermsAccepted } from "./store-conversation-guest-terms"
-import { getStoreEntryServiceRequestForm } from "./store-conversation-service-intake"
+import {
+  getStoreEntryServiceRequestForm,
+  resolveStoreConversationPreferredTime,
+} from "./store-conversation-service-intake"
 import { assertStoreConversationTextScreened } from "./store-conversation-text-safety"
 import {
   StoreConversationError,
@@ -43,6 +46,14 @@ const schema = z
       )
       .min(1)
       .max(96),
+    preferredDate: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/)
+      .optional(),
+    preferredTime: z
+      .string()
+      .regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/)
+      .optional(),
   })
   .refine(
     (input) => Boolean(input.credentialToken) !== Boolean(input.accountUserId),
@@ -190,6 +201,11 @@ export async function startStoreConversationServiceRequest(
   const form = await getStoreEntryServiceRequestForm(db, {
     publicToken: input.publicToken,
   })
+  const requestedAt = await resolveStoreConversationPreferredTime(db, {
+    preferredDate: input.preferredDate,
+    preferredTime: input.preferredTime,
+    tenantId: form.tenantId,
+  })
   return submitPublicServiceRequest(
     db,
     {
@@ -199,6 +215,7 @@ export async function startStoreConversationServiceRequest(
       customerPhone: input.customerPhone,
       details: input.details,
       lines: input.lines,
+      requestedAt,
       expectedScope: { storeId: form.storeId, tenantId: form.tenantId },
       formId: form.formId,
       intakeContext: {

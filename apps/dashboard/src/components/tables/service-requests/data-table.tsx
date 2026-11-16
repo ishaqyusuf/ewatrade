@@ -5,6 +5,7 @@ import { FormFeedback } from "@/components/forms/form-feedback"
 import { useServiceRequestFilters } from "@/components/service-work/service-request-search-filter"
 import {
   type ServiceRequest,
+  formatPreferred,
   formatPrice,
   formatWhen,
   isOpenRequest,
@@ -142,7 +143,21 @@ export function ServiceRequestsDataTable({
     {
       id: "received",
       header: "Received",
-      cell: ({ row }) => formatWhen(row.original.createdAt, timeZone),
+      cell: ({ row }) => (
+        <div>
+          <p>{formatWhen(row.original.createdAt, timeZone)}</p>
+          {row.original.requestedAt ? (
+            <p className="text-xs text-muted-foreground">
+              Prefers{" "}
+              {formatPreferred(
+                row.original.requestedAt,
+                row.original.requestedAtDateOnly,
+                timeZone,
+              )}
+            </p>
+          ) : null}
+        </div>
+      ),
     },
     {
       id: "quote",

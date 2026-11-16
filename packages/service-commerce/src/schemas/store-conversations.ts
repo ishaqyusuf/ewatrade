@@ -289,6 +289,14 @@ export const storeConversationServiceContinuationSchema = z
     customerPhone: z.string().trim().min(3).max(40).optional(),
     details: z.string().trim().max(2_000).optional(),
     messageId: opaqueIdSchema,
+    preferredDate: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/)
+      .optional(),
+    preferredTime: z
+      .string()
+      .regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/)
+      .optional(),
     publicToken: z.string().trim().min(32).max(200),
   })
   .refine((input) => input.customerEmail || input.customerPhone, {

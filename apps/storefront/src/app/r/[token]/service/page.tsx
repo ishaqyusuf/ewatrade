@@ -63,9 +63,11 @@ export default async function StoreConversationServicePage({
       ? "Choose at least one service and enter a quantity."
       : query.error === "contact"
         ? "Enter your name and either a phone number or email address."
-        : query.error
-          ? "This Request could not be linked. Return to the conversation and try again."
-          : null
+        : query.error === "time"
+          ? "Choose both a day and a time, later than now and within six months, or leave both empty."
+          : query.error
+            ? "This Request could not be linked. Return to the conversation and try again."
+            : null
 
   return (
     <main className="min-h-screen bg-background text-foreground">
@@ -171,6 +173,30 @@ export default async function StoreConversationServicePage({
               Choose another service
             </a>
           ) : null}
+          <fieldset className="grid gap-4 border border-border p-5">
+            <legend className="px-1 font-semibold">
+              Preferred day and time (optional)
+            </legend>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <label className="grid gap-1 text-sm">
+                Day
+                <input
+                  className="h-11 border border-border bg-background px-3 text-sm"
+                  name="preferredDate"
+                  type="date"
+                />
+              </label>
+              <label className="grid gap-1 text-sm">
+                Time
+                <input
+                  className="h-11 border border-border bg-background px-3 text-sm"
+                  name="preferredTime"
+                  step={900}
+                  type="time"
+                />
+              </label>
+            </div>
+          </fieldset>
           <section className="grid gap-4 border border-border p-5">
             <h2 className="font-semibold">Contact details</h2>
             <input

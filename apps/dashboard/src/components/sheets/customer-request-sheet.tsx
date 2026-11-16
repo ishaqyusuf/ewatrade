@@ -5,6 +5,7 @@ import { FormFeedback } from "@/components/forms/form-feedback"
 import { ServiceQuoteForm } from "@/components/service-work/service-quote-form"
 import {
   formatDue,
+  formatPreferred,
   formatPrice,
   isOpenRequest,
   requestStatus,
@@ -351,6 +352,18 @@ function CustomerRequestContent({
             <>
               <dt className="text-muted-foreground">They wrote</dt>
               <dd className="whitespace-pre-line">“{request.details}”</dd>
+            </>
+          ) : null}
+          {request.requestedAt ? (
+            <>
+              <dt className="text-muted-foreground">Prefers</dt>
+              <dd>
+                {formatPreferred(
+                  request.requestedAt,
+                  request.requestedAtDateOnly,
+                  timeZone,
+                )}
+              </dd>
             </>
           ) : null}
           <dt className="text-muted-foreground">Contact</dt>

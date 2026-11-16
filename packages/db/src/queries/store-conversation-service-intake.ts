@@ -18,7 +18,48 @@ import {
   resolveStoreConversationGuestCredential,
 } from "./store-conversations-core"
 import { attachStoreConversationTypedRequestInTransaction } from "./store-conversations-requests"
+import { storefrontPreferredTime } from "./storefront-preferred-date"
 import type { DbClient } from "./types"
+
+/** A preferred day and time the customer can correct on the request form. */
+export class StoreConversationServicePreferenceError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = "StoreConversationServicePreferenceError"
+  }
+}
+
+/**
+ * The customer's preferred day and time, read in the business's time zone.
+ * Both or neither: a day alone would be stored as a misleading time.
+ */
+export async function resolveStoreConversationPreferredTime(
+  db: DbClient,
+  input: { preferredDate?: string; preferredTime?: string; tenantId: string },
+  now = new Date(),
+) {
+  if (!input.preferredDate && !input.preferredTime) return undefined
+  if (!input.preferredDate || !input.preferredTime)
+    throw new StoreConversationServicePreferenceError(
+      "Choose both a day and a time, or leave both empty.",
+    )
+  const tenant = await db.tenant.findUniqueOrThrow({
+    select: { timezone: true },
+    where: { id: input.tenantId },
+  })
+  try {
+    return storefrontPreferredTime(
+      input.preferredDate,
+      input.preferredTime,
+      tenant.timezone,
+      now,
+    )
+  } catch (error) {
+    if (error instanceof RangeError)
+      throw new StoreConversationServicePreferenceError(error.message)
+    throw error
+  }
+}
 
 export async function getStoreEntryServiceRequestForm(
   db: PrismaClient,
@@ -84,6 +125,8 @@ export async function submitStoreConversationServiceRequest(
     details?: string
     lines: Array<{ offeringId: string; quantity: string }>
     messageId: string
+    preferredDate?: string
+    preferredTime?: string
     publicToken: string
   },
 ) {
@@ -146,6 +189,11 @@ export async function submitStoreConversationServiceRequest(
   const form = await getStoreEntryServiceRequestForm(db, {
     publicToken: input.publicToken,
   })
+  const requestedAt = await resolveStoreConversationPreferredTime(db, {
+    preferredDate: input.preferredDate,
+    preferredTime: input.preferredTime,
+    tenantId: form.tenantId,
+  })
   return submitPublicServiceRequest(
     db,
     {
@@ -162,6 +210,7 @@ export async function submitStoreConversationServiceRequest(
         kind: "entry_point",
       },
       lines: input.lines,
+      requestedAt,
     },
     {
       onRequest: (tx, request) =>
