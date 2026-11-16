@@ -10,7 +10,7 @@ has the status, evidence and limitation for each case.
 
 ## Scorecard
 
-Current, 16 November 2026, after runtime runs 1–13, all of T1–T8 landing, and the
+Current, 16 November 2026, after runtime runs 1–14, all of T1–T8 landing, and the
 owner's instruction to keep data-dependent retail cases blocked:
 
 | Business | Passed | Fail | Blocked | Not assessed |
@@ -654,3 +654,33 @@ storefront and dashboard. Synthetic guest, contact and quote; no provider send.
   clean; dashboard and DB typecheck errors remain only in untouched files
   (`shipment-steps.fixture.tsx`, `catalog-option-photos.integration.test.ts`,
   `mobile-auth.test.ts`).
+
+## Runtime run 14: follow-up fixes
+
+16 November 2026, same local runtime, after the owner asked to fix the open
+findings. The score is unchanged at 16/72.
+
+- **Request form keeps entries (eef9c80b0).** A refused day without a time
+  showed the message and kept the quantity, day, name, phone and details,
+  with nothing personal in the address. A corrected submit went through.
+- **Business name (4d8c986a5).** The chat, the request form and the quote
+  now lead with the business name. Heritage has two active Stores, so they
+  read "Heritage Wash & Care QA · Main store"; a one-Store business shows
+  its name alone.
+- **Attachments (21efdd866).** For a Store with attachments off, the
+  capability now answers "not available" (200, blockers
+  `attachments_disabled`, `policy_restricted`,
+  `private_media_provider_unavailable`) instead of a 409, so the composer
+  shows attachments as unavailable without an error.
+- **Tracking (264815c6c).** A local one-hour tracking link for completed
+  ORD-007 shows the line as "Completed", not "Ready".
+- **Placeholders (6cc693d7b).** The request link name, expense and stock-use
+  placeholders no longer show farm or poultry examples.
+- **Tests (449cc19cb).** Five quote tests broken by the ordinary-service
+  default now close policy with a current restriction. Stale fixtures were
+  repaired (Terms date, variant, plan and advisory-lock reads), along with
+  two type-only test errors and two outside this work (growth seed script,
+  shipment fixture). 448 affected DB tests and 198 service-commerce tests
+  pass; DB, storefront, dashboard and API typechecks are clean. API
+  attachment and six storefront route tests still need a database address
+  in the shell.
