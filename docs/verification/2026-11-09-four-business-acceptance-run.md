@@ -10,7 +10,7 @@ has the status, evidence and limitation for each case.
 
 ## Scorecard
 
-Current, 15 November 2026, after runtime runs 1–11, all of T1–T8 landing, and the
+Current, 16 November 2026, after runtime runs 1–12, all of T1–T8 landing, and the
 owner's instruction to keep data-dependent retail cases blocked:
 
 | Business | Passed | Fail | Blocked | Not assessed |
@@ -592,3 +592,39 @@ then decided that ordinary services should be "Allow by default".
   `packages/db/src/queries/service-commerce-catalog.test.ts` (private draft
   graph) fails because its mock DB lacks the `$executeRaw` now used by
   `retail-ops-subscriptions.ts`.
+
+## Runtime run 12: Store chat fix (L05)
+
+16 November 2026, storefront-qa-otp on 3091 (next dev with 57daf25e3), qa-api on
+3095, dashboard next dev. Heritage Wash & Care QA, synthetic guest and contact
+details on the QA test domain. No provider send, WhatsApp message or AI call.
+
+- **Cause.** The page started two chat loads at once (React runs the start-up
+  effect twice in development). Their serializable timeline transactions
+  collided, and Postgres rejected one at commit. The adapter reports that as a
+  raw `DriverAdapterError` (40001), which the Store chat retry check did not
+  recognise, so the timeline route answered 503. A stale load could also
+  overwrite the good one.
+- **Fix, 57daf25e3.** The retry check now treats the adapter's commit conflict
+  like P2034. The chat hook aborts and ignores an outdated load. A new test
+  covers the adapter error. The realtime fixtures now close web chat with an
+  explicit restriction, because ordinary service chat is open by default since
+  ADR-0075.
+- **Rerun.** The chat opens with one bootstrap and one timeline, and polling
+  settles at about one request every two seconds. A reload also opens it. The
+  guest declared 18+, accepted the Terms, opened Request a service and sent
+  Laundry × 2 with name, phone, email and details. The chat shows "Service
+  request submitted · Received". The owner's dashboard lists it under Customer
+  requests as New, Price to quote.
+- **L05 stays FAIL, narrower.** The Store chat request form has no preferred
+  time, and the request stores none, so the case's preferred time can only go
+  in the free-text details. The quote step was not exercised.
+- **Minor.** The customer still sees the internal Store name "Main store". An
+  attachment capability call returns 409 and shows "This attachment changed or
+  is not ready" under the composer.
+- **Tests.** The transaction conflict tests pass (23). Storefront and DB
+  typechecks pass for the changed files; DB typecheck errors remain in two
+  untouched tests (`catalog-option-photos.integration.test.ts`,
+  `mobile-auth.test.ts`). Untouched failures: `store-conversations.test.ts`
+  (its mock lacks the plan check that bootstrap now runs) and six storefront
+  route tests that need a database address.
