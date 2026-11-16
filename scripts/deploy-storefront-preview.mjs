@@ -221,6 +221,8 @@ function prepareStage(stage) {
       [
         "-a",
         "--exclude=node_modules",
+        "--exclude=.next",
+        "--exclude=.turbo",
         "--exclude=.vercel",
         "--exclude=.env*",
         "--exclude=.git",
