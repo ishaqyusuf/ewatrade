@@ -19,6 +19,17 @@ const currentError = (code = "P2034", meta?: Record<string, unknown>) =>
     clientVersion: "7.6.0-fixture",
     meta,
   })
+/** The adapter can reject COMMIT directly, outside Prisma's error mapping. */
+const driverAdapterCommitConflict = () =>
+  Object.assign(new Error("TransactionWriteConflict"), {
+    name: "DriverAdapterError",
+    cause: {
+      kind: "TransactionWriteConflict",
+      originalCode: "40001",
+      originalMessage:
+        "could not serialize access due to read/write dependencies among transactions",
+    },
+  })
 const quoteInput = {
   actorUserId: "actor-fixture",
   availabilityOutcome: "unavailable",
@@ -179,8 +190,9 @@ describe("bounded transaction retries across Prisma constructor identities", () 
   for (const error of [
     currentError("P2002"),
     currentError("P2010", { code: "40001" }),
+    driverAdapterCommitConflict(),
   ]) {
-    test(`conversation's existing ${error.code} retry still uses the original bound`, async () => {
+    test(`conversation's ${"code" in error ? error.code : error.name} retry uses the original bound`, async () => {
       const { db, options } = failingClient(error)
       await expect(
         runStoreConversationActionTransaction(db, async () => "unused"),

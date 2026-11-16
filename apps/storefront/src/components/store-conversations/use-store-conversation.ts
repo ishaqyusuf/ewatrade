@@ -157,6 +157,9 @@ export function useStoreConversation(
   const stateRef = useRef(state)
   stateRef.current = state
   const accessRef = useRef<ConversationAccess>("guest")
+  // Only the latest bootstrap may set state; an older overlapping run (React
+  // re-running the effect, or a retry) must not overwrite it with its outcome.
+  const bootstrapRunRef = useRef(0)
   const operationIdRef = useRef<string | null>(null)
   const acknowledgedSequenceRef = useRef(0)
   const progressOperationRef = useRef<{
@@ -184,8 +187,8 @@ export function useStoreConversation(
     async (
       conversation: Conversation,
       access: ConversationAccess = accessRef.current,
+      run?: { isCurrent: () => boolean; signal?: AbortSignal },
     ) => {
-      accessRef.current = access
       const params = new URLSearchParams({
         access,
         conversationId: conversation.id,
@@ -194,8 +197,11 @@ export function useStoreConversation(
       const timeline = await parseResponse<StoreConversationTimelineProjection>(
         await fetch(`/api/store-conversations/timeline?${params}`, {
           cache: "no-store",
+          signal: run?.signal,
         }),
       )
+      if (run && !run.isCurrent()) return
+      accessRef.current = access
       setState({ ...timeline, access, kind: "ready" })
     },
     [publicToken],
@@ -582,7 +588,10 @@ export function useStoreConversation(
   ])
 
   const bootstrap = useCallback(
-    async (resetGuest = false) => {
+    async (resetGuest = false, signal?: AbortSignal) => {
+      const runId = ++bootstrapRunRef.current
+      const isCurrent = () =>
+        bootstrapRunRef.current === runId && !signal?.aborted
       setDraft("")
       setRestoredAttachmentKind(null)
       setDraftHydratedScope(null)
@@ -602,14 +611,21 @@ export function useStoreConversation(
               }),
               headers: { "content-type": "application/json" },
               method: "POST",
+              signal,
             }),
           )
         let result = await requestBootstrap()
+        if (!isCurrent()) return
         if (result.rotationPrepared) {
           result = await requestBootstrap()
+          if (!isCurrent()) return
         }
-        await loadTimeline(result.conversation, result.access)
+        await loadTimeline(result.conversation, result.access, {
+          isCurrent,
+          signal,
+        })
       } catch (error) {
+        if (!isCurrent()) return
         setState({
           code:
             error instanceof Error && "code" in error
@@ -627,7 +643,9 @@ export function useStoreConversation(
   )
 
   useEffect(() => {
-    void bootstrap(initialResetGuest)
+    const controller = new AbortController()
+    void bootstrap(initialResetGuest, controller.signal)
+    return () => controller.abort()
   }, [bootstrap, initialResetGuest])
 
   const openWhatsAppBridge = useCallback(async () => {

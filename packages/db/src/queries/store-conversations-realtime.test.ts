@@ -15,6 +15,23 @@ function dbClient(client: Record<string, unknown>) {
 const credentialToken = "customer-credential-token-that-is-at-least-32"
 const publicToken = "public-entry-token-that-is-at-least-32-characters"
 
+function webChatRestriction() {
+  return {
+    approvalReference: "fixture-approval",
+    channel: "WEB",
+    effectiveAt: new Date("2026-01-01T00:00:00.000Z"),
+    evidenceReference: "fixture-evidence",
+    expiresAt: new Date("2030-01-01T00:00:00.000Z"),
+    id: "decision_web_restricted",
+    jurisdictionCode: "NG",
+    outcome: "RESTRICTED",
+    revision: 1,
+    revokedAt: null,
+    subject: "WEB",
+    vertical: "SERVICE",
+  }
+}
+
 function guestDependencies() {
   return {
     customerEntryPoint: {
@@ -27,7 +44,11 @@ function guestDependencies() {
       }),
     },
     serviceCommercePolicyAuditEvent: { createMany: async () => ({ count: 1 }) },
-    serviceCommercePolicyDecision: { findMany: async () => [] },
+    // Ordinary web service chat is open by default (ADR-0075), so these
+    // fixtures close it with a current release-owner restriction.
+    serviceCommercePolicyDecision: {
+      findMany: async () => [webChatRestriction()],
+    },
     serviceCommerceStoreProfile: {
       findFirst: async () => ({
         intakeEnabled: true,

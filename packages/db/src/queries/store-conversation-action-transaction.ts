@@ -1,30 +1,21 @@
 import { Prisma, type PrismaClient } from "../../generated/prisma/client"
 import { isPrismaTransactionWriteConflict } from "../utils/prisma-transaction-conflict"
+import { isOwnSerializationConflict } from "./own-transaction"
 import { CUSTOMER_ACTION_TRANSACTION_OPTIONS } from "./service-commerce-actions/shared"
 import { StoreConversationError } from "./store-conversations-core"
 
-function objectProperty(value: unknown, property: string) {
-  return typeof value === "object" && value !== null
-    ? Reflect.get(value, property)
-    : undefined
-}
-
+/**
+ * Serialization conflicts arrive as P2034, as P2010 with code 40001, or, when
+ * the adapter rejects the commit itself, as a raw DriverAdapterError.
+ */
 export function isRetryableStoreConversationActionTransactionError(
   error: unknown,
 ) {
   if (isPrismaTransactionWriteConflict(error)) return true
-  if (!(error instanceof Prisma.PrismaClientKnownRequestError)) return false
-  if (error.code === "P2002") return true
-  if (error.code !== "P2010") return false
-
-  const metadataCode = objectProperty(error.meta, "code")
-  const driverError = objectProperty(error.meta, "driverAdapterError")
-  const driverCause = objectProperty(driverError, "cause")
-  const driverCauseKind = objectProperty(driverCause, "kind")
+  if (isOwnSerializationConflict(error)) return true
   return (
-    metadataCode === "40001" ||
-    driverCauseKind === "TransactionWriteConflict" ||
-    error.message.includes("Code: `40001`")
+    error instanceof Prisma.PrismaClientKnownRequestError &&
+    error.code === "P2002"
   )
 }
 
