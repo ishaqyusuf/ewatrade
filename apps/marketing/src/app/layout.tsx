@@ -28,7 +28,9 @@ export const metadata: Metadata = {
   title: "EwaTrade — Come. Trade. Together.",
   description:
     "The products you sell, the orders you take, and the work that follows. One connected place to keep your business moving.",
-  metadataBase: new URL("https://ewatrade.com"),
+  // Canonical host: the apex 308-redirects here, and WhatsApp drops
+  // og:image URLs that redirect.
+  metadataBase: new URL("https://www.ewatrade.com"),
   openGraph: {
     title: "EwaTrade — Come. Trade. Together.",
     description:

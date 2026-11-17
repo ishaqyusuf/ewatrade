@@ -328,7 +328,7 @@ function publicVideoUrl(value?: string) {
   if (!value) return undefined
   try {
     // Matches the marketing layout's canonical metadataBase.
-    const url = new URL(value, "https://ewatrade.com")
+    const url = new URL(value, "https://www.ewatrade.com")
     return /^https?:$/.test(url.protocol) ? url.href : undefined
   } catch {
     return undefined

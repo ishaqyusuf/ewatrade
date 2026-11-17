@@ -29,8 +29,8 @@ function isInternalQaBuild(env = process.env) {
 }
 
 const nextConfig: NextConfig = {
-  // Deliver marketing styles with the document to avoid render-blocking round trips.
-  experimental: { inlineCss: true },
+  // Do not inline CSS: the shared stylesheet is ~370KB, which pushed the
+  // Open Graph tags past WhatsApp's 300KB head limit and broke link previews.
   logging: { incomingRequests: { ignore: onboardingRequestLogIgnore } },
   async rewrites() {
     return [

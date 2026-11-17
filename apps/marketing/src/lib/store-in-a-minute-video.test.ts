@@ -283,8 +283,8 @@ test("same-origin video metadata uses absolute canonical URLs", () => {
       }),
     ),
   ).toMatchObject({
-    contentUrl: "https://ewatrade.com/video/web.m3u8",
-    thumbnailUrl: ["https://ewatrade.com/video/web.jpg"],
+    contentUrl: "https://www.ewatrade.com/video/web.m3u8",
+    thumbnailUrl: ["https://www.ewatrade.com/video/web.jpg"],
   })
   expect(
     getStoreInAMinuteJsonLd(
