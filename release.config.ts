@@ -10,6 +10,7 @@ const featuresOff = [
   // must not block an Apple-only deployment; runtime checks still refuse it.
   "PAYSTACK_SECRET_KEY",
   "PAYSTACK_SUBSCRIPTION_SECRET_KEY",
+  "PAYSTACK_SUBSCRIPTION_WEBHOOK_SECRET", // whsec_; signs Paystack-Signature
   "WEB_BILLING_ENVIRONMENT",
   // Paid-owner privacy review remains default-off until its exact policy and
   // operational acceptance are installed; source deployment does not enable it.

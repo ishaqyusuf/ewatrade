@@ -5,6 +5,7 @@ import {
   isWebCheckoutEnabled,
   isWebProviderConfigured,
   isWebReconciliationConfigured,
+  paystackWebhookSecrets,
   webBillingCountry,
   webBillingOwnerCountry,
   webBillingProduct,
@@ -14,6 +15,7 @@ import { webMonthlyPriceReference } from "./pricing"
 import {
   WebSubscriptionClient,
   hostedCheckoutUrl,
+  verifyPaystackSignatureHeader,
   verifyPaystackSubscriptionWebhook,
 } from "./providers"
 
@@ -507,4 +509,66 @@ test("software subscriptions require their scoped merchant credential and never 
       PAYSTACK_SUBSCRIPTION_SECRET_KEY: "sk_live_fixture",
     }),
   ).toBe(false)
+})
+
+test("a Live restricted key needs the webhook signing secret because it signs nothing", () => {
+  const live = {
+    WEB_BILLING_ENVIRONMENT: "production",
+    PAYSTACK_SUBSCRIPTION_SECRET_KEY: "rk_live_fixture",
+  }
+  expect(isWebProviderConfigured("paystack", live)).toBe(false)
+  const signed = {
+    ...live,
+    PAYSTACK_SUBSCRIPTION_WEBHOOK_SECRET: "whsec_fixture",
+  }
+  expect(isWebProviderConfigured("paystack", signed)).toBe(true)
+  expect(paystackWebhookSecrets(signed)).toEqual([
+    { kind: "signing", secret: "whsec_fixture" },
+  ])
+  expect(
+    isWebProviderConfigured("paystack", {
+      ...signed,
+      PAYSTACK_SUBSCRIPTION_SECRET_KEY: "rk_test_fixture",
+    }),
+  ).toBe(false)
+  expect(
+    isWebProviderConfigured("paystack", {
+      ...signed,
+      PAYSTACK_SUBSCRIPTION_SECRET_KEY: "pk_live_fixture",
+    }),
+  ).toBe(false)
+  expect(
+    paystackWebhookSecrets({
+      PAYSTACK_SUBSCRIPTION_SECRET_KEY: "sk_live_fixture",
+    }),
+  ).toEqual([{ kind: "legacy", secret: "sk_live_fixture" }])
+})
+
+test("Paystack-Signature checks every v1 entry inside the five-minute window", () => {
+  const body = '{"event":"charge.success", "data":{}}'
+  const t = 1_760_270_400
+  const sign = (secret: string) =>
+    createHmac("sha512", secret).update(`${t}.`).update(body).digest("hex")
+  const header = `t=${t},v1=whk_old:${sign("whsec_old")},v1=whk_new:${sign("whsec_new")}`
+  expect(
+    verifyPaystackSignatureHeader(body, header, "whsec_new", t + 300),
+  ).toBe(true)
+  expect(
+    verifyPaystackSignatureHeader(body, header, "whsec_old", t - 300),
+  ).toBe(true)
+  expect(
+    verifyPaystackSignatureHeader(body, header, "whsec_new", t + 301),
+  ).toBe(false)
+  expect(
+    verifyPaystackSignatureHeader(
+      body.replace(" ", ""),
+      header,
+      "whsec_new",
+      t,
+    ),
+  ).toBe(false)
+  expect(
+    verifyPaystackSignatureHeader(body, `t=${t},t=${t}`, "whsec_new", t),
+  ).toBe(false)
+  expect(verifyPaystackSignatureHeader(body, null, "whsec_new", t)).toBe(false)
 })

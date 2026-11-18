@@ -96,14 +96,32 @@ export function isWebProviderConfigured(
 ) {
   const environment = webBillingEnvironment(env)
   if (!environment) return false
+  // Any server key for the mode (secret sk_ or restricted); never a public pk_.
+  // Live accounts on restricted keys have no sk_ at all.
+  const mode = environment === "production" ? "live" : "test"
   return (
     provider === "paystack" &&
-    Boolean(
-      env.PAYSTACK_SUBSCRIPTION_SECRET_KEY?.startsWith(
-        environment === "production" ? "sk_live_" : "sk_test_",
-      ),
-    )
+    new RegExp(`^(?!pk_)[a-z]{2}_${mode}_[A-Za-z0-9]`).test(
+      env.PAYSTACK_SUBSCRIPTION_SECRET_KEY ?? "",
+    ) &&
+    paystackWebhookSecrets(env).length > 0
   )
+}
+
+/**
+ * Secrets that authenticate Paystack events. The signing secret (whsec_) signs
+ * `Paystack-Signature`; only a full secret key (sk_) signs the legacy
+ * `x-paystack-signature`. A restricted key signs nothing.
+ */
+export function paystackWebhookSecrets(env: BillingEnvironment = process.env) {
+  const secrets: Array<{ kind: "signing" | "legacy"; secret: string }> = []
+  const signing = env.PAYSTACK_SUBSCRIPTION_WEBHOOK_SECRET?.trim() ?? ""
+  if (/^whsec_[A-Za-z0-9_]+$/.test(signing))
+    secrets.push({ kind: "signing", secret: signing })
+  const key = env.PAYSTACK_SUBSCRIPTION_SECRET_KEY?.trim() ?? ""
+  if (/^sk_(live|test)_/.test(key))
+    secrets.push({ kind: "legacy", secret: key })
+  return secrets
 }
 
 export function isWebCheckoutEnabled(env: BillingEnvironment = process.env) {

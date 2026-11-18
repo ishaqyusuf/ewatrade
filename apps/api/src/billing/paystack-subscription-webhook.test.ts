@@ -8,27 +8,28 @@ function fixture() {
   const app = new OpenAPIHono()
   registerPaystackSubscriptionWebhook(app, {
     configured: () => state.configured,
-    secret: () => "fixture-secret",
+    secrets: () => [
+      { kind: "signing", secret: "whsec_fixture" },
+      { kind: "legacy", secret: "fixture-secret" },
+    ],
     process: async (payload) => {
       state.calls.push(payload)
       if (state.fail) throw new Error("private provider payload")
     },
   })
+  const request = (body: string, headers: Record<string, string>) =>
+    app.request("/api/billing/webhooks/paystack", {
+      method: "POST",
+      body,
+      headers: { "Content-Type": "application/json", ...headers },
+    })
   const send = (
     body: string,
     signature: string | null = createHmac("sha512", "fixture-secret")
       .update(body)
       .digest("hex"),
-  ) =>
-    app.request("/api/billing/webhooks/paystack", {
-      method: "POST",
-      body,
-      headers: {
-        "Content-Type": "application/json",
-        ...(signature ? { "x-paystack-signature": signature } : {}),
-      },
-    })
-  return { state, send }
+  ) => request(body, signature ? { "x-paystack-signature": signature } : {})
+  return { state, send, request }
 }
 
 test("the webhook authenticates raw bytes before parsing or processing any receipt", async () => {
@@ -43,6 +44,23 @@ test("the webhook authenticates raw bytes before parsing or processing any recei
   expect(state.calls).toHaveLength(0)
   expect((await send("invalid json")).status).toBe(400)
   expect((await send(body)).status).toBe(200)
+  expect(state.calls).toEqual([JSON.parse(body)])
+})
+
+test("Paystack-Signature events authenticate with the signing secret and reject replays", async () => {
+  const { state, request } = fixture()
+  const body = '{"event":"charge.success","data":{"reference":"signed"}}'
+  const now = Math.floor(Date.now() / 1000)
+  const header = (t: number, secret = "whsec_fixture") =>
+    `t=${t},v1=whk_fixture:${createHmac("sha512", secret)
+      .update(`${t}.`)
+      .update(body)
+      .digest("hex")}`
+  const post = (value: string) => request(body, { "paystack-signature": value })
+  expect((await post(header(now - 301))).status).toBe(401)
+  expect((await post(header(now, "whsec_other"))).status).toBe(401)
+  expect(state.calls).toHaveLength(0)
+  expect((await post(header(now))).status).toBe(200)
   expect(state.calls).toEqual([JSON.parse(body)])
 })
 

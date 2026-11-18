@@ -194,3 +194,42 @@ export function verifyPaystackSubscriptionWebhook(
   const expected = createHmac("sha512", secret).update(body).digest()
   return timingSafeEqual(expected, Buffer.from(signature, "hex"))
 }
+
+const PAYSTACK_SIGNATURE_TOLERANCE_SECONDS = 300
+
+/** Verifies `Paystack-Signature: t=<unix>,v1=<kid>:<hex>[,v1=…]` (HMAC SHA512 of `t.body`). */
+export function verifyPaystackSignatureHeader(
+  body: string,
+  header: string | null,
+  secret: string,
+  now = Math.floor(Date.now() / 1000),
+) {
+  if (!secret.trim() || !header) return false
+  let timestamp: number | null = null
+  const signatures: string[] = []
+  for (const part of header.split(",")) {
+    const separator = part.indexOf("=")
+    if (separator === -1) continue
+    const key = part.slice(0, separator).trim()
+    const value = part.slice(separator + 1).trim()
+    if (key === "t") {
+      if (timestamp !== null || !/^[0-9]+$/.test(value)) return false
+      timestamp = Number(value)
+    } else if (key === "v1") {
+      const colon = value.indexOf(":")
+      if (colon !== -1) signatures.push(value.slice(colon + 1))
+    }
+  }
+  if (timestamp === null || signatures.length === 0) return false
+  if (Math.abs(now - timestamp) > PAYSTACK_SIGNATURE_TOLERANCE_SECONDS)
+    return false
+  const expected = createHmac("sha512", secret)
+    .update(`${timestamp}.`)
+    .update(body)
+    .digest()
+  return signatures.some(
+    (hex) =>
+      /^[0-9a-f]{128}$/.test(hex) &&
+      timingSafeEqual(expected, Buffer.from(hex, "hex")),
+  )
+}

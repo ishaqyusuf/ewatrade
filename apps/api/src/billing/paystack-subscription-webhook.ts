@@ -1,6 +1,8 @@
 import { prisma } from "@ewatrade/db"
 import {
   isWebReconciliationConfigured,
+  paystackWebhookSecrets,
+  verifyPaystackSignatureHeader,
   verifyPaystackSubscriptionWebhook,
 } from "@ewatrade/payments/web-subscriptions"
 import type { OpenAPIHono } from "@hono/zod-openapi"
@@ -11,11 +13,11 @@ export function registerPaystackSubscriptionWebhook(
   app: OpenAPIHono,
   dependencies: {
     configured: () => boolean
-    secret: () => string
+    secrets: () => Array<{ kind: "signing" | "legacy"; secret: string }>
     process: (payload: unknown) => Promise<void>
   } = {
     configured: () => isWebReconciliationConfigured(),
-    secret: () => process.env.PAYSTACK_SUBSCRIPTION_SECRET_KEY ?? "",
+    secrets: () => paystackWebhookSecrets(),
     process: (payload) => processPaystackSubscriptionEvent(prisma, payload),
   },
 ) {
@@ -32,13 +34,16 @@ export function registerPaystackSubscriptionWebhook(
       const raw = await c.req.text()
       if (new TextEncoder().encode(raw).length > 256_000)
         return c.json({ error: "Event too large." }, 413)
-      if (
-        !verifyPaystackSubscriptionWebhook(
-          raw,
-          c.req.header("x-paystack-signature") ?? null,
-          dependencies.secret(),
+      const signature = c.req.header("paystack-signature") ?? null
+      const legacySignature = c.req.header("x-paystack-signature") ?? null
+      const authentic = dependencies
+        .secrets()
+        .some(({ kind, secret }) =>
+          kind === "signing"
+            ? verifyPaystackSignatureHeader(raw, signature, secret)
+            : verifyPaystackSubscriptionWebhook(raw, legacySignature, secret),
         )
-      )
+      if (!authentic)
         return c.json({ error: "Invalid payment signature." }, 401)
       let payload: unknown
       try {
