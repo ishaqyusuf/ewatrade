@@ -644,6 +644,7 @@ export async function processWhatsAppOnboardingMessage(
       )
         return false
       const userId =
+        advanced.connectedUserId ??
         advanced.state?.principal?.userId ??
         claimed.state?.principal?.userId ??
         null

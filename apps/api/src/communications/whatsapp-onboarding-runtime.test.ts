@@ -267,11 +267,6 @@ test("verified state associates privacy owner, completed connection clears priva
   const h = harness()
   await h.send("owner@example.com")
   await h.send("372819")
-  const verified = [...h.rows.values()].find((row) =>
-    row.token.startsWith("wa-flow_"),
-  )
-  expect(verified?.userId).toBe("user")
-  await h.send("YES")
   const complete = [...h.rows.values()].find((row) =>
     row.token.startsWith("wa-flow_"),
   )

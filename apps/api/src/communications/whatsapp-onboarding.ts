@@ -107,6 +107,8 @@ export type WhatsAppOnboardingResult = {
   buttons?: WhatsAppOnboardingButton[]
   /** Sent instead of buttons when the provider supports lists. */
   list?: WhatsAppOnboardingList
+  /** Account just connected, kept after the private principal is cleared. */
+  connectedUserId?: string
 }
 
 export type WhatsAppOnboardingAdapters = {
@@ -284,6 +286,46 @@ function chooseReply(state: WhatsAppOnboardingState) {
 
 function consentReply(choice: WhatsAppOnboardingChoice) {
   return `Connect this WhatsApp number to ${label(choice.businessName)} — ${label(choice.storeName)}? Reply YES to allow access using your current business permissions, or NO to cancel.`
+}
+
+async function connectChoice(
+  state: WhatsAppOnboardingState,
+  choice: WhatsAppOnboardingChoice,
+  message: WhatsAppOnboardingMessage,
+  adapters: WhatsAppOnboardingAdapters,
+) {
+  if (!state.principal) return result(null, message, greeting)
+  try {
+    await adapters.connect({
+      phoneNumberId: message.phoneNumberId,
+      senderId: message.senderId,
+      userId: state.principal.userId,
+      sessionId: state.principal.sessionId,
+      choice,
+      operationId: message.messageId,
+    })
+  } catch {
+    return result(
+      null,
+      message,
+      "We could not connect this business. Your business access may have changed. Send CONNECT to verify again.",
+    )
+  }
+  return {
+    ...result(
+      {
+        ...state,
+        stage: "complete",
+        selected: choice,
+        principal: undefined,
+        choices: undefined,
+      },
+      message,
+      whatsAppOnboardingWelcome(choice),
+      true,
+    ),
+    connectedUserId: state.principal.userId,
+  }
 }
 
 export function whatsAppOnboardingWelcome(choice: WhatsAppOnboardingChoice) {
@@ -929,17 +971,9 @@ export async function advanceWhatsAppOnboarding(
           message,
           "Email verified, but no eligible business and Store is available to connect. Use EwaTrade to review your business access, then send CONNECT.",
         )
+      // CONNECT plus the email code is the consent; one Store connects at once.
       if (choices.length === 1 && choices[0])
-        return result(
-          {
-            ...state,
-            stage: "consent",
-            selected: choices[0],
-            expiresAt: Math.min(state.expiresAt, message.now + 10 * 60_000),
-          },
-          message,
-          consentReply(choices[0]),
-        )
+        return connectChoice(state, choices[0], message, adapters)
       return result({ ...state, stage: "choose" }, message, chooseReply(state))
     }
     case "choose": {
@@ -962,16 +996,7 @@ export async function advanceWhatsAppOnboarding(
         ? choices[Number(text) - 1]
         : undefined
       if (!choice) return result(state, message, chooseReply(state))
-      return result(
-        {
-          ...state,
-          stage: "consent",
-          selected: choice,
-          expiresAt: Math.min(state.expiresAt, message.now + 10 * 60_000),
-        },
-        message,
-        consentReply(choice),
-      )
+      return connectChoice(state, choice, message, adapters)
     }
     case "consent":
       if (command === "NO")
@@ -988,33 +1013,8 @@ export async function advanceWhatsAppOnboarding(
           message,
           state.selected ? consentReply(state.selected) : greeting,
         )
-      try {
-        await adapters.connect({
-          phoneNumberId: message.phoneNumberId,
-          senderId: message.senderId,
-          userId: state.principal.userId,
-          sessionId: state.principal.sessionId,
-          choice: state.selected,
-          operationId: message.messageId,
-        })
-      } catch {
-        return result(
-          null,
-          message,
-          "We could not connect this business. Your business access may have changed. Send CONNECT to verify again.",
-        )
-      }
-      return result(
-        {
-          ...state,
-          stage: "complete",
-          principal: undefined,
-          choices: undefined,
-        },
-        message,
-        whatsAppOnboardingWelcome(state.selected),
-        true,
-      )
+      // Sessions saved before direct connection still finish with YES.
+      return connectChoice(state, state.selected, message, adapters)
     case "complete":
       return result(
         state,

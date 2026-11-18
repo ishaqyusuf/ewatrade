@@ -26,6 +26,10 @@ import {
 } from "@ewatrade/jobs/assistant-whatsapp"
 
 import { sendAssistantWhatsAppStopNotice } from "../assistant/channel-disconnect-notice"
+import {
+  queueRefusalReason,
+  runAssistantWhatsAppTurnNow,
+} from "../assistant/channel-turn-now"
 import { cancelWhatsAppBusinessFlows } from "./whatsapp-business-flow-lifecycle"
 import {
   isWhatsAppCredentialSubmission,
@@ -49,6 +53,8 @@ type PlatformDependencies = {
     permittedUserIds: readonly string[],
   ) => Promise<WhatsAppInboxReceipt>
   enqueue: (ingressId: string) => Promise<unknown>
+  /** Runs the turn in this request when the queue refuses it. */
+  runNow?: (ingressId: string) => Promise<unknown>
   enqueueDelivery?: (outboxId: string) => Promise<unknown>
   onboarding?: (
     event: NormalizedWhatsAppMessageEvent,
@@ -107,6 +113,7 @@ export async function processPlatformWhatsAppEvent(
       }
     },
     enqueue: enqueueAssistantWhatsAppTurn,
+    runNow: runAssistantWhatsAppTurnNow,
     enqueueDelivery: enqueueAssistantWhatsAppDelivery,
     onboarding: processWhatsAppOnboardingMessage,
     cancelOnboarding: cancelWhatsAppOnboarding,
@@ -257,8 +264,16 @@ export async function processPlatformWhatsAppEvent(
   } else if (receipt.kind !== "ignored") {
     try {
       await dependencies.enqueue(receipt.id)
-    } catch {
-      console.error("[assistant] inbox dispatch deferred to recovery")
+    } catch (error) {
+      console.error(
+        "[assistant] inbox queue refused; running turn now",
+        queueRefusalReason(error),
+      )
+      try {
+        await dependencies.runNow?.(receipt.id)
+      } catch {
+        console.error("[assistant] inbox dispatch deferred to recovery")
+      }
     }
   }
   // Ordinary assistant turns survive dispatch failure; their model and reply work stays in jobs.

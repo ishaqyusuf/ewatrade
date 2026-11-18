@@ -58,16 +58,17 @@ function harness() {
   }
 }
 
-test("connection reveals no businesses until email proof, then requires explicit exact-scope consent", async () => {
+test("connection reveals no businesses until email proof, then connects the only Store without a second YES", async () => {
   const h = harness()
   const requested = await h.send("owner@example.com")
   expect(requested.reply).not.toContain(choice.businessName)
   expect(h.calls.choices).toBe(0)
   expect(h.calls.connect).toBe(0)
-  const verified = await h.send("372819")
-  expect(verified.reply).toContain(choice.businessName)
-  expect(h.calls.connect).toBe(0)
-  const connected = await h.send("YES")
+  const connected = await h.send("372819")
+  expect(connected.reply).toStartWith(
+    `You are connected to ${choice.businessName} — ${choice.storeName}.`,
+  )
+  expect(connected.reply).not.toContain("Reply YES")
   expect(connected.connected).toBe(true)
   expect(h.calls.connect).toBe(1)
   expect(JSON.stringify(connected.state)).not.toContain("372819")
@@ -79,9 +80,8 @@ test("duplicate provider message never repeats email issuance or the grant adapt
   await h.send("owner@example.com", now, "email-message")
   await h.send("owner@example.com", now, "email-message")
   expect(h.calls.request).toBe(1)
-  await h.send("372819")
-  const original = await h.send("YES", now, "consent-message")
-  const replay = await h.send("YES", now, "consent-message")
+  const original = await h.send("372819", now, "code-message")
+  const replay = await h.send("372819", now, "code-message")
   expect(replay.reply).toBe(original.reply)
   expect(h.calls.connect).toBe(1)
 })
@@ -232,7 +232,7 @@ test("under-13 refusal and resume controls never treat control text as registrat
   expect(h.calls.request).toBe(0)
 })
 
-test("another verified account keeps the existing connection without enumerating businesses; same-account proof still reaches exact consent", async () => {
+test("another verified account keeps the existing connection without enumerating businesses; same-account proof still connects", async () => {
   const other = harness()
   other.adapters.connected = true
   other.adapters.connectedUserId = "existing-user"
@@ -252,9 +252,9 @@ test("another verified account keeps the existing connection without enumerating
   same.adapters.connected = true
   same.adapters.connectedUserId = "user"
   await same.send("owner@example.com")
-  expect((await same.send("372819")).state?.stage).toBe("consent")
+  expect((await same.send("372819")).state?.stage).toBe("complete")
   expect(same.calls.choices).toBe(1)
-  expect(same.calls.connect).toBe(0)
+  expect(same.calls.connect).toBe(1)
 })
 
 test("batched registration collects all details in one message then separates review, legal consent and email proof", async () => {
@@ -388,4 +388,20 @@ test("exact natural registration intents collect attached details and retain con
   )
   expect(collected.state?.stage).toBe("legal")
   expect(attached.calls.request).toBe(0)
+})
+
+test("picking a Store number connects it without a second YES", async () => {
+  const h = harness()
+  const second = { ...choice, storeId: "branch", storeName: "Branch Store" }
+  h.adapters.choices = async () => [choice, second]
+  await h.send("owner@example.com")
+  const listed = await h.send("372819")
+  expect(listed.state?.stage).toBe("choose")
+  expect(h.calls.connect).toBe(0)
+  const connected = await h.send("2")
+  expect(connected.connected).toBe(true)
+  expect(connected.reply).toStartWith(
+    `You are connected to ${choice.businessName} — Branch Store.`,
+  )
+  expect(h.calls.connect).toBe(1)
 })

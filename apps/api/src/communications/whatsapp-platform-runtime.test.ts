@@ -162,10 +162,40 @@ test("a committed inbox survives enqueue failure and provider acknowledgement re
           ids.push(id)
           throw Error("queue unavailable")
         },
+        runNow: async (id) => {
+          ids.push(`now:${id}`)
+          throw Error("model unavailable")
+        },
       },
     ),
   ).toBe(true)
-  expect(ids).toEqual(["durable-inbox"])
+  expect(ids).toEqual(["durable-inbox", "now:durable-inbox"])
+})
+
+test("a refused queue runs the turn in the request; a working queue never does", async () => {
+  const ran: string[] = []
+  const deps = (queueWorks: boolean) => ({
+    env: configured,
+    claim: async () => true,
+    disconnect: async () => {},
+    accept: async () => ({
+      kind: "accepted" as const,
+      id: "durable-inbox",
+      bindingId: "binding-1",
+      requestId: "request-1",
+    }),
+    enqueue: async () => {
+      if (!queueWorks) throw Error("queue refused")
+    },
+    runNow: async (id: string) => {
+      ran.push(id)
+    },
+  })
+  const event = { ...message("search rice"), timestamp: "1792050000" }
+  expect(await processPlatformWhatsAppEvent(event, deps(true))).toBe(true)
+  expect(ran).toEqual([])
+  expect(await processPlatformWhatsAppEvent(event, deps(false))).toBe(true)
+  expect(ran).toEqual(["durable-inbox"])
 })
 
 test("platform statuses use only assistant receipt correlation, even while disabled, and persistence failure is retryable", async () => {
