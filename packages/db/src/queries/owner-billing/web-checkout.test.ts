@@ -2,10 +2,13 @@ import { expect, test } from "bun:test"
 import { PrismaPg } from "@prisma/adapter-pg"
 import { Prisma, PrismaClient } from "../../../generated/prisma/client"
 import {
+  OwnerWebCheckoutRefusal,
   type WebCheckoutProduct,
   applyOwnerWebCharge,
   bindOwnerWebSubscription,
   finishOwnerWebCheckout,
+  ownerWebCheckoutBlock,
+  ownerWebCheckoutBlockMessage,
   prepareOwnerWebCheckout,
   recordWebRefund,
   revokeOwnerWebCharge,
@@ -327,9 +330,9 @@ test("an early refund tombstone and a current native subscription prevent a web 
     status: "ACTIVE",
     currentPeriodEndsAt: new Date(Date.now() + 86400000),
   }
-  await expect(prepareOwnerWebCheckout(db, input)).rejects.toThrow(
-    "existing subscription",
-  )
+  const refused = prepareOwnerWebCheckout(db, input)
+  await expect(refused).rejects.toBeInstanceOf(OwnerWebCheckoutRefusal)
+  await expect(refused).rejects.toThrow("billed through the App Store")
   state.subscription = null
   const prepared = await prepareOwnerWebCheckout(db, input)
   const receipt = {
@@ -424,4 +427,42 @@ test("a refunded Paystack period still reserves billing until its provider confi
   expect(state.sessions).toHaveLength(0)
   state.subscription.cancelAtPeriodEnd = true
   expect((await prepareOwnerWebCheckout(db, input)).dispatch).toBe(true)
+})
+
+test("the checkout block names the store that bills the plan, or the existing web subscription", async () => {
+  const now = new Date("2026-11-18Z")
+  const later = new Date("2026-11-19Z")
+  const blockFor = (
+    subscription: Row | null,
+    legacyStore: { provider: string } | null = null,
+  ) => {
+    const db = {
+      ownerBillingSubscription: { findUnique: async () => subscription },
+      tenantSubscription: { findFirst: async () => legacyStore },
+    } as unknown as Prisma.TransactionClient
+    return ownerWebCheckoutBlock(db, accountId, "tenant", now)
+  }
+  const active = { status: "ACTIVE", currentPeriodEndsAt: later }
+  expect(await blockFor({ ...active, provider: "APP_STORE" })).toBe("app_store")
+  expect(await blockFor({ ...active, provider: "PLAY_STORE" })).toBe(
+    "play_store",
+  )
+  expect(await blockFor({ ...active, provider: "OTHER" })).toBe("subscription")
+  // An ended or cancelled store plan no longer blocks a web payment.
+  expect(
+    await blockFor({
+      provider: "APP_STORE",
+      status: "ACTIVE",
+      currentPeriodEndsAt: now,
+    }),
+  ).toBeNull()
+  expect(
+    await blockFor({ ...active, provider: "APP_STORE", status: "CANCELLED" }),
+  ).toBeNull()
+  expect(await blockFor(null, { provider: "PLAY_STORE" })).toBe("play_store")
+  expect(await blockFor(null)).toBeNull()
+  expect(ownerWebCheckoutBlockMessage("play_store")).toContain("Google Play")
+  expect(ownerWebCheckoutBlockMessage("subscription")).toContain(
+    "existing subscription",
+  )
 })

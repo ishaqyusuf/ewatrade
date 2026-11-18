@@ -1,5 +1,6 @@
 import type { PrismaClient } from "@ewatrade/db"
 import {
+  OwnerWebCheckoutRefusal,
   applyOwnerWebCharge,
   bindOwnerWebSubscription,
   findOwnerBillingAccount,
@@ -13,6 +14,8 @@ import {
   latestOwnerWebCheckout,
   markOwnerWebNonRenewing,
   ownerBillingRuntime,
+  ownerWebCheckoutBlock,
+  ownerWebCheckoutBlockMessage,
   prepareOwnerWebCheckout,
   recordWebRefund,
   revokeOwnerWebCharge,
@@ -153,6 +156,10 @@ export async function createWebSubscriptionCheckout(
     product,
     environment,
     returnUrl,
+  }).catch((error: unknown) => {
+    throw error instanceof OwnerWebCheckoutRefusal
+      ? webBillingRuleError(error.message)
+      : error
   })
   if (!prepared.dispatch)
     return {
@@ -274,8 +281,11 @@ export async function getWebBillingSettings(
   const country = account
     ? await billingCountry(db, account.id, tenantId, env)
     : null
+  const block = await ownerWebCheckoutBlock(db, account?.id ?? null, tenantId)
   return {
     pending: Boolean(pending),
+    /** Set when upgrading here cannot work; the page shows it instead. */
+    blocked: block ? ownerWebCheckoutBlockMessage(block) : null,
     hasSubscription: state?.hasSubscription ?? false,
     covered: state?.enrolled ?? false,
     canManage: state?.subscriptionProvider === "paystack",

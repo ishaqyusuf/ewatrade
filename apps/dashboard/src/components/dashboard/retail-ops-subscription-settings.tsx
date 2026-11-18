@@ -371,7 +371,10 @@ export function RetailOpsSubscriptionSettings({
     enrollBusiness,
     queryClient,
   ])
-  const notice = snapshot ? limitNotice(snapshot) : null
+  // A store-billed or already-paid plan cannot be upgraded here; say why
+  // instead of offering buttons that would only fail.
+  const blocked = snapshot?.webBilling?.blocked ?? null
+  const notice = snapshot && !blocked ? limitNotice(snapshot) : null
   const currentIndex = snapshot
     ? snapshot.plans.findIndex((plan) => plan.id === snapshot.plan.id)
     : -1
@@ -419,6 +422,8 @@ export function RetailOpsSubscriptionSettings({
           onAllowedChange={setTermsAccepted}
         />
       ) : null}
+
+      {blocked && isOwner ? <SettingsNotice>{blocked}</SettingsNotice> : null}
 
       {checkoutError ? (
         <div role="alert">
@@ -525,7 +530,9 @@ export function RetailOpsSubscriptionSettings({
                 upgrade.isPending ||
                 (Boolean(snapshot?.webBilling) && !termsAccepted)
               }
-              upgrade={isOwner && currentIndex >= 0 && index > currentIndex}
+              upgrade={
+                isOwner && !blocked && currentIndex >= 0 && index > currentIndex
+              }
               pending={
                 upgrade.isPending && upgrade.variables?.planId === plan.id
               }

@@ -61,9 +61,60 @@ async function assertOwner(
       AND t."qaPurgeStartedAt" IS NULL
     FOR SHARE OF u, m, t`
   if (rows.length !== 1)
-    throw new Error(
+    throw new OwnerWebCheckoutRefusal(
       "Only the current business owner can pay for this business.",
     )
+}
+
+/** A refusal the owner can act on; the API shows its message as it is. */
+export class OwnerWebCheckoutRefusal extends Error {}
+
+export type OwnerWebCheckoutBlock = "app_store" | "play_store" | "subscription"
+
+/**
+ * Why this owner cannot start a web payment for this business, or null.
+ * Checkout refuses on it, and the billing page swaps its upgrade buttons for
+ * the same message, so the two never disagree.
+ */
+export async function ownerWebCheckoutBlock(
+  db: Prisma.TransactionClient,
+  accountId: string | null,
+  tenantId: string,
+  now = new Date(),
+): Promise<OwnerWebCheckoutBlock | null> {
+  const current = accountId
+    ? await db.ownerBillingSubscription.findUnique({
+        where: { accountId },
+      })
+    : null
+  if (
+    current &&
+    ((current.status !== "CANCELLED" && current.currentPeriodEndsAt > now) ||
+      (current.provider === "OTHER" && !current.cancelAtPeriodEnd))
+  )
+    return current.provider === "APP_STORE"
+      ? "app_store"
+      : current.provider === "PLAY_STORE"
+        ? "play_store"
+        : "subscription"
+  const legacyStore = await db.tenantSubscription.findFirst({
+    where: {
+      tenantId,
+      provider: { in: ["APP_STORE", "PLAY_STORE"] },
+      status: { in: ["ACTIVE", "PAST_DUE"] },
+      currentPeriodEndsAt: { gt: now },
+    },
+    select: { provider: true },
+  })
+  if (!legacyStore) return null
+  return legacyStore.provider === "PLAY_STORE" ? "play_store" : "app_store"
+}
+
+export function ownerWebCheckoutBlockMessage(block: OwnerWebCheckoutBlock) {
+  if (block === "subscription")
+    return "Manage or cancel your existing subscription before starting another payment."
+  const store = block === "app_store" ? "the App Store" : "Google Play"
+  return `Your plan is billed through ${store}. Cancel it there and wait for it to end before paying on the web.`
 }
 
 /** Account lock serializes preparations across ALL businesses owned by this payer. */
@@ -87,31 +138,13 @@ export async function prepareOwnerWebCheckout(
       input.tenantId,
       input.environment,
     )
-    const current = await tx.ownerBillingSubscription.findUnique({
-      where: { accountId: input.accountId },
-    })
-    if (
-      current &&
-      ((current.status !== "CANCELLED" &&
-        current.currentPeriodEndsAt > new Date()) ||
-        (current.provider === "OTHER" && !current.cancelAtPeriodEnd))
+    const block = await ownerWebCheckoutBlock(
+      tx,
+      input.accountId,
+      input.tenantId,
     )
-      throw new Error(
-        "Manage or cancel your existing subscription before starting another payment.",
-      )
-    const legacyStore = await tx.tenantSubscription.findFirst({
-      where: {
-        tenantId: input.tenantId,
-        provider: { in: ["APP_STORE", "PLAY_STORE"] },
-        status: { in: ["ACTIVE", "PAST_DUE"] },
-        currentPeriodEndsAt: { gt: new Date() },
-      },
-      select: { id: true },
-    })
-    if (legacyStore)
-      throw new Error(
-        "Manage the existing store subscription before starting a web payment.",
-      )
+    if (block)
+      throw new OwnerWebCheckoutRefusal(ownerWebCheckoutBlockMessage(block))
     const pending = await findPendingOwnerWebCheckout(tx, input.accountId)
     if (pending) {
       const facts = readWebCheckoutFacts(pending.metadata)
@@ -125,7 +158,7 @@ export async function prepareOwnerWebCheckout(
         pending.checkoutUrl
       )
         return { session: pending, facts, dispatch: false }
-      throw new Error(
+      throw new OwnerWebCheckoutRefusal(
         "A payment is already pending. Check its status before starting another.",
       )
     }
