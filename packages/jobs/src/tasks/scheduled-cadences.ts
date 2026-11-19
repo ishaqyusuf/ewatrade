@@ -281,10 +281,32 @@ export async function runCadenceSteps(steps: readonly CadenceStep[]) {
       }),
     })
     throw new Error(
-      `${failed.length} scheduled step(s) failed: ${failed.map((step) => step.id).join(", ")}`,
+      `${failed.length} scheduled step(s) failed: ${failed
+        .map((step) => {
+          const result = results[steps.indexOf(step)]
+          return `${step.id} (${failureKind(result?.status === "rejected" ? result.reason : undefined)})`
+        })
+        .join(", ")}`,
     )
   }
   return outcome
+}
+
+/**
+ * Error class and HTTP status only: the run's own error (and Sentry) then
+ * says why a step failed, with no message text that could carry keys or data.
+ */
+export function failureKind(reason: unknown) {
+  const error =
+    reason instanceof Error && reason.cause instanceof Error
+      ? reason.cause
+      : reason
+  if (!(error instanceof Error)) return "unknown"
+  const status =
+    "status" in error && typeof error.status === "number"
+      ? ` ${error.status}`
+      : ""
+  return `${error.name}${status}`
 }
 
 /** Keep both recovery groups on one wake window without dropping either group. */
@@ -319,6 +341,11 @@ function cadenceSchedule(id: keyof typeof SCHEDULED_CADENCES) {
   return schedules.task({
     id,
     cron: cadence.cron,
+    // One run imports nearly every job module (and the full Prisma client)
+    // and runs all its sweeps at once; on the default 0.5 GB machine the
+    // prelaunch tick, which also folds in the 15-minute steps, was OOM-killed.
+    // A few seconds of 1 GB per tick is cheaper than lost recovery ticks.
+    machine: id === "schedules.every-5-minutes" ? "small-2x" : undefined,
     maxDuration: 180,
     // The next tick is the retry; retrying would rerun every sweep.
     retry: { maxAttempts: 1 },

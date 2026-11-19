@@ -1,3 +1,4 @@
+import { taskContext } from "@trigger.dev/core/v3"
 import { configure, idempotencyKeys, tasks } from "@trigger.dev/sdk/v3"
 import type { JobHandler, RetryOptions } from "./queue"
 import { runInBackground } from "./queue"
@@ -17,8 +18,15 @@ export function triggerSecretKey() {
 
 let configuredKey: string | undefined
 
-/** The SDK only reads TRIGGER_SECRET_KEY by itself, so pass the resolved key. */
+/**
+ * The SDK only reads TRIGGER_SECRET_KEY by itself, so pass the resolved key.
+ * Inside a Trigger.dev run the platform has already authenticated the SDK
+ * for this run. `configure()` is process-global, so swapping in the app key
+ * there would move every later trigger in the run onto it — including
+ * unrelated cadence steps — and fail all of them whenever that key is refused.
+ */
 function useTriggerClient() {
+  if (taskContext.isInsideTask) return true
   const key = triggerSecretKey()
   if (!key) return false
   if (key !== configuredKey) {

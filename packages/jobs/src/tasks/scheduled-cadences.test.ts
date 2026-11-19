@@ -166,4 +166,36 @@ describe("scheduled cadences", () => {
     expect(triggered).toEqual([])
     expect(swept).toBe(1)
   })
+
+  test("a failed step names its error kind without the message", async () => {
+    const { runCadenceSteps } = await import("./scheduled-cadences")
+    const refused = Object.assign(new Error("key tr_prod_secret refused"), {
+      name: "AuthenticationError",
+      status: 401,
+    })
+    const run = runCadenceSteps([
+      {
+        id: "analytics.dashboard.recovery",
+        kind: "task",
+        task: {
+          id: "analytics.dashboard.recovery",
+          trigger: async () => {
+            throw refused
+          },
+        },
+      },
+      {
+        hasWork: async () => {
+          throw new TypeError("db down")
+        },
+        id: "probe-fails",
+        kind: "task",
+        task: { id: "probe-fails", trigger: async () => {} },
+      },
+    ])
+    await expect(run).rejects.toThrow(
+      "2 scheduled step(s) failed: analytics.dashboard.recovery (AuthenticationError 401), probe-fails (TypeError)",
+    )
+    await expect(run).rejects.not.toThrow("tr_prod_secret")
+  })
 })
