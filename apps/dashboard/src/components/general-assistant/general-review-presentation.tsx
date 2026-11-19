@@ -73,7 +73,14 @@ export function GeneralReviewPresentationBody({
               <li
                 // biome-ignore lint/suspicious/noArrayIndexKey: facts have no ids
                 key={index}
-                className="rounded-full border px-2.5 py-0.5 text-xs text-muted-foreground"
+                className={cn(
+                  "text-xs text-muted-foreground",
+                  // Long facts (a category path) wrap as plain text; a pill
+                  // stretched over several lines reads as a blob.
+                  `${fact.label ?? ""} ${fact.value}`.length > 32
+                    ? "basis-full"
+                    : "rounded-full border px-2.5 py-0.5",
+                )}
               >
                 {fact.label ? `${fact.label} ` : null}
                 <span
@@ -87,77 +94,61 @@ export function GeneralReviewPresentationBody({
         ) : null}
       </div>
       {table ? (
-        <table className="w-full border-collapse text-sm">
-          <thead>
-            <tr className="border-b text-xs text-muted-foreground">
-              {table.columns.map((column) => (
-                <th
-                  key={column.label}
-                  scope="col"
-                  className={cn(
-                    "py-1 font-normal whitespace-nowrap",
-                    column.align === "end" ? "pl-3 text-right" : "text-left",
-                  )}
-                >
-                  {column.label}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row, index) => (
-              // biome-ignore lint/suspicious/noArrayIndexKey: rows have no ids
-              <tr key={index} className="border-b border-border/60 align-top">
-                {row.cells.map((cell, at) => (
-                  <td
-                    // biome-ignore lint/suspicious/noArrayIndexKey: cells have no ids
-                    key={at}
-                    className={cn(
-                      "py-1.5",
-                      table.columns[at]?.align === "end"
-                        ? "pl-3 text-right whitespace-nowrap tabular-nums"
-                        : "pr-2",
-                    )}
-                  >
-                    {cell}
-                    {at === 0 && row.detail ? (
-                      <span className="block text-xs text-muted-foreground">
-                        {row.detail}
+        // A stacked list, not a table: assistant output never uses
+        // multi-column tables because owners read it on a phone.
+        <div className="flex flex-col text-sm">
+          <ul className="flex flex-col divide-y divide-border/60 border-y border-border/60">
+            {rows.map((row, index) => {
+              const [name, lead, ...rest] = row.cells
+              return (
+                // biome-ignore lint/suspicious/noArrayIndexKey: rows have no ids
+                <li key={index} className="flex flex-col gap-0.5 py-2">
+                  <div className="flex items-baseline justify-between gap-3">
+                    <span className="min-w-0 flex-1 font-medium">{name}</span>
+                    {lead !== undefined ? (
+                      <span className="shrink-0 text-right tabular-nums">
+                        {lead}
                       </span>
                     ) : null}
-                  </td>
-                ))}
-              </tr>
-            ))}
-            {table.rows.length > preview + 1 ? (
-              <tr>
-                <td colSpan={table.columns.length} className="py-1">
-                  <button
-                    type="button"
-                    className="rounded text-xs text-muted-foreground hover:text-foreground"
-                    aria-expanded={allRows}
-                    onClick={() => setAllRows((value) => !value)}
-                  >
-                    {allRows
-                      ? "Show fewer"
-                      : `+ ${table.rows.length - preview} more`}
-                  </button>
-                </td>
-              </tr>
-            ) : null}
-            {table.total ? (
-              <tr className="font-semibold">
-                <td className="pt-2">{table.total.label}</td>
-                <td
-                  colSpan={table.columns.length - 1}
-                  className="pt-2 text-right tabular-nums"
-                >
-                  {table.total.value}
-                </td>
-              </tr>
-            ) : null}
-          </tbody>
-        </table>
+                  </div>
+                  {row.detail || rest.length ? (
+                    <div className="flex flex-wrap items-baseline justify-between gap-x-3 text-xs text-muted-foreground">
+                      <span>{row.detail}</span>
+                      {rest.length ? (
+                        <span className="tabular-nums">
+                          {rest.map((cell, at) => (
+                            // biome-ignore lint/suspicious/noArrayIndexKey: cells have no ids
+                            <span key={at}>
+                              {at ? " · " : null}
+                              {table.columns[at + 2]?.label}{" "}
+                              <span className="text-foreground">{cell}</span>
+                            </span>
+                          ))}
+                        </span>
+                      ) : null}
+                    </div>
+                  ) : null}
+                </li>
+              )
+            })}
+          </ul>
+          {table.rows.length > preview + 1 ? (
+            <button
+              type="button"
+              className="self-start rounded py-1 text-xs text-muted-foreground hover:text-foreground"
+              aria-expanded={allRows}
+              onClick={() => setAllRows((value) => !value)}
+            >
+              {allRows ? "Show fewer" : `+ ${table.rows.length - preview} more`}
+            </button>
+          ) : null}
+          {table.total ? (
+            <div className="flex justify-between gap-3 pt-2 font-semibold">
+              <span>{table.total.label}</span>
+              <span className="tabular-nums">{table.total.value}</span>
+            </div>
+          ) : null}
+        </div>
       ) : null}
       {p.sections?.length ? (
         <div className="-mx-4 divide-y border-t">
